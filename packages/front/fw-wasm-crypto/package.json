@@ -1,0 +1,67 @@
+{
+  "name": "@awacloud/fw-wasm-crypto",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Supply-chain-isolated WebAssembly crypto for @awacloud/fw: 17 wasm modules (AES, ChaCha20-Poly1305, SHA-2/3, BLAKE2b, HMAC/HKDF/PBKDF2/Argon2, RSA, ECC, Ed25519/X25519, ML-KEM, ML-DSA, SLH-DSA) built from own C23 sources and committed vendored bases, with a browser loader and a provenance validator.",
+  "keywords": ["awa", "wasm", "webassembly", "crypto", "post-quantum", "ml-kem", "ml-dsa", "slh-dsa", "aes", "chacha20-poly1305", "sha3", "blake2b", "ed25519", "x25519", "browser"],
+  "engines": { "node": ">=18" },
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "awa": {
+    "maturity": "L3",
+    "role": "build-asset",
+    "coverageBasis": ["src/**"],
+    "coverageFloor": 0.86,
+    "_coverageComment": "Basis = the package's own JS surface (src/loader.js, src/provenance.js). The canonical All-files aggregate is dominated by collateral this package's KAT harness imports by design (tools/wasm-crypto build tooling) and by gitignored generated dist/*.wasm.js glue, so it tracks whether dist/ is built rather than tests; the floor is seeded max(0, floor(basis mean) - 2) from the src/** basis measured at declaration. Never seed from the unfiltered aggregate."
+  },
+  "files": [
+    "src/**/*.js",
+    "dist/**/*.wasm",
+    "dist/**/*.wasm.js",
+    "vendor/PROVENANCE.json",
+    "vendor/NOTICE",
+    "vendor/NOTICE-*",
+    "NOTICE",
+    "targets.json",
+    "README.md",
+    "CHANGELOG.md",
+    "!src/**/*.test.*"
+  ],
+  "exports": {
+    ".": { "default": "./src/loader.js" },
+    "./loader": { "default": "./src/loader.js" },
+    "./provenance": { "default": "./src/provenance.js" },
+    "./targets.json": { "default": "./targets.json" },
+    "./dist/*": { "default": "./dist/*" },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "bun test src/ shims/",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "build": "bun ../../../cli.ts wasm-crypto build --pkg packages/front/fw-wasm-crypto",
+    "verify": "bun ../../../cli.ts wasm-crypto verify --pkg packages/front/fw-wasm-crypto"
+  },
+  "devDependencies": {
+    "@awacloud/tool-wasm-crypto": "workspace:*",
+    "@eslint/js": "^10.0.1",
+    "@types/bun": "latest",
+    "eslint": "^10.4.1",
+    "globals": "^15.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/fw-wasm-crypto"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

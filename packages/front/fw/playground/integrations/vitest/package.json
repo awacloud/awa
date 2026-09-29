@@ -1,0 +1,14 @@
+{
+    "name": "@awacloud/playground-vitest",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "postinstall": "node ../../_tools/link-fw.mjs",
+        "setup": "node ../../_tools/link-fw.mjs",
+        "test": "vitest run"
+    },
+    "devDependencies": {
+        "vitest": "^4.1.8",
+        "@happy-dom/global-registrator": "^20.10.2"
+    }
+}

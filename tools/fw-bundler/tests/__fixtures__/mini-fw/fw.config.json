@@ -1,0 +1,22 @@
+{
+    "description": "Minimal fw-shaped fixture package for @awacloud/tool-fw-bundler golden/idempotence tests. Not a real framework — just enough core stubs + two modules to drive the full bundle pipeline deterministically.",
+    "defaults": {
+        "variants": ["pure"]
+    },
+    "presets": {
+        "minimal": {
+            "description": "Core runtime only, zero modules.",
+            "modules": []
+        },
+        "core": {
+            "description": "Two demo modules with a dependency edge.",
+            "modules": ["alpha", "beta"]
+        }
+    },
+    "sideBundles": {
+        "extra": {
+            "description": "Side-bundle demo.",
+            "modules": ["alpha"]
+        }
+    }
+}

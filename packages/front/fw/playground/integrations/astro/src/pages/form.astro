@@ -1,0 +1,21 @@
+---
+// src/pages/form.astro — static page + "form validation" island.
+import Layout from '../layouts/Layout.astro';
+import FormIsland from '../components/FormIsland.astro';
+---
+<Layout title="fw × Astro — form">
+    <h1>Form validation</h1>
+    <p>
+        The fw <code>form</code> module manages multi-field state
+        (values / errors / touched / dirty / submitting), per-field
+        validation and async submit. Here: two required fields with
+        validators, errors shown only after <em>touch</em>
+        (blur), a button disabled while submitting, and each successful
+        sign-up pushed into a keyed list (<code>uiSession.list</code>).
+    </p>
+    <FormIsland />
+    <p>
+        All the state lives in the island, client-side — the page itself
+        is rendered statically by Astro.
+    </p>
+</Layout>

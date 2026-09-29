@@ -1,0 +1,8 @@
+{
+  "name": "@awacloud/fw-vite-plugin",
+  "private": true,
+  "description": "Internal alias — the Vite plugin is published from inside @awacloud/fw under the subpath `@awacloud/fw/vite`.",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts"
+}

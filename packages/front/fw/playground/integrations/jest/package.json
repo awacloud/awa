@@ -1,0 +1,14 @@
+{
+    "name": "@awacloud/playground-jest",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "postinstall": "node ../../_tools/link-fw.mjs",
+        "setup": "node ../../_tools/link-fw.mjs",
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js -c jest.config.mjs"
+    },
+    "devDependencies": {
+        "jest": "^30.4.2",
+        "@jest/globals": "^30.4.1"
+    }
+}

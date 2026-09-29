@@ -1,0 +1,11 @@
+{
+  "name": "@fx/sibling",
+  "private": true,
+  "type": "module",
+  "main": "src/main.js",
+  "exports": {
+    ".": "./src/main.js",
+    "./thing": "./src/thing.js",
+    "./extra/*": "./src/extra/*.js"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "trees": [
+    {
+      "id": "mlkem-native",
+      "url": "https://github.com/pq-code-package/mlkem-native/archive/refs/tags/v1.2.0.tar.gz",
+      "ref": "v1.2.0",
+      "sha256": "377f0960ebab767ab2e4ad4bdb10d615dfcd530d575feeb572feb83e4aecbd33",
+      "license": "Apache-2.0 AND MIT AND ISC AND CC0-1.0",
+      "notice": "mlkem-native v1.2.0 (PQ Code Package / PQCA). See vendor/NOTICE-mlkem-native."
+    },
+    {
+      "id": "pqclean",
+      "url": "https://github.com/PQClean/PQClean",
+      "ref": "202a8f96315f9ed219387a50f7e40d04af037ea8",
+      "sha256": "517bffa8694b3e50f9ce5a68c316b6a24c4e1067a543c03083e77190b038b2c0",
+      "license": "CC0-1.0",
+      "notice": "PQClean (rolling, commit 202a8f9). Per-file SPDX; see vendor/NOTICE-pqclean."
+    },
+    {
+      "id": "openssl-slh-dsa",
+      "url": "https://github.com/openssl/openssl/archive/refs/tags/openssl-3.5.0.tar.gz",
+      "ref": "openssl-3.5.0",
+      "sha256": "20a5f860014d4008b95084cb40c5df85c5e6694dbef89ac755136be5396ef7a0",
+      "license": "Apache-2.0",
+      "notice": "OpenSSL FIPS-205 SLH-DSA core (crypto/slh_dsa, openssl-3.5.0). Apache-2.0; see vendor/NOTICE-openssl-slh-dsa."
+    },
+    {
+      "id": "bearssl",
+      "url": "https://bearssl.org/bearssl-0.6.tar.gz",
+      "ref": "v0.6",
+      "sha256": "759d09cd1e850657301e60d6179fba4b1d11d743f7f34de821a5f6dffbb82a1f",
+      "license": "MIT",
+      "notice": "BearSSL v0.6 (Thomas Pornin, bearssl.org). v0.6 beta, Aug 2018, never formally audited (accepted-debt per plan risk 2). See vendor/NOTICE-bearssl."
+    },
+    {
+      "id": "fiat-crypto",
+      "url": "https://github.com/mit-plv/fiat-crypto/archive/refs/tags/v0.1.6.tar.gz",
+      "ref": "v0.1.6",
+      "sha256": "b6a4a6ce5563b5b86ba1161801e0bbba60dd0c689b5b06abde36d91ab84b979a",
+      "license": "MIT AND BSD-1-Clause AND Apache-2.0",
+      "notice": "fiat-crypto machine-verified P-256/P-384/P-521 field arithmetic. See vendor/NOTICE-fiat-crypto."
+    },
+    {
+      "id": "libsodium",
+      "url": "https://github.com/jedisct1/libsodium/archive/refs/tags/1.0.22-RELEASE.tar.gz",
+      "ref": "1.0.22-RELEASE",
+      "sha256": "acb6837051b26fd4cb80405d9a2a9d96b25184c3e65ac04bc4894008e6554688",
+      "license": "ISC",
+      "notice": "libsodium 1.0.22 ed25519 + curve25519 ref10 closure (jedisct1/libsodium, ISC). Field path fe_25_5 (32-bit); SHA-512+randombytes+sodium-utils seamed to the package's own csrc. See vendor/NOTICE-libsodium."
+    }
+  ]
+}

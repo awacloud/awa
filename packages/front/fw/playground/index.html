@@ -1,0 +1,193 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/fw — playground</title>
+
+    <!--
+      Navigable playground index, rendered with @awacloud/fw itself (dogfooding):
+      the cards are generated from ./examples.json (produced by
+      `node _tools/gen-index.mjs` — re-run after adding an example).
+
+      SERVE from the package root (packages/front/fw) or above,
+      e.g. `npx serve .` from fw/ then open /playground/ — the sanity
+      script and the import map reference ../src/. `fetch('./examples.json')`
+      works under any static server; not under file://.
+    -->
+
+    <!-- 1. Sanity FIRST: locks down dangerous globals (eval, innerHTML,
+         Math.random…) before any module code. Classic blocking script. -->
+    <script src="../dist/build/sanity.min.js"></script>
+
+    <!-- 2. Import map: resolves @awacloud/fw to the native ESM source (no bundler). -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@awacloud/fw": "../src/main.js",
+            "@awacloud/fw/": "../src/"
+        }
+    }
+    </script>
+
+    <style>
+        :root { color-scheme: light dark; }
+        /* fw templates' conditional hidden="#{x}" attributes must win
+           over explicit display: rules (.badge, etc.). */
+        [hidden] { display: none !important; }
+        html, body {
+            margin: 0; padding: 0;
+            font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #fafafa; color: #1a1a1a;
+        }
+        @media (prefers-color-scheme: dark) {
+            html, body { background: #15171a; color: #e8e8e8; }
+            a { color: #6ea8ff; }
+            a:visited { color: #b89dff; }
+            .muted { color: #9aa0a6; }
+            .card { background: #1d2025; border-color: #2a2d31; }
+            code { background: #2a2d31; }
+        }
+        body { padding: 32px clamp(16px, 4vw, 48px); max-width: 980px; margin: 0 auto; }
+        h1 { font-size: 22px; margin: 0 0 4px; }
+        .sub { margin: 0 0 8px; color: #555; font-size: 13px; }
+        @media (prefers-color-scheme: dark) { .sub { color: #9aa0a6; } }
+        .muted { color: #777; }
+        .axis h2 { font-size: 16px; margin: 28px 0 10px; }
+        .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+        .card {
+            background: #fff; border: 1px solid #e2e2e2; border-radius: 8px;
+            padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+        }
+        .card h3 { margin: 0; font-size: 15px; font-weight: 600; }
+        .card p  { margin: 0; font-size: 13px; color: #555; }
+        @media (prefers-color-scheme: dark) { .card p { color: #9aa0a6; } }
+        .runline { margin-top: auto; }
+        .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; font-size: 13px; }
+        a { color: #1565c0; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code { font: 12px/1.4 ui-monospace, 'Cascadia Mono', Consolas, monospace; background: #f0f0f0; padding: 1px 5px; border-radius: 3px; }
+        .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; background: #e3f2fd; color: #0d47a1; }
+        @media (prefers-color-scheme: dark) { .badge { background: #1e3a5f; color: #9bc4ff; } }
+        .badge.warn { background: #fff3e0; color: #b25400; }
+        @media (prefers-color-scheme: dark) { .badge.warn { background: #4a3320; color: #f0a050; } }
+        .nav { font-size: 12px; margin-top: 24px; color: #888; }
+    </style>
+</head>
+<body>
+    <main id="app"></main>
+    <p id="boot" class="muted">Loading the index…</p>
+    <noscript>
+        <p>JavaScript is required for this index — see <a href="./README.md">README.md</a>.</p>
+    </noscript>
+
+    <!-- 3. The app: ES module, no bundler. The whole DOM is built via the
+         fw template / uiSession / list modules (sanity blocks innerHTML). -->
+    <script type="module">
+        import { runtime, domReady } from '@awacloud/fw';
+        import modules from '@awacloud/fw/core/modules.js';
+
+        // No module pre-registered by main.js — register the catalogue.
+        runtime.registerAll(modules);
+
+        const tpl = runtime.resolve('template');
+        const ui  = runtime.resolve('uiSession');
+
+        // fw templates — notation: #{var} = substituted value, ${slot} = item
+        // insertion point, id = logical id referenced from JS.
+        // `hidden="#{x}"` is a conditional attribute: set if x is non-null
+        // (including ''), omitted when x is null — hence the ternaries below.
+        const PAGE = `<div id="root" class="page">
+                <header id="hd">
+                    <h1 id="ttl">@awacloud/fw — playground</h1>
+                    <p id="sub" class="sub">Generated index — <code id="cmd">node _tools/gen-index.mjs</code> to refresh <code id="cmd2">examples.json</code></p>
+                </header>
+                <div id="axes">\${axes}</div>
+                <p id="foot" class="nav"><a id="lnkReadme" href="./README.md">playground README</a> · <a id="lnkUp" href="../../index.html">← packages/front</a></p>
+            </div>`;
+
+        const AXIS = `<section id="root" class="axis">
+                <h2 id="lbl">#{label} <span id="cnt" class="badge">#{count}</span></h2>
+                <div id="grid" class="grid">\${cards}</div>
+            </section>`;
+
+        const CARD = `<article id="root" class="card">
+                <h3 id="nm" title="#{tooltip}">#{name}</h3>
+                <p id="desc" class="desc">#{description}</p>
+                <p id="runline" class="runline" hidden="#{noRun}"><code id="run">#{run}</code></p>
+                <div id="lnks" class="row">
+                    <a id="lnkOpen" href="#{openHref}" hidden="#{noOpen}">open</a>
+                    <a id="lnkDir" href="#{dirHref}">folder</a>
+                    <span id="npm" class="badge warn" hidden="#{noInstall}">npm i</span>
+                </div>
+            </article>`;
+
+        // examples.json item → CARD template variables.
+        const toCardVars = (it) => ({
+            name:        it.name,
+            tooltip:     it.title || it.name,
+            description: it.description || '',
+            run:         it.run || '',
+            noRun:       it.run ? null : '',
+            openHref:    typeof it.browser === 'string' ? it.browser : '',
+            noOpen:      it.browser ? null : '',
+            dirHref:     it.dir,
+            noInstall:   it.install ? null : '',
+        });
+
+        const ctx = 'pg-index';
+
+        async function main() {
+            const res = await fetch('./examples.json');
+            if (!res.ok) throw new Error(`examples.json: HTTP ${res.status}`);
+            const data = await res.json();
+
+            tpl.init(ctx, { to: document.getElementById('app'), main: true });
+            const s = ui(ctx);
+
+            // Page shell (header + axes slot + footer).
+            s.add([{ id: 'page', block: s.parse(PAGE), data: {} }]);
+
+            // One section per axis, attached to the ${axes} slot; each
+            // axis's cards are a keyed list synchronized on the items.
+            for (const axis of data.axes) {
+                if (!axis.items || axis.items.length === 0) continue;
+                const blockId = `axis:${axis.id}`;
+                s.add([{
+                    id: blockId,
+                    block: s.parse(AXIS),
+                    data: { label: axis.label, count: String(axis.items.length) },
+                    attach: { elm: 'page', name: 'axes' },
+                }]);
+                s.list(blockId, 'cards', {
+                    keyFn: (it) => it.name,
+                    block: s.parse(CARD),
+                    dataFn: toCardVars,
+                    eqFn: 'shallow',
+                }).sync(axis.items);
+            }
+
+            document.getElementById('boot').remove();
+        }
+
+        domReady.loaded(() => {
+            main().catch((err) => {
+                console.error('[playground-index]', err);
+                const boot = document.getElementById('boot');
+                if (boot) {
+                    boot.textContent = 'Unable to load ./examples.json — '
+                        + 'serve from the package root (e.g. `npx serve .` in packages/front/fw, '
+                        + 'then open /playground/) and run `node _tools/gen-index.mjs` if needed.';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

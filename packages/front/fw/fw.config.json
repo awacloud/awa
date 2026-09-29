@@ -1,0 +1,129 @@
+{
+    "description": "Build configuration for @awacloud/fw — presets and side-bundles. Pure data, consumed by tools/fw-bundler (bundle), integrations/vite/, and any other downstream tool.",
+    "defaults": {
+        "variants": ["pure"]
+    },
+    "presets": {
+        "minimal": {
+            "description": "Core runtime only, zero modules.",
+            "modules": []
+        },
+        "core": {
+            "description": "Minimal glue required by nearly every fw module.",
+            "modules": [
+                "errors", "eventBus", "signal", "valid", "ui8", "abort", "clock"
+            ]
+        },
+        "site": {
+            "description": "Static showcase — landing pages, blogs, marketing.",
+            "extends": "core",
+            "modules": [
+                "dom", "events", "animate", "visibility",
+                "a11y", "focus", "route",
+                "render", "parser", "template", "sanitize", "secPolicy",
+                "uiSessionCore", "uiSessionDirect",
+                "hex", "b64", "utf8", "url",
+                "str", "date", "i18n",
+                "rateLimit"
+            ]
+        },
+        "site-interactive": {
+            "description": "Forms, search, dynamic content, user-driven import/export.",
+            "extends": "site",
+            "modules": [
+                "ajax", "network",
+                "form", "component", "uiSession", "uiSessionList", "devtools",
+                "htmlEntities", "unicode",
+                "csv", "xml", "mime",
+                "keybindings", "gesture", "fullscreen", "idle",
+                "lruCache", "ringBuffer", "trie", "treeWalker",
+                "queue", "bitmap",
+                "easing", "interp", "scheduler",
+                "storage", "download", "clipboard", "ua",
+                "uuid"
+            ]
+        },
+        "spa": {
+            "description": "Reactive Single-Page Application (no offline).",
+            "extends": "site-interactive",
+            "modules": [
+                "virtualScroll", "themeTokens", "chart",
+                "indexedDB",
+                "mutex", "semaphore", "channel", "cancellable", "tokenBucket",
+                "base32", "base58", "buffer", "cbor", "msgpack",
+                "crc32", "adler32", "bigint",
+                "linalg", "geom", "stats", "fixedPoint",
+                "binaryReader", "binaryWriter",
+                "processMessage", "processRPC",
+                "dnd", "media"
+            ]
+        },
+        "pwa": {
+            "description": "Strict superset of spa — only what depends on a Service Worker or an offline cycle.",
+            "extends": "spa",
+            "modules": [
+                "serviceWorker", "cache", "backgroundSync", "push", "sharedWorker",
+                "fsAccess", "remoteStore",
+                "broadcastChannel", "leaderElection",
+                "notifications", "permissions",
+                "wakeLock", "networkInfo", "battery",
+                "workerPool", "atomics",
+                "gzip", "deflate", "zlib"
+            ]
+        }
+    },
+    "sideBundles": {
+        "realtime": {
+            "description": "Real-time transports.",
+            "modules": ["ws", "sse", "webrtc"]
+        },
+        "crypto-basic": {
+            "description": "Auth / session-level crypto.",
+            "modules": [
+                "random", "sha256", "sha512", "hmac", "hkdf", "pbkdf2",
+                "aes", "gcm", "aes_modes", "pad", "totp"
+            ]
+        },
+        "crypto-identity": {
+            "description": "Passkeys, signatures, key formats.",
+            "modules": [
+                "webauthn", "jws", "keyformat",
+                "ed25519", "x25519", "ecc",
+                "pem", "asn1", "asn1Oid", "bitArray", "bn"
+            ]
+        },
+        "crypto-advanced": {
+            "description": "E2EE, PQC, KeePass interop.",
+            "modules": [
+                "sha224", "sha384", "sha512_224", "sha512_256", "sha3",
+                "blake2b", "argon2", "poly1305",
+                "chacha20", "chacha20poly1305",
+                "ctr", "cbc", "cmac", "kw",
+                "rsa", "rsaKeygen",
+                "ml_kem", "ml_dsa", "slh_dsa",
+                "adf"
+            ]
+        },
+        "compress-heavy": {
+            "description": "Heavy compression codecs — never in the main bundle.",
+            "modules": [
+                "brotli", "brotliShared", "brotliFrame", "brotliDict", "brotliDictWords",
+                "lz4", "lz77", "lzw",
+                "huffman", "bitstream",
+                "zip"
+            ]
+        },
+        "sensors": {
+            "description": "Permission-invasive sensors.",
+            "modules": ["geolocation", "sensors", "entropyCollector"]
+        },
+        "text-advanced": {
+            "description": "Terminal / package-manager-grade text.",
+            "modules": ["ansi", "semver"]
+        },
+        "structures-advanced": {
+            "description": "Specialised algorithms.",
+            "modules": ["heap", "btree"]
+        }
+    }
+}

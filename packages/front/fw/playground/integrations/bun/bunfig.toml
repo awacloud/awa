@@ -1,0 +1,4 @@
+# Registers the @awacloud/fw resolver for DIRECT execution (`bun run src/app.js`),
+# so `virtual:@awacloud/fw/preset/*` resolves without a build step. `bun build.ts`
+# does not need this (the plugin is passed to Bun.build explicitly).
+preload = ["./fw-register.js"]

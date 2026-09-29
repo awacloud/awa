@@ -1,0 +1,7 @@
+{
+  "_comment": "wasm-crypto config — copy to wasm-crypto.config.json and gitignore it.",
+  "_comment_paths": "All paths are relative to the repo root (process.cwd when using bun cli.ts).",
+  "wasiSdkPath": "/opt/wasi-sdk",
+  "outDir": "packages/front/fw/src/crypto/wasm",
+  "targetsFile": "tools/wasm-crypto/targets.json"
+}

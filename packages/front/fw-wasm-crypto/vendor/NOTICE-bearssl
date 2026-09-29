@@ -1,0 +1,92 @@
+NOTICE — vendored BearSSL v0.6 subset
+======================================
+
+Source:   https://bearssl.org/bearssl-0.6.tar.gz
+Version:  v0.6 (beta, August 2018)
+Author:   Thomas Pornin <pornin@bolet.org>
+Vendored: packages/front/fw-wasm-crypto/vendor/bearssl/
+
+Security note: BearSSL v0.6 is a beta release and has never received a formal
+cryptographic audit. This is accepted debt per the BATCH_22 plan (risk 2).
+
+Files vendored
+--------------
+  inc/bearssl*.h             — public API headers (all)
+  src/inner.h                — internal API header
+  src/config.h               — build configuration header
+  src/aead/gcm.c             — GCM authenticated encryption
+  src/ec/ec_keygen.c         — EC key generation
+  src/ec/ec_prime_i31.c      — EC prime-field I31 arithmetic core
+  src/ec/ec_pubkey.c         — EC public key ops
+  src/ec/ec_secp256r1.c      — P-256 curve parameters
+  src/ec/ec_secp384r1.c      — P-384 curve parameters
+  src/ec/ec_secp521r1.c      — P-521 curve parameters
+  src/ec/ecdsa_i31_sign_raw.c  — ECDSA I31 sign (raw)
+  src/ec/ecdsa_i31_vrfy_raw.c  — ECDSA I31 verify (raw)
+  src/hash/ghash_ctmul64.c   — GHASH constant-time 64-bit multiply
+  src/hash/sha2big.c         — SHA-384 / SHA-512
+  src/hash/sha2small.c       — SHA-224 / SHA-256
+  src/int/i31_*.c            — I31 big-integer primitives (16 files)
+  src/kdf/hkdf.c             — HKDF key derivation
+  src/mac/hmac.c             — HMAC
+  src/mac/hmac_ct.c          — HMAC constant-time variant
+  src/rand/hmac_drbg.c       — HMAC-DRBG
+  src/rsa/rsa_i31_keygen.c         — RSA I31 key generation (dispatcher)
+  src/rsa/rsa_i31_keygen_inner.c   — RSA I31 key generation (core)
+  src/rsa/rsa_i31_modulus.c        — RSA I31 modulus ops
+  src/rsa/rsa_i31_oaep_decrypt.c   — RSA OAEP decrypt (I31)
+  src/rsa/rsa_i31_pkcs1_sign.c     — RSA PKCS1 sign (I31)
+  src/rsa/rsa_i31_pkcs1_vrfy.c     — RSA PKCS1 verify (I31)
+  src/rsa/rsa_i31_priv.c           — RSA I31 private key ops
+  src/rsa/rsa_i31_privexp.c        — RSA I31 private exponent
+  src/rsa/rsa_i31_pub.c            — RSA I31 public key ops
+  src/rsa/rsa_i31_pubexp.c         — RSA I31 public exponent
+  src/rsa/rsa_oaep_pad.c           — RSA OAEP padding (generic)
+  src/symcipher/aes_ct.c           — AES constant-time base
+  src/symcipher/aes_ct64.c         — AES constant-time 64-bit
+  src/symcipher/aes_ct64_cbcdec.c  — AES-CT64 CBC decrypt
+  src/symcipher/aes_ct64_cbcenc.c  — AES-CT64 CBC encrypt
+  src/symcipher/aes_ct64_ctr.c     — AES-CT64 CTR mode
+
+Files NOT vendored (out of scope)
+-----------------------------------
+  T0/                    — T0 TLS codegen (not needed)
+  test/                  — upstream test harness
+  tools/                 — upstream build tools
+  samples/               — example code
+  src/ssl/               — TLS/SSL layer (unused)
+  src/x509/              — X.509 layer (unused)
+  src/codec/             — PEM/DER codecs (unused)
+  src/ec/ec_*i15*.c      — I15 EC variants (unused)
+  src/ec/ecdsa_*i15*.c   — I15 ECDSA variants (unused)
+  src/ec/ec_c25519*.c    — Curve25519 (vendored via libsodium instead)
+  src/symcipher/aes_big*.c, aes_small*.c, aes_x86ni*.c — non-CT or x86-specific
+  src/rsa/rsa_i15_*.c, rsa_i32_*.c, rsa_i62_*.c — non-I31 RSA variants
+  src/int/i15_*.c, i32_*.c, i62_*.c — non-I31 big-integer files
+  T0Comp.exe             — Windows binary (not committed)
+
+License
+-------
+MIT
+
+Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

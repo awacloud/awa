@@ -1,0 +1,41 @@
+---
+// src/components/FwIsland.astro
+// "fw island" recipe (option B) — see the @awacloud/fw/astro README.
+// Vanilla container + Astro <script> bundled by Vite: the preset's virtual
+// modules resolve client-side, no component framework required.
+// The script is hoisted and deduplicated by Astro: it runs ONCE per page
+// and mounts a counter in EACH [data-fw-island] container.
+---
+<div data-fw-island></div>
+
+<script>
+    import { runtime } from 'virtual:@awacloud/fw/preset/site-interactive';
+    import { COUNTER_TPL } from '../lib/templates.js';
+
+    const tpl       = runtime.resolve('template');
+    const uiSession = runtime.resolve('uiSession');
+    const sig       = runtime.resolve('signal');
+
+    let seq = 0;
+    for (const el of document.querySelectorAll('[data-fw-island]')) {
+        // One render context per island (template.init requires a unique name).
+        const ctx = `fw-island-${++seq}`;
+        tpl.init(ctx, { to: el, main: true });
+        const ui = uiSession(ctx);
+
+        // Reactive state: a source signal + a derived signal.
+        const count  = sig.create(0);
+        const parity = sig.derived([count], (n) => (n % 2 === 0 ? 'even' : 'odd'));
+
+        // Render the block, then declarative signal → DOM bindings
+        // (applied immediately, then on every `set`/`update`).
+        ui.add([{ id: 'counter', block: ui.parse(COUNTER_TPL) }]);
+        ui.bind(count,  'counter', 'value',  'text', { transform: String });
+        ui.bind(parity, 'counter', 'parity', 'text', { transform: (p) => `count is ${p}` });
+
+        // Listeners managed by the session (released by ui.clear / unmount).
+        ui.on('counter', 'inc',  'click', () => count.update((n) => n + 1));
+        ui.on('counter', 'dec',  'click', () => count.update((n) => n - 1));
+        ui.on('counter', 'zero', 'click', () => count.set(0));
+    }
+</script>

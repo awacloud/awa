@@ -1,0 +1,65 @@
+---
+// src/pages/index.astro
+// Frontmatter = SSR: `render.toHTML` (worker-safe, pure data — the parser
+// has a DOM-less tokenizer) produces the markup with `data-fw-id` markers;
+// the client <script> adopts this DOM via `uiSession.hydrate` (same
+// template, same idPrefix) then makes it interactive WITHOUT re-rendering.
+import Layout from '../layouts/Layout.astro';
+import FwIsland from '../components/FwIsland.astro';
+import { runtime } from 'virtual:@awacloud/fw/preset/site-interactive';
+import { HELLO_TPL } from '../lib/templates.js';
+
+const html = runtime.resolve('render').toHTML(
+    runtime.resolve('parser').fromHTML(HELLO_TPL),
+    {
+        title: 'Hydrated island',
+        detail: `Markup generated server-side on ${new Date().toISOString()}.`,
+    },
+    { idPrefix: 'hello' },
+);
+---
+<Layout title="fw × Astro — home">
+    <h1>fw × Astro</h1>
+    <p>
+        A multi-page Astro site (static SSG content) + <code>@awacloud/fw</code>
+        islands. This page shows both flows: markup rendered server-side then
+        <em>hydrated</em>, and an island mounted fresh client-side. The
+        <a href="/form">form page</a> shows the <code>form</code> module.
+    </p>
+
+    <h2>Island 1 — SSR + hydration</h2>
+    <p>
+        The block below is in the HTML shipped by the server (view the page
+        source); on load, <code>uiSession.hydrate</code> adopts the existing
+        nodes and wires up the listeners.
+    </p>
+    <div id="hello-host" set:html={html}></div>
+
+    <h2>Island 2 — counter mounted client-side</h2>
+    <FwIsland />
+</Layout>
+
+<script>
+    import { runtime } from 'virtual:@awacloud/fw/preset/site-interactive';
+    import { HELLO_TPL, HELLO_DATA } from '../lib/templates.js';
+
+    const tpl = runtime.resolve('template');
+    tpl.init('hello', { to: document.getElementById('hello-host'), main: true });
+    const ui = runtime.resolve('uiSession')('hello');
+
+    // Adopts the SSR DOM (data-fw-id="hello:*" markers). `onMismatch:
+    // 'rebuild'`: if the server markup doesn't match (template out of
+    // sync), fw re-renders the block client-side with HELLO_DATA.
+    ui.hydrate(
+        [{ id: 'hello', block: ui.parse(HELLO_TPL), data: HELLO_DATA }],
+        { idPrefix: 'hello', onMismatch: 'rebuild' },
+    );
+
+    // Same DOM nodes, now addressable through the session.
+    let clicks = 0;
+    ui.text('hello', 'state', 'Hydrated — same DOM nodes, now interactive.');
+    ui.on('hello', 'bump', 'click', () => {
+        clicks += 1;
+        ui.text('hello', 'bump', `hydration: ${clicks} click${clicks > 1 ? 's' : ''}`);
+    });
+</script>

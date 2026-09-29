@@ -1,0 +1,14 @@
+{
+    "name": "@awacloud/playground-esbuild",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "postinstall": "node ../../_tools/link-fw.mjs",
+        "setup": "node ../../_tools/link-fw.mjs",
+        "build": "node build.mjs"
+    },
+    "devDependencies": {
+        "esbuild": "^0.28.1"
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "_comment": "Minimal tsconfig for TypeDoc — compilerOptions only, NO `include` (TypeDoc drives the file set via entryPoints = dist/types). Kept separate from tsconfig.types.json to avoid inheriting its `include: src/**/*.js`.",
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "lib": ["ESNext", "DOM"],
+        "skipLibCheck": true,
+        "types": []
+    },
+    "include": ["../../dist/types/**/*.d.ts"],
+    "exclude": ["../../dist/types/**/*.test.d.ts", "../../dist/types/typed.d.ts"]
+}

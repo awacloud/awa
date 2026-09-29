@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "_comment": "Generate .d.ts ambient types from JSDoc-annotated JavaScript into dist/types/. Run via `bun run types`. Colocation in src/ was attempted but TS refuses to overwrite files it has already seen as companion declarations (input/output collision) — generated declarations must live in a separate output tree.",
+
+    "compilerOptions": {
+        "target":            "ESNext",
+        "module":            "ESNext",
+        "moduleResolution":  "bundler",
+
+        "allowJs":           true,
+        "checkJs":           true,
+
+        "declaration":       true,
+        "declarationMap":    true,
+        "emitDeclarationOnly": true,
+        "outDir":            "dist/types",
+        "rootDir":           "src",
+
+        "strict":            false,
+        "skipLibCheck":      true,
+        "noEmitOnError":     false,
+
+        "lib":               ["ESNext", "DOM"],
+        "types":             []
+    },
+
+    "include": [
+        "src/**/*.js"
+    ],
+    "exclude": [
+        "src/**/*.test.js",
+        "src/**/*.kat.js",
+        "src/**/*.test.html",
+        "src/typed.js",
+        "src/**/__fixtures__/**",
+        "dist",
+        "node_modules"
+    ]
+}

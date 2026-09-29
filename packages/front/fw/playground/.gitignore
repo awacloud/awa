@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+# BL-374: `next start` (or a stray driver) sometimes redirects its own stdout
+# here; it is run output, never source, and was committed by mistake.
+next-start.log

@@ -1,0 +1,285 @@
+{
+  "name": "@awacloud/fw",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Zero-dependency browser framework: a DI module runtime with 200+ ESM modules — codecs, compression, crypto (WebCrypto + WASM tiers, post-quantum), DOM rendering and query, workers, security lockdown — usable without a bundler via import maps.",
+  "keywords": ["awa", "framework", "browser", "esm", "zero-dependencies", "dependency-injection", "import-maps", "crypto", "webcrypto", "wasm", "post-quantum", "rendering", "service-worker", "web-worker", "lockdown"],
+  "engines": { "node": ">=18" },
+  "awa": {
+    "maturity": "L3",
+    "coverageBasis": ["src/**", "integrations/**", "tools/rendering/**", "tools/_lib/cli-help.js"],
+    "coverageFloor": 0.92,
+    "_coverageComment": "Basis = the package.json files[] JS surface, i.e. exactly what this package PUBLISHES: src/**, integrations/**, tools/rendering/** and tools/_lib/cli-help.js. playground/** is excluded because files[] excludes it (!playground/**), and test files are already out via bunfig coverageSkipTestFiles. The unfiltered All-files aggregate is NOT a source-quality signal here: it is an unweighted mean of per-file %Lines, so it admitted 4 rows that are not this package at all - two tools/fw-bundler/** modules and two OS-temp COPIES that integrations/_shared/config-resolve.test.js imports from a temp dir (1.14% and 29.94%) - which dragged 238 rows to 91.9770% (RED) while the 230 published rows read 93.1865%. The floor stays 0.92, deliberately UNCHANGED: coverageBasis fixes the measurement basis, it must not relax the gate, so the max(0, floor(basis mean) - 2) seeding rule used when DECLARING a floor is not applied here - 0.92 was earned previously and is kept, now with a +1.19 pp margin."
+  },
+  "main": "src/main.js",
+  "types": "dist/types/main.d.ts",
+  "sideEffects": [
+    "./src/main.js",
+    "./src/core/logger.js",
+    "./src/sanity/lockdown-apply.js",
+    "./dist/build/*.js"
+  ],
+  "files": [
+    "fw.config.json",
+    "src/**/*.js",
+    "src/**/*.md",
+    "src/**/*.bin",
+    "types/**/*.d.ts",
+    "dist/types/**/*.d.ts",
+    "dist/types/**/*.d.ts.map",
+    "dist/build/*.min.js",
+    "dist/build/*.meta.json",
+    "dist/build/**/*.bin",
+    "tools/rendering/**/*.js",
+    "tools/_lib/cli-help.js",
+    "integrations/**/*.js",
+    "integrations/**/*.d.ts",
+    "integrations/**/*.md",
+    "integrations/**/*.json",
+    "!tools/**/*.test.js",
+    "!tools/**/_fixtures/**",
+    "!integrations/_e2e/**",
+    "!integrations/**/*.test.js",
+    "!src/**/*.test.js",
+    "!src/**/*.kat.js",
+    "!src/**/*.test.html",
+    "!src/**/__fixtures__/**",
+    "!dist/types/**/__fixtures__/**",
+    "docs",
+    "third-party",
+    "!docs/api-generated/**",
+    "!playground/**",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/main.d.ts",
+      "browser": "./src/main.js",
+      "import": "./src/main.js",
+      "default": "./src/main.js"
+    },
+    "./core/runtime": {
+      "types": "./dist/types/core/runtime.d.ts",
+      "default": "./src/core/runtime.js"
+    },
+    "./core/worker-helper": {
+      "types": "./dist/types/core/worker-helper.d.ts",
+      "browser": "./src/core/worker-helper.js",
+      "default": "./src/core/worker-helper.js"
+    },
+    "./core/readyState": {
+      "types": "./dist/types/core/readyState.d.ts",
+      "default": "./src/core/readyState.js"
+    },
+    "./core/logger": {
+      "types": "./dist/types/core/logger.d.ts",
+      "default": "./src/core/logger.js"
+    },
+    "./core/modules": {
+      "types": "./dist/types/core/modules.d.ts",
+      "default": "./src/core/modules.js"
+    },
+    "./core/runtime.js": {
+      "types": "./dist/types/core/runtime.d.ts",
+      "default": "./src/core/runtime.js"
+    },
+    "./core/worker-helper.js": {
+      "types": "./dist/types/core/worker-helper.d.ts",
+      "browser": "./src/core/worker-helper.js",
+      "default": "./src/core/worker-helper.js"
+    },
+    "./core/readyState.js": {
+      "types": "./dist/types/core/readyState.d.ts",
+      "default": "./src/core/readyState.js"
+    },
+    "./core/logger.js": {
+      "types": "./dist/types/core/logger.d.ts",
+      "default": "./src/core/logger.js"
+    },
+    "./core/modules.js": {
+      "types": "./dist/types/core/modules.d.ts",
+      "default": "./src/core/modules.js"
+    },
+    "./typed": {
+      "types": "./types/typed.d.ts",
+      "default": "./src/typed.js"
+    },
+    "./io/*.js": {
+      "types": "./dist/types/io/*.d.ts",
+      "default": "./src/io/*.js"
+    },
+    "./io/*": {
+      "types": "./dist/types/io/*.d.ts",
+      "default": "./src/io/*"
+    },
+    "./dom/*.js": {
+      "types": "./dist/types/dom/*.d.ts",
+      "browser": "./src/dom/*.js",
+      "default": "./src/dom/*.js"
+    },
+    "./dom/*": {
+      "types": "./dist/types/dom/*.d.ts",
+      "browser": "./src/dom/*",
+      "default": "./src/dom/*"
+    },
+    "./crypto/pkc/__fixtures__/*.js": null,
+    "./crypto/pkc/__fixtures__/*": null,
+    "./crypto/*.js": {
+      "types": "./dist/types/crypto/*.d.ts",
+      "default": "./src/crypto/*.js"
+    },
+    "./crypto/*": {
+      "types": "./dist/types/crypto/*.d.ts",
+      "default": "./src/crypto/*"
+    },
+    "./process/*.js": {
+      "types": "./dist/types/process/*.d.ts",
+      "default": "./src/process/*.js"
+    },
+    "./process/*": {
+      "types": "./dist/types/process/*.d.ts",
+      "default": "./src/process/*"
+    },
+    "./sanity/base": {
+      "default": "./src/sanity/base.js"
+    },
+    "./sanity/base.classic": {
+      "default": "./dist/build/sanity-base-classic.min.js"
+    },
+    "./sanity/community": {
+      "default": "./src/sanity/community.js"
+    },
+    "./sanity/community.classic": {
+      "default": "./dist/build/sanity-community-classic.min.js"
+    },
+    "./sanity/lockdown": {
+      "default": "./src/sanity/lockdown.js"
+    },
+    "./sanity/lockdown.apply": {
+      "default": "./src/sanity/lockdown-apply.js"
+    },
+    "./config": {
+      "default": "./fw.config.json"
+    },
+    "./vite": {
+      "types": "./integrations/vite/index.d.ts",
+      "default": "./integrations/vite/index.js"
+    },
+    "./vite-env": {
+      "types": "./integrations/vite/vite-env.d.ts"
+    },
+    "./esbuild": {
+      "types": "./integrations/esbuild/index.d.ts",
+      "default": "./integrations/esbuild/index.js"
+    },
+    "./rollup": {
+      "types": "./integrations/rollup/index.d.ts",
+      "default": "./integrations/rollup/index.js"
+    },
+    "./bun": {
+      "types": "./integrations/bun/index.d.ts",
+      "default": "./integrations/bun/index.js"
+    },
+    "./webpack": {
+      "types": "./integrations/webpack/index.d.ts",
+      "default": "./integrations/webpack/index.js"
+    },
+    "./astro": {
+      "types": "./integrations/astro/index.d.ts",
+      "default": "./integrations/astro/index.js"
+    },
+    "./vitest/shim": {
+      "default": "./integrations/vitest/bun-test-shim.js"
+    },
+    "./jest/shim": {
+      "default": "./integrations/jest/bun-test-shim.js"
+    },
+    "./next": {
+      "types": "./integrations/nextjs/index.d.ts",
+      "default": "./integrations/nextjs/index.js"
+    },
+    "./turbopack": {
+      "types": "./integrations/turbopack/index.d.ts",
+      "default": "./integrations/turbopack/index.js"
+    },
+    "./nest": {
+      "types": "./integrations/nestjs/index.d.ts",
+      "default": "./integrations/nestjs/index.js"
+    },
+    "./dist/build/*": {
+      "default": "./dist/build/*"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "bun test src/",
+    "test:watch": "bun test src/ --watch",
+    "types": "tsc -p tsconfig.types.json",
+    "types:watch": "tsc -p tsconfig.types.json --watch",
+    "types:registry": "fw-codegen registry",
+    "types:registry:check": "fw-codegen registry --check",
+    "types:audit": "fw-codegen audit",
+    "integrations:catalog": "fw-bundler catalog",
+    "integrations:catalog:check": "fw-bundler catalog --check",
+    "prepack": "bun run lint && bun run types && bun run types:registry && bun run prebuild",
+    "prebuild": "fw-bundler bundle",
+    "prebuild:presets": "fw-bundler bundle presets",
+    "prebuild:side-bundles": "fw-bundler bundle side-bundles",
+    "prebuild:minimal": "fw-bundler bundle minimal",
+    "prebuild:core": "fw-bundler bundle core",
+    "prebuild:site": "fw-bundler bundle site",
+    "prebuild:site-interactive": "fw-bundler bundle site-interactive",
+    "prebuild:spa": "fw-bundler bundle spa",
+    "prebuild:pwa": "fw-bundler bundle pwa",
+    "prebuild:full": "fw-bundler bundle full",
+    "prebuild:sanity": "fw-bundler bundle --sanity-only",
+    "prebuild:silent": "fw-bundler bundle --no-log --no-sanity-log",
+    "prebuild:esbuild": "fw-bundler bundle --backend esbuild",
+    "prebuild:rollup": "fw-bundler bundle --backend rollup",
+    "prebuild:node": "node --input-type=module -e \"import('@awacloud/tool-fw-bundler/bundle').then(m => m.runCli(process.argv.slice(1))).then(c => process.exit(c))\" -- --backend esbuild",
+    "build:standalone": "fw-bundler standalone",
+    "build:parseresult": "bun tools/rendering/precompilation/",
+    "build:aot": "bun tools/rendering/aot/",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "setup:e2e": "bun add --no-save esbuild rollup @rollup/plugin-node-resolve @rollup/plugin-terser webpack vite",
+    "e2e": "bun integrations/_e2e/run.mjs",
+    "e2e:playgrounds": "bun integrations/_e2e/playgrounds.mjs",
+    "e2e:preview": "node integrations/_e2e/preview.mjs",
+    "e2e:preview:install": "node integrations/_e2e/preview-provision.mjs",
+    "setup:vitest": "bun add --no-save vitest",
+    "test:vitest": "vitest run -c integrations/vitest/vitest.config.js",
+    "setup:jest": "bun add --no-save jest @jest/globals",
+    "test:jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js -c integrations/jest/jest.config.mjs",
+    "setup:typedoc": "bun add --no-save typedoc",
+    "docs:api": "rm -rf dist/types && bun run types && bun integrations/typedoc/categorize.js && typedoc --options integrations/typedoc/typedoc.json"
+  },
+  "devDependencies": {
+    "@awacloud/fw-wasm-crypto": "workspace:*",
+    "@awacloud/tool-fw-bundler": "workspace:*",
+    "@awacloud/tool-fw-codegen": "workspace:*",
+    "@eslint/js": "^10.0.1",
+    "@happy-dom/global-registrator": "^20.10.2",
+    "@types/bun": "latest",
+    "eslint": "^10.4.1",
+    "globals": "^15.0.0",
+    "playwright": "1.60.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/fw"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

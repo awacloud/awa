@@ -1,0 +1,49 @@
+NOTICE — vendored PQClean subset
+=================================
+
+Source:   https://github.com/PQClean/PQClean
+Commit:   202a8f96315f9ed219387a50f7e40d04af037ea8
+Vendored: packages/front/fw-wasm-crypto/vendor/pqclean/
+
+Schemes vendored
+----------------
+  FIPS-204 (ML-DSA):
+    crypto_sign/ml-dsa-44/clean/
+    crypto_sign/ml-dsa-65/clean/
+    crypto_sign/ml-dsa-87/clean/
+
+  NOTE: the round-3 SPHINCS+ sets first vendored here were removed once SLH-DSA
+  was re-sourced from OpenSSL's FIPS-205 implementation (see
+  vendor/NOTICE-openssl-slh-dsa). This tree no longer vendors any sphincs set.
+
+  Shared (FIPS-202 and SHA-2 helpers):
+    common/fips202.c  — public domain (SUPERCOP/Keccak by Ronny Van Keer,
+                        TweetFips202 authors; see file header); used by ml-dsa
+                        and the OpenSSL SLH-DSA freestanding hash adapter
+    common/fips202.h
+    common/sha2.c     — public domain (SUPERCOP by D. J. Bernstein; see
+                        file header); used by the OpenSSL SLH-DSA hash adapter
+    common/sha2.h
+    common/compat.h   — no explicit copyright; compiler-compatibility shims
+    common/randombytes.h — declaration only; definition is the package RNG seam
+                        (NOT PQClean's randombytes.c; MIT, omitted)
+
+Files NOT vendored (out of scope)
+----------------------------------
+  common/randombytes.c  — MIT, Daan Sprenkels; definition owned by task 01 seam
+  common/sp800-185.{c,h}, common/aes.{c,h}, common/nistseedexpander.{c,h},
+  common/crypto_declassify.h — not referenced by any vendored scheme
+  AVX2 backends, aarch64 backends, test harnesses, CI, other schemes
+
+SPDX license expressions
+-------------------------
+  crypto_sign/ml-dsa-*/clean/   :  CC0-1.0 (see each clean/LICENSE)
+  common/fips202.{c,h}          :  Public domain (see file headers)
+  common/sha2.{c,h}             :  Public domain (see file headers)
+  common/compat.h               :  (no license notice; header-only compat shims)
+  common/randombytes.h          :  (no license notice; declaration only)
+
+Aggregate SPDX expression: CC0-1.0
+
+CC0 carries no NOTICE obligation, but this file is recorded per the
+project's provenance policy for the W5 audit trail.

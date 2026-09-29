@@ -1,0 +1,38 @@
+---
+// src/pages/about.astro — 100% static page, no island.
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="fw × Astro — about">
+    <h1>About this example</h1>
+    <p>
+        Demo of the official <code>@awacloud/fw/astro</code> integration:
+        Astro runs on Vite, the integration re-injects the
+        <code>@awacloud/fw/vite</code> plugin via the
+        <code>astro:config:setup</code> hook, which makes the virtual
+        modules <code>virtual:@awacloud/fw/preset/*</code> available
+        everywhere — frontmatter (SSR) as well as client scripts.
+    </p>
+    <h2>Boundaries</h2>
+    <ul>
+        <li>
+            <strong>Frontmatter / SSR</strong>: only worker-safe modules
+            (<code>render.toHTML</code>, <code>parser</code>,
+            codecs, <code>valid</code>…). Never a DOM module.
+        </li>
+        <li>
+            <strong>Client scripts</strong>: the whole preset
+            (<code>uiSession</code>, <code>form</code>, <code>signal</code>,
+            <code>dom</code>, <code>events</code>…).
+        </li>
+        <li>
+            <strong>Sanity layer</strong>: <code>sanity: 'community'</code> in
+            <code>astro.config.mjs</code> is injected by the integration as a
+            <em>client-only</em> script on every page (including this one) —
+            never at SSR.
+        </li>
+    </ul>
+    <p>
+        This page loads no island: Astro ships only static HTML
+        (+ the sanity script injected by the integration).
+    </p>
+</Layout>

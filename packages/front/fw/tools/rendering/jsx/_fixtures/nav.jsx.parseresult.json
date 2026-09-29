@@ -1,0 +1,51 @@
+{
+  "template": [
+    {
+      "id": "main-nav",
+      "tag": "nav"
+    },
+    {
+      "id": "nav-list",
+      "tag": "ul",
+      "parent": "main-nav",
+      "content": "items"
+    },
+    {
+      "id": "nav-title",
+      "tag": "span",
+      "parent": "main-nav",
+      "content": "pageTitle"
+    }
+  ],
+  "iterates": {
+    "items": [
+      {
+        "id": "p0",
+        "tag": "li"
+      },
+      {
+        "id": "p1",
+        "tag": "a",
+        "parent": "p0",
+        "attrs": [
+          "href"
+        ],
+        "data": {
+          "href": ""
+        },
+        "text": "",
+        "map": [
+          {
+            "name": "href",
+            "prop": "href",
+            "data": true
+          },
+          {
+            "name": "label",
+            "prop": "text"
+          }
+        ]
+      }
+    ]
+  }
+}

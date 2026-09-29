@@ -1,0 +1,6 @@
+{
+  "name": "@fx/consumer",
+  "private": true,
+  "type": "module",
+  "main": "src/main.js"
+}

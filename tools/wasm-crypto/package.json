@@ -1,0 +1,46 @@
+{
+  "name": "@awacloud/tool-wasm-crypto",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Build tool that compiles and verifies the WebAssembly crypto modules used by @awacloud/fw, from each package's own C sources, validated against pinned test vectors and checked into the repo as committed bytes.",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "wasm-crypto": "bin/wasm-crypto.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./targets-schema": "./src/targets.schema.ts",
+    "./cmd/build": "./src/cmd/build.ts",
+    "./cmd/copy": "./src/cmd/copy.ts",
+    "./cmd/verify": "./src/cmd/verify.ts"
+  },
+  "files": [
+    "bin/**/*.ts",
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "build-env/toolchain.ts",
+    "build-env/pins.ts",
+    "wasm-crypto.config.example.json",
+    "README.md",
+    "CHANGELOG.md",
+    "NOTICE"
+  ],
+  "awa": {
+    "maturity": "L2",
+    "coverageFloor": 0.92
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "tools/wasm-crypto"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

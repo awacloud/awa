@@ -1,0 +1,45 @@
+{
+  "name": "@awacloud/tool-fw-bundler",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "description": "Production build tools for @awacloud/fw-shaped packages: bundles presets and variants into distributable output, generates self-contained standalone factories, and emits a deterministic module-catalog artifact.",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "fw-bundler": "bin/fw-bundler.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./bundle": "./src/bundle/index.js",
+    "./standalone": "./src/standalone/index.js",
+    "./modlib": "./src/modlib/index.js"
+  },
+  "files": [
+    "bin/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.ts",
+    "!src/**/*.test.js",
+    "!src/**/*.test.ts",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "NOTICE"
+  ],
+  "awa": {
+    "maturity": "L2",
+    "coverageFloor": 0.6
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "tools/fw-bundler"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

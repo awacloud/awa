@@ -1,0 +1,10 @@
+{
+    "_comment": "Playground: consume @awacloud/fw under Deno AUTONOMOUSLY via a relative import map to the in-repo sources (the package is not published to npm; standalone operation is preferred). `deno task start` runs app.ts.",
+    "imports": {
+        "@awacloud/fw": "../../../src/main.js",
+        "@awacloud/fw/": "../../../src/"
+    },
+    "tasks": {
+        "start": "deno run --allow-read app.ts"
+    }
+}

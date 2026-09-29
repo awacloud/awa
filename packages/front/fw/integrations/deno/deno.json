@@ -1,0 +1,10 @@
+{
+    "_comment": "Example Deno config for consuming @awacloud/fw. Maps the package to npm: specifiers (post-publication). In-repo, check-deno.ts imports ../../src directly and needs no map.",
+    "imports": {
+        "@awacloud/fw": "npm:@awacloud/fw",
+        "@awacloud/fw/": "npm:/@awacloud/fw/"
+    },
+    "tasks": {
+        "fw:check": "deno run --allow-read integrations/deno/check-deno.ts"
+    }
+}

@@ -1,0 +1,59 @@
+# Containerfile — linux-x64 wasm-crypto build image
+#
+# IMPORTANT: linux-x64 ONLY. Windows and macOS use the native local install
+# documented in docs/tools/wasm-crypto.md ("Self-hosted toolchain").
+#
+# The wasi-sdk toolchain is fetched at image BUILD time via downloadWasiSdk()
+# (tools/wasm-crypto/build-env/toolchain.ts). No SDK binaries are committed to
+# the repository — they are always acquired on first build.
+#
+# Usage (via container.ts runner — preferred):
+#   bun tools/wasm-crypto/build-env/container.ts --pkg <pkg-rel-path>
+#
+# Manual usage:
+#   podman build -t awa-wasm-crypto-build -f tools/wasm-crypto/build-env/Containerfile .
+#   podman run --rm \
+#     -v $(pwd):/workspace -w /workspace \
+#     -e PKG_DIR=<repo-relative-posix-path> \
+#     awa-wasm-crypto-build
+
+FROM debian:stable-slim
+
+# ─── System dependencies ───────────────────────────────────────────────────────
+# ca-certificates: HTTPS for Bun install and SDK fetch
+# xz-utils, tar: unpack tarballs (wasi-sdk tar.gz)
+# curl, unzip: used by the Bun install script
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        xz-utils \
+        tar \
+        curl \
+        unzip && \
+    rm -rf /var/lib/apt/lists/*
+
+# ─── Bun install ──────────────────────────────────────────────────────────────
+# Pin Bun 1.2.17 (matches the monorepo's required runtime version).
+ENV BUN_INSTALL=/usr/local
+RUN curl -fsSL https://bun.sh/install | bash -s -- bun-v1.2.17
+
+# ─── Workspace ────────────────────────────────────────────────────────────────
+# The repo is mounted at /workspace at run time — not baked into the image.
+WORKDIR /workspace
+
+# ─── SDK acquisition ARG ──────────────────────────────────────────────────────
+# Override to install the SDK elsewhere inside the image build context.
+# Must match DEFAULT_SDK_DIR from build-env/toolchain.ts at run time
+# (tools/wasm-crypto/build-env/sdk relative to the mounted repo root).
+ARG SDK_INSTALL_DIR=tools/wasm-crypto/build-env/sdk
+
+# ─── Default command ──────────────────────────────────────────────────────────
+# The container expects the repo to be mounted at /workspace.
+# PKG_DIR must be set to a repo-relative POSIX path via -e PKG_DIR=<path>.
+#
+# Step 1: acquire wasi-sdk-33 via downloadWasiSdk() (no second URL/pin literal).
+# Step 2: run the wasm-crypto build for the mounted package.
+CMD bun -e " \
+  import { downloadWasiSdk } from './tools/wasm-crypto/build-env/toolchain.ts'; \
+  await downloadWasiSdk(); \
+" && bun cli.ts wasm-crypto build --pkg "$PKG_DIR"

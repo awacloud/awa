@@ -1,0 +1,19 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "name": "@awacloud/fw — Référence API (générée)",
+    "entryPoints": ["../../dist/types"],
+    "entryPointStrategy": "expand",
+    "exclude": [
+        "**/*.test.d.ts",
+        "**/*.kat.d.ts",
+        "**/registry.generated.d.ts",
+        "**/typed.d.ts"
+    ],
+    "tsconfig": "./tsconfig.typedoc.json",
+    "out": "../../docs/api-generated",
+    "readme": "none",
+    "excludeInternal": true,
+    "excludePrivate": true,
+    "githubPages": false,
+    "hideGenerator": false
+}

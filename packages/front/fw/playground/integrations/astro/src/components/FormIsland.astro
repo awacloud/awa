@@ -1,0 +1,71 @@
+---
+// src/components/FormIsland.astro
+// "form validation" island: fw `form` module (multi-field state,
+// dirty/touched/errors, async submit) + keyed list `uiSession.list`.
+// Same recipe as FwIsland.astro: container + hoisted <script>.
+---
+<div data-fw-form-island></div>
+
+<script>
+    import { runtime } from 'virtual:@awacloud/fw/preset/site-interactive';
+    import { FORM_TPL, ENTRY_TPL } from '../lib/templates.js';
+
+    const tpl       = runtime.resolve('template');
+    const uiSession = runtime.resolve('uiSession');
+    const form      = runtime.resolve('form');
+
+    let seq = 0;
+    for (const el of document.querySelectorAll('[data-fw-form-island]')) {
+        const ctx = `fw-form-island-${++seq}`;
+        tpl.init(ctx, { to: el, main: true });
+        const ui = uiSession(ctx);
+
+        // Form shell + keyed list wired to the ${rows} slot.
+        ui.add([{ id: 'signup', block: ui.parse(FORM_TPL) }]);
+        const entries = ui.list('signup', 'rows', {
+            keyFn: (e) => e.key,
+            block: ui.parse(ENTRY_TPL),
+            eqFn:  'shallow',
+        });
+        let nextKey = 0;
+
+        // Form controller: sync per-field validation + async submit.
+        const controller = form.create({
+            fields: {
+                name: {
+                    type: 'string',
+                    required: true,
+                    validate: (v) => (v.trim().length >= 2 ? null : 'At least 2 characters'),
+                },
+                email: {
+                    type: 'string',
+                    required: true,
+                    validate: (v) => (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? null : 'Invalid email'),
+                },
+            },
+            onSubmit: async (values) => {
+                await new Promise((r) => setTimeout(r, 250)); // fake API call
+                entries.push({ key: `entry-${++nextKey}`, name: values.name, email: values.email });
+            },
+        });
+
+        // Two-way binding field ↔ state (+ blur → touched).
+        controller.attach('name',  ui.get('signup', 'name'));
+        controller.attach('email', ui.get('signup', 'email'));
+
+        // A single subscription drives every error/state surface.
+        controller.subscribe((snap) => {
+            ui.text('signup', 'nameError',  snap.touched.name  && snap.errors.name  ? snap.errors.name  : '');
+            ui.text('signup', 'emailError', snap.touched.email && snap.errors.email ? snap.errors.email : '');
+            ui.attr('signup', 'send', 'disabled', snap.submitting ? 'disabled' : false);
+        });
+
+        ui.on('signup', 'root', 'submit', (e) => {
+            e.preventDefault();
+            controller.submit().then((ok) => {
+                ui.text('signup', 'state', ok ? 'Welcome aboard!' : 'Please fix the errors above.');
+                if (ok) controller.reset();
+            });
+        });
+    }
+</script>

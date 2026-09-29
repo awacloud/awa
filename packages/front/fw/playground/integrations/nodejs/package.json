@@ -1,0 +1,12 @@
+{
+  "name": "@awacloud/playground-nodejs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Node-pure 'à la carte' consumer of @awacloud/fw — no bundler.",
+  "scripts": {
+    "postinstall": "node ../../_tools/link-fw.mjs",
+    "setup": "node ../../_tools/link-fw.mjs",
+    "start": "node app.mjs"
+  }
+}

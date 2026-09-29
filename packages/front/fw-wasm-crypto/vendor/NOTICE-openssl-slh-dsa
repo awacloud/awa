@@ -1,0 +1,50 @@
+OpenSSL SLH-DSA (FIPS-205) core — vendored source notice
+=========================================================
+
+Origin
+------
+Upstream: OpenSSL (https://github.com/openssl/openssl)
+Tag:      openssl-3.5.0
+Commit:   02192e014a72972a398eee3106f0ec369eabc1f1 (annotated tag object)
+Path:     crypto/slh_dsa/** and include/crypto/slh_dsa.h
+License:  Apache License 2.0
+
+Only the PORTABLE FIPS-205 SLH-DSA algorithm core is vendored here (FORS, WOTS+,
+XMSS, hypertree, address encoding, parameter sets, and the sign/verify driver).
+The EVP/provider-coupled translation units (slh_hash.c, slh_dsa_key.c,
+slh_dsa_hash_ctx.c) are NOT vendored: they are replaced by a freestanding
+adapter under csrc/slhdsa/** that implements the OSSL_SLH_HASHFUNC_* vtable on
+top of vendor/pqclean/common/{fips202,sha2}.c and provides a minimal
+freestanding key/context and OpenSSL-infra compatibility layer.
+
+slh_dsa_pub.h is the upstream include/crypto/slh_dsa.h, vendored next to the core
+under the name slh_dsa_pub.h; the freestanding compat header tree maps
+#include "crypto/slh_dsa.h" onto it.
+
+Vendored files (13):
+  slh_adrs.c slh_adrs.h slh_dsa.c slh_dsa_key.h slh_dsa_local.h slh_dsa_pub.h
+  slh_fors.c slh_hash.h slh_hypertree.c slh_params.c slh_params.h slh_wots.c
+  slh_xmss.c
+
+Committed-tree SHA-256 (sorted POSIX paths, single running SHA-256 over
+"<relpath>\0<bytes>" per file):
+  20a5f860014d4008b95084cb40c5df85c5e6694dbef89ac755136be5396ef7a0
+
+
+Apache License 2.0 obligation
+-----------------------------
+Copyright 2024-2025 The OpenSSL Project Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+these files except in compliance with the License. You may obtain a copy of the
+License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+The per-file headers in the vendored sources carry the upstream SPDX/copyright
+notice verbatim and are preserved unchanged.

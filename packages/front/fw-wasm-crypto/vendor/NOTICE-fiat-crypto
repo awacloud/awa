@@ -1,0 +1,68 @@
+NOTICE — vendored fiat-crypto v0.1.6 subset
+============================================
+
+Source:   https://github.com/mit-plv/fiat-crypto/archive/refs/tags/v0.1.6.tar.gz
+Version:  v0.1.6
+Authors:  The fiat-crypto authors (see AUTHORS)
+Vendored: packages/front/fw-wasm-crypto/vendor/fiat-crypto/
+
+fiat-crypto generates machine-verified correct-by-construction field-arithmetic
+code for prime-field curves (P-256, P-384, P-521, Curve25519, etc.) from
+formal proofs in Coq/Bedrock2. The generated C files are the sole compilation
+output — no proofs or Coq toolchain are needed at build time.
+
+Files vendored
+--------------
+  fiat-c/src/p256_64.c         — P-256 field arithmetic (64-bit)
+  fiat-c/src/p256_32.c         — P-256 field arithmetic (32-bit)
+  fiat-c/src/p256_scalar_64.c  — P-256 scalar arithmetic (64-bit)
+  fiat-c/src/p256_scalar_32.c  — P-256 scalar arithmetic (32-bit)
+  fiat-c/src/p384_64.c         — P-384 field arithmetic (64-bit)
+  fiat-c/src/p384_32.c         — P-384 field arithmetic (32-bit)
+  fiat-c/src/p384_scalar_64.c  — P-384 scalar arithmetic (64-bit)
+  fiat-c/src/p384_scalar_32.c  — P-384 scalar arithmetic (32-bit)
+  fiat-c/src/p521_64.c         — P-521 field arithmetic (64-bit)
+  fiat-c/src/p521_32.c         — P-521 field arithmetic (32-bit)
+  fiat-c/src/curve25519_64.c   — X25519 / Ed25519 field arith (64-bit)
+  fiat-c/src/curve25519_32.c   — X25519 / Ed25519 field arith (32-bit)
+  (and all other fiat-c/src/*.c field-arithmetic files)
+  AUTHORS, LICENSE-MIT, LICENSE-BSD-1, LICENSE-APACHE
+
+Files NOT vendored (out of scope)
+-----------------------------------
+  fiat-amd64/, fiat-bedrock2/, fiat-go/, fiat-java/, fiat-rust/, fiat-zig/
+  fiat-html/, fiat-json/   — other language targets
+  src/                     — Coq proof sources
+  inversion/, output-tests/, etc/ — proof tooling
+  Makefile*, _CoqProject*, *.in, *.local  — build/proof infra
+  README.md, *.md          — project documentation
+
+License (triple — any one may be used)
+---------------------------------------
+  MIT: Copyright (c) 2015-2020 the fiat-crypto authors
+  Apache-2.0: Copyright 2015-2020 the fiat-crypto authors
+  BSD-1-Clause: Copyright (c) 2015-2020 the fiat-crypto authors
+
+SPDX-License-Identifier: MIT AND Apache-2.0 AND BSD-1-Clause
+
+The MIT License (MIT)
+
+Copyright (c) 2015-2020 the fiat-crypto authors (see the AUTHORS file).
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

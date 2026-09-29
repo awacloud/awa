@@ -1,0 +1,137 @@
+{
+    "generated": "generated file — run `node _tools/gen-index.mjs` to refresh (do not edit by hand)",
+    "axes": [
+        {
+            "id": "integrations",
+            "label": "Integrations",
+            "items": [
+                {
+                    "name": "astro",
+                    "dir": "./integrations/astro/",
+                    "title": "Playground — Astro",
+                    "description": "Multi-page Astro mini-site (SSG) with fw islands: a reactive counter, form validation, and hydrated SSR markup. Demonstrates @awacloud/fw/astro.",
+                    "run": "npm i && npm run dev",
+                    "browser": false,
+                    "install": true
+                },
+                {
+                    "name": "bun",
+                    "dir": "./integrations/bun/",
+                    "title": "Playground — Bun consumer",
+                    "description": "Runnable example of a third-party app consuming @awacloud/fw virtual presets via the official @awacloud/fw/bun plugin (default export fwBun).",
+                    "run": "bun build.ts && bun dist/app.js",
+                    "browser": false,
+                    "install": true
+                },
+                {
+                    "name": "deno",
+                    "dir": "./integrations/deno/",
+                    "title": "Playground — Deno",
+                    "description": "Consumer-style example: run @awacloud/fw under Deno using native Web APIs, via the npm:@awacloud/fw import map. See the integration doc:…",
+                    "run": "deno run --allow-read app.ts",
+                    "browser": false,
+                    "install": false
+                },
+                {
+                    "name": "esbuild",
+                    "dir": "./integrations/esbuild/",
+                    "title": "Playground — esbuild",
+                    "description": "Mini-app built with the esbuild.build API and the consumer plugin @awacloud/fw/esbuild (default export fwEsbuild).",
+                    "run": "npm i && node build.mjs && npx serve --no-clean-urls .",
+                    "browser": "./integrations/esbuild/index.html",
+                    "install": true
+                },
+                {
+                    "name": "eslint",
+                    "dir": "./integrations/eslint/",
+                    "title": "Playground — ESLint (fw/no-factory-capture)",
+                    "description": "Demonstrates the custom rule fw/no-factory-capture: a module factory() must be self-contained because runtime.serialize() ships factory.toString() into a…",
+                    "run": "npm i",
+                    "browser": false,
+                    "install": true
+                },
+                {
+                    "name": "jest",
+                    "dir": "./integrations/jest/",
+                    "title": "Playground — Jest",
+                    "description": "Mini-consumer running a bun:test-style test under Jest (native ESM).",
+                    "run": "npm i && node --experimental-vm-modules node_modules/jest/bin/jest.js -c jest.config.mjs",
+                    "browser": false,
+                    "install": true
+                },
+                {
+                    "name": "nest",
+                    "dir": "./integrations/nest/",
+                    "title": "Playground — NestJS consumer",
+                    "description": "Runnable example of a NestJS backend reusing @awacloud/fw's hand-written crypto/codec primitives server-side, via the official @awacloud/fw/nest integration…",
+                    "run": "npm i && npm start",
+                    "browser": false,
+                    "install": true
+                },
+                {
+                    "name": "next",
+                    "dir": "./integrations/next/",
+                    "title": "Playground — Next.js",
+                    "description": "Multi-page Next.js App Router app using @awacloud/fw via Webpack: a hydrated SSR island, a reactive counter island, and a form-validation island.",
+                    "run": "npm i && npm run dev",
+                    "browser": false,
+                    "install": true
+                },
+                {
+                    "name": "nodejs",
+                    "dir": "./integrations/nodejs/",
+                    "title": "Playground — Node.js (\"à la carte\" consumption)",
+                    "description": "Runtime example: consuming @awacloud/fw under plain Node, without a bundler, by importing a few worker-safe modules by subpath then resolving them via the…",
+                    "run": "node app.mjs",
+                    "browser": false,
+                    "install": true
+                },
+                {
+                    "name": "rollup",
+                    "dir": "./integrations/rollup/",
+                    "title": "Playground — Rollup",
+                    "description": "Minimal Rollup consumer build for @awacloud/fw/rollup.",
+                    "run": "npm i && npx rollup -c && npx serve --no-clean-urls .",
+                    "browser": "./integrations/rollup/index.html",
+                    "install": true
+                },
+                {
+                    "name": "typedoc",
+                    "dir": "./integrations/typedoc/",
+                    "title": "Playground — TypeDoc",
+                    "description": "Type: generated-doc example · Integration: @awacloud/fw/typedoc",
+                    "run": "bun run docs:api",
+                    "browser": false,
+                    "install": false
+                },
+                {
+                    "name": "vite",
+                    "dir": "./integrations/vite/",
+                    "title": "Playground — Vite",
+                    "description": "Minimal Vite consumer app for @awacloud/fw/vite.",
+                    "run": "npm i && npm run dev",
+                    "browser": "./integrations/vite/index.html",
+                    "install": true
+                },
+                {
+                    "name": "vitest",
+                    "dir": "./integrations/vitest/",
+                    "title": "Playground — Vitest",
+                    "description": "Mini-consumer running a test written in bun:test style under Vitest / Node, without touching the test. See the integration @awacloud/fw/vitest.",
+                    "run": "npm i && npx vitest run",
+                    "browser": false,
+                    "install": true
+                },
+                {
+                    "name": "webpack",
+                    "dir": "./integrations/webpack/",
+                    "title": "Playground — Webpack",
+                    "description": "Minimal Webpack 5 consumer build for @awacloud/fw using the official FwWebpackPlugin (scheme-based virtual modules, zero custom deps).",
+                    "run": "npm i && npx webpack && npx serve --no-clean-urls dist",
+                    "browser": "./integrations/webpack/index.html",
+                    "install": true
+                }
+            ]
+        }
+    ]
+}

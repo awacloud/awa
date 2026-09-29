@@ -1,0 +1,463 @@
+[
+  {
+    "algo": "argon2",
+    "wasmModule": "argon2",
+    "exportName": "argon2Wasm",
+    "source": "own-argon2",
+    "sourceKind": "own",
+    "shim": "shims/argon2.c",
+    "cSources": [
+      "csrc/argon2/argon2.c",
+      "csrc/blake2/blake2b.c"
+    ],
+    "cflags": [],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "argon2id_hash"],
+    "vectors": ["references/SPEC/RFC/rfc9106.txt"]
+  },
+  {
+    "algo": "ml_kem",
+    "wasmModule": "ml_kem",
+    "exportName": "mlKemWasm",
+    "source": "mlkem-native",
+    "sourceKind": "vendored-fork",
+    "shim": "shims/mlkem.c",
+    "cSources": [
+      "csrc/mlkem/mlkem512.c",
+      "csrc/mlkem/mlkem768.c",
+      "csrc/mlkem/mlkem1024.c",
+      "csrc/rng/rng.c"
+    ],
+    "cStd": "c99",
+    "cflags": ["-O2"],
+    "simd": true,
+    "exports": ["memory", "alloc", "free", "mlkem_keygen", "mlkem_encaps", "mlkem_decaps", "rng_stage", "rng_reset"],
+    "vectors": [
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ML-KEM-keyGen-FIPS203/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ML-KEM-encapDecap-FIPS203/prompt.json"
+    ]
+  },
+  {
+    "algo": "ml_dsa",
+    "wasmModule": "ml_dsa",
+    "exportName": "mlDsaWasm",
+    "source": "pqclean",
+    "sourceKind": "vendored-fork",
+    "shim": "shims/mldsa.c",
+    "cSources": [
+      "vendor/pqclean/crypto_sign/ml-dsa-44/clean/sign.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-44/clean/packing.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-44/clean/polyvec.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-44/clean/poly.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-44/clean/ntt.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-44/clean/reduce.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-44/clean/rounding.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-44/clean/symmetric-shake.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-65/clean/sign.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-65/clean/packing.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-65/clean/polyvec.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-65/clean/poly.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-65/clean/ntt.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-65/clean/reduce.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-65/clean/rounding.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-65/clean/symmetric-shake.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-87/clean/sign.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-87/clean/packing.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-87/clean/polyvec.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-87/clean/poly.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-87/clean/ntt.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-87/clean/reduce.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-87/clean/rounding.c",
+      "vendor/pqclean/crypto_sign/ml-dsa-87/clean/symmetric-shake.c",
+      "vendor/pqclean/common/fips202.c",
+      "csrc/pqclean/pqcl_support.c",
+      "csrc/rng/rng.c"
+    ],
+    "cStd": "c99",
+    "cflags": ["-O2", "-Wl,-z,stack-size=4194304", "-Ipackages/front/fw-wasm-crypto/csrc/pqclean/compat", "-Ipackages/front/fw-wasm-crypto/vendor/pqclean/common"],
+    "simd": true,
+    "exports": ["memory", "alloc", "free", "mldsa_keygen", "mldsa_sign", "mldsa_verify", "rng_stage", "rng_reset"],
+    "vectors": [
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ML-DSA-keyGen-FIPS204/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ML-DSA-sigGen-FIPS204/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ML-DSA-sigVer-FIPS204/prompt.json"
+    ]
+  },
+  {
+    "algo": "slh_dsa",
+    "wasmModule": "slh_dsa",
+    "exportName": "slhDsaWasm",
+    "source": "openssl-slh-dsa",
+    "sourceKind": "vendored-fork",
+    "shim": "shims/slhdsa.c",
+    "cSources": [
+      "vendor/openssl-slh-dsa/slh_adrs.c",
+      "vendor/openssl-slh-dsa/slh_dsa.c",
+      "vendor/openssl-slh-dsa/slh_fors.c",
+      "vendor/openssl-slh-dsa/slh_hypertree.c",
+      "vendor/openssl-slh-dsa/slh_params.c",
+      "vendor/openssl-slh-dsa/slh_wots.c",
+      "vendor/openssl-slh-dsa/slh_xmss.c",
+      "csrc/slhdsa/slh_hash_adapter.c",
+      "csrc/slhdsa/slh_entry.c",
+      "csrc/slhdsa/slh_support.c",
+      "vendor/pqclean/common/fips202.c",
+      "vendor/pqclean/common/sha2.c",
+      "csrc/pqclean/pqcl_support.c",
+      "csrc/rng/rng.c"
+    ],
+    "cStd": "c99",
+    "cflags": ["-O2", "-Wl,-z,stack-size=8388608", "-Ipackages/front/fw-wasm-crypto/csrc/slhdsa/ossl", "-Ipackages/front/fw-wasm-crypto/csrc/slhdsa/compat", "-Ipackages/front/fw-wasm-crypto/csrc/pqclean/compat", "-Ipackages/front/fw-wasm-crypto/vendor/openssl-slh-dsa", "-Ipackages/front/fw-wasm-crypto/vendor/pqclean/common"],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "slhdsa_keygen", "slhdsa_sign", "slhdsa_verify", "rng_stage", "rng_reset"],
+    "vectors": [
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SLH-DSA-keyGen-FIPS205/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SLH-DSA-sigGen-FIPS205/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SLH-DSA-sigVer-FIPS205/prompt.json"
+    ]
+  },
+  {
+    "algo": "sha3",
+    "wasmModule": "sha3",
+    "exportName": "sha3Wasm",
+    "source": "own-sha3",
+    "sourceKind": "own",
+    "shim": "shims/sha3.c",
+    "cSources": [
+      "csrc/sha3/keccak.c",
+      "csrc/sha3/sha3.c"
+    ],
+    "cflags": [],
+    "simd": true,
+    "exports": ["memory", "alloc", "free", "sha3"],
+    "vectors": [
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SHA3-256-2.0/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SHAKE-128-1.0/prompt.json"
+    ]
+  },
+  {
+    "algo": "blake2b",
+    "wasmModule": "blake2b",
+    "exportName": "blake2bWasm",
+    "source": "own-blake2",
+    "sourceKind": "own",
+    "shim": "shims/blake2b.c",
+    "cSources": [
+      "csrc/blake2/blake2b.c"
+    ],
+    "cflags": [],
+    "simd": true,
+    "exports": ["memory", "alloc", "free", "blake2b"],
+    "vectors": ["references/SPEC/RFC/rfc7693.txt"]
+  },
+  {
+    "algo": "chacha20poly1305",
+    "wasmModule": "chacha20poly1305",
+    "exportName": "chacha20poly1305Wasm",
+    "source": "own-chacha20poly1305",
+    "sourceKind": "own",
+    "shim": "shims/chacha20poly1305.c",
+    "cSources": [
+      "csrc/chacha20poly1305/chacha20.c",
+      "csrc/chacha20poly1305/poly1305.c"
+    ],
+    "cflags": [],
+    "simd": true,
+    "exports": ["memory", "alloc", "free", "aead_seal", "aead_open"],
+    "vectors": ["references/SPEC/RFC/rfc8439.txt"]
+  },
+  {
+    "algo": "cmac",
+    "wasmModule": "cmac",
+    "exportName": "cmacWasm",
+    "source": "own-cmac-over-bearssl-aes",
+    "sourceKind": "own",
+    "shim": "shims/cmac.c",
+    "cSources": [
+      "csrc/cmac/cmac.c",
+      "vendor/bearssl/src/symcipher/aes_ct64.c",
+      "vendor/bearssl/src/symcipher/aes_ct64_enc.c",
+      "vendor/bearssl/src/symcipher/aes_ct.c",
+      "vendor/bearssl/src/codec/dec32le.c"
+    ],
+    "cStd": "c99",
+    "cflags": ["-DBR_CT64=1", "-Ipackages/front/fw-wasm-crypto/csrc/bearssl/compat", "-Ipackages/front/fw-wasm-crypto/vendor/bearssl/inc", "-Ipackages/front/fw-wasm-crypto/vendor/bearssl/src", "-DWASM_NO_AESNI=1"],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "aes_cmac"],
+    "vectors": ["references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/CMAC-AES-1.0/prompt.json"]
+  },
+  {
+    "algo": "sha2",
+    "wasmModule": "sha2",
+    "exportName": "sha2Wasm",
+    "source": "own-sha2",
+    "sourceKind": "own",
+    "shim": "shims/sha2.c",
+    "cSources": [
+      "csrc/sha2/sha2.c"
+    ],
+    "cflags": [],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "sha2"],
+    "vectors": [
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SHA2-256-1.0/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SHA2-384-1.0/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SHA2-512-1.0/prompt.json"
+    ]
+  },
+  {
+    "algo": "hmac",
+    "wasmModule": "hmac",
+    "exportName": "hmacWasm",
+    "source": "own-hmac",
+    "sourceKind": "own",
+    "shim": "shims/hmac.c",
+    "cSources": [
+      "csrc/hmac/hmac.c",
+      "csrc/sha2/sha2.c"
+    ],
+    "cflags": [],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "hmac"],
+    "vectors": [
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/HMAC-SHA2-256-2.0/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/HMAC-SHA2-384-2.0/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/HMAC-SHA2-512-2.0/prompt.json"
+    ]
+  },
+  {
+    "algo": "pbkdf2",
+    "wasmModule": "pbkdf2",
+    "exportName": "pbkdf2Wasm",
+    "source": "own-pbkdf2",
+    "sourceKind": "own",
+    "shim": "shims/pbkdf2.c",
+    "cSources": [
+      "csrc/pbkdf2/pbkdf2.c",
+      "csrc/hmac/hmac.c",
+      "csrc/sha2/sha2.c"
+    ],
+    "cflags": [],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "pbkdf2"],
+    "vectors": ["references/SPEC/RFC/rfc6070-pbkdf2.json"]
+  },
+  {
+    "algo": "hkdf",
+    "wasmModule": "hkdf",
+    "exportName": "hkdfWasm",
+    "source": "own-hkdf",
+    "sourceKind": "own",
+    "shim": "shims/hkdf.c",
+    "cSources": [
+      "csrc/hkdf/hkdf.c",
+      "csrc/hmac/hmac.c",
+      "csrc/sha2/sha2.c"
+    ],
+    "cflags": [],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "hkdf"],
+    "vectors": ["references/SPEC/RFC/rfc5869-hkdf.json"]
+  },
+  {
+    "algo": "aes",
+    "wasmModule": "aes",
+    "exportName": "aesWasm",
+    "source": "bearssl",
+    "sourceKind": "vendored",
+    "shim": "shims/aes.c",
+    "cSources": [
+      "vendor/bearssl/src/symcipher/aes_ct64.c",
+      "vendor/bearssl/src/symcipher/aes_ct64_enc.c",
+      "vendor/bearssl/src/symcipher/aes_ct64_dec.c",
+      "vendor/bearssl/src/symcipher/aes_ct64_ctr.c",
+      "vendor/bearssl/src/symcipher/aes_ct64_cbcenc.c",
+      "vendor/bearssl/src/symcipher/aes_ct64_cbcdec.c",
+      "vendor/bearssl/src/symcipher/aes_ct.c",
+      "vendor/bearssl/src/codec/enc32le.c",
+      "vendor/bearssl/src/codec/dec32le.c",
+      "vendor/bearssl/src/hash/ghash_ctmul64.c",
+      "vendor/bearssl/src/aead/gcm.c"
+    ],
+    "cStd": "c99",
+    "cflags": ["-O2", "-DBR_CT64=1", "-Ipackages/front/fw-wasm-crypto/csrc/bearssl/compat", "-Ipackages/front/fw-wasm-crypto/vendor/bearssl/inc", "-Ipackages/front/fw-wasm-crypto/vendor/bearssl/src", "-DWASM_NO_AESNI=1"],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "aes_gcm_seal", "aes_gcm_open", "aes_cbc_enc", "aes_cbc_dec", "aes_ctr"],
+    "vectors": ["references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ACVP-AES-GCM-1.0/prompt.json"]
+  },
+  {
+    "algo": "rsa",
+    "wasmModule": "rsa",
+    "exportName": "rsaWasm",
+    "source": "bearssl",
+    "sourceKind": "vendored",
+    "shim": "shims/rsa.c",
+    "cSources": [
+      "vendor/bearssl/src/rsa/rsa_i31_keygen.c",
+      "vendor/bearssl/src/rsa/rsa_i31_keygen_inner.c",
+      "vendor/bearssl/src/rsa/rsa_i31_modulus.c",
+      "vendor/bearssl/src/rsa/rsa_i31_privexp.c",
+      "vendor/bearssl/src/rsa/rsa_i31_pubexp.c",
+      "vendor/bearssl/src/rsa/rsa_i31_pkcs1_sign.c",
+      "vendor/bearssl/src/rsa/rsa_i31_pkcs1_vrfy.c",
+      "vendor/bearssl/src/rsa/rsa_pkcs1_sig_pad.c",
+      "vendor/bearssl/src/rsa/rsa_pkcs1_sig_unpad.c",
+      "vendor/bearssl/src/rsa/rsa_i31_oaep_decrypt.c",
+      "vendor/bearssl/src/rsa/rsa_oaep_pad.c",
+      "vendor/bearssl/src/rsa/rsa_oaep_unpad.c",
+      "vendor/bearssl/src/rsa/rsa_i31_pub.c",
+      "vendor/bearssl/src/rsa/rsa_i31_priv.c",
+      "vendor/bearssl/src/int/i31_add.c",
+      "vendor/bearssl/src/int/i31_bitlen.c",
+      "vendor/bearssl/src/int/i31_decmod.c",
+      "vendor/bearssl/src/int/i31_decode.c",
+      "vendor/bearssl/src/int/i31_decred.c",
+      "vendor/bearssl/src/int/i31_encode.c",
+      "vendor/bearssl/src/int/i31_fmont.c",
+      "vendor/bearssl/src/int/i31_iszero.c",
+      "vendor/bearssl/src/int/i31_moddiv.c",
+      "vendor/bearssl/src/int/i32_div32.c",
+      "vendor/bearssl/src/int/i31_modpow.c",
+      "vendor/bearssl/src/int/i31_modpow2.c",
+      "vendor/bearssl/src/int/i31_montmul.c",
+      "vendor/bearssl/src/int/i31_mulacc.c",
+      "vendor/bearssl/src/int/i31_muladd.c",
+      "vendor/bearssl/src/int/i31_ninv31.c",
+      "vendor/bearssl/src/int/i31_reduce.c",
+      "vendor/bearssl/src/int/i31_rshift.c",
+      "vendor/bearssl/src/int/i31_sub.c",
+      "vendor/bearssl/src/int/i31_tmont.c",
+      "vendor/bearssl/src/codec/ccopy.c",
+      "vendor/bearssl/src/codec/dec32be.c",
+      "vendor/bearssl/src/codec/dec64be.c",
+      "vendor/bearssl/src/codec/enc32be.c",
+      "vendor/bearssl/src/codec/enc64be.c",
+      "vendor/bearssl/src/hash/sha2small.c",
+      "vendor/bearssl/src/hash/sha2big.c",
+      "vendor/bearssl/src/hash/mgf1.c",
+      "vendor/bearssl/src/mac/hmac.c",
+      "vendor/bearssl/src/rand/hmac_drbg.c",
+      "csrc/rng/rng.c"
+    ],
+    "cStd": "c99",
+    "cflags": ["-O2", "-Ipackages/front/fw-wasm-crypto/csrc/bearssl/compat", "-Ipackages/front/fw-wasm-crypto/vendor/bearssl/inc", "-Ipackages/front/fw-wasm-crypto/vendor/bearssl/src"],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "rsa_keygen", "rsa_oaep_enc", "rsa_oaep_dec", "rsa_sign", "rsa_verify", "rng_stage", "rng_reset"],
+    "vectors": [
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/RSA-SigGen-FIPS186-5/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/RSA-SigVer-FIPS186-5/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/RSA-SigVer-FIPS186-4/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/RSA-SigGen-FIPS186-4/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/RSA-DecryptionPrimitive-Sp800-56Br2/prompt.json"
+    ]
+  },
+  {
+    "algo": "ecc",
+    "wasmModule": "ecc",
+    "exportName": "eccWasm",
+    "source": "fiat-crypto",
+    "sourceKind": "vendored-fork",
+    "shim": "shims/ecc.c",
+    "cSources": [
+      "vendor/bearssl/src/ec/ec_prime_i31.c",
+      "vendor/bearssl/src/ec/ec_keygen.c",
+      "vendor/bearssl/src/ec/ec_pubkey.c",
+      "vendor/bearssl/src/ec/ecdsa_i31_sign_raw.c",
+      "vendor/bearssl/src/ec/ecdsa_i31_vrfy_raw.c",
+      "vendor/bearssl/src/ec/ecdsa_i31_bits.c",
+      "vendor/bearssl/src/ec/ec_secp256r1.c",
+      "vendor/bearssl/src/ec/ec_secp384r1.c",
+      "vendor/bearssl/src/ec/ec_secp521r1.c",
+      "vendor/bearssl/src/int/i31_add.c",
+      "vendor/bearssl/src/int/i31_bitlen.c",
+      "vendor/bearssl/src/int/i31_decmod.c",
+      "vendor/bearssl/src/int/i31_decode.c",
+      "vendor/bearssl/src/int/i31_decred.c",
+      "vendor/bearssl/src/int/i31_encode.c",
+      "vendor/bearssl/src/int/i31_fmont.c",
+      "vendor/bearssl/src/int/i31_iszero.c",
+      "vendor/bearssl/src/int/i31_modpow.c",
+      "vendor/bearssl/src/int/i31_montmul.c",
+      "vendor/bearssl/src/int/i31_muladd.c",
+      "vendor/bearssl/src/int/i31_ninv31.c",
+      "vendor/bearssl/src/int/i31_rshift.c",
+      "vendor/bearssl/src/int/i31_sub.c",
+      "vendor/bearssl/src/int/i31_tmont.c",
+      "vendor/bearssl/src/int/i32_div32.c",
+      "vendor/bearssl/src/codec/ccopy.c",
+      "vendor/bearssl/src/codec/dec32be.c",
+      "vendor/bearssl/src/codec/dec64be.c",
+      "vendor/bearssl/src/codec/enc32be.c",
+      "vendor/bearssl/src/codec/enc64be.c",
+      "vendor/bearssl/src/mac/hmac.c",
+      "vendor/bearssl/src/hash/sha2small.c",
+      "vendor/bearssl/src/hash/sha2big.c",
+      "vendor/bearssl/src/rand/hmac_drbg.c",
+      "vendor/fiat-crypto/fiat-c/src/p256_64.c",
+      "csrc/rng/rng.c"
+    ],
+    "cStd": "c99",
+    "cflags": ["-O2", "-Ipackages/front/fw-wasm-crypto/csrc/bearssl/compat", "-Ipackages/front/fw-wasm-crypto/vendor/bearssl/inc", "-Ipackages/front/fw-wasm-crypto/vendor/bearssl/src", "-Ipackages/front/fw-wasm-crypto/vendor/fiat-crypto/fiat-c/src", "-DWASM_NO_AESNI=1"],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "ecdsa_keygen", "ecdsa_sign", "ecdsa_verify", "ecdh", "rng_stage", "rng_reset"],
+    "vectors": [
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ECDSA-KeyGen-FIPS186-5/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/DetECDSA-SigGen-FIPS186-5/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ECDSA-SigVer-FIPS186-5/prompt.json",
+      "references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/KAS-ECC-1.0/prompt.json"
+    ]
+  },
+  {
+    "algo": "ed25519",
+    "wasmModule": "ed25519",
+    "exportName": "ed25519Wasm",
+    "source": "libsodium",
+    "sourceKind": "vendored",
+    "shim": "shims/ed25519.c",
+    "cSources": [
+      "vendor/libsodium/crypto_sign/ed25519/ref10/keypair.c",
+      "vendor/libsodium/crypto_sign/ed25519/ref10/sign.c",
+      "vendor/libsodium/crypto_sign/ed25519/ref10/open.c",
+      "vendor/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c",
+      "csrc/libsodium-compat/sodium_sha512_seam.c",
+      "csrc/libsodium-compat/sodium_util_seam.c",
+      "csrc/sha2/sha2.c",
+      "csrc/rng/rng.c"
+    ],
+    "cStd": "c11",
+    "cflags": [
+      "-DNATIVE_LITTLE_ENDIAN",
+      "-DCONFIGURED=1",
+      "-Ipackages/front/fw-wasm-crypto/csrc/libsodium-compat",
+      "-Ipackages/front/fw-wasm-crypto/vendor/libsodium",
+      "-Ipackages/front/fw-wasm-crypto/vendor/libsodium/crypto_core/ed25519/ref10"
+    ],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "ed25519_keypair", "ed25519_sign", "ed25519_verify", "rng_stage", "rng_reset"],
+    "vectors": ["references/SPEC/RFC/rfc8032.txt"]
+  },
+  {
+    "algo": "x25519",
+    "wasmModule": "x25519",
+    "exportName": "x25519Wasm",
+    "source": "libsodium",
+    "sourceKind": "vendored",
+    "shim": "shims/x25519.c",
+    "cSources": [
+      "vendor/libsodium/crypto_scalarmult/curve25519/ref10/x25519_ref10.c",
+      "vendor/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c",
+      "csrc/libsodium-compat/sodium_util_seam.c"
+    ],
+    "cStd": "c11",
+    "cflags": [
+      "-DNATIVE_LITTLE_ENDIAN",
+      "-DCONFIGURED=1",
+      "-Ipackages/front/fw-wasm-crypto/csrc/libsodium-compat",
+      "-Ipackages/front/fw-wasm-crypto/vendor/libsodium",
+      "-Ipackages/front/fw-wasm-crypto/vendor/libsodium/crypto_core/ed25519/ref10"
+    ],
+    "simd": false,
+    "exports": ["memory", "alloc", "free", "x25519_base", "x25519"],
+    "vectors": ["references/SPEC/RFC/rfc7748.txt"]
+  }
+]

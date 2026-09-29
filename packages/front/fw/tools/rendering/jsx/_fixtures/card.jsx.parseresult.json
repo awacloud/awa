@@ -1,0 +1,77 @@
+{
+  "template": [
+    {
+      "id": "card",
+      "tag": "article"
+    },
+    {
+      "id": "card-title",
+      "tag": "h2",
+      "parent": "card",
+      "text": "",
+      "map": [
+        {
+          "name": "title",
+          "prop": "text"
+        }
+      ]
+    },
+    {
+      "id": "card-body",
+      "tag": "p",
+      "parent": "card",
+      "attrs": [
+        "class"
+      ],
+      "data": {
+        "class": ""
+      },
+      "text": "",
+      "map": [
+        {
+          "name": "bodyClass",
+          "prop": "class",
+          "data": true
+        },
+        {
+          "name": "summary",
+          "prop": "text"
+        }
+      ]
+    },
+    {
+      "id": "card-link",
+      "tag": "a",
+      "parent": "card",
+      "attrs": [
+        "href",
+        "class"
+      ],
+      "data": {
+        "href": "/items/",
+        "class": "btn "
+      },
+      "text": "Read more",
+      "map": [
+        {
+          "name": "id",
+          "prop": "href",
+          "data": true,
+          "append": true
+        },
+        {
+          "name": "btnClass",
+          "prop": "class",
+          "data": true,
+          "append": true
+        }
+      ]
+    },
+    {
+      "id": "card-slot",
+      "tag": "div",
+      "parent": "card",
+      "content": "footer"
+    }
+  ]
+}

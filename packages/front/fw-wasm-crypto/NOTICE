@@ -1,0 +1,16 @@
+@awacloud/fw-wasm-crypto
+Copyright (c) 2026 AwaCloud SAS
+Author: Matthieu Bouilloux
+
+Licensed under Apache-2.0; see the LICENSE file.
+SPDX-License-Identifier: Apache-2.0
+
+AWACLOUD and AWA are trademarks of Towards Conseil, used under licence.
+
+Third-party components:
+- mlkem-native v1.2.0 — Copyright (c) The mlkem-native project authors — Apache-2.0 AND MIT AND ISC AND CC0-1.0 — licence text: vendor/NOTICE-mlkem-native
+- PQClean (commit 202a8f9, ML-DSA clean subset + FIPS-202/SHA-2 helpers) — The PQClean contributors — CC0-1.0 — licence text: vendor/NOTICE-pqclean
+- OpenSSL SLH-DSA (FIPS-205) core — Copyright 2024-2025 The OpenSSL Project Authors. All Rights Reserved. — Apache-2.0 — licence text: vendor/NOTICE-openssl-slh-dsa
+- BearSSL v0.6 — Copyright (c) 2016 Thomas Pornin <pornin@bolet.org> — MIT — licence text: vendor/NOTICE-bearssl
+- fiat-crypto v0.1.6 — Copyright (c) 2015-2020 the fiat-crypto authors — MIT AND BSD-1-Clause AND Apache-2.0 — licence text: vendor/NOTICE-fiat-crypto
+- libsodium 1.0.22 — Copyright (c) 2013-2024 Frank Denis and contributors — ISC — licence text: vendor/NOTICE-libsodium

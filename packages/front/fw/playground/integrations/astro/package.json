@@ -1,0 +1,15 @@
+{
+    "name": "@awacloud/playground-astro",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "postinstall": "node ../../_tools/link-fw.mjs",
+        "setup": "node ../../_tools/link-fw.mjs",
+        "dev": "astro telemetry disable && astro dev",
+        "build": "astro telemetry disable && astro build",
+        "preview": "astro preview"
+    },
+    "devDependencies": {
+        "astro": "^6.4.6"
+    }
+}

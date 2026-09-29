@@ -1,0 +1,12 @@
+@awacloud/fw
+Copyright (c) 2026 AwaCloud SAS
+Author: Matthieu Bouilloux
+
+Licensed under Apache-2.0; see the LICENSE file.
+SPDX-License-Identifier: Apache-2.0
+
+AWACLOUD and AWA are trademarks of Towards Conseil, used under licence.
+
+Third-party components:
+- Stanford Javascript Crypto Library (SJCL) — Copyright (c) 2009-2015, Emily Stark, Mike Hamburg and Dan Boneh at Stanford University. All rights reserved. — BSD-2-Clause — licence text: third-party/NOTICE-sjcl
+- Robert Penner's easing equations / jQuery Easing v1.3 — Copyright © 2001 Robert Penner; Copyright © 2008 George McGinley Smith — BSD-3-Clause — licence text: third-party/NOTICE-penner-easing

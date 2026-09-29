@@ -1,0 +1,51 @@
+{
+  "description": "Static showcase — landing pages, blogs, marketing.",
+  "modules": [
+    "errors",
+    "eventBus",
+    "signal",
+    "valid",
+    "ui8",
+    "abort",
+    "clock",
+    "dom",
+    "events",
+    "animate",
+    "visibility",
+    "a11y",
+    "focus",
+    "route",
+    "render",
+    "parser",
+    "template",
+    "sanitize",
+    "secPolicy",
+    "uiSessionCore",
+    "uiSessionDirect",
+    "hex",
+    "b64",
+    "utf8",
+    "url",
+    "str",
+    "date",
+    "i18n",
+    "rateLimit"
+  ],
+  "env": {
+    "DEV": false,
+    "LOG": true
+  },
+  "kind": "preset",
+  "name": "site",
+  "variant": "pure",
+  "bytes": {
+    "min":"<n>",
+    "minGz":"<n>",
+    "dev":"<n>",
+    "devGz":"<n>"
+  },
+  "hashSha256": {
+    "min":"<sha256>",
+    "dev":"<sha256>"
+  }
+}

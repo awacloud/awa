@@ -1,0 +1,15 @@
+# Default owner for everything in this repository.
+*                                   @awacloud/maintainers
+
+# Community and security policy files.
+/SECURITY.md                        @awacloud/maintainers
+/CONTRIBUTING.md                    @awacloud/maintainers
+/CODEOWNERS                         @awacloud/maintainers
+/docs/publication/                  @awacloud/maintainers
+
+# Publication lot 1 (awf.config.json distribution rows, lot 1).
+/packages/front/fw/                 @awacloud/maintainers
+/packages/front/fw-wasm-crypto/     @awacloud/maintainers
+/tools/fw-bundler/                  @awacloud/maintainers
+/tools/fw-codegen/                  @awacloud/maintainers
+/tools/wasm-crypto/                 @awacloud/maintainers

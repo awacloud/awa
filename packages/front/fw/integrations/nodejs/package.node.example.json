@@ -1,0 +1,31 @@
+{
+  "_comment": "EXAMPLE — deliberate bun → Node substitution. Copy these `scripts` + `devDependencies` into fw's package.json (or take them as a model) to develop 100% under Node, without bun. `types:registry*`/`types:audit`/`prebuild*`/`build:standalone` are wired through Node's own module resolution (`import('@awacloud/tool-fw-{bundler,codegen}/<entry>').then(m => m.runCli(...))`), same as the bun-default profile's resolved node form — this profile's own devDependencies make that resolve locally, so no relative path is needed. `build:parseresult`/`build:aot` still target `index.js` explicitly (the isMainModule guard does not fire on `node <dir>`). Builds via the esbuild backend (Node). NB: this profile commits the Node toolchain as devDependencies, unlike the lean bun default.",
+  "scripts": {
+    "test": "vitest run -c integrations/vitest/vitest.config.js",
+    "test:watch": "vitest -c integrations/vitest/vitest.config.js",
+    "lint": "eslint . --max-warnings 0",
+    "types": "tsc -p tsconfig.types.json",
+    "types:registry": "node --input-type=module -e \"import('@awacloud/tool-fw-codegen/registry').then(m => m.runCli(process.argv.slice(1))).then(c => process.exit(c))\" --",
+    "types:registry:check": "node --input-type=module -e \"import('@awacloud/tool-fw-codegen/registry').then(m => m.runCli(process.argv.slice(1))).then(c => process.exit(c))\" -- --check",
+    "types:audit": "node --input-type=module -e \"import('@awacloud/tool-fw-codegen/audit').then(m => m.runCli(process.argv.slice(1))).then(c => process.exit(c))\" --",
+    "prebuild": "node --input-type=module -e \"import('@awacloud/tool-fw-bundler/bundle').then(m => m.runCli(process.argv.slice(1))).then(c => process.exit(c))\" -- --backend esbuild",
+    "prebuild:rollup": "node --input-type=module -e \"import('@awacloud/tool-fw-bundler/bundle').then(m => m.runCli(process.argv.slice(1))).then(c => process.exit(c))\" -- --backend rollup",
+    "build:standalone": "node --input-type=module -e \"import('@awacloud/tool-fw-bundler/standalone').then(m => m.runCli(process.argv.slice(1))).then(c => process.exit(c))\" --",
+    "build:parseresult": "node tools/rendering/precompilation/index.js",
+    "build:aot": "node tools/rendering/aot/index.js",
+    "docs:api": "rm -rf dist/types && npm run types && node integrations/typedoc/categorize.js && typedoc --options integrations/typedoc/typedoc.json"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@happy-dom/global-registrator": "^20.6.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "esbuild": "^0.28.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0",
+    "happy-dom": "^20.6.0",
+    "rollup": "^4.61.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}

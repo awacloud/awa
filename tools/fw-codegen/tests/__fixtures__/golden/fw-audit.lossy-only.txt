@@ -1,0 +1,10 @@
+
+Factory return-type audit — 201 modules
+  TYPED  (named @returns type)  : 198  → exported type alias (TypeDoc "Type Aliases")
+  INLINE (anonymous {…} @returns): 1  ← fix targets : promote to a named @typedef
+  INFER  (no @returns)          : 2
+  LOSSY  (wide @returns)        : 0  ← fix targets
+
+── INLINE — promote anonymous {…} to a named @typedef (→ TypeDoc Type Alias)
+  hybridKem  deps: 0  @returns {{ xwing: XwingApi }}  — src/crypto/pkc/hybridKem.js
+

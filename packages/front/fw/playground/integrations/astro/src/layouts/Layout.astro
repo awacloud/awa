@@ -1,0 +1,78 @@
+---
+// src/layouts/Layout.astro — shared shell: nav + global styles.
+// 100% Astro pages (SSG); fw islands are injected by each page.
+interface Props {
+    title?: string;
+}
+const { title = 'fw × Astro' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title}</title>
+    </head>
+    <body>
+        <nav>
+            <strong>fw × Astro</strong>
+            <a href="/">Home</a>
+            <a href="/form">Form</a>
+            <a href="/about">About</a>
+        </nav>
+        <main>
+            <slot />
+        </main>
+        <footer>
+            <small>@awacloud/fw playground — <code>@awacloud/fw/astro</code> integration</small>
+        </footer>
+    </body>
+</html>
+
+<style is:global>
+    body {
+        font: 16px/1.5 system-ui, sans-serif;
+        max-width: 42rem;
+        margin: 0 auto;
+        padding: 0 1rem 2rem;
+        color: #1c1c1c;
+    }
+    nav {
+        display: flex;
+        gap: 1rem;
+        align-items: baseline;
+        padding: 1rem 0;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 1.5rem;
+    }
+    footer {
+        margin-top: 3rem;
+        border-top: 1px solid #ddd;
+        padding-top: 1rem;
+        color: #666;
+    }
+    .island {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    .island .big {
+        font-size: 2rem;
+        margin: 0.25rem 0;
+    }
+    .island .error {
+        color: #b00020;
+        min-height: 1.2em;
+        margin: 0.2rem 0;
+    }
+    .island input {
+        display: block;
+        padding: 0.4rem;
+        margin-top: 0.2rem;
+    }
+    .island li > span {
+        margin-left: 0.5rem;
+        color: #555;
+    }
+</style>
