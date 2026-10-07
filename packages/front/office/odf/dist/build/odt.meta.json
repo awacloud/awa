@@ -1,0 +1,45 @@
+{
+  "kind": "build",
+  "variant": "fw",
+  "name": "odt",
+  "package": "@awacloud/odf",
+  "modules": [
+    "odfErrors",
+    "odfShared",
+    "pkgMimetype",
+    "pkgManifest",
+    "pkgPackage",
+    "odfMeta",
+    "odfSettings",
+    "odfStyles",
+    "textParagraph",
+    "textHeading",
+    "textList",
+    "textSection",
+    "tableCell",
+    "tableRow",
+    "tableTable",
+    "textContent",
+    "odfWalker",
+    "odtWalker",
+    "styleAutomatic",
+    "textStyleRegistry",
+    "drawImage",
+    "drawFrame",
+    "odt"
+  ],
+  "fwDependencies": [
+    "xml",
+    "bitstream",
+    "huffman",
+    "lz77",
+    "deflate",
+    "zip",
+    "crc32"
+  ],
+  "bytes": {
+    "dev": 101840,
+    "min": 57227
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

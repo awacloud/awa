@@ -25,16 +25,17 @@ You will receive an acknowledgment within **2 business days**.
 
 ## What happens next
 
-| Step | Commitment |
+| Step | Target |
 |---|---|
 | Acknowledgment | ≤ 2 business days |
 | Triage & severity assessment (shared with you) | ≤ 5 business days |
 | Fix or documented mitigation for critical/high issues | target ≤ 30 days |
 | Coordinated disclosure | **90 days** after report, or earlier once a fix ships — negotiable if exploitation is observed in the wild |
 
-We credit reporters in the release notes (unless you prefer anonymity). We
-do not run a paid bounty program at this time; we say so here rather than
-let you discover it after the work.
+These timings are disclosure-process targets, not a service level of the
+commercial licence. We credit reporters in the release notes (unless you
+prefer anonymity). We do not run a paid bounty program at this time; we
+say so here rather than let you discover it after the work.
 
 ## Scope
 
@@ -58,8 +59,9 @@ authorization.
 
 ## Supported versions
 
-Support windows, the pre-1.0 rule, and perpetual-licensee terms are
-documented in full in [MAINTENANCE.md](MAINTENANCE.md).
+Support windows and the pre-1.0 rule are documented in full in
+[MAINTENANCE.md](MAINTENANCE.md); commercial-licensee terms are those of
+the CGL and its Support Annex.
 
 ## Release integrity
 
@@ -71,8 +73,9 @@ first releases the source host is not itself isolated; running this
 procedure in a dedicated isolated environment is a target, not yet in
 place. No always-connected CI pushes or publishes anything.
 
-No release has been published yet; the first signed release will carry
-the files named below.
+The first signed release was published on 2026-09-29 (lot 1: five
+packages at version 0.1.0); it carries the files named below, as does
+every later release.
 
 Two mechanisms, split by object: release **tags** are signed over SSH
 with a dedicated ed25519 tag key (classical); the **per-file digest

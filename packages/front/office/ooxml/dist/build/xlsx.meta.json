@@ -1,0 +1,40 @@
+{
+  "kind": "build",
+  "variant": "fw",
+  "name": "xlsx",
+  "package": "@awacloud/ooxml",
+  "modules": [
+    "ooxmlErrors",
+    "opcContentTypes",
+    "opcRelationships",
+    "ooxmlShared",
+    "opcPackage",
+    "xlsxStyles",
+    "xlsxTables",
+    "xlsxConditionalFormatting",
+    "xlsxComments",
+    "markupCompatibility",
+    "drawingmlShape",
+    "ooxmlMath",
+    "drawingml",
+    "xlsxDrawings",
+    "drawingmlChart",
+    "xlsxThreadedComments",
+    "xlsxWalker",
+    "xlsx"
+  ],
+  "fwDependencies": [
+    "xml",
+    "bitstream",
+    "huffman",
+    "lz77",
+    "deflate",
+    "zip",
+    "crc32"
+  ],
+  "bytes": {
+    "dev": 179389,
+    "min": 99621
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

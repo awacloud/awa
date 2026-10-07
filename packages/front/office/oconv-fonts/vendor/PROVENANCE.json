@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "trees": [
+    {
+      "id": "liberation",
+      "url": "https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz",
+      "ref": "2.1.5",
+      "sha256": "7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0",
+      "license": "OFL-1.1",
+      "notice": "Liberation Fonts 2.1.5 (Red Hat, Inc.; digitized data (c) 2010 Google Corporation). SIL OFL 1.1 with Reserved Font Names Liberation, Arimo, Tinos, Cousine. See vendor/NOTICE-liberation and vendor/OFL.txt.",
+      "upstream": {
+        "project": "liberationfonts/liberation-fonts",
+        "repository": "https://github.com/liberationfonts/liberation-fonts",
+        "release": "2.1.5",
+        "released": "2021-09-30",
+        "archive": "liberation-fonts-ttf-2.1.5.tar.gz",
+        "archiveBytes": 2385008,
+        "archiveSha512": "b9f178fae43c9214ba6de36c6da613fcf59bd98084058afaaa9151d00f2406942bc360430be0a8f35ea6b5529146eef371c7cf75bdd7910403d449254f943fed",
+        "mirror": "https://dev-www.libreoffice.org/src/liberation-fonts-ttf-2.1.5.tar.gz",
+        "mirrorVerified": "byte-identical to the upstream URL (cmp clean, 2026-09-09)",
+        "retrievedUtc": "2026-09-09",
+        "flavour": "TrueType (sfnt 0x00010000) — no CFF/OpenType face in the set",
+        "modifications": "none; the faces are vendored byte-identically from the upstream archive (sha256 verified before and after the copy)"
+      },
+      "corroboration": [
+        {
+          "publisher": "LibreOffice core",
+          "source": "download.lst (FONT_LIBERATION_SHA256SUM)",
+          "algorithm": "sha256",
+          "agrees": true
+        },
+        {
+          "publisher": "Void Linux",
+          "source": "srcpkgs/liberation-fonts-ttf/template",
+          "algorithm": "sha256",
+          "agrees": true
+        },
+        {
+          "publisher": "MacPorts",
+          "source": "x11/liberation-fonts/Portfile",
+          "algorithm": "sha256",
+          "agrees": true
+        },
+        {
+          "publisher": "Ravenports",
+          "source": "bucket_76/fonts-liberation2",
+          "algorithm": "sha256",
+          "agrees": true
+        },
+        {
+          "publisher": "Gentoo",
+          "source": "media-fonts/liberation-fonts/Manifest",
+          "algorithm": "sha512",
+          "agrees": true
+        },
+        {
+          "publisher": "Debian trixie",
+          "source": "src:fonts-liberation 1:2.1.5-3 debian/copyright and binary file list",
+          "algorithm": "none",
+          "agrees": true,
+          "note": "Licence and face-set corroboration only. Debian's orig.tar.gz is the GitHub tag archive of the FontForge sources (5106189 bytes), so its shipped .ttf bytes are NOT the upstream release bytes; it is deliberately not the source of this payload. Its debian/copyright confirms OFL-1.1 on every font file, GPL-2+ on debian/* alone."
+        }
+      ],
+      "excluded": {
+        "liberation-sans-narrow": "Liberation Sans Narrow is NOT part of the 2.1.5 release and MUST NOT be added to this tree. It is distributed separately from the 1.07.x line (liberation-narrow-fonts-ttf-1.07.6.tar.gz) under GPL-2 with a font exception, not the OFL. Adding it would break this package's single-licence isolation."
+      },
+      "payloadBytes": 4359164,
+      "files": [
+        { "path": "liberation/LiberationMono-Bold.ttf", "bytes": 307996, "sha256": "bd62a0672d0b9b6710b01df434c80ad54fa5f0835207eb7b17b7a761463067bb", "family": "Liberation Mono", "subfamily": "Bold" },
+        { "path": "liberation/LiberationMono-BoldItalic.ttf", "bytes": 284068, "sha256": "79451f3c09fe25116098853b7a2ca6e2436220ccc11af022979adbcf195be130", "family": "Liberation Mono", "subfamily": "Bold Italic" },
+        { "path": "liberation/LiberationMono-Italic.ttf", "bytes": 281536, "sha256": "605c01c711b44480a7508d349dfbf3264e81fa43d69e61cfa7d10b86e764c4d1", "family": "Liberation Mono", "subfamily": "Italic" },
+        { "path": "liberation/LiberationMono-Regular.ttf", "bytes": 319508, "sha256": "f2b83c763e8afd21709333370bed4774337fae82267937e2b5aea7e2fbd922c1", "family": "Liberation Mono", "subfamily": "Regular" },
+        { "path": "liberation/LiberationSans-Bold.ttf", "bytes": 414456, "sha256": "788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173", "family": "Liberation Sans", "subfamily": "Bold" },
+        { "path": "liberation/LiberationSans-BoldItalic.ttf", "bytes": 408996, "sha256": "698da70fc191cc5f33ad4d6d3fe830fe4624b898ea2e3169955928b7c491f1ee", "family": "Liberation Sans", "subfamily": "Bold Italic" },
+        { "path": "liberation/LiberationSans-Italic.ttf", "bytes": 415816, "sha256": "e5bae5c4cde31f22142753855f4f8fb86da6ff39955ed3c0a11248b0d16948b0", "family": "Liberation Sans", "subfamily": "Italic" },
+        { "path": "liberation/LiberationSans-Regular.ttf", "bytes": 410712, "sha256": "76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8", "family": "Liberation Sans", "subfamily": "Regular" },
+        { "path": "liberation/LiberationSerif-Bold.ttf", "bytes": 370096, "sha256": "d754ba427cfe0bca54ae052384baa8f842da5bd6550ad4da024ac441e7a7d5ce", "family": "Liberation Serif", "subfamily": "Bold" },
+        { "path": "liberation/LiberationSerif-BoldItalic.ttf", "bytes": 376772, "sha256": "f17db8af71e24d2066b587546021d4f0b296be389512b658dec3c09affeb11a7", "family": "Liberation Serif", "subfamily": "Bold Italic" },
+        { "path": "liberation/LiberationSerif-Italic.ttf", "bytes": 375632, "sha256": "0e3dea9f8d613e006ccfa62201f33e265d19167bd0907725c3e145368b04fc2e", "family": "Liberation Serif", "subfamily": "Italic" },
+        { "path": "liberation/LiberationSerif-Regular.ttf", "bytes": 393576, "sha256": "058ea80864aef09a23f45cbec2bb5400bc3dfbdea01c3f10538a21fcb497fb74", "family": "Liberation Serif", "subfamily": "Regular" },
+        { "path": "OFL.txt", "bytes": 4414, "sha256": "93fed46019c38bbe566b479d22148e2e8a1e85ada614accb0211c37b2c61c19b", "role": "SIL OFL 1.1 verbatim, upstream LICENSE" }
+      ],
+      "notVendored": [
+        { "file": "AUTHORS", "bytes": 379, "sha256": "b627404917ef824675cb24c32e2facd0b57650627955f3fc3d8a8863c5d0adfc" },
+        { "file": "ChangeLog", "bytes": 4726, "sha256": "97d9c0c8ae7418fcb8f0f7711be28c92d6fe117895b3019ed455b0631451000a" },
+        { "file": "README.md", "bytes": 2406, "sha256": "625a61d7e161cde3b1e9dd1ff8b7a86c251be536c34266bf1f1a9bd1c15c19e8" },
+        { "file": "TODO", "bytes": 268, "sha256": "0c9333c07734cb936d44c592d4cec039200c50ac2bd41869221dbcb9031559bc" }
+      ]
+    }
+  ]
+}

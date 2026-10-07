@@ -1,0 +1,6 @@
+# The root .gitignore ignores every `dist/` directory, but `@awacloud/odf`
+# ships its dual build surfaces (dist/build + dist/standalone) as GENERATED +
+# COMMITTED artifacts so consumers get pre-built bundles without a build step.
+# Re-include them here.
+!dist/
+!dist/**

@@ -1,0 +1,43 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "pptx-large",
+  "package": "@awacloud/ooxml",
+  "modules": [
+    "ooxmlErrors",
+    "opcContentTypes",
+    "opcRelationships",
+    "ooxmlShared",
+    "opcPackage",
+    "ooxmlMath",
+    "drawingml",
+    "pptxPicture",
+    "pptxTable",
+    "drawingmlChart",
+    "pptxChart",
+    "drawingmlShape",
+    "pptxSlide",
+    "pptxTheme",
+    "markupCompatibility",
+    "pptxWalker",
+    "pptx",
+    "pmlAnimations",
+    "pmlTransitions",
+    "pmlNotes",
+    "pmlLayoutsTyped",
+    "dmlChartDataLabels",
+    "dmlChartTrendlines",
+    "dmlChartAxesAdvanced",
+    "dmlChart3d",
+    "dmlChartOtherTypes",
+    "mathAdvanced",
+    "dmlEffects",
+    "dmlFillsAdvanced"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 344170,
+    "min": 184716
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

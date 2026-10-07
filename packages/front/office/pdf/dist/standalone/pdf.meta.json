@@ -1,0 +1,35 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "pdf",
+  "package": "@awacloud/pdf",
+  "modules": [
+    "pdfErrors",
+    "pdfShared",
+    "pdfTokenizer",
+    "pdfParserObj",
+    "pdfParser",
+    "pdfXref",
+    "pdfTrailer",
+    "pdfSerializer",
+    "pdfCatalog",
+    "pdfPages",
+    "pdfPage",
+    "pdfCrossRefStream",
+    "pdfObjStream",
+    "pdfFlate",
+    "pdfAsciiHex",
+    "pdfAscii85",
+    "pdfRunLength",
+    "pdfFilterDispatch",
+    "pdfDocument",
+    "pdfWriter",
+    "pdf"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 310921,
+    "min": 167737
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

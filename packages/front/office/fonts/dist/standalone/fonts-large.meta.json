@@ -1,0 +1,41 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "fonts-large",
+  "package": "@awacloud/fonts",
+  "modules": [
+    "fontErrors",
+    "fontsShared",
+    "fontFixed",
+    "fontReader",
+    "fontWriter",
+    "fontTag",
+    "fontChecksum",
+    "fontSfnt",
+    "tableHead",
+    "tableHhea",
+    "tableMaxp",
+    "tableHmtx",
+    "tableCmapFormats",
+    "tableCmap",
+    "fontEncoding",
+    "tableName",
+    "tableOs2",
+    "tablePost",
+    "tableLoca",
+    "tableGlyf",
+    "tableGvar",
+    "fontGlyph",
+    "fontPath",
+    "fontCompositeResolve",
+    "fonts",
+    "extraMath",
+    "extraJstf"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 249802,
+    "min": 120881
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

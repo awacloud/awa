@@ -1,0 +1,31 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "pptx",
+  "package": "@awacloud/ooxml",
+  "modules": [
+    "ooxmlErrors",
+    "opcContentTypes",
+    "opcRelationships",
+    "ooxmlShared",
+    "opcPackage",
+    "ooxmlMath",
+    "drawingml",
+    "pptxPicture",
+    "pptxTable",
+    "drawingmlChart",
+    "pptxChart",
+    "drawingmlShape",
+    "pptxSlide",
+    "pptxTheme",
+    "markupCompatibility",
+    "pptxWalker",
+    "pptx"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 206978,
+    "min": 108029
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

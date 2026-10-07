@@ -1,0 +1,37 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "odt",
+  "package": "@awacloud/odf",
+  "modules": [
+    "odfErrors",
+    "odfShared",
+    "pkgMimetype",
+    "pkgManifest",
+    "pkgPackage",
+    "odfMeta",
+    "odfSettings",
+    "odfStyles",
+    "textParagraph",
+    "textHeading",
+    "textList",
+    "textSection",
+    "tableCell",
+    "tableRow",
+    "tableTable",
+    "textContent",
+    "odfWalker",
+    "odtWalker",
+    "styleAutomatic",
+    "textStyleRegistry",
+    "drawImage",
+    "drawFrame",
+    "odt"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 170952,
+    "min": 89146
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

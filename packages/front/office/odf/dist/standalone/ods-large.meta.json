@@ -1,0 +1,37 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "ods-large",
+  "package": "@awacloud/odf",
+  "modules": [
+    "odfErrors",
+    "odfShared",
+    "pkgMimetype",
+    "pkgManifest",
+    "pkgPackage",
+    "odfMeta",
+    "odfSettings",
+    "odfStyles",
+    "tableCell",
+    "tableRow",
+    "tableTable",
+    "spreadsheet",
+    "styleAutomatic",
+    "textParagraph",
+    "odfWalker",
+    "odsWalker",
+    "ods",
+    "tableAdvanced",
+    "stylePage",
+    "stylePropertiesTyped",
+    "drawShapes",
+    "textFieldsExtended",
+    "textListDetailed"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 158758,
+    "min": 84237
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

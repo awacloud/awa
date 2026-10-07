@@ -1,0 +1,97 @@
+%PDF-1.7
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /MarkInfo << /Marked true >> /StructTreeRoot 7 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /StructParents 0 /Tabs /S /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 438 >>
+stream
+/H1 <</MCID 0>> BDC BT /F1 24 Tf 72 720 Td (Quarterly Report) Tj ET EMC
+/P <</MCID 1>> BDC BT /F1 12 Tf 72 690 Td (This report summarizes the quarter.) Tj ET EMC
+/H2 <</MCID 2>> BDC BT /F1 18 Tf 72 660 Td (Details) Tj ET EMC
+/P <</MCID 3>> BDC BT /F1 12 Tf 72 640 Td (Revenue grew across all regions.) Tj ET EMC
+/P <</MCID 4>> BDC BT /F1 12 Tf 72 610 Td (Cell one) Tj ET EMC
+/P <</MCID 5>> BDC BT /F1 12 Tf 72 590 Td (Cell two) Tj ET EMC
+
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /ToUnicode 6 0 R >>
+endobj
+6 0 obj
+<< /Length 352 >>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo <<
+  /Registry (Adobe)
+  /Ordering (UCS)
+  /Supplement 0
+>> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+1 beginbfrange
+<0020> <007E> <0020>
+endbfrange
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+endstream
+endobj
+7 0 obj
+<< /Type /StructTreeRoot /K [8 0 R 9 0 R 10 0 R 11 0 R 12 0 R] >>
+endobj
+8 0 obj
+<< /Type /StructElem /S /H1 /P 7 0 R /Pg 3 0 R /K 0 >>
+endobj
+9 0 obj
+<< /Type /StructElem /S /P /P 7 0 R /Pg 3 0 R /K 1 >>
+endobj
+10 0 obj
+<< /Type /StructElem /S /H2 /P 7 0 R /Pg 3 0 R /K 2 >>
+endobj
+11 0 obj
+<< /Type /StructElem /S /P /P 7 0 R /Pg 3 0 R /K 3 >>
+endobj
+12 0 obj
+<< /Type /StructElem /S /Table /P 7 0 R /Pg 3 0 R /K [13 0 R 14 0 R] >>
+endobj
+13 0 obj
+<< /Type /StructElem /S /P /P 12 0 R /Pg 3 0 R /K 4 >>
+endobj
+14 0 obj
+<< /Type /StructElem /S /P /P 12 0 R /Pg 3 0 R /K 5 >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000000015 00000 n 
+0000000115 00000 n 
+0000000172 00000 n 
+0000000324 00000 n 
+0000000813 00000 n 
+0000000900 00000 n 
+0000001303 00000 n 
+0000001384 00000 n 
+0000001454 00000 n 
+0000001523 00000 n 
+0000001594 00000 n 
+0000001664 00000 n 
+0000001752 00000 n 
+0000001823 00000 n 
+trailer
+<< /Size 15 /Root 1 0 R >>
+startxref
+1894
+%%EOF

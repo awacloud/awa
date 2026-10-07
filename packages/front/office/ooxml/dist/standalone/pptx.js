@@ -1,0 +1,5923 @@
+/*!
+ * Copyright (c) 2026 AwaCloud SAS
+ * Author: Matthieu Bouilloux
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Dual-licensed; see the NOTICE file for licensing and any additional terms.
+ */
+/* GENERATED — do not edit. Source: packages/front/office/ooxml/tools/generate-bundles.mjs */
+
+/**
+ * @fileoverview `@awacloud/ooxml/bundles/prebuilt/pptx-bundled` — pre-built single-factory bundle.
+ *
+ * Variant **bundled** : declares no dependencies — every fw and ooxml-local
+ * factory transitively reachable from `pptx`  is inlined.
+ *
+ * @module ooxml/bundles/prebuilt/pptx-bundled
+ */
+
+export const pptxBundled = {
+    name: "pptxBundled",
+    dependencies: [],
+    factory() {
+    const __reg = Object.create(null);
+    const __cache = Object.create(null);
+    function __register(m) { __reg[m.name] = m; }
+    function __resolve(name) {
+        if (name in __cache) return __cache[name];
+        const def = __reg[name];
+        if (!def) throw new Error('prebuilt: unknown module ' + name);
+        const args = def.dependencies.map(__resolve);
+        return (__cache[name] = def.factory.apply({}, args));
+    }
+
+    // fw modules — inlined (bundled variant).
+    __register({ name: "xml", dependencies: [], factory: function() {
+    class XmlParseError extends Error {
+      constructor(code, msg) {
+        super(msg);
+        Object.defineProperty(this, "name", { value: "XmlParseError", writable: !0, configurable: !0 });
+        this.code = code;
+      }
+    }
+    const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+    function decodeEntities(s) {
+      return s.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (m, body) => {
+        if (body[0] === "#") {
+          const cp = body[1] === "x" ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+          if (isNaN(cp) || cp < 0 || cp > 1114111 || cp >= 55296 && cp <= 57343)
+            return m;
+          return String.fromCodePoint(cp);
+        }
+        return ENTITIES[body] != null ? ENTITIES[body] : m;
+      });
+    }
+    function encodeText(s) {
+      return String(s).replace(/[&<>]/g, (c) => c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;");
+    }
+    function encodeAttr(s) {
+      return String(s).replace(/[&<>"]/g, (c) => c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&quot;");
+    }
+    function el(name, attrs, children) {
+      return {
+        type: "element",
+        name,
+        attrs: attrs || {},
+        children: children || []
+      };
+    }
+    function text(value) {
+      return { type: "text", value };
+    }
+    function findTagEnd(s, from) {
+      let i = from + 1;
+      const len = s.length;
+      let q = "";
+      while (i < len) {
+        const c = s[i];
+        if (q) {
+          if (c === q)
+            q = "";
+        } else if (c === '"' || c === "'")
+          q = c;
+        else if (c === ">")
+          return i;
+        i++;
+      }
+      return -1;
+    }
+    function parseStartTag(inner) {
+      let i = 0;
+      const len = inner.length;
+      while (i < len && !/\s/.test(inner[i]))
+        i++;
+      const name = inner.slice(0, i), attrs = {};
+      while (i < len) {
+        while (i < len && /\s/.test(inner[i]))
+          i++;
+        if (i >= len)
+          break;
+        let j = i;
+        while (j < len && inner[j] !== "=" && !/\s/.test(inner[j]))
+          j++;
+        const attrName = inner.slice(i, j);
+        if (!attrName)
+          break;
+        while (j < len && /\s/.test(inner[j]))
+          j++;
+        if (inner[j] !== "=") {
+          attrs[attrName] = "";
+          i = j;
+          continue;
+        }
+        j++;
+        while (j < len && /\s/.test(inner[j]))
+          j++;
+        const q = inner[j];
+        if (q !== '"' && q !== "'")
+          throw new XmlParseError("xml/parse-error", `XML: unquoted attribute "${attrName}"`);
+        const end = inner.indexOf(q, j + 1);
+        if (end < 0)
+          throw new XmlParseError("xml/parse-error", `XML: unterminated attribute "${attrName}"`);
+        attrs[attrName] = decodeEntities(inner.slice(j + 1, end));
+        i = end + 1;
+      }
+      return el(name, attrs);
+    }
+    function parse(xmlStr) {
+      let i = 0;
+      const len = xmlStr.length;
+      if (xmlStr.charCodeAt(0) === 65279)
+        i = 1;
+      const stack = [];
+      let root = null;
+      while (i < len)
+        if (xmlStr[i] === "<") {
+          if (xmlStr.startsWith("<?", i)) {
+            const end = xmlStr.indexOf("?>", i + 2);
+            if (end < 0)
+              throw new XmlParseError("xml/parse-error", "XML: unterminated processing instruction");
+            i = end + 2;
+            continue;
+          }
+          if (xmlStr.startsWith("<!--", i)) {
+            const end = xmlStr.indexOf("-->", i + 4);
+            if (end < 0)
+              throw new XmlParseError("xml/parse-error", "XML: unterminated comment");
+            i = end + 3;
+            continue;
+          }
+          if (xmlStr.startsWith("<![CDATA[", i)) {
+            const end = xmlStr.indexOf("]]>", i + 9);
+            if (end < 0)
+              throw new XmlParseError("xml/parse-error", "XML: unterminated CDATA");
+            const val = xmlStr.slice(i + 9, end);
+            if (stack.length)
+              stack[stack.length - 1].children.push(text(val));
+            i = end + 3;
+            continue;
+          }
+          if (xmlStr.startsWith("<!", i)) {
+            let j = i + 2, foundBracket = !1;
+            while (j < len) {
+              if (xmlStr[j] === "[") {
+                foundBracket = !0;
+                break;
+              }
+              if (xmlStr[j] === ">")
+                break;
+              j++;
+            }
+            if (foundBracket) {
+              const subsetEnd = xmlStr.indexOf("]>", j + 1);
+              if (subsetEnd < 0)
+                throw new XmlParseError("xml/parse-error", "XML: unterminated declaration");
+              i = subsetEnd + 2;
+            } else {
+              if (j >= len)
+                throw new XmlParseError("xml/parse-error", "XML: unterminated declaration");
+              i = j + 1;
+            }
+            continue;
+          }
+          if (xmlStr[i + 1] === "/") {
+            const end = xmlStr.indexOf(">", i);
+            if (end < 0)
+              throw new XmlParseError("xml/parse-error", "XML: unterminated end tag");
+            const tagName = xmlStr.slice(i + 2, end).trim(), top = stack.pop();
+            if (!top || top.name !== tagName)
+              throw new XmlParseError("xml/parse-error", `XML: mismatched end tag </${tagName}> (expected </${top ? top.name : "\u2205"}>)`);
+            i = end + 1;
+            continue;
+          }
+          const end = findTagEnd(xmlStr, i);
+          if (end < 0)
+            throw new XmlParseError("xml/parse-error", "XML: unterminated start tag");
+          const selfClose = xmlStr[end - 1] === "/", inner = xmlStr.slice(i + 1, selfClose ? end - 1 : end), node = parseStartTag(inner);
+          if (stack.length)
+            stack[stack.length - 1].children.push(node);
+          else {
+            if (root)
+              throw new XmlParseError("xml/parse-error", "XML: multiple root elements");
+            root = node;
+          }
+          if (!selfClose)
+            stack.push(node);
+          else if (!root)
+            root = node;
+          i = end + 1;
+        } else {
+          const next = xmlStr.indexOf("<", i), slice = xmlStr.slice(i, next < 0 ? len : next);
+          if (stack.length && slice.length)
+            stack[stack.length - 1].children.push(text(decodeEntities(slice)));
+          if (next < 0)
+            break;
+          i = next;
+        }
+      if (stack.length)
+        throw new XmlParseError("xml/parse-error", `XML: unclosed element <${stack[stack.length - 1].name}>`);
+      if (!root)
+        throw new XmlParseError("xml/parse-error", "XML: no root element");
+      return root;
+    }
+    function serializeNode(node) {
+      if (node.type === "text")
+        return encodeText(node.value);
+      const attrs = Object.keys(node.attrs).map((k) => ` ${k}="${encodeAttr(node.attrs[k])}"`).join("");
+      if (!node.children || node.children.length === 0)
+        return `<${node.name}${attrs}/>`;
+      const inner = node.children.map(serializeNode).join("");
+      return `<${node.name}${attrs}>${inner}</${node.name}>`;
+    }
+    function serialize(root) {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r
+` + serializeNode(root);
+    }
+    function findChild(node, name) {
+      if (!node.children)
+        return null;
+      for (const c of node.children)
+        if (c.type === "element" && c.name === name)
+          return c;
+      return null;
+    }
+    function findAll(node, name) {
+      const out = [];
+      if (!node.children)
+        return out;
+      for (const c of node.children)
+        if (c.type === "element" && c.name === name)
+          out.push(c);
+      return out;
+    }
+    function textContent(node) {
+      if (!node)
+        return "";
+      if (node.type === "text")
+        return node.value;
+      if (!node.children)
+        return "";
+      return node.children.map(textContent).join("");
+    }
+    return {
+      el,
+      text,
+      parse,
+      serialize,
+      serializeNode,
+      findChild,
+      findAll,
+      textContent,
+      encodeText,
+      encodeAttr,
+      decodeEntities,
+      XmlParseError
+    };
+  } });
+    __register({ name: "bitstream", dependencies: [], factory: function() {
+    function readBits(buf, bitPos, mask) {
+      const at = bitPos >>> 3;
+      return (buf[at] | buf[at + 1] << 8) >>> (bitPos & 7) & mask;
+    }
+    function readBits16(buf, bitPos) {
+      const at = bitPos >>> 3;
+      return (buf[at] | buf[at + 1] << 8 | buf[at + 2] << 16) >>> (bitPos & 7);
+    }
+    function writeBits(buf, bitPos, value) {
+      const at = bitPos >>> 3, placed = value << (bitPos & 7);
+      buf[at] |= placed;
+      buf[at + 1] |= placed >>> 8;
+    }
+    function writeBits16(buf, bitPos, value) {
+      const at = bitPos >>> 3, placed = value << (bitPos & 7);
+      buf[at] |= placed;
+      buf[at + 1] |= placed >>> 8;
+      buf[at + 2] |= placed >>> 16;
+    }
+    function byteOffset(bitPos) {
+      return bitPos + 7 >>> 3;
+    }
+    function slice(buf, start, end) {
+      const from = start == null || start < 0 ? 0 : start, to = end == null || end > buf.length ? buf.length : end;
+      return new Uint8Array(buf.subarray(from, to));
+    }
+    function max(arr) {
+      let top = arr[0];
+      for (let k = arr.length - 1;k > 0; --k) {
+        const v = arr[k];
+        if (v > top)
+          top = v;
+      }
+      return top;
+    }
+    const rev = new Uint16Array(32768);
+    for (let code = 1;code < 32768; code++)
+      rev[code] = (code & 1) << 14 | rev[code >> 1] >> 1;
+    return {
+      rev,
+      byteOffset,
+      readBits,
+      writeBits,
+      readBits16,
+      writeBits16,
+      slice,
+      max
+    };
+  } });
+    __register({ name: "huffman", dependencies: ["bitstream"], factory: function(bitstream) {
+    const mirror15 = bitstream.rev;
+    function _firstCodes(codeLengths) {
+      const perLength = new Int32Array(16);
+      for (let s = 0;s < codeLengths.length; ++s)
+        perLength[codeLengths[s]]++;
+      perLength[0] = 0;
+      const firstCode = new Int32Array(16);
+      let code = 0;
+      for (let len = 1;len < 16; ++len) {
+        code = code + perLength[len - 1] << 1;
+        firstCode[len] = code;
+      }
+      return firstCode;
+    }
+    function buildMap(codeLengths, maxBits, reversed) {
+      const next = _firstCodes(codeLengths), count = codeLengths.length;
+      if (!reversed) {
+        const codes = new Uint16Array(count);
+        for (let s = 0;s < count; ++s) {
+          const len = codeLengths[s];
+          if (len)
+            codes[s] = mirror15[next[len]++] >>> 15 - len;
+        }
+        return codes;
+      }
+      const size = 1 << maxBits, table = new Uint16Array(size);
+      for (let s = 0;s < count; ++s) {
+        const len = codeLengths[s];
+        if (!len)
+          continue;
+        const entry = s << 4 | len, stride = 1 << len;
+        for (let k = mirror15[next[len]++] >>> 15 - len;k < size; k += stride)
+          table[k] = entry;
+      }
+      return table;
+    }
+    function _sortedLeaves(freqs, span, used) {
+      const keys = new Float64Array(used);
+      let n = 0;
+      for (let s = 0;s < span; ++s)
+        if (freqs[s] > 0)
+          keys[n++] = freqs[s] * span + s;
+      keys.sort();
+      const symbols = new Int32Array(used), weights = new Float64Array(used);
+      for (let i = 0;i < used; ++i) {
+        const symbol = keys[i] % span;
+        symbols[i] = symbol;
+        weights[i] = (keys[i] - symbol) / span;
+      }
+      return { symbols, weights };
+    }
+    function _packageMerge(weights, levels) {
+      const n = weights.length, room = 2 * n, isLeaf = new Uint8Array(levels * room), listSize = new Int32Array(levels);
+      let below = new Float64Array(room), here = new Float64Array(room);
+      below.set(weights);
+      isLeaf.fill(1, 0, n);
+      listSize[0] = n;
+      for (let level = 1;level < levels; ++level) {
+        const packages = listSize[level - 1] >>> 1, base = level * room;
+        let leaf = 0, pkg = 0, size = 0;
+        while (leaf < n || pkg < packages) {
+          const pkgWeight = pkg < packages ? below[2 * pkg] + below[2 * pkg + 1] : 1 / 0;
+          if (leaf < n && weights[leaf] <= pkgWeight) {
+            here[size] = weights[leaf++];
+            isLeaf[base + size] = 1;
+          } else {
+            here[size] = pkgWeight;
+            ++pkg;
+          }
+          ++size;
+        }
+        listSize[level] = size;
+        const swap = below;
+        below = here;
+        here = swap;
+      }
+      const lengths = new Uint8Array(n);
+      let bought = 2 * n - 2;
+      for (let level = levels - 1;level >= 0 && bought > 0; --level) {
+        const base = level * room;
+        let leaves = 0;
+        for (let i = 0;i < bought; ++i)
+          leaves += isLeaf[base + i];
+        for (let i = 0;i < leaves; ++i)
+          lengths[i]++;
+        bought = 2 * (bought - leaves);
+      }
+      return lengths;
+    }
+    function _huffmanLengths(weights, limit) {
+      const n = weights.length, steps = n - 1, merged = new Float64Array(steps), absorbedBy = new Int32Array(steps + n);
+      let leaf = 0, node = 0;
+      for (let step = 0;step < steps; ++step) {
+        let sum = 0;
+        for (let pick = 0;pick < 2; ++pick)
+          if (leaf < n && (node === step || weights[leaf] <= merged[node])) {
+            sum += weights[leaf];
+            absorbedBy[steps + leaf++] = step;
+          } else {
+            sum += merged[node];
+            absorbedBy[node++] = step;
+          }
+        merged[step] = sum;
+      }
+      const depth = new Int32Array(steps);
+      for (let step = steps - 2;step >= 0; --step)
+        depth[step] = depth[absorbedBy[step]] + 1;
+      const lengths = new Uint8Array(n);
+      for (let i = 0;i < n; ++i) {
+        const len = depth[absorbedBy[steps + i]] + 1;
+        if (len > limit)
+          return null;
+        lengths[i] = len;
+      }
+      return lengths;
+    }
+    function buildTree(freqs, maxBits) {
+      let used = 0, top = -1;
+      for (let s = 0;s < freqs.length; ++s)
+        if (freqs[s] > 0) {
+          ++used;
+          top = s;
+        }
+      if (used === 0)
+        return { t: new Uint8Array(0), l: 0 };
+      const t = new Uint8Array(top + 1);
+      if (used === 1) {
+        t[top] = 1;
+        return { t, l: 1 };
+      }
+      const { symbols, weights } = _sortedLeaves(freqs, top + 1, used), lengths = _huffmanLengths(weights, maxBits) || _packageMerge(weights, maxBits);
+      for (let i = 0;i < used; ++i)
+        t[symbols[i]] = lengths[i];
+      return { t, l: lengths[0] };
+    }
+    return { buildTree, buildMap };
+  } });
+    __register({ name: "lz77", dependencies: [], factory: function() {
+    const u8 = Uint8Array, i32 = Int32Array, DEFAULT = Object.freeze({
+      windowBits: 16,
+      minMatch: 4,
+      maxMatch: 258,
+      chainDepth: 16,
+      lazy: !1,
+      hashBits: 17,
+      niceLength: 258,
+      goodLength: 258,
+      maxLazy: 258,
+      chainSkip: !1,
+      start: 0,
+      hashFn: null
+    });
+    function _resolveOpts(opts) {
+      opts = opts || {};
+      const minMatch = Math.max(opts.minMatch ?? DEFAULT.minMatch, 3), maxMatch = opts.maxMatch ?? DEFAULT.maxMatch, niceLength = Math.min(Math.max(opts.niceLength ?? maxMatch, minMatch), maxMatch);
+      return {
+        windowBits: Math.min(opts.windowBits ?? DEFAULT.windowBits, 24),
+        minMatch,
+        maxMatch,
+        chainDepth: Math.max(opts.chainDepth ?? DEFAULT.chainDepth, 1),
+        lazy: opts.lazy ?? DEFAULT.lazy,
+        hashBits: Math.min(opts.hashBits ?? DEFAULT.hashBits, 22),
+        niceLength,
+        goodLength: Math.min(opts.goodLength ?? DEFAULT.goodLength, maxMatch),
+        maxLazy: Math.min(opts.maxLazy ?? DEFAULT.maxLazy, niceLength),
+        chainSkip: opts.chainSkip ?? DEFAULT.chainSkip,
+        start: Math.max(0, opts.start | 0),
+        hashFn: typeof opts.hashFn === "function" ? opts.hashFn : null
+      };
+    }
+    function _hasherFor(o) {
+      const mask = (1 << o.hashBits) - 1, shift = 32 - o.hashBits, fn = o.hashFn;
+      if (fn)
+        return function hashInjected(data, i) {
+          return fn(data, i) & mask;
+        };
+      if (o.minMatch <= 3)
+        return function hash3(data, i) {
+          let h = data[i] * 506832829 >>> 0;
+          h = (h ^ data[i + 1] * 982451653) >>> 0;
+          h = (h ^ data[i + 2] * 1610612741) >>> 0;
+          return h >>> shift & mask;
+        };
+      return function hash4(data, i) {
+        let h = data[i] * 506832829 >>> 0;
+        h = (h ^ data[i + 1] * 982451653) >>> 0;
+        h = (h ^ data[i + 2] * 1610612741) >>> 0;
+        h = (h ^ data[i + 3] * 805306457) >>> 0;
+        return h >>> shift & mask;
+      };
+    }
+    let matchDist = 0;
+    function _longestMatch(data, pos, h, head, prev, wndSize, wndMask, maxLen, niceLength, chainDepth, chainSkip, atLeast) {
+      if (atLeast >= niceLength || atLeast >= maxLen)
+        return 0;
+      const first = data[pos], second = data[pos + 1];
+      let best = atLeast, bestDist = 0, link = head[h], align = 0, probes = chainDepth;
+      while (link !== -1 && probes-- > 0) {
+        const cand = link - align;
+        if (cand < 0 || pos - cand >= wndSize)
+          break;
+        if (data[cand + best] === data[pos + best] && data[cand + best - 1] === data[pos + best - 1] && data[cand] === first && data[cand + 1] === second) {
+          let m = 0;
+          while (m < maxLen && data[cand + m] === data[pos + m])
+            ++m;
+          if (m > best) {
+            best = m;
+            bestDist = pos - cand;
+            if (m >= niceLength || m >= maxLen)
+              break;
+            if (chainSkip) {
+              let widest = 0;
+              for (let j = 0, n = Math.min(bestDist, m - 2);j < n; ++j) {
+                const at = cand + j, back = prev[at & wndMask];
+                if (back === -1)
+                  continue;
+                const gap = at - back;
+                if (gap > widest) {
+                  widest = gap;
+                  link = at;
+                  align = j;
+                }
+              }
+            }
+          }
+        }
+        link = prev[link & wndMask];
+      }
+      if (bestDist === 0)
+        return 0;
+      matchDist = bestDist;
+      return best;
+    }
+    function findMatch(data, pos, head, prev, opts) {
+      const o = _resolveOpts(opts);
+      if (pos + o.minMatch > data.length)
+        return null;
+      const wndSize = 1 << o.windowBits, hash = _hasherFor(o), maxLen = Math.min(o.maxMatch, data.length - pos), len = _longestMatch(data, pos, hash(data, pos), head, prev, wndSize, wndSize - 1, maxLen, o.niceLength, o.chainDepth, o.chainSkip, o.minMatch - 1);
+      return len ? { len, dist: matchDist } : null;
+    }
+    function encode(data, opts, callbacks) {
+      if (!(data instanceof u8))
+        throw Error("lz77.encode: data must be Uint8Array");
+      const { literal: onLit, match: onMatch } = callbacks;
+      if (typeof onLit !== "function" || typeof onMatch !== "function")
+        throw Error("lz77.encode: callbacks.literal and callbacks.match required");
+      const { tokens, count } = encodeTokens(data, opts);
+      let pos = _resolveOpts(opts).start;
+      for (let k = 0, p = 0;k < count; ++k, p += 2) {
+        const len = tokens[p];
+        if (len === 0) {
+          onLit(pos);
+          pos += 1;
+        } else {
+          onMatch(pos, len, tokens[p + 1]);
+          pos += len;
+        }
+      }
+    }
+    function encodeTokens(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.encodeTokens: data must be Uint8Array");
+      const o = _resolveOpts(opts), len = data.length, cap = 2 * Math.max(0, len - o.start), provided = opts && opts.tokens;
+      let tokens;
+      if (provided) {
+        if (provided.length < cap)
+          throw Error("lz77.encodeTokens: tokens buffer too small");
+        tokens = provided;
+      } else
+        tokens = new i32(cap);
+      let p = 0;
+      if (o.start >= len)
+        return { tokens, count: 0 };
+      const { maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip } = o, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, head = new i32(1 << o.hashBits).fill(-1), prev = new i32(Math.min(wndSize, len)).fill(-1), hash = _hasherFor(o), lastKey = len - o.minMatch, atLeast = o.minMatch - 1;
+      for (let k = 0;k < o.start && k <= lastKey; ++k) {
+        const h = hash(data, k);
+        prev[k & wndMask] = head[h];
+        head[h] = k;
+      }
+      let i = o.start;
+      while (i <= lastKey) {
+        const h = hash(data, i);
+        let matchLen = _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
+        prev[i & wndMask] = head[h];
+        head[h] = i;
+        if (matchLen === 0) {
+          tokens[p++] = 0;
+          tokens[p++] = data[i];
+          i++;
+          continue;
+        }
+        if (lazy && matchLen < maxLazy && i < lastKey) {
+          const h1 = hash(data, i + 1), nextLen = _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
+          if (nextLen) {
+            tokens[p++] = 0;
+            tokens[p++] = data[i];
+            i++;
+            matchLen = nextLen;
+            dist = matchDist;
+            prev[i & wndMask] = head[h1];
+            head[h1] = i;
+          }
+        }
+        tokens[p++] = matchLen;
+        tokens[p++] = dist;
+        const end = i + matchLen;
+        for (let k = i + 1;k < end && k <= lastKey; ++k) {
+          const hk = hash(data, k);
+          prev[k & wndMask] = head[hk];
+          head[hk] = k;
+        }
+        i = end;
+      }
+      while (i < len) {
+        tokens[p++] = 0;
+        tokens[p++] = data[i];
+        i++;
+      }
+      return { tokens, count: p / 2 };
+    }
+    function decodeStream(dst, ops) {
+      let p = 0;
+      for (const op of ops)
+        if ("lit" in op)
+          dst[p++] = op.lit;
+        else
+          for (let k = 0;k < op.len; ++k) {
+            dst[p] = dst[p - op.dist];
+            p++;
+          }
+      return p;
+    }
+    return {
+      encode,
+      encodeTokens,
+      findMatch,
+      decodeStream,
+      DEFAULT
+    };
+  } });
+    __register({ name: "deflate", dependencies: ["bitstream","huffman","lz77"], factory: function(bitstream, huffman, lz77) {
+    const {
+      readBits,
+      readBits16,
+      writeBits,
+      writeBits16,
+      byteOffset,
+      slice,
+      max
+    } = bitstream, { buildMap, buildTree } = huffman, ERROR_MESSAGES = [
+      "unexpected EOF",
+      "invalid block type",
+      "invalid length/literal",
+      "invalid distance",
+      "stream finished",
+      "no stream handler",
+      null,
+      null,
+      "invalid data"
+    ];
+    function fail(code, message) {
+      const e = Error(message ?? ERROR_MESSAGES[code] ?? "unknown error");
+      e.code = code;
+      throw e;
+    }
+    const u8 = Uint8Array, u16 = Uint16Array, u32 = Uint32Array, i32 = Int32Array, WINDOW_SIZE = 32768;
+    function lengthExtraBits(i) {
+      if (i < 8 || i === 28)
+        return 0;
+      return i - 4 >> 2;
+    }
+    function distanceExtraBits(i) {
+      if (i < 4)
+        return 0;
+      return i - 2 >> 1;
+    }
+    function accumulateBases(extra, start) {
+      const base = new u16(extra.length);
+      base[0] = start;
+      for (let i = 1;i < extra.length; ++i)
+        base[i] = base[i - 1] + (1 << extra[i - 1]);
+      return base;
+    }
+    const LENGTH_EXTRA = new u8(29);
+    for (let i = 0;i < 29; ++i)
+      LENGTH_EXTRA[i] = lengthExtraBits(i);
+    const LENGTH_BASE = accumulateBases(LENGTH_EXTRA, 3);
+    LENGTH_BASE[28] = 258;
+    const DIST_EXTRA = new u8(30);
+    for (let i = 0;i < 30; ++i)
+      DIST_EXTRA[i] = distanceExtraBits(i);
+    const DIST_BASE = accumulateBases(DIST_EXTRA, 1), CODE_LENGTH_ORDER = new u8([
+      16,
+      17,
+      18,
+      0,
+      8,
+      7,
+      9,
+      6,
+      10,
+      5,
+      11,
+      4,
+      12,
+      3,
+      13,
+      2,
+      14,
+      1,
+      15
+    ]), FIXED_LIT_LENGTHS = new u8(288);
+    for (let i = 0;i < 144; ++i)
+      FIXED_LIT_LENGTHS[i] = 8;
+    for (let i = 144;i < 256; ++i)
+      FIXED_LIT_LENGTHS[i] = 9;
+    for (let i = 256;i < 280; ++i)
+      FIXED_LIT_LENGTHS[i] = 7;
+    for (let i = 280;i < 288; ++i)
+      FIXED_LIT_LENGTHS[i] = 8;
+    const FIXED_DIST_LENGTHS = new u8(30);
+    for (let i = 0;i < 30; ++i)
+      FIXED_DIST_LENGTHS[i] = 5;
+    const FIXED_LIT_TABLE = buildMap(FIXED_LIT_LENGTHS, 9, 1), FIXED_DIST_TABLE = buildMap(FIXED_DIST_LENGTHS, 5, 1), FIXED_LIT_CODES = buildMap(FIXED_LIT_LENGTHS, 9, 0), FIXED_DIST_CODES = buildMap(FIXED_DIST_LENGTHS, 5, 0), LENGTH_CODE = new u8(259);
+    for (let sym = 0;sym < 28; ++sym) {
+      const base = LENGTH_BASE[sym], span = 1 << LENGTH_EXTRA[sym];
+      for (let len = base;len < base + span && len < 258; ++len)
+        LENGTH_CODE[len] = sym;
+    }
+    LENGTH_CODE[258] = 28;
+    const DIST_CODE_LOW = new u8(256);
+    for (let dist = 1, sym = 0;dist <= 256; ++dist) {
+      while (sym < 29 && dist >= DIST_BASE[sym + 1])
+        ++sym;
+      DIST_CODE_LOW[dist - 1] = sym;
+    }
+    const DIST_CODE_HIGH = new u8(128);
+    for (let bucket = 0, sym = 0;bucket < 128; ++bucket) {
+      const first = (bucket << 8) + 1;
+      while (sym < 29 && first >= DIST_BASE[sym + 1])
+        ++sym;
+      DIST_CODE_HIGH[bucket] = sym;
+    }
+    function distanceCode(dist) {
+      if (dist <= 256)
+        return DIST_CODE_LOW[dist - 1];
+      const sym = DIST_CODE_HIGH[dist - 1 >> 8];
+      return sym < 29 && dist >= DIST_BASE[sym + 1] ? sym + 1 : sym;
+    }
+    const PHASE_HEADER = 0, PHASE_STORED = 1, PHASE_CODES = 2, PHASE_DONE = 3, NEED_INPUT = 0, COMPLETE = 1;
+    function createInflateState(dictionary) {
+      const dict = dictionary && dictionary.length ? dictionary.subarray(Math.max(0, dictionary.length - WINDOW_SIZE)) : null;
+      return {
+        bitPos: 0,
+        finalBlock: 0,
+        phase: PHASE_HEADER,
+        storedRemaining: 0,
+        litTable: null,
+        litBits: 0,
+        distTable: null,
+        distBits: 0,
+        out: null,
+        outLen: 0,
+        emitted: 0,
+        dictionary: dict,
+        fixedOut: !1
+      };
+    }
+    function initOutput(state, inputLength, providedOut) {
+      const dictLen = state.dictionary ? state.dictionary.length : 0;
+      if (providedOut && !dictLen) {
+        state.out = providedOut;
+        state.fixedOut = !0;
+      } else
+        state.out = new u8(Math.max(65536, inputLength * 3));
+      if (dictLen) {
+        state.out.set(state.dictionary);
+        state.outLen = dictLen;
+        state.emitted = dictLen;
+      }
+    }
+    function reserveOutput(state, needed) {
+      if (needed <= state.out.length)
+        return;
+      if (state.fixedOut)
+        fail(8, "output exceeds provided buffer");
+      let size = state.out.length || 65536;
+      while (size < needed)
+        size *= 2;
+      const grown = new u8(size);
+      grown.set(state.out.subarray(0, state.outLen));
+      state.out = grown;
+    }
+    function readDynamicTables(state, input) {
+      const totalBits = input.length * 8;
+      let pos = state.bitPos;
+      const hlit = readBits(input, pos, 31) + 257, hdist = readBits(input, pos + 5, 31) + 1, hclen = readBits(input, pos + 10, 15) + 4;
+      pos += 14;
+      if (pos > totalBits) {
+        state.bitPos = pos;
+        return !1;
+      }
+      if (hlit > 286 || hdist > 30)
+        fail(8, "too many length/distance codes");
+      const clLengths = new u8(19);
+      for (let i = 0;i < hclen; ++i)
+        clLengths[CODE_LENGTH_ORDER[i]] = readBits(input, pos + i * 3, 7);
+      pos += hclen * 3;
+      if (pos > totalBits) {
+        state.bitPos = pos;
+        return !1;
+      }
+      const clBits = max(clLengths), clMask = (1 << clBits) - 1, clTable = buildMap(clLengths, clBits, 1), total = hlit + hdist, lengths = new u8(total);
+      for (let i = 0;i < total; ) {
+        const entry = clTable[readBits(input, pos, clMask)];
+        if (!entry || pos + (entry & 15) > totalBits) {
+          if (pos + clBits > totalBits) {
+            state.bitPos = totalBits + 1;
+            return !1;
+          }
+          fail(8, "invalid code-length code");
+        }
+        pos += entry & 15;
+        const symbol = entry >> 4;
+        if (symbol < 16) {
+          lengths[i++] = symbol;
+          continue;
+        }
+        let repeat, value = 0;
+        if (symbol === 16) {
+          if (i === 0)
+            fail(8, "code-length repeat with no previous length");
+          value = lengths[i - 1];
+          repeat = 3 + readBits(input, pos, 3);
+          pos += 2;
+        } else if (symbol === 17) {
+          repeat = 3 + readBits(input, pos, 7);
+          pos += 3;
+        } else {
+          repeat = 11 + readBits(input, pos, 127);
+          pos += 7;
+        }
+        if (pos > totalBits) {
+          state.bitPos = pos;
+          return !1;
+        }
+        if (i + repeat > total)
+          fail(8, "code-length repeat overruns the table");
+        while (repeat--)
+          lengths[i++] = value;
+      }
+      const litLengths = lengths.subarray(0, hlit), distLengths = lengths.subarray(hlit);
+      state.litBits = max(litLengths);
+      state.distBits = max(distLengths);
+      state.litTable = buildMap(litLengths, state.litBits, 1);
+      state.distTable = buildMap(distLengths, state.distBits, 1);
+      state.bitPos = pos;
+      return !0;
+    }
+    function readBlockHeader(state, input) {
+      const totalBits = input.length * 8;
+      state.finalBlock = readBits(input, state.bitPos, 1);
+      const type = readBits(input, state.bitPos + 1, 3);
+      state.bitPos += 3;
+      if (state.bitPos > totalBits)
+        return !1;
+      if (type === 0) {
+        const start = byteOffset(state.bitPos);
+        if (start + 4 > input.length) {
+          state.bitPos = (start + 4) * 8;
+          return !1;
+        }
+        const len = input[start] | input[start + 1] << 8;
+        if ((input[start + 2] | input[start + 3] << 8) !== (~len & 65535))
+          fail(8, "stored block LEN/NLEN mismatch");
+        state.bitPos = (start + 4) * 8;
+        state.storedRemaining = len;
+        state.phase = PHASE_STORED;
+      } else if (type === 1) {
+        state.litTable = FIXED_LIT_TABLE;
+        state.litBits = 9;
+        state.distTable = FIXED_DIST_TABLE;
+        state.distBits = 5;
+        state.phase = PHASE_CODES;
+      } else if (type === 2) {
+        if (!readDynamicTables(state, input))
+          return !1;
+        state.phase = PHASE_CODES;
+      } else
+        fail(1);
+      return !0;
+    }
+    function copyStored(state, input) {
+      const start = state.bitPos >> 3, n = Math.min(state.storedRemaining, input.length - start);
+      if (n > 0) {
+        const end = state.outLen + n;
+        reserveOutput(state, end);
+        state.out.set(input.subarray(start, start + n), state.outLen);
+        state.outLen = end;
+        state.storedRemaining -= n;
+        state.bitPos += n * 8;
+      }
+      if (state.storedRemaining > 0)
+        return !1;
+      state.phase = state.finalBlock ? PHASE_DONE : PHASE_HEADER;
+      return !0;
+    }
+    function decodeSymbols(state, input) {
+      const totalBits = input.length * 8, litTable = state.litTable, distTable = state.distTable, litMask = (1 << state.litBits) - 1, distMask = (1 << state.distBits) - 1;
+      for (;; ) {
+        const snapshot = state.bitPos, entry = litTable[readBits16(input, state.bitPos) & litMask];
+        if (!entry || state.bitPos + (entry & 15) > totalBits) {
+          if (state.bitPos + state.litBits > totalBits) {
+            state.bitPos = snapshot;
+            return !1;
+          }
+          fail(2);
+        }
+        state.bitPos += entry & 15;
+        const symbol = entry >> 4;
+        if (symbol < 256) {
+          reserveOutput(state, state.outLen + 1);
+          state.out[state.outLen++] = symbol;
+          continue;
+        }
+        if (symbol === 256) {
+          state.phase = state.finalBlock ? PHASE_DONE : PHASE_HEADER;
+          return !0;
+        }
+        const lengthIndex = symbol - 257;
+        if (lengthIndex >= 29)
+          fail(2);
+        let length = LENGTH_BASE[lengthIndex];
+        const lengthExtra = LENGTH_EXTRA[lengthIndex];
+        if (lengthExtra) {
+          if (state.bitPos + lengthExtra > totalBits) {
+            state.bitPos = snapshot;
+            return !1;
+          }
+          length += readBits(input, state.bitPos, (1 << lengthExtra) - 1);
+          state.bitPos += lengthExtra;
+        }
+        const distEntry = distTable[readBits16(input, state.bitPos) & distMask];
+        if (!distEntry || state.bitPos + (distEntry & 15) > totalBits) {
+          if (state.bitPos + state.distBits > totalBits) {
+            state.bitPos = snapshot;
+            return !1;
+          }
+          fail(3);
+        }
+        state.bitPos += distEntry & 15;
+        const distIndex = distEntry >> 4;
+        if (distIndex >= 30)
+          fail(3);
+        let distance = DIST_BASE[distIndex];
+        const distExtra = DIST_EXTRA[distIndex];
+        if (distExtra) {
+          if (state.bitPos + distExtra > totalBits) {
+            state.bitPos = snapshot;
+            return !1;
+          }
+          distance += readBits16(input, state.bitPos) & (1 << distExtra) - 1;
+          state.bitPos += distExtra;
+        }
+        if (distance > state.outLen)
+          fail(3);
+        const end = state.outLen + length;
+        reserveOutput(state, end);
+        const out = state.out;
+        for (let p = state.outLen;p < end; ++p)
+          out[p] = out[p - distance];
+        state.outLen = end;
+      }
+    }
+    function runInflate(state, input, streaming) {
+      for (;; ) {
+        if (state.phase === PHASE_DONE)
+          return COMPLETE;
+        if (state.phase === PHASE_HEADER) {
+          const snapshot = state.bitPos;
+          if (!readBlockHeader(state, input)) {
+            if (!streaming)
+              fail(0);
+            state.bitPos = snapshot;
+            state.phase = PHASE_HEADER;
+            return NEED_INPUT;
+          }
+        }
+        if (state.phase === PHASE_STORED) {
+          if (!copyStored(state, input)) {
+            if (!streaming)
+              fail(0);
+            return NEED_INPUT;
+          }
+        } else if (state.phase === PHASE_CODES) {
+          if (!decodeSymbols(state, input)) {
+            if (!streaming)
+              fail(0);
+            return NEED_INPUT;
+          }
+        }
+      }
+    }
+    function trimWindow(state) {
+      if (state.outLen <= WINDOW_SIZE)
+        return;
+      const start = state.outLen - WINDOW_SIZE;
+      state.out.set(state.out.subarray(start, state.outLen), 0);
+      state.outLen = WINDOW_SIZE;
+      state.emitted = Math.max(0, state.emitted - start);
+    }
+    const WINDOW_BITS = 15, MIN_MATCH = 3, MAX_MATCH = 258, BLOCK_TOKENS = 16384, STREAM_FLUSH_BYTES = 65536, LEVELS = [
+      null,
+      { chainDepth: 4, niceLength: 8 },
+      { chainDepth: 8, niceLength: 16 },
+      { chainDepth: 16, niceLength: 32 },
+      { chainDepth: 16, niceLength: 16, goodLength: 4, maxLazy: 4 },
+      { chainDepth: 32, niceLength: 32, goodLength: 8, maxLazy: 16 },
+      { chainDepth: 128, niceLength: 128, goodLength: 8, maxLazy: 16 },
+      { chainDepth: 256, niceLength: 128, goodLength: 8, maxLazy: 32 },
+      { chainDepth: 1024, niceLength: 258, goodLength: 32, maxLazy: 128 },
+      { chainDepth: 4096, niceLength: 258, goodLength: 32, maxLazy: 258 }
+    ];
+    function clamp(value, lo, hi) {
+      if (!(value >= lo))
+        return lo;
+      return value > hi ? hi : value;
+    }
+    function resolveHashBits(opts, inputLength) {
+      if (opts.mem != null)
+        return Math.min(22, 12 + opts.mem);
+      return clamp(Math.ceil(Math.log2(inputLength || 1)), 12, 20);
+    }
+    function makeHashFn(hashBits) {
+      const shift = 32 - hashBits;
+      return function rfc1951Hash(data, i) {
+        return Math.imul(data[i] | data[i + 1] << 8 | data[i + 2] << 16, 2654435761) >>> shift;
+      };
+    }
+    const TOKEN_SCRATCH_MAX = 2097152;
+    let tokenScratch = null;
+    function tokenBuffer(capacity) {
+      if (capacity > TOKEN_SCRATCH_MAX)
+        return new i32(capacity);
+      if (!tokenScratch || tokenScratch.length < capacity)
+        tokenScratch = new i32(capacity);
+      return tokenScratch;
+    }
+    function createTokenBuffer(tokens, start) {
+      return {
+        tokens,
+        from: 0,
+        to: 0,
+        litFreq: new u32(286),
+        distFreq: new u32(30),
+        extraBits: 0,
+        blockStart: start,
+        blockLen: 0
+      };
+    }
+    function tallyBlock(tb, from, to) {
+      const { tokens, litFreq, distFreq } = tb;
+      let extraBits = 0, covered = 0;
+      for (let p = 2 * from, end = 2 * to;p < end; p += 2) {
+        const len = tokens[p], value = tokens[p + 1];
+        if (len === 0) {
+          ++litFreq[value];
+          covered += 1;
+        } else {
+          const ls = LENGTH_CODE[len], ds = distanceCode(value);
+          ++litFreq[257 + ls];
+          ++distFreq[ds];
+          extraBits += LENGTH_EXTRA[ls] + DIST_EXTRA[ds];
+          covered += len;
+        }
+      }
+      tb.from = from;
+      tb.to = to;
+      tb.extraBits = extraBits;
+      return covered;
+    }
+    function resetTokenBuffer(tb, start) {
+      tb.extraBits = 0;
+      tb.blockStart = start;
+      tb.blockLen = 0;
+      tb.litFreq.fill(0);
+      tb.distFreq.fill(0);
+    }
+    function ensureBits(w, bits) {
+      const needed = (w.bitPos + bits >> 3) + 8;
+      if (needed <= w.buf.length)
+        return;
+      let size = w.buf.length || 1024;
+      while (size < needed)
+        size *= 2;
+      const grown = new u8(size);
+      grown.set(w.buf);
+      w.buf = grown;
+    }
+    function codeBits(freq, lengths, n) {
+      let bits = 0;
+      for (let i = 0;i < n; ++i)
+        if (freq[i])
+          bits += freq[i] * lengths[i];
+      return bits;
+    }
+    function usedAtLeastTwo(freq) {
+      let used = 0;
+      for (let i = 0;i < freq.length; ++i)
+        if (freq[i] && ++used === 2)
+          return 2;
+      return used;
+    }
+    function runLengthEncodeCodeLengths(lengths) {
+      const out = [], n = lengths.length;
+      let i = 0;
+      while (i < n) {
+        const value = lengths[i];
+        let run = 1;
+        while (i + run < n && lengths[i + run] === value)
+          ++run;
+        i += run;
+        if (value === 0) {
+          while (run >= 11) {
+            const r = run < 138 ? run : 138;
+            out.push(18, r - 11, 7);
+            run -= r;
+          }
+          if (run >= 3) {
+            out.push(17, run - 3, 3);
+            run = 0;
+          }
+          while (run-- > 0)
+            out.push(0, 0, 0);
+        } else {
+          out.push(value, 0, 0);
+          let rest = run - 1;
+          while (rest >= 3) {
+            const r = rest < 6 ? rest : 6;
+            out.push(16, r - 3, 2);
+            rest -= r;
+          }
+          while (rest-- > 0)
+            out.push(value, 0, 0);
+        }
+      }
+      return out;
+    }
+    function writeStoredBlock(w, input, start, n, final) {
+      writeBits(w.buf, w.bitPos, final ? 1 : 0);
+      w.bitPos += 3;
+      const o = byteOffset(w.bitPos);
+      w.buf[o] = n & 255;
+      w.buf[o + 1] = n >> 8 & 255;
+      w.buf[o + 2] = ~n & 255;
+      w.buf[o + 3] = ~n >> 8 & 255;
+      if (n)
+        w.buf.set(input.subarray(start, start + n), o + 4);
+      w.bitPos = (o + 4 + n) * 8;
+    }
+    function writeTokens(w, tb, litCodes, litLengths, distCodes, distLengths) {
+      const buf = w.buf, tokens = tb.tokens;
+      let p = w.bitPos;
+      for (let i = 2 * tb.from, end = 2 * tb.to;i < end; i += 2) {
+        const len = tokens[i], value = tokens[i + 1];
+        if (len === 0) {
+          writeBits16(buf, p, litCodes[value]);
+          p += litLengths[value];
+          continue;
+        }
+        const ls = LENGTH_CODE[len];
+        writeBits16(buf, p, litCodes[257 + ls]);
+        p += litLengths[257 + ls];
+        const lextra = LENGTH_EXTRA[ls];
+        if (lextra) {
+          writeBits(buf, p, len - LENGTH_BASE[ls]);
+          p += lextra;
+        }
+        const ds = distanceCode(value);
+        writeBits16(buf, p, distCodes[ds]);
+        p += distLengths[ds];
+        const dextra = DIST_EXTRA[ds];
+        if (dextra) {
+          writeBits16(buf, p, value - DIST_BASE[ds]);
+          p += dextra;
+        }
+      }
+      writeBits16(buf, p, litCodes[256]);
+      w.bitPos = p + litLengths[256];
+    }
+    function writeBlock(w, tb, input, final) {
+      ++tb.litFreq[256];
+      const n = tb.blockLen, align = 8 - (w.bitPos + 3 & 7) & 7, storedCost = n <= 65535 ? 8 * (5 + n) + align : 1 / 0, fixedCost = 3 + codeBits(tb.litFreq, FIXED_LIT_LENGTHS, 286) + codeBits(tb.distFreq, FIXED_DIST_LENGTHS, 30) + tb.extraBits, litTree = buildTree(tb.litFreq, 15), distTree = buildTree(tb.distFreq, 15), hlit = Math.max(257, litTree.t.length), hdist = Math.max(1, distTree.t.length), combined = new u8(hlit + hdist);
+      combined.set(litTree.t, 0);
+      if (distTree.t.length)
+        combined.set(distTree.t, hlit);
+      const litLengths = combined.subarray(0, hlit), distLengths = combined.subarray(hlit), rle = runLengthEncodeCodeLengths(combined), clFreq = new u16(19);
+      let clExtra = 0;
+      for (let i = 0;i < rle.length; i += 3) {
+        ++clFreq[rle[i]];
+        clExtra += rle[i + 2];
+      }
+      const clTree = buildTree(clFreq, 7), clLengths = new u8(19);
+      clLengths.set(clTree.t);
+      let hclen = 19;
+      while (hclen > 4 && !clLengths[CODE_LENGTH_ORDER[hclen - 1]])
+        --hclen;
+      let dynamicCost = 17 + 3 * hclen + codeBits(clFreq, clLengths, 19) + clExtra + codeBits(tb.litFreq, litLengths, Math.min(286, hlit)) + codeBits(tb.distFreq, distLengths, Math.min(30, hdist)) + tb.extraBits;
+      if (usedAtLeastTwo(tb.litFreq) < 2 || usedAtLeastTwo(clFreq) < 2)
+        dynamicCost = 1 / 0;
+      const best = Math.min(storedCost, fixedCost, dynamicCost);
+      ensureBits(w, best + 64);
+      if (best === storedCost) {
+        writeStoredBlock(w, input, tb.blockStart, n, final);
+        return;
+      }
+      writeBits(w.buf, w.bitPos, final ? 1 : 0);
+      if (best === fixedCost) {
+        writeBits(w.buf, w.bitPos + 1, 1);
+        w.bitPos += 3;
+        writeTokens(w, tb, FIXED_LIT_CODES, FIXED_LIT_LENGTHS, FIXED_DIST_CODES, FIXED_DIST_LENGTHS);
+        return;
+      }
+      writeBits(w.buf, w.bitPos + 1, 2);
+      w.bitPos += 3;
+      const buf = w.buf;
+      let p = w.bitPos;
+      writeBits(buf, p, hlit - 257);
+      writeBits(buf, p + 5, hdist - 1);
+      writeBits(buf, p + 10, hclen - 4);
+      p += 14;
+      for (let i = 0;i < hclen; ++i)
+        writeBits(buf, p + 3 * i, clLengths[CODE_LENGTH_ORDER[i]]);
+      p += 3 * hclen;
+      const clCodes = buildMap(clLengths, clTree.l || 1, 0);
+      for (let i = 0;i < rle.length; i += 3) {
+        const symbol = rle[i];
+        writeBits16(buf, p, clCodes[symbol]);
+        p += clLengths[symbol];
+        const bits = rle[i + 2];
+        if (bits) {
+          writeBits(buf, p, rle[i + 1]);
+          p += bits;
+        }
+      }
+      w.bitPos = p;
+      writeTokens(w, tb, buildMap(litLengths, litTree.l || 1, 0), litLengths, buildMap(distLengths, distTree.l || 1, 0), distLengths);
+    }
+    function writeStoredRun(w, input, start, final) {
+      const end = input.length;
+      if (start >= end) {
+        if (final) {
+          ensureBits(w, 48);
+          writeStoredBlock(w, input, start, 0, !0);
+        }
+        return;
+      }
+      let pos = start;
+      while (pos < end) {
+        const n = Math.min(65535, end - pos);
+        ensureBits(w, 8 * (n + 5) + 8);
+        writeStoredBlock(w, input, pos, n, final && pos + n >= end);
+        pos += n;
+      }
+    }
+    function compressBlocks(input, params) {
+      const w = { buf: new u8(4096), bitPos: params.carryBits & 7 };
+      w.buf[0] = params.carryByte & 255;
+      const start = params.start;
+      if (params.level === 0)
+        writeStoredRun(w, input, start, params.final);
+      else {
+        const scan = lz77.encodeTokens(input, {
+          windowBits: WINDOW_BITS,
+          minMatch: MIN_MATCH,
+          maxMatch: MAX_MATCH,
+          hashBits: params.hashBits,
+          start,
+          hashFn: makeHashFn(params.hashBits),
+          lazy: params.lazy,
+          chainSkip: !0,
+          ...LEVELS[params.level],
+          tokens: tokenBuffer(2 * Math.max(0, input.length - start))
+        }), tb = createTokenBuffer(scan.tokens, start), count = scan.count;
+        for (let from = 0;; from += BLOCK_TOKENS) {
+          const to = Math.min(count, from + BLOCK_TOKENS), covered = tallyBlock(tb, from, to);
+          if (to === count) {
+            tb.blockLen = input.length - tb.blockStart;
+            writeBlock(w, tb, input, params.final);
+            break;
+          }
+          tb.blockLen = covered;
+          writeBlock(w, tb, input, !1);
+          resetTokenBuffer(tb, tb.blockStart + covered);
+        }
+      }
+      if (params.final)
+        return { bytes: slice(w.buf, 0, byteOffset(w.bitPos)), carryByte: 0, carryBits: 0 };
+      const whole = w.bitPos >> 3, carryBits = w.bitPos & 7;
+      return {
+        bytes: slice(w.buf, 0, whole),
+        carryByte: carryBits ? w.buf[whole] : 0,
+        carryBits
+      };
+    }
+    function DeflateStream(opts, ondata) {
+      if (typeof opts === "function") {
+        ondata = opts;
+        opts = {};
+      }
+      this.ondata = ondata;
+      this._o = opts || {};
+      this._level = clamp(this._o.level ?? 6, 0, 9) | 0;
+      const dict = this._o.dictionary;
+      this._window = dict && dict.length ? slice(dict, Math.max(0, dict.length - WINDOW_SIZE), dict.length) : new u8(0);
+      this._pending = [];
+      this._pendingLen = 0;
+      this._carryByte = 0;
+      this._carryBits = 0;
+      this._done = !1;
+    }
+    DeflateStream.prototype._compressPending = function(final) {
+      const window = this._window, input = new u8(window.length + this._pendingLen);
+      input.set(window);
+      let off = window.length;
+      for (const chunk of this._pending) {
+        input.set(chunk, off);
+        off += chunk.length;
+      }
+      const result = compressBlocks(input, {
+        start: window.length,
+        level: this._level,
+        lazy: this._o.lazy === !0,
+        hashBits: resolveHashBits(this._o, input.length),
+        final,
+        carryByte: this._carryByte,
+        carryBits: this._carryBits
+      });
+      this._carryByte = result.carryByte;
+      this._carryBits = result.carryBits;
+      this._window = input.length > WINDOW_SIZE ? slice(input, input.length - WINDOW_SIZE, input.length) : input;
+      this._pending = [];
+      this._pendingLen = 0;
+      if (result.bytes.length > 0 || final)
+        this.ondata(result.bytes, final);
+    };
+    DeflateStream.prototype.push = function(chunk, final) {
+      final = !!final;
+      if (!this.ondata)
+        fail(5);
+      if (this._done)
+        fail(4);
+      if (chunk && chunk.length) {
+        this._pending.push(chunk);
+        this._pendingLen += chunk.length;
+      }
+      if (final)
+        this._done = !0;
+      if (final || this._pendingLen >= STREAM_FLUSH_BYTES)
+        this._compressPending(final);
+    };
+    DeflateStream.prototype.flush = function() {
+      if (!this.ondata)
+        fail(5);
+      if (this._done)
+        fail(4);
+      this._compressPending(!1);
+    };
+    function InflateStream(opts, ondata) {
+      if (typeof opts === "function") {
+        ondata = opts;
+        opts = {};
+      }
+      this.ondata = ondata;
+      this._state = createInflateState((opts || {}).dictionary);
+      initOutput(this._state, 0, void 0);
+      this._pending = new u8(0);
+      this._done = !1;
+    }
+    InflateStream.prototype._append = function(chunk) {
+      if (!this._pending.length)
+        this._pending = chunk;
+      else if (chunk.length) {
+        const merged = new u8(this._pending.length + chunk.length);
+        merged.set(this._pending);
+        merged.set(chunk, this._pending.length);
+        this._pending = merged;
+      }
+    };
+    InflateStream.prototype.push = function(chunk, final) {
+      if (!this.ondata)
+        fail(5);
+      if (this._done)
+        fail(4);
+      final = !!final;
+      this._append(chunk);
+      const state = this._state, status = runInflate(state, this._pending, !0);
+      if (final && status !== COMPLETE)
+        fail(0);
+      this._done = final;
+      const produced = slice(state.out, state.emitted, state.outLen);
+      state.emitted = state.outLen;
+      this.ondata(produced, final);
+      trimWindow(state);
+      this._pending = slice(this._pending, state.bitPos >> 3);
+      state.bitPos &= 7;
+    };
+    function deflateSync(data, opts = {}) {
+      let input = data, start = 0;
+      const dict = opts.dictionary;
+      if (dict && dict.length) {
+        const tail = dict.subarray(Math.max(0, dict.length - WINDOW_SIZE));
+        input = new u8(tail.length + data.length);
+        input.set(tail);
+        input.set(data, tail.length);
+        start = tail.length;
+      }
+      return compressBlocks(input, {
+        start,
+        level: clamp(opts.level ?? 6, 0, 9) | 0,
+        lazy: opts.lazy === !0,
+        hashBits: resolveHashBits(opts, input.length),
+        final: !0,
+        carryByte: 0,
+        carryBits: 0
+      }).bytes;
+    }
+    function inflateSync(data, opts = {}) {
+      if (!data.length)
+        return opts.out ? opts.out.subarray(0, 0) : new u8(0);
+      const state = createInflateState(opts.dictionary), dictLen = state.dictionary ? state.dictionary.length : 0;
+      initOutput(state, data.length, opts.out);
+      runInflate(state, data, !1);
+      if (state.fixedOut)
+        return state.out.subarray(0, state.outLen);
+      if (opts.out) {
+        const produced = state.outLen - dictLen;
+        if (produced > opts.out.length)
+          fail(8, "output exceeds provided buffer");
+        opts.out.set(state.out.subarray(dictLen, state.outLen));
+        return opts.out.subarray(0, produced);
+      }
+      return slice(state.out, dictLen, state.outLen);
+    }
+    const _mt = typeof queueMicrotask === "function" ? queueMicrotask : (fn) => Promise.resolve().then(fn);
+    function deflateAsync(data, opts = {}) {
+      return new Promise((resolve, reject) => {
+        _mt(() => {
+          try {
+            resolve(deflateSync(data, opts));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+    }
+    function inflateAsync(data, opts = {}) {
+      return new Promise((resolve, reject) => {
+        _mt(() => {
+          try {
+            resolve(inflateSync(data, opts));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+    }
+    return {
+      deflateSync,
+      inflateSync,
+      deflate: deflateAsync,
+      inflate: inflateAsync,
+      DeflateStream,
+      InflateStream
+    };
+  } });
+    __register({ name: "zip", dependencies: ["deflate","crc32"], factory: function(deflateModule, Crc32) {
+    const { deflateSync, inflateSync, DeflateStream } = deflateModule, _te = typeof TextEncoder < "u" && new TextEncoder, _td = typeof TextDecoder < "u" && new TextDecoder;
+    function _strToU8(str) {
+      if (_te)
+        return _te.encode(str);
+      const a = [];
+      for (let i = 0;i < str.length; ++i) {
+        let c = str.charCodeAt(i);
+        if (c < 128)
+          a.push(c);
+        else if (c < 2048)
+          a.push(192 | c >> 6, 128 | c & 63);
+        else if (c > 55295 && c < 57344) {
+          c = 65536 + ((c & 1023) << 10 | str.charCodeAt(++i) & 1023);
+          a.push(240 | c >> 18, 128 | c >> 12 & 63, 128 | c >> 6 & 63, 128 | c & 63);
+        } else
+          a.push(224 | c >> 12, 128 | c >> 6 & 63, 128 | c & 63);
+      }
+      return new Uint8Array(a);
+    }
+    function _u8ToStr(d, utf8) {
+      if (!utf8) {
+        let r = "";
+        for (let i = 0;i < d.length; i += 16384)
+          r += String.fromCharCode(...d.subarray(i, i + 16384));
+        return r;
+      }
+      if (_td)
+        return _td.decode(d);
+      let r = "";
+      for (let i = 0;i < d.length; ) {
+        const b = d[i++];
+        if (b < 128)
+          r += String.fromCharCode(b);
+        else if (b < 224)
+          r += String.fromCharCode((b & 31) << 6 | d[i++] & 63);
+        else if (b < 240)
+          r += String.fromCharCode((b & 15) << 12 | (d[i++] & 63) << 6 | d[i++] & 63);
+        else {
+          let cp = (b & 7) << 18 | (d[i++] & 63) << 12 | (d[i++] & 63) << 6 | d[i++] & 63;
+          cp -= 65536;
+          r += String.fromCharCode(55296 | cp >> 10, 56320 | cp & 1023);
+        }
+      }
+      return r;
+    }
+    function _isUTF8(str) {
+      for (let i = 0;i < str.length; ++i)
+        if (str.charCodeAt(i) > 127)
+          return !0;
+      return !1;
+    }
+    function _r16(d, b) {
+      return d[b] | d[b + 1] << 8;
+    }
+    function _r32(d, b) {
+      return (d[b] | d[b + 1] << 8 | d[b + 2] << 16 | d[b + 3] << 24) >>> 0;
+    }
+    function _r64(d, b) {
+      return _r32(d, b) + _r32(d, b + 4) * 4294967296;
+    }
+    function _w16(d, b, v) {
+      d[b] = v & 255;
+      d[b + 1] = v >> 8 & 255;
+    }
+    function _w32(d, b, v) {
+      d[b] = v & 255;
+      d[b + 1] = v >> 8 & 255;
+      d[b + 2] = v >> 16 & 255;
+      d[b + 3] = v >>> 24 & 255;
+    }
+    function _dosDateTime(mtime) {
+      const d = new Date(mtime ?? Date.now()), y = d.getFullYear() - 1980;
+      if (y < 0 || y > 119) {
+        const e = Error("date not in range 1980-2099");
+        e.code = 10;
+        throw e;
+      }
+      return y << 25 | d.getMonth() + 1 << 21 | d.getDate() << 16 | d.getHours() << 11 | d.getMinutes() << 5 | d.getSeconds() >> 1;
+    }
+    function _dbf(l) {
+      return l === 1 ? 3 : l < 6 ? 2 : l === 9 ? 1 : 0;
+    }
+    function _exfl(ex) {
+      let le = 0;
+      if (ex)
+        for (const k in ex) {
+          const l = ex[k].length;
+          if (l > 65535) {
+            const e = Error("extra field too long");
+            e.code = 9;
+            throw e;
+          }
+          le += l + 4;
+        }
+      return le;
+    }
+    function _writeExtra(d, b, ex) {
+      if (!ex)
+        return b;
+      for (const k in ex) {
+        const exf = ex[k];
+        _w16(d, b, +k);
+        _w16(d, b + 2, exf.length);
+        d.set(exf, b + 4);
+        b += 4 + exf.length;
+      }
+      return b;
+    }
+    function _localHeaderSize(fnLen, exLen) {
+      return 30 + fnLen + exLen;
+    }
+    function _writeLocalHeader(d, b, fn, fnBytes, u, compression, dosTime, crc, cSize, uSize, ex) {
+      _w32(d, b, 67324752);
+      b += 4;
+      d[b] = 20;
+      b += 2;
+      d[b] = compression < 0 && 8;
+      d[b + 1] = u && 8;
+      b += 2;
+      _w16(d, b, compression & 65535);
+      b += 2;
+      _w32(d, b, dosTime);
+      b += 4;
+      if (compression >= 0) {
+        _w32(d, b, crc);
+        b += 4;
+        _w32(d, b, cSize);
+        b += 4;
+        _w32(d, b, uSize);
+        b += 4;
+      } else
+        b += 12;
+      _w16(d, b, fnBytes.length);
+      b += 2;
+      _w16(d, b, _exfl(ex));
+      b += 2;
+      d.set(fnBytes, b);
+      b += fnBytes.length;
+      return _writeExtra(d, b, ex);
+    }
+    function _centralEntrySize(fnLen, exLen, comLen) {
+      return 46 + fnLen + exLen + comLen;
+    }
+    function _writeCentralEntry(d, b, fnBytes, u, compression, dosTime, crc, cSize, uSize, localOffset, ex, comment) {
+      _w32(d, b, 33639248);
+      b += 4;
+      d[b] = 20;
+      d[b + 1] = 0;
+      b += 2;
+      d[b] = 20;
+      b += 2;
+      d[b] = _dbf(compression) << 1;
+      d[b + 1] = u && 8;
+      b += 2;
+      _w16(d, b, compression < 0 ? 0 : compression & 65535);
+      b += 2;
+      _w32(d, b, dosTime);
+      b += 4;
+      _w32(d, b, crc);
+      b += 4;
+      _w32(d, b, compression < 0 ? -compression - 2 : cSize);
+      b += 4;
+      _w32(d, b, uSize);
+      b += 4;
+      _w16(d, b, fnBytes.length);
+      b += 2;
+      const exl = _exfl(ex);
+      _w16(d, b, exl);
+      b += 2;
+      const coml = comment ? comment.length : 0;
+      _w16(d, b, coml);
+      b += 2;
+      b += 2;
+      b += 2;
+      b += 4;
+      _w32(d, b, localOffset);
+      b += 4;
+      d.set(fnBytes, b);
+      b += fnBytes.length;
+      b = _writeExtra(d, b, ex);
+      if (comment) {
+        d.set(comment, b);
+        b += coml;
+      }
+      return b;
+    }
+    function _writeEOCD(o, b, entryCount, cdSize, cdOffset) {
+      _w32(o, b, 101010256);
+      b += 4;
+      b += 4;
+      _w16(o, b, entryCount);
+      b += 2;
+      _w16(o, b, entryCount);
+      b += 2;
+      _w32(o, b, cdSize);
+      b += 4;
+      _w32(o, b, cdOffset);
+    }
+    function _z64e(d, b) {
+      while (_r16(d, b) !== 1)
+        b += 4 + _r16(d, b + 2);
+      return [_r64(d, b + 12), _r64(d, b + 4), _r64(d, b + 20)];
+    }
+    function _slzh(d, b) {
+      return b + 30 + _r16(d, b + 26) + _r16(d, b + 28);
+    }
+    function _readCDE(d, b, zip64) {
+      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
+      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off];
+    }
+    function _flatten(d, prefix, out, defaultOpts) {
+      for (const k in d) {
+        const val = d[k], name = prefix + k;
+        let data = val, opts = defaultOpts;
+        if (Array.isArray(val)) {
+          opts = Object.assign({}, defaultOpts, val[1]);
+          data = val[0];
+        }
+        if (data instanceof Uint8Array)
+          out[name] = [data, opts];
+        else {
+          out[name + "/"] = [new Uint8Array(0), opts];
+          _flatten(data, name + "/", out, defaultOpts);
+        }
+      }
+    }
+    function zipSync(files, opts = {}) {
+      const flat = {};
+      _flatten(files, "", flat, opts);
+      const entries = [];
+      let dataLen = 0, cdLen = 0;
+      for (const fn in flat) {
+        const [file, p] = flat[fn], compression = p.level === 0 ? 0 : 8, fnBytes = _strToU8(fn), fnLen = fnBytes.length;
+        if (fnLen > 65535) {
+          const e = Error("filename too long");
+          e.code = 11;
+          throw e;
+        }
+        const comBytes = p.comment ? _strToU8(p.comment) : null, exl = _exfl(p.extra), u = _isUTF8(fn) || comBytes && _isUTF8(p.comment), dosTime = _dosDateTime(p.mtime), crc = new Crc32;
+        crc.append(file);
+        const compressed = compression ? deflateSync(file, p) : file, cSize = compressed.length, uSize = file.length, crcVal = crc.get(), localHdrLen = _localHeaderSize(fnLen, exl);
+        entries.push({
+          fnBytes,
+          u,
+          compression,
+          dosTime,
+          crcVal,
+          cSize,
+          uSize,
+          compressed,
+          localHdrLen,
+          p,
+          comBytes,
+          exl,
+          localOffset: dataLen
+        });
+        dataLen += localHdrLen + cSize;
+        cdLen += _centralEntrySize(fnLen, exl, comBytes ? comBytes.length : 0);
+      }
+      const out = new Uint8Array(dataLen + cdLen + 22);
+      let pos = 0, cdPos = dataLen;
+      for (const e of entries) {
+        pos = _writeLocalHeader(out, pos, null, e.fnBytes, e.u, e.compression, e.dosTime, e.crcVal, e.cSize, e.uSize, e.p.extra);
+        out.set(e.compressed, pos);
+        pos += e.cSize;
+        cdPos = _writeCentralEntry(out, cdPos, e.fnBytes, e.u, e.compression, e.dosTime, e.crcVal, e.cSize, e.uSize, e.localOffset, e.p.extra, e.comBytes);
+      }
+      _writeEOCD(out, cdPos, entries.length, cdLen, dataLen);
+      return out;
+    }
+    function _isUnsafePath(name) {
+      if (!name)
+        return !1;
+      if (name.charCodeAt(0) === 47)
+        return !0;
+      if (/^[A-Za-z]:[\\/]/.test(name))
+        return !0;
+      if (name.startsWith("\\\\"))
+        return !0;
+      const segs = name.split(/[\\/]/);
+      for (const s of segs)
+        if (s === "..")
+          return !0;
+      return !1;
+    }
+    function unzipSync(data, opts = {}) {
+      const result = {}, safe = opts.safe !== !1;
+      let e = data.length - 22;
+      while (_r32(data, e) !== 101010256) {
+        if (!e || data.length - e > 65558) {
+          const err = Error("invalid zip data");
+          err.code = 13;
+          throw err;
+        }
+        --e;
+      }
+      let entryCount = _r16(data, e + 8);
+      if (!entryCount)
+        return result;
+      let cdOffset = _r32(data, e + 16), zip64 = cdOffset === 4294967295 || entryCount === 65535;
+      if (zip64) {
+        const ze = _r32(data, e - 12);
+        if (_r32(data, ze) === 101075792) {
+          entryCount = _r32(data, ze + 32);
+          cdOffset = _r64(data, ze + 48);
+        }
+      }
+      const fltr = opts.filter;
+      let o = cdOffset;
+      for (let i = 0;i < entryCount; ++i) {
+        const [cmp, cSize, uSize, fn, nextOff, localOff] = _readCDE(data, o, zip64);
+        o = nextOff;
+        const dataStart = _slzh(data, localOff);
+        if (safe && _isUnsafePath(fn)) {
+          const err = Error('zip-slip: unsafe entry path "' + fn + '"');
+          err.code = 15;
+          throw err;
+        }
+        if (fltr && !fltr({ name: fn, size: cSize, originalSize: uSize, compression: cmp }))
+          continue;
+        if (cmp === 0)
+          result[fn] = new Uint8Array(data.subarray(dataStart, dataStart + cSize));
+        else if (cmp === 8)
+          result[fn] = inflateSync(data.subarray(dataStart, dataStart + cSize), {
+            out: new Uint8Array(uSize)
+          });
+        else {
+          const err = Error("unknown compression type " + cmp);
+          err.code = 14;
+          throw err;
+        }
+      }
+      return result;
+    }
+    function _writeLocalHeaderDD(d, b, fnBytes, u, method, dosTime, ex) {
+      _w32(d, b, 67324752);
+      b += 4;
+      d[b] = 20;
+      b += 2;
+      d[b] = 8;
+      d[b + 1] = u ? 8 : 0;
+      b += 2;
+      _w16(d, b, method);
+      b += 2;
+      _w32(d, b, dosTime);
+      b += 4;
+      b += 12;
+      _w16(d, b, fnBytes.length);
+      b += 2;
+      _w16(d, b, _exfl(ex));
+      b += 2;
+      d.set(fnBytes, b);
+      b += fnBytes.length;
+      return _writeExtra(d, b, ex);
+    }
+    function _writeDataDescriptor(d, b, crc, cSize, uSize) {
+      _w32(d, b, 134695760);
+      b += 4;
+      _w32(d, b, crc);
+      b += 4;
+      _w32(d, b, cSize);
+      b += 4;
+      _w32(d, b, uSize);
+      b += 4;
+      return b;
+    }
+    function ZipStream(opts, ondata) {
+      if (typeof opts === "function") {
+        ondata = opts;
+        opts = {};
+      }
+      this.ondata = ondata || null;
+      this._opts = opts || {};
+      this._off = 0;
+      this._entries = [];
+      this._active = null;
+    }
+    ZipStream.prototype._emit = function(chunk, final) {
+      this._off += chunk.length;
+      if (this.ondata)
+        this.ondata(chunk, !!final);
+    };
+    ZipStream.prototype.add = function(name, data, opts) {
+      if (this._active)
+        throw Error("ZipStream: an entry is still open");
+      if (Array.isArray(data)) {
+        opts = Object.assign({}, data[1], opts);
+        data = data[0];
+      }
+      const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
+      if (fnBytes.length > 65535) {
+        const e = Error("filename too long");
+        e.code = 11;
+        throw e;
+      }
+      const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, crc = new Crc32;
+      crc.append(data);
+      const crcVal = crc.get(), compressed = method ? deflateSync(data, p) : data, cSize = compressed.length, uSize = data.length, out = new Uint8Array(localHdrLen + cSize);
+      _writeLocalHeader(out, 0, null, fnBytes, u, method, dosTime, crcVal, cSize, uSize, p.extra);
+      out.set(compressed, localHdrLen);
+      this._emit(out, !1);
+      const comBytes = p.comment ? _strToU8(p.comment) : null;
+      this._entries.push({ fnBytes, u, method, dosTime, crcVal, cSize, uSize, localOffset, extra: p.extra, comBytes });
+    };
+    ZipStream.prototype.openEntry = function(name, opts) {
+      if (this._active)
+        throw Error("ZipStream: an entry is still open");
+      const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
+      if (fnBytes.length > 65535) {
+        const e = Error("filename too long");
+        e.code = 11;
+        throw e;
+      }
+      const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, hdr = new Uint8Array(localHdrLen);
+      _writeLocalHeaderDD(hdr, 0, fnBytes, u, method, dosTime, p.extra);
+      this._emit(hdr, !1);
+      const crc = new Crc32;
+      let cSize = 0, uSize = 0;
+      const self = this, comBytes = p.comment ? _strToU8(p.comment) : null;
+      let ds = null;
+      if (method === 8)
+        ds = new DeflateStream(p, function(chunk, dfinal) {
+          cSize += chunk.length;
+          self._emit(chunk, !1);
+          if (dfinal) {
+            const dd = new Uint8Array(16);
+            _writeDataDescriptor(dd, 0, crc.get(), cSize, uSize);
+            self._emit(dd, !1);
+            self._entries.push({ fnBytes, u, method, dosTime, crcVal: crc.get(), cSize, uSize, localOffset, extra: p.extra, comBytes });
+            self._active = null;
+          }
+        });
+      const state = { done: !1 };
+      this._active = state;
+      return {
+        push(chunk, final) {
+          if (state.done)
+            throw Error("ZipStream entry already finalized");
+          final = !!final;
+          crc.append(chunk);
+          uSize += chunk.length;
+          if (method === 0) {
+            cSize += chunk.length;
+            self._emit(chunk, !1);
+            if (final) {
+              const dd = new Uint8Array(16);
+              _writeDataDescriptor(dd, 0, crc.get(), cSize, uSize);
+              self._emit(dd, !1);
+              self._entries.push({ fnBytes, u, method, dosTime, crcVal: crc.get(), cSize, uSize, localOffset, extra: p.extra, comBytes });
+              self._active = null;
+              state.done = !0;
+            }
+          } else {
+            ds.push(chunk, final);
+            if (final)
+              state.done = !0;
+          }
+        }
+      };
+    };
+    ZipStream.prototype.finalize = function() {
+      if (this._active)
+        throw Error("ZipStream: an entry is still open");
+      const cdOffset = this._off;
+      let cdLen = 0;
+      for (const e of this._entries)
+        cdLen += _centralEntrySize(e.fnBytes.length, _exfl(e.extra), e.comBytes ? e.comBytes.length : 0);
+      const out = new Uint8Array(cdLen + 22);
+      let pos = 0;
+      for (const e of this._entries)
+        pos = _writeCentralEntry(out, pos, e.fnBytes, e.u, e.method, e.dosTime, e.crcVal, e.cSize, e.uSize, e.localOffset, e.extra, e.comBytes);
+      _writeEOCD(out, pos, this._entries.length, cdLen, cdOffset);
+      this._emit(out, !0);
+    };
+    function ZipStreamReader(opts, onfile) {
+      if (typeof opts === "function") {
+        onfile = opts;
+        opts = {};
+      }
+      this.onfile = onfile || null;
+      this._opts = opts || {};
+      this._buf = [];
+      this._bufLen = 0;
+    }
+    ZipStreamReader.prototype.push = function(chunk, final) {
+      this._buf.push(chunk);
+      this._bufLen += chunk.length;
+      if (!final)
+        return;
+      const combined = new Uint8Array(this._bufLen);
+      let off = 0;
+      for (const c of this._buf) {
+        combined.set(c, off);
+        off += c.length;
+      }
+      this._buf = null;
+      const files = unzipSync(combined, this._opts);
+      if (this.onfile) {
+        const names = Object.keys(files);
+        for (let i = 0;i < names.length; ++i)
+          this.onfile(names[i], files[names[i]], i === names.length - 1);
+      }
+    };
+    const _mt = typeof queueMicrotask === "function" ? queueMicrotask : (fn) => Promise.resolve().then(fn);
+    function zipAsync(files, opts = {}) {
+      return new Promise((resolve, reject) => {
+        _mt(() => {
+          try {
+            resolve(zipSync(files, opts));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+    }
+    function unzipAsync(data, opts = {}) {
+      return new Promise((resolve, reject) => {
+        _mt(() => {
+          try {
+            resolve(unzipSync(data, opts));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+    }
+    return {
+      zipSync,
+      unzipSync,
+      zip: zipAsync,
+      unzip: unzipAsync,
+      ZipStream,
+      ZipStreamReader
+    };
+  } });
+    __register({ name: "crc32", dependencies: [], factory: function() {
+    const table = new Uint32Array(256);
+    for (let i = 0;i < 256; i++) {
+      let t = i;
+      for (let j = 0;j < 8; j++)
+        if (t & 1)
+          t = t >>> 1 ^ 3988292384;
+        else
+          t = t >>> 1;
+      table[i] = t;
+    }
+    function Crc32() {
+      this.crc = -1;
+    }
+    Crc32.prototype.append = function(data) {
+      let crc = this.crc | 0;
+      for (let offset = 0, length = data.length | 0;offset < length; offset++)
+        crc = crc >>> 8 ^ table[(crc ^ data[offset]) & 255];
+      this.crc = crc;
+    };
+    Crc32.prototype.get = function() {
+      return ~this.crc >>> 0;
+    };
+    return Crc32;
+  } });
+
+    // ooxml-local factories — inlined and topo-ordered.
+    __register({ name: "ooxmlErrors", dependencies: [], factory: function() {
+    class OoxmlError extends Error {
+      constructor(code, message, opts) {
+        super(message);
+        this.name = new.target.name;
+        this.code = code;
+        if (opts && opts.context)
+          this.context = opts.context;
+        if (opts && opts.cause)
+          this.cause = opts.cause;
+      }
+    }
+
+    class ParseError extends OoxmlError {
+    }
+
+    class RenderError extends OoxmlError {
+    }
+
+    class ContractError extends OoxmlError {
+    }
+    function isOoxmlError(e) {
+      return e instanceof OoxmlError;
+    }
+    return {
+      OoxmlError,
+      ParseError,
+      RenderError,
+      ContractError,
+      isOoxmlError
+    };
+  } });
+    __register({ name: "opcContentTypes", dependencies: ["ooxmlErrors","xml"], factory: function(errors, xml) {
+    const { ParseError } = errors;
+    function parse(text) {
+      const root = xml.parse(text);
+      if (root.name !== "Types")
+        throw new ParseError("opc/content-types-bad-root", `OPC: expected <Types>, got <${root.name}>`, { context: { elementName: root && root.name } });
+      const defaults = {}, overrides = {};
+      for (const child of root.children) {
+        if (child.type !== "element")
+          continue;
+        if (child.name === "Default")
+          defaults[child.attrs.Extension] = child.attrs.ContentType;
+        else if (child.name === "Override")
+          overrides[child.attrs.PartName] = child.attrs.ContentType;
+      }
+      return { defaults, overrides };
+    }
+    function serialize(types) {
+      const children = [];
+      for (const ext of Object.keys(types.defaults || {}))
+        children.push(xml.el("Default", {
+          Extension: ext,
+          ContentType: types.defaults[ext]
+        }));
+      for (const part of Object.keys(types.overrides || {}))
+        children.push(xml.el("Override", {
+          PartName: part,
+          ContentType: types.overrides[part]
+        }));
+      return xml.serialize(xml.el("Types", { xmlns: "http://schemas.openxmlformats.org/package/2006/content-types" }, children));
+    }
+    function lookup(types, partName) {
+      if (types.overrides && types.overrides[partName])
+        return types.overrides[partName];
+      const dot = partName.lastIndexOf(".");
+      if (dot < 0)
+        return null;
+      const ext = partName.slice(dot + 1).toLowerCase();
+      return types.defaults && types.defaults[ext] || null;
+    }
+    return { parse, serialize, lookup, NS: "http://schemas.openxmlformats.org/package/2006/content-types" };
+  } });
+    __register({ name: "opcRelationships", dependencies: ["ooxmlErrors","xml"], factory: function(errors, xml) {
+    const { ParseError } = errors;
+    function parse(text) {
+      const root = xml.parse(text);
+      if (root.name !== "Relationships")
+        throw new ParseError("opc/relationships-bad-root", `OPC: expected <Relationships>, got <${root.name}>`, { context: { elementName: root && root.name } });
+      const out = [];
+      for (const c of root.children) {
+        if (c.type !== "element" || c.name !== "Relationship")
+          continue;
+        const r = {
+          Id: c.attrs.Id,
+          Type: c.attrs.Type,
+          Target: c.attrs.Target
+        };
+        if (c.attrs.TargetMode)
+          r.TargetMode = c.attrs.TargetMode;
+        out.push(r);
+      }
+      return out;
+    }
+    function serialize(rels) {
+      const children = (rels || []).map((r) => {
+        const attrs = {
+          Id: r.Id,
+          Type: r.Type,
+          Target: r.Target
+        };
+        if (r.TargetMode)
+          attrs.TargetMode = r.TargetMode;
+        return xml.el("Relationship", attrs);
+      });
+      return xml.serialize(xml.el("Relationships", { xmlns: "http://schemas.openxmlformats.org/package/2006/relationships" }, children));
+    }
+    function relsPathFor(partName) {
+      if (!partName || partName === "/")
+        return "_rels/.rels";
+      const clean = partName.replace(/^\//, ""), slash = clean.lastIndexOf("/"), dir = slash < 0 ? "" : clean.slice(0, slash + 1), file = slash < 0 ? clean : clean.slice(slash + 1);
+      return `${dir}_rels/${file}.rels`;
+    }
+    function resolveTarget(sourcePart, target) {
+      if (target.startsWith("/"))
+        return target;
+      const src = sourcePart.replace(/^\//, ""), slash = src.lastIndexOf("/"), segments = ((slash < 0 ? "" : src.slice(0, slash + 1)) + target).split("/"), out = [];
+      for (const seg of segments) {
+        if (!seg || seg === ".")
+          continue;
+        if (seg === "..")
+          out.pop();
+        else
+          out.push(seg);
+      }
+      return "/" + out.join("/");
+    }
+    return { parse, serialize, relsPathFor, resolveTarget, NS: "http://schemas.openxmlformats.org/package/2006/relationships" };
+  } });
+    __register({ name: "ooxmlShared", dependencies: [], factory: function() {
+    const NS = Object.freeze({
+      W: "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+      ["W15"]: "http://schemas.microsoft.com/office/word/2012/wordml",
+      A: "http://schemas.openxmlformats.org/drawingml/2006/main",
+      R: "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+      SS: "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+      P: "http://schemas.openxmlformats.org/presentationml/2006/main",
+      C: "http://schemas.openxmlformats.org/drawingml/2006/chart",
+      M: "http://schemas.openxmlformats.org/officeDocument/2006/math",
+      MC: "http://schemas.openxmlformats.org/markup-compatibility/2006",
+      WP: "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+      PIC: "http://schemas.openxmlformats.org/drawingml/2006/picture",
+      XDR: "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing",
+      DS: "http://schemas.openxmlformats.org/officeDocument/2006/customXml",
+      TC: "http://schemas.microsoft.com/office/spreadsheetml/2018/threadedcomments",
+      ACTIVEX: "http://schemas.microsoft.com/office/2006/activeX"
+    }), REL_TYPE = Object.freeze({
+      DOC: NS.R + "/officeDocument",
+      HYPERLINK: NS.R + "/hyperlink",
+      IMAGE: NS.R + "/image",
+      STYLES: NS.R + "/styles",
+      NUMBERING: NS.R + "/numbering",
+      SETTINGS: NS.R + "/settings",
+      COMMENTS: NS.R + "/comments",
+      FOOTNOTES: NS.R + "/footnotes",
+      ENDNOTES: NS.R + "/endnotes",
+      HEADER: NS.R + "/header",
+      FOOTER: NS.R + "/footer",
+      CUSTOM_XML: NS.R + "/customXml",
+      CUSTOM_XML_PROPS: NS.R + "/customXmlProps",
+      CHART: NS.R + "/chart",
+      PACKAGE: NS.R + "/package",
+      DRAWING: NS.R + "/drawing",
+      TABLE: NS.R + "/table",
+      SHEET: NS.R + "/worksheet",
+      SHARED_STRINGS: NS.R + "/sharedStrings",
+      VML_DRAWING: NS.R + "/vmlDrawing",
+      THREADED_COMMENT: "http://schemas.microsoft.com/office/2017/10/relationships/threadedComment",
+      PERSON: "http://schemas.microsoft.com/office/2017/10/relationships/person",
+      SLIDE: NS.R + "/slide",
+      SLIDE_LAYOUT: NS.R + "/slideLayout",
+      SLIDE_MASTER: NS.R + "/slideMaster",
+      THEME: NS.R + "/theme"
+    }), CT = Object.freeze({
+      DOCUMENT: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+      STYLES_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+      STYLES_X: "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml",
+      NUMBERING: "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
+      SETTINGS: "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml",
+      COMMENTS_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+      COMMENTS_X: "application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml",
+      FOOTNOTES: "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+      ENDNOTES: "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
+      HEADER: "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+      FOOTER: "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+      WORKBOOK: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+      SHEET: "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
+      SHARED_STRINGS: "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml",
+      DRAWING: "application/vnd.openxmlformats-officedocument.drawing+xml",
+      TABLE: "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml",
+      CHART: "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
+      EMBEDDED_XLSX: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      PRESENTATION: "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+      SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
+      SLIDE_LAYOUT: "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml",
+      SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
+      THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
+      VML_DRAWING: "application/vnd.openxmlformats-officedocument.vmlDrawing",
+      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"
+    });
+    function toEmu(v) {
+      if (typeof v === "number")
+        return Math.round(v);
+      const m = /^(-?\d+(\.\d+)?)(in|cm|mm|pt|px)?$/.exec(String(v));
+      if (!m)
+        return 0;
+      const n = parseFloat(m[1]);
+      switch (m[3]) {
+        case "in":
+          return Math.round(n * 914400);
+        case "cm":
+          return Math.round(n * 360000);
+        case "mm":
+          return Math.round(n * 360000 / 10);
+        case "pt":
+          return Math.round(n * 12700);
+        case "px":
+          return Math.round(n * 9525);
+        default:
+          return Math.round(n);
+      }
+    }
+    function inchesToEmu(v) {
+      return Math.round(v * 914400);
+    }
+    function cmToEmu(v) {
+      return Math.round(v * 360000);
+    }
+    function ptToEmu(v) {
+      return Math.round(v * 12700);
+    }
+    function readBoolAttr(v) {
+      if (v == null)
+        return;
+      return v === "1" || v === "true";
+    }
+    function writeBoolAttr(b) {
+      return b ? "1" : "0";
+    }
+    function partExt(partName) {
+      const s = String(partName || ""), dot = s.lastIndexOf(".");
+      if (dot < 0)
+        return "";
+      return s.slice(dot + 1).toLowerCase();
+    }
+    function lookupCT(pkg, partName) {
+      const ct = pkg && pkg.contentTypes;
+      if (!ct)
+        return null;
+      if (ct.overrides && ct.overrides[partName])
+        return ct.overrides[partName];
+      const ext = partExt(partName);
+      if (!ext)
+        return null;
+      return ct.defaults && ct.defaults[ext] || null;
+    }
+    function trackUnmodelledParts(pkg, consume) {
+      const plain = pkg.parts, consumed = new Set;
+      pkg.parts = new Proxy(plain, {
+        get(target, key) {
+          if (typeof key === "string")
+            consumed.add(key);
+          return target[key];
+        }
+      });
+      let value;
+      try {
+        value = consume(pkg);
+      } finally {
+        pkg.parts = plain;
+      }
+      const unmodelledParts = Object.keys(plain).filter((name) => !consumed.has(name)).sort().map((partName) => ({ partName, contentType: lookupCT(pkg, partName) }));
+      return { value, unmodelledParts };
+    }
+    function wordRootAttrs(nodes) {
+      const attrs = { "xmlns:w": NS.W, "xmlns:r": NS.R };
+      if (hasWord2012Element(nodes)) {
+        attrs["xmlns:mc"] = NS.MC;
+        attrs["xmlns:w15"] = NS.W15;
+        attrs["mc:Ignorable"] = "w15";
+      }
+      return attrs;
+    }
+    function hasWord2012Element(nodes) {
+      for (const n of nodes || []) {
+        if (!n || n.type !== "element")
+          continue;
+        if (typeof n.name === "string" && n.name.startsWith("w15:"))
+          return !0;
+        if (hasWord2012Element(n.children))
+          return !0;
+      }
+      return !1;
+    }
+    const _te = new TextEncoder, _td = new TextDecoder;
+    function encodeText(s) {
+      return _te.encode(s);
+    }
+    function decodeText(bytes) {
+      return _td.decode(bytes);
+    }
+    function createRidAllocator(opts) {
+      const prefix = opts && opts.prefix || "rId", startN = opts && opts.start || 1, used = new Set;
+      if (opts && opts.existing) {
+        for (const e of opts.existing)
+          if (typeof e === "string")
+            used.add(e);
+          else if (e && e.Id)
+            used.add(e.Id);
+      }
+      let n = startN;
+      function _idAt(k) {
+        return prefix + k;
+      }
+      function _advance() {
+        while (used.has(_idAt(n)))
+          n++;
+      }
+      function next() {
+        _advance();
+        const id = _idAt(n++);
+        used.add(id);
+        return id;
+      }
+      function peek() {
+        _advance();
+        return _idAt(n);
+      }
+      function reset() {
+        n = startN;
+      }
+      function usedIds() {
+        return Array.from(used);
+      }
+      function claim(preferred) {
+        if (preferred && !used.has(preferred)) {
+          used.add(preferred);
+          return preferred;
+        }
+        return next();
+      }
+      function register(id) {
+        if (id)
+          used.add(id);
+      }
+      return { next, peek, reset, usedIds, claim, register };
+    }
+    function createDmlColorCodec(xml) {
+      const COLOR_TAGS = Object.freeze([
+        "srgbClr",
+        "schemeClr",
+        "prstClr",
+        "hslClr",
+        "scrgbClr",
+        "sysClr"
+      ]);
+      function _kindOf(name) {
+        switch (name) {
+          case "a:srgbClr":
+            return "srgbClr";
+          case "a:schemeClr":
+            return "schemeClr";
+          case "a:prstClr":
+            return "prstClr";
+          case "a:hslClr":
+            return "hslClr";
+          case "a:scrgbClr":
+            return "scrgbClr";
+          case "a:sysClr":
+            return "sysClr";
+          default:
+            return null;
+        }
+      }
+      function parseColor(el, opts) {
+        if (!el)
+          return null;
+        const kind = _kindOf(el.name);
+        if (!kind)
+          return null;
+        const out = { kind, attrs: { ...el.attrs } };
+        if (opts && opts.withMods)
+          out.mods = parseColorMods(el);
+        return out;
+      }
+      function renderColor(c, opts) {
+        if (!c)
+          return null;
+        const mods = !!(opts && opts.withMods) && c.mods && c.mods.length ? c.mods.map(renderColorMod).filter(Boolean) : [];
+        switch (c.kind) {
+          case "srgbClr":
+            return xml.el("a:srgbClr", c.attrs || {}, mods);
+          case "schemeClr":
+            return xml.el("a:schemeClr", c.attrs || {}, mods);
+          case "prstClr":
+            return xml.el("a:prstClr", c.attrs || {}, mods);
+          case "hslClr":
+            return xml.el("a:hslClr", c.attrs || {}, mods);
+          case "scrgbClr":
+            return xml.el("a:scrgbClr", c.attrs || {}, mods);
+          case "sysClr":
+            return xml.el("a:sysClr", c.attrs || {}, mods);
+          default:
+            return null;
+        }
+      }
+      function parseColorMods(el) {
+        const out = [];
+        for (const c of el.children || []) {
+          if (c.type !== "element")
+            continue;
+          const m = parseColorMod(c);
+          if (m)
+            out.push(m);
+        }
+        return out;
+      }
+      function parseColorMod(el) {
+        switch (el.name) {
+          case "a:lum":
+            return { kind: "lum", attrs: { ...el.attrs } };
+          case "a:tint":
+            return { kind: "tint", attrs: { ...el.attrs } };
+          case "a:shade":
+            return { kind: "shade", attrs: { ...el.attrs } };
+          case "a:grayscl":
+            return { kind: "grayscl", attrs: {} };
+          case "a:alphaMod":
+            return { kind: "alphaMod", attrs: { ...el.attrs } };
+          case "a:alphaModFix":
+            return { kind: "alphaModFix", attrs: { ...el.attrs } };
+          case "a:alphaCeiling":
+            return { kind: "alphaCeiling", attrs: {} };
+          case "a:alphaFloor":
+            return { kind: "alphaFloor", attrs: {} };
+          case "a:alphaRepl":
+            return { kind: "alphaRepl", attrs: { ...el.attrs } };
+          case "a:biLevel":
+            return { kind: "biLevel", attrs: { ...el.attrs } };
+          case "a:lumMod":
+            return { kind: "lumMod", attrs: { ...el.attrs } };
+          case "a:lumOff":
+            return { kind: "lumOff", attrs: { ...el.attrs } };
+          case "a:duotone":
+            return { kind: "duotone", colors: (el.children || []).filter((c) => c.type === "element").map((c) => parseColor(c, { withMods: !0 })).filter(Boolean) };
+          case "a:clrChange": {
+            const cf = (el.children || []).find((c) => c.type === "element" && c.name === "a:clrFrom"), ct = (el.children || []).find((c) => c.type === "element" && c.name === "a:clrTo");
+            return {
+              kind: "clrChange",
+              attrs: { ...el.attrs },
+              clrFrom: cf ? findFirstColor(cf, { withMods: !0 }) : null,
+              clrTo: ct ? findFirstColor(ct, { withMods: !0 }) : null
+            };
+          }
+          case "a:clrRepl":
+            return { kind: "clrRepl", color: findFirstColor(el, { withMods: !0 }) };
+          default:
+            return null;
+        }
+      }
+      function renderColorMod(m) {
+        switch (m.kind) {
+          case "lum":
+            return xml.el("a:lum", m.attrs || {});
+          case "tint":
+            return xml.el("a:tint", m.attrs || {});
+          case "shade":
+            return xml.el("a:shade", m.attrs || {});
+          case "grayscl":
+            return xml.el("a:grayscl", {});
+          case "alphaMod":
+            return xml.el("a:alphaMod", m.attrs || {});
+          case "alphaModFix":
+            return xml.el("a:alphaModFix", m.attrs || {});
+          case "alphaCeiling":
+            return xml.el("a:alphaCeiling", {});
+          case "alphaFloor":
+            return xml.el("a:alphaFloor", {});
+          case "alphaRepl":
+            return xml.el("a:alphaRepl", m.attrs || {});
+          case "biLevel":
+            return xml.el("a:biLevel", m.attrs || {});
+          case "lumMod":
+            return xml.el("a:lumMod", m.attrs || {});
+          case "lumOff":
+            return xml.el("a:lumOff", m.attrs || {});
+          case "duotone":
+            return xml.el("a:duotone", {}, (m.colors || []).map((c) => renderColor(c, { withMods: !0 })));
+          case "clrChange":
+            return xml.el("a:clrChange", m.attrs || {}, [
+              xml.el("a:clrFrom", {}, m.clrFrom ? [renderColor(m.clrFrom, { withMods: !0 })] : []),
+              xml.el("a:clrTo", {}, m.clrTo ? [renderColor(m.clrTo, { withMods: !0 })] : [])
+            ]);
+          case "clrRepl":
+            return xml.el("a:clrRepl", {}, m.color ? [renderColor(m.color, { withMods: !0 })] : []);
+          default:
+            return null;
+        }
+      }
+      function findFirstColor(el, opts) {
+        for (const c of el.children || []) {
+          if (c.type !== "element")
+            continue;
+          const local = c.name.replace(/^a:/, "");
+          if (COLOR_TAGS.includes(local))
+            return parseColor(c, opts);
+        }
+        return null;
+      }
+      function srgbClr(hex6) {
+        return xml.el("a:srgbClr", { val: String(hex6).replace(/^#/, "").toUpperCase() });
+      }
+      return {
+        COLOR_TAGS,
+        parseColor,
+        renderColor,
+        parseColorMod,
+        renderColorMod,
+        parseColorMods,
+        findFirstColor,
+        srgbClr
+      };
+    }
+    function createXlsxColorCodec(xml) {
+      function parseColor(el) {
+        if (!el)
+          return null;
+        const a = el.attrs || {}, c = {};
+        if (a.rgb)
+          c.rgb = a.rgb;
+        if (a.theme)
+          c.theme = Number(a.theme);
+        if (a.tint)
+          c.tint = Number(a.tint);
+        if (a.indexed)
+          c.indexed = Number(a.indexed);
+        if (a.auto)
+          c.auto = a.auto === "1";
+        return c;
+      }
+      function renderColor(name, c) {
+        if (!c)
+          return null;
+        const a = {};
+        if (c.rgb != null)
+          a.rgb = c.rgb;
+        if (c.theme != null)
+          a.theme = String(c.theme);
+        if (c.tint != null)
+          a.tint = String(c.tint);
+        if (c.indexed != null)
+          a.indexed = String(c.indexed);
+        if (c.auto === !0)
+          a.auto = "1";
+        return xml.el(name, a);
+      }
+      return { parseColor, renderColor };
+    }
+    return {
+      NS,
+      REL_TYPE,
+      CT,
+      EMU_PER_INCH: 914400,
+      EMU_PER_CM: 360000,
+      EMU_PER_PT: 12700,
+      EMU_PER_PX_96: 9525,
+      toEmu,
+      inchesToEmu,
+      cmToEmu,
+      ptToEmu,
+      readBoolAttr,
+      writeBoolAttr,
+      partExt,
+      lookupCT,
+      trackUnmodelledParts,
+      wordRootAttrs,
+      encodeText,
+      decodeText,
+      createRidAllocator,
+      createDmlColorCodec,
+      createXlsxColorCodec
+    };
+  } });
+    __register({ name: "opcPackage", dependencies: ["ooxmlErrors","zip","opcContentTypes","opcRelationships","ooxmlShared"], factory: function(errors, zipMod, contentTypesMod, relsMod, shared) {
+    const { ParseError, RenderError, ContractError } = errors, DEFAULT_LIMITS = Object.freeze({
+      maxParts: 1024,
+      maxUncompressed: 268435456,
+      maxRatio: 200
+    }), LEADING_SLASH_RE = /^\//, { encodeText, decodeText } = shared;
+    function bytesToString(u8) {
+      return decodeText(u8);
+    }
+    function stringToBytes(s) {
+      return encodeText(s);
+    }
+    function read(bytes, opts) {
+      if (!(bytes instanceof Uint8Array))
+        throw new ContractError("opc/invalid-input", "OPC read: bytes must be a Uint8Array", { context: { received: bytes === null ? "null" : typeof bytes } });
+      const maxParts = opts && opts.maxParts !== void 0 ? opts.maxParts : DEFAULT_LIMITS.maxParts, maxUncompressed = opts && opts.maxUncompressed !== void 0 ? opts.maxUncompressed : DEFAULT_LIMITS.maxUncompressed, maxRatio = opts && opts.maxRatio !== void 0 ? opts.maxRatio : DEFAULT_LIMITS.maxRatio;
+      let partCount = 0, uncompressedTotal = 0;
+      const seen = [];
+      try {
+        zipMod.unzipSync(bytes, {
+          filter(entry) {
+            partCount++;
+            if (maxParts && partCount > maxParts)
+              throw new ParseError("opc/zip-bomb", "OPC: too many parts in archive", { context: { limit: "maxParts", max: maxParts } });
+            if (entry && typeof entry.originalSize === "number") {
+              uncompressedTotal += entry.originalSize;
+              if (maxUncompressed && uncompressedTotal > maxUncompressed)
+                throw new ParseError("opc/zip-bomb", "OPC: uncompressed payload exceeds limit", { context: {
+                  limit: "maxUncompressed",
+                  max: maxUncompressed,
+                  actual: uncompressedTotal
+                } });
+              if (maxRatio && entry.size > 0 && entry.originalSize / entry.size > maxRatio)
+                throw new ParseError("opc/zip-bomb", "OPC: per-entry compression ratio exceeds limit", { context: {
+                  limit: "maxRatio",
+                  max: maxRatio,
+                  name: entry.name,
+                  ratio: entry.originalSize / entry.size
+                } });
+            }
+            seen.push(entry && entry.name);
+            return !0;
+          }
+        });
+      } catch (e) {
+        if (e && e.code && typeof e.code === "string" && e.code.startsWith("opc/"))
+          throw e;
+        throw new ParseError("opc/invalid-zip", "OPC: failed to unzip archive: " + (e && e.message), { cause: e });
+      }
+      let files;
+      try {
+        files = zipMod.unzipSync(bytes);
+      } catch (e) {
+        throw new ParseError("opc/invalid-zip", "OPC: failed to unzip archive: " + (e && e.message), { cause: e });
+      }
+      const ctRaw = files["[Content_Types].xml"];
+      if (!ctRaw)
+        throw new ParseError("opc/missing-content-types", "OPC: missing [Content_Types].xml", { context: { partName: "[Content_Types].xml" } });
+      let contentTypes;
+      try {
+        contentTypes = contentTypesMod.parse(bytesToString(ctRaw));
+      } catch (e) {
+        if (e && e.code && typeof e.code === "string" && e.code.startsWith("opc/"))
+          throw e;
+        throw new ParseError("opc/invalid-content-types", "OPC: failed to parse [Content_Types].xml", { context: { partName: "[Content_Types].xml" }, cause: e });
+      }
+      const parts = {}, rels = {};
+      for (const path of Object.keys(files)) {
+        if (path === "[Content_Types].xml")
+          continue;
+        if (path.endsWith("/"))
+          continue;
+        const absolute = "/" + path;
+        if (isRelsPath(path)) {
+          const owner = ownerPartFromRels(path);
+          try {
+            rels[owner] = relsMod.parse(bytesToString(files[path]));
+          } catch (e) {
+            throw new ParseError("opc/invalid-rels", "OPC: failed to parse rels", { context: { partName: path, owner }, cause: e });
+          }
+        } else
+          parts[absolute] = files[path];
+      }
+      return { contentTypes, parts, rels };
+    }
+    function write(pkg, opts) {
+      if (!pkg || typeof pkg !== "object")
+        throw new ContractError("opc/invalid-input", "OPC write: pkg must be an object", { context: { received: pkg === null ? "null" : typeof pkg } });
+      const files = {};
+      try {
+        files["[Content_Types].xml"] = stringToBytes(contentTypesMod.serialize(pkg.contentTypes));
+      } catch (e) {
+        throw new RenderError("opc/render-content-types", "OPC: failed to serialize [Content_Types].xml", { cause: e });
+      }
+      for (const owner of Object.keys(pkg.rels || {})) {
+        const rels = pkg.rels[owner];
+        if (!rels || !rels.length)
+          continue;
+        const path = relsMod.relsPathFor(owner === "/" ? "" : owner);
+        try {
+          files[path] = stringToBytes(relsMod.serialize(rels));
+        } catch (e) {
+          throw new RenderError("opc/render-rels", "OPC: failed to serialize rels", { context: { owner, path }, cause: e });
+        }
+      }
+      for (const partName of Object.keys(pkg.parts || {})) {
+        const data = pkg.parts[partName];
+        files[partName.replace(LEADING_SLASH_RE, "")] = data;
+      }
+      const mtime = opts && opts.mtime !== void 0 ? opts.mtime : new Date(1980, 0, 1, 0, 0, 0);
+      try {
+        return zipMod.zipSync(files, { mtime });
+      } catch (e) {
+        throw new RenderError("opc/zip-failed", "OPC: failed to zip package", { cause: e });
+      }
+    }
+    function empty() {
+      return {
+        contentTypes: {
+          defaults: {
+            rels: "application/vnd.openxmlformats-package.relationships+xml",
+            xml: "application/xml"
+          },
+          overrides: {}
+        },
+        parts: {},
+        rels: { "/": [] }
+      };
+    }
+    function isRelsPath(zipPath) {
+      if (zipPath === "_rels/.rels")
+        return !0;
+      const slash = zipPath.lastIndexOf("/");
+      if (slash < 0)
+        return !1;
+      const dir = zipPath.slice(0, slash);
+      return zipPath.endsWith(".rels") && dir.endsWith("/_rels");
+    }
+    function ownerPartFromRels(zipPath) {
+      if (zipPath === "_rels/.rels")
+        return "/";
+      const noExt = zipPath.slice(0, -5), idx = noExt.lastIndexOf("/_rels/"), baseDir = noExt.slice(0, idx), fileName = noExt.slice(idx + 7);
+      return "/" + (baseDir ? baseDir + "/" : "") + fileName;
+    }
+    function setPart(pkg, partName, data, contentType) {
+      pkg.parts[partName] = data;
+      if (contentType)
+        pkg.contentTypes.overrides[partName] = contentType;
+      return pkg;
+    }
+    function setRels(pkg, sourcePart, rels) {
+      pkg.rels[sourcePart] = rels;
+      return pkg;
+    }
+    return {
+      read,
+      write,
+      empty,
+      setPart,
+      setRels,
+      bytesToString,
+      stringToBytes,
+      isRelsPath,
+      ownerPartFromRels,
+      defaultLimits: DEFAULT_LIMITS
+    };
+  } });
+    __register({ name: "ooxmlMath", dependencies: ["ooxmlErrors","xml"], factory: function(errors, xml) {
+    const { ParseError } = errors;
+    function parseSlot(parentEl) {
+      const out = [];
+      if (!parentEl)
+        return out;
+      for (const c of parentEl.children) {
+        if (c.type !== "element")
+          continue;
+        const node = parseMathElement(c);
+        if (node)
+          out.push(node);
+      }
+      return out;
+    }
+    function renderSlot(name, elements) {
+      return xml.el(name, {}, (elements || []).map(renderMathElement));
+    }
+    function parseMathRun(rEl) {
+      const out = { type: "mathRun", text: "" }, rPrEl = xml.findChild(rEl, "m:rPr");
+      if (rPrEl) {
+        const sty = xml.findChild(rPrEl, "m:sty");
+        if (sty)
+          out.rPr = { sty: sty.attrs["m:val"] };
+      }
+      for (const c of rEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "m:t")
+          out.text += xml.textContent(c);
+      }
+      return out;
+    }
+    function renderMathRun(r) {
+      const children = [];
+      if (r.rPr) {
+        const inner = [];
+        if (r.rPr.sty)
+          inner.push(xml.el("m:sty", { "m:val": r.rPr.sty }));
+        if (inner.length)
+          children.push(xml.el("m:rPr", {}, inner));
+      }
+      children.push(xml.el("m:t", { "xml:space": "preserve" }, [xml.text(r.text || "")]));
+      return xml.el("m:r", {}, children);
+    }
+    function parseFrac(fEl) {
+      return {
+        type: "frac",
+        numerator: parseSlot(xml.findChild(fEl, "m:num")),
+        denominator: parseSlot(xml.findChild(fEl, "m:den"))
+      };
+    }
+    function renderFrac(f) {
+      return xml.el("m:f", {}, [
+        renderSlot("m:num", f.numerator),
+        renderSlot("m:den", f.denominator)
+      ]);
+    }
+    function parseSSup(el) {
+      return {
+        type: "sSup",
+        base: parseSlot(xml.findChild(el, "m:e")),
+        sup: parseSlot(xml.findChild(el, "m:sup"))
+      };
+    }
+    function renderSSup(n) {
+      return xml.el("m:sSup", {}, [
+        renderSlot("m:e", n.base),
+        renderSlot("m:sup", n.sup)
+      ]);
+    }
+    function parseSSub(el) {
+      return {
+        type: "sSub",
+        base: parseSlot(xml.findChild(el, "m:e")),
+        sub: parseSlot(xml.findChild(el, "m:sub"))
+      };
+    }
+    function renderSSub(n) {
+      return xml.el("m:sSub", {}, [
+        renderSlot("m:e", n.base),
+        renderSlot("m:sub", n.sub)
+      ]);
+    }
+    function parseSSubSup(el) {
+      return {
+        type: "sSubSup",
+        base: parseSlot(xml.findChild(el, "m:e")),
+        sub: parseSlot(xml.findChild(el, "m:sub")),
+        sup: parseSlot(xml.findChild(el, "m:sup"))
+      };
+    }
+    function renderSSubSup(n) {
+      return xml.el("m:sSubSup", {}, [
+        renderSlot("m:e", n.base),
+        renderSlot("m:sub", n.sub),
+        renderSlot("m:sup", n.sup)
+      ]);
+    }
+    function parseRad(el) {
+      return {
+        type: "rad",
+        degree: parseSlot(xml.findChild(el, "m:deg")),
+        base: parseSlot(xml.findChild(el, "m:e"))
+      };
+    }
+    function renderRad(n) {
+      return xml.el("m:rad", {}, [
+        renderSlot("m:deg", n.degree),
+        renderSlot("m:e", n.base)
+      ]);
+    }
+    function parseNary(el) {
+      const out = {
+        type: "nary",
+        op: "\u2211",
+        sub: parseSlot(xml.findChild(el, "m:sub")),
+        sup: parseSlot(xml.findChild(el, "m:sup")),
+        body: parseSlot(xml.findChild(el, "m:e"))
+      }, naryPr = xml.findChild(el, "m:naryPr");
+      if (naryPr) {
+        const chr = xml.findChild(naryPr, "m:chr");
+        if (chr && chr.attrs["m:val"])
+          out.op = chr.attrs["m:val"];
+      }
+      return out;
+    }
+    function renderNary(n) {
+      const children = [];
+      children.push(xml.el("m:naryPr", {}, [
+        xml.el("m:chr", { "m:val": n.op || "\u2211" })
+      ]));
+      children.push(renderSlot("m:sub", n.sub));
+      children.push(renderSlot("m:sup", n.sup));
+      children.push(renderSlot("m:e", n.body));
+      return xml.el("m:nary", {}, children);
+    }
+    function parseDelim(el) {
+      const out = { type: "d", children: [] }, dPr = xml.findChild(el, "m:dPr");
+      if (dPr) {
+        const beg = xml.findChild(dPr, "m:begChr"), end = xml.findChild(dPr, "m:endChr"), sep = xml.findChild(dPr, "m:sepChr");
+        if (beg && beg.attrs["m:val"])
+          out.open = beg.attrs["m:val"];
+        if (end && end.attrs["m:val"])
+          out.close = end.attrs["m:val"];
+        if (sep && sep.attrs["m:val"])
+          out.sep = sep.attrs["m:val"];
+      }
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "m:e")
+          out.children.push(parseSlot(c));
+      }
+      return out;
+    }
+    function renderDelim(n) {
+      const children = [], pr = [];
+      if (n.open != null)
+        pr.push(xml.el("m:begChr", { "m:val": n.open }));
+      if (n.close != null)
+        pr.push(xml.el("m:endChr", { "m:val": n.close }));
+      if (n.sep != null)
+        pr.push(xml.el("m:sepChr", { "m:val": n.sep }));
+      if (pr.length)
+        children.push(xml.el("m:dPr", {}, pr));
+      for (const slot of n.children || [])
+        children.push(renderSlot("m:e", slot));
+      return xml.el("m:d", {}, children);
+    }
+    function parseFunc(el) {
+      return {
+        type: "func",
+        name: parseSlot(xml.findChild(el, "m:fName")),
+        body: parseSlot(xml.findChild(el, "m:e"))
+      };
+    }
+    function renderFunc(n) {
+      return xml.el("m:func", {}, [
+        renderSlot("m:fName", n.name),
+        renderSlot("m:e", n.body)
+      ]);
+    }
+    function parseMatrix(el) {
+      const out = { type: "m", rows: [] };
+      for (const r of xml.findAll(el, "m:mr")) {
+        const row = [];
+        for (const c of xml.findAll(r, "m:e"))
+          row.push(parseSlot(c));
+        out.rows.push(row);
+      }
+      return out;
+    }
+    function renderMatrix(n) {
+      const rows = (n.rows || []).map((row) => xml.el("m:mr", {}, row.map((cell) => renderSlot("m:e", cell))));
+      return xml.el("m:m", {}, rows);
+    }
+    function parseAcc(el) {
+      const out = { type: "acc", base: parseSlot(xml.findChild(el, "m:e")) }, accPr = xml.findChild(el, "m:accPr");
+      if (accPr) {
+        const chr = xml.findChild(accPr, "m:chr");
+        if (chr && chr.attrs["m:val"])
+          out.char = chr.attrs["m:val"];
+      }
+      return out;
+    }
+    function renderAcc(n) {
+      const children = [];
+      if (n.char != null)
+        children.push(xml.el("m:accPr", {}, [
+          xml.el("m:chr", { "m:val": n.char })
+        ]));
+      children.push(renderSlot("m:e", n.base));
+      return xml.el("m:acc", {}, children);
+    }
+    function parseBar(el) {
+      const out = { type: "bar", base: parseSlot(xml.findChild(el, "m:e")) }, barPr = xml.findChild(el, "m:barPr");
+      if (barPr) {
+        const pos = xml.findChild(barPr, "m:pos");
+        if (pos && pos.attrs["m:val"])
+          out.pos = pos.attrs["m:val"];
+      }
+      return out;
+    }
+    function renderBar(n) {
+      const children = [];
+      if (n.pos)
+        children.push(xml.el("m:barPr", {}, [
+          xml.el("m:pos", { "m:val": n.pos })
+        ]));
+      children.push(renderSlot("m:e", n.base));
+      return xml.el("m:bar", {}, children);
+    }
+    function parseBox(el) {
+      return { type: "box", base: parseSlot(xml.findChild(el, "m:e")) };
+    }
+    function renderBox(n) {
+      return xml.el("m:box", {}, [renderSlot("m:e", n.base)]);
+    }
+    function parseMathElement(el) {
+      switch (el.name) {
+        case "m:r":
+          return parseMathRun(el);
+        case "m:f":
+          return parseFrac(el);
+        case "m:sSup":
+          return parseSSup(el);
+        case "m:sSub":
+          return parseSSub(el);
+        case "m:sSubSup":
+          return parseSSubSup(el);
+        case "m:rad":
+          return parseRad(el);
+        case "m:nary":
+          return parseNary(el);
+        case "m:d":
+          return parseDelim(el);
+        case "m:func":
+          return parseFunc(el);
+        case "m:m":
+          return parseMatrix(el);
+        case "m:acc":
+          return parseAcc(el);
+        case "m:bar":
+          return parseBar(el);
+        case "m:box":
+          return parseBox(el);
+        case "m:oMath":
+          return parseOMath(el);
+        default:
+          return { type: "mathUnknown", node: el };
+      }
+    }
+    function renderMathElement(n) {
+      switch (n.type) {
+        case "mathRun":
+          return renderMathRun(n);
+        case "frac":
+          return renderFrac(n);
+        case "sSup":
+          return renderSSup(n);
+        case "sSub":
+          return renderSSub(n);
+        case "sSubSup":
+          return renderSSubSup(n);
+        case "rad":
+          return renderRad(n);
+        case "nary":
+          return renderNary(n);
+        case "d":
+          return renderDelim(n);
+        case "func":
+          return renderFunc(n);
+        case "m":
+          return renderMatrix(n);
+        case "acc":
+          return renderAcc(n);
+        case "bar":
+          return renderBar(n);
+        case "box":
+          return renderBox(n);
+        case "oMath":
+          return renderOMath(n);
+        case "mathUnknown":
+          return n.node;
+        default:
+          throw new ParseError("math/unknown-node-type", `ooxmlMath: unknown type ${n.type}`, { context: { type: n && n.type } });
+      }
+    }
+    function parseOMath(el) {
+      return { type: "oMath", children: parseSlot(el) };
+    }
+    function renderOMath(n) {
+      const children = (n.children || []).map(renderMathElement);
+      return xml.el("m:oMath", {}, children);
+    }
+    function parseOMathPara(el) {
+      const out = { type: "oMathPara", children: [] };
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "m:oMath")
+          out.children.push(parseOMath(c));
+      }
+      return out;
+    }
+    function renderOMathPara(n) {
+      return xml.el("m:oMathPara", {}, (n.children || []).map(renderOMath));
+    }
+    function r(text, sty) {
+      const out = { type: "mathRun", text: String(text || "") };
+      if (sty)
+        out.rPr = { sty };
+      return out;
+    }
+    function frac(numerator, denominator) {
+      return {
+        type: "frac",
+        numerator: toArray(numerator),
+        denominator: toArray(denominator)
+      };
+    }
+    function sup(base, sup) {
+      return { type: "sSup", base: toArray(base), sup: toArray(sup) };
+    }
+    function sub(base, sub) {
+      return { type: "sSub", base: toArray(base), sub: toArray(sub) };
+    }
+    function subSup(base, sub, sup) {
+      return {
+        type: "sSubSup",
+        base: toArray(base),
+        sub: toArray(sub),
+        sup: toArray(sup)
+      };
+    }
+    function rad(base, degree) {
+      return {
+        type: "rad",
+        degree: degree != null ? toArray(degree) : [],
+        base: toArray(base)
+      };
+    }
+    function nary(op, sub, sup, body) {
+      return {
+        type: "nary",
+        op,
+        sub: toArray(sub),
+        sup: toArray(sup),
+        body: toArray(body)
+      };
+    }
+    function delim(content, opts = {}) {
+      const slots = Array.isArray(content) && Array.isArray(content[0]) ? content : [toArray(content)];
+      return {
+        type: "d",
+        ...opts.open != null ? { open: opts.open } : {},
+        ...opts.close != null ? { close: opts.close } : {},
+        ...opts.sep != null ? { sep: opts.sep } : {},
+        children: slots
+      };
+    }
+    function func(name, body) {
+      return { type: "func", name: toArray(name), body: toArray(body) };
+    }
+    function matrix(rows) {
+      return {
+        type: "m",
+        rows: (rows || []).map((row) => row.map(toArray))
+      };
+    }
+    function toArray(x) {
+      if (x == null)
+        return [];
+      return Array.isArray(x) ? x : [x];
+    }
+    function oMath(...children) {
+      const flat = [];
+      for (const c of children)
+        if (Array.isArray(c))
+          flat.push(...c);
+        else
+          flat.push(c);
+      return { type: "oMath", children: flat };
+    }
+    function oMathPara(...maths) {
+      return {
+        type: "oMathPara",
+        children: maths.map((m) => m.type === "oMath" ? m : oMath(m))
+      };
+    }
+    return {
+      parseOMath,
+      renderOMath,
+      parseOMathPara,
+      renderOMathPara,
+      parseMathElement,
+      renderMathElement,
+      r,
+      frac,
+      sup,
+      sub,
+      subSup,
+      rad,
+      nary,
+      delim,
+      func,
+      matrix,
+      oMath,
+      oMathPara,
+      M_NS: "http://schemas.openxmlformats.org/officeDocument/2006/math"
+    };
+  } });
+    __register({ name: "drawingml", dependencies: ["xml","ooxmlMath","ooxmlShared"], factory: function(xml, mathMod, shared) {
+    const {
+      NS,
+      EMU_PER_INCH,
+      EMU_PER_CM,
+      EMU_PER_PT,
+      inchesToEmu,
+      cmToEmu,
+      ptToEmu,
+      readBoolAttr,
+      writeBoolAttr
+    } = shared, A_NS = NS.A, srgbClr = shared.createDmlColorCodec(xml).srgbClr;
+    function parseRunProperties(rPrEl) {
+      if (!rPrEl)
+        return;
+      const a = rPrEl.attrs, out = {};
+      if (a.lang)
+        out.lang = a.lang;
+      if (a.sz != null)
+        out.size = Number(a.sz);
+      if (a.b != null)
+        out.bold = readBoolAttr(a.b);
+      if (a.i != null)
+        out.italic = readBoolAttr(a.i);
+      if (a.strike)
+        out.strike = a.strike;
+      if (a.u)
+        out.underline = a.u;
+      if (a.baseline != null)
+        out.baseline = Number(a.baseline);
+      const extras = [];
+      for (const c of rPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:solidFill") {
+          const cl = c.children.find((n) => n.type === "element" && n.name === "a:srgbClr");
+          if (cl)
+            out.color = cl.attrs.val;
+          else
+            extras.push(c);
+        } else if (c.name === "a:latin")
+          out.font = c.attrs.typeface;
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderRunProperties(rPr) {
+      if (!rPr)
+        return null;
+      const a = {};
+      if (rPr.lang)
+        a.lang = rPr.lang;
+      if (rPr.size != null)
+        a.sz = String(rPr.size);
+      if (rPr.bold != null)
+        a.b = writeBoolAttr(rPr.bold);
+      if (rPr.italic != null)
+        a.i = writeBoolAttr(rPr.italic);
+      if (rPr.strike)
+        a.strike = rPr.strike;
+      if (rPr.underline)
+        a.u = rPr.underline;
+      if (rPr.baseline != null)
+        a.baseline = String(rPr.baseline);
+      const children = [];
+      if (rPr.color)
+        children.push(xml.el("a:solidFill", {}, [srgbClr(rPr.color)]));
+      if (rPr.font)
+        children.push(xml.el("a:latin", { typeface: rPr.font }));
+      if (rPr._extras)
+        for (const ex of rPr._extras)
+          children.push(ex);
+      return xml.el("a:rPr", a, children);
+    }
+    function parseParagraphProperties(pPrEl) {
+      if (!pPrEl)
+        return;
+      const a = pPrEl.attrs, out = {};
+      if (a.lvl != null)
+        out.level = Number(a.lvl);
+      if (a.algn)
+        out.align = a.algn;
+      if (a.indent != null)
+        out.indent = Number(a.indent);
+      if (a.marL != null)
+        out.marL = Number(a.marL);
+      const extras = [];
+      for (const c of pPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:buNone")
+          out.bullet = "none";
+        else if (c.name === "a:buChar")
+          out.bullet = { char: c.attrs.char };
+        else if (c.name === "a:buAutoNum")
+          out.bullet = { autoNumType: c.attrs.type };
+        else if (c.name === "a:defRPr")
+          out.defRPr = parseRunProperties(c);
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderParagraphProperties(pPr) {
+      if (!pPr)
+        return null;
+      const a = {};
+      if (pPr.level != null)
+        a.lvl = String(pPr.level);
+      if (pPr.align)
+        a.algn = pPr.align;
+      if (pPr.indent != null)
+        a.indent = String(pPr.indent);
+      if (pPr.marL != null)
+        a.marL = String(pPr.marL);
+      const children = [];
+      if (pPr.bullet === "none")
+        children.push(xml.el("a:buNone", {}));
+      else if (pPr.bullet && pPr.bullet.char)
+        children.push(xml.el("a:buChar", { char: pPr.bullet.char }));
+      else if (pPr.bullet && pPr.bullet.autoNumType)
+        children.push(xml.el("a:buAutoNum", { type: pPr.bullet.autoNumType }));
+      if (pPr.defRPr) {
+        const dpr = renderRunProperties(pPr.defRPr);
+        if (dpr)
+          children.push(xml.el("a:defRPr", dpr.attrs, dpr.children));
+      }
+      if (pPr._extras)
+        for (const ex of pPr._extras)
+          children.push(ex);
+      if (!Object.keys(a).length && !children.length)
+        return null;
+      return xml.el("a:pPr", a, children);
+    }
+    function parseRun(rEl) {
+      const rPrEl = xml.findChild(rEl, "a:rPr"), tEl = xml.findChild(rEl, "a:t"), out = { type: "text", value: tEl ? xml.textContent(tEl) : "" }, rPr = parseRunProperties(rPrEl);
+      if (rPr)
+        out.rPr = rPr;
+      return out;
+    }
+    function renderRun(run) {
+      const children = [], rPrEl = renderRunProperties(run.rPr);
+      if (rPrEl)
+        children.push(rPrEl);
+      children.push(xml.el("a:t", {}, [xml.text(run.value || "")]));
+      return xml.el("a:r", {}, children);
+    }
+    function parseField(fEl) {
+      const out = {
+        type: "field",
+        id: fEl.attrs.id
+      };
+      if (fEl.attrs.type)
+        out.fieldType = fEl.attrs.type;
+      const rPrEl = xml.findChild(fEl, "a:rPr"), tEl = xml.findChild(fEl, "a:t"), rPr = parseRunProperties(rPrEl);
+      if (rPr)
+        out.rPr = rPr;
+      if (tEl)
+        out.value = xml.textContent(tEl);
+      return out;
+    }
+    function renderField(f) {
+      const a = { id: f.id };
+      if (f.fieldType)
+        a.type = f.fieldType;
+      const children = [], rPrEl = renderRunProperties(f.rPr);
+      if (rPrEl)
+        children.push(rPrEl);
+      if (f.value != null)
+        children.push(xml.el("a:t", {}, [xml.text(f.value)]));
+      return xml.el("a:fld", a, children);
+    }
+    function parseBreak(brEl) {
+      const out = { type: "break" }, rPrEl = xml.findChild(brEl, "a:rPr"), rPr = parseRunProperties(rPrEl);
+      if (rPr)
+        out.rPr = rPr;
+      return out;
+    }
+    function renderBreak(b) {
+      const rPrEl = renderRunProperties(b.rPr);
+      return xml.el("a:br", {}, rPrEl ? [rPrEl] : []);
+    }
+    function parseParagraph(pEl) {
+      const pPrEl = xml.findChild(pEl, "a:pPr"), pPr = parseParagraphProperties(pPrEl), runs = [], extras = [];
+      for (const c of pEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:pPr")
+          continue;
+        if (c.name === "a:r")
+          runs.push(parseRun(c));
+        else if (c.name === "a:br")
+          runs.push(parseBreak(c));
+        else if (c.name === "a:fld")
+          runs.push(parseField(c));
+        else if (c.name === "m:oMath" && mathMod)
+          runs.push(mathMod.parseOMath(c));
+        else if (c.name === "a:endParaRPr")
+          extras.push(c);
+        else
+          extras.push(c);
+      }
+      const out = { runs };
+      if (pPr)
+        out.pPr = pPr;
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderParagraph(p) {
+      const children = [], pPrEl = renderParagraphProperties(p.pPr);
+      if (pPrEl)
+        children.push(pPrEl);
+      for (const r of p.runs || [])
+        if (r.type === "text")
+          children.push(renderRun(r));
+        else if (r.type === "break")
+          children.push(renderBreak(r));
+        else if (r.type === "field")
+          children.push(renderField(r));
+        else if (r.type === "oMath" && mathMod)
+          children.push(mathMod.renderOMath(r));
+      if (p._extras)
+        for (const ex of p._extras)
+          children.push(ex);
+      return xml.el("a:p", {}, children);
+    }
+    function parseTextBody(tbEl) {
+      const out = { paragraphs: [] };
+      for (const c of tbEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:bodyPr")
+          out.bodyPr = c;
+        else if (c.name === "a:lstStyle")
+          out.lstStyle = c;
+        else if (c.name === "a:p")
+          out.paragraphs.push(parseParagraph(c));
+      }
+      return out;
+    }
+    function renderTextBody(tb, rootTag = "a:txBody") {
+      const children = [];
+      children.push(tb.bodyPr || xml.el("a:bodyPr", {}));
+      children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
+      for (const p of tb.paragraphs || [])
+        children.push(renderParagraph(p));
+      return xml.el(rootTag, {}, children);
+    }
+    function textBodyFromString(text, rPr) {
+      const run = { type: "text", value: text };
+      if (rPr)
+        run.rPr = rPr;
+      return { paragraphs: [{ runs: [run] }] };
+    }
+    function textParagraph(text) {
+      return xml.el("a:p", {}, [
+        xml.el("a:r", {}, [
+          xml.el("a:t", {}, [xml.text(text)])
+        ])
+      ]);
+    }
+    return {
+      A_NS,
+      EMU_PER_INCH,
+      EMU_PER_CM,
+      EMU_PER_PT,
+      inchesToEmu,
+      cmToEmu,
+      ptToEmu,
+      srgbClr,
+      textParagraph,
+      textBodyFromString,
+      parseRunProperties,
+      renderRunProperties,
+      parseParagraphProperties,
+      renderParagraphProperties,
+      parseRun,
+      renderRun,
+      parseBreak,
+      renderBreak,
+      parseField,
+      renderField,
+      parseParagraph,
+      renderParagraph,
+      parseTextBody,
+      renderTextBody
+    };
+  } });
+    __register({ name: "pptxPicture", dependencies: ["xml","ooxmlShared"], factory: function(xml, shared) {
+    const { NS, REL_TYPE } = shared, A_NS = NS.A, REL_TYPE_IMAGE = REL_TYPE.IMAGE;
+    function sniffImageType(bytes) {
+      if (!bytes || bytes.length < 4)
+        return "application/octet-stream";
+      const b = bytes;
+      if (b[0] === 137 && b[1] === 80 && b[2] === 78 && b[3] === 71)
+        return "image/png";
+      if (b[0] === 255 && b[1] === 216 && b[2] === 255)
+        return "image/jpeg";
+      if (b[0] === 71 && b[1] === 73 && b[2] === 70 && b[3] === 56)
+        return "image/gif";
+      if (b[0] === 66 && b[1] === 77)
+        return "image/bmp";
+      if (b[0] === 82 && b[1] === 73 && b[2] === 70 && b[3] === 70 && b.length >= 12 && b[8] === 87 && b[9] === 69 && b[10] === 66 && b[11] === 80)
+        return "image/webp";
+      if (b[0] === 73 && b[1] === 73 && b[2] === 42 && b[3] === 0 || b[0] === 77 && b[1] === 77 && b[2] === 0 && b[3] === 42)
+        return "image/tiff";
+      return "application/octet-stream";
+    }
+    function extensionFor(contentType) {
+      switch (contentType) {
+        case "image/png":
+          return "png";
+        case "image/jpeg":
+          return "jpg";
+        case "image/gif":
+          return "gif";
+        case "image/bmp":
+          return "bmp";
+        case "image/webp":
+          return "webp";
+        case "image/tiff":
+          return "tiff";
+        case "image/svg+xml":
+          return "svg";
+        case "image/x-emf":
+          return "emf";
+        case "image/x-wmf":
+          return "wmf";
+        default:
+          return "bin";
+      }
+    }
+    function extToContentType(ext) {
+      switch (ext) {
+        case "png":
+          return "image/png";
+        case "jpg":
+        case "jpeg":
+          return "image/jpeg";
+        case "gif":
+          return "image/gif";
+        case "bmp":
+          return "image/bmp";
+        case "webp":
+          return "image/webp";
+        case "tiff":
+          return "image/tiff";
+        case "svg":
+          return "image/svg+xml";
+        case "emf":
+          return "image/x-emf";
+        case "wmf":
+          return "image/x-wmf";
+        default:
+          return "application/octet-stream";
+      }
+    }
+    const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
+    function parsePicture(picEl) {
+      const out = { type: "picture" }, nvPicPr = xml.findChild(picEl, "p:nvPicPr");
+      if (nvPicPr) {
+        const cNvPr = xml.findChild(nvPicPr, "p:cNvPr");
+        if (cNvPr) {
+          if (cNvPr.attrs.id != null)
+            out.id = Number(cNvPr.attrs.id);
+          if (cNvPr.attrs.name)
+            out.name = cNvPr.attrs.name;
+          if (cNvPr.attrs.descr)
+            out.description = cNvPr.attrs.descr;
+          if (cNvPr.attrs.title)
+            out.title = cNvPr.attrs.title;
+        }
+      }
+      const blipFill = xml.findChild(picEl, "p:blipFill");
+      if (blipFill) {
+        const blip = xml.findChild(blipFill, "a:blip");
+        if (blip) {
+          if (blip.attrs["r:embed"])
+            out.embedRef = blip.attrs["r:embed"];
+          if (blip.attrs["r:link"])
+            out.linkRef = blip.attrs["r:link"];
+        }
+      }
+      const spPr = xml.findChild(picEl, "p:spPr");
+      if (spPr) {
+        const xfrm = xml.findChild(spPr, "a:xfrm");
+        if (xfrm) {
+          const off = xml.findChild(xfrm, "a:off"), ext = xml.findChild(xfrm, "a:ext");
+          if (off) {
+            if (off.attrs.x != null)
+              out.offsetX = Number(off.attrs.x);
+            if (off.attrs.y != null)
+              out.offsetY = Number(off.attrs.y);
+          }
+          if (ext) {
+            if (ext.attrs.cx != null)
+              out.cx = Number(ext.attrs.cx);
+            if (ext.attrs.cy != null)
+              out.cy = Number(ext.attrs.cy);
+          }
+        }
+        const prst = xml.findChild(spPr, "a:prstGeom");
+        if (prst && prst.attrs.prst)
+          out.prstGeom = prst.attrs.prst;
+      }
+      return out;
+    }
+    function renderPicture(p) {
+      const cNvPrAttrs = {
+        id: String(p.id != null ? p.id : 2),
+        name: p.name || "Picture"
+      };
+      if (p.description)
+        cNvPrAttrs.descr = p.description;
+      if (p.title)
+        cNvPrAttrs.title = p.title;
+      const blipAttrs = {};
+      if (p.embedRef)
+        blipAttrs["r:embed"] = p.embedRef;
+      else if (p.linkRef)
+        blipAttrs["r:link"] = p.linkRef;
+      return xml.el("p:pic", {}, [
+        xml.el("p:nvPicPr", {}, [
+          xml.el("p:cNvPr", cNvPrAttrs),
+          xml.el("p:cNvPicPr", {}, [
+            xml.el("a:picLocks", { noChangeAspect: "1" })
+          ]),
+          xml.el("p:nvPr", {})
+        ]),
+        xml.el("p:blipFill", {}, [
+          xml.el("a:blip", blipAttrs),
+          xml.el("a:stretch", {}, [xml.el("a:fillRect", {})])
+        ]),
+        xml.el("p:spPr", {}, [
+          xml.el("a:xfrm", {}, [
+            xml.el("a:off", {
+              x: String(p.offsetX || 0),
+              y: String(p.offsetY || 0)
+            }),
+            xml.el("a:ext", {
+              cx: String(p.cx ?? 1828800),
+              cy: String(p.cy ?? 1371600)
+            })
+          ]),
+          xml.el("a:prstGeom", { prst: p.prstGeom || "rect" }, [
+            xml.el("a:avLst", {})
+          ])
+        ])
+      ]);
+    }
+    function image(data, opts = {}) {
+      const contentType = opts.contentType || sniffImageType(data), cx = toEmu(opts.cx || "4in"), cy = toEmu(opts.cy || cx * 0.75), out = {
+        type: "picture",
+        cx,
+        cy,
+        name: opts.name || "Picture",
+        prstGeom: opts.prstGeom || "rect",
+        image: { data, contentType }
+      };
+      if (opts.description)
+        out.description = opts.description;
+      if (opts.title)
+        out.title = opts.title;
+      if (opts.offsetX != null)
+        out.offsetX = toEmu(opts.offsetX);
+      if (opts.offsetY != null)
+        out.offsetY = toEmu(opts.offsetY);
+      if (opts.id != null)
+        out.id = opts.id;
+      if (opts.rId)
+        out.embedRef = opts.rId;
+      return out;
+    }
+    return {
+      parsePicture,
+      renderPicture,
+      image,
+      sniffImageType,
+      extensionFor,
+      extToContentType,
+      toEmu,
+      EMU_PER_INCH,
+      EMU_PER_CM,
+      EMU_PER_PT,
+      EMU_PER_PX_96,
+      REL_TYPE_IMAGE,
+      A_NS
+    };
+  } });
+    __register({ name: "pptxTable", dependencies: ["xml","drawingml","ooxmlShared"], factory: function(xml, dml, shared) {
+    const { NS, readBoolAttr, writeBoolAttr } = shared, A_NS = NS.A, R_NS = NS.R;
+    function parseCell(tcEl) {
+      const out = {}, extras = [];
+      for (const k of ["gridSpan", "rowSpan"])
+        if (tcEl.attrs[k] != null)
+          out[k] = Number(tcEl.attrs[k]);
+      for (const k of ["hMerge", "vMerge"])
+        if (tcEl.attrs[k] != null)
+          out[k] = readBoolAttr(tcEl.attrs[k]);
+      for (const c of tcEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:txBody")
+          out.txBody = dml.parseTextBody(c);
+        else if (c.name === "a:tcPr")
+          out.tcPr = c;
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderCell(cell) {
+      const a = {};
+      if (cell.gridSpan != null)
+        a.gridSpan = String(cell.gridSpan);
+      if (cell.rowSpan != null)
+        a.rowSpan = String(cell.rowSpan);
+      if (cell.hMerge != null)
+        a.hMerge = writeBoolAttr(cell.hMerge);
+      if (cell.vMerge != null)
+        a.vMerge = writeBoolAttr(cell.vMerge);
+      const children = [];
+      if (cell.txBody)
+        children.push(dml.renderTextBody(cell.txBody, "a:txBody"));
+      else
+        children.push(xml.el("a:txBody", {}, [
+          xml.el("a:bodyPr", {}),
+          xml.el("a:lstStyle", {}),
+          xml.el("a:p", {})
+        ]));
+      children.push(cell.tcPr || xml.el("a:tcPr", {}));
+      if (cell._extras)
+        for (const ex of cell._extras)
+          children.push(ex);
+      return xml.el("a:tc", a, children);
+    }
+    function parseRow(trEl) {
+      const out = {
+        height: trEl.attrs.h != null ? Number(trEl.attrs.h) : 370840,
+        cells: []
+      };
+      for (const c of trEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:tc")
+          out.cells.push(parseCell(c));
+      }
+      return out;
+    }
+    function renderRow(row) {
+      return xml.el("a:tr", { h: String(row.height ?? 370840) }, (row.cells || []).map(renderCell));
+    }
+    const FLAG_ATTRS = [
+      "firstRow",
+      "lastRow",
+      "firstCol",
+      "lastCol",
+      "bandRow",
+      "bandCol"
+    ];
+    function parseTable(tblEl) {
+      const out = { columns: [], rows: [] }, tblPr = xml.findChild(tblEl, "a:tblPr");
+      if (tblPr) {
+        const flags = {};
+        for (const k of FLAG_ATTRS)
+          if (tblPr.attrs[k] != null)
+            flags[k] = readBoolAttr(tblPr.attrs[k]);
+        if (Object.keys(flags).length)
+          out.flags = flags;
+        const styleId = xml.findChild(tblPr, "a:tableStyleId");
+        if (styleId)
+          out.tableStyleId = xml.textContent(styleId);
+      }
+      const grid = xml.findChild(tblEl, "a:tblGrid");
+      if (grid)
+        for (const col of xml.findAll(grid, "a:gridCol"))
+          out.columns.push({
+            width: col.attrs.w != null ? Number(col.attrs.w) : 0
+          });
+      for (const tr of xml.findAll(tblEl, "a:tr"))
+        out.rows.push(parseRow(tr));
+      return out;
+    }
+    function renderTable(t) {
+      const tblPrAttrs = {};
+      for (const k of FLAG_ATTRS)
+        if (t.flags && t.flags[k] != null)
+          tblPrAttrs[k] = writeBoolAttr(t.flags[k]);
+      const tblPrChildren = [];
+      if (t.tableStyleId)
+        tblPrChildren.push(xml.el("a:tableStyleId", {}, [xml.text(t.tableStyleId)]));
+      const tblGridChildren = (t.columns || []).map((col) => xml.el("a:gridCol", { w: String(col.width ?? 3000000) }));
+      return xml.el("a:tbl", {}, [
+        xml.el("a:tblPr", tblPrAttrs, tblPrChildren),
+        xml.el("a:tblGrid", {}, tblGridChildren),
+        ...(t.rows || []).map(renderRow)
+      ]);
+    }
+    function parseGraphicFrame(gfEl) {
+      const graphic = xml.findChild(gfEl, "a:graphic");
+      if (!graphic)
+        return null;
+      const gd = xml.findChild(graphic, "a:graphicData");
+      if (!gd || gd.attrs.uri !== "http://schemas.openxmlformats.org/drawingml/2006/table")
+        return null;
+      const tbl = xml.findChild(gd, "a:tbl");
+      if (!tbl)
+        return null;
+      const out = parseTable(tbl);
+      out.type = "table";
+      const nv = xml.findChild(gfEl, "p:nvGraphicFramePr");
+      if (nv) {
+        const cNvPr = xml.findChild(nv, "p:cNvPr");
+        if (cNvPr) {
+          if (cNvPr.attrs.id != null)
+            out.id = Number(cNvPr.attrs.id);
+          if (cNvPr.attrs.name)
+            out.name = cNvPr.attrs.name;
+        }
+      }
+      const xfrm = xml.findChild(gfEl, "p:xfrm");
+      if (xfrm) {
+        const off = xml.findChild(xfrm, "a:off"), ext = xml.findChild(xfrm, "a:ext");
+        if (off) {
+          if (off.attrs.x != null)
+            out.offsetX = Number(off.attrs.x);
+          if (off.attrs.y != null)
+            out.offsetY = Number(off.attrs.y);
+        }
+        if (ext) {
+          if (ext.attrs.cx != null)
+            out.cx = Number(ext.attrs.cx);
+          if (ext.attrs.cy != null)
+            out.cy = Number(ext.attrs.cy);
+        }
+      }
+      return out;
+    }
+    function renderGraphicFrame(t) {
+      const cNvPrAttrs = {
+        id: String(t.id != null ? t.id : 4),
+        name: t.name || "Table"
+      };
+      return xml.el("p:graphicFrame", {}, [
+        xml.el("p:nvGraphicFramePr", {}, [
+          xml.el("p:cNvPr", cNvPrAttrs),
+          xml.el("p:cNvGraphicFramePr", {}, [
+            xml.el("a:graphicFrameLocks", { noGrp: "1" })
+          ]),
+          xml.el("p:nvPr", {})
+        ]),
+        xml.el("p:xfrm", {}, [
+          xml.el("a:off", {
+            x: String(t.offsetX || 0),
+            y: String(t.offsetY || 0)
+          }),
+          xml.el("a:ext", {
+            cx: String(t.cx ?? 6000000),
+            cy: String(t.cy ?? 1500000)
+          })
+        ]),
+        xml.el("a:graphic", {}, [
+          xml.el("a:graphicData", { uri: "http://schemas.openxmlformats.org/drawingml/2006/table" }, [renderTable(t)])
+        ])
+      ]);
+    }
+    function tableFromRows(rows, opts = {}) {
+      const ncols = rows[0] ? rows[0].length : 0, colWidth = opts.colWidth || (ncols ? Math.floor(6000000 / ncols) : 3000000);
+      return {
+        type: "table",
+        cx: opts.cx || ncols * colWidth,
+        cy: opts.cy || rows.length * 370840,
+        offsetX: opts.offsetX || 0,
+        offsetY: opts.offsetY || 0,
+        tableStyleId: opts.tableStyleId,
+        flags: opts.flags || (rows.length > 0 ? { firstRow: !0, bandRow: !0 } : void 0),
+        columns: Array(ncols).fill(null).map(() => ({ width: colWidth })),
+        rows: rows.map((row) => ({
+          height: 370840,
+          cells: row.map((value) => ({
+            txBody: dml.textBodyFromString(String(value ?? ""))
+          }))
+        }))
+      };
+    }
+    return {
+      parseTable,
+      renderTable,
+      parseRow,
+      renderRow,
+      parseCell,
+      renderCell,
+      parseGraphicFrame,
+      renderGraphicFrame,
+      tableFromRows,
+      TABLE_GRAPHIC_URI: "http://schemas.openxmlformats.org/drawingml/2006/table",
+      A_NS,
+      R_NS
+    };
+  } });
+    __register({ name: "drawingmlChart", dependencies: ["ooxmlErrors","xml","ooxmlShared"], factory: function(errors, xml, shared) {
+    const { ParseError } = errors, { NS, REL_TYPE, CT, readBoolAttr, writeBoolAttr, encodeText, decodeText } = shared, C_NS = NS.C, A_NS = NS.A, R_NS = NS.R, CHART_GRAPHIC_URI = C_NS, REL_TYPE_CHART = REL_TYPE.CHART, REL_TYPE_PACKAGE = REL_TYPE.PACKAGE, CT_CHART = CT.CHART, CT_EMBEDDED_XLSX = CT.EMBEDDED_XLSX;
+    function renderStrLit(values) {
+      const pts = values.map((v, i) => xml.el("c:pt", { idx: String(i) }, [xml.el("c:v", {}, [xml.text(String(v))])]));
+      return xml.el("c:strLit", {}, [
+        xml.el("c:ptCount", { val: String(values.length) }),
+        ...pts
+      ]);
+    }
+    function renderNumLit(values, formatCode) {
+      const pts = values.map((v, i) => xml.el("c:pt", { idx: String(i) }, [xml.el("c:v", {}, [xml.text(String(v))])])), children = [
+        xml.el("c:formatCode", {}, [xml.text(formatCode || "General")]),
+        xml.el("c:ptCount", { val: String(values.length) }),
+        ...pts
+      ];
+      return xml.el("c:numLit", {}, children);
+    }
+    function parseLitValues(litEl) {
+      return xml.findAll(litEl, "c:pt").map((pt) => {
+        const v = xml.findChild(pt, "c:v");
+        return v ? xml.textContent(v) : "";
+      });
+    }
+    function parseStrLit(el) {
+      return parseLitValues(el);
+    }
+    function parseNumLit(el) {
+      return parseLitValues(el).map((v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : v;
+      });
+    }
+    function renderSpPrSolid(rgb) {
+      return xml.el("c:spPr", {}, [
+        xml.el("a:solidFill", {}, [
+          xml.el("a:srgbClr", { val: rgb })
+        ])
+      ]);
+    }
+    function parseSpPrSolid(spPrEl) {
+      if (!spPrEl)
+        return;
+      const fill = xml.findChild(spPrEl, "a:solidFill");
+      if (!fill)
+        return;
+      const cl = xml.findChild(fill, "a:srgbClr");
+      return cl ? cl.attrs.val : void 0;
+    }
+    function renderSeries(series, plotType, idx, formatCode) {
+      const children = [
+        xml.el("c:idx", { val: String(idx) }),
+        xml.el("c:order", { val: String(idx) })
+      ];
+      children.push(xml.el("c:tx", {}, [
+        xml.el("c:strRef", {}, [
+          xml.el("c:f", {}, [xml.text(`"${series.name || ""}"`)]),
+          renderStrLit([series.name || ""])
+        ])
+      ]));
+      if (series.color)
+        children.push(renderSpPrSolid(series.color));
+      if (plotType === "scatter") {
+        const xVals = series.xValues || (series.categories || []), yVals = series.yValues || series.values || [];
+        children.push(xml.el("c:xVal", {}, [
+          xml.el("c:numRef", {}, [
+            xml.el("c:f", {}, [xml.text('""')]),
+            renderNumLit(xVals.map(Number), formatCode)
+          ])
+        ]));
+        children.push(xml.el("c:yVal", {}, [
+          xml.el("c:numRef", {}, [
+            xml.el("c:f", {}, [xml.text('""')]),
+            renderNumLit(yVals.map(Number), formatCode)
+          ])
+        ]));
+      } else {
+        if (series.categories && series.categories.length)
+          children.push(xml.el("c:cat", {}, [
+            xml.el("c:strRef", {}, [
+              xml.el("c:f", {}, [xml.text('""')]),
+              renderStrLit(series.categories)
+            ])
+          ]));
+        children.push(xml.el("c:val", {}, [
+          xml.el("c:numRef", {}, [
+            xml.el("c:f", {}, [xml.text('""')]),
+            renderNumLit(series.values || [], formatCode)
+          ])
+        ]));
+      }
+      return xml.el("c:ser", {}, children);
+    }
+    function parseSeries(serEl, plotType) {
+      const out = {}, idx = xml.findChild(serEl, "c:idx");
+      if (idx)
+        out._idx = Number(idx.attrs.val);
+      const tx = xml.findChild(serEl, "c:tx");
+      if (tx) {
+        const sr = xml.findChild(tx, "c:strRef"), sl = xml.findChild(tx, "c:strLit"), v = xml.findChild(tx, "c:v");
+        if (sr) {
+          const inner = xml.findChild(sr, "c:strLit");
+          if (inner)
+            out.name = parseLitValues(inner)[0] || "";
+          else {
+            const f = xml.findChild(sr, "c:f");
+            if (f)
+              out.name = xml.textContent(f).replace(/^"|"$/g, "");
+          }
+        } else if (sl)
+          out.name = parseLitValues(sl)[0] || "";
+        else if (v)
+          out.name = xml.textContent(v);
+      }
+      const spPr = xml.findChild(serEl, "c:spPr"), color = parseSpPrSolid(spPr);
+      if (color)
+        out.color = color;
+      if (plotType === "scatter") {
+        const xValEl = xml.findChild(serEl, "c:xVal"), yValEl = xml.findChild(serEl, "c:yVal");
+        if (xValEl)
+          out.xValues = readNumData(xValEl);
+        if (yValEl)
+          out.values = readNumData(yValEl);
+      } else {
+        const catEl = xml.findChild(serEl, "c:cat");
+        if (catEl)
+          out.categories = readStrData(catEl);
+        const valEl = xml.findChild(serEl, "c:val");
+        if (valEl)
+          out.values = readNumData(valEl);
+      }
+      return out;
+    }
+    function readStrData(parentEl) {
+      const strRef = xml.findChild(parentEl, "c:strRef");
+      if (strRef) {
+        const lit = xml.findChild(strRef, "c:strLit");
+        if (lit)
+          return parseStrLit(lit);
+      }
+      const strLit = xml.findChild(parentEl, "c:strLit");
+      if (strLit)
+        return parseStrLit(strLit);
+      const numRef = xml.findChild(parentEl, "c:numRef");
+      if (numRef) {
+        const lit = xml.findChild(numRef, "c:numLit");
+        if (lit)
+          return parseLitValues(lit);
+      }
+      return [];
+    }
+    function readNumData(parentEl) {
+      const numRef = xml.findChild(parentEl, "c:numRef");
+      if (numRef) {
+        const lit = xml.findChild(numRef, "c:numLit");
+        if (lit)
+          return parseNumLit(lit);
+      }
+      const numLit = xml.findChild(parentEl, "c:numLit");
+      if (numLit)
+        return parseNumLit(numLit);
+      return [];
+    }
+    const PLOT_TAGS = {
+      bar: "c:barChart",
+      line: "c:lineChart",
+      pie: "c:pieChart",
+      scatter: "c:scatterChart",
+      area: "c:areaChart",
+      doughnut: "c:doughnutChart"
+    }, TAG_TO_PLOT = Object.fromEntries(Object.entries(PLOT_TAGS).map(([k, v]) => [v, k]));
+    function renderPlot(chart, axIds) {
+      const tag = PLOT_TAGS[chart.plotType] || PLOT_TAGS.bar, children = [];
+      if (chart.plotType === "bar" || chart.plotType === "area")
+        children.push(xml.el("c:barDir", {
+          val: chart.barDirection || "col"
+        }));
+      if (chart.plotType !== "pie" && chart.plotType !== "doughnut" && chart.plotType !== "scatter")
+        children.push(xml.el("c:grouping", {
+          val: chart.grouping || (chart.plotType === "bar" ? "clustered" : "standard")
+        }));
+      if (chart.plotType === "scatter")
+        children.push(xml.el("c:scatterStyle", {
+          val: chart.scatterStyle || "lineMarker"
+        }));
+      children.push(xml.el("c:varyColors", {
+        val: writeBoolAttr(chart.varyColors !== void 0 ? chart.varyColors : chart.plotType === "pie" || chart.plotType === "doughnut")
+      }));
+      for (let i = 0;i < (chart.series || []).length; i++)
+        children.push(renderSeries(chart.series[i], chart.plotType, i, chart.formatCode));
+      if (chart.plotType !== "pie" && chart.plotType !== "doughnut") {
+        children.push(xml.el("c:axId", { val: String(axIds[0]) }));
+        children.push(xml.el("c:axId", { val: String(axIds[1]) }));
+      } else if (chart.plotType === "doughnut") {
+        children.push(xml.el("c:firstSliceAng", {
+          val: String(chart.firstSliceAng || 0)
+        }));
+        children.push(xml.el("c:holeSize", {
+          val: String(chart.holeSize || 50)
+        }));
+      }
+      return xml.el(tag, {}, children);
+    }
+    function parsePlot(plotEl) {
+      const plotType = TAG_TO_PLOT[plotEl.name], out = { plotType, series: [] }, barDir = xml.findChild(plotEl, "c:barDir");
+      if (barDir)
+        out.barDirection = barDir.attrs.val;
+      const grouping = xml.findChild(plotEl, "c:grouping");
+      if (grouping)
+        out.grouping = grouping.attrs.val;
+      const scatterStyle = xml.findChild(plotEl, "c:scatterStyle");
+      if (scatterStyle)
+        out.scatterStyle = scatterStyle.attrs.val;
+      const varyColors = xml.findChild(plotEl, "c:varyColors");
+      if (varyColors)
+        out.varyColors = readBoolAttr(varyColors.attrs.val);
+      for (const s of xml.findAll(plotEl, "c:ser"))
+        out.series.push(parseSeries(s, plotType));
+      const fsa = xml.findChild(plotEl, "c:firstSliceAng");
+      if (fsa)
+        out.firstSliceAng = Number(fsa.attrs.val);
+      const hs = xml.findChild(plotEl, "c:holeSize");
+      if (hs)
+        out.holeSize = Number(hs.attrs.val);
+      return out;
+    }
+    function renderCatAx(axId, crossAx) {
+      return xml.el("c:catAx", {}, [
+        xml.el("c:axId", { val: String(axId) }),
+        xml.el("c:scaling", {}, [
+          xml.el("c:orientation", { val: "minMax" })
+        ]),
+        xml.el("c:delete", { val: "0" }),
+        xml.el("c:axPos", { val: "b" }),
+        xml.el("c:crossAx", { val: String(crossAx) })
+      ]);
+    }
+    function renderValAx(axId, crossAx) {
+      return xml.el("c:valAx", {}, [
+        xml.el("c:axId", { val: String(axId) }),
+        xml.el("c:scaling", {}, [
+          xml.el("c:orientation", { val: "minMax" })
+        ]),
+        xml.el("c:delete", { val: "0" }),
+        xml.el("c:axPos", { val: "l" }),
+        xml.el("c:crossAx", { val: String(crossAx) })
+      ]);
+    }
+    function axIdCat() {
+      return 100000001;
+    }
+    function axIdVal() {
+      return 200000001;
+    }
+    function renderTitle(title) {
+      return xml.el("c:title", {}, [
+        xml.el("c:tx", {}, [
+          xml.el("c:rich", {}, [
+            xml.el("a:bodyPr", { rot: "0", spcFirstLastPara: "1", vertOverflow: "ellipsis", wrap: "square", anchor: "ctr", anchorCtr: "1" }),
+            xml.el("a:lstStyle", {}),
+            xml.el("a:p", {}, [
+              xml.el("a:r", {}, [
+                xml.el("a:rPr", { lang: "en-US" }),
+                xml.el("a:t", {}, [xml.text(String(title))])
+              ])
+            ])
+          ])
+        ]),
+        xml.el("c:overlay", { val: "0" })
+      ]);
+    }
+    function parseTitle(titleEl) {
+      const tx = xml.findChild(titleEl, "c:tx");
+      if (!tx)
+        return;
+      const rich = xml.findChild(tx, "c:rich");
+      if (!rich)
+        return;
+      const out = [];
+      for (const p of xml.findAll(rich, "a:p"))
+        for (const r of xml.findAll(p, "a:r")) {
+          const t = xml.findChild(r, "a:t");
+          if (t)
+            out.push(xml.textContent(t));
+        }
+      return out.join("");
+    }
+    function renderLegend(legend) {
+      return xml.el("c:legend", {}, [
+        xml.el("c:legendPos", { val: legend.position || "r" }),
+        xml.el("c:overlay", { val: writeBoolAttr(legend.overlay) })
+      ]);
+    }
+    function parseLegend(legendEl) {
+      const out = {}, pos = xml.findChild(legendEl, "c:legendPos");
+      if (pos)
+        out.position = pos.attrs.val;
+      const ov = xml.findChild(legendEl, "c:overlay");
+      if (ov)
+        out.overlay = readBoolAttr(ov.attrs.val);
+      return out;
+    }
+    function serialize(chart) {
+      const axIds = [axIdCat(), axIdVal()], plotChildren = [];
+      plotChildren.push(xml.el("c:layout", {}));
+      plotChildren.push(renderPlot(chart, axIds));
+      if (chart.plotType !== "pie" && chart.plotType !== "doughnut") {
+        plotChildren.push(renderCatAx(axIds[0], axIds[1]));
+        plotChildren.push(renderValAx(axIds[1], axIds[0]));
+      }
+      const plotArea = xml.el("c:plotArea", {}, plotChildren), chartChildren = [];
+      if (chart.title != null) {
+        chartChildren.push(renderTitle(chart.title));
+        chartChildren.push(xml.el("c:autoTitleDeleted", { val: "0" }));
+      } else
+        chartChildren.push(xml.el("c:autoTitleDeleted", { val: "1" }));
+      chartChildren.push(plotArea);
+      if (chart.legend)
+        chartChildren.push(renderLegend(chart.legend));
+      chartChildren.push(xml.el("c:plotVisOnly", { val: "1" }));
+      chartChildren.push(xml.el("c:dispBlanksAs", { val: "gap" }));
+      if (chart._extras)
+        for (const ex of chart._extras)
+          chartChildren.push(ex);
+      const rootChildren = [xml.el("c:chart", {}, chartChildren)];
+      if (chart.embeddedWorkbookRid)
+        rootChildren.push(xml.el("c:externalData", {
+          "r:id": chart.embeddedWorkbookRid
+        }, [xml.el("c:autoUpdate", { val: "0" })]));
+      const root = xml.el("c:chartSpace", { "xmlns:c": C_NS, "xmlns:a": A_NS, "xmlns:r": R_NS }, rootChildren);
+      return xml.serialize(root);
+    }
+    function parse(input) {
+      const text = typeof input === "string" ? input : decodeText(input), root = xml.parse(text);
+      if (root.name !== "c:chartSpace")
+        throw new ParseError("drawingml/chart-bad-root", `drawingmlChart: expected <c:chartSpace>, got <${root.name}>`, { context: { elementName: root && root.name } });
+      const chartEl = xml.findChild(root, "c:chart");
+      if (!chartEl)
+        throw new ParseError("drawingml/chart-missing", "drawingmlChart: missing <c:chart>", { context: { elementName: "c:chart" } });
+      const out = {}, titleEl = xml.findChild(chartEl, "c:title");
+      if (titleEl) {
+        const t = parseTitle(titleEl);
+        if (t != null)
+          out.title = t;
+      }
+      const plotArea = xml.findChild(chartEl, "c:plotArea");
+      if (plotArea)
+        for (const c of plotArea.children) {
+          if (c.type !== "element")
+            continue;
+          if (TAG_TO_PLOT[c.name]) {
+            Object.assign(out, parsePlot(c));
+            break;
+          }
+        }
+      const legendEl = xml.findChild(chartEl, "c:legend");
+      if (legendEl)
+        out.legend = parseLegend(legendEl);
+      const extData = xml.findChild(root, "c:externalData");
+      if (extData && extData.attrs["r:id"])
+        out.embeddedWorkbookRid = extData.attrs["r:id"];
+      return out;
+    }
+    function bytesOf(chart) {
+      return encodeText(serialize(chart));
+    }
+    function barChart(opts) {
+      return Object.assign({
+        plotType: "bar",
+        barDirection: opts.direction || "col",
+        grouping: opts.grouping || "clustered",
+        varyColors: !1,
+        series: opts.series || [],
+        title: opts.title,
+        legend: opts.legend
+      });
+    }
+    function lineChart(opts) {
+      return {
+        plotType: "line",
+        grouping: opts.grouping || "standard",
+        varyColors: !1,
+        series: opts.series || [],
+        title: opts.title,
+        legend: opts.legend
+      };
+    }
+    function pieChart(opts) {
+      return {
+        plotType: "pie",
+        varyColors: opts.varyColors !== !1,
+        series: opts.series || [],
+        title: opts.title,
+        legend: opts.legend
+      };
+    }
+    function scatterChart(opts) {
+      return {
+        plotType: "scatter",
+        scatterStyle: opts.scatterStyle || "lineMarker",
+        varyColors: !1,
+        series: opts.series || [],
+        title: opts.title,
+        legend: opts.legend
+      };
+    }
+    function doughnutChart(opts) {
+      return {
+        plotType: "doughnut",
+        varyColors: opts.varyColors !== !1,
+        holeSize: opts.holeSize || 50,
+        series: opts.series || [],
+        title: opts.title,
+        legend: opts.legend
+      };
+    }
+    return {
+      parse,
+      serialize,
+      bytesOf,
+      barChart,
+      lineChart,
+      pieChart,
+      scatterChart,
+      doughnutChart,
+      renderSeries,
+      parseSeries,
+      renderTitle,
+      parseTitle,
+      renderLegend,
+      parseLegend,
+      CHART_GRAPHIC_URI,
+      REL_TYPE_CHART,
+      CT_CHART,
+      REL_TYPE_PACKAGE,
+      CT_EMBEDDED_XLSX,
+      C_NS
+    };
+  } });
+    __register({ name: "pptxChart", dependencies: ["xml","drawingmlChart","ooxmlShared"], factory: function(xml, chartMod, shared) {
+    const { NS } = shared, A_NS = NS.A, R_NS = NS.R, CHART_URI = chartMod.CHART_GRAPHIC_URI;
+    function parseGraphicFrame(gfEl) {
+      const graphic = xml.findChild(gfEl, "a:graphic");
+      if (!graphic)
+        return null;
+      const gd = xml.findChild(graphic, "a:graphicData");
+      if (!gd || gd.attrs.uri !== CHART_URI)
+        return null;
+      const chart = xml.findChild(gd, "c:chart");
+      if (!chart)
+        return null;
+      const out = { type: "chart" };
+      if (chart.attrs["r:id"])
+        out.chartRef = chart.attrs["r:id"];
+      const nv = xml.findChild(gfEl, "p:nvGraphicFramePr");
+      if (nv) {
+        const cNvPr = xml.findChild(nv, "p:cNvPr");
+        if (cNvPr) {
+          if (cNvPr.attrs.id != null)
+            out.id = Number(cNvPr.attrs.id);
+          if (cNvPr.attrs.name)
+            out.name = cNvPr.attrs.name;
+        }
+      }
+      const xfrm = xml.findChild(gfEl, "p:xfrm");
+      if (xfrm) {
+        const off = xml.findChild(xfrm, "a:off"), ext = xml.findChild(xfrm, "a:ext");
+        if (off) {
+          if (off.attrs.x != null)
+            out.offsetX = Number(off.attrs.x);
+          if (off.attrs.y != null)
+            out.offsetY = Number(off.attrs.y);
+        }
+        if (ext) {
+          if (ext.attrs.cx != null)
+            out.cx = Number(ext.attrs.cx);
+          if (ext.attrs.cy != null)
+            out.cy = Number(ext.attrs.cy);
+        }
+      }
+      return out;
+    }
+    function renderGraphicFrame(c) {
+      const cNvPrAttrs = {
+        id: String(c.id != null ? c.id : 5),
+        name: c.name || "Chart"
+      }, chartAttrs = {};
+      if (c.chartRef)
+        chartAttrs["r:id"] = c.chartRef;
+      return xml.el("p:graphicFrame", {}, [
+        xml.el("p:nvGraphicFramePr", {}, [
+          xml.el("p:cNvPr", cNvPrAttrs),
+          xml.el("p:cNvGraphicFramePr", {}),
+          xml.el("p:nvPr", {})
+        ]),
+        xml.el("p:xfrm", {}, [
+          xml.el("a:off", {
+            x: String(c.offsetX || 0),
+            y: String(c.offsetY || 0)
+          }),
+          xml.el("a:ext", {
+            cx: String(c.cx ?? 6000000),
+            cy: String(c.cy ?? 4000000)
+          })
+        ]),
+        xml.el("a:graphic", {}, [
+          xml.el("a:graphicData", { uri: CHART_URI }, [
+            xml.el("c:chart", Object.assign({
+              "xmlns:c": chartMod.C_NS,
+              "xmlns:r": R_NS
+            }, chartAttrs))
+          ])
+        ])
+      ]);
+    }
+    return {
+      parseGraphicFrame,
+      renderGraphicFrame,
+      CHART_URI,
+      A_NS,
+      R_NS
+    };
+  } });
+    __register({ name: "drawingmlShape", dependencies: ["xml","ooxmlShared"], factory: function(xml, shared) {
+    const { NS } = shared, A_NS = NS.A;
+    function parseColorChild(parent) {
+      for (const c of parent.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:srgbClr")
+          return { rgb: c.attrs.val };
+        if (c.name === "a:schemeClr")
+          return { schemeColor: c.attrs.val };
+      }
+      return null;
+    }
+    function renderSrgbClr(rgb) {
+      return xml.el("a:srgbClr", { val: String(rgb).replace(/^#/, "") });
+    }
+    function renderSchemeClr(name) {
+      return xml.el("a:schemeClr", { val: name });
+    }
+    function renderColorChild(color) {
+      if (!color)
+        return null;
+      if (color.rgb)
+        return renderSrgbClr(color.rgb);
+      if (color.schemeColor)
+        return renderSchemeClr(color.schemeColor);
+      return null;
+    }
+    function parsePrstGeom(prstEl) {
+      if (!prstEl)
+        return;
+      const out = { geom: prstEl.attrs.prst }, avLst = xml.findChild(prstEl, "a:avLst");
+      if (avLst) {
+        const guides = [];
+        for (const g of xml.findAll(avLst, "a:gd"))
+          guides.push({ name: g.attrs.name, fmla: g.attrs.fmla });
+        if (guides.length)
+          out.avLst = guides;
+      }
+      return out;
+    }
+    function renderPrstGeom(props) {
+      const avChildren = (props.avLst || []).map((g) => xml.el("a:gd", { name: g.name, fmla: g.fmla }));
+      return xml.el("a:prstGeom", { prst: props.geom }, [xml.el("a:avLst", {}, avChildren)]);
+    }
+    function parseXfrm(xfrmEl) {
+      if (!xfrmEl)
+        return {};
+      const out = {};
+      if (xfrmEl.attrs.rot != null)
+        out.rotation = Number(xfrmEl.attrs.rot);
+      if (xfrmEl.attrs.flipH === "1")
+        out.flipH = !0;
+      if (xfrmEl.attrs.flipV === "1")
+        out.flipV = !0;
+      const off = xml.findChild(xfrmEl, "a:off"), ext = xml.findChild(xfrmEl, "a:ext");
+      if (off) {
+        if (off.attrs.x != null)
+          out.offsetX = Number(off.attrs.x);
+        if (off.attrs.y != null)
+          out.offsetY = Number(off.attrs.y);
+      }
+      if (ext) {
+        if (ext.attrs.cx != null)
+          out.cx = Number(ext.attrs.cx);
+        if (ext.attrs.cy != null)
+          out.cy = Number(ext.attrs.cy);
+      }
+      return out;
+    }
+    function renderXfrm(props) {
+      const a = {};
+      if (props.rotation != null)
+        a.rot = String(props.rotation);
+      if (props.flipH)
+        a.flipH = "1";
+      if (props.flipV)
+        a.flipV = "1";
+      return xml.el("a:xfrm", a, [
+        xml.el("a:off", {
+          x: String(props.offsetX || 0),
+          y: String(props.offsetY || 0)
+        }),
+        xml.el("a:ext", {
+          cx: String(props.cx || 0),
+          cy: String(props.cy || 0)
+        })
+      ]);
+    }
+    function parseFill(spPrEl) {
+      for (const c of spPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:noFill")
+          return "none";
+        if (c.name === "a:solidFill") {
+          const color = parseColorChild(c);
+          if (color)
+            return color;
+        }
+      }
+      return;
+    }
+    function renderFill(fill) {
+      if (fill === "none")
+        return xml.el("a:noFill", {});
+      if (typeof fill === "object" && fill) {
+        const color = renderColorChild(fill);
+        if (color)
+          return xml.el("a:solidFill", {}, [color]);
+      }
+      return null;
+    }
+    function parseLine(lnEl) {
+      if (!lnEl)
+        return;
+      const out = {};
+      if (lnEl.attrs.w != null)
+        out.width = Number(lnEl.attrs.w);
+      if (lnEl.attrs.cap)
+        out.cap = lnEl.attrs.cap;
+      if (lnEl.attrs.cmpd)
+        out.compound = lnEl.attrs.cmpd;
+      const sf = xml.findChild(lnEl, "a:solidFill");
+      if (sf) {
+        const c = parseColorChild(sf);
+        if (c && c.rgb)
+          out.color = c.rgb;
+      }
+      const dash = xml.findChild(lnEl, "a:prstDash");
+      if (dash)
+        out.dash = dash.attrs.val;
+      if (xml.findChild(lnEl, "a:noFill"))
+        out.color = null;
+      return out;
+    }
+    function renderLine(line) {
+      if (line === "none")
+        return xml.el("a:ln", {}, [xml.el("a:noFill", {})]);
+      if (!line || typeof line !== "object")
+        return null;
+      const a = {};
+      if (line.width != null)
+        a.w = String(line.width);
+      if (line.cap)
+        a.cap = line.cap;
+      if (line.compound)
+        a.cmpd = line.compound;
+      const children = [];
+      if (line.color === null)
+        children.push(xml.el("a:noFill", {}));
+      else if (line.color)
+        children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
+      if (line.dash)
+        children.push(xml.el("a:prstDash", { val: line.dash }));
+      return xml.el("a:ln", a, children);
+    }
+    function parseShapeProperties(spPrEl) {
+      if (!spPrEl)
+        return;
+      const out = {}, xfrmEl = xml.findChild(spPrEl, "a:xfrm");
+      Object.assign(out, parseXfrm(xfrmEl));
+      const prst = xml.findChild(spPrEl, "a:prstGeom");
+      if (prst) {
+        const geom = parsePrstGeom(prst);
+        if (geom)
+          Object.assign(out, geom);
+      }
+      const fill = parseFill(spPrEl);
+      if (fill !== void 0)
+        out.fill = fill;
+      const ln = xml.findChild(spPrEl, "a:ln");
+      if (ln) {
+        const lineProps = parseLine(ln);
+        if (lineProps !== void 0)
+          out.line = lineProps;
+      }
+      const known = new Set([
+        "a:xfrm",
+        "a:prstGeom",
+        "a:solidFill",
+        "a:noFill",
+        "a:ln"
+      ]), extras = [];
+      for (const c of spPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (!known.has(c.name))
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return Object.keys(out).length ? out : void 0;
+    }
+    function renderShapeProperties(props, tag = "p:spPr") {
+      if (!props)
+        return null;
+      const children = [];
+      if (props.cx != null || props.cy != null || props.offsetX != null || props.offsetY != null || props.rotation != null || props.flipH || props.flipV)
+        children.push(renderXfrm(props));
+      if (props.geom)
+        children.push(renderPrstGeom(props));
+      const fillEl = renderFill(props.fill);
+      if (fillEl)
+        children.push(fillEl);
+      const lineEl = renderLine(props.line);
+      if (lineEl)
+        children.push(lineEl);
+      if (props._extras)
+        for (const ex of props._extras)
+          children.push(ex);
+      return xml.el(tag, {}, children);
+    }
+    const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
+    function shapeProps(opts = {}) {
+      const out = {};
+      if (opts.geom)
+        out.geom = opts.geom;
+      if (opts.cx != null)
+        out.cx = toEmu(opts.cx);
+      if (opts.cy != null)
+        out.cy = toEmu(opts.cy);
+      if (opts.offsetX != null)
+        out.offsetX = toEmu(opts.offsetX);
+      if (opts.offsetY != null)
+        out.offsetY = toEmu(opts.offsetY);
+      if (opts.rotation != null)
+        out.rotation = opts.rotation;
+      if (opts.flipH)
+        out.flipH = !0;
+      if (opts.flipV)
+        out.flipV = !0;
+      if (opts.fill !== void 0) {
+        if (opts.fill === "none" || opts.fill === null)
+          out.fill = "none";
+        else if (typeof opts.fill === "string")
+          out.fill = { rgb: opts.fill };
+        else if (opts.fill && opts.fill.rgb)
+          out.fill = { rgb: opts.fill.rgb };
+        else if (opts.fill && opts.fill.schemeColor)
+          out.fill = { schemeColor: opts.fill.schemeColor };
+      }
+      if (opts.line !== void 0)
+        if (opts.line === "none" || opts.line === null)
+          out.line = "none";
+        else
+          out.line = { ...opts.line };
+      return out;
+    }
+    const PRESETS = Object.freeze({
+      rect: "rect",
+      roundRect: "roundRect",
+      ellipse: "ellipse",
+      triangle: "triangle",
+      rtTriangle: "rtTriangle",
+      parallelogram: "parallelogram",
+      trapezoid: "trapezoid",
+      diamond: "diamond",
+      pentagon: "pentagon",
+      hexagon: "hexagon",
+      heptagon: "heptagon",
+      octagon: "octagon",
+      star5: "star5",
+      star6: "star6",
+      star8: "star8",
+      rightArrow: "rightArrow",
+      leftArrow: "leftArrow",
+      upArrow: "upArrow",
+      downArrow: "downArrow",
+      leftRightArrow: "leftRightArrow",
+      upDownArrow: "upDownArrow",
+      wedgeRectCallout: "wedgeRectCallout",
+      wedgeRoundRectCallout: "wedgeRoundRectCallout",
+      wedgeEllipseCallout: "wedgeEllipseCallout",
+      cloudCallout: "cloudCallout",
+      line: "line",
+      bentConnector2: "bentConnector2",
+      bentConnector3: "bentConnector3",
+      curvedConnector2: "curvedConnector2",
+      curvedConnector3: "curvedConnector3",
+      ribbon: "ribbon",
+      wave: "wave",
+      doubleWave: "doubleWave",
+      cloud: "cloud",
+      sun: "sun",
+      moon: "moon",
+      heart: "heart",
+      lightningBolt: "lightningBolt"
+    });
+    return {
+      parseShapeProperties,
+      renderShapeProperties,
+      parsePrstGeom,
+      renderPrstGeom,
+      parseXfrm,
+      renderXfrm,
+      parseFill,
+      renderFill,
+      parseLine,
+      renderLine,
+      shapeProps,
+      toEmu,
+      EMU_PER_INCH,
+      EMU_PER_CM,
+      EMU_PER_PT,
+      EMU_PER_PX_96,
+      PRESETS,
+      A_NS
+    };
+  } });
+    __register({ name: "pptxSlide", dependencies: ["ooxmlErrors","xml","drawingml","pptxPicture","pptxTable","pptxChart","drawingmlShape","ooxmlShared"], factory: function(errors, xml, dml, picMod, tblMod, chartMod, shapeMod, shared) {
+    const { ParseError } = errors, { NS, REL_TYPE, CT, encodeText, decodeText } = shared, P_NS = NS.P, A_NS = NS.A, R_NS = NS.R;
+    function parseShape(spEl) {
+      const out = { type: "shape" }, nvSpPr = xml.findChild(spEl, "p:nvSpPr");
+      if (nvSpPr) {
+        const cNvPr = xml.findChild(nvSpPr, "p:cNvPr");
+        if (cNvPr) {
+          if (cNvPr.attrs.id != null)
+            out.id = Number(cNvPr.attrs.id);
+          if (cNvPr.attrs.name)
+            out.name = cNvPr.attrs.name;
+        }
+        const nvPr = xml.findChild(nvSpPr, "p:nvPr");
+        if (nvPr) {
+          const ph = xml.findChild(nvPr, "p:ph");
+          if (ph) {
+            const phObj = {};
+            if (ph.attrs.type)
+              phObj.type = ph.attrs.type;
+            if (ph.attrs.idx != null)
+              phObj.idx = Number(ph.attrs.idx);
+            if (ph.attrs.sz)
+              phObj.sz = ph.attrs.sz;
+            out.placeholder = phObj;
+          }
+        }
+        out.nvSpPr = nvSpPr;
+      }
+      const spPr = xml.findChild(spEl, "p:spPr");
+      if (spPr) {
+        out.spPr = spPr;
+        const typed = shapeMod.parseShapeProperties(spPr);
+        if (typed)
+          out.shapeProps = typed;
+      }
+      const styleEl = xml.findChild(spEl, "p:style");
+      if (styleEl)
+        out.style = styleEl;
+      const txBody = xml.findChild(spEl, "p:txBody");
+      if (txBody)
+        out.txBody = dml.parseTextBody(txBody);
+      return out;
+    }
+    function renderShape(shape) {
+      const children = [];
+      children.push(shape.nvSpPr || buildNvSpPr(shape));
+      if (shape.shapeProps)
+        children.push(shapeMod.renderShapeProperties(shape.shapeProps, "p:spPr"));
+      else if (shape.spPr)
+        children.push(shape.spPr);
+      else
+        children.push(xml.el("p:spPr", {}));
+      if (shape.style)
+        children.push(shape.style);
+      if (shape.txBody)
+        children.push(dml.renderTextBody(shape.txBody, "p:txBody"));
+      if (shape._extras)
+        for (const ex of shape._extras)
+          children.push(ex);
+      return xml.el("p:sp", {}, children);
+    }
+    function buildNvSpPr(shape) {
+      const cNvPrAttrs = {};
+      cNvPrAttrs.id = String(shape.id != null ? shape.id : 2);
+      cNvPrAttrs.name = shape.name || "TextBox";
+      const nvPrChildren = [];
+      if (shape.placeholder) {
+        const pa = {};
+        if (shape.placeholder.type)
+          pa.type = shape.placeholder.type;
+        if (shape.placeholder.idx != null)
+          pa.idx = String(shape.placeholder.idx);
+        if (shape.placeholder.sz)
+          pa.sz = shape.placeholder.sz;
+        nvPrChildren.push(xml.el("p:ph", pa));
+      }
+      return xml.el("p:nvSpPr", {}, [
+        xml.el("p:cNvPr", cNvPrAttrs),
+        xml.el("p:cNvSpPr", {}, [xml.el("a:spLocks", { noGrp: "1" })]),
+        xml.el("p:nvPr", {}, nvPrChildren)
+      ]);
+    }
+    function parseSpTree(treeEl) {
+      const shapes = [], extras = [];
+      for (const c of treeEl.children) {
+        if (c.type !== "element")
+          continue;
+        switch (c.name) {
+          case "p:sp":
+            shapes.push(parseShape(c));
+            break;
+          case "p:pic":
+            shapes.push(picMod.parsePicture(c));
+            break;
+          case "p:graphicFrame": {
+            const tbl = tblMod.parseGraphicFrame(c);
+            if (tbl) {
+              shapes.push(tbl);
+              break;
+            }
+            const chart = chartMod.parseGraphicFrame(c);
+            if (chart) {
+              shapes.push(chart);
+              break;
+            }
+            shapes.push({ type: "graphicFrame", node: c });
+            break;
+          }
+          case "p:nvGrpSpPr":
+          case "p:grpSpPr":
+            extras.push(c);
+            break;
+          default:
+            extras.push(c);
+        }
+      }
+      return { shapes, extras };
+    }
+    function renderSpTree({ shapes, extras }) {
+      const children = [], headExtras = (extras || []).filter((n) => n.name === "p:nvGrpSpPr" || n.name === "p:grpSpPr"), tailExtras = (extras || []).filter((n) => n.name !== "p:nvGrpSpPr" && n.name !== "p:grpSpPr");
+      if (!headExtras.length) {
+        children.push(xml.el("p:nvGrpSpPr", {}, [
+          xml.el("p:cNvPr", { id: "1", name: "" }),
+          xml.el("p:cNvGrpSpPr", {}),
+          xml.el("p:nvPr", {})
+        ]));
+        children.push(xml.el("p:grpSpPr", {}));
+      } else
+        for (const ex of headExtras)
+          children.push(ex);
+      for (const sp of shapes || [])
+        if (sp.type === "shape")
+          children.push(renderShape(sp));
+        else if (sp.type === "picture")
+          children.push(picMod.renderPicture(sp));
+        else if (sp.type === "table")
+          children.push(tblMod.renderGraphicFrame(sp));
+        else if (sp.type === "chart")
+          children.push(chartMod.renderGraphicFrame(sp));
+        else if (sp.type === "graphicFrame" && sp.node)
+          children.push(sp.node);
+      for (const ex of tailExtras)
+        children.push(ex);
+      return xml.el("p:spTree", {}, children);
+    }
+    function parseCSld(cSldEl) {
+      const out = {}, extras = [];
+      if (cSldEl.attrs.name)
+        out.name = cSldEl.attrs.name;
+      for (const c of cSldEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "p:bg")
+          out.bg = c;
+        else if (c.name === "p:spTree") {
+          const tree = parseSpTree(c);
+          out.shapes = tree.shapes;
+          if (tree.extras.length)
+            out.spTreeExtras = tree.extras;
+        } else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderCSld(content, defaultName) {
+      const a = {};
+      if (content.name)
+        a.name = content.name;
+      else if (defaultName)
+        a.name = defaultName;
+      const children = [];
+      if (content.bg)
+        children.push(content.bg);
+      children.push(renderSpTree({
+        shapes: content.shapes || [],
+        extras: content.spTreeExtras
+      }));
+      if (content._extras)
+        for (const ex of content._extras)
+          children.push(ex);
+      return xml.el("p:cSld", a, children);
+    }
+    function buildParser(rootTag, defaults) {
+      return function parse(input) {
+        let root;
+        if (input && input.type === "element")
+          root = input;
+        else {
+          const text = typeof input === "string" ? input : decodeText(input);
+          root = xml.parse(text);
+        }
+        if (root.name !== rootTag)
+          throw new ParseError(`pptx/${rootTag.replace(/^p:/, "")}-bad-root`, `pptx ${rootTag}: expected <${rootTag}>, got <${root.name}>`, { context: { expected: rootTag, elementName: root && root.name } });
+        const out = { type: defaults.type }, cSld = xml.findChild(root, "p:cSld");
+        if (cSld)
+          Object.assign(out, parseCSld(cSld));
+        const extras = [];
+        for (const c of root.children) {
+          if (c.type !== "element" || c.name === "p:cSld")
+            continue;
+          if (c.name === "p:clrMapOvr")
+            out.clrMapOvr = c;
+          else if (c.name === "p:clrMap")
+            out.clrMap = c;
+          else if (c.name === "p:sldLayoutIdLst")
+            out.layoutIds = parseSldLayoutIdLst(c);
+          else if (c.name === "p:txStyles")
+            out.txStyles = c;
+          else
+            extras.push(c);
+        }
+        if (extras.length)
+          out._extras = extras;
+        return out;
+      };
+    }
+    function buildSerializer(rootTag, defaultName, extraNs) {
+      return function serialize(obj) {
+        const ns = {
+          "xmlns:p": P_NS,
+          "xmlns:a": A_NS,
+          "xmlns:r": R_NS,
+          ...extraNs || {}
+        }, children = [renderCSld(obj, defaultName)];
+        if (obj.clrMap)
+          children.push(obj.clrMap);
+        if (obj.clrMapOvr)
+          children.push(obj.clrMapOvr);
+        if (obj.layoutIds)
+          children.push(renderSldLayoutIdLst(obj.layoutIds));
+        if (obj.txStyles)
+          children.push(obj.txStyles);
+        if (obj._extras)
+          for (const ex of obj._extras)
+            children.push(ex);
+        return xml.serialize(xml.el(rootTag, ns, children));
+      };
+    }
+    function parseSldLayoutIdLst(el) {
+      return xml.findAll(el, "p:sldLayoutId").map((c) => ({
+        id: c.attrs.id,
+        rId: c.attrs["r:id"]
+      }));
+    }
+    function renderSldLayoutIdLst(layoutIds) {
+      return xml.el("p:sldLayoutIdLst", {}, layoutIds.map((li) => xml.el("p:sldLayoutId", { id: String(li.id), "r:id": li.rId })));
+    }
+    const parseSlide = buildParser("p:sld", { type: "slide" }), parseSlideLayout = buildParser("p:sldLayout", { type: "slideLayout" }), parseSlideMaster = buildParser("p:sldMaster", { type: "slideMaster" }), serializeSlide = buildSerializer("p:sld", null);
+    function serializeSlideLayout(obj) {
+      const xmlText = buildSerializer("p:sldLayout", obj.cSldName || "Title and Content", obj.layoutType ? {} : {})(obj);
+      if (obj.layoutType)
+        return xmlText.replace("<p:sldLayout", `<p:sldLayout type="${obj.layoutType}"`);
+      return xmlText;
+    }
+    const serializeSlideMaster = buildSerializer("p:sldMaster", null);
+    function slideBytes(obj) {
+      return encodeText(serializeSlide(obj));
+    }
+    function slideLayoutBytes(obj) {
+      return encodeText(serializeSlideLayout(obj));
+    }
+    function slideMasterBytes(obj) {
+      return encodeText(serializeSlideMaster(obj));
+    }
+    function fromTitleBody({ title, body }) {
+      const shapes = [];
+      if (title != null)
+        shapes.push({
+          type: "shape",
+          id: 2,
+          name: "Title 1",
+          placeholder: { type: "title" },
+          txBody: dml.textBodyFromString(String(title))
+        });
+      if (body && body.length)
+        shapes.push({
+          type: "shape",
+          id: 3,
+          name: "Content Placeholder 2",
+          placeholder: { idx: 1 },
+          txBody: {
+            paragraphs: body.map((line) => ({
+              runs: [{ type: "text", value: String(line) }]
+            }))
+          }
+        });
+      return { type: "slide", shapes };
+    }
+    function extractTitle(slide) {
+      const sp = (slide.shapes || []).find((s) => s.placeholder && s.placeholder.type === "title");
+      if (!sp || !sp.txBody)
+        return null;
+      return sp.txBody.paragraphs.map((p) => p.runs.map((r) => r.value || "").join("")).join(`
+`);
+    }
+    function extractBody(slide) {
+      const sp = (slide.shapes || []).find((s) => s.placeholder && s.placeholder.idx != null);
+      if (!sp || !sp.txBody)
+        return [];
+      return sp.txBody.paragraphs.map((p) => p.runs.map((r) => r.value || "").join(""));
+    }
+    return {
+      parseShape,
+      renderShape,
+      parseSlide,
+      parseSlideLayout,
+      parseSlideMaster,
+      serializeSlide,
+      serializeSlideLayout,
+      serializeSlideMaster,
+      slideBytes,
+      slideLayoutBytes,
+      slideMasterBytes,
+      parseCSld,
+      renderCSld,
+      parseSpTree,
+      renderSpTree,
+      fromTitleBody,
+      extractTitle,
+      extractBody,
+      P_NS,
+      A_NS,
+      R_NS,
+      REL_TYPE_SLIDE: REL_TYPE.SLIDE,
+      REL_TYPE_SLIDE_LAYOUT: REL_TYPE.SLIDE_LAYOUT,
+      REL_TYPE_SLIDE_MASTER: REL_TYPE.SLIDE_MASTER,
+      CT_SLIDE: CT.SLIDE,
+      CT_SLIDE_LAYOUT: CT.SLIDE_LAYOUT,
+      CT_SLIDE_MASTER: CT.SLIDE_MASTER
+    };
+  } });
+    __register({ name: "pptxTheme", dependencies: ["ooxmlErrors","xml","ooxmlShared"], factory: function(errors, xml, shared) {
+    const { ParseError } = errors, { NS, REL_TYPE, CT, encodeText, decodeText } = shared, A_NS = NS.A, REL_TYPE_THEME = REL_TYPE.THEME, CT_THEME = CT.THEME;
+    function parseColorContainer(el) {
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:srgbClr")
+          return { srgb: c.attrs.val };
+        if (c.name === "a:sysClr")
+          return { sysClr: {
+            val: c.attrs.val,
+            lastClr: c.attrs.lastClr
+          } };
+      }
+      return null;
+    }
+    function renderColorContainer(name, color) {
+      if (!color)
+        return null;
+      let inner;
+      if (color.srgb)
+        inner = xml.el("a:srgbClr", { val: color.srgb });
+      else if (color.sysClr) {
+        const a = { val: color.sysClr.val };
+        if (color.sysClr.lastClr)
+          a.lastClr = color.sysClr.lastClr;
+        inner = xml.el("a:sysClr", a);
+      } else
+        return null;
+      return xml.el(name, {}, [inner]);
+    }
+    const CLR_SCHEME_KEYS = [
+      "dk1",
+      "lt1",
+      "dk2",
+      "lt2",
+      "accent1",
+      "accent2",
+      "accent3",
+      "accent4",
+      "accent5",
+      "accent6",
+      "hlink",
+      "folHlink"
+    ];
+    function parseClrScheme(el) {
+      const out = { name: el.attrs.name || "", colors: {} };
+      for (const key of CLR_SCHEME_KEYS) {
+        const child = xml.findChild(el, "a:" + key);
+        if (child)
+          out.colors[key] = parseColorContainer(child);
+      }
+      return out;
+    }
+    function renderClrScheme(scheme) {
+      const children = [];
+      for (const key of CLR_SCHEME_KEYS) {
+        const c = scheme.colors[key];
+        if (!c)
+          continue;
+        const el = renderColorContainer("a:" + key, c);
+        if (el)
+          children.push(el);
+      }
+      return xml.el("a:clrScheme", { name: scheme.name || "Office" }, children);
+    }
+    function parseFontKind(el) {
+      const out = {}, latin = xml.findChild(el, "a:latin"), ea = xml.findChild(el, "a:ea"), cs = xml.findChild(el, "a:cs");
+      if (latin)
+        out.latin = latin.attrs.typeface;
+      if (ea)
+        out.ea = ea.attrs.typeface;
+      if (cs)
+        out.cs = cs.attrs.typeface;
+      const extras = el.children.filter((n) => n.type === "element" && !["a:latin", "a:ea", "a:cs"].includes(n.name));
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderFontKind(tag, kind) {
+      const children = [];
+      children.push(xml.el("a:latin", { typeface: kind.latin || "Calibri" }));
+      children.push(xml.el("a:ea", { typeface: kind.ea || "" }));
+      children.push(xml.el("a:cs", { typeface: kind.cs || "" }));
+      if (kind._extras)
+        for (const ex of kind._extras)
+          children.push(ex);
+      return xml.el(tag, {}, children);
+    }
+    function parseFontScheme(el) {
+      const out = { name: el.attrs.name || "" }, major = xml.findChild(el, "a:majorFont"), minor = xml.findChild(el, "a:minorFont");
+      if (major)
+        out.majorFont = parseFontKind(major);
+      if (minor)
+        out.minorFont = parseFontKind(minor);
+      return out;
+    }
+    function renderFontScheme(scheme) {
+      const children = [];
+      children.push(renderFontKind("a:majorFont", scheme.majorFont || {}));
+      children.push(renderFontKind("a:minorFont", scheme.minorFont || {}));
+      return xml.el("a:fontScheme", { name: scheme.name || "Office" }, children);
+    }
+    function parse(input) {
+      const text = typeof input === "string" ? input : decodeText(input), root = xml.parse(text);
+      if (root.name !== "a:theme")
+        throw new ParseError("pptx/theme-bad-root", `pptx theme: expected <a:theme>, got <${root.name}>`, { context: { elementName: root && root.name } });
+      const out = { name: root.attrs.name || "Office Theme" }, themeEls = xml.findChild(root, "a:themeElements");
+      if (themeEls) {
+        const cs = xml.findChild(themeEls, "a:clrScheme"), fs = xml.findChild(themeEls, "a:fontScheme"), fm = xml.findChild(themeEls, "a:fmtScheme");
+        if (cs)
+          out.clrScheme = parseClrScheme(cs);
+        if (fs)
+          out.fontScheme = parseFontScheme(fs);
+        if (fm)
+          out.fmtScheme = fm;
+      }
+      const od = xml.findChild(root, "a:objectDefaults"), xc = xml.findChild(root, "a:extraClrSchemeLst");
+      if (od)
+        out.objectDefaults = od;
+      if (xc)
+        out.extraClrSchemeLst = xc;
+      return out;
+    }
+    function serialize(obj) {
+      const themeChildren = [];
+      if (obj.clrScheme)
+        themeChildren.push(renderClrScheme(obj.clrScheme));
+      if (obj.fontScheme)
+        themeChildren.push(renderFontScheme(obj.fontScheme));
+      if (obj.fmtScheme)
+        themeChildren.push(obj.fmtScheme);
+      const children = [xml.el("a:themeElements", {}, themeChildren)];
+      children.push(obj.objectDefaults || xml.el("a:objectDefaults", {}));
+      children.push(obj.extraClrSchemeLst || xml.el("a:extraClrSchemeLst", {}));
+      return xml.serialize(xml.el("a:theme", { "xmlns:a": A_NS, name: obj.name || "Office Theme" }, children));
+    }
+    function bytesOf(obj) {
+      return encodeText(serialize(obj));
+    }
+    function defaults() {
+      const fmtSchemeXml = '<a:fmtScheme xmlns:a="' + A_NS + '" name="Office"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln w="6350" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln><a:ln w="12700" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln><a:ln w="19050" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme>';
+      return {
+        name: "Office Theme",
+        clrScheme: {
+          name: "Office",
+          colors: {
+            dk1: { sysClr: { val: "windowText", lastClr: "000000" } },
+            lt1: { sysClr: { val: "window", lastClr: "FFFFFF" } },
+            dk2: { srgb: "44546A" },
+            lt2: { srgb: "E7E6E6" },
+            accent1: { srgb: "4472C4" },
+            accent2: { srgb: "ED7D31" },
+            accent3: { srgb: "A5A5A5" },
+            accent4: { srgb: "FFC000" },
+            accent5: { srgb: "5B9BD5" },
+            accent6: { srgb: "70AD47" },
+            hlink: { srgb: "0563C1" },
+            folHlink: { srgb: "954F72" }
+          }
+        },
+        fontScheme: {
+          name: "Office",
+          majorFont: { latin: "Calibri Light" },
+          minorFont: { latin: "Calibri" }
+        },
+        fmtScheme: xml.parse(fmtSchemeXml)
+      };
+    }
+    return {
+      parse,
+      serialize,
+      bytesOf,
+      defaults,
+      parseClrScheme,
+      renderClrScheme,
+      parseFontScheme,
+      renderFontScheme,
+      REL_TYPE_THEME,
+      CT_THEME
+    };
+  } });
+    __register({ name: "markupCompatibility", dependencies: ["xml"], factory: function(xml) {
+    function process(root, options) {
+      const opts = {
+        supportedPrefixes: [],
+        preserveAlternateContent: !1,
+        keepElements: [],
+        ...options || {}
+      };
+      if (!Array.isArray(opts.keepElements))
+        opts.keepElements = [];
+      walk(root, new Set, opts, !1);
+      return root;
+    }
+    function walk(node, ignorable, opts, kept) {
+      if (!node || node.type !== "element")
+        return;
+      const localIgnorable = kept ? ignorable : pickIgnorable(node, ignorable, opts), processContent = parseSpaceSep(node.attrs && node.attrs["mc:ProcessContent"]), attrKeys = Object.keys(node.attrs || {});
+      for (const k of attrKeys)
+        if (isMcAttr(k))
+          delete node.attrs[k];
+        else if (localIgnorable.size && hasPrefix(k, localIgnorable))
+          delete node.attrs[k];
+      if (!node.children || !node.children.length)
+        return;
+      const out = [];
+      for (const child of node.children) {
+        if (child.type !== "element") {
+          out.push(child);
+          continue;
+        }
+        if (child.name === "mc:AlternateContent" && !opts.preserveAlternateContent) {
+          const replacement = resolveAlternateContentRecursive(child, opts);
+          for (const r of replacement) {
+            walk(r, localIgnorable, opts, kept);
+            out.push(r);
+          }
+          continue;
+        }
+        if (opts.keepElements.includes(child.name)) {
+          walk(child, new Set, opts, !0);
+          out.push(child);
+          continue;
+        }
+        if (localIgnorable.size && hasPrefix(child.name, localIgnorable)) {
+          if (processContent.includes(child.name))
+            for (const grand of child.children || []) {
+              if (grand.type === "element")
+                walk(grand, localIgnorable, opts, kept);
+              out.push(grand);
+            }
+          continue;
+        }
+        walk(child, localIgnorable, opts, kept);
+        out.push(child);
+      }
+      node.children = out;
+    }
+    function parseSpaceSep(s) {
+      if (!s)
+        return [];
+      return String(s).split(/\s+/).filter(Boolean);
+    }
+    function pickIgnorable(node, parentSet, opts) {
+      const ig = node.attrs && node.attrs["mc:Ignorable"];
+      if (!ig)
+        return parentSet;
+      const merged = new Set(parentSet);
+      for (const prefix of String(ig).split(/\s+/).filter(Boolean))
+        if (!opts.supportedPrefixes.includes(prefix))
+          merged.add(prefix);
+      return merged;
+    }
+    function isMcAttr(name) {
+      return name === "mc:Ignorable" || name === "mc:PreserveElements" || name === "mc:PreserveAttributes" || name === "mc:MustUnderstand" || name === "mc:ProcessContent";
+    }
+    function hasPrefix(name, prefixSet) {
+      const colon = name.indexOf(":");
+      if (colon <= 0)
+        return !1;
+      return prefixSet.has(name.slice(0, colon));
+    }
+    function resolveAlternateContentRecursive(altEl, opts) {
+      const direct = resolveAlternateContent(altEl, opts), out = [];
+      for (const e of direct)
+        if (e.type === "element" && e.name === "mc:AlternateContent" && !opts.preserveAlternateContent)
+          for (const inner of resolveAlternateContentRecursive(e, opts))
+            out.push(inner);
+        else
+          out.push(e);
+      return out;
+    }
+    function resolveAlternateContent(altEl, opts) {
+      const choices = (altEl.children || []).filter((c) => c.type === "element" && c.name === "mc:Choice");
+      for (const choice of choices)
+        if (String(choice.attrs.Requires || "").split(/\s+/).filter(Boolean).every((p) => opts.supportedPrefixes.includes(p)))
+          return (choice.children || []).filter((c) => c.type === "element");
+      const fallback = (altEl.children || []).find((c) => c.type === "element" && c.name === "mc:Fallback");
+      if (fallback)
+        return (fallback.children || []).filter((c) => c.type === "element");
+      return [];
+    }
+    function wrapAlternateContent({ choices, fallback }) {
+      const children = [];
+      for (const c of choices || []) {
+        const inner = Array.isArray(c.element) ? c.element : c.element ? [c.element] : [];
+        children.push(xml.el("mc:Choice", { Requires: String(c.requires || "") }, inner));
+      }
+      if (fallback !== void 0) {
+        const inner = Array.isArray(fallback) ? fallback : fallback ? [fallback] : [];
+        children.push(xml.el("mc:Fallback", {}, inner));
+      }
+      return xml.el("mc:AlternateContent", {}, children);
+    }
+    function setIgnorable(rootEl, prefixes) {
+      if (!rootEl || rootEl.type !== "element")
+        return rootEl;
+      const list = Array.isArray(prefixes) ? prefixes.join(" ") : String(prefixes);
+      if (!rootEl.attrs["xmlns:mc"])
+        rootEl.attrs["xmlns:mc"] = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+      const existing = rootEl.attrs["mc:Ignorable"];
+      if (!existing)
+        rootEl.attrs["mc:Ignorable"] = list;
+      else {
+        const set = new Set(existing.split(/\s+/).filter(Boolean));
+        for (const p of list.split(/\s+/).filter(Boolean))
+          set.add(p);
+        rootEl.attrs["mc:Ignorable"] = [...set].join(" ");
+      }
+      return rootEl;
+    }
+    return {
+      process,
+      wrapAlternateContent,
+      setIgnorable,
+      MC_NS: "http://schemas.openxmlformats.org/markup-compatibility/2006"
+    };
+  } });
+    __register({ name: "pptxWalker", dependencies: [], factory: function() {
+    function createWalker() {
+      const _exts = [];
+      function use(...extensions) {
+        for (const ext of extensions)
+          if (ext && !_exts.includes(ext))
+            _exts.push(ext);
+      }
+      function applyHook(name, value) {
+        if (value == null)
+          return value;
+        for (const ext of _exts)
+          if (typeof ext[name] === "function") {
+            const r = ext[name](value);
+            if (r !== void 0)
+              value = r;
+          }
+        return value;
+      }
+      function walkRunsInTextBody(tb, phase) {
+        if (!tb || !tb.paragraphs)
+          return;
+        const hr = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hp = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties";
+        for (const p of tb.paragraphs) {
+          if (p.pPr)
+            p.pPr = applyHook(hp, p.pPr);
+          for (const r of p.runs || [])
+            if (r.rPr)
+              r.rPr = applyHook(hr, r.rPr);
+        }
+      }
+      function applyExtensions(presentation, phase) {
+        if (!_exts.length || !presentation)
+          return presentation;
+        const sName = phase === "hydrate" ? "hydrateSettings" : "dehydrateSettings";
+        for (const slide of presentation.slides || [])
+          for (const shape of slide.shapes || [])
+            walkRunsInTextBody(shape.txBody, phase);
+        for (const layout of presentation.slideLayouts || [])
+          for (const shape of layout.shapes || [])
+            walkRunsInTextBody(shape.txBody, phase);
+        for (const master of presentation.slideMasters || [])
+          for (const shape of master.shapes || [])
+            walkRunsInTextBody(shape.txBody, phase);
+        applyHook(sName, presentation);
+        return presentation;
+      }
+      return {
+        use,
+        applyHydrate(presentation) {
+          applyExtensions(presentation, "hydrate");
+        },
+        applyDehydrate(presentation) {
+          applyExtensions(presentation, "dehydrate");
+        },
+        get hasExtensions() {
+          return _exts.length > 0;
+        },
+        get extensions() {
+          return _exts.slice();
+        }
+      };
+    }
+    return { createWalker };
+  } });
+    __register({ name: "pptx", dependencies: ["ooxmlErrors","opcPackage","xml","opcRelationships","pptxSlide","pptxTheme","markupCompatibility","pptxPicture","drawingmlChart","drawingmlShape","pptxWalker","ooxmlShared"], factory: function(errors, opc, xml, relsMod, slideMod, themeMod, mc, picMod, chartPartMod, shapeMod, walkerMod, shared) {
+    const { ParseError, ContractError } = errors, {
+      REL_TYPE,
+      CT,
+      lookupCT,
+      encodeText,
+      decodeText,
+      createRidAllocator,
+      trackUnmodelledParts
+    } = shared, P_NS = slideMod.P_NS, A_NS = slideMod.A_NS, R_NS = slideMod.R_NS, REL_TYPE_DOC = REL_TYPE.DOC, CT_PRESENTATION = CT.PRESENTATION;
+    function attachSlideImages(slide, slideRels, slidePart, pkg) {
+      for (const shape of slide.shapes || [])
+        if (shape.type === "picture" && shape.embedRef) {
+          const rel = slideRels.find((r) => r.Id === shape.embedRef);
+          if (rel && rel.Type === picMod.REL_TYPE_IMAGE) {
+            const partName = relsMod.resolveTarget(slidePart, rel.Target), data = pkg.parts[partName];
+            if (data) {
+              const declared = lookupCT(pkg, partName);
+              shape.image = shape.image || {};
+              shape.image.data = data;
+              shape.image.contentType = declared || picMod.sniffImageType(data);
+              shape.image.rId = shape.embedRef;
+            }
+          }
+        } else if (shape.type === "chart" && shape.chartRef) {
+          const rel = slideRels.find((r) => r.Id === shape.chartRef);
+          if (rel && rel.Type === chartPartMod.REL_TYPE_CHART) {
+            const partName = relsMod.resolveTarget(slidePart, rel.Target), data = pkg.parts[partName];
+            if (data) {
+              shape.chart = chartPartMod.parse(data);
+              shape._chartPartName = partName;
+              if (shape.chart.embeddedWorkbookRid) {
+                const embRel = (pkg.rels[partName] || []).find((r) => r.Id === shape.chart.embeddedWorkbookRid);
+                if (embRel) {
+                  const embPart = relsMod.resolveTarget(partName, embRel.Target);
+                  if (pkg.parts[embPart])
+                    shape.chart.embeddedWorkbook = pkg.parts[embPart];
+                }
+              }
+            }
+          }
+        }
+    }
+    function defaultMasterContent(layoutRefIds) {
+      return {
+        type: "slideMaster",
+        shapes: [],
+        clrMap: xml.el("p:clrMap", {
+          bg1: "lt1",
+          tx1: "dk1",
+          bg2: "lt2",
+          tx2: "dk2",
+          accent1: "accent1",
+          accent2: "accent2",
+          accent3: "accent3",
+          accent4: "accent4",
+          accent5: "accent5",
+          accent6: "accent6",
+          hlink: "hlink",
+          folHlink: "folHlink"
+        }),
+        layoutIds: layoutRefIds.map((rId, i) => ({
+          id: String(2147483649 + i),
+          rId
+        }))
+      };
+    }
+    function defaultLayoutContent(type, name) {
+      return {
+        type: "slideLayout",
+        layoutType: type || "obj",
+        cSldName: name || "Title and Content",
+        shapes: [],
+        clrMapOvr: xml.el("p:clrMapOvr", {}, [
+          xml.el("a:masterClrMapping", {})
+        ])
+      };
+    }
+    function archiveLimits(o) {
+      return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio } : void 0;
+    }
+    function read(bytes, opts) {
+      const pkg = opc.read(bytes, archiveLimits(opts)), { value: result, unmodelledParts } = trackUnmodelledParts(pkg, readPackage);
+      result.unmodelledParts = unmodelledParts;
+      return result;
+    }
+    function readPackage(pkg) {
+      const docRel = (pkg.rels["/"] || []).find((r) => r.Type === REL_TYPE_DOC || r.Type.endsWith("/officeDocument"));
+      if (!docRel)
+        throw new ParseError("pptx/missing-officeDocument-rel", "pptx: no officeDocument relationship");
+      const presPart = relsMod.resolveTarget("/", docRel.Target), presBytes = pkg.parts[presPart];
+      if (!presBytes)
+        throw new ParseError("pptx/missing-presentation-part", "pptx: missing presentation part", { context: { partName: presPart } });
+      let presRoot;
+      try {
+        presRoot = mc.process(xml.parse(decodeText(presBytes)));
+      } catch (e) {
+        throw new ParseError("pptx/invalid-presentation-xml", "pptx: failed to parse presentation XML", { context: { partName: presPart }, cause: e });
+      }
+      const presRels = pkg.rels[presPart] || [], sldList = xml.findChild(presRoot, "p:sldIdLst"), slideEntries = sldList ? xml.findAll(sldList, "p:sldId").map((s) => ({
+        id: s.attrs.id,
+        rId: s.attrs["r:id"]
+      })) : [], masterList = xml.findChild(presRoot, "p:sldMasterIdLst"), masterEntries = masterList ? xml.findAll(masterList, "p:sldMasterId").map((m) => ({
+        id: m.attrs.id,
+        rId: m.attrs["r:id"]
+      })) : [];
+      let sldSize;
+      const ssEl = xml.findChild(presRoot, "p:sldSize");
+      if (ssEl) {
+        sldSize = {
+          cx: Number(ssEl.attrs.cx),
+          cy: Number(ssEl.attrs.cy)
+        };
+        if (ssEl.attrs.type)
+          sldSize.type = ssEl.attrs.type;
+      }
+      const slides = [], slideLayouts = [], slideMasters = [];
+      let theme;
+      for (const entry of slideEntries) {
+        const rel = presRels.find((r) => r.Id === entry.rId);
+        if (!rel)
+          continue;
+        const slidePart = relsMod.resolveTarget(presPart, rel.Target), sBytes = pkg.parts[slidePart];
+        if (!sBytes)
+          continue;
+        const slideRoot = mc.process(xml.parse(decodeText(sBytes))), slide = slideMod.parseSlide(slideRoot), slideRels = pkg.rels[slidePart] || [];
+        slide._partName = slidePart;
+        attachSlideImages(slide, slideRels, slidePart, pkg);
+        slides.push(slide);
+        const layoutRel = slideRels.find((r) => r.Type === slideMod.REL_TYPE_SLIDE_LAYOUT);
+        if (layoutRel) {
+          const layoutPart = relsMod.resolveTarget(slidePart, layoutRel.Target);
+          if (!slideLayouts.some((l) => l._partName === layoutPart)) {
+            const lBytes = pkg.parts[layoutPart];
+            if (lBytes) {
+              const layoutRoot = mc.process(xml.parse(decodeText(lBytes))), layout = slideMod.parseSlideLayout(layoutRoot);
+              layout._partName = layoutPart;
+              slideLayouts.push(layout);
+            }
+          }
+          slide.layoutRef = slideLayouts.findIndex((l) => l._partName === layoutPart);
+        }
+      }
+      for (const entry of masterEntries) {
+        const rel = presRels.find((r) => r.Id === entry.rId);
+        if (!rel)
+          continue;
+        const masterPart = relsMod.resolveTarget(presPart, rel.Target), mBytes = pkg.parts[masterPart];
+        if (!mBytes)
+          continue;
+        const masterRoot = mc.process(xml.parse(decodeText(mBytes))), master = slideMod.parseSlideMaster(masterRoot);
+        master._partName = masterPart;
+        slideMasters.push(master);
+        const themeRel = (pkg.rels[masterPart] || []).find((r) => r.Type === themeMod.REL_TYPE_THEME);
+        if (themeRel && !theme) {
+          const themePart = relsMod.resolveTarget(masterPart, themeRel.Target), tBytes = pkg.parts[themePart];
+          if (tBytes)
+            theme = themeMod.parse(tBytes);
+        }
+      }
+      for (const s of slides) {
+        delete s._partName;
+        for (const sp of s.shapes || [])
+          delete sp._chartPartName;
+      }
+      for (const l of slideLayouts)
+        delete l._partName;
+      for (const m of slideMasters)
+        delete m._partName;
+      const presentation = { type: "presentation", slides };
+      if (slideLayouts.length)
+        presentation.slideLayouts = slideLayouts;
+      if (slideMasters.length)
+        presentation.slideMasters = slideMasters;
+      if (theme)
+        presentation.theme = theme;
+      if (sldSize)
+        presentation.sldSize = sldSize;
+      walker.applyHydrate(presentation);
+      return { presentation, package: pkg };
+    }
+    const walker = walkerMod.createWalker();
+    function use(...extensions) {
+      walker.use(...extensions);
+      return api;
+    }
+    function write(pres) {
+      if (pres == null || typeof pres !== "object" || Array.isArray(pres))
+        throw new ContractError("pptx/invalid-presentation", "pptx.write: presentation must be an object with a slides array", { context: { received: pres === null ? "null" : typeof pres } });
+      if (pres.slides !== void 0 && !Array.isArray(pres.slides))
+        throw new ContractError("pptx/invalid-slides", "pptx.write: presentation.slides must be an array", { context: { path: "slides", received: typeof pres.slides } });
+      if (walker.hasExtensions)
+        walker.applyDehydrate(pres);
+      const pkg = opc.empty(), slides = pres.slides || [], theme = pres.theme || themeMod.defaults();
+      let layouts = pres.slideLayouts;
+      if (!layouts || !layouts.length)
+        layouts = [defaultLayoutContent("obj", "Title and Content")];
+      const masterRels = layouts.map((_, i) => `rId${i + 1}`);
+      let masters = pres.slideMasters;
+      if (!masters || !masters.length)
+        masters = [defaultMasterContent(masterRels)];
+      else
+        for (const m of masters)
+          if (!m.layoutIds)
+            m.layoutIds = masterRels.map((rId, i) => ({
+              id: String(2147483649 + i),
+              rId
+            }));
+      opc.setPart(pkg, "/ppt/theme/theme1.xml", themeMod.bytesOf(theme), themeMod.CT_THEME);
+      masters.forEach((master, i) => {
+        const masterPath = `/ppt/slideMasters/slideMaster${i + 1}.xml`;
+        opc.setPart(pkg, masterPath, slideMod.slideMasterBytes(master), slideMod.CT_SLIDE_MASTER);
+        const masterRelsArr = [];
+        layouts.forEach((_, j) => {
+          masterRelsArr.push({
+            Id: `rId${j + 1}`,
+            Type: slideMod.REL_TYPE_SLIDE_LAYOUT,
+            Target: `../slideLayouts/slideLayout${j + 1}.xml`
+          });
+        });
+        masterRelsArr.push({
+          Id: `rId${layouts.length + 1}`,
+          Type: themeMod.REL_TYPE_THEME,
+          Target: "../theme/theme1.xml"
+        });
+        opc.setRels(pkg, masterPath, masterRelsArr);
+      });
+      layouts.forEach((layout, j) => {
+        const layoutPath = `/ppt/slideLayouts/slideLayout${j + 1}.xml`;
+        opc.setPart(pkg, layoutPath, slideMod.slideLayoutBytes(layout), slideMod.CT_SLIDE_LAYOUT);
+        opc.setRels(pkg, layoutPath, [{
+          Id: "rId1",
+          Type: slideMod.REL_TYPE_SLIDE_MASTER,
+          Target: "../slideMasters/slideMaster1.xml"
+        }]);
+      });
+      const usedExts = new Set;
+      let nextImageIdx = 1, nextChartIdx = 1;
+      const chartParts = [];
+      slides.forEach((slide, k) => {
+        const node = normalizeSlide(slide), slidePath = `/ppt/slides/slide${k + 1}.xml`, slideRels = [], ridAlloc = createRidAllocator({ prefix: "rId", start: 1 }), seenData = new Map;
+        for (const shape of node.shapes || [])
+          if (shape.type === "picture" && shape.image && shape.image.data) {
+            let item = seenData.get(shape.image.data);
+            if (!item) {
+              const ct = shape.image.contentType || picMod.sniffImageType(shape.image.data), ext = picMod.extensionFor(ct), fileName = shape.image.fileName || `image${nextImageIdx++}.${ext}`;
+              item = {
+                rId: ridAlloc.claim(shape.image.rId || shape.embedRef),
+                data: shape.image.data,
+                contentType: ct,
+                fileName,
+                partName: "/ppt/media/" + fileName
+              };
+              seenData.set(shape.image.data, item);
+              opc.setPart(pkg, item.partName, item.data, item.contentType);
+              usedExts.add(ext);
+              slideRels.push({
+                Id: item.rId,
+                Type: picMod.REL_TYPE_IMAGE,
+                Target: "../media/" + fileName
+              });
+            }
+            shape.embedRef = item.rId;
+          } else if (shape.type === "chart" && shape.chart) {
+            const chartIdx = nextChartIdx++, chartFile = `chart${chartIdx}.xml`, partName = "/ppt/charts/" + chartFile;
+            if (shape.chart.embeddedWorkbook) {
+              const embFile = `Microsoft_Excel_Worksheet${chartIdx}.xlsx`, embPath = "/ppt/embeddings/" + embFile;
+              opc.setPart(pkg, embPath, shape.chart.embeddedWorkbook, chartPartMod.CT_EMBEDDED_XLSX);
+              pkg.contentTypes.overrides[embPath] = chartPartMod.CT_EMBEDDED_XLSX;
+              shape.chart.embeddedWorkbookRid = "rId1";
+              opc.setRels(pkg, partName, [{
+                Id: "rId1",
+                Type: chartPartMod.REL_TYPE_PACKAGE,
+                Target: "../embeddings/" + embFile
+              }]);
+            }
+            opc.setPart(pkg, partName, chartPartMod.bytesOf(shape.chart), chartPartMod.CT_CHART);
+            chartParts.push(partName);
+            const finalRid = ridAlloc.claim(shape.chartRef);
+            slideRels.push({
+              Id: finalRid,
+              Type: chartPartMod.REL_TYPE_CHART,
+              Target: "../charts/" + chartFile
+            });
+            shape.chartRef = finalRid;
+          }
+        const layoutRid = ridAlloc.next(), layoutIdx = slide.layoutRef != null && slide.layoutRef < layouts.length ? slide.layoutRef : 0;
+        slideRels.push({
+          Id: layoutRid,
+          Type: slideMod.REL_TYPE_SLIDE_LAYOUT,
+          Target: `../slideLayouts/slideLayout${layoutIdx + 1}.xml`
+        });
+        opc.setPart(pkg, slidePath, slideMod.slideBytes(node), slideMod.CT_SLIDE);
+        opc.setRels(pkg, slidePath, slideRels);
+      });
+      for (const ext of usedExts)
+        pkg.contentTypes.defaults[ext] = picMod.extToContentType(ext);
+      for (const partName of chartParts)
+        pkg.contentTypes.overrides[partName] = chartPartMod.CT_CHART;
+      const presChildren = [];
+      presChildren.push(xml.el("p:sldMasterIdLst", {}, masters.map((_, i) => xml.el("p:sldMasterId", {
+        id: String(2147483648 + i),
+        "r:id": `rIdMaster${i + 1}`
+      }))));
+      presChildren.push(xml.el("p:sldIdLst", {}, slides.map((_, k) => xml.el("p:sldId", {
+        id: String(256 + k),
+        "r:id": `rIdSlide${k + 1}`
+      }))));
+      const sldSize = pres.sldSize || { cx: 9144000, cy: 6858000, type: "screen4x3" }, sa = { cx: String(sldSize.cx), cy: String(sldSize.cy) };
+      if (sldSize.type)
+        sa.type = sldSize.type;
+      presChildren.push(xml.el("p:sldSize", sa));
+      presChildren.push(xml.el("p:notesSz", { cx: "6858000", cy: "9144000" }));
+      const presXml = xml.serialize(xml.el("p:presentation", { "xmlns:p": P_NS, "xmlns:a": A_NS, "xmlns:r": R_NS }, presChildren));
+      opc.setPart(pkg, "/ppt/presentation.xml", encodeText(presXml), CT_PRESENTATION);
+      const presRels = [];
+      masters.forEach((_, i) => presRels.push({
+        Id: `rIdMaster${i + 1}`,
+        Type: slideMod.REL_TYPE_SLIDE_MASTER,
+        Target: `slideMasters/slideMaster${i + 1}.xml`
+      }));
+      slides.forEach((_, k) => presRels.push({
+        Id: `rIdSlide${k + 1}`,
+        Type: slideMod.REL_TYPE_SLIDE,
+        Target: `slides/slide${k + 1}.xml`
+      }));
+      opc.setRels(pkg, "/ppt/presentation.xml", presRels);
+      opc.setRels(pkg, "/", [{
+        Id: "rId1",
+        Type: REL_TYPE_DOC,
+        Target: "ppt/presentation.xml"
+      }]);
+      return opc.write(pkg);
+    }
+    function normalizeSlide(slide) {
+      if (slide.shapes)
+        return slide;
+      if (slide.title != null || slide.body && slide.body.length)
+        return slideMod.fromTitleBody(slide);
+      if (slide.paragraphs)
+        return {
+          type: "slide",
+          shapes: [{
+            type: "shape",
+            id: 2,
+            name: "Text Body",
+            placeholder: { idx: 1 },
+            txBody: {
+              paragraphs: slide.paragraphs.map((line) => ({
+                runs: [{ type: "text", value: String(line) }]
+              }))
+            }
+          }]
+        };
+      return { type: "slide", shapes: [] };
+    }
+    function fromTitleBody(args) {
+      return slideMod.fromTitleBody(args);
+    }
+    function extractTitle(slide) {
+      return slideMod.extractTitle(slide);
+    }
+    function extractBody(slide) {
+      return slideMod.extractBody(slide);
+    }
+    function picture(data, opts) {
+      return picMod.image(data, opts);
+    }
+    function shape(geom, opts = {}) {
+      const props = shapeMod.shapeProps({ geom, ...opts }), out = {
+        type: "shape",
+        id: opts.id != null ? opts.id : 4,
+        name: opts.name || "Shape",
+        shapeProps: props
+      };
+      if (opts.text != null)
+        if (typeof opts.text === "string")
+          out.txBody = {
+            paragraphs: [{
+              runs: [{ type: "text", value: opts.text }]
+            }]
+          };
+        else
+          out.txBody = opts.text;
+      return out;
+    }
+    function chart(spec, opts = {}) {
+      return {
+        type: "chart",
+        cx: opts.cx || 6000000,
+        cy: opts.cy || 4000000,
+        offsetX: opts.offsetX || 0,
+        offsetY: opts.offsetY || 0,
+        name: opts.name || "Chart",
+        ...opts.id != null ? { id: opts.id } : {},
+        chart: spec
+      };
+    }
+    const api = {
+      read,
+      write,
+      use,
+      fromTitleBody,
+      extractTitle,
+      extractBody,
+      picture,
+      chart,
+      shape,
+      PRESETS: shapeMod.PRESETS
+    };
+    return api;
+  } });
+
+    const __core = __resolve("pptx");
+    return __core;
+    }
+};

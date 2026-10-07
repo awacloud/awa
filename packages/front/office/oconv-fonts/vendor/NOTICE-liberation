@@ -1,0 +1,53 @@
+Liberation Fonts — SIL Open Font License 1.1
+============================================
+
+Vendored payload: the 12 Liberation faces (Sans / Serif / Mono, each in
+Regular / Bold / Italic / BoldItalic), TrueType flavour, unmodified.
+Upstream: https://github.com/liberationfonts/liberation-fonts
+Release: 2.1.5 (2021-09-30)
+
+Copyright notice, verbatim from the upstream LICENSE header
+-----------------------------------------------------------
+
+    Digitized data copyright (c) 2010 Google Corporation
+            with Reserved Font Arimo, Tinos and Cousine.
+    Copyright (c) 2012 Red Hat, Inc.
+            with Reserved Font Name Liberation.
+
+    This Font Software is licensed under the SIL Open Font License,
+    Version 1.1.
+
+The full licence text is vendored verbatim beside this file as `OFL.txt`.
+
+Obligation surface
+------------------
+
+Reserved Font Names: **Liberation**, **Arimo**, **Tinos**, **Cousine**.
+Under OFL 1.1 condition 3, no Modified Version of this Font Software may
+be distributed under any of those names without written permission from
+the corresponding copyright holder. "Modified Version" is defined by the
+licence as any addition, deletion or substitution of any part of the Font
+Software, or any change to its format — which includes **subsetting**.
+This is why the faces are vendored whole and unmodified: a pre-subsetted
+face could no longer be called "Liberation".
+
+Notice retention (OFL 1.1 condition 2): each copy of the Font Software,
+whether distributed on its own or bundled, must carry the copyright
+notice above and the licence text. `OFL.txt` and this file must therefore
+travel with `liberation/*.ttf` in any redistribution, and must not be
+removed from this directory.
+
+What a downstream redistributor owes:
+
+  - retain the copyright notice above and the full `OFL.txt`;
+  - not sell the Font Software on its own (OFL 1.1 condition 1 — bundling
+    it inside a larger work, sold or not, is permitted);
+  - not use the Reserved Font Names for a modified version;
+  - keep any derivative under the OFL as well (condition 5), which binds
+    only the Font Software, not the software that uses it.
+
+The licence covers the vendored faces only. This package's own source is
+licensed separately; see the package LICENSE.
+
+Provenance, per-file sha256 and the upstream archive digest are locked in
+`PROVENANCE.json` beside this file.

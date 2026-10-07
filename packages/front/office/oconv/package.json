@@ -1,0 +1,81 @@
+{
+  "name": "@awacloud/oconv",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "description": "Browser-safe document conversion through a versioned pivot IR — docx/odt/xlsx/ods/pptx/odp/pdf to structured Markdown, Markdown to docx/odt/pdf, and docx/odt cross-format pairs, each call returning a machine-readable loss ledger. Zero runtime dependency beyond @awacloud/fw and the @awacloud office packages.",
+  "keywords": [
+    "document-conversion",
+    "pivot-ir",
+    "markdown",
+    "docx",
+    "odt",
+    "xlsx",
+    "ods",
+    "pptx",
+    "odp",
+    "pdf",
+    "loss-ledger",
+    "office",
+    "browser",
+    "worker-safe"
+  ],
+  "private": true,
+  "type": "module",
+  "main": "src/main.js",
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "!src/write/pdf/_test-runtime.js",
+    "docs",
+    "LICENSE",
+    "NOTICE",
+    "tests/_fixtures/corpus/LICENSE-apache-2.0",
+    "tests/_fixtures/corpus/NOTICE-apache-poi",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./src/worker.js": "./src/worker.js"
+  },
+  "sideEffects": [
+    "./src/worker.js"
+  ],
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.0"
+  },
+  "scripts": {
+    "deps:check": "bun ../../../../cli.ts fw-codegen deps --check",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "@awacloud/fonts": "workspace:*",
+    "@awacloud/fw": "workspace:*",
+    "@awacloud/md": "workspace:*",
+    "@awacloud/odf": "workspace:*",
+    "@awacloud/ooxml": "workspace:*",
+    "@awacloud/pdf": "workspace:*"
+  },
+  "devDependencies": {
+    "@awacloud/tool-fw-codegen": "workspace:*"
+  },
+  "awa": {
+    "maturity": "L3",
+    "coverageBasis": ["src/**"],
+    "coverageFloor": 0.95,
+    "_coverageComment": "Basis = this package's own src/** rows. The canonical All-files aggregate is dominated by the sibling office packages and @awacloud/fw that src/main.js's modules array composes by design (W0 measured 502 of 535 rows foreign), so it tracks the siblings' tests, not this package's. src/worker.js has no lcov row (it evaluates inside a Worker thread; its guard is tests/worker.integration.test.js). src/write/pdf/_test-runtime.js stays inside the basis (the gate's glob matcher has no negation). 0.95 is the owner-ruled floor, confirmed against the gate's own post-declaration print."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/office/oconv"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

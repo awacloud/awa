@@ -1,0 +1,66 @@
+{
+  "name": "@awacloud/oconv-fonts",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "description": "The SIL OFL companion of @awacloud/oconv — vendored Liberation 2.1.5 Sans/Serif/Mono font faces (12 TrueType programs, Regular/Bold/Italic/BoldItalic) registered as an @awacloud/fw descriptor by name, so oconv's md → pdf route embeds real faces by default instead of falling back to the PDF Standard 14. Optional at every layer: absent from the runtime, oconv still resolves to Standard 14 and the module graph still links. Zero runtime dependency beyond @awacloud/fw.",
+  "keywords": [
+    "fonts",
+    "liberation",
+    "ofl",
+    "pdf",
+    "font-embedding",
+    "oconv",
+    "office",
+    "browser",
+    "worker-safe"
+  ],
+  "private": true,
+  "type": "module",
+  "main": "src/main.js",
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "vendor/liberation/*.ttf",
+    "vendor/OFL.txt",
+    "vendor/NOTICE-liberation",
+    "vendor/PROVENANCE.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE",
+    "docs"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./faces.js": "./src/faces.js",
+    "./loader.js": "./src/loader.js",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.0"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {},
+  "awa": {
+    "maturity": "L3",
+    "coverageBasis": ["src/**"],
+    "coverageFloor": 0.98,
+    "_coverageComment": "Basis = this package's own src/** JS surface (src/main.js, src/faces.js, src/loader.js — 3 lcov rows). The unfiltered/canonical aggregate is not usable as a basis: this package's tarball payload is dominated by 4 359 164 B of vendored Liberation TrueType font programs (vendor/liberation/*.ttf), which are binary font data, not instrumentable JS — no coverage percentage may describe them. Measured 2026-09-18: `bun cli.ts coverage-gate --scopes packages/front/office/oconv-fonts/` -> 100.00% lines over 3 basis rows (awa.coverageBasis). floor = max(0, floor(100) - 2)/100 = 0.98."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/office/oconv-fonts"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

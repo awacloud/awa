@@ -1,0 +1,48 @@
+{
+  "kind": "build",
+  "variant": "fw",
+  "name": "md",
+  "package": "@awacloud/md",
+  "modules": [
+    "mdErrors",
+    "mdNode",
+    "mdAstTypes",
+    "refsLinkRefs",
+    "mdBlockHtmlPatterns",
+    "mdCommon",
+    "mdBlockLinkRef",
+    "mdBlockListData",
+    "mdBlockTable",
+    "mdBlockTaskList",
+    "mdBlockTypes",
+    "mdBlockStarts",
+    "mdBlockCursor",
+    "blockParser",
+    "mdInlineRegex",
+    "mdInlineHelpers",
+    "mdInlineEscapes",
+    "mdInlineCodeSpan",
+    "mdInlineAutolink",
+    "mdInlineAutolinkExt",
+    "mdInlineDelimiterStack",
+    "mdInlineLink",
+    "mdInlineLineBreak",
+    "mdInlineSourcepos",
+    "inlineParser",
+    "inlineParserBuilder",
+    "renderHtmlMod",
+    "renderMarkdownMod",
+    "md"
+  ],
+  "fwDependencies": [
+    "secPolicy",
+    "sanitize",
+    "htmlEntities",
+    "url"
+  ],
+  "bytes": {
+    "dev": 106541,
+    "min": 53186
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

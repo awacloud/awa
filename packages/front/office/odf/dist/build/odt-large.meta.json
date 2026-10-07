@@ -1,0 +1,52 @@
+{
+  "kind": "build",
+  "variant": "fw",
+  "name": "odt-large",
+  "package": "@awacloud/odf",
+  "modules": [
+    "odfErrors",
+    "odfShared",
+    "pkgMimetype",
+    "pkgManifest",
+    "pkgPackage",
+    "odfMeta",
+    "odfSettings",
+    "odfStyles",
+    "textParagraph",
+    "textHeading",
+    "textList",
+    "textSection",
+    "tableCell",
+    "tableRow",
+    "tableTable",
+    "textContent",
+    "odfWalker",
+    "odtWalker",
+    "styleAutomatic",
+    "textStyleRegistry",
+    "drawImage",
+    "drawFrame",
+    "odt",
+    "textTrackedChanges",
+    "textFieldsExtended",
+    "textListDetailed",
+    "tableAdvanced",
+    "stylePage",
+    "stylePropertiesTyped",
+    "drawShapes"
+  ],
+  "fwDependencies": [
+    "xml",
+    "bitstream",
+    "huffman",
+    "lz77",
+    "deflate",
+    "zip",
+    "crc32"
+  ],
+  "bytes": {
+    "dev": 130377,
+    "min": 73964
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

@@ -1,0 +1,43 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "xlsx-large",
+  "package": "@awacloud/ooxml",
+  "modules": [
+    "ooxmlErrors",
+    "opcContentTypes",
+    "opcRelationships",
+    "ooxmlShared",
+    "opcPackage",
+    "xlsxStyles",
+    "xlsxTables",
+    "xlsxConditionalFormatting",
+    "xlsxComments",
+    "markupCompatibility",
+    "drawingmlShape",
+    "ooxmlMath",
+    "drawingml",
+    "xlsxDrawings",
+    "drawingmlChart",
+    "xlsxThreadedComments",
+    "xlsxWalker",
+    "xlsx",
+    "smlPivotTables",
+    "smlCalculation",
+    "smlSheetConfig",
+    "smlWorkbookConfig",
+    "dmlChartDataLabels",
+    "dmlChartTrendlines",
+    "dmlChartAxesAdvanced",
+    "dmlChart3d",
+    "dmlChartOtherTypes",
+    "dmlEffects",
+    "dmlFillsAdvanced"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 360541,
+    "min": 196706
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

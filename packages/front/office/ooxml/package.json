@@ -1,0 +1,81 @@
+{
+  "name": "@awacloud/ooxml",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS",
+  "type": "module",
+  "main": "src/main.js",
+  "description": "Browser-safe OOXML (ECMA-376) reader/writer for .docx, .xlsx and .pptx — typed core, opt-in extras covering the rest of the schema. Zero runtime dependency beyond @awacloud/fw.",
+  "keywords": [
+    "ooxml",
+    "ecma-376",
+    "docx",
+    "xlsx",
+    "pptx",
+    "wordprocessingml",
+    "spreadsheetml",
+    "presentationml",
+    "drawingml",
+    "office",
+    "opc",
+    "browser"
+  ],
+  "engines": { "node": ">=18" },
+  "sideEffects": false,
+  "files": [
+    "src/**/*.js",
+    "src/**/*.md",
+    "!src/**/*.test.js",
+    "!src/**/*.test.html",
+    "dist/**",
+    "docs",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./docx": "./src/docx/docx.js",
+    "./docx-large": "./src/bundles/docx-large.js",
+    "./docx-full": "./src/bundles/docx-full.js",
+    "./xlsx": "./src/xlsx/xlsx.js",
+    "./xlsx-large": "./src/bundles/xlsx-large.js",
+    "./xlsx-full": "./src/bundles/xlsx-full.js",
+    "./pptx": "./src/pptx/pptx.js",
+    "./pptx-large": "./src/bundles/pptx-large.js",
+    "./pptx-full": "./src/bundles/pptx-full.js",
+    "./opc": "./src/opc/package.js",
+    "./drawingml": "./src/drawingml/drawingml.js",
+    "./errors": "./src/errors.js",
+    "./extra/*": "./src/extra/*.js",
+    "./bundles/*": "./src/bundles/*.js",
+    "./build/*": { "default": "./dist/build/*" },
+    "./standalone/*": { "default": "./dist/standalone/*" }
+  },
+  "dependencies": {
+    "@awacloud/fw": "workspace:*"
+  },
+  "devDependencies": {
+    "@awacloud/tool-fw-codegen": "workspace:*",
+    "@awacloud/tool-prebuild-generator": "workspace:*"
+  },
+  "scripts": {
+    "deps:check": "bun ../../../../cli.ts fw-codegen deps --check",
+    "gen:bundles": "bun run tools/generate-bundles.mjs",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "awa": { "maturity": "L4", "coverageFloor": 0.77 },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/office/ooxml"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  }
+}

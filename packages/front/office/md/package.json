@@ -1,0 +1,63 @@
+{
+  "name": "@awacloud/md",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS",
+  "type": "module",
+  "main": "src/main.js",
+  "description": "Browser-safe Markdown parser and serializer — CommonMark 0.31 and GitHub Flavored Markdown, core plus opt-in extras. Zero runtime dependency beyond @awacloud/fw.",
+  "keywords": ["markdown", "commonmark", "gfm", "parser", "serializer", "ast", "sanitize", "browser", "worker-safe"],
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "!src/**/_test-runtime.js",
+    "dist/**",
+    "docs",
+    "LICENSE",
+    "NOTICE",
+    "third-party",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./modules": "./src/main.js",
+    "./md": "./src/md.js",
+    "./md-full": "./src/bundles/md-full.js",
+    "./bootstrap.js": "./src/bootstrap.js",
+    "./extra/*.js": "./src/extra/*.js",
+    "./extra/*": "./src/extra/*.js",
+    "./bundles/*": "./src/bundles/*.js",
+    "./build/*": { "default": "./dist/build/*" },
+    "./standalone/*": { "default": "./dist/standalone/*" },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "deps:check": "bun ../../../../cli.ts fw-codegen deps --check",
+    "gen:bundles": "bun run tools/generate-bundles.mjs",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "@awacloud/fw": "workspace:*"
+  },
+  "devDependencies": {
+    "@awacloud/tool-fw-codegen": "workspace:*",
+    "@awacloud/tool-prebuild-generator": "workspace:*"
+  },
+  "awa": {
+    "maturity": "L4",
+    "coverageFloor": 0.85
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/office/md"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "name": "@awacloud/odf",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS",
+  "description": "Browser-safe OpenDocument Format (ODT/ODS/ODP) reader, writer and orchestrator for the @awacloud stack.",
+  "keywords": [
+    "odf",
+    "opendocument",
+    "odt",
+    "ods",
+    "odp",
+    "oasis",
+    "office",
+    "spreadsheet",
+    "presentation",
+    "word-processor",
+    "xml",
+    "zip",
+    "browser",
+    "worker-safe"
+  ],
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.0"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "main": "src/main.js",
+  "files": [
+    "src/**/*.js",
+    "src/**/*.md",
+    "!src/**/*.test.js",
+    "!src/**/*.test.html",
+    "dist/**",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE",
+    "!tmp",
+    "!**/tmp/**"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./errors": "./src/errors.js",
+    "./odt": "./src/odt/odt.js",
+    "./odt-large": "./src/bundles/odt-large.js",
+    "./odt-full": "./src/bundles/odt-full.js",
+    "./ods": "./src/ods/ods.js",
+    "./ods-large": "./src/bundles/ods-large.js",
+    "./ods-full": "./src/bundles/ods-full.js",
+    "./odp": "./src/odp/odp.js",
+    "./odp-large": "./src/bundles/odp-large.js",
+    "./odp-full": "./src/bundles/odp-full.js",
+    "./pkg": "./src/pkg/package.js",
+    "./text": "./src/text/content.js",
+    "./table": "./src/table/table.js",
+    "./draw": "./src/draw/frame.js",
+    "./chart": "./src/chart/chart.js",
+    "./math": "./src/math/math.js",
+    "./form": "./src/form/forms.js",
+    "./dr3d": "./src/dr3d/dr3d.js",
+    "./extra/*": "./src/extra/*.js",
+    "./bundles/*": "./src/bundles/*.js",
+    "./build/*": { "default": "./dist/build/*" },
+    "./standalone/*": { "default": "./dist/standalone/*" }
+  },
+  "scripts": {
+    "deps:check": "bun ../../../../cli.ts fw-codegen deps --check",
+    "gen:bundles": "bun run tools/generate-bundles.mjs",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "@awacloud/fw": "workspace:*"
+  },
+  "devDependencies": {
+    "@awacloud/tool-fw-codegen": "workspace:*",
+    "@awacloud/tool-prebuild-generator": "workspace:*"
+  },
+  "awa": { "maturity": "L4", "coverageFloor": 0.92, "coverageBasis": ["src/**"] },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/office/odf"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  }
+}

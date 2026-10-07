@@ -1,0 +1,36 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "docx",
+  "package": "@awacloud/ooxml",
+  "modules": [
+    "ooxmlErrors",
+    "docxText",
+    "opcContentTypes",
+    "opcRelationships",
+    "ooxmlShared",
+    "opcPackage",
+    "docxProperties",
+    "drawingmlShape",
+    "docxDrawing",
+    "ooxmlMath",
+    "docxStructure",
+    "docxStyles",
+    "docxNumbering",
+    "docxSettings",
+    "docxComments",
+    "docxFootnotes",
+    "docxHeaders",
+    "markupCompatibility",
+    "drawingmlChart",
+    "docxCustomXml",
+    "docxWalker",
+    "docx"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 260291,
+    "min": 135847
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

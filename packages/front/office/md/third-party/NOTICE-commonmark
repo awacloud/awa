@@ -1,0 +1,49 @@
+Third-party notice - commonmark.js
+
+Three source files of @awacloud/office-md are ported from the CommonMark
+reference implementation commonmark.js, which is licensed BSD 2-clause:
+
+  src/common.js        (from upstream lib/common.js; the named-entity table
+    and the CommonMark URL percent-encoder are now delegated to
+    @awacloud/fw and are no longer derived from upstream)
+  src/block/parser.js  (from upstream lib/blocks.js)
+  src/inline/parser.js (from upstream lib/inlines.js)
+
+The origin is declared in each file's own header. The upstream copyright
+notice and BSD 2-clause licence text below are reproduced verbatim from the
+upstream repository (https://github.com/commonmark/commonmark.js, file
+LICENSE, first section - the section that covers lib/).
+
+The remaining sections of that upstream LICENSE do not apply here: no code
+is derived from upstream lib/from-code-point.js (this package's
+fromCodePoint wraps the native String.fromCodePoint), and neither the
+bench/samples corpus nor the CommonMark spec text is redistributed.
+
+---------------------------------------------------------------------
+
+Copyright (c) 2014, John MacFarlane
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

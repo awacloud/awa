@@ -1,0 +1,39 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "fonts",
+  "package": "@awacloud/fonts",
+  "modules": [
+    "fontErrors",
+    "fontsShared",
+    "fontFixed",
+    "fontReader",
+    "fontWriter",
+    "fontTag",
+    "fontChecksum",
+    "fontSfnt",
+    "tableHead",
+    "tableHhea",
+    "tableMaxp",
+    "tableHmtx",
+    "tableCmapFormats",
+    "tableCmap",
+    "fontEncoding",
+    "tableName",
+    "tableOs2",
+    "tablePost",
+    "tableLoca",
+    "tableGlyf",
+    "tableGvar",
+    "fontGlyph",
+    "fontPath",
+    "fontCompositeResolve",
+    "fonts"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 242272,
+    "min": 116223
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

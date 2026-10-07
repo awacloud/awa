@@ -1,0 +1,96 @@
+{
+  "name": "@awacloud/pdf",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS",
+  "type": "module",
+  "main": "src/main.js",
+  "description": "Browser-safe PDF 2.0 reader/writer — ISO 32000-2:2020, PDF 1.7 legacy read, typed object graph, AES-256 encrypted write, PKCS#7/PAdES signatures (sign + verify). Zero runtime dependency beyond @awacloud/fw and @awacloud/fonts.",
+  "keywords": [
+    "pdf",
+    "pdf-2.0",
+    "iso-32000",
+    "pades",
+    "pkcs7",
+    "tagged-pdf",
+    "pdf-a",
+    "pdf-ua",
+    "xmp",
+    "acroform",
+    "browser",
+    "worker-safe"
+  ],
+  "engines": { "node": ">=18" },
+  "sideEffects": false,
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "dist/**",
+    "docs",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./pdf": "./src/pdf.js",
+    "./errors": "./src/errors.js",
+    "./serializer": "./src/syntax/serializer.js",
+    "./filters/*.js": "./src/syntax/filters/*.js",
+    "./filters/*": "./src/syntax/filters/*.js",
+    "./annot/*.js": "./src/annot/*.js",
+    "./annot/*": "./src/annot/*.js",
+    "./tagged/*.js": "./src/tagged/*.js",
+    "./tagged/*": "./src/tagged/*.js",
+    "./crypto/*.js": "./src/crypto/*.js",
+    "./crypto/*": "./src/crypto/*.js",
+    "./sig/*.js": "./src/sig/*.js",
+    "./sig/*": "./src/sig/*.js",
+    "./ocg/*.js": "./src/ocg/*.js",
+    "./ocg/*": "./src/ocg/*.js",
+    "./action/*.js": "./src/action/*.js",
+    "./action/*": "./src/action/*.js",
+    "./embedded/*.js": "./src/embedded/*.js",
+    "./embedded/*": "./src/embedded/*.js",
+    "./metadata/*.js": "./src/metadata/*.js",
+    "./metadata/*": "./src/metadata/*.js",
+    "./prepress/*.js": "./src/prepress/*.js",
+    "./prepress/*": "./src/prepress/*.js",
+    "./extra/*.js": "./src/extra/*.js",
+    "./extra/*": "./src/extra/*.js",
+    "./bundles/*.js": "./src/bundles/*.js",
+    "./bundles/*": "./src/bundles/*.js",
+    "./pdf-large": "./src/bundles/pdf-large.js",
+    "./pdf-full": "./src/bundles/pdf-full.js",
+    "./pdf-legacy": "./src/bundles/pdf-legacy.js",
+    "./build/*": { "default": "./dist/build/*" },
+    "./standalone/*": { "default": "./dist/standalone/*" }
+  },
+  "scripts": {
+    "deps:check": "bun ../../../../cli.ts fw-codegen deps --check",
+    "gen:bundles": "bun run tools/generate-bundles.mjs",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "@awacloud/fw": "workspace:*",
+    "@awacloud/fonts": "workspace:*"
+  },
+  "devDependencies": {
+    "@awacloud/tool-fw-codegen": "workspace:*",
+    "@awacloud/tool-prebuild-generator": "workspace:*"
+  },
+  "awa": { "maturity": "L4", "coverageFloor": 0.58 },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/office/pdf"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "kind": "build",
+  "variant": "fw",
+  "name": "ods",
+  "package": "@awacloud/odf",
+  "modules": [
+    "odfErrors",
+    "odfShared",
+    "pkgMimetype",
+    "pkgManifest",
+    "pkgPackage",
+    "odfMeta",
+    "odfSettings",
+    "odfStyles",
+    "tableCell",
+    "tableRow",
+    "tableTable",
+    "spreadsheet",
+    "styleAutomatic",
+    "textParagraph",
+    "odfWalker",
+    "odsWalker",
+    "ods"
+  ],
+  "fwDependencies": [
+    "xml",
+    "bitstream",
+    "huffman",
+    "lz77",
+    "deflate",
+    "zip",
+    "crc32"
+  ],
+  "bytes": {
+    "dev": 66172,
+    "min": 38596
+  },
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

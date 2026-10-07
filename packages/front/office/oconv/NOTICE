@@ -1,0 +1,80 @@
+@awacloud/oconv
+Copyright (c) 2026 AwaCloud SAS
+Author: Matthieu Bouilloux
+
+Licensed under AGPL-3.0-only; see the LICENSE file.
+SPDX-License-Identifier: AGPL-3.0-only
+
+AWACLOUD and AWA are trademarks of Towards Conseil, used under licence.
+
+This package is also available under a commercial licence from AwaCloud SAS (see https://awacloud.com/offers).
+Commercial licensing: sales@awacloud.com
+
+Additional terms (AGPL-3.0 section 7):
+Scope. AwaCloud SAS, the copyright holder, adds the following terms under
+section 7 of the GNU Affero General Public License version 3 (the "AGPL")
+to the parts of this software of which it holds the copyright (the
+"Material"). They do not apply to third-party components, which remain
+under their own licences, nor to use of this software under a commercial
+licence from AwaCloud SAS, which is governed by that licence alone. They
+do not limit the purposes, commercial or otherwise, for which the Material
+may be run, modified or conveyed. Each term is to be read as going no
+further than section 7 of the AGPL permits, and each is separate from the
+others.
+
+1. Notices and author attribution (section 7(b)). In every copy of the
+   Material and of modified versions of it, you must preserve: (a) in each
+   source file that contains the Material, the copyright notices of
+   AwaCloud SAS, the author attributions (such as "Author: Matthieu
+   Bouilloux"), the licence notices and the notice indicating where to
+   find these terms; and (b) when you convey the Material in a non-source
+   form, including bundled or minified forms, those copyright notices,
+   author attributions and licence notices, and these terms, in the
+   object code itself, in a text file or other materials provided with
+   it, or at the place from which it is offered. The statement that this
+   software is also available under a commercial licence, including the
+   word "Dual-licensed" in file headers, and the commercial contact need
+   not be preserved.
+
+2. Appropriate Legal Notices (section 7(b)). Where a work containing the
+   Material displays Appropriate Legal Notices, you must preserve in them,
+   as plain text, the copyright notice of AwaCloud SAS and the attribution
+   of the Material to its author, Matthieu Bouilloux. A list of components
+   reached from those notices is sufficient. No logo, link, product name,
+   badge or promotional statement is required, and nothing needs to be
+   added to documents, web pages or other output produced by running the
+   work.
+
+3. Origin and modified versions (section 7(c)). You may not misrepresent
+   the origin of the Material. A modified version may not be presented as
+   the original version published by AwaCloud SAS, or as provided,
+   endorsed or supported by it. It must be marked in reasonable ways as
+   different from the original; the notices required by section 5(a) of
+   the AGPL, together with a statement in the NOTICE file, a change log or
+   another text file conveyed with it that it has been modified and when,
+   are sufficient. Keeping the original import paths, file headers,
+   copyright notices and author attributions is not a misrepresentation
+   of origin.
+
+4. Publicity (section 7(d)). The names of AwaCloud SAS and of Matthieu
+   Bouilloux may not be used to endorse or promote a product or service
+   derived from the Material without prior written permission from
+   AwaCloud SAS or, for his name, from him. This does not limit accurate
+   statements of origin or the notices required by these terms.
+
+5. Trademarks (section 7(e)). AwaCloud SAS declines to grant, under the
+   AGPL, any rights under trademark law in the names AWA and AWACLOUD, in
+   any spelling or case, which are trademarks of Towards Conseil used by
+   AwaCloud SAS under licence, or in the trade name AwaCloud and related
+   logos. This does not prevent you from preserving the notices required
+   by these terms, keeping the original import paths, or stating
+   accurately that your work is based on or uses the Material.
+
+6. Indemnification (section 7(f)). Anyone who conveys the Material, or a
+   modified version of it, with contractual assumptions of liability to
+   the recipient must indemnify AwaCloud SAS and Matthieu Bouilloux for
+   any liability that those contractual assumptions directly impose on
+   them.
+
+Third-party components:
+- Apache POI sample documents (test-corpus fixtures, tests/_fixtures/corpus) — Copyright 2003-2026 The Apache Software Foundation — Apache-2.0 — licence text: tests/_fixtures/corpus/NOTICE-apache-poi
