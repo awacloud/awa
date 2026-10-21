@@ -780,7 +780,12 @@ export const mdBundled = {
     class MdError extends Error {
       constructor(code, message, opts) {
         super(message);
-        this.name = new.target.name;
+        Object.defineProperty(this, "name", {
+          value: new.target.name,
+          writable: !0,
+          enumerable: !0,
+          configurable: !0
+        });
         this.code = code;
         if (opts && opts.context)
           this.context = opts.context;
@@ -1226,7 +1231,7 @@ export const mdBundled = {
       }
     }
     function parseLinkLabel(cur) {
-      const m = cur.match(/^\[(?:[^\\[\]]|\\.){0,1000}\]/);
+      const m = cur.match(/^\[(?:[^\\[\]]|\\.){0,1000}\]/s);
       if (m === null || m.length > 1001)
         return 0;
       return m.length;
@@ -1245,6 +1250,8 @@ export const mdBundled = {
         } else if (c === 40) {
           cur.pos += 1;
           openparens += 1;
+          if (openparens > 32)
+            return null;
         } else if (c === 41) {
           if (openparens < 1)
             break;
@@ -1289,16 +1296,14 @@ export const mdBundled = {
       let title = null;
       if (cur.pos !== beforetitle)
         title = parseLinkTitle(cur);
-      if (title === null) {
-        title = "";
+      if (title === null)
         cur.pos = beforetitle;
-      }
       let atLineEnd = !0;
       if (cur.match(reSpaceAtEndOfLine) === null)
-        if (title === "")
+        if (title === null)
           atLineEnd = !1;
         else {
-          title = "";
+          title = null;
           cur.pos = beforetitle;
           atLineEnd = cur.match(reSpaceAtEndOfLine) !== null;
         }
@@ -1311,7 +1316,7 @@ export const mdBundled = {
         cur.pos = startpos;
         return 0;
       }
-      addLinkRef(refmap, normlabel, dest, title);
+      addLinkRef(refmap, normlabel, dest, title === null ? "" : title);
       return cur.pos - startpos;
     }
     function removeLinkReferenceDefinitions(parser, tree) {
@@ -1568,7 +1573,7 @@ export const mdBundled = {
     return { detectTaskLists };
   } });
     __register({ name: "mdBlockTypes", dependencies: ["mdAstTypes","mdBlockLinkRef","mdCommon"], factory: function(astTypes, blockLinkRef, common) {
-    const { T_ITEM } = astTypes, { removeLinkReferenceDefinitions } = blockLinkRef, { unescapeString } = common, reClosingCodeFence = /^(?:`{3,}|~{3,})(?=[ \t]*$)/;
+    const { T_ITEM, T_CODE_BLOCK, T_HTML_BLOCK } = astTypes, { removeLinkReferenceDefinitions } = blockLinkRef, { unescapeString } = common, reClosingCodeFence = /^(?:`{3,}|~{3,})(?=[ \t]*$)/;
     function isSpaceOrTab(c) {
       return c === 32 || c === 9;
     }
@@ -1592,7 +1597,19 @@ export const mdBundled = {
         acceptsLines: !1
       },
       list: {
-        continue() {
+        continue(parser, container) {
+          const seen = parser.listsAfterBlank || (parser.listsAfterBlank = new Set);
+          if (!parser.blank)
+            seen.delete(container);
+          else if (!seen.has(container))
+            seen.add(container);
+          else if (parser.indent === 0) {
+            const tip = parser.tip;
+            if (tip.type === T_CODE_BLOCK || tip.type === T_HTML_BLOCK)
+              parser.addLine();
+            parser.lastLineLength = parser.currentLine.length;
+            return 2;
+          }
           return 0;
         },
         finalize(parser, block) {
@@ -1770,9 +1787,30 @@ export const mdBundled = {
       listsMatch,
       applyListData,
       listDataFromNode
-    } = blockListData, reThematicBreak = /^(?:\*[ \t]*){3,}$|^(?:_[ \t]*){3,}$|^(?:-[ \t]*){3,}$/, reATXHeadingMarker = /^#{1,6}(?:[ \t]+|$)/, reCodeFence = /^`{3,}(?!.*`)|^~{3,}/, reSetextHeadingLine = /^(?:=+|-+)[ \t]*$/;
+    } = blockListData, reATXHeadingMarker = /^#{1,6}(?:[ \t]+|$)/, reCodeFence = /^`{3,}(?!.*`)|^~{3,}/, reSetextHeadingLine = /^(?:=+|-+)[ \t]*$/;
     function isSpaceOrTab(c) {
       return c === 32 || c === 9;
+    }
+    function isThematicBreak(parser) {
+      const { currentLine: ln, nextNonspace: start } = parser;
+      if (parser.thematicBreakLine === parser.lineNumber && parser.thematicBreakKill > start)
+        return !1;
+      const c = ln.charCodeAt(start);
+      let i = start, count = 0;
+      if (c === 42 || c === 95 || c === 45) {
+        for (;i < ln.length; i++) {
+          const d = ln.charCodeAt(i);
+          if (d === c)
+            count++;
+          else if (!isSpaceOrTab(d))
+            break;
+        }
+        if (count >= 3 && i === ln.length)
+          return !0;
+      }
+      parser.thematicBreakLine = parser.lineNumber;
+      parser.thematicBreakKill = i;
+      return !1;
     }
     function peek(ln, pos) {
       return pos < ln.length ? ln.charCodeAt(pos) : -1;
@@ -1855,7 +1893,7 @@ export const mdBundled = {
         return 0;
       },
       function(parser) {
-        if (!parser.indented && reThematicBreak.test(parser.currentLine.slice(parser.nextNonspace))) {
+        if (!parser.indented && isThematicBreak(parser)) {
           parser.closeUnmatchedBlocks();
           parser.addChild(T_THEMATIC_BREAK, parser.nextNonspace);
           parser.advanceOffset(parser.currentLine.length - parser.offset, !1);
@@ -1978,7 +2016,7 @@ export const mdBundled = {
       this.blank = !1;
       this.partiallyConsumedTab = !1;
       this.lineNumber += 1;
-      if (ln.indexOf(" ") !== -1)
+      if (ln.indexOf("\x00") !== -1)
         ln = ln.replace(/\0/g, "\uFFFD");
       this.currentLine = ln;
       let lastChild;
@@ -2185,11 +2223,35 @@ export const mdBundled = {
     };
   } });
     __register({ name: "mdInlineHelpers", dependencies: ["mdNode","mdAstTypes"], factory: function(nodeApi, astTypes) {
-    const { Node } = nodeApi, { T_TEXT } = astTypes;
+    const { Node } = nodeApi, { T_TEXT, T_MATH_INLINE, T_MATH_BLOCK } = astTypes;
     function makeText(s) {
       const n = new Node(T_TEXT);
       n.literal = s;
       return n;
+    }
+    function makeMath(s, display) {
+      const n = new Node(display ? T_MATH_BLOCK : T_MATH_INLINE);
+      n.literal = s;
+      return n;
+    }
+    function mathSpanEnd(s, p) {
+      if (s.charCodeAt(p + 1) === 36) {
+        const end = s.indexOf("$$", p + 2), nl = s.indexOf(`
+`, p + 2);
+        return end >= 0 && (nl < 0 || end < nl) ? end + 2 : -1;
+      }
+      for (let j = p + 1;j < s.length; j++) {
+        const c = s.charCodeAt(j);
+        if (c === 10)
+          return -1;
+        if (c === 92) {
+          j++;
+          continue;
+        }
+        if (c === 36)
+          return j > p + 1 ? j + 1 : -1;
+      }
+      return -1;
     }
     function fromCodePoint(cp) {
       try {
@@ -2215,7 +2277,7 @@ export const mdBundled = {
           break;
       return str.slice(start, end + 1);
     }
-    return { makeText, fromCodePoint, normalizeReference, trim, isSpace };
+    return { makeText, makeMath, mathSpanEnd, fromCodePoint, normalizeReference, trim, isSpace };
   } });
     __register({ name: "mdInlineEscapes", dependencies: ["mdInlineHelpers","mdInlineRegex","mdCommon","mdNode","mdAstTypes","htmlEntities"], factory: function(helpers, regex, common, nodeApi, astTypes, htmlEntitiesMod) {
     const { decodeHtmlStrict: decodeHTMLStrict } = htmlEntitiesMod, { makeText } = helpers, { reEscapable, reEntityHere } = regex, { C_NEWLINE } = common, { Node } = nodeApi, { T_LINEBREAK } = astTypes;
@@ -2296,6 +2358,9 @@ export const mdBundled = {
         return !1;
       };
       ip.parseHtmlTag = function(block) {
+        const end = requiredEnd(this.subject, this.pos);
+        if (end !== null && !this.hasAhead(end[0], end[1]))
+          return !1;
         const m = this.match(reHtmlTag);
         if (m === null)
           return !1;
@@ -2304,6 +2369,27 @@ export const mdBundled = {
         block.appendChild(node);
         return !0;
       };
+      ip.hasAhead = function(token, from) {
+        if (this._htmlEnds === null || this._htmlEnds === void 0)
+          this._htmlEnds = {};
+        let c = this._htmlEnds[token];
+        if (c === void 0 || from < c.from || c.at !== -1 && c.at < from) {
+          c = { from, at: this.subject.indexOf(token, from) };
+          this._htmlEnds[token] = c;
+        }
+        return c.at !== -1;
+      };
+    }
+    function requiredEnd(subject, pos) {
+      if (subject.startsWith("<!--", pos))
+        return ["-->", pos + 2];
+      if (subject.startsWith("<?", pos))
+        return ["?>", pos + 2];
+      if (subject.startsWith("<![CDATA[", pos))
+        return ["]]>", pos + 9];
+      if (subject.charCodeAt(pos + 1) === 33 && /[A-Za-z]/.test(subject.charAt(pos + 2)))
+        return [">", pos + 3];
+      return null;
     }
     return { installAutolink };
   } });
@@ -2321,6 +2407,19 @@ export const mdBundled = {
       }
       s = s.replace(/&[a-zA-Z0-9]+;$/, "");
       return s;
+    }
+    function endsWithDashOrUnderscore(text, end) {
+      let i = end;
+      while (i < text.length && (text[i] === "-" || text[i] === "_"))
+        i++;
+      if (i === end)
+        return !1;
+      const next = text[i];
+      if (next !== void 0 && /[a-zA-Z0-9]/.test(next))
+        return !1;
+      if (next === "." && /[a-zA-Z0-9]/.test(text[i + 1] || ""))
+        return !1;
+      return !0;
     }
     function scanExtAutolinks(text) {
       const matches = [];
@@ -2353,6 +2452,8 @@ export const mdBundled = {
         if (!/@.+\..+/.test(email))
           continue;
         const start = m.index + m[0].indexOf(m[1]);
+        if (endsWithDashOrUnderscore(text, start + email.length))
+          continue;
         matches.push({ start, end: start + email.length, url: email, isEmail: !0, isWww: !1 });
       }
       matches.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
@@ -2504,6 +2605,7 @@ export const mdBundled = {
             cc,
             numdelims,
             origdelims: numdelims,
+            position: startpos,
             node,
             previous: this.delimiters,
             next: null,
@@ -2527,8 +2629,9 @@ export const mdBundled = {
         let opener, closer, old_closer, opener_inl, closer_inl, tempstack, use_delims, tmp, next, opener_found;
         const openers_bottom = [];
         let openers_bottom_index, odd_match;
-        for (let i = 0;i < 15; i++)
-          openers_bottom[i] = stack_bottom;
+        const bottom = stack_bottom === null ? 0 : stack_bottom.position + 1;
+        for (let i = 0;i < 20; i++)
+          openers_bottom[i] = bottom;
         closer = this.delimiters;
         while (closer !== null && closer.previous !== stack_bottom)
           closer = closer.previous;
@@ -2553,10 +2656,10 @@ export const mdBundled = {
                 openers_bottom_index = 8 + (closer.can_open ? 3 : 0) + closer.origdelims % 3;
                 break;
               case C_TILDE:
-                openers_bottom_index = 13;
+                openers_bottom_index = 14 + (closer.can_open ? 3 : 0) + closer.origdelims % 3;
                 break;
             }
-            while (opener !== null && opener !== stack_bottom && opener !== openers_bottom[openers_bottom_index]) {
+            while (opener !== null && opener !== stack_bottom && opener.position >= openers_bottom[openers_bottom_index]) {
               odd_match = (closer.can_open || opener.can_close) && closer.origdelims % 3 !== 0 && (opener.origdelims + closer.origdelims) % 3 === 0;
               if (opener.cc === closer.cc && opener.can_open && !odd_match) {
                 opener_found = !0;
@@ -2625,7 +2728,7 @@ export const mdBundled = {
               closer = closer.next;
             }
             if (!opener_found) {
-              openers_bottom[openers_bottom_index] = old_closer.previous;
+              openers_bottom[openers_bottom_index] = old_closer.position;
               if (!old_closer.can_open)
                 this.removeDelimiter(old_closer);
             }
@@ -2675,6 +2778,8 @@ export const mdBundled = {
             } else if (c === C_OPEN_PAREN) {
               this.pos += 1;
               openparens += 1;
+              if (openparens > 32)
+                return null;
             } else if (c === C_CLOSE_PAREN) {
               if (openparens < 1)
                 break;
@@ -2782,10 +2887,11 @@ export const mdBundled = {
           opener.node.unlink();
           if (!is_image) {
             opener = this.brackets;
-            while (opener !== null) {
-              if (!opener.image)
-                opener.active = !1;
-              opener = opener.previous;
+            if (opener !== null && opener.image)
+              opener = opener.previousLink;
+            while (opener !== null && opener.active) {
+              opener.active = !1;
+              opener = opener.previousLink;
             }
           }
           return !0;
@@ -2797,11 +2903,13 @@ export const mdBundled = {
         }
       };
       ip.addBracket = function(node, index, image) {
-        if (this.brackets !== null)
-          this.brackets.bracketAfter = !0;
+        const previous = this.brackets;
+        if (previous !== null)
+          previous.bracketAfter = !0;
         this.brackets = {
           node,
-          previous: this.brackets,
+          previous,
+          previousLink: previous === null ? null : previous.image ? previous.previousLink : previous,
           previousDelimiter: this.delimiters,
           index,
           image,
@@ -2880,7 +2988,7 @@ export const mdBundled = {
       C_AMPERSAND,
       C_SINGLEQUOTE,
       C_DOUBLEQUOTE
-    } = common, { C_TILDE, reSpnl } = regex, { makeText, fromCodePoint, trim, isSpace } = helpers, { installEscapes } = escapes, { installCodeSpan } = codeSpan, { installAutolink } = autolink, { installDelimiterStack } = delimiterStack, { installLink } = link, { installLineBreak } = lineBreak, { processExtendedAutolinks } = autolinkExt, { backfillSourcepos } = sourcepos;
+    } = common, { C_TILDE, reSpnl } = regex, { makeText, makeMath, mathSpanEnd, fromCodePoint, trim, isSpace } = helpers, C_DOLLAR = 36, { installEscapes } = escapes, { installCodeSpan } = codeSpan, { installAutolink } = autolink, { installDelimiterStack } = delimiterStack, { installLink } = link, { installLineBreak } = lineBreak, { processExtendedAutolinks } = autolinkExt, { backfillSourcepos } = sourcepos;
     function createInlineParser(opts) {
       const ip = {
         subject: "",
@@ -2888,7 +2996,8 @@ export const mdBundled = {
         delimiters: null,
         brackets: null,
         refmap: {},
-        options: opts || {}
+        options: opts || {},
+        flags: {}
       };
       ip.match = function(re) {
         const m = re.exec(this.subject.slice(this.pos));
@@ -2912,11 +3021,38 @@ export const mdBundled = {
       installDelimiterStack(ip);
       installLink(ip);
       installLineBreak(ip);
+      ip.parseMathSpan = function(block) {
+        const end = mathSpanEnd(this.subject, this.pos);
+        if (end < 0)
+          return !1;
+        const display = this.subject.charCodeAt(this.pos + 1) === C_DOLLAR, k = display ? 2 : 1;
+        block.appendChild(makeMath(this.subject.slice(this.pos + k, end - k), display));
+        this.pos = end;
+        return !0;
+      };
+      const parseStringBase = ip.parseString;
+      ip.parseString = function(block) {
+        const start = this.pos;
+        if (!parseStringBase.call(this, block))
+          return !1;
+        if (!this.flags.math)
+          return !0;
+        const node = block.lastChild, m = node.literal;
+        for (let k = m.indexOf("$", 1);k > 0; k = m.indexOf("$", k + 1))
+          if (mathSpanEnd(this.subject, start + k) > 0) {
+            node.literal = m.slice(0, k);
+            this.pos = start + k;
+            break;
+          }
+        return !0;
+      };
       ip.parseInline = function(block) {
         let res;
         const c = this.peek();
         if (c === -1)
           return !1;
+        if (c === C_DOLLAR && this.flags.math && this.parseMathSpan(block))
+          return !0;
         switch (c) {
           case C_NEWLINE:
             res = this.parseNewline(block);
@@ -2963,7 +3099,8 @@ export const mdBundled = {
         }
         return !0;
       };
-      ip.parse = function(block, refmap) {
+      ip.parse = function(block, refmap, flags) {
+        this.flags = flags || {};
         const raw = block.stringContent || "";
         this.subject = trim(raw);
         let leadTrim = 0;
@@ -2972,6 +3109,7 @@ export const mdBundled = {
         this.pos = 0;
         this.delimiters = null;
         this.brackets = null;
+        this._htmlEnds = null;
         if (refmap)
           this.refmap = refmap;
         const wantSourcepos = !!this.options.sourcepos;
@@ -3033,8 +3171,8 @@ export const mdBundled = {
       return ip;
     }
     const ip = createInlineParser(options);
-    function parse(block, refmap) {
-      ip.parse(block, refmap);
+    function parse(block, refmap, flags) {
+      ip.parse(block, refmap, flags);
     }
     return { parse };
   } });
@@ -3269,7 +3407,7 @@ export const mdBundled = {
             if (info) {
               const lang = info.split(/\s+/)[0];
               if (lang)
-                attr = ' class="language-' + escapeHtml(lang) + '"';
+                attr = ' class="' + (lang.startsWith("language-") ? "" : "language-") + escapeHtml(lang) + '"';
             }
             cr();
             out("<pre><code" + attr + ">");
@@ -3278,11 +3416,18 @@ export const mdBundled = {
             cr();
             break;
           }
-          case "html_block":
+          case "html_block": {
+            const html = safe && !node._mdTrustedHtml ? "" : filterHtml(node.literal || "");
             cr();
-            out(safe && !node._mdTrustedHtml ? "" : filterHtml(node.literal || ""));
-            cr();
+            out(html);
+            if (html.length > 1 && html.endsWith(`
+`))
+              lit(`
+`);
+            else
+              cr();
             break;
+          }
           case "text":
             out(escapeHtml(node.literal || ""));
             break;
@@ -3430,15 +3575,35 @@ export const mdBundled = {
     function escapeTableCell(s) {
       return s.replace(/\|/g, "\\|").replace(/\n/g, " ");
     }
+    const INLINE_CONTAINERS = new Set([
+      "emph",
+      "strong",
+      "strikethrough",
+      "link",
+      "image",
+      "subscript",
+      "superscript",
+      "highlight"
+    ]), BLOCK_CONTAINERS = new Set(["document", "block_quote", "list"]);
     function renderInlines(node, inTable) {
-      let out = "", child = node.firstChild;
-      while (child) {
-        out += renderInline(child, inTable);
-        child = child.next;
+      const stack = [{ node, out: "", child: node.firstChild }];
+      for (;; ) {
+        const top = stack[stack.length - 1], child = top.child;
+        if (child) {
+          top.child = child.next;
+          if (INLINE_CONTAINERS.has(child.type))
+            stack.push({ node: child, out: "", child: child.firstChild });
+          else
+            top.out += renderInlineLeaf(child, inTable);
+          continue;
+        }
+        stack.pop();
+        if (stack.length === 0)
+          return top.out;
+        stack[stack.length - 1].out += wrapInline(top.node, top.out);
       }
-      return out;
     }
-    function renderInline(node, inTable) {
+    function renderInlineLeaf(node, inTable) {
       switch (node.type) {
         case "text":
           return escapeText(node.literal || "");
@@ -3456,32 +3621,36 @@ export const mdBundled = {
           const fence = "`".repeat(n), pad = lit.startsWith("`") || lit.endsWith("`") || /^\s|\s$/.test(lit) ? " " : "";
           return fence + pad + lit + pad + fence;
         }
-        case "emph":
-          return "*" + renderInlines(node, inTable) + "*";
-        case "strong":
-          return "**" + renderInlines(node, inTable) + "**";
-        case "strikethrough": {
-          const run = Object.prototype.hasOwnProperty.call(node, "delimiterCount") && node.delimiterCount === 1 ? "~" : "~~";
-          return run + renderInlines(node, inTable) + run;
-        }
-        case "link": {
-          const inner = renderInlines(node, inTable), url = renderDestination(node.destination), title = node.title ? ' "' + (node.title || "").replace(/"/g, "\\\"") + '"' : "";
-          return "[" + inner + "](" + url + title + ")";
-        }
-        case "image": {
-          const inner = renderInlines(node, inTable), url = renderDestination(node.destination), title = node.title ? ' "' + (node.title || "").replace(/"/g, "\\\"") + '"' : "";
-          return "![" + inner + "](" + url + title + ")";
-        }
-        case "subscript":
-          return "~" + renderInlines(node, inTable) + "~";
-        case "superscript":
-          return "^" + renderInlines(node, inTable) + "^";
-        case "highlight":
-          return "==" + renderInlines(node, inTable) + "==";
         case "html_inline":
           return node.literal || "";
         default:
           return "";
+      }
+    }
+    function wrapInline(node, inner) {
+      switch (node.type) {
+        case "emph":
+          return "*" + inner + "*";
+        case "strong":
+          return "**" + inner + "**";
+        case "strikethrough": {
+          const run = Object.prototype.hasOwnProperty.call(node, "delimiterCount") && node.delimiterCount === 1 ? "~" : "~~";
+          return run + inner + run;
+        }
+        case "link": {
+          const url = renderDestination(node.destination), title = node.title ? ' "' + (node.title || "").replace(/"/g, "\\\"") + '"' : "";
+          return "[" + inner + "](" + url + title + ")";
+        }
+        case "image": {
+          const url = renderDestination(node.destination), title = node.title ? ' "' + (node.title || "").replace(/"/g, "\\\"") + '"' : "";
+          return "![" + inner + "](" + url + title + ")";
+        }
+        case "subscript":
+          return "~" + inner + "~";
+        case "superscript":
+          return "^" + inner + "^";
+        default:
+          return "==" + inner + "==";
       }
     }
     function indent(s, prefix) {
@@ -3491,19 +3660,68 @@ export const mdBundled = {
 `).map((l, i) => i === 0 ? l : l.length ? prefix + l : prefix.replace(/\s+$/, "")).join(`
 `);
     }
-    function renderBlock(node, ctx) {
+    function renderBlock(node) {
+      if (!BLOCK_CONTAINERS.has(node.type))
+        return renderLeafBlock(node);
+      const stack = [{ node, item: !1, tight: !0, parts: [], child: node.firstChild }];
+      for (;; ) {
+        const top = stack[stack.length - 1], child = top.child;
+        if (child) {
+          top.child = child.next;
+          if (!top.item && top.node.type === "list")
+            stack.push({ node: child, item: !0, tight: top.node.listTight !== !1, parts: [], child: child.firstChild });
+          else if (BLOCK_CONTAINERS.has(child.type))
+            stack.push({ node: child, item: !1, tight: !0, parts: [], child: child.firstChild });
+          else
+            top.parts.push(renderLeafBlock(child));
+          continue;
+        }
+        stack.pop();
+        const out = finishBlock(top);
+        if (stack.length === 0)
+          return out;
+        stack[stack.length - 1].parts.push(out);
+      }
+    }
+    function finishBlock(frame) {
+      const node = frame.node;
+      if (frame.item)
+        return frame.parts.join(frame.tight ? "" : `
+`);
       switch (node.type) {
-        case "document": {
-          let out = "", child = node.firstChild;
-          while (child) {
-            out += renderBlock(child, ctx);
-            if (child.next)
+        case "document":
+          return frame.parts.join(`
+`);
+        case "block_quote":
+          return frame.parts.join(`
+`).replace(/\n$/, "").split(`
+`).map((l) => l.length ? "> " + l : ">").join(`
+`) + `
+`;
+        default: {
+          const tight = node.listTight !== !1;
+          let out = "", item = node.firstChild, idx = 0;
+          while (item) {
+            const marker = node.listType === "ordered" ? (node.listStart || 1) + idx + (node.listDelimiter || ".") + " " : (node.listBulletChar || "-") + " ", itemBody = frame.parts[idx], prefix = " ".repeat(marker.length);
+            let taskPrefix = "";
+            if (item.checked === !0)
+              taskPrefix = "[x] ";
+            else if (item.checked === !1)
+              taskPrefix = "[ ] ";
+            out += marker + taskPrefix + indent(itemBody, prefix).replace(/\n$/, "") + `
+`;
+            if (!tight && item.next)
               out += `
 `;
-            child = child.next;
+            idx++;
+            item = item.next;
           }
           return out;
         }
+      }
+    }
+    function renderLeafBlock(node) {
+      switch (node.type) {
         case "heading":
           return "#".repeat(node.level) + " " + renderInlines(node, !1) + `
 `;
@@ -3530,56 +3748,11 @@ export const mdBundled = {
         case "html_block":
           return (node.literal || "") + `
 `;
-        case "block_quote": {
-          let inner = "", child = node.firstChild;
-          while (child) {
-            inner += renderBlock(child, ctx);
-            if (child.next)
-              inner += `
-`;
-            child = child.next;
-          }
-          return inner.split(`
-`).map((l) => l.length ? "> " + l : ">").join(`
-`).replace(/>\n$/, `
-`);
-        }
-        case "list": {
-          const tight = node.listTight !== !1;
-          let out = "", item = node.firstChild, idx = 0;
-          while (item) {
-            const marker = node.listType === "ordered" ? (node.listStart || 1) + idx + (node.listDelimiter || ".") + " " : (node.listBulletChar || "-") + " ", itemBody = renderItemContents(item, tight), prefix = " ".repeat(marker.length);
-            let taskPrefix = "";
-            if (item.checked === !0)
-              taskPrefix = "[x] ";
-            else if (item.checked === !1)
-              taskPrefix = "[ ] ";
-            out += marker + taskPrefix + indent(itemBody, prefix).replace(/\n$/, "") + `
-`;
-            if (!tight && item.next)
-              out += `
-`;
-            idx++;
-            item = item.next;
-          }
-          return out;
-        }
         case "table":
           return renderTable(node);
         default:
           return "";
       }
-    }
-    function renderItemContents(item, tight) {
-      let out = "", child = item.firstChild;
-      while (child) {
-        out += renderBlock(child, {});
-        if (child.next)
-          out += tight ? "" : `
-`;
-        child = child.next;
-      }
-      return out;
     }
     function renderTable(table) {
       const aligns = table.align || [], rows = [];
@@ -3617,13 +3790,12 @@ export const mdBundled = {
 `;
       return out;
     }
-    function renderMarkdown(root, opts) {
+    function renderMarkdown(root, _opts) {
       if (!root || typeof root !== "object" || !root.type) {
         const gotType = root === null ? "null" : typeof root;
         throw new RenderError("md/render-invalid-root", "renderMarkdown: invalid AST root (expected document node, got " + gotType + ")", { context: { gotType } });
       }
-      const ctx = Object.assign({}, opts || {});
-      return renderBlock(root, ctx);
+      return renderBlock(root);
     }
     return { renderMarkdown };
   } });
@@ -3643,7 +3815,7 @@ export const mdBundled = {
       const maxDepth = pickLimit(opts && opts.maxDepth, 1000), maxNodes = pickLimit(opts && opts.maxNodes, 1e5), maxUrlLength = pickLimit(opts && opts.maxUrlLength, 8192);
       function enforceLimits(document) {
         let nodeCount = 0;
-        const w = document.walker();
+        const depthOf = new Map, w = document.walker();
         let ev;
         while ((ev = w.next()) !== null) {
           if (!ev.entering)
@@ -3651,10 +3823,8 @@ export const mdBundled = {
           nodeCount++;
           if (nodeCount > maxNodes)
             throw new ContractError("md/limit-exceeded", "md.parse: node count exceeded limit (" + maxNodes + ")", { context: { kind: "maxNodes", limit: maxNodes } });
-          const node = ev.node;
-          let d = 0;
-          for (let p = node.parent;p; p = p.parent)
-            d++;
+          const node = ev.node, d = node.parent ? depthOf.get(node.parent) + 1 : 0;
+          depthOf.set(node, d);
           if (d > maxDepth)
             throw new ContractError("md/limit-exceeded", "md.parse: nesting depth exceeded limit (" + maxDepth + ")", { context: { kind: "maxDepth", limit: maxDepth, depth: d } });
           if (node.destination && node.destination.length > maxUrlLength)
@@ -3664,7 +3834,11 @@ export const mdBundled = {
       function parse(text) {
         if (typeof text !== "string")
           throw new ContractError("md/parse-not-string", "md.parse: expected a string, got " + typeof text, { context: { gotType: typeof text } });
-        const { document, refmap } = bp.parse(text, { inlineParser: ip.parse });
+        const flags = {
+          math: extensions.some((e) => Array.isArray(e.inlineSyntax) && e.inlineSyntax.includes("math"))
+        }, { document, refmap } = bp.parse(text, {
+          inlineParser: (block, map) => ip.parse(block, map, flags)
+        });
         document.data = { refmap };
         if (maxDepth !== 1 / 0 || maxNodes !== 1 / 0 || maxUrlLength !== 1 / 0)
           enforceLimits(document);
@@ -3678,7 +3852,9 @@ export const mdBundled = {
         return html;
       }
       function renderHtmlFn(text, renderOpts) {
-        return render(parse(text), renderOpts);
+        if (typeof text !== "string")
+          throw new ContractError("md/parse-not-string", "md.parse: expected a string, got " + typeof text, { context: { gotType: typeof text } });
+        return api.render(api.parse(text), renderOpts);
       }
       function renderMarkdownFn(astOrText, renderOpts) {
         const ast = typeof astOrText === "string" ? api.parse(astOrText) : astOrText;

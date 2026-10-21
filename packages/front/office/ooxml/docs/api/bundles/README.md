@@ -51,4 +51,4 @@ resolves the extras it actually declares, so nothing else is instantiated.
 
 - [Extra modules](../extra/README.md)
 - [Getting started](../../guide/getting-started.md)
-- [`@awacloud/fw` runtime](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/api/core/runtime.md)
+- [`@awacloud/fw` runtime](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/core/runtime.md)

@@ -60,10 +60,24 @@ export const docxNumbering = {
     deps: [ooxmlErrors, xml, docxProperties, ooxmlShared],
 
     factory(errors, xml, props, shared) {
+        // Schema order (ECMA-376 Part 1); a hand-wired ooxmlShared without
+        // the ordering helper writes children in the old order.
+        const orderSeq = shared.sequence ? shared.sequence : () => null;
+        const ordered = (children, seq) => (seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children);
+        const LVL_SEQ = orderSeq([
+            'w:start', 'w:numFmt', 'w:lvlRestart', 'w:pStyle', 'w:isLgl', 'w:suff', 'w:lvlText',
+            'w:lvlPicBulletId', 'w:legacy', 'w:lvlJc', 'w:pPr', 'w:rPr'
+        ]);
+        const ABSTRACT_SEQ = orderSeq([
+            'w:nsid', 'w:multiLevelType', 'w:tmpl', 'w:name', 'w:styleLink', 'w:numStyleLink',
+            'w:lvl'
+        ]);
+        const NUMBERING_SEQ = orderSeq([
+            'w:numPicBullet', 'w:abstractNum', 'w:num', 'w:numIdMacAtCleanup'
+        ]);
         const { ParseError } = errors;
-        const { NS, REL_TYPE, CT, encodeText, decodeText } = shared;
+        const { REL_TYPE, CT, encodeText, decodeText, wordRootAttrs } = shared;
 
-        const W_NS = NS.W;
         const REL_TYPE_NUMBERING = REL_TYPE.NUMBERING;
         const CT_NUMBERING = CT.NUMBERING;
 
@@ -111,7 +125,7 @@ export const docxNumbering = {
             const rPrEl = props.renderRunProperties(lvl.rPr);
             if (rPrEl) children.push(rPrEl);
             if (lvl._extras) for (const ex of lvl._extras) children.push(ex);
-            return xml.el('w:lvl', { 'w:ilvl': String(lvl.ilvl) }, children);
+            return xml.el('w:lvl', { 'w:ilvl': String(lvl.ilvl) }, ordered(children, LVL_SEQ));
         }
 
         // --- Abstract numbering (<w:abstractNum>) ---
@@ -146,7 +160,7 @@ export const docxNumbering = {
             if (a._extras)        for (const ex of a._extras) children.push(ex);
             for (const lvl of a.levels || []) children.push(renderLevel(lvl));
             return xml.el('w:abstractNum',
-                { 'w:abstractNumId': String(a.abstractNumId) }, children);
+                { 'w:abstractNumId': String(a.abstractNumId) }, ordered(children, ABSTRACT_SEQ));
         }
 
         // --- Concrete numbering instance (<w:num>) ---
@@ -211,8 +225,9 @@ export const docxNumbering = {
             for (const a of obj.abstractNums || []) children.push(renderAbstractNum(a));
             for (const n of obj.nums || []) children.push(renderNum(n));
             if (obj._extras) for (const ex of obj._extras) children.push(ex);
+            const kids = ordered(children, NUMBERING_SEQ);
             return xml.serialize(xml.el('w:numbering',
-                { 'xmlns:w': W_NS }, children));
+                wordRootAttrs(kids, { r: false }), kids));
         }
 
         function bytesOf(obj) { return encodeText(serialize(obj)); }

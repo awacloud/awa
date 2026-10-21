@@ -385,8 +385,69 @@ describe('ooxmlShared.wordRootAttrs', () => {
         expect(attrs['mc:Ignorable']).toBe('w15');
     });
 
-    test('a w14 element alone: w and r only', () => {
+    // Re-pinned for BL-2456: this leg used to pin `w` and `r` only, i.e. a
+    // `w14` element written with no declaration in scope (invalid XML).
+    test('a w14 element alone: declared, and ignorable through mc', () => {
         const attrs = wordRootAttrs([xml.el('w:r', {}, [xml.el('w14:glow', { 'w14:rad': '1' })])]);
+        expect(Object.keys(attrs))
+            .toEqual(['xmlns:w', 'xmlns:r', 'xmlns:mc', 'xmlns:w14', 'mc:Ignorable']);
+        expect(attrs['xmlns:w14']).toBe('http://schemas.microsoft.com/office/word/2010/wordml');
+        expect(attrs['mc:Ignorable']).toBe('w14');
+    });
+
+    test('a wp drawing: wp declared after w and r, nothing else', () => {
+        const attrs = wordRootAttrs([xml.el('w:r', {}, [xml.el('w:drawing', {}, [
+            xml.el('wp:inline', {}, [xml.el('wp:extent', { cx: '1', cy: '1' })])])])]);
+        expect(attrs).toEqual({ 'xmlns:w': URI_W, 'xmlns:r': URI_R,
+            'xmlns:wp': 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing' });
+        expect(Object.keys(attrs)).toEqual(['xmlns:w', 'xmlns:r', 'xmlns:wp']);
+    });
+
+    test('a prefix declared where it is used is not declared again', () => {
+        const attrs = wordRootAttrs([xml.el('wp:inline', {}, [
+            xml.el('a:graphic', { 'xmlns:a': 'http://schemas.openxmlformats.org/drawingml/2006/main' }, [
+                xml.el('a:graphicData', { uri: 'u' })])])]);
+        expect(Object.keys(attrs)).toEqual(['xmlns:w', 'xmlns:r', 'xmlns:wp']);
+    });
+
+    test('attribute prefixes count, in the table order (v before o)', () => {
+        const attrs = wordRootAttrs([xml.el('w:pict', {}, [
+            xml.el('v:shape', { 'o:spid': '_x0000_s1' })])]);
+        expect(Object.keys(attrs)).toEqual(['xmlns:w', 'xmlns:r', 'xmlns:v', 'xmlns:o']);
+        expect(attrs['xmlns:v']).toBe('urn:schemas-microsoft-com:vml');
+        expect(attrs['xmlns:o']).toBe('urn:schemas-microsoft-com:office:office');
+    });
+
+    test('w15 and w14 together: one mc, both ignorable, in table order', () => {
+        const attrs = wordRootAttrs([xml.el('w15:repeatingSection'), xml.el('w14:glow')]);
+        expect(Object.keys(attrs))
+            .toEqual(['xmlns:w', 'xmlns:r', 'xmlns:mc', 'xmlns:w14', 'xmlns:w15', 'mc:Ignorable']);
+        expect(attrs['mc:Ignorable']).toBe('w14 w15');
+    });
+
+    test('an undeclared mc element declares mc once, right after r', () => {
+        const attrs = wordRootAttrs([xml.el('mc:AlternateContent', {}, [
+            xml.el('mc:Choice', { Requires: 'wps' }, [xml.el('wps:wsp')])])]);
+        expect(Object.keys(attrs)).toEqual(['xmlns:w', 'xmlns:r', 'xmlns:mc', 'xmlns:wps']);
+        expect(attrs['mc:Ignorable']).toBeUndefined();
+    });
+
+    test('the prefixes named by mc:Choice Requires count as used', () => {
+        const attrs = wordRootAttrs([xml.el('mc:AlternateContent', {}, [
+            xml.el('mc:Choice', { Requires: 'w14 wps' }, [xml.el('w:numFmt')])])]);
+        expect(Object.keys(attrs))
+            .toEqual(['xmlns:w', 'xmlns:r', 'xmlns:mc', 'xmlns:wps', 'xmlns:w14', 'mc:Ignorable']);
+        expect(attrs['mc:Ignorable']).toBe('w14');
+    });
+
+    test('{ r: false }: r declared only when used outside a declaration', () => {
+        expect(wordRootAttrs([xml.el('w:style')], { r: false })).toEqual({ 'xmlns:w': URI_W });
+        expect(Object.keys(wordRootAttrs([xml.el('w:hyperlink', { 'r:id': 'rId1' })], { r: false })))
+            .toEqual(['xmlns:w', 'xmlns:r']);
+    });
+
+    test('a prefix with no known namespace is left alone', () => {
+        const attrs = wordRootAttrs([xml.el('zz:unknown', { 'zz:a': '1' })]);
         expect(Object.keys(attrs)).toEqual(['xmlns:w', 'xmlns:r']);
     });
 

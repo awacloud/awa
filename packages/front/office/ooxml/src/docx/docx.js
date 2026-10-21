@@ -128,29 +128,46 @@ export const docx = {
             });
         }
 
-        // Walk every container that may host drawings : the main body,
-        // each header / footer body, every footnote, endnote and comment
-        // body. Used by both read (to resolve image/chart parts) and
-        // write (to collect rIds before serialization).
-        function walkAllDrawings(result, cb) {
-            walkDrawings(result.document || result, cb);
-            for (const k of Object.keys(result.headers || {})) {
-                const h = result.headers[k];
-                if (h && h.body) walkDrawings(h.body, cb);
+        // Read: a drawing visitor copying image bytes / chart specs onto
+        // each drawing whose embedRef / chartRef is a key of `images` /
+        // `charts` (the tables of the part that holds it).
+        function attachDrawing(images, charts) {
+            return drawing => {
+                const img = drawing.embedRef && images[drawing.embedRef];
+                if (img) {
+                    drawing.image = drawing.image || {};
+                    drawing.image.data = img.data;
+                    drawing.image.contentType = img.contentType;
+                    drawing.image.rId = drawing.embedRef;
+                }
+                if (drawing.chartRef && charts && charts[drawing.chartRef]) {
+                    drawing.chart = charts[drawing.chartRef].chart;
+                    drawing.kind = 'chart';
+                }
+            };
+        }
+
+        // Read: the image and chart tables of one story part, from its own
+        // relationships (same shapes as the read result's `images` /
+        // `charts`).
+        function storyDrawingTables(pkg, partName) {
+            const images = {};
+            const charts = {};
+            for (const rel of pkg.rels[partName] || []) {
+                if (rel.TargetMode === 'External') continue;
+                if (rel.Type === drawingMod.REL_TYPE_IMAGE) {
+                    const target = relsMod.resolveTarget(partName, rel.Target);
+                    const data = pkg.parts[target];
+                    if (!data) continue;
+                    images[rel.Id] = { partName: target, data,
+                        contentType: lookupCT(pkg, target) || drawingMod.sniffImageType(data) };
+                } else if (rel.Type === chartMod.REL_TYPE_CHART) {
+                    const target = relsMod.resolveTarget(partName, rel.Target);
+                    const data = pkg.parts[target];
+                    if (data) charts[rel.Id] = { partName: target, chart: chartMod.parse(data) };
+                }
             }
-            for (const k of Object.keys(result.footers || {})) {
-                const f = result.footers[k];
-                if (f && f.body) walkDrawings(f.body, cb);
-            }
-            for (const fn of (result.footnotes && result.footnotes.notes) || []) {
-                if (fn && fn.body) walkDrawings(fn.body, cb);
-            }
-            for (const en of (result.endnotes && result.endnotes.notes) || []) {
-                if (en && en.body) walkDrawings(en.body, cb);
-            }
-            for (const c of (result.comments && result.comments.comments) || []) {
-                if (c && c.body) walkDrawings(c.body, cb);
-            }
+            return { images, charts };
         }
 
         function walkNodes(node, cb) {
@@ -201,7 +218,7 @@ export const docx = {
         // The archive limits of `opc.read`, picked from the read options;
         // an absent key keeps the opc default, 0 disables that check.
         function archiveLimits(o) {
-            return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio } : undefined;
+            return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio, maxDepth: o.maxDepth } : undefined;
         }
 
         /**
@@ -215,13 +232,33 @@ export const docx = {
          *        `opc.read` (default 256 MiB in total; `0` disables).
          * @param {number} [opts.maxRatio] archive limit forwarded to
          *        `opc.read` (default 200 per entry; `0` disables).
+         * @param {number} [opts.maxDepth] archive limit forwarded to
+         *        `opc.read`: element depth of any XML part (default
+         *        1000; `0` disables).
          */
         function read(bytes, opts) {
             const pkg = opc.read(bytes, archiveLimits(opts));
             const { value: result, unmodelledParts } =
-                trackUnmodelledParts(pkg, readPackage);
+                trackUnmodelledParts(pkg, p => {
+                    try {
+                        return readPackage(p);
+                    } catch (e) {
+                        throw typedPartXml(e);
+                    }
+                });
             result.unmodelledParts = unmodelledParts;
             return result;
+        }
+
+        // A part the read pass parses without a typed wrapper of its own
+        // (styles, numbering, notes, comments, headers …): the fw XML
+        // parser's `xml/parse-error` becomes this package's ParseError,
+        // the parser's error kept as `cause`. Any other error is returned
+        // as it is.
+        function typedPartXml(e) {
+            if (!e || e.code !== 'xml/parse-error') return e;
+            return new ParseError('docx/invalid-part-xml',
+                `docx: failed to parse a part's XML (${e.message})`, { cause: e });
         }
 
         // The read pass proper, over an access-tracking view of
@@ -411,26 +448,16 @@ export const docx = {
                 attachTargets(bodies, hyperlinkTable(pkg.rels[partName]));
             }
 
-            // Attach image bytes / chart specs to each <w:drawing> in
-            // the body, headers, footers, footnotes, endnotes AND
-            // comments — resolving its embedRef / chartRef against the
-            // document rels.
-            walkAllDrawings(result, drawing => {
-                if (drawing.embedRef) {
-                    const img = result.images[drawing.embedRef];
-                    if (img) {
-                        drawing.image = drawing.image || {};
-                        drawing.image.data = img.data;
-                        drawing.image.contentType = img.contentType;
-                        drawing.image.rId = drawing.embedRef;
-                    }
-                }
-                if (drawing.chartRef && result.charts
-                    && result.charts[drawing.chartRef]) {
-                    drawing.chart = result.charts[drawing.chartRef].chart;
-                    drawing.kind = 'chart';
-                }
-            });
+            // Attach image bytes / chart specs to each <w:drawing>,
+            // resolving its embedRef / chartRef against the relationships of
+            // the part that holds it: the body against the document part's,
+            // each header, footer, footnotes, endnotes and comments part
+            // against its own.
+            walkDrawings(document, attachDrawing(result.images, result.charts));
+            for (const [partName, bodies] of storyParts) {
+                const own = storyDrawingTables(pkg, partName);
+                walkDrawings(bodies, attachDrawing(own.images, own.charts));
+            }
 
             walker.applyHydrate(result);
             return result;
@@ -478,9 +505,16 @@ export const docx = {
          *   non-empty `rId` is not a key of the table written for its part
          *   (`context.rId`, `context.story`, plus `context.key` for a header
          *   or footer) — the reference would dangle;
-         *   `docx/numbering-missing` when a paragraph's `pPr.numPr`
-         *   references a non-zero `numId` and `opts.numbering` is missing
-         *   (the list reference would dangle). All checks run before any part
+         *   `docx/numbering-missing` when a `pPr.numPr` references a
+         *   non-zero `numId` and `opts.numbering` is missing — in the body,
+         *   any header, footer, footnotes, endnotes or comments part, or
+         *   `opts.styles` (a style or the docDefaults); `docx/numbering-
+         *   unknown-num` when `opts.numbering` is passed but its `nums` do
+         *   not declare that `numId`. Both carry `context.numId`,
+         *   `context.story` (`'document'`, `'header'`, `'footer'`,
+         *   `'footnotes'`, `'endnotes'`, `'comments'`, `'styles'`), plus
+         *   `context.key` for a header or footer and `context.styleId` for
+         *   a style (the list reference would dangle). All checks run before any part
          *   is rendered and before the dehydrate pass, so a throw leaves the
          *   caller's tree untouched.
          */
@@ -503,15 +537,21 @@ export const docx = {
             // in place, so callers reusing the same doc tree see
             // properties demoted back into `_extras`. This mirrors the
             // hydrate pass on read().
+            // A settings hook returns a new object (the caller's settings
+            // are left alone): the part is written from what it returns.
+            let settings = opts.settings;
             if (walker.hasExtensions) {
-                walker.applyDehydrate({
+                const parts = {
                     document: doc,
                     headers: opts.headers || {},
                     footers: opts.footers || {},
                     styles: opts.styles,
                     settings: opts.settings
-                });
+                };
+                walker.applyDehydrate(parts);
+                settings = parts.settings;
             }
+            assignDocIds(doc, opts);
             const pkg = opc.empty();
 
             const hyperlinks = opts.hyperlinks || derivedHyperlinks(doc);
@@ -522,14 +562,16 @@ export const docx = {
             // BEFORE renderDocument is called, so the rendered XML carries
             // the right r:embed / r:id on each drawing.
             const collected = collectImages(doc, opts.images);
+            const chartCollected = collectCharts(doc);
+            // Story-part drawings: their own relationships, shared media.
+            const story = collectStoryDrawings(opts, collected, chartCollected.length);
             for (const ext of collected.exts) {
                 pkg.contentTypes.defaults[ext] = extToContentType(ext);
             }
-            for (const img of collected.list) {
+            for (const img of collected.list.concat(story.media)) {
                 opc.setPart(pkg, img.partName, img.data, img.contentType);
             }
-            const chartCollected = collectCharts(doc);
-            for (const ch of chartCollected) {
+            for (const ch of chartCollected.concat(story.charts)) {
                 opc.setPart(pkg, ch.partName,
                     chartMod.bytesOf(ch.chart),
                     chartMod.CT_CHART);
@@ -552,9 +594,11 @@ export const docx = {
             }
 
             // A story part's own relationship table: the hyperlink
-            // relationships derived from its bodies, written when non-empty.
+            // relationships derived from its bodies, then those of its
+            // pictures and charts, written when non-empty.
             function attachStoryRels(partName, bodies) {
-                const rels = hyperlinkRels(derivedHyperlinks(bodies));
+                const rels = hyperlinkRels(derivedHyperlinks(bodies))
+                    .concat(story.rels.get(partName) || []);
                 if (rels.length) opc.setRels(pkg, partName, rels);
             }
 
@@ -574,9 +618,9 @@ export const docx = {
                     { Id: claimRid(), Type: numberingMod.REL_TYPE_NUMBERING,
                       Target: 'numbering.xml' });
             }
-            if (opts.settings) {
+            if (settings) {
                 attachPart(
-                    { bytes: settingsMod.bytesOf(opts.settings),
+                    { bytes: settingsMod.bytesOf(settings),
                       contentType: settingsMod.CT_SETTINGS },
                     '/word/settings.xml',
                     { Id: claimRid(), Type: settingsMod.REL_TYPE_SETTINGS,
@@ -778,7 +822,83 @@ export const docx = {
                 drawing.embedRef = item.rId;
             });
 
-            return { list, exts };
+            // A media part for an image met outside the document body (a
+            // story part): same naming and dedup, no document relationship.
+            function addMedia(img) {
+                const ct = img.contentType || drawingMod.sniffImageType(img.data);
+                const ext = drawingMod.extensionFor(ct);
+                const fileName = img.fileName || `image${nextIdx++}.${ext}`;
+                const item = { data: img.data, contentType: ct,
+                    fileName, partName: '/word/media/' + fileName };
+                byData.set(img.data, item);
+                exts.add(ext);
+                return item;
+            }
+
+            return { list, exts, byData, addMedia };
+        }
+
+        /**
+         * Pictures and charts of the story parts (headers, footers,
+         * footnotes, endnotes, comments). Each story part gets its own
+         * relationships — rIds live in the part's own table, kept clear of
+         * its hyperlink rIds — to media parts shared package-wide through
+         * `images` (dedup by bytes identity) and to chart parts numbered
+         * after the `chartCount` document charts. Patches each drawing's
+         * `embedRef` / `chartRef` in place, like `collectImages`.
+         *
+         * @returns {{ rels: Map<string, Array<object>>, media: Array<object>,
+         *   charts: Array<object> }} relationships by story part name, plus
+         *   the media and chart parts to write.
+         */
+        function collectStoryDrawings(opts, images, chartCount) {
+            const rels = new Map();
+            const media = [];
+            const charts = [];
+            let chartIdx = chartCount;
+            function visit(partName, bodies) {
+                const alloc = createRidAllocator({
+                    existing: Object.keys(derivedHyperlinks(bodies)) });
+                const ridOf = new Map();
+                const out = [];
+                walkDrawings(bodies, drawing => {
+                    const img = drawing.image;
+                    if (img && img.data) {
+                        let item = images.byData.get(img.data);
+                        if (!item) {
+                            item = images.addMedia(img);
+                            media.push(item);
+                        }
+                        let rId = ridOf.get(item);
+                        if (!rId) {
+                            rId = alloc.claim(img.rId || drawing.embedRef);
+                            ridOf.set(item, rId);
+                            out.push({ Id: rId, Type: drawingMod.REL_TYPE_IMAGE,
+                                Target: 'media/' + item.fileName });
+                        }
+                        drawing.embedRef = rId;
+                    }
+                    if (drawing.chart) {
+                        const fileName = `chart${++chartIdx}.xml`;
+                        const rId = alloc.claim(drawing.chartRef);
+                        charts.push({ fileName, partName: '/word/charts/' + fileName,
+                            chart: drawing.chart });
+                        out.push({ Id: rId, Type: chartMod.REL_TYPE_CHART,
+                            Target: 'charts/' + fileName });
+                        drawing.chartRef = rId;
+                        drawing.kind = 'chart';
+                    }
+                });
+                if (out.length) rels.set(partName, out);
+            }
+            if (opts.comments) visit('/word/comments.xml', bodiesOf(opts.comments.comments));
+            if (opts.footnotes) visit('/word/footnotes.xml', bodiesOf(opts.footnotes.notes));
+            if (opts.endnotes) visit('/word/endnotes.xml', bodiesOf(opts.endnotes.notes));
+            Object.keys(opts.headers || {}).forEach((rId, i) =>
+                visit(`/word/header${i + 1}.xml`, [opts.headers[rId].body]));
+            Object.keys(opts.footers || {}).forEach((rId, i) =>
+                visit(`/word/footer${i + 1}.xml`, [opts.footers[rId].body]));
+            return { rels, media, charts };
         }
 
         /**
@@ -824,14 +944,29 @@ export const docx = {
          * with no relationship in the table written for its part (the body:
          * `opts.hyperlinks` when passed, else the map derived from the body;
          * a story part: the map derived from that part), then on the first
-         * list reference that would dangle without `opts.numbering` (body,
-         * headers and footers). Read-only: never mutates the tree.
+         * list reference (`pPr.numPr.numId`, non-zero) that would dangle
+         * without `opts.numbering`, then on the first one `opts.numbering`
+         * does not declare in `nums`. The list checks cover the body, every
+         * story part and `opts.styles` (each style and the docDefaults).
+         * Read-only: never mutates the tree.
          */
         function checkReferences(doc, opts) {
             let lostTarget = null;
             let unresolved = null;
             let danglingNumId = null;
-            const visitor = (table, where, withNumbering) => node => {
+            let unknownNumId = null;
+            const declaredNums = opts.numbering
+                ? new Set((opts.numbering.nums || []).map(n => Number(n && n.numId)))
+                : null;
+            function checkNumPr(numPr, where) {
+                if (!numPr || numPr.numId == null || Number(numPr.numId) === 0) return;
+                if (!declaredNums) {
+                    if (danglingNumId === null) danglingNumId = { numId: numPr.numId, ...where };
+                } else if (unknownNumId === null && !declaredNums.has(Number(numPr.numId))) {
+                    unknownNumId = { numId: numPr.numId, ...where };
+                }
+            }
+            const visitor = (table, where) => node => {
                 if (!node || typeof node !== 'object') return;
                 if (node.type === 'hyperlink') {
                     if (lostTarget === null
@@ -845,19 +980,19 @@ export const docx = {
                         unresolved = { rId: node.rId, ...where };
                     }
                 }
-                if (withNumbering && danglingNumId === null && !opts.numbering
-                    && node.type === 'paragraph' && node.pPr && node.pPr.numPr
-                    && node.pPr.numPr.numId != null
-                    && Number(node.pPr.numPr.numId) !== 0) {
-                    danglingNumId = node.pPr.numPr.numId;
-                }
+                if (node.type === 'paragraph' && node.pPr) checkNumPr(node.pPr.numPr, where);
             };
             walkRuns(doc.body, visitor(opts.hyperlinks || derivedHyperlinks(doc),
-                { story: 'document' }, true));
+                { story: 'document' }));
             for (const part of storyPartsOf(opts)) {
-                const headerOrFooter = part.where.key !== undefined;
-                walkRuns(part.bodies, visitor(derivedHyperlinks(part.bodies),
-                    part.where, headerOrFooter));
+                walkRuns(part.bodies, visitor(derivedHyperlinks(part.bodies), part.where));
+            }
+            if (opts.styles) {
+                const dd = opts.styles.docDefaults;
+                if (dd && dd.pPr) checkNumPr(dd.pPr.numPr, { story: 'styles' });
+                for (const s of opts.styles.styles || []) {
+                    if (s && s.pPr) checkNumPr(s.pPr.numPr, { story: 'styles', styleId: s.styleId });
+                }
             }
             if (lostTarget !== null) {
                 throw new ContractError('docx/hyperlink-missing-rid',
@@ -871,8 +1006,13 @@ export const docx = {
             }
             if (danglingNumId !== null) {
                 throw new ContractError('docx/numbering-missing',
-                    'docx.write: the document references a list (pPr.numPr) but opts.numbering is missing',
-                    { context: { numId: danglingNumId } });
+                    `docx.write: the ${danglingNumId.story} part references a list (pPr.numPr) but opts.numbering is missing`,
+                    { context: danglingNumId });
+            }
+            if (unknownNumId !== null) {
+                throw new ContractError('docx/numbering-unknown-num',
+                    `docx.write: numId ${unknownNumId.numId} (${unknownNumId.story} part) is not declared in opts.numbering.nums`,
+                    { context: unknownNumId });
             }
         }
 
@@ -890,6 +1030,41 @@ export const docx = {
 
         function hasOwn(obj, key) {
             return Object.prototype.hasOwnProperty.call(obj, key);
+        }
+
+        /**
+         * Gives every drawing of the document body and of the story parts
+         * a `wp:docPr` id unique among them (ECMA-376 Part 1 § 20.4.2.5).
+         * A drawing keeps its `docId` (a non-negative integer) when no
+         * drawing met before holds it; a later duplicate and a drawing
+         * without one get the smallest unused id from 1. Patches `docId`
+         * in place, as `collectImages` patches `embedRef`.
+         */
+        function assignDocIds(doc, opts) {
+            const drawings = [];
+            const collect = drawing => { drawings.push(drawing); };
+            walkDrawings(doc, collect);
+            for (const items of [opts.comments && opts.comments.comments,
+                opts.footnotes && opts.footnotes.notes,
+                opts.endnotes && opts.endnotes.notes]) {
+                walkDrawings(bodiesOf(items), collect);
+            }
+            for (const story of [opts.headers || {}, opts.footers || {}]) {
+                for (const rId of Object.keys(story)) walkDrawings([story[rId] && story[rId].body], collect);
+            }
+            const used = new Set();
+            const pending = [];
+            for (const drawing of drawings) {
+                const id = drawing.docId;
+                if (Number.isInteger(id) && id >= 0 && !used.has(id)) used.add(id);
+                else pending.push(drawing);
+            }
+            let next = 1;
+            for (const drawing of pending) {
+                while (used.has(next)) next++;
+                drawing.docId = next;
+                used.add(next);
+            }
         }
 
         // The bodies of a footnotes / endnotes / comments item list.

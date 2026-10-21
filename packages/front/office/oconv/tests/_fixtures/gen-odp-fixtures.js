@@ -52,9 +52,24 @@ runtime.registerAll(fw_require);
 runtime.registerAll(modules);
 const odp = runtime.resolve('odp');
 const xml = runtime.resolve('xml');
+const frames = runtime.resolve('drawFrame');
 
 /** @param {string} text raw `<text:p>` carrying one text run. */
 function p(text) { return xml.el('text:p', {}, [xml.text(text)]); }
+
+/**
+ * @param {string} text speaker notes as the schema wants them inside
+ * `<presentation:notes>`: a `presentation:class="notes"` text-box frame
+ * (as LibreOffice writes them), rendered by `drawFrame.renderFrame` — not a
+ * bare `<text:p>`, which a validator refuses there.
+ */
+function notes(text) {
+    return { body: [frames.renderFrame({
+        type: 'frame',
+        _extras: { attrs: { 'presentation:class': 'notes' } },
+        child: { kind: 'text-box', children: [p(text)] }
+    })] };
+}
 
 /** @param {string} text a `presentation:class="title"` text-box frame. */
 function titleFrame(text) {
@@ -85,7 +100,7 @@ const structured = {
                 titleFrame('Sovereign RAG Ingestion'),
                 bodyFrame('Air-gapped by design', 'No egress, ever')
             ],
-            notes: { body: [p('Remember to mention the offline chunker demo.')] }
+            notes: notes('Remember to mention the offline chunker demo.')
         },
         {
             type: 'slide', name: 'Slide2',
@@ -107,7 +122,7 @@ const media = {
                 bodyFrame('An untitled slide with an embedded picture.'),
                 imageFrame('Pictures/100000000000012C.png')
             ],
-            notes: { body: [p('Speaker note that includeNotes:false must omit.')] }
+            notes: notes('Speaker note that includeNotes:false must omit.')
         }
     ]
 };

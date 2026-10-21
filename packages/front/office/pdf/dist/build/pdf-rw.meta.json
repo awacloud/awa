@@ -70,8 +70,8 @@
     "ed25519"
   ],
   "bytes": {
-    "dev": 299742,
-    "min": 162199
+    "dev": 303803,
+    "min": 164260
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

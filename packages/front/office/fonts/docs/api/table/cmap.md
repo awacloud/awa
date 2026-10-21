@@ -87,6 +87,7 @@ const gidA = unicode.get(0x41);
 ## Notes
 
 - An out-of-bounds subtable offset throws `ParseError('fonts/cmap-bad-offset')`.
+- A format 4 subtable whose `segCountX2` is odd (it is 2 × `segCount`) throws `ParseError('fonts/cmap-fmt4-odd-segcount')`.
 - Format 4 implements the OT pointer arithmetic exactly (`idRangeOffset[i]/2 + (c - startCode[i]) + &idRangeOffset[i]`).
 - Format 12 uses `uint32` throughout — supports codepoints beyond the BMP — always under the Unicode cap (see "Parser hardening").
 - See [errors](../errors.md) for the complete list of `fonts/cmap-*`

@@ -17,11 +17,12 @@
  *  - a paragraph whose `pPr.numPr.numId` is non-zero, written without
  *    `opts.numbering`, throws `ContractError` `docx/numbering-missing` —
  *    `write()` never derives `word/numbering.xml`, so the list reference
- *    would otherwise dangle.
+ *    would otherwise dangle; with `opts.numbering`, a `numId` its `nums`
+ *    do not declare throws `docx/numbering-unknown-num`.
  *
  * The hyperlink checks walk the document body and every header, footer,
- * footnotes, endnotes and comments body; the numbering check walks the
- * body and every header / footer body. All checks run before any part is
+ * footnotes, endnotes and comments body; the numbering checks walk the
+ * same bodies plus `opts.styles` (each style and the docDefaults). All checks run before any part is
  * rendered and before the extension dehydrate pass, so a throw leaves the
  * caller's tree untouched.
  *
@@ -265,6 +266,73 @@ describe('docx.write — a list reference needs opts.numbering', () => {
 
         const back = d.read(bytes);
         expect(back.numbering).toBeDefined();
+    });
+});
+
+describe('docx.write — every part\'s list references need opts.numbering', () => {
+    const numbering = { abstractNums: [{ abstractNumId: 0,
+        levels: [{ ilvl: 0, numFmt: 'decimal', lvlText: '%1.' }] }],
+        nums: [{ numId: 1, abstractNumId: 0 }] };
+    const body = { type: 'document', body: [d.paragraph('Body text')] };
+
+    test('a list paragraph in a footnote, an endnote or a comment throws docx/numbering-missing naming its story', () => {
+        const cases = [
+            ['footnotes', { footnotes: { notes: [{ id: 1, body: [d.listParagraph('In note', 4, 0)] }] } }],
+            ['endnotes', { endnotes: { notes: [{ id: 1, body: [d.listParagraph('In note', 4, 0)] }] } }],
+            ['comments', { comments: { comments: [{ id: 0, author: 'A', body: [d.listParagraph('In comment', 4, 0)] }] } }],
+        ];
+        for (const [story, opts] of cases) {
+            const err = thrown(() => d.write(body, opts));
+            expect({ story, code: err && err.code, context: err && err.context })
+                .toEqual({ story, code: 'docx/numbering-missing', context: { numId: 4, story } });
+        }
+    });
+
+    test('a style-level numPr written without opts.numbering throws docx/numbering-missing naming the style', () => {
+        const styles = { styles: [{ type: 'paragraph', styleId: 'ListPara',
+            pPr: { numPr: { ilvl: 0, numId: 3 } } }] };
+        const err = thrown(() => d.write(body, { styles }));
+        expect(err).toBeInstanceOf(ContractError);
+        expect(err.code).toBe('docx/numbering-missing');
+        expect(err.context).toEqual({ numId: 3, story: 'styles', styleId: 'ListPara' });
+    });
+
+    test('a numPr in the docDefaults throws docx/numbering-missing too', () => {
+        const styles = { docDefaults: { pPr: { numPr: { ilvl: 0, numId: 2 } } }, styles: [] };
+        const err = thrown(() => d.write(body, { styles }));
+        expect(err && err.code).toBe('docx/numbering-missing');
+        expect(err.context).toEqual({ numId: 2, story: 'styles' });
+    });
+
+    test('a numId absent from opts.numbering.nums throws docx/numbering-unknown-num', () => {
+        const doc = { type: 'document', body: [d.listParagraph('Item', 2, 0)] };
+        const err = thrown(() => d.write(doc, { numbering }));
+        expect(err).toBeInstanceOf(ContractError);
+        expect(err.code).toBe('docx/numbering-unknown-num');
+        expect(err.context).toEqual({ numId: 2, story: 'document' });
+    });
+
+    test('an unknown numId in a header, a note or a style is found too', () => {
+        const header = { rIdH: { type: 'header', body: [d.listParagraph('H', 5, 0)] } };
+        expect(thrown(() => d.write(body, { numbering, headers: header })).context)
+            .toEqual({ numId: 5, story: 'header', key: 'rIdH' });
+        const footnotes = { notes: [{ id: 1, body: [d.listParagraph('N', 6, 0)] }] };
+        expect(thrown(() => d.write(body, { numbering, footnotes })).context)
+            .toEqual({ numId: 6, story: 'footnotes' });
+        const styles = { styles: [{ type: 'paragraph', styleId: 'S', pPr: { numPr: { numId: 7 } } }] };
+        expect(thrown(() => d.write(body, { numbering, styles })).code)
+            .toBe('docx/numbering-unknown-num');
+    });
+
+    test('declared numIds pass, whatever their type; numId 0 is never a reference', () => {
+        const doc = { type: 'document', body: [
+            d.listParagraph('Number', 1, 0),
+            d.paragraph('String', { pPr: { numPr: { ilvl: 0, numId: '1' } } }),
+            d.paragraph('Removed', { pPr: { numPr: { ilvl: 0, numId: 0 } } }),
+        ] };
+        const footnotes = { notes: [{ id: 1, body: [d.listParagraph('In note', 1, 0)] }] };
+        const styles = { styles: [{ type: 'paragraph', styleId: 'L', pPr: { numPr: { numId: 1 } } }] };
+        expect(thrown(() => d.write(doc, { numbering, footnotes, styles }))).toBeNull();
     });
 });
 

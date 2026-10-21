@@ -9,7 +9,7 @@ Per-module reference, organised by sub-domain. Mirrors `src/`.
 | [`ooxmlErrors`](./errors.md) | `src/errors.js` | Typed error hierarchy + stable code catalog. |
 | [`ooxmlShared`](./_shared/README.md) | `src/_shared/index.js` | Namespaces, relationship types, EMU helpers, colour codecs. |
 
-> The XML parser is consumed from [`@awacloud/fw/io/codec/xml.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/api/io/codec/xml.md); the ZIP container from [`@awacloud/fw/io/compress/zip.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/api/io/compress/zip.md).
+> The XML parser is consumed from [`@awacloud/fw/io/codec/xml.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/io/codec/xml.md); the ZIP container from [`@awacloud/fw/io/compress/zip.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/io/compress/zip.md).
 
 ## OPC — Open Packaging Conventions
 

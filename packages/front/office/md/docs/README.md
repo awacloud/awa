@@ -23,7 +23,7 @@ Top-level: see the [API index](./api/README.md). By domain:
 - [`inline/parser`](./api/inline/parser.md) — CommonMark + GFM inline phase
 - [`refs/link-refs`](./api/refs/link-refs.md) — link reference map
 - [`render/`](./api/render/) — `html`, `markdown` (CommonMark + GFM roundtrip), `xml`
-- Sanitize — consumed from [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md)
+- Sanitize — consumed from [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md)
 - [`md-walker`](./api/md-walker.md) — visitor walker enter/exit
 - [`common`](./api/common.md) — char codes + helpers (backed by `@awacloud/fw`)
 - [`bootstrap`](./api/bootstrap.md) — `bootstrapMd(opts)`, the runtime-bootstrap primitive
@@ -115,7 +115,7 @@ Regeneration: `bun run gen:bundles` (idempotent — byte-identical, no build sta
 
 ## See also
 
-- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.0.0/packages/front/fw) — shared runtime + helpers (sole dependency)
-- [Doc format spec (fw)](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/guide/doc-format.md) — convention used here
+- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/fw) — shared runtime + helpers (sole dependency)
+- [Doc format spec (fw)](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/guide/doc-format.md) — convention used here
 - [CommonMark 0.31](https://spec.commonmark.org/0.31.2/)
 - [GitHub Flavored Markdown](https://github.github.com/gfm/)

@@ -1,0 +1,4 @@
+# Vendored third-party PDFs: git must never convert line ends, whatever its
+# text detection decides — a rewritten line end shifts every
+# cross-reference offset. MANIFEST.json pins every file's SHA-256.
+* -text

@@ -318,4 +318,46 @@ describe('tableGpos', () => {
         expect(buildKerningTable({}).size).toBe(0);
         expect(buildKerningTable({ lookups: [] }).size).toBe(0);
     });
+
+    /* --- Type 2 format 2 with zero-byte records ------------- */
+    /** PairPos format 2, both value formats `valueFormat` (no low bits: 0-byte records), the given class counts, no record bytes. */
+    function pairPos2ZeroRecords(class1Count, class2Count, valueFormat = 0) {
+        const w = new BinaryWriter();
+        w.writeUint16(2).writeUint16(16);                         // format 2, coverage @16
+        w.writeUint16(valueFormat).writeUint16(valueFormat);       // valueFormat1, valueFormat2
+        w.writeUint16(22).writeUint16(22);                         // classDef1, classDef2 @22
+        w.writeUint16(class1Count).writeUint16(class2Count);
+        w.writeUint16(1).writeUint16(1).writeUint16(7);           // @16 coverage: fmt 1, [7]
+        w.writeUint16(2).writeUint16(0);                           // @22 classDef: fmt 2, 0 ranges
+        return w.finalize();
+    }
+
+    test('type 2 format 2 with 0-byte records: a small grid keeps one cell object per cell', () => {
+        const sub = parseGposSubtable(2, pairPos2ZeroRecords(3, 4));
+        expect(sub.grid.length).toBe(3);
+        expect(sub.grid[2].length).toBe(4);
+        expect(sub.grid[2][3]).toEqual({ value1: null, value2: null });
+        expect(sub.grid[0][0]).not.toBe(sub.grid[0][1]);
+        expect(sub.grid[0]).not.toBe(sub.grid[1]);
+        expect(sub.kern(7, 9)).toEqual({ value1: null, value2: null });
+    });
+
+    test('type 2 format 2 with 0-byte records: a 65535 × 65535 grid returns at once, every cell the empty adjustment', () => {
+        // The bytes hold no record: the old loop built 4.3 billion cells and hung.
+        for (const vf of [0, 0x100]) {
+            const sub = parseGposSubtable(2, pairPos2ZeroRecords(0xFFFF, 0xFFFF, vf));
+            const empty = vf ? {} : null;
+            expect(sub.grid.length).toBe(0xFFFF);
+            expect(sub.grid[0xFFFE].length).toBe(0xFFFF);
+            expect(sub.grid[0xFFFE][0xFFFE]).toEqual({ value1: empty, value2: empty });
+            expect(sub.kern(7, 9)).toEqual({ value1: empty, value2: empty });
+        }
+    });
+
+    test('type 2 format 2 with 2-byte records the bytes cannot hold: a typed refusal, as before', () => {
+        const bytes = pairPos2ZeroRecords(0xFFFF, 0xFFFF, VALUE_FORMAT.X_ADVANCE);
+        let code;
+        try { parseGposSubtable(2, bytes); } catch (e) { code = e instanceof ParseError ? e.code : `untyped ${e.name}`; }
+        expect(code).toMatch(/^fonts\//);
+    });
 });

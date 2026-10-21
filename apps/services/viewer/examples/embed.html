@@ -1,0 +1,69 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Embedding the AWA Viewer</title>
+    <meta name="theme-color" content="#00263D">
+    <link rel="icon" type="image/svg+xml" href="../public/icons/icon.svg">
+    <script type="importmap">
+    { "imports": {
+        "@awacloud/viewer":  "/apps/services/viewer/src/viewer.js",
+        "@awacloud/viewer/": "/apps/services/viewer/src/",
+        "@awacloud/fw":      "/packages/front/fw/src/main.js",
+        "@awacloud/fw/":     "/packages/front/fw/src/",
+        "@awacloud/pdf":     "/packages/front/office/pdf/src/main.js",
+        "@awacloud/pdf/":    "/packages/front/office/pdf/src/",
+        "@awacloud/ooxml":   "/packages/front/office/ooxml/src/main.js",
+        "@awacloud/ooxml/":  "/packages/front/office/ooxml/src/",
+        "@awacloud/odf":     "/packages/front/office/odf/src/main.js",
+        "@awacloud/odf/":    "/packages/front/office/odf/src/",
+        "@awacloud/md":      "/packages/front/office/md/src/main.js",
+        "@awacloud/md/":     "/packages/front/office/md/src/",
+        "@awacloud/fonts":   "/packages/front/office/fonts/src/main.js",
+        "@awacloud/fonts/":  "/packages/front/office/fonts/src/",
+        "@awacloud/oconv":   "/packages/front/office/oconv/src/main.js",
+        "@awacloud/oconv/":  "/packages/front/office/oconv/src/"
+    }}
+    </script>
+    <!-- An AWA site already carries the awaforge tokens; any other host links them. -->
+    <link rel="stylesheet" href="../src/styles/tokens.css">
+    <link rel="stylesheet" href="../src/styles/viewer.css">
+    <style>
+        /* The host page's own styles: the viewer only needs a height. */
+        :root { color-scheme: dark; }
+        @media (prefers-color-scheme: light) { :root { color-scheme: light; } }
+        body { margin: 0; font: 400 var(--af-step-0)/1.6 var(--af-sans); color: var(--af-fg); background: var(--af-bg); }
+        main { max-width: var(--af-container); margin: 0 auto; padding: var(--fw-space-8) var(--fw-space-4); }
+        h1 { font-size: var(--af-step-3); margin: 0 0 var(--fw-space-2); }
+        p { max-width: var(--af-measure); color: var(--af-muted); }
+        code { font-family: var(--af-mono); }
+        .viewer-slot { height: 75vh; margin: var(--fw-space-6) 0; border: 1px solid var(--af-rule); border-radius: var(--fw-radius-lg); overflow: hidden; }
+        h2 { font-size: var(--af-step-2); margin-top: var(--fw-space-12); }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>The viewer inside a page</h1>
+        <p>Two ways to place the AWA Viewer in a site: the <code>&lt;awa-viewer&gt;</code> element, here opening a document of this site through its <code>src</code> attribute, and the <code>mountViewer()</code> call below, empty until you drop a file on it. Files you open stay on your device.</p>
+
+        <awa-viewer class="viewer-slot" src="../tests/fixtures/rich.odt" heading-offset="2"></awa-viewer>
+
+        <h2>With a script call</h2>
+        <div id="scripted" class="viewer-slot"></div>
+    </main>
+    <script type="module">
+        import { mountViewer } from '@awacloud/viewer';
+        import { defineViewerElement } from '@awacloud/viewer/element.js';
+        defineViewerElement();
+        mountViewer(document.getElementById('scripted'), { headingOffset: 2 });
+    </script>
+</body>
+</html>

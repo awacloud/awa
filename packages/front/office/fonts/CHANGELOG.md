@@ -10,6 +10,116 @@ Reference specs:
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-21
+
+### Added
+
+- **`avar` version 2.** `parseAvar` reads an OpenType 1.9.1 `avar`
+  version 2 table, which it used to refuse with `fonts/avar-version`: the
+  segment maps as in version 1, plus two new fields `axisIndexMapOffset`
+  and `varStoreOffset` (offsets from the table start, `0` when absent; a
+  cut offset field throws `fonts/avar-short`, an offset past the table
+  `fonts/avar-bad-offset`). Version 1 output is unchanged. Coordinate
+  normalisation still applies the segment maps only (see the README's
+  known limits).
+
+### Changed
+
+- **A TrueType contour starts where FreeType starts it.**
+  `pathFromSimpleGlyph` started each contour on its first on-curve point.
+  It now starts on point 0 when that point is on-curve, else on the last
+  point when that one is on-curve, else on the midpoint of the last and
+  first points — the rule of FreeType and of the common renderers. Only
+  contours whose point 0 is off-curve change. When such a contour has an
+  on-curve point, the outline drawn is the same and only the order of its
+  commands differs (`font.getGlyphByIndex(gid).path`, composite glyphs
+  included): code that compares or hashes `Path.commands` or `toSvgPath()`
+  output sees another sequence. A contour with no on-curve point is drawn
+  differently, see Fixed.
+- **`parseCff2` reads the FDArray of every CFF2 font.** A CFF2 font that
+  parsed before now throws a `ParseError` when its FDArray offset is
+  outside the table (`fonts/cff2-fdarray-range`), when a Private DICT
+  `[size, offset]` runs past the table (`fonts/cff2-private-range`) or when
+  the FDArray INDEX is malformed (the `fonts/cff2-index-*` codes); a
+  VariationStore that runs past the table throws `fonts/cff2-vstore-range`.
+- **A WOFF2 body that needs the Brotli dictionary throws a typed error.**
+  `decodeWoff2` let the fw error with `code` `ENEEDDICT` through when the
+  body uses the Brotli static dictionary before it is loaded. It now
+  throws the `ContractError` `fonts/woff2-no-dictionary`; code that
+  matched `err.code === 'ENEEDDICT'` matches the new code, or reads
+  `err.cause.code`, which is still `ENEEDDICT`. The README and the
+  `woff2` page show the dictionary-loading step.
+
+### Fixed
+
+- **`CFF2_TOP_DICT_OPS` follows the CFF2 specification.** The frozen map
+  that `tableCff2` exports named the Top DICT operators wrongly. Key `18`
+  (named `FDArray`) is removed; `0x0C24` is now `FDArray` (it was
+  `FontMatrix`); `0x0C07` is now `FontMatrix` (it was
+  `FontMatrix(legacy alias)`); `0x0C25` `FDSelect` is added. `17`
+  `CharStrings` and `24` `vstore` are unchanged. Code that looked an
+  operator up in this map gets the corrected names.
+- **A TrueType contour that ends off-curve closes on its own start.**
+  `pathFromSimpleGlyph` closed such a contour with a curve to the start
+  of the glyph's FIRST contour, so every later contour ending on an
+  off-curve point was drawn with a stray curve across the glyph
+  (`font.getGlyphByIndex(gid).path`, composite glyphs included). It now
+  closes on the contour's own start.
+- **A TrueType contour with no on-curve point is drawn in full.** Such a
+  contour started on the midpoint of its last and first points but then
+  walked the points from point 1, so the curve round point 0 was missing
+  and a degenerate curve closed the contour. It now walks every point from
+  point 0.
+- **CFF charstrings draw every path operator.** `decodeCharstring` drew
+  one line too many in `rlinecurve` (its curve then read past the
+  arguments: `NaN` coordinates), took the optional fifth argument of
+  `hvcurveto` / `vhcurveto` on a curve that was not the last one, and
+  dropped the four flex operators (`flex`, `hflex`, `hflex1`, `flex1`)
+  with their curves. All three now follow the Type 2 charstring format.
+- **A Pair Adjustment grid of 0-byte records no longer hangs.** A GPOS
+  Pair Adjustment format 2 subtable whose value formats carry no
+  placement, advance or device bit reads no byte per cell, so its class
+  counts alone (up to 65535 × 65535) drove billions of iterations over a
+  few bytes of input. Above 65,536 cells such a grid is now built from one
+  shared row of one shared cell (the cell values are the same; smaller
+  grids are unchanged).
+- **CFF and CFF2 INDEX offsets are checked.** An INDEX whose offsets go
+  backwards let a `RangeError` through, or cut items outside the INDEX
+  data; it now throws `ParseError` `fonts/cff-index-bad-offset` (CFF) or
+  `fonts/cff2-index-bad-offset` (CFF2). A CFF2 INDEX whose `uint32` count
+  needs more offset bytes than the reader holds throws
+  `fonts/cff2-index-truncated` before anything is allocated (a count near
+  2³² used to throw `RangeError: Invalid array length`).
+- **A cmap format 4 with an odd `segCountX2` is refused.** It let a
+  `RangeError` through (half a segment count); it now throws
+  `ParseError` `fonts/cmap-fmt4-odd-segcount`.
+- **`extractFont` refuses a table record past the end of a TTC.** A
+  member font whose table record runs past the file let a `RangeError`
+  through; it now throws `ParseError` `fonts/ttc-bad-offset`.
+- **WOFF and WOFF2 decoding throws typed errors.** A table body the
+  injected `zlib` could not inflate, or a WOFF2 body the injected `brotli`
+  could not decompress, let the decoder's plain `Error` through. They now
+  throw `ParseError` `fonts/woff1-bad-inflate` and `fonts/woff2-bad-brotli`;
+  the decoder's error is kept as `cause`.
+- **CFF2 variable fonts parse.** The shared DICT decoder rejected the CFF2
+  operator bytes 22–24, so a Top DICT with a `vstore` entry (every variable
+  CFF2 font) threw `fonts/cff-dict-bad-byte`; `parseDict(bytes, { cff2: true })`
+  now reads `vsindex`, `blend` and `vstore` (CFF1 unchanged, the second
+  argument is optional). `parseCff2` fills `fdArray` (Font DICTs with their
+  Private DICT) and `vstore` (the sized Item Variation Store).
+- **Errors survive the fw sanity layer.** `FontError` defined `name` by
+  assignment, which throws a `TypeError` once `applyBase()` has frozen
+  `Error.prototype`, so the typed error (code, context) was lost. `name` is
+  now an own property set with `Object.defineProperty` (same shape:
+  writable, enumerable, configurable).
+- **Subset `cmap` binary-search fields.** `subsetForPdf` wrote the format 4
+  `cmap` subtable with `searchRange`, `entrySelector` and `rangeShift` all
+  `0`. They are now derived from the segment count as the OpenType spec
+  defines them; strict font checkers (the OpenType Sanitizer that browsers
+  run) refused every subset on it. The segments, the mapping and the table
+  length are unchanged; the `cmap` checksum and `head.checkSumAdjustment`
+  follow the three fields.
+
 ## [1.0.0] - 2026-10-07
 
 ### Added

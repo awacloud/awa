@@ -71,8 +71,9 @@ the calc chain, and the legacy VML drawing of comment shapes (for which
         name: string,
         state?: 'visible'|'hidden'|'veryHidden',
         rows: [ [cell, cell, …], … ],   // an array of rows, each an array of cells
+        rowProps?: { [rowIndex]: { r, height?, customHeight?, hidden? } },
         merges?: ['A1:B2', …],
-        cols?: [{ min, max, width?, customWidth?, style? }],
+        cols?: [{ min, max, width?, hidden?, style?, bestFit? }],
         sheetViews?, autoFilter?, hyperlinks?, dataValidations?,
         conditionalFormatting?,
         tableRefs?: [tableId],
@@ -97,6 +98,16 @@ cell := { type: 'cell',
 cells** — there is no `{ index, cells }` wrapper. Gaps produced by a sparse
 `r=` attribute are back-filled with `{ type:'cell', value:null, t:'n' }` so the
 column index equals the position in the row array.
+
+`sheet.rowProps` carries the `<row>` attributes the cells cannot: `height`
+(`ht`, in points), `customHeight` and `hidden`, keyed by the row's index in
+`sheet.rows`, each entry with the row's 1-based number `r` (its `r=`
+attribute — the same number as the row part of its cells' `ref`). It is
+absent when no row carries one of them. `write()` emits them on the row at
+that index (rows are written as `r = index + 1`; `rowProps[i].r` is not
+used on write). Other row attributes (`s`, `customFormat`, `outlineLevel`,
+`collapsed`, `spans`) are not modelled. Boolean attributes read `1` and
+`true` alike, on rows and on `cols` (`hidden`, `bestFit`).
 
 ## Examples
 
@@ -155,7 +166,8 @@ invoked — call their parse/render helpers directly. See the
   - `maxCellsPerSheet` (default `5000000`) — the cells of one worksheet, **including the empty cells the reader inserts for gaps before a cell's column** (a lone `<c r="XFD1">` materialises a 16384-cell row).
 
   The row and cell caps are checked twice: on a pre-scan of the worksheet part's text, before its XML is parsed, and while its rows are mapped, so gap padding stops the moment the cell total passes the cap. The `opcPackage.read` archive limits bound the part bytes before either. A cap of `0` disables that check (and, for `maxCellsPerSheet`, the bound on gap padding).
-  - `readOpts.maxParts`, `readOpts.maxUncompressed` and `readOpts.maxRatio` override the archive limits of [`opc.read`](../opc/package.md) from the same options object (defaults kept; `0` disables a check).
+  - `readOpts.maxParts`, `readOpts.maxUncompressed`, `readOpts.maxRatio` and `readOpts.maxDepth` override the archive limits of [`opc.read`](../opc/package.md) from the same options object (defaults kept; `0` disables a check).
+- `readOpts.typedRunColors: true` types the text-run fills of drawing shapes that a bare `'RRGGBB'` cannot express (theme colours, colour transforms) as `rPr.color = { rgb | schemeColor, mods? }`; by default they stay verbatim in `rPr._extras` (see [drawingml](../drawingml/drawingml.md#text-body-model)).
 - Threaded comments (Office 2018+): see [xlsx-threaded-comments](./threaded-comments.md). They coexist with legacy comments.
 
 ## See also

@@ -20,7 +20,7 @@ rejected** — see §4.
 
 ## 1 — `docx/` — first-party, inherited from the W0 spike (3 files)
 
-Byte-identical copies of `ai/plans/oconv/spikes/w0-core/corpus/docx/*` —
+Byte-identical copies of `ai/archives/plans/oconv/spikes/w0-core/corpus/docx/*` —
 **copied, never regenerated** (GAP-OOXML-4: `@awacloud/fw`'s zip writer stamps a
 wall-clock DOS date/time by default, so regeneration is not
 byte-identical — the spike's own `PROVENANCE.md` documents this measured
@@ -83,8 +83,10 @@ bun packages/front/office/oconv/tests/_fixtures/gen-odt-fixtures.js
 
 | File | Bytes | SHA-256 | Content |
 |---|---|---|---|
-| `odt/odt-structured.odt` | 1958 | `e1035ef67e8d4e3888c185f2520c7e22bd135266a3078bdeee6ff69146faabb4` | 3 headings (`outlineLevel` 1/2/3), a plain + emphasised-span paragraph, a standalone hyperlink paragraph, a flat "ordered" list (3 items) and a bullet list with one nested level |
-| `odt/odt-table.odt` | 1893 | `e0110e80012f31d5b282b8e5ba060f5f9a6a3653dd3fd4916fafd450dfed4a37` | a paragraph, a 2×2 `<table:table>` embedded directly in the text body as a raw XML element, a closing paragraph |
+| `odt/odt-structured.odt` | 1973 | `66d0b4568cbccdc31076303ffe585b63b483a39d795a5ae65f259a74a47b80af` | 3 headings (`outlineLevel` 1/2/3), a plain + emphasised-span paragraph, a standalone hyperlink paragraph, a flat "ordered" list (3 items) and a bullet list with one nested level |
+| `odt/odt-table.odt` | 1898 | `f6717f9e71006e9746854dccd5f4b5dd42b0da5aa1d84eaf6a70465a09e8dffe` | a paragraph, a 2×2 `<table:table>` embedded directly in the text body as a raw XML element, a closing paragraph |
+
+Regenerated 2026-10-15 with the same generators after the odf writer fixes for schema validity (no empty `office:settings`, a table column when the model has none, a master page for every slide, the custom-shape and tracked-change fixes); the odp speaker notes are now a `presentation:class="notes"` text-box frame, as the schema wants inside `<presentation:notes>`, and the odt hyperlink carries the schema-fixed `xlink:type="simple"`. The readings recorded below are unchanged (the oconv suite passes on the new bytes).
 
 **Why a raw `<table:table>` element**: `@awacloud/odf`'s typed `text:p`/
 `text:list` helpers have no table constructor for text-body content

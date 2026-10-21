@@ -64,6 +64,9 @@ for, an image whose bytes are not available, a task-list checkbox. Every
 
 - `losses` is an array of [`Loss`](./api/types.md#loss) records, in
   document order: reader losses first, then writer losses.
+- `lossSummary` groups `losses` by `code` and `detail`, with a `count`
+  ([`LossSummaryEntry`](./api/types.md#losssummaryentry)). The MCP tools
+  return only the summary when called with `"lossView": "summary"`.
 - `lossy` is `true` exactly when `losses` is not empty.
 - A lossy conversion is still a **success**. The CLI exits `0` and prints
   the count on stderr (`convert: 1 loss recorded`). The MCP result carries
@@ -72,10 +75,11 @@ for, an image whose bytes are not available, a task-list checkbox. Every
   does not itemise them, so there is nothing it can list — see
   [`toHtml`](./api/toHtml.md).
 
-Measured example: a task-list item going to `docx`.
+Measured example: a task-list item going to `pdf`, whose built-in faces
+have no checkbox glyph (docx and odt draw it, with no loss).
 
 ```json
-{ "losses": [{ "code": "list/task-marker-dropped", "detail": "[x]" }], "lossy": true }
+{ "losses": [{ "index": "0", "kind": "list", "code": "list/task-marker-dropped", "detail": "[x]" }], "lossy": true }
 ```
 
 `@awacloud/oconv`'s `docs/loss-matrix.md` gives the fidelity table for each

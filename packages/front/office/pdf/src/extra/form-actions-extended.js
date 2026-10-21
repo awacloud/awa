@@ -112,12 +112,15 @@ export const pdfFormActionsExtended = {
         function readRendition(e) {
             const op = (e.OP && (e.OP.type === 'int' || e.OP.type === 'real'))
                 ? (e.OP.value | 0) : null;
-            const hasJs = isType(e.JS, 'string') || isType(e.JS, 'stream');
+            // a stream script reaches the typer as an indirect reference
+            // (ISO 32000-2 7.3.8): kept for the caller to resolve
+            const scriptObj = isType(e.JS, 'stream') || isType(e.JS, 'ref');
+            const hasJs = isType(e.JS, 'string') || scriptObj;
             return {
                 r:  e.R  || null,
                 an: e.AN || null,
                 op,
-                js: isType(e.JS, 'string') ? e.JS.value : (isType(e.JS, 'stream') ? e.JS : null),
+                js: isType(e.JS, 'string') ? e.JS.value : (scriptObj ? e.JS : null),
                 sandboxed: hasJs ? true : undefined
             };
         }
@@ -174,9 +177,11 @@ export const pdfFormActionsExtended = {
                 throw new ParseError('pdf/extra/action-ext/missing-js',
                     'JavaScript action requires /JS');
             }
-            if (!isType(e.JS, 'string') && !isType(e.JS, 'stream')) {
+            // a stream script reaches the typer as an indirect reference
+            // (ISO 32000-2 7.3.8): kept for the caller to resolve
+            if (!isType(e.JS, 'string') && !isType(e.JS, 'stream') && !isType(e.JS, 'ref')) {
                 throw new ParseError('pdf/extra/action-ext/bad-js',
-                    '/JS must be string or stream',
+                    '/JS must be a string, a stream or a reference to a stream',
                     { context: { type: e.JS.type } });
             }
             return { js: e.JS, sandboxed: true };

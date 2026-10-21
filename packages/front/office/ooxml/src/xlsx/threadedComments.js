@@ -183,7 +183,10 @@ export const xlsxThreadedComments = {
 
         // --- Helpers ---
 
-        /** Generate a `{GUID}` matching what Excel produces. */
+        /**
+         * Generate a `{GUID}` as Excel writes it: version 4, upper-case
+         * hexadecimal (the schema's ST_Guid pattern is `[0-9A-F]`).
+         */
         function generateId() {
             // Read at call time (worker-safe); fail closed, never a weak fallback.
             const c = globalThis.crypto;
@@ -194,7 +197,7 @@ export const xlsxThreadedComments = {
             c.getRandomValues(b);
             b[6] = (b[6] & 0x0F) | 0x40;
             b[8] = (b[8] & 0x3F) | 0x80;
-            const hex = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+            const hex = Array.from(b, x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
             return `{${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}}`;
         }
 

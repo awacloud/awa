@@ -46,6 +46,8 @@ const { ParseError, EncryptionError } = pdfErrors.factory();
 
 `code`: kebab-case (e.g. `'pdf/bad-header'`). `opts.context`: arbitrary payload (`{ offset, num, gen, raw }`). `opts.cause`: source `Error` (re-throw).
 
+`name` is the class name of the thrown error (`'ParseError'`, …). It is an own, writable, enumerable and configurable property set with `Object.defineProperty`, not an assignment: assigning the inherited `name` throws a `TypeError` once the `@awacloud/fw` sanity layer (`applyBase()`) has frozen `Error.prototype`, and the typed error — its `code` and `context` — would be lost. Under that layer the error is thrown with its `code` and `context` intact.
+
 ## Examples
 
 ### Typed catch at the root
@@ -97,6 +99,8 @@ This page **defines** the codes; the modules emit them. Prefixes by domain:
 - `pdf/page/...` — emitted by [`pdfPage`](./document/page.md).
 - `pdf/document/...` — emitted by [`pdfDocument`](./document/document.md).
 - `pdf/writer/...` — emitted by [`pdfWriter`](./document/writer.md); includes `pdf/writer/unresolvable-objects` (`RenderError`, `context.objects` = `Array<{ num, gen, code }>`), thrown by `assembleIndirects(model, { strict: true })` when an in-use object cannot be resolved.
+- `pdf/builder/...` — emitted by [`pdfBuilder`](./document/builder.md#errors); includes `pdf/builder/bad-font` (`RenderError`), also thrown for a bad `standard14` option.
+- `pdf/flate/...` — emitted by [`pdfFlate`](./syntax/filters/flate.md); includes `pdf/flate/output-limit` (`ParseError`), thrown when a stream inflates past the `maxOutput` ceiling (256 MiB by default).
 - `pdf/use/...` — emitted by [`pdf`](./pdf.md).
 - `pdf/sig/...` — emitted by [`pdfSignature`](./sig/signature.md), [`pdfByteRange`](./sig/byteRange.md), [`pdfCertChain`](./sig/certChain.md). The public-key verification path is wired and executed by construction — there is no `pdf/sig/pk-verify-not-wired` code; see [`pdfSignature`](./sig/signature.md)'s Errors table for the full `pdf/sig/*` and `pdf/sig/verify-pk/*` set.
 - `pdf/ts/...` — emitted by [`pdfTimestamp`](./sig/timestamp.md) (RFC 3161) and by [`pdfSignature`](./sig/signature.md)'s `/DocTimeStamp` verification branch.

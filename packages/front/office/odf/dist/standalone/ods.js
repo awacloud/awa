@@ -2067,7 +2067,12 @@ export const odsBundled = {
     class OdfError extends Error {
       constructor(code, message, opts) {
         super(message);
-        this.name = new.target.name;
+        Object.defineProperty(this, "name", {
+          value: new.target.name,
+          writable: !0,
+          enumerable: !0,
+          configurable: !0
+        });
         this.code = code;
         if (opts && opts.context)
           this.context = opts.context;
@@ -2509,7 +2514,7 @@ export const odsBundled = {
     return { parse, serialize, empty, setEntry, MANIFEST_NS };
   } });
     __register({ name: "pkgPackage", dependencies: ["odfErrors","odfShared","zip","pkgMimetype","pkgManifest"], factory: function(errors, shared, zipMod, mimetypeMod, manifestMod) {
-    const { ParseError, ContractError } = errors, { encodeText, decodeText } = shared, DEFAULT_LIMITS = Object.freeze({
+    const { ParseError, RenderError, ContractError } = errors, { encodeText, decodeText } = shared, DEFAULT_LIMITS = Object.freeze({
       maxParts: 4096,
       maxUncompressed: 268435456,
       maxRatio: 200
@@ -2564,7 +2569,7 @@ export const odsBundled = {
       }
       return { mimetype, manifest, parts };
     }
-    function write(pkg) {
+    function write(pkg, opts) {
       if (!pkg || !pkg.mimetype)
         throw new ContractError("odf/contract-error/pkg", "pkg: package needs a mimetype", { context: { module: "pkg", argument: "pkg" } });
       const files = {};
@@ -2577,7 +2582,12 @@ export const odsBundled = {
         files[path] = pkg.parts[path];
       }
       files["META-INF/manifest.xml"] = encodeText(manifestMod.serialize(pkg.manifest));
-      return zipMod.zipSync(files);
+      const mtime = opts && opts.mtime !== void 0 ? opts.mtime : new Date(1980, 0, 1, 0, 0, 0);
+      try {
+        return zipMod.zipSync(files, { mtime });
+      } catch (e) {
+        throw new RenderError("odf/render-error/pkg", "pkg: failed to zip package", { cause: e, context: { module: "pkg" } });
+      }
     }
     function empty(mimetype) {
       return {
@@ -2709,11 +2719,11 @@ export const odsBundled = {
       if (s._extras && s._extras.children)
         for (const c of s._extras.children)
           children.push(c);
-      const settingsEl = xml.el("office:settings", {}, children), root = xml.el("office:document-settings", {
+      const root = xml.el("office:document-settings", {
         "xmlns:office": OFFICE_NS,
         "xmlns:config": CONFIG_NS,
         "office:version": ODF_VERSION
-      }, [settingsEl]);
+      }, children.length ? [xml.el("office:settings", {}, children)] : []);
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "settings.xml",
@@ -2977,6 +2987,8 @@ export const odsBundled = {
           throw new ParseError("odf/parse-error/limit", `row: number-rows-repeated ${r} exceeds max ${max}`, { context: { module: "tableRow", value: r, max } });
         out.repeated = r;
       }
+      if (attrs["table:visibility"])
+        out.visibility = attrs["table:visibility"];
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
@@ -2991,6 +3003,8 @@ export const odsBundled = {
         attrs["table:style-name"] = row.styleName;
       if (row.repeated && row.repeated > 1)
         attrs["table:number-rows-repeated"] = String(row.repeated);
+      if (row.visibility)
+        attrs["table:visibility"] = row.visibility;
       const children = (row.cells || []).map((c) => cellMod.renderCell(c));
       return xml.el("table:table-row", attrs, children);
     }
@@ -3006,6 +3020,8 @@ export const odsBundled = {
       const r = parseInt(a["table:number-columns-repeated"], 10);
       if (Number.isFinite(r) && r > 1)
         out.repeated = r;
+      if (a["table:visibility"])
+        out.visibility = a["table:visibility"];
       return out;
     }
     function renderColumn(col) {
@@ -3016,6 +3032,8 @@ export const odsBundled = {
         a["table:default-cell-style-name"] = col.defaultCellStyleName;
       if (col.repeated && col.repeated > 1)
         a["table:number-columns-repeated"] = String(col.repeated);
+      if (col.visibility)
+        a["table:visibility"] = col.visibility;
       return xml.el("table:table-column", a, []);
     }
     function parseTable(el) {
@@ -3053,16 +3071,27 @@ export const odsBundled = {
         out._extras = { children: extras };
       return out;
     }
+    function widthOf(rows) {
+      let width = 1;
+      for (const r of rows) {
+        let pos = 0;
+        for (const c of r && r.cells || []) {
+          const rep = c.repeated > 1 ? c.repeated : 1, span = c.colSpan > 1 ? c.colSpan : 1;
+          width = Math.max(width, pos + rep - 1 + span);
+          pos += rep;
+        }
+      }
+      return width;
+    }
     function renderTable(t) {
       const attrs = {};
       if (t.name)
         attrs["table:name"] = t.name;
       if (t.styleName)
         attrs["table:style-name"] = t.styleName;
-      const children = [];
-      for (const col of t.columns || [])
+      const children = [], headerN = t.headerRows || 0, rows = t.rows || [], columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
+      for (const col of columns)
         children.push(renderColumn(col));
-      const headerN = t.headerRows || 0, rows = t.rows || [];
       if (headerN > 0) {
         const headerKids = rows.slice(0, headerN).map((r) => rowMod.renderRow(r));
         children.push(xml.el("table:table-header-rows", {}, headerKids));
@@ -3289,6 +3318,8 @@ export const odsBundled = {
             runs.push({ type: "line-break" });
           else if (c.name === "text:a" && !insideLink)
             runs.push(parseLink(c, ctx));
+          else if (c.name === "draw:frame" && ctx && typeof ctx.parseFrame === "function")
+            runs.push(ctx.parseFrame(c));
           else if (positional)
             runs.push(c);
           else
@@ -3389,13 +3420,15 @@ export const odsBundled = {
         }
         case "image":
           return ctx && typeof ctx.renderImage === "function" ? ctx.renderImage(r) : xml.text("");
+        case "frame":
+          return ctx && typeof ctx.renderFrame === "function" ? ctx.renderFrame(r) : xml.text("");
         case "element":
           return r;
         default:
           return xml.text("");
       }
     }
-    function textOfRuns(runs) {
+    function textOfRuns(runs, inSpan) {
       const out = [];
       for (const r of runs || [])
         switch (r.type) {
@@ -3403,7 +3436,7 @@ export const odsBundled = {
             out.push(r.value || "");
             break;
           case "span":
-            out.push(Array.isArray(r.runs) ? textOfRuns(r.runs) : r.value || "");
+            out.push(Array.isArray(r.runs) ? textOfRuns(r.runs, !0) : r.value || "");
             break;
           case "space":
             out.push(" ".repeat(r.count || 1));
@@ -3421,8 +3454,18 @@ export const odsBundled = {
           case "element":
             out.push(xml.textContent(r));
             break;
+          case "frame":
+            if (inSpan)
+              out.push(frameText(r));
+            break;
         }
       return out.join("");
+    }
+    function frameText(f) {
+      return [
+        ...f.child && f.child.children || [],
+        ...f._extras && f._extras.children || []
+      ].map((n) => xml.textContent(n)).join("");
     }
     function textOf(p) {
       return textOfRuns(p.runs);
@@ -3615,7 +3658,7 @@ export const odsBundled = {
       pkg.setPart(p, "content.xml", encodeText(contentXml), CT_XML);
       writeSidecars(p, doc, opts, { pkg, metaMod, settingsMod, stylesMod }, CT_XML);
       carryParts(p, doc.package, { pkg, manifestMod });
-      return pkg.write(p);
+      return pkg.write(p, { mtime: opts.mtime });
     }
     function renderContent(doc) {
       const sheet = doc.spreadsheet || { tables: doc.tables || [] }, ssEl = spreadsheetMod.renderSpreadsheet(sheet), bodyEl = xml.el("office:body", {}, [ssEl]), children = [];

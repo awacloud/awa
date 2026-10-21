@@ -119,6 +119,7 @@ export const mdInlineDelimiterStack = {
                         cc,
                         numdelims,
                         origdelims: numdelims,
+                        position: startpos,
                         node,
                         previous: this.delimiters,
                         next: null,
@@ -145,11 +146,16 @@ export const mdInlineDelimiterStack = {
                 let use_delims;
                 let tmp, next;
                 let opener_found;
+                // Lowest opener position worth searching, per closer kind. A
+                // position, not a delimiter: the delimiter a failed search
+                // stopped at can be unlinked later, and a search for it would
+                // then run to the stack bottom every time (cmark issue 389).
                 const openers_bottom = [];
                 let openers_bottom_index;
                 let odd_match;
 
-                for (let i = 0; i < 15; i++) openers_bottom[i] = stack_bottom;
+                const bottom = stack_bottom === null ? 0 : stack_bottom.position + 1;
+                for (let i = 0; i < 20; i++) openers_bottom[i] = bottom;
 
                 closer = this.delimiters;
                 while (closer !== null && closer.previous !== stack_bottom) {
@@ -175,12 +181,16 @@ export const mdInlineDelimiterStack = {
                                     + (closer.origdelims % 3);
                                 break;
                             case C_TILDE:
-                                openers_bottom_index = 13;
+                                // Own slots (`*` uses 8–13), split like `*` and
+                                // `_`: the opener test below depends on the
+                                // closer's `can_open` and run length mod 3.
+                                openers_bottom_index = 14 + (closer.can_open ? 3 : 0)
+                                    + (closer.origdelims % 3);
                                 break;
                         }
                         while (opener !== null &&
                             opener !== stack_bottom &&
-                            opener !== openers_bottom[openers_bottom_index]) {
+                            opener.position >= openers_bottom[openers_bottom_index]) {
                             odd_match =
                                 (closer.can_open || opener.can_close) &&
                                 closer.origdelims % 3 !== 0 &&
@@ -263,7 +273,7 @@ export const mdInlineDelimiterStack = {
                             closer = closer.next;
                         }
                         if (!opener_found) {
-                            openers_bottom[openers_bottom_index] = old_closer.previous;
+                            openers_bottom[openers_bottom_index] = old_closer.position;
                             if (!old_closer.can_open) {
                                 this.removeDelimiter(old_closer);
                             }

@@ -29,7 +29,7 @@ const ext = runtime.resolve('pdfEmbeddedFilesPortfolio');
 | Member | Signature | Returns |
 |--------|-----------|---------|
 | `typePortfolio` | `(collectionDict) => Portfolio` | Full view `{ raw, _extras, schema?, initialDoc?, view?, sort?, navigator? }`. |
-| `typeSchema` | `(dict) => { fields, raw }` | `/Schema` fields, keyed by their dict key. |
+| `typeSchema` | `(dict) => { fields, raw }` | `/Schema` fields, keyed by their dict key; the optional `/Type /CollectionSchema` names the dictionary and is not a field. |
 | `typeSchemaField` | `(name, dict) => Field` | A single field definition. |
 | `typeSort` | `(dict) => Sort` | `/Sort` `/S`/`/A`. |
 | `typeNavigator` | `(value) => Navigator` | Ref or typed dict. |

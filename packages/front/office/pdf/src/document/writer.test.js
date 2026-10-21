@@ -4,6 +4,10 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 import { describe, test, expect } from 'bun:test';
+import { createHash } from 'node:crypto';
+import { sha256 } from '@awacloud/fw/crypto/hash/sha256.js';
+import { bitArray } from '@awacloud/fw/crypto/utils/bitArray.js';
+import { utf8 } from '@awacloud/fw/io/codec/utf8.js';
 import { pdfWriter } from './writer.js';
 import { pdfDocument } from './document.js';
 import { pdfShared } from '../_shared/index.js';
@@ -325,10 +329,55 @@ describe('assembleIndirects — unresolvable objects (BL-332)', () => {
 describe('pdfWriter module', () => {
     test('module shape', () => {
         expect(pdfWriter.name).toBe('pdfWriter');
-        expect(pdfWriter.dependencies).toEqual(['pdfErrors', 'pdfSerializer']);
+        expect(pdfWriter.dependencies).toEqual(['pdfErrors', 'pdfSerializer', 'sha256', 'bitArray']);
         expect(pdfWriter.factory.toString()).toContain('function');
         const m = pdfWriter.factory(_pdfErrors_TD1, {});
         expect(typeof m.writeDocument).toBe('function');
         expect(typeof m.assembleIndirects).toBe('function');
+    });
+
+    test('declares sha256 and bitArray last, after the two it had', () => {
+        expect(pdfWriter.dependencies).toEqual(['pdfErrors', 'pdfSerializer', 'sha256', 'bitArray']);
+        expect(pdfWriter.deps).toEqual([pdfErrors, pdfSerializer, sha256, bitArray]);
+    });
+});
+
+describe('writeDocument — the /ID a PDF 2.0 file requires (ISO 32000-2 Table 15)', () => {
+    const _bitArray = bitArray.factory();
+    const wired = pdfWriter.factory(errors, _serializer, sha256.factory(_bitArray, utf8.factory()), _bitArray);
+    const model = () => ({
+        indirects: [
+            { num: 1, gen: 0, value: obj.dict({ Type: obj.name('Catalog'), Pages: obj.ref(2, 0) }) },
+            { num: 2, gen: 0, value: obj.dict({ Type: obj.name('Pages'), Kids: obj.array([]), Count: obj.int(0) }) }
+        ],
+        root: { num: 1, gen: 0 }
+    });
+    const trailerOf = (out) => td.decode(out).slice(td.decode(out).lastIndexOf('trailer\n'));
+    const hex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+    test('no id given: both halves are the first 16 bytes of the SHA-256 of what precedes the trailer', () => {
+        const out = wired.writeDocument(model());
+        const body = out.subarray(0, td.decode(out).lastIndexOf('trailer\n'));
+        const h = hex(createHash('sha256').update(body).digest().subarray(0, 16));
+        expect(trailerOf(out)).toContain(` /ID [<${h}><${h}>]`);
+        expect(Array.from(wired.writeDocument(model()))).toEqual(Array.from(out));
+        const back = readDocument(out);
+        expect(hex(back.trailer.id[0])).toBe(h);
+    });
+
+    test('a different body gives a different /ID', () => {
+        const other = model();
+        other.indirects[1].value = obj.dict({ Type: obj.name('Pages'), Kids: obj.array([]), Count: obj.int(0), X: obj.int(1) });
+        const idOf = (out) => (/ \/ID \[<([0-9A-F]{32})><\1>\]/.exec(trailerOf(out)) || [])[1];
+        expect(idOf(wired.writeDocument(model()))).toMatch(/^[0-9A-F]{32}$/);
+        expect(idOf(wired.writeDocument(other))).toMatch(/^[0-9A-F]{32}$/);
+        expect(idOf(wired.writeDocument(other))).not.toBe(idOf(wired.writeDocument(model())));
+    });
+
+    test('an explicit id, a 1.x version, or a hand-wiring without the hash keep the old output', () => {
+        const id = [new Uint8Array(16).fill(1), new Uint8Array(16).fill(2)];
+        expect(Array.from(wired.writeDocument({ ...model(), id }))).toEqual(Array.from(writeDocument({ ...model(), id })));
+        expect(trailerOf(wired.writeDocument({ ...model(), version: '1.7' }))).not.toContain('/ID');
+        expect(trailerOf(writeDocument(model()))).not.toContain('/ID');
     });
 });

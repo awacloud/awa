@@ -174,6 +174,84 @@ describe('callTool — convert', () => {
     });
 });
 
+describe('callTool — lossSummary and lossView', () => {
+    const LOSSY_MD = '<div>a</div>\n\n<div>b</div>\n\nText <br> x.\n';
+    const SUMMARY = [
+        { code: 'block/dropped', detail: 'html_block', count: 2 },
+        { code: 'inline/dropped', detail: 'html_inline', count: 1 },
+    ];
+
+    test('default: losses unchanged, lossSummary beside them', async () => {
+        const { content, isError } = await callTool('from_md', { markdown: LOSSY_MD, target: 'docx' });
+        expect(isError).toBe(false);
+        const payload = JSON.parse(content[0]!.text);
+        expect(payload.losses).toHaveLength(3);
+        expect(payload.lossSummary).toEqual(SUMMARY);
+        expect(payload.lossy).toBe(true);
+    });
+
+    test('lossView "full" is the default spelled out', async () => {
+        const { content } = await callTool('from_md', { markdown: LOSSY_MD, target: 'docx', lossView: 'full' });
+        const payload = JSON.parse(content[0]!.text);
+        expect(payload.losses).toHaveLength(3);
+        expect(payload.lossSummary).toEqual(SUMMARY);
+    });
+
+    test('lossView "summary": no losses key, the summary and lossy kept', async () => {
+        const { content, isError } = await callTool('from_md', { markdown: LOSSY_MD, target: 'docx', lossView: 'summary' });
+        expect(isError).toBe(false);
+        const payload = JSON.parse(content[0]!.text);
+        expect('losses' in payload).toBe(false);
+        expect(payload.lossSummary).toEqual(SUMMARY);
+        expect(payload.lossy).toBe(true);
+        expect(payload.mode).toBe('inline');
+    });
+
+    test('lossView "summary" in file mode, and on to_md and convert', async () => {
+        const dir = join(FIXTURES, '..', 'tmp-mcp-test-loss-view');
+        mkdirSync(dir, { recursive: true });
+        const filed = JSON.parse((await callTool('from_md', {
+            markdown: LOSSY_MD, target: 'docx', outPath: join(dir, 'out.docx'), lossView: 'summary',
+        })).content[0]!.text);
+        rmSync(dir, { recursive: true, force: true });
+        expect(filed.mode).toBe('file');
+        expect('losses' in filed).toBe(false);
+        expect(filed.lossSummary).toEqual(SUMMARY);
+
+        const md = JSON.parse((await callTool('to_md', { path: SAMPLE_DOCX_PATH, at: CONVERTED_AT, lossView: 'summary' })).content[0]!.text);
+        expect('losses' in md).toBe(false);
+        expect(Array.isArray(md.lossSummary)).toBe(true);
+
+        const odt = JSON.parse((await callTool('convert', { path: SAMPLE_DOCX_PATH, target: 'odt', lossView: 'summary' })).content[0]!.text);
+        expect('losses' in odt).toBe(false);
+        expect(Array.isArray(odt.lossSummary)).toBe(true);
+    });
+
+    test('an unknown lossView is a usage error, checked before the input is read', async () => {
+        for (const [tool, args] of [
+            ['to_md', { path: join(FIXTURES, 'does-not-exist.docx') }],
+            ['from_md', { path: join(FIXTURES, 'does-not-exist.md'), target: 'docx' }],
+            ['convert', { path: join(FIXTURES, 'does-not-exist.docx'), target: 'odt' }],
+        ] as const) {
+            const { content, isError } = await callTool(tool, { ...args, lossView: 'grouped' });
+            expect(isError).toBe(true);
+            const payload = JSON.parse(content[0]!.text);
+            expect(payload.error).toBe('argument lossView: expected "full" or "summary", got "grouped"');
+            expect(payload.usage).toBe(true);
+        }
+    });
+
+    test('the three ledger tools declare lossView and recommend the summary; to_html does not', () => {
+        for (const name of ['to_md', 'from_md', 'convert']) {
+            const def = TOOLS.find((t) => t.name === name)!;
+            expect(def.inputSchema.properties.lossView?.type).toBe('string');
+            expect(def.description).toContain('lossSummary');
+            expect(def.description).toContain('"lossView": "summary"');
+        }
+        expect(TOOLS.find((t) => t.name === 'to_html')!.inputSchema.properties.lossView).toBeUndefined();
+    });
+});
+
 describe('callTool — to_html', () => {
     test('happy path — no losses field (the renderer does not itemise its drops)', async () => {
         const { content, isError } = await callTool('to_html', { markdown: '# Title\n\nSome *text*.\n' });

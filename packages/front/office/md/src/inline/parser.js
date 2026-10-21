@@ -97,7 +97,8 @@ export const inlineParser = {
         } = common;
 
         const { C_TILDE, reSpnl } = regex;
-        const { makeText, fromCodePoint, trim, isSpace } = helpers;
+        const { makeText, makeMath, mathSpanEnd, fromCodePoint, trim, isSpace } = helpers;
+        const C_DOLLAR = 0x24;
         const { installEscapes }        = escapes;
         const { installCodeSpan }       = codeSpan;
         const { installAutolink }       = autolink;
@@ -114,7 +115,10 @@ export const inlineParser = {
                 delimiters: null,
                 brackets: null,
                 refmap: {},
-                options: opts || {}
+                options: opts || {},
+                // Per-parse syntax flags (`md.parse` sets `math` when an
+                // installed extension declares `inlineSyntax: ['math']`).
+                flags: {}
             };
 
             ip.match = function(re) {
@@ -140,10 +144,41 @@ export const inlineParser = {
             installLink(ip);
             installLineBreak(ip);
 
+            // Math spans (`flags.math`): a `$…$` / `$$…$$` span is claimed
+            // as one math node before any other inline construct can split
+            // it (code-span precedence) — so `$H~2~O$` is no strikethrough.
+            ip.parseMathSpan = function(block) {
+                const end = mathSpanEnd(this.subject, this.pos);
+                if (end < 0) return false;
+                const display = this.subject.charCodeAt(this.pos + 1) === C_DOLLAR;
+                const k = display ? 2 : 1;
+                block.appendChild(makeMath(this.subject.slice(this.pos + k, end - k), display));
+                this.pos = end;
+                return true;
+            };
+            // A plain string stops before a `$` that opens a math span.
+            const parseStringBase = ip.parseString;
+            ip.parseString = function(block) {
+                const start = this.pos;
+                if (!parseStringBase.call(this, block)) return false;
+                if (!this.flags.math) return true;
+                const node = block.lastChild;
+                const m = node.literal;
+                for (let k = m.indexOf('$', 1); k > 0; k = m.indexOf('$', k + 1)) {
+                    if (mathSpanEnd(this.subject, start + k) > 0) {
+                        node.literal = m.slice(0, k);
+                        this.pos = start + k;
+                        break;
+                    }
+                }
+                return true;
+            };
+
             ip.parseInline = function(block) {
                 let res;
                 const c = this.peek();
                 if (c === -1) return false;
+                if (c === C_DOLLAR && this.flags.math && this.parseMathSpan(block)) return true;
                 switch (c) {
                     case C_NEWLINE:       res = this.parseNewline(block); break;
                     case C_BACKSLASH:     res = this.parseBackslash(block); break;
@@ -171,7 +206,8 @@ export const inlineParser = {
                 return true;
             };
 
-            ip.parse = function(block, refmap) {
+            ip.parse = function(block, refmap, flags) {
+                this.flags = flags || {};
                 const raw = block.stringContent || '';
                 this.subject = trim(raw);
                 let leadTrim = 0;
@@ -179,6 +215,7 @@ export const inlineParser = {
                 this.pos = 0;
                 this.delimiters = null;
                 this.brackets = null;
+                this._htmlEnds = null;
                 if (refmap) this.refmap = refmap;
 
                 const wantSourcepos = !!this.options.sourcepos;
@@ -245,7 +282,7 @@ export const inlineParser = {
         }
 
         const ip = createInlineParser(options);
-        function parse(block, refmap) { ip.parse(block, refmap); }
+        function parse(block, refmap, flags) { ip.parse(block, refmap, flags); }
         return { parse };
     }
 };

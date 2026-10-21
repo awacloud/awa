@@ -53,7 +53,7 @@ mandatory for very large files.
 ## Resource bounds
 
 `xlsx.read`, `docx.read` and `pptx.read` accept the ZIP-decompression limits
-of `opc.read` (`maxParts`, `maxUncompressed`, `maxRatio`; see the
+of `opc.read` (`maxParts`, `maxUncompressed`, `maxRatio`, `maxDepth`; see the
 [security section](../../README.md#security)) in their options object. A key
 you leave out keeps the default and `0` disables that check. For `xlsx.read`
 the same object also carries the sheet-size caps:

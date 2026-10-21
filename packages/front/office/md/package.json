@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/md",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Matthieu Bouilloux",
@@ -49,7 +49,8 @@
   },
   "awa": {
     "maturity": "L4",
-    "coverageFloor": 0.85
+    "coverageFloor": 0.947,
+    "coverageBasis": ["src/**"]
   },
   "repository": {
     "type": "git",

@@ -21,8 +21,10 @@ bun packages/front/office/oconv/tests/_fixtures/gen-odp-fixtures.js
 
 | File | Bytes | SHA-256 | Content |
 |---|---|---|---|
-| `odp-structured.odp` | 1925 | `5fa471393570bab4465155135094b5b3763b03e4227577265a7bd51d0f43c30c` | 2 slides, each with a `presentation:class="title"` frame + a plain body text-box frame (2 paragraphs on slide 1, 1 on slide 2); slide 1 also carries speaker notes |
-| `odp-media.odp` | 1899 | `645825e42b0c53cfd14af39f17a550b51dacef775647b3f8a73b5861721731ce` | 1 slide, NO title frame, one body paragraph, one embedded `<draw:image>` frame, speaker notes |
+| `odp-structured.odp` | 2065 | `e51edd1f4f17293719cddb8ce06af125b9e5662575dc315d35420961affa6f04` | 2 slides, each with a `presentation:class="title"` frame + a plain body text-box frame (2 paragraphs on slide 1, 1 on slide 2); slide 1 also carries speaker notes |
+| `odp-media.odp` | 2051 | `4133caf6eb761dc6ce3ecdd2dd20b116a4e54f404a2f4971164e0d33086f5ee2` | 1 slide, NO title frame, one body paragraph, one embedded `<draw:image>` frame, speaker notes |
+
+Regenerated 2026-10-15 with the same generators after the odf writer fixes for schema validity (no empty `office:settings`, a table column when the model has none, a master page for every slide, the custom-shape and tracked-change fixes); the odp speaker notes are now a `presentation:class="notes"` text-box frame, as the schema wants inside `<presentation:notes>`. The readings recorded below are unchanged (the oconv suite passes on the new bytes).
 
 **Why odp instead of a second real-world source**: Apache POI's
 `test-data` tree has no `.odp` content at all (POI does not implement

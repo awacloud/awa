@@ -1,8 +1,8 @@
 # @awacloud/md
 
-Pure-JavaScript Markdown parser and serializer for the browser, built on CommonMark 0.31 and the GitHub Flavored Markdown extensions (tables, task lists, strikethrough, extended autolinks, the disallowed raw HTML filter). It parses to a CommonMark-compatible AST, renders HTML, Markdown (CommonMark + GFM roundtrip) and XML, offers opt-in extras (frontmatter, math, footnotes, wikilinks, admonitions, highlight, sub/superscript, table of contents, emoji, mermaid) and can assemble Markdown documents into one self-contained HTML page. The only dependency is [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.0.0/packages/front/fw); no Node API is used.
+Pure-JavaScript Markdown parser and serializer for the browser, built on CommonMark 0.31 and the GitHub Flavored Markdown extensions (tables, task lists, strikethrough, extended autolinks, the disallowed raw HTML filter). It parses to a CommonMark-compatible AST, renders HTML, Markdown (CommonMark + GFM roundtrip) and XML, offers opt-in extras (frontmatter, math, footnotes, wikilinks, admonitions, highlight, sub/superscript, table of contents, emoji, mermaid) and can assemble Markdown documents into one self-contained HTML page. The only dependency is [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/fw); no Node API is used.
 
-Coverage claim, with its limit: every example of the vendored CommonMark 0.31.2 specification passes, while the GFM extensions are covered by a hand-curated set of cases, not by the full GFM example list; the extras are covered by their own tests only. See the [coverage guide](./docs/guide/coverage.md).
+Coverage claim, with its limit: every example of the vendored CommonMark 0.31.2 specification passes; of the GFM 0.29 specification's 670 examples, 661 pass, and the 9 others are nested strong emphasis, where GFM 0.29 and CommonMark 0.31.2 disagree and md follows CommonMark; the extras are covered by their own tests only. See the [coverage guide](./docs/guide/coverage.md).
 
 ## Installation
 
@@ -89,7 +89,7 @@ html.startsWith('<!DOCTYPE html>');   // true: one file, no external reference
 
 ## The `.use(...)` hook
 
-Each `md` instance exposes `.use(ext)` to plug in an extra. The contract is `{ name, install(md) }`: `install` receives the `md` API and patches `parse` / `render` / `renderHtml` according to its needs. Idempotent: registering an extra with the same name is a no-op.
+Each `md` instance exposes `.use(ext)` to plug in an extra. The contract is `{ name, install(md) }`: `install` receives the `md` API and patches `parse` / `render` / `renderHtml` according to its needs. Idempotent: registering an extra with the same name is a no-op. An extra may also carry `inlineSyntax: ['math']` (`mdMath` does): `md.parse` then has the inline parser claim `$…$` / `$$…$$` spans first, like code spans, so `$H~2~O$` and `$a*b*c$` keep their LaTeX whatever the install order.
 
 ```js
 const md2           = fw.runtime.resolve('md').createMd();
@@ -177,7 +177,7 @@ The suite includes the CommonMark spec examples (`tests/commonmark-suite.test.js
 
 ## See also
 
-- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.0.0/packages/front/fw): `ModuleRuntime` + shared helpers
+- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/fw): `ModuleRuntime` + shared helpers
 - [CommonMark 0.31](https://spec.commonmark.org/0.31.2/): implemented spec
 - [GitHub Flavored Markdown](https://github.github.com/gfm/): GFM extensions
 
@@ -211,6 +211,6 @@ See [`docs/api/bundles/README.md`](./docs/api/bundles/README.md).
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/md`](https://github.com/awacloud/awa/tree/@awacloud/md@1.0.0/packages/front/office/md)
+- Source: [`packages/front/office/md`](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/office/md)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/SECURITY.md)
+- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/SECURITY.md)

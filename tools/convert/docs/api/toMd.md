@@ -26,6 +26,7 @@ On success, a [`ToMdOutput`](./types.md#tomdoutput):
 | `error` | `null` | Marks success. |
 | `markdown` | `string` | The Markdown, with a YAML front matter block giving provenance and heading anchors. |
 | `losses` | [`Loss[]`](./types.md#loss) | What the conversion could not carry across. |
+| `lossSummary` | [`LossSummaryEntry[]`](./types.md#losssummaryentry) | `losses` grouped by `code` + `detail`, with a count, in order of first occurrence. |
 | `lossy` | `boolean` | `losses.length > 0`. |
 
 On failure, a [`CoreError`](./types.md#coreerror). The function never
@@ -65,7 +66,7 @@ sourceBytes: 1556
 sourceSha256: 7be541047cdb2255188fdf68ed6ddc98c47ed22332093df494dcb3f5c7f60b7c
 convertedAt: 2026-01-01T00:00:00.000Z
 converter: oconv
-converterVersion: 1.0.0
+converterVersion: 1.1.0
 blocks: 6
 anchors:
   - { level: 1, anchor: sovereign-rag-ingestion }

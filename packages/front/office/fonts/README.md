@@ -2,7 +2,7 @@
 
 Pure JavaScript library to read, write and subset **OpenType** and
 **TrueType** fonts in the browser. No runtime dependency beyond
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.0.0/packages/front/fw):
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.1.0/packages/front/fw):
 SFNT container and table directory, table parsing and serialization,
 quadratic TrueType outlines, composite glyphs, WOFF/WOFF2/TTC containers and a
 TrueType subsetter for PDF embedding.
@@ -26,6 +26,16 @@ Known limits, so they are not a surprise:
   transformed `glyf` / `loca` table is not reversed.
 - `subsetForPdf` subsets TrueType (`glyf`) outlines only; CFF fonts are
   rejected.
+- An `avar` version 2 table is read (its segment maps, and the offsets of
+  its index map and variation store), but coordinate normalisation
+  applies the segment maps only, not the version 2 variation-store step.
+- A TrueType contour starts where FreeType starts it (on point 0 when it is
+  on-curve, else on the last point when that is on-curve, else on the midpoint
+  of the last and first points), so `Path.commands` and `toSvgPath()` begin
+  there and not on the first on-curve point: for a contour that has an
+  on-curve point the outline drawn is the same, only the command order of a
+  contour whose point 0 is off-curve differs from a renderer that starts
+  elsewhere.
 - Apple AAT state-machine bodies (`morx`, non-format-0 `kerx`, `prop`) are
   returned as `{ parsed: false }`; `ankr` and `lcar` expose raw lookup bytes.
 
@@ -130,6 +140,32 @@ try {
     } else { throw e; }
 }
 ```
+
+### WOFF2: load the Brotli dictionary first
+
+A WOFF2 body is Brotli-compressed, and most bodies use Brotli's static
+dictionary. `@awacloud/fw` ships that dictionary as a separate file
+(`io/compress/brotli_dict.bin`, 122,784 bytes) and loads it only when the
+caller asks: load it once per runtime before decoding WOFF2, or the
+decoder throws the `ContractError` `fonts/woff2-no-dictionary`.
+
+```js
+import fw from '@awacloud/fw';
+import { fw_require, modules } from '@awacloud/fonts';
+import { readFileSync } from 'node:fs';
+
+for (const m of [...fw_require, ...modules]) fw.runtime.register(m);
+const words = fw.runtime.resolve('brotliDictWords');
+// Bun / Node:
+words.setBlob(new Uint8Array(readFileSync(new URL(import.meta.resolve('@awacloud/fw/io/compress/brotli_dict.bin')))));
+// Browser: await words.load('/node_modules/@awacloud/fw/src/io/compress/brotli_dict.bin');
+
+const { tables } = fw.runtime.resolve('fontWoff2').decode(woff2Bytes);
+```
+
+A WOFF or WOFF2 body that does not decompress throws the typed
+`fonts/woff1-bad-inflate` or `fonts/woff2-bad-brotli`, with the
+decoder's own error as `cause`.
 
 ## Security — parsing untrusted fonts
 
@@ -306,6 +342,6 @@ Copyright (c) 2026 AwaCloud SAS
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/fonts`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.0.0/packages/front/office/fonts)
+- Source: [`packages/front/office/fonts`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.1.0/packages/front/office/fonts)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/fonts@1.0.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/fonts@1.1.0/SECURITY.md

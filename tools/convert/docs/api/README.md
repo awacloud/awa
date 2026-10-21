@@ -14,7 +14,7 @@ when an export, a CLI verb or an MCP tool has no page or section here.
 | `toHtml` | function | [toHtml.md](./toHtml.md) |
 | `isCoreError` | function | [isCoreError.md](./isCoreError.md) |
 | `TO_MD_FORMATS`, `FROM_MD_TARGETS`, `CONVERT_PAIRS` | constants | [types.md](./types.md#constants) |
-| `Loss`, `CoreError`, `ToMdInput`, `ToMdOutput`, `ToMdResult`, `FromMdInput`, `FromMdOutput`, `FromMdResult`, `ConvertInput`, `ConvertOutput`, `ConvertResult`, `ToHtmlInput`, `ToHtmlOutput`, `ToHtmlResult` | types | [types.md](./types.md) |
+| `Loss`, `LossSummaryEntry`, `CoreError`, `ToMdInput`, `ToMdOutput`, `ToMdResult`, `FromMdInput`, `FromMdOutput`, `FromMdResult`, `ConvertInput`, `ConvertOutput`, `ConvertResult`, `ToHtmlInput`, `ToHtmlOutput`, `ToHtmlResult` | types | [types.md](./types.md) |
 
 ## CLI — `src/index.ts`
 

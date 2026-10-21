@@ -62,7 +62,7 @@ export const pptxTable = {
 
         // --- Cell parse / render ---
 
-        function parseCell(tcEl) {
+        function parseCell(tcEl, opts) {
             const out = {};
             const extras = [];
             for (const k of ['gridSpan', 'rowSpan']) {
@@ -73,7 +73,7 @@ export const pptxTable = {
             }
             for (const c of tcEl.children) {
                 if (c.type !== 'element') continue;
-                if (c.name === 'a:txBody')      out.txBody = dml.parseTextBody(c);
+                if (c.name === 'a:txBody')      out.txBody = dml.parseTextBody(c, opts);
                 else if (c.name === 'a:tcPr')   out.tcPr = c;
                 else                            extras.push(c);
             }
@@ -106,14 +106,14 @@ export const pptxTable = {
 
         // --- Row parse / render ---
 
-        function parseRow(trEl) {
+        function parseRow(trEl, opts) {
             const out = {
                 height: trEl.attrs.h != null ? Number(trEl.attrs.h) : 370840,
                 cells: []
             };
             for (const c of trEl.children) {
                 if (c.type !== 'element') continue;
-                if (c.name === 'a:tc') out.cells.push(parseCell(c));
+                if (c.name === 'a:tc') out.cells.push(parseCell(c, opts));
             }
             return out;
         }
@@ -128,7 +128,7 @@ export const pptxTable = {
         const FLAG_ATTRS = ['firstRow', 'lastRow', 'firstCol', 'lastCol',
                              'bandRow', 'bandCol'];
 
-        function parseTable(tblEl) {
+        function parseTable(tblEl, opts) {
             const out = { columns: [], rows: [] };
             const tblPr = xml.findChild(tblEl, 'a:tblPr');
             if (tblPr) {
@@ -149,7 +149,7 @@ export const pptxTable = {
                 }
             }
             for (const tr of xml.findAll(tblEl, 'a:tr')) {
-                out.rows.push(parseRow(tr));
+                out.rows.push(parseRow(tr, opts));
             }
             return out;
         }
@@ -181,8 +181,9 @@ export const pptxTable = {
          * Parse a `<p:graphicFrame>` if it contains a DrawingML table.
          * Returns `null` when the graphicFrame holds something else
          * (e.g. a chart) — the caller should preserve the element raw.
+         * `opts.typedRunColors`: see `drawingml.parseTextBody`.
          */
-        function parseGraphicFrame(gfEl) {
+        function parseGraphicFrame(gfEl, opts) {
             const graphic = xml.findChild(gfEl, 'a:graphic');
             if (!graphic) return null;
             const gd = xml.findChild(graphic, 'a:graphicData');
@@ -190,7 +191,7 @@ export const pptxTable = {
             const tbl = xml.findChild(gd, 'a:tbl');
             if (!tbl) return null;
 
-            const out = parseTable(tbl);
+            const out = parseTable(tbl, opts);
             out.type = 'table';
 
             const nv = xml.findChild(gfEl, 'p:nvGraphicFramePr');

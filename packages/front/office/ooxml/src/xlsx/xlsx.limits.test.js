@@ -237,7 +237,7 @@ describe('xlsx.read — archive limits', () => {
     test('defaults are unchanged', () => {
         const { opc } = build();
         expect(opc.defaultLimits).toEqual(
-            { maxParts: 1024, maxUncompressed: 268435456, maxRatio: 200 });
+            { maxParts: 1024, maxUncompressed: 268435456, maxRatio: 200, maxDepth: 1000 });
     });
 
     test('zero-filled part: default throws opc/zip-bomb on maxRatio', () => {

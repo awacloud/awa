@@ -86,12 +86,15 @@ delete `doc.package` altogether.
 **Not carried**: the extra attributes and children of manifest entries
 (`manifest:size`, encryption data). **Not restored**: the original position of
 a frame inside a paragraph — the read side keeps it in the paragraph's
-`_extras`, which a re-write emits after the runs. Inside a `text:span` the
+`_extras`, which a re-write emits after the runs, unless the document is read
+with `odt.read(bytes, { framesInRuns: true })`, which types it as a `frame`
+run at its place in the text. Inside a `text:span` the
 markup is kept in place: spacing elements (`text:s`, `text:tab`,
 `text:line-break`), nested spans with their own styles, links, fields and
 frames anchored in the span keep their position (see
-[text/paragraph — Span runs](../api/text/paragraph.md#span-runs)). Zip bytes are not identical
-across writes (entry timestamps); parts and manifest entries are.
+[text/paragraph — Span runs](../api/text/paragraph.md#span-runs)). Zip bytes are identical
+across writes of the same document: every entry carries the date
+1980-01-01 00:00:00, or the `opts.mtime` given to `write`.
 
 ```js
 const odt = runtime.resolve('odt');

@@ -60,7 +60,7 @@ const { renderHtml } = renderHtmlMod.factory(mdErrors.factory());
 | `softbreak` | `'\n'` | Soft-line-break replacement (`' '`, `'<br />\n'`) |
 | `disallowedRawHtml` | `true` | Filters the GFM disallowed raw HTML tags (`<script>`, `<title>`, …); `false` keeps them |
 
-`sanitize` / `sanitizeOpts` are not options of this module: the [`md`](../md.md) facade applies them after calling `renderHtml`, through [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
+`sanitize` / `sanitizeOpts` are not options of this module: the [`md`](../md.md) facade applies them after calling `renderHtml`, through [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
 
 ## Examples
 
@@ -93,6 +93,8 @@ md.renderHtml('a\nb', { softbreak: '<br />\n' });
 ## Notes
 
 - Rendering follows the reference `cmark` output byte-for-byte (block-level newlines, double newline before `</li>` in loose lists, etc.).
+- A fenced code block whose info string starts with a word gets `class="language-<word>"`; a word that already starts with `language-` is used as it is (` ```language-r ` gives `class="language-r"`, not `language-language-r`), as the CommonMark reference renderers write it. With `mdMermaid`, ` ```language-mermaid ` renders as a diagram like ` ```mermaid `.
+- A raw HTML block (`<pre>`, `<script>`, a comment, …) that kept a trailing blank line, because its list item, block quote or the end of the document closed it, is followed by the newline that ends it: `<pre>x` then a blank line gives `<pre>x\n\n`. The parsed `literal` is unchanged.
 - URLs are percent-encoded via the helpers in `src/common.js` (which delegate to `@awacloud/fw/io/codec/url.js#encodeSafe`) — preserves valid `%HH`, encodes unsafe ASCII (`< > \ ` " etc.) and non-ASCII UTF-8.
 - `safe` (the default) is a baseline protection (`data:` URLs blocked, `allowDataImage: true` to re-allow `data:image/*`). For complete XSS hardening, use the facade's `sanitize: true`, which pipes the output through `@awacloud/fw/dom/rendering/sanitize.js` (stricter defaults: `<input>` is out of the allowlist and `data:` URLs are always removed).
 - Throws `RenderError` if the walker encounters an unknown type — guard against extras producing unhandled types by wrapping the renderer or lowering to `html_inline`.
@@ -101,5 +103,5 @@ md.renderHtml('a\nb', { softbreak: '<br />\n' });
 
 - [`render/markdown`](./markdown.md) — roundtrip
 - [`render/xml`](./xml.md) — stable XML AST
-- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — post-render XSS pipe
+- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — post-render XSS pipe
 - [Read+write](../../guide/read-write.md)

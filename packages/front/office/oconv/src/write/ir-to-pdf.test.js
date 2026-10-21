@@ -21,6 +21,7 @@
  */
 /* global Bun */
 import { describe, test, expect, beforeAll } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { pdfWriterRuntime, corpusBytes, CORPUS_PDF } from './pdf/_test-runtime.js';
 import { oconvIrToPdf } from './ir-to-pdf.js';
@@ -175,7 +176,8 @@ async function roundTrip(bytes, name) {
 describe('oconvIrToPdf — descriptor', () => {
     test('name and declared dependencies are the frozen list', () => {
         // RE-PINNED by office/BATCH_38 task 04 (gate G-OF1): `oconvDefaultFaces`
-        // appended LAST. Re-measured, not relaxed — still an exhaustive
+        // appended LAST; then `zlib`, appended LAST and optional (PNG
+        // decoding). Re-measured, not relaxed — still an exhaustive
         // `toEqual` over the whole list.
         expect(oconvIrToPdf.name).toBe('oconvIrToPdf');
         expect(oconvIrToPdf.dependencies).toEqual([
@@ -185,8 +187,25 @@ describe('oconvIrToPdf — descriptor', () => {
             'oconvPdfRenderList', 'oconvPdfRenderCode',
             'oconvPdfRenderTable', 'oconvPdfRenderImage',
             'pdfBuilder', 'pdfFontEmbed', 'fonts',
-            'oconvDefaultFaces'
+            'oconvDefaultFaces',
+            'zlib',
+            'standard14Lookup'
         ]);
+    });
+
+    test('`standard14Lookup` is the optional last dependency: the Standard 14 metrics PDF 2.0 requires, or the old dictionaries', () => {
+        const rt = pdfWriterRuntime();
+        const args = oconvIrToPdf.dependencies.slice(0, 15).map((n) => rt.resolve(n));
+        const ir = emissionDocument();
+        const latin1 = (bytes) => Array.from(bytes, (b) => String.fromCharCode(b)).join('');
+        const bare = latin1(oconvIrToPdf.factory(...args).irToPdf(ir).bytes);
+        expect(bare).toContain('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+        expect(bare).not.toContain('/FontDescriptor');
+        const full = latin1(oconvIrToPdf.factory(...args, rt.resolve('standard14Lookup')).irToPdf(ir).bytes);
+        expect(full).toContain('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 255 /Widths [');
+        expect(full).toContain('/Type /FontDescriptor /FontName /Helvetica');
+        // the runtime-resolved instance is the second
+        expect(latin1(irToPdf.irToPdf(ir).bytes)).toBe(full);
     });
 
     test('the resolved instance exposes exactly `RESOURCE_NAMES` and `irToPdf`', () => {
@@ -311,13 +330,16 @@ describe('oconvIrToPdf — determinism', () => {
         expect(a.every((v, i) => v === b[i])).toBe(true);
     });
 
-    test('no date and no /ID reach the file — and the clock-free premise is re-derived, not assumed', async () => {
+    test('no date reaches the file, the /ID is derived from the content — and the clock-free premise is re-derived, not assumed', async () => {
         const bytes = irToPdf.irToPdf(emissionDocument()).bytes;
         let latin1 = '';
         for (const b of bytes) latin1 += String.fromCharCode(b);
         expect(latin1).not.toContain('/CreationDate');
         expect(latin1).not.toContain('/ModDate');
-        expect(latin1).not.toContain('/ID');
+        // PDF 2.0 requires /ID: irToPdf never gives one, @awacloud/pdf's
+        // writer derives it from the bytes before the trailer
+        const h = createHash('sha256').update(bytes.subarray(0, latin1.lastIndexOf('trailer\n'))).digest('hex').slice(0, 32).toUpperCase();
+        expect(latin1).toContain(` /ID [<${h}><${h}>]`);
         expect(latin1).toContain('/Producer');
 
         // The upstream half of the property, measured on THIS tree rather
@@ -1028,20 +1050,14 @@ describe('oconvIrToPdf — writeOpts.assets', () => {
         expect([...img.raw]).toEqual([...JPEG]);
     });
 
-    test('a PNG in `assets`: the honest refusal, no /XObject, placeholder drawn', () => {
+    test('a PNG in `assets`: placed through a PNG predictor stream, no loss, no placeholder', () => {
         const written = irToPdf.irToPdf(imageDoc('d.png'), undefined, {
             assets: { 'd.png': PNG }
         });
-        expect(written.losses).toEqual([{
-            code: 'layout/image-dropped',
-            index: '0', kind: 'image',
-            detail: {
-                index: '0', name: 'd.png', alt: 'A',
-                reason: 'unsupported-encoding', bytes: PNG.length, format: 'png'
-            }
-        }]);
-        expect(xobjectsOf(written.bytes)).toBeNull();
-        expect(latin1(written.bytes)).toContain('([image: A])');
+        expect(written.losses).toEqual([]);
+        expect(Object.keys(xobjectsOf(written.bytes).entries)).toEqual(['Im0']);
+        expect(latin1(written.bytes)).toContain('/Predictor 15');
+        expect(latin1(written.bytes)).not.toContain('([image: A])');
     });
 
     test('no `writeOpts` at all: `reason: no-bytes`, byte-identical to passing an empty manifest', () => {

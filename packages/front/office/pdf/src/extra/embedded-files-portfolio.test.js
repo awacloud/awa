@@ -131,6 +131,24 @@ describe('extra/embedded-files-portfolio — /Schema rejections', () => {
             .toBe('pdf/portfolio/bad-schema-field');
     });
 
+    test('the optional /Type /CollectionSchema is not a field (ISO 32000-2 Table 155)', () => {
+        const schema = obj.dict({
+            Type: obj.name('CollectionSchema'),
+            Title: obj.dict({ Subtype: obj.name('S'), N: obj.string(u8('Title')) })
+        });
+        const s = m.typeSchema(schema);
+        expect(Object.keys(s.fields)).toEqual(['Title']);
+        expect(s.fields.Title.displayName).toEqual(u8('Title'));
+        const p = m.typePortfolio(obj.dict({ Type: obj.name('Collection'), Schema: schema }));
+        expect(Object.keys(p.schema.fields)).toEqual(['Title']);
+        // a dictionary under the key Type is still a field definition
+        expect(Object.keys(m.typeSchema(obj.dict({ Type: obj.dict({ Subtype: obj.name('S') }) })).fields))
+            .toEqual(['Type']);
+        // and a field that is neither a dict nor that /Type name still throws
+        expect(code(() => m.typeSchema(obj.dict({ Type: obj.name('CollectionSchema'), F: obj.int(1) }))))
+            .toBe('pdf/portfolio/bad-schema-field');
+    });
+
     test('/Subtype must be a name AND one of the eight known subtypes', () => {
         // Wrong node type — not just a wrong value.
         expect(code(() => m.typeSchemaField('F', obj.dict({ Subtype: obj.name('Q') }))))

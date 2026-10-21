@@ -36,6 +36,8 @@ export const mdInlineLink = {
         const { Node } = nodeApi;
         const { T_LINK, T_IMAGE } = astTypes;
 
+        const MAX_DESTINATION_PARENS = 32;
+
         function installLink(ip) {
             ip.parseLinkTitle = function() {
                 const title = this.match(reLinkTitle);
@@ -57,6 +59,9 @@ export const mdInlineLink = {
                             if (this.peek() !== -1) this.pos += 1;
                         } else if (c === C_OPEN_PAREN) {
                             this.pos += 1; openparens += 1;
+                            // Nesting cap (the spec allows one, cmark uses 32): bounds
+                            // the scan of an unclosed destination.
+                            if (openparens > MAX_DESTINATION_PARENS) return null;
                         } else if (c === C_CLOSE_PAREN) {
                             if (openparens < 1) break;
                             this.pos += 1; openparens -= 1;
@@ -187,10 +192,14 @@ export const mdInlineLink = {
                     opener.node.unlink();
 
                     if (!is_image) {
+                        // Deactivate the earlier link openers. Below an inactive one
+                        // every link opener is inactive already, and `previousLink`
+                        // skips the image openers: each opener is visited once.
                         opener = this.brackets;
-                        while (opener !== null) {
-                            if (!opener.image) opener.active = false;
-                            opener = opener.previous;
+                        if (opener !== null && opener.image) opener = opener.previousLink;
+                        while (opener !== null && opener.active) {
+                            opener.active = false;
+                            opener = opener.previousLink;
                         }
                     }
                     return true;
@@ -203,9 +212,12 @@ export const mdInlineLink = {
             };
 
             ip.addBracket = function(node, index, image) {
-                if (this.brackets !== null) this.brackets.bracketAfter = true;
+                const previous = this.brackets;
+                if (previous !== null) previous.bracketAfter = true;
                 this.brackets = {
-                    node, previous: this.brackets,
+                    node, previous,
+                    // Nearest link (not image) opener below this one.
+                    previousLink: previous === null ? null : (previous.image ? previous.previousLink : previous),
                     previousDelimiter: this.delimiters,
                     index, image, active: true
                 };

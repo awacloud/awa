@@ -117,17 +117,21 @@ export const oconvPdfLinebreak = {
          * @param {object} measurer A `oconvPdfMetrics.createMeasurer()`
          *   instance (`widthOf(text, style, sizePt)`).
          * @param {number} sizePt
-         * @param {string} [styleOverride] Forces every token's style class
-         *   to this value instead of `styleOfRun(node)` — e.g. `'code'` for
-         *   a fenced code block's text, `'italic'` for a blockquote's
-         *   default emphasis or an image's alt text.
+         * @param {string|function(object): string} [styleOverride] A string
+         *   forces every token's style class to this value instead of
+         *   `styleOfRun(node)` — e.g. `'code'` for a fenced code block's
+         *   text, `'italic'` for a blockquote's default emphasis or an
+         *   image's alt text. A function maps each run to its own class
+         *   (a table header: bold, keeping each run's italics and code
+         *   face); a falsy result falls back to `styleOfRun(node)`.
          * @returns {Token[]}
          */
         function tokenize(inlines, measurer, sizePt, styleOverride) {
             const tokens = [];
             for (const node of inlines || []) {
                 if (!node || node.kind !== 'run') continue;
-                const style = styleOverride || styleOfRun(node);
+                const style = (typeof styleOverride === 'function' ? styleOverride(node) : styleOverride)
+                    || styleOfRun(node);
                 const link = (node.link === undefined) ? null : node.link;
                 // Split keeping the separators so run-internal whitespace
                 // survives as explicit space tokens (a break opportunity).
@@ -147,7 +151,9 @@ export const oconvPdfLinebreak = {
          *
          * Algorithm: walk word tokens left to right; a word joins the
          * current line when `currentWidth + pendingSpaceWidth + wordWidth
-         * <= columnPt`. Otherwise the line is flushed and the word starts
+         * <= columnPt` (to within 1e-6 pt: a float-noise tie fits, and a
+         * line flags `overflow` only beyond that tolerance). Otherwise the
+         * line is flushed and the word starts
          * the next one. Leading spaces of a line are dropped; trailing
          * spaces never count toward the line width. The FIRST word of a
          * line always goes on, even when it alone overflows — the typesetter
@@ -167,9 +173,12 @@ export const oconvPdfLinebreak = {
             let pendingSpace = null;
             let overflowLines = 0;
 
+            // Widths are float sums: a line that matches the column to
+            // within this many points fits (no spurious wrap or overflow).
+            const FIT_TOLERANCE = 1e-6;
             const flush = () => {
                 if (current.length === 0) return;
-                const over = width > columnPt;
+                const over = width - columnPt > FIT_TOLERANCE;
                 if (over) overflowLines += 1;
                 lines.push({ tokens: current, width, overflow: over });
                 current = [];
@@ -190,7 +199,7 @@ export const oconvPdfLinebreak = {
                     pendingSpace = null;
                     continue;
                 }
-                if (width + gap + t.width <= columnPt) {
+                if (width + gap + t.width - columnPt <= FIT_TOLERANCE) {
                     if (pendingSpace) { current.push(pendingSpace); width += gap; }
                     current.push(t);
                     width += t.width;
@@ -242,7 +251,7 @@ export const oconvPdfLinebreak = {
          * @param {object} measurer
          * @param {number} sizePt
          * @param {number} columnPt
-         * @param {string} [styleOverride]
+         * @param {string|function(object): string} [styleOverride] See {@link tokenize}.
          * @returns {{lines: Line[], losses: Loss[]}}
          */
         function breakInlines(inlines, measurer, sizePt, columnPt, styleOverride) {

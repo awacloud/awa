@@ -25,6 +25,7 @@ Apple AAT state machines not decoded) are listed in the package README.
 ## Getting started
 
 - [Quick Start](./guide/getting-started.md) — Read a TTF, extract a glyph, list metrics.
+- [Coverage](./guide/coverage.md) — What the package is measured against: public suites, an external validator, wild inputs, a published benchmark.
 - [API: fonts](./api/fonts.md) — Top-level orchestrator (`fonts.read`, `.use()`).
 - [API: sfnt](./api/sfnt/sfnt.md) — SFNT container + table directory.
 - [API: errors](./api/errors.md) — `ParseError` / `ContractError` /
@@ -33,6 +34,6 @@ Apple AAT state machines not decoded) are listed in the package README.
 
 ## See also
 
-- `@awacloud/ooxml` ([docs](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.0.0/packages/front/office/ooxml/docs)) — the sibling package whose docs layout (`api/` + `bundles/` + `guide/`) this one follows.
+- `@awacloud/ooxml` ([docs](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.1.0/packages/front/office/ooxml/docs)) — the sibling package whose docs layout (`api/` + `bundles/` + `guide/`) this one follows.
 - OpenType spec: <https://learn.microsoft.com/en-us/typography/opentype/spec/>.
 - TrueType Reference Manual: <https://developer.apple.com/fonts/TrueType-Reference-Manual/>.

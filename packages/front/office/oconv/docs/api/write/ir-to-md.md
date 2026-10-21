@@ -66,7 +66,7 @@ const ir = doc([
 const meta = {
     sourceFormat: 'docx', sourceName: 'x.docx', sourceBytes: 10,
     sourceSha256: 'abc123', convertedAt: '2026-09-15T00:00:00Z',
-    converter: 'oconv', converterVersion: '1.0.0', engine: 'bun'
+    converter: 'oconv', converterVersion: '1.1.0', engine: 'bun'
 };
 const { markdown, anchors, lossy } = oconvIrToMd.irToMd(ir, meta);
 // markdown starts with the YAML front matter, then "# Title\n\nHello **world**\n"
@@ -91,8 +91,9 @@ and `lossy` is `false`.
   fence widths are `@awacloud/md`'s job (`src/write/ir-to-md.js:8-11`).
 - **The asset manifest's `bytes` field is read from the shape the reader
   really produces.** `imageNode` populates `assets[].bytes` from an IR
-  `image` node's `escapes.docx.bytes` — the nested field `docx-to-ir.js`
-  stores for an embedded image. The array is passed through **by
+  `image` node's `escapes.docx.bytes`, else its `escapes.odt.bytes` — the
+  nested fields `docx-to-ir.js` and `odt-to-ir.js` store for an embedded
+  image. The array is passed through **by
   reference** (the same `Uint8Array`, never copied) and is never serialized
   into the YAML front matter. A flat `escapes.bytes` is not read: no
   shipped reader produces it, so the single nested shape is the contract.
@@ -105,9 +106,19 @@ and `lossy` is `false`.
   loss. See the [loss matrix](../../loss-matrix.md) for the published
   Preserved/Degraded/Dropped classification of `block/dropped` and
   `link/target-missing`.
+- A GFM task item (`listItem.escapes.md.task`, set by the md reader) is
+  written back as `- [ ] ` / `- [x] `, so md → IR → md keeps it. A task
+  item whose first block is not a paragraph has no line for the marker:
+  it records `list/task-marker-dropped` (detail `[x]` or `[ ]`).
 - A table cell's block content is flattened to inline text (paragraphs and
   headings joined by a space); a heading flattened inside a cell produces no
   `#`-heading and contributes **no anchor**.
+- A `\n` in a run's text is a hard line break (an odt `text:line-break`
+  reads as one). In a paragraph it is written as a CommonMark hard break — a
+  backslash at the end of the line — and a break that ends the paragraph is
+  dropped (it has no meaning there). A heading or a table cell cannot hold
+  one: the break becomes a space and records `inline/linebreak-degraded`
+  (detail `hard break`). A code run keeps its newline inside the code span.
 - Capture-free by contract (`fw/no-factory-capture`): the anchor-slug
   algorithm is re-declared inside this module's factory rather than
   imported from `./anchors.js`, and a drift test pins the two copies

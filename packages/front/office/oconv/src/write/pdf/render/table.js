@@ -29,7 +29,8 @@
  *
  * Every cell is measured TWICE, unbroken, with the same tokenizer the layout
  * then breaks with (`oconvPdfLinebreak.tokenize`, header cells measured in
- * their forced bold class so the measurement matches the ink):
+ * their header classes — each run bold, bold italic or monospace — so the
+ * measurement matches the ink):
  *
  * - `minWidth` — the widest single unbreakable WORD token of the cell;
  * - `natWidth` — the widest single block of the cell, unbroken.
@@ -209,26 +210,19 @@ export const oconvPdfRenderTable = {
         }
 
         /**
-         * The forced style class of a HEADER cell. `flowChildren`'s
-         * `styleOverride` is uniform per call, so the choice is per cell:
-         * `'boldItalic'` when every run of the cell is italic, `'bold'`
-         * otherwise (a mixed cell loses its italics — and an inline-code run
-         * in a header loses its monospace face; stated here rather than
-         * recorded, the ink is still there).
+         * The style class of one run of a HEADER cell — handed to
+         * `tokenize` / `flowChildren` as a per-run `styleOverride`
+         * function: inline code keeps its monospace face (`'code'`, not
+         * bold — there is no bold monospace class), an italic run is
+         * `'boldItalic'`, any other run `'bold'`. A mixed cell keeps each
+         * run's face.
          *
-         * @param {object} cell
+         * @param {object} run An IR `run`.
          * @returns {string}
          */
-        function headerStyleOf(cell) {
-            let any = false;
-            let allItalic = true;
-            for (const b of blocksOf(cell)) {
-                for (const r of inlineRunsOf(b, [])) {
-                    any = true;
-                    if (!r.italic) allItalic = false;
-                }
-            }
-            return any && allItalic ? 'boldItalic' : 'bold';
+        function headerStyleOf(run) {
+            if (run && run.code) return 'code';
+            return run && run.italic ? 'boldItalic' : 'bold';
         }
 
         /**
@@ -236,7 +230,7 @@ export const oconvPdfRenderTable = {
          *
          * @param {object} cell
          * @param {object} ctx Renderer context.
-         * @param {string} [override] Forced style class (header cells).
+         * @param {Function} [override] Per-run style mapper (header cells).
          * @returns {{min: number, nat: number}} Padding INCLUDED.
          */
         function measureCell(cell, ctx, override) {
@@ -389,7 +383,7 @@ export const oconvPdfRenderTable = {
          *
          * @param {object} cell IR `cell` node (may be `undefined` — a short
          *   row simply leaves that column empty).
-         * @param {{x: number, width: number, y0: number, override: string|null}} spec
+         * @param {{x: number, width: number, y0: number, override: Function|null}} spec
          *   `x` the cell's LEFT edge, `y0` the block-local y of its content
          *   top (the row's top plus the padding).
          * @param {object} ctx
@@ -516,9 +510,9 @@ export const oconvPdfRenderTable = {
             // --- measure -----------------------------------------------------
             const nat = new Array(colCount).fill(2 * CELL_PAD);
             const min = new Array(colCount).fill(2 * CELL_PAD);
-            /** @type {(string|null)[][]} Per row, per column: the forced class. */
+            /** @type {(Function|null)[][]} Per row, per column: the header run-style mapper. */
             const overrides = rows.map((row) => cellsOf(row).map(
-                (cell) => (row.header ? headerStyleOf(cell) : null)
+                () => (row.header ? headerStyleOf : null)
             ));
             rows.forEach((row, r) => {
                 cellsOf(row).forEach((cell, j) => {

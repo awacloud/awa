@@ -52,6 +52,8 @@ const run = (text, props) => irApi.node('run', { text, ...(props || {}) });
 const n = (kind, props, children) => irApi.node(kind, props, children);
 /** @returns {Object} an IR `document` node. */
 const doc = children => irApi.doc(children);
+// A read w:rFonts also carries every attribute in `fonts` (ooxml).
+const slots = name => ({ ascii: name, hAnsi: name, cs: name });
 
 /** Read the raw OPC package out of the produced bytes. */
 const opcOf = bytes => opcApi.read(bytes);
@@ -135,7 +137,7 @@ describe('oconvIrToDocx — inline code', () => {
         const runs = docxApi.read(bytes).document.body[0].children;
 
         expect(losses).toEqual([]);
-        expect(runs[0].rPr).toEqual({ font: 'Courier New' });
+        expect(runs[0].rPr).toEqual({ font: 'Courier New', fonts: slots('Courier New') });
         expect(runs[0].children[0].value).toBe('npm i');
     });
 
@@ -145,7 +147,7 @@ describe('oconvIrToDocx — inline code', () => {
         const runs = docxApi.read(bytes).document.body[0].children;
 
         expect(losses).toEqual([]);
-        expect(runs[0].rPr).toEqual({ bold: true, font: 'Courier New' });
+        expect(runs[0].rPr).toEqual({ bold: true, font: 'Courier New', fonts: slots('Courier New') });
     });
 
     test('a code run inside a hyperlink carries the font on the inner run, no loss', () => {
@@ -413,6 +415,50 @@ describe('oconvIrToDocx — lists and numbering', () => {
         n('listItem', {}, [n('paragraph', {}, [run(t)])]
             .concat(nested && i === texts.length - 1 ? [nested] : []))));
 
+    /** Concatenated text of a read-back docx paragraph's runs. */
+    const paraText = p => (p.children || [])
+        .flatMap(r => r.children || [])
+        .filter(c => c.type === 'text')
+        .map(c => c.value)
+        .join('');
+
+    /** A task item (`escapes.md.task`) holding the given blocks. */
+    const taskItem = (task, blocks) => n('listItem', { escapes: { md: { task } } }, blocks);
+
+    test('task items: a ☐ / ☒ run leads the first paragraph, no loss', () => {
+        const ir = doc([
+            n('list', { ordered: false }, [
+                taskItem('unchecked', [n('paragraph', {}, [run('todo', { bold: true })])]),
+                taskItem('checked', [n('paragraph', {}, [run('done')])]),
+                n('listItem', {}, [n('paragraph', {}, [run('plain')])])
+            ])
+        ]);
+
+        const { bytes, losses } = irToDocx(ir);
+        const body = docxApi.read(bytes).document.body;
+
+        expect(losses).toEqual([]);
+        expect(body.map(paraText)).toEqual(['☐ todo', '☒ done', 'plain']);
+        // The glyph is its own plain run: the item's bold run stays bold.
+        expect(body[0].children[0].rPr || {}).not.toHaveProperty('bold', true);
+        expect(body[0].children[1].rPr).toHaveProperty('bold', true);
+        expect(body[0].pPr.numPr).toEqual({ numId: 1, ilvl: 0 });
+    });
+
+    test('a task flag on an item without a leading paragraph is a writer loss', () => {
+        const ir = doc([
+            n('list', { ordered: false }, [
+                taskItem('checked', [listOf(false, ['nested'])])
+            ])
+        ]);
+
+        const { bytes, losses } = irToDocx(ir);
+        const body = docxApi.read(bytes).document.body;
+
+        expect(losses).toEqual([{ code: 'list/task-marker-dropped', detail: '[x]' }]);
+        expect(body.map(paraText)).toEqual(['nested']);
+    });
+
     test('two adjacent bullet lists get numId 1 and 2 and re-read as TWO lists', () => {
         const ir = doc([
             listOf(false, ['A1', 'A2']),
@@ -577,6 +623,15 @@ const GRID_BORDERS = {
 const GRID_CELL_MARGINS = { left: { w: 108, type: 'dxa' }, right: { w: 108, type: 'dxa' } };
 /** The prescribed heading sizes (half-points), Heading1..Heading6. */
 const HEADING_SIZES = [32, 28, 26, 24, 22, 22];
+/** The `HorizontalRule` style's paragraph border, as `docx.read` returns it. */
+const RULE_BORDER = {
+    type: 'element', name: 'w:pBdr', attrs: {},
+    children: [{
+        type: 'element', name: 'w:bottom',
+        attrs: { 'w:val': 'single', 'w:sz': '6', 'w:space': '1', 'w:color': 'auto' },
+        children: []
+    }]
+};
 
 /** Every `w:pStyle w:val` referenced in `word/document.xml`, in order. */
 const referencedPStyles = bytes =>
@@ -644,7 +699,7 @@ describe('oconvIrToDocx — styles part (BL-1766)', () => {
         const { bytes } = irToDocx(doc([n('paragraph', {}, [run('x')])]));
         const styles = docxApi.read(bytes).styles;
 
-        expect(styles.docDefaults).toEqual({ rPr: { font: 'Calibri', size: 22 } });
+        expect(styles.docDefaults).toEqual({ rPr: { font: 'Calibri', fonts: slots('Calibri'), size: 22 } });
         expect(styles.styles).toEqual([
             { type: 'paragraph', styleId: 'Normal', name: 'Normal', isDefault: true },
             ...[1, 2, 3, 4, 5, 6].map(level => ({
@@ -653,6 +708,13 @@ describe('oconvIrToDocx — styles part (BL-1766)', () => {
                 pPr: { spacing: { before: 240, after: 80 } },
                 rPr: { bold: true, size: HEADING_SIZES[level - 1] }
             })),
+            { type: 'paragraph', styleId: 'SourceCode', name: 'Source Code', basedOn: 'Normal',
+                pPr: { spacing: { before: 0, after: 0 } },
+                rPr: { font: 'Courier New', fonts: slots('Courier New'), size: 20 } },
+            { type: 'paragraph', styleId: 'BlockText', name: 'Block Text', basedOn: 'Normal',
+                pPr: { indent: { left: 720, right: 720 } } },
+            { type: 'paragraph', styleId: 'HorizontalRule', name: 'Horizontal Rule', basedOn: 'Normal',
+                pPr: { _extras: [RULE_BORDER] } },
             { type: 'table', styleId: 'TableGrid', name: 'Table Grid',
                 tblPr: { borders: GRID_BORDERS, cellMargins: GRID_CELL_MARGINS } }
         ]);
@@ -707,14 +769,21 @@ describe('oconvIrToDocx — styles part (BL-1766)', () => {
         expect(Bun.deepEquals(a.parts['/word/document.xml'], b.parts['/word/document.xml'])).toBe(true);
     });
 
-    test('ledger unchanged: headings + prose stay loss-free, hr stays block/dropped', () => {
+    test('ledger: headings, prose, code, quote and rule are loss-free', () => {
         const clean = doc([
             n('heading', { level: 1 }, [run('T')]),
-            n('paragraph', {}, [run('p')])
+            n('paragraph', {}, [run('p')]),
+            n('codeBlock', { info: 'js', text: 'x();\n' }),
+            n('blockquote', {}, [n('paragraph', {}, [run('q')])]),
+            n('hr')
         ]);
-        expect(irToDocx(clean).losses).toEqual([]);
-        expect(irToDocx(doc([n('hr')])).losses)
-            .toEqual([{ code: 'block/dropped', detail: 'hr' }]);
+        const { bytes, losses } = irToDocx(clean);
+        expect(losses).toEqual([]);
+        // Every style the new blocks reference is defined (non-vacuity).
+        const refs = referencedPStyles(bytes);
+        expect(refs).toEqual(['Heading1', 'SourceCode', 'BlockText', 'HorizontalRule']);
+        const ids = new Set(docxApi.read(bytes).styles.styles.map(s => s.styleId));
+        for (const ref of refs) expect(ids.has(ref)).toBe(true);
     });
 
     test('return leg: docx -> IR keeps heading levels and inline emphasis with the styles part present', () => {
@@ -750,44 +819,123 @@ describe('oconvIrToDocx — styles part (BL-1766)', () => {
 
 /* ── degrades ────────────────────────────────────────────────────────── */
 
-describe('oconvIrToDocx — degrades', () => {
-    test('codeBlock becomes one paragraph per line, with one loss', () => {
-        const ir = doc([n('codeBlock', { info: 'js', text: 'a();\nb();\nc();' })]);
+/** The `pStyle` of a read-back paragraph, or `undefined`. */
+const pStyleOf = p => (p.pPr ? p.pPr.pStyle : undefined);
+
+/** A read-back run's children as text values, `|break` for a line break. */
+const runContent = r => r.children.map(c => (c.type === 'text' ? c.value : '|' + c.type));
+
+describe('oconvIrToDocx — code blocks, quotes and rules', () => {
+    test('codeBlock: ONE SourceCode paragraph, lines split by breaks, no loss', () => {
+        const ir = doc([n('codeBlock', { info: 'js', text: 'a();\n  b();\n\nc();\n' })]);
         const { bytes, losses } = irToDocx(ir);
         const body = docxApi.read(bytes).document.body;
 
-        expect(losses).toEqual([{ code: 'block/degraded', detail: 'codeBlock' }]);
-        expect(body.map(p => p.children[0].children[0].value))
-            .toEqual(['a();', 'b();', 'c();']);
+        expect(losses).toEqual([]);
+        expect(body).toHaveLength(1);
+        expect(pStyleOf(body[0])).toBe('SourceCode');
+        expect(body[0].children).toHaveLength(1);
+        expect(body[0].children[0].rPr).toEqual({ font: 'Courier New', fonts: slots('Courier New') });
+        // The one trailing newline writes no trailing break; a blank line
+        // is two adjacent breaks; leading spaces survive.
+        expect(runContent(body[0].children[0]))
+            .toEqual(['a();', '|break', '  b();', '|break', '|break', 'c();']);
+        expect(documentXmlOf(bytes)).toContain('<w:t xml:space="preserve">  b();</w:t>');
     });
 
-    test('blockquote emits its children in place, with one loss', () => {
+    test('an empty codeBlock still writes its SourceCode paragraph', () => {
+        const { bytes, losses } = irToDocx(doc([n('codeBlock', { info: '', text: '' })]));
+        const body = docxApi.read(bytes).document.body;
+
+        expect(losses).toEqual([]);
+        expect(body.map(pStyleOf)).toEqual(['SourceCode']);
+    });
+
+    test('blockquote: its paragraphs styled BlockText, inline emphasis kept, no loss', () => {
+        const ir = doc([n('blockquote', {}, [
+            n('paragraph', {}, [run('first')]),
+            n('paragraph', {}, [run('second', { italic: true })])
+        ])]);
+        const { bytes, losses } = irToDocx(ir);
+        const body = docxApi.read(bytes).document.body;
+
+        expect(losses).toEqual([]);
+        expect(body.map(pStyleOf)).toEqual(['BlockText', 'BlockText']);
+        expect(body[0].pPr.indent).toBeUndefined();          // the style carries it
+        expect(body[1].children[0].rPr).toEqual({ italic: true });
+    });
+
+    test('blockquote: a non-paragraph child keeps its own mapping and records blockquote-child', () => {
         const ir = doc([
             n('blockquote', {}, [
                 n('paragraph', {}, [run('quoted')]),
-                n('heading', { level: 3 }, [run('quoted heading')])
+                n('heading', { level: 3 }, [run('quoted heading')]),
+                n('list', { ordered: false }, [
+                    n('listItem', {}, [n('paragraph', {}, [run('item')])])
+                ])
             ])
         ]);
         const { bytes, losses } = irToDocx(ir);
         const body = docxApi.read(bytes).document.body;
 
-        expect(losses).toEqual([{ code: 'block/degraded', detail: 'blockquote' }]);
-        expect(body).toHaveLength(2);
-        expect(body[0].children[0].children[0].value).toBe('quoted');
-        expect(body[1].pPr.pStyle).toBe('Heading3');
+        expect(losses).toEqual([
+            { code: 'block/degraded', detail: 'blockquote-child:heading' },
+            { code: 'block/degraded', detail: 'blockquote-child:list' }
+        ]);
+        expect(body.map(pStyleOf)).toEqual(['BlockText', 'Heading3', undefined]);
+        expect(body[2].pPr.numPr).toEqual({ numId: 1, ilvl: 0 });
     });
 
-    test('hr is dropped with a loss', () => {
+    test('a nested blockquote: deeper direct indent, one blockquote:nested loss', () => {
+        const ir = doc([n('blockquote', {}, [
+            n('paragraph', {}, [run('outer')]),
+            n('blockquote', {}, [n('paragraph', {}, [run('inner')])])
+        ])]);
+        const { bytes, losses } = irToDocx(ir);
+        const body = docxApi.read(bytes).document.body;
+
+        expect(losses).toEqual([{ code: 'block/degraded', detail: 'blockquote:nested' }]);
+        expect(body.map(pStyleOf)).toEqual(['BlockText', 'BlockText']);
+        expect(body[0].pPr.indent).toBeUndefined();
+        expect(body[1].pPr.indent).toEqual({ left: 1440, right: 720 });
+    });
+
+    test('hr: an empty HorizontalRule paragraph between its neighbours, no loss', () => {
         const ir = doc([n('paragraph', {}, [run('before')]), n('hr'),
             n('paragraph', {}, [run('after')])]);
         const { bytes, losses } = irToDocx(ir);
         const body = docxApi.read(bytes).document.body;
 
-        expect(losses).toEqual([{ code: 'block/dropped', detail: 'hr' }]);
-        expect(body).toHaveLength(2);
-        expect(body.map(p => p.children[0].children[0].value))
-            .toEqual(['before', 'after']);
+        expect(losses).toEqual([]);
+        expect(body.map(pStyleOf)).toEqual([undefined, 'HorizontalRule', undefined]);
+        expect(body[1].children).toEqual([]);
+        expect(body[2].children[0].children[0].value).toBe('after');
     });
+
+    test('return leg: docx -> IR reads the code block, the quote and the rule back', () => {
+        const ir = doc([
+            n('codeBlock', { info: 'sh', text: 'echo a\n\n  echo b\n' }),
+            n('blockquote', {}, [
+                n('paragraph', {}, [run('q1')]),
+                n('paragraph', {}, [run('q2', { bold: true })])
+            ]),
+            n('hr'),
+            n('paragraph', {}, [run('tail')])
+        ]);
+        const back = docxToIr(docxApi.read(irToDocx(ir).bytes));
+
+        expect(back.losses).toEqual([]);
+        expect(back.ir.children.map(b => b.kind))
+            .toEqual(['codeBlock', 'blockquote', 'hr', 'paragraph']);
+        expect(back.ir.children[0]).toEqual(
+            { kind: 'codeBlock', info: '', text: 'echo a\n\n  echo b' });
+        const quote = back.ir.children[1];
+        expect(quote.children.map(p => p.children[0].text)).toEqual(['q1', 'q2']);
+        expect(quote.children[1].children[0].bold).toBe(true);
+    });
+});
+
+describe('oconvIrToDocx — degrades', () => {
 
     test('a block image is dropped, named by its manifest name', () => {
         const ir = doc([n('image', { name: 'figure.png', alt: 'A figure' })]);
@@ -830,13 +978,15 @@ describe('oconvIrToDocx — degrades', () => {
 
     test('losses are returned in document order', () => {
         const ir = doc([
-            n('hr'),
+            n('blockquote', {}, [n('hr')]),
             n('paragraph', {}, [n('image', { name: 'inline-z.png', alt: '' })]),
             n('image', { name: 'z.png', alt: '' }),
-            n('codeBlock', { info: '', text: 'q' })
+            n('list', { ordered: false }, [
+                n('listItem', {}, [n('codeBlock', { info: '', text: 'q' })])
+            ])
         ]);
-        expect(irToDocx(ir).losses.map(l => l.code)).toEqual([
-            'block/dropped', 'image/dropped', 'image/dropped', 'block/degraded'
+        expect(irToDocx(ir).losses.map(l => l.detail)).toEqual([
+            'blockquote-child:hr', 'inline-z.png', 'z.png', 'listItem-child:codeBlock'
         ]);
     });
 });
@@ -942,11 +1092,11 @@ describe('oconvIrToDocx — opts.assets', () => {
         ).arrayBuffer());
     });
 
-    test('a block image WITH bytes is placed: one image part, image/size-defaulted, no drop', () => {
+    test('a block image WITH bytes is placed: one image part, sized from its header, no loss', () => {
         const ir = doc([n('image', { name: 'figure.png', alt: 'A figure' })]);
         const { bytes, losses } = irToDocx(ir, { assets: { 'figure.png': PNG } });
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'figure.png' }]);
+        expect(losses).toEqual([]);
         const read = docxApi.read(bytes);
         const ids = Object.keys(read.images);
         expect(ids).toHaveLength(1);
@@ -962,7 +1112,7 @@ describe('oconvIrToDocx — opts.assets', () => {
         ])]);
         const { bytes, losses } = irToDocx(ir, { assets: { 'inline.png': PNG } });
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'inline.png' }]);
+        expect(losses).toEqual([]);
         const read = docxApi.read(bytes);
         expect(Object.keys(read.images)).toHaveLength(1);
         const kids = read.document.body[0].children;
@@ -977,7 +1127,7 @@ describe('oconvIrToDocx — opts.assets', () => {
         image.escapes = { docx: { bytes: PNG, contentType: 'image/png' } };
         const { bytes, losses } = irToDocx(doc([image]));
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'carried.png' }]);
+        expect(losses).toEqual([]);
         expect(Object.keys(docxApi.read(bytes).images)).toHaveLength(1);
     });
 
@@ -1036,5 +1186,126 @@ describe('oconvIrToDocx — opts.assets', () => {
         expect([...read.images[id].data]).toEqual([...junk]);
         expect(read.images[id].partName).toBe('/word/media/image1.bin');
         expect(read.images[id].contentType).toBe('application/octet-stream');
+    });
+});
+
+/* ── images: intrinsic size and alt text ─────────────────────────────── */
+
+/** EMUs per inch (DrawingML). */
+const EMU = 914400;
+const u32 = v => [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
+const u16 = v => [(v >>> 8) & 255, v & 255];
+
+/**
+ * A header-only PNG: signature, IHDR (`w` × `h`), an optional pHYs
+ * (`pxPerMetre` on both axes, unit metre), IEND. CRCs are zero — never
+ * checked by a size reader.
+ */
+function pngHeader(w, h, pxPerMetre) {
+    const chunk = (type, data) =>
+        [...u32(data.length), ...[...type].map(c => c.charCodeAt(0)), ...data, 0, 0, 0, 0];
+    return new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        ...chunk('IHDR', [...u32(w), ...u32(h), 8, 2, 0, 0, 0]),
+        ...(pxPerMetre ? chunk('pHYs', [...u32(pxPerMetre), ...u32(pxPerMetre), 1]) : []),
+        ...chunk('IEND', [])
+    ]);
+}
+
+/** A header-only baseline JPEG: SOI, JFIF APP0 (`density`, `units`), SOF0 (`w` × `h`), EOI. */
+function jpegHeader(w, h, density, units = 1) {
+    return new Uint8Array([
+        0xff, 0xd8,
+        0xff, 0xe0, ...u16(16), 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, units,
+        ...u16(density), ...u16(density), 0, 0,
+        0xff, 0xc0, ...u16(17), 8, ...u16(h), ...u16(w), 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1,
+        0xff, 0xd9
+    ]);
+}
+
+/** A header-only GIF89a of `w` × `h`. */
+const gifHeader = (w, h) => new Uint8Array(
+    [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, w & 255, w >> 8, h & 255, h >> 8, 0, 0, 0, 0x3b]);
+
+describe('oconvIrToDocx — image intrinsic size and alt text', () => {
+    /** Write one block image with `bytes` and `alt`; return the ledger and its read-back drawing. */
+    function place(bytes, alt = '') {
+        const { bytes: out, losses } = irToDocx(
+            doc([n('image', { name: 'img', alt })]), { assets: { img: bytes } });
+        const read = docxApi.read(out);
+        const drawing = read.document.body[0].children[0].children
+            .find(c => c.type === 'drawing');
+        return { out, read, losses, drawing };
+    }
+
+    test('PNG without pHYs: 96 dpi, 192 × 96 px → 2 in × 1 in, no loss', () => {
+        const { losses, drawing } = place(pngHeader(192, 96));
+        expect(losses).toEqual([]);
+        expect([drawing.cx, drawing.cy]).toEqual([2 * EMU, EMU]);
+    });
+
+    test('PNG pHYs 5000 px/m (127 dpi): 254 × 127 px → 2 in × 1 in', () => {
+        const { losses, drawing } = place(pngHeader(254, 127, 5000));
+        expect(losses).toEqual([]);
+        expect([drawing.cx, drawing.cy]).toEqual([2 * EMU, EMU]);
+    });
+
+    test('JPEG, JFIF 72 dpi: 144 × 72 px → 2 in × 1 in; JFIF dots per cm too', () => {
+        expect(place(jpegHeader(144, 72, 72)).drawing.cx).toBe(2 * EMU);
+        expect(place(jpegHeader(144, 72, 72)).drawing.cy).toBe(EMU);
+        // 50 dots/cm = 127 dpi: 254 px → 2 in.
+        expect(place(jpegHeader(254, 127, 50, 2)).drawing.cx).toBe(2 * EMU);
+    });
+
+    test('JPEG whose JFIF density is an aspect ratio only (units 0): 96 dpi', () => {
+        const { losses, drawing } = place(jpegHeader(96, 48, 1, 0));
+        expect(losses).toEqual([]);
+        expect([drawing.cx, drawing.cy]).toEqual([EMU, EMU / 2]);
+    });
+
+    test('GIF: 96 × 48 px → 1 in × 0.5 in', () => {
+        const { losses, drawing } = place(gifHeader(96, 48));
+        expect(losses).toEqual([]);
+        expect([drawing.cx, drawing.cy]).toEqual([EMU, EMU / 2]);
+    });
+
+    test('wider than 6 in or taller than 8 in: scaled down to fit, aspect kept', () => {
+        // 12 in × 2 in → 6 in × 1 in.
+        expect(place(pngHeader(1152, 192)).drawing).toMatchObject({ cx: 6 * EMU, cy: EMU });
+        // 1 in × 16 in → 0.5 in × 8 in.
+        expect(place(pngHeader(96, 1536)).drawing).toMatchObject({ cx: EMU / 2, cy: 8 * EMU });
+    });
+
+    test('an unreadable header keeps the default box and image/size-defaulted', () => {
+        const truncated = pngHeader(192, 96).slice(0, 20);            // IHDR cut short
+        const noSof = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);       // SOI, EOI
+        for (const bytes of [truncated, noSof, new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])]) {
+            const { losses, drawing } = place(bytes);
+            expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'img' }]);
+            expect([drawing.cx, drawing.cy]).toEqual([2 * EMU, 1.5 * EMU]);
+        }
+    });
+
+    test('alt text → the drawing description (wp:docPr descr), read back as the IR alt', () => {
+        const { out, drawing } = place(pngHeader(96, 96), 'A bar chart');
+        expect(drawing.description).toBe('A bar chart');
+        const back = docxToIr(docxApi.read(out)).ir;
+        expect(back.children[0].children[0]).toMatchObject({ kind: 'image', alt: 'A bar chart' });
+    });
+
+    test('an empty alt writes no descr attribute', () => {
+        const { out } = place(pngHeader(96, 96));
+        expect(documentXmlOf(out)).not.toContain('descr=');
+    });
+
+    test('an inline image is sized and described too', () => {
+        const ir = doc([n('paragraph', {}, [
+            run('see '), n('image', { name: 'g', alt: 'gif' }), run(' here')
+        ])]);
+        const { bytes, losses } = irToDocx(ir, { assets: { g: gifHeader(48, 96) } });
+        const drawing = docxApi.read(bytes).document.body[0].children[1].children[0];
+
+        expect(losses).toEqual([]);
+        expect(drawing).toMatchObject({ cx: EMU / 2, cy: EMU, description: 'gif' });
     });
 });

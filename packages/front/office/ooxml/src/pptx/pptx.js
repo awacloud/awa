@@ -13,7 +13,7 @@
  *
  * | Part | Module | Coverage |
  * |------|--------|----------|
- * | `ppt/presentation.xml` | this module | sldMasterIdLst, sldIdLst, sldSize |
+ * | `ppt/presentation.xml` | this module | sldMasterIdLst, sldIdLst, sldSz (as `sldSize`) |
  * | `ppt/slides/slide*.xml` | `pptxSlide` | shapes with typed placeholders + text bodies |
  * | `ppt/slideLayouts/slideLayout*.xml` | `pptxSlide` | layouts with placeholders |
  * | `ppt/slideMasters/slideMaster*.xml` | `pptxSlide` | master content + sldLayoutIdLst + clrMap |
@@ -100,21 +100,32 @@ export const pptx = {
 
         // --- Image walking helpers ---
 
+        /** Resolve a picture's `embedRef` through its part's relationships. */
+        function attachPictureImage(shape, rels, part, pkg) {
+            const rel = rels.find(r => r.Id === shape.embedRef);
+            if (!rel || rel.Type !== picMod.REL_TYPE_IMAGE) return;
+            const partName = relsMod.resolveTarget(part, rel.Target);
+            const data = pkg.parts[partName];
+            if (!data) return;
+            const declared = lookupCT(pkg, partName);
+            shape.image = shape.image || {};
+            shape.image.data = data;
+            shape.image.contentType = declared || picMod.sniffImageType(data);
+            shape.image.rId = shape.embedRef;
+        }
+
+        /** The pictures of a slide layout or a slide master: images only. */
+        function attachTemplateImages(template, part, pkg) {
+            const rels = pkg.rels[part] || [];
+            for (const shape of template.shapes || []) {
+                if (shape.type === 'picture' && shape.embedRef) attachPictureImage(shape, rels, part, pkg);
+            }
+        }
+
         function attachSlideImages(slide, slideRels, slidePart, pkg) {
             for (const shape of slide.shapes || []) {
                 if (shape.type === 'picture' && shape.embedRef) {
-                    const rel = slideRels.find(r => r.Id === shape.embedRef);
-                    if (rel && rel.Type === picMod.REL_TYPE_IMAGE) {
-                        const partName = relsMod.resolveTarget(slidePart, rel.Target);
-                        const data = pkg.parts[partName];
-                        if (data) {
-                            const declared = lookupCT(pkg, partName);
-                            shape.image = shape.image || {};
-                            shape.image.data = data;
-                            shape.image.contentType = declared || picMod.sniffImageType(data);
-                            shape.image.rId = shape.embedRef;
-                        }
-                    }
+                    attachPictureImage(shape, slideRels, slidePart, pkg);
                 } else if (shape.type === 'chart' && shape.chartRef) {
                     const rel = slideRels.find(r => r.Id === shape.chartRef);
                     if (rel && rel.Type === chartPartMod.REL_TYPE_CHART) {
@@ -178,7 +189,7 @@ export const pptx = {
         // The archive limits of `opc.read`, picked from the read options;
         // an absent key keeps the opc default, 0 disables that check.
         function archiveLimits(o) {
-            return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio } : undefined;
+            return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio, maxDepth: o.maxDepth } : undefined;
         }
 
         /**
@@ -192,18 +203,48 @@ export const pptx = {
          *        `opc.read` (default 256 MiB in total; `0` disables).
          * @param {number} [opts.maxRatio] archive limit forwarded to
          *        `opc.read` (default 200 per entry; `0` disables).
+         * @param {number} [opts.maxDepth] archive limit forwarded to
+         *        `opc.read`: element depth of any XML part (default
+         *        1000; `0` disables).
+         * @param {boolean} [opts.typedRunColors] type the text-run fills a
+         *        bare `'RRGGBB'` cannot express (scheme colours, colour
+         *        transforms) as `rPr.color = { rgb | schemeColor, mods? }`
+         *        in slides, layouts, masters and table cells (default
+         *        `false`: such fills stay verbatim in `rPr._extras`).
+         * @param {boolean} [opts.slideExtrasByPart] keep the leftovers of
+         *        each slide, layout and master's `<p:cSld>` in `cSldExtras`
+         *        and those of its root in `_extras` (default `false`: both
+         *        go to `_extras`, the root's replacing `<p:cSld>`'s).
          */
         function read(bytes, opts) {
             const pkg = opc.read(bytes, archiveLimits(opts));
+            const textOpts = { typedRunColors: !!(opts && opts.typedRunColors) };
+            if (opts && opts.slideExtrasByPart) textOpts.slideExtrasByPart = true;
             const { value: result, unmodelledParts } =
-                trackUnmodelledParts(pkg, readPackage);
+                trackUnmodelledParts(pkg, p => {
+                    try {
+                        return readPackage(p, textOpts);
+                    } catch (e) {
+                        throw typedPartXml(e);
+                    }
+                });
             result.unmodelledParts = unmodelledParts;
             return result;
         }
 
+        // A part the read pass parses without a typed wrapper of its own
+        // (slides, layouts, masters, theme, charts …): the fw XML parser's
+        // `xml/parse-error` becomes this package's ParseError, the parser's
+        // error kept as `cause`. Any other error is returned as it is.
+        function typedPartXml(e) {
+            if (!e || e.code !== 'xml/parse-error') return e;
+            return new ParseError('pptx/invalid-part-xml',
+                `pptx: failed to parse a part's XML (${e.message})`, { cause: e });
+        }
+
         // The read pass proper, over an access-tracking view of
         // `pkg.parts` (see `ooxmlShared.trackUnmodelledParts`).
-        function readPackage(pkg) {
+        function readPackage(pkg, textOpts) {
             const pkgRels = pkg.rels['/'] || [];
             const docRel = pkgRels.find(r => r.Type === REL_TYPE_DOC
                                            || r.Type.endsWith('/officeDocument'));
@@ -241,9 +282,10 @@ export const pptx = {
                   }))
                 : [];
 
-            // Optional sldSize.
+            // Optional slide size: `p:sldSz` (CT_SlideSize); `p:sldSize` is
+            // what this package wrote before it used the schema's name.
             let sldSize;
-            const ssEl = xml.findChild(presRoot, 'p:sldSize');
+            const ssEl = xml.findChild(presRoot, 'p:sldSz') || xml.findChild(presRoot, 'p:sldSize');
             if (ssEl) {
                 sldSize = {
                     cx: Number(ssEl.attrs.cx),
@@ -266,7 +308,7 @@ export const pptx = {
                 const sBytes = pkg.parts[slidePart];
                 if (!sBytes) continue;
                 const slideRoot = mc.process(xml.parse(decodeText(sBytes)));
-                const slide = slideMod.parseSlide(slideRoot);
+                const slide = slideMod.parseSlide(slideRoot, textOpts);
                 // Resolve picture images via the slide's own relationships.
                 const slideRels = pkg.rels[slidePart] || [];
                 slide._partName = slidePart;
@@ -281,7 +323,8 @@ export const pptx = {
                         const lBytes = pkg.parts[layoutPart];
                         if (lBytes) {
                             const layoutRoot = mc.process(xml.parse(decodeText(lBytes)));
-                            const layout = slideMod.parseSlideLayout(layoutRoot);
+                            const layout = slideMod.parseSlideLayout(layoutRoot, textOpts);
+                            attachTemplateImages(layout, layoutPart, pkg);
                             layout._partName = layoutPart;
                             slideLayouts.push(layout);
                         }
@@ -298,7 +341,8 @@ export const pptx = {
                 const mBytes = pkg.parts[masterPart];
                 if (!mBytes) continue;
                 const masterRoot = mc.process(xml.parse(decodeText(mBytes)));
-                const master = slideMod.parseSlideMaster(masterRoot);
+                const master = slideMod.parseSlideMaster(masterRoot, textOpts);
+                attachTemplateImages(master, masterPart, pkg);
                 master._partName = masterPart;
                 slideMasters.push(master);
 
@@ -384,11 +428,33 @@ export const pptx = {
             opc.setPart(pkg, '/ppt/theme/theme1.xml',
                 themeMod.bytesOf(theme), themeMod.CT_THEME);
 
+            // Each master's rels name the written layouts rId1…rIdK, so its
+            // sldLayoutIdLst lists exactly those: an entry naming another
+            // rId (a read keeps the source master's list) would dangle; a
+            // layout without an entry gets an id above every kept layout
+            // id and every master id. The model is left as given.
+            const writtenLayoutRids = new Set(masterRels);
+            let maxLayoutId = 2147483648 + masters.length - 1;
+            for (const m of masters) {
+                for (const li of m.layoutIds || []) {
+                    const n = Number(li.id);
+                    if (writtenLayoutRids.has(li.rId) && n > maxLayoutId) maxLayoutId = n;
+                }
+            }
+            function writtenLayoutIds(master) {
+                const kept = (master.layoutIds || []).filter(li => writtenLayoutRids.has(li.rId));
+                const listed = new Set(kept.map(li => li.rId));
+                const added = masterRels.filter(rId => !listed.has(rId))
+                    .map(rId => ({ id: String(++maxLayoutId), rId }));
+                return kept.length === (master.layoutIds || []).length && !added.length
+                    ? master : { ...master, layoutIds: [...kept, ...added] };
+            }
+
             // --- Slide masters + their rels (theme + layouts) ---
             masters.forEach((master, i) => {
                 const masterPath = `/ppt/slideMasters/slideMaster${i + 1}.xml`;
                 opc.setPart(pkg, masterPath,
-                    slideMod.slideMasterBytes(master),
+                    slideMod.slideMasterBytes(writtenLayoutIds(master)),
                     slideMod.CT_SLIDE_MASTER);
 
                 const masterRelsArr = [];
@@ -544,7 +610,7 @@ export const pptx = {
             const sldSize = pres.sldSize || { cx: 9144000, cy: 6858000, type: 'screen4x3' };
             const sa = { cx: String(sldSize.cx), cy: String(sldSize.cy) };
             if (sldSize.type) sa.type = sldSize.type;
-            presChildren.push(xml.el('p:sldSize', sa));
+            presChildren.push(xml.el('p:sldSz', sa));
             presChildren.push(xml.el('p:notesSz', { cx: '6858000', cy: '9144000' }));
 
             const presXml = xml.serialize(xml.el('p:presentation',

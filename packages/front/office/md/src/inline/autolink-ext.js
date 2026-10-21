@@ -41,6 +41,21 @@ export const mdInlineAutolinkExt = {
             return s;
         }
 
+        /**
+         * True when `text` continues an address at `end` with a `-` / `_`
+         * run that closes it (end of text, or a character that neither
+         * continues the address — alphanumeric — nor starts a `.label`).
+         */
+        function endsWithDashOrUnderscore(text, end) {
+            let i = end;
+            while (i < text.length && (text[i] === '-' || text[i] === '_')) i++;
+            if (i === end) return false;
+            const next = text[i];
+            if (next !== undefined && /[a-zA-Z0-9]/.test(next)) return false;
+            if (next === '.' && /[a-zA-Z0-9]/.test(text[i + 1] || '')) return false;
+            return true;
+        }
+
         function scanExtAutolinks(text) {
             const matches = [];
             let m;
@@ -67,6 +82,10 @@ export const mdInlineAutolinkExt = {
                 while (email.length > 0 && /[?!.,:_*~-]$/.test(email)) email = email.slice(0, -1);
                 if (!/@.+\..+/.test(email)) continue;
                 const start = m.index + m[0].indexOf(m[1]);
+                // GFM 6.9: only `.` may end an address. A `-` / `_` run that
+                // ends the address here (the regex stopped before it) makes
+                // the whole text no autolink.
+                if (endsWithDashOrUnderscore(text, start + email.length)) continue;
                 matches.push({ start, end: start + email.length, url: email, isEmail: true, isWww: false });
             }
             matches.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));

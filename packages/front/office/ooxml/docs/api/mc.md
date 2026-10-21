@@ -88,4 +88,4 @@ mc.setIgnorable(rootEl, ['w14', 'w15']);
 ## See also
 
 - [docx](./docx/docx.md), [xlsx](./xlsx/xlsx.md), [pptx](./pptx/pptx.md) — all call `process` on read.
-- [`@awacloud/fw` xml](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/api/io/codec/xml.md) — the node model being manipulated.
+- [`@awacloud/fw` xml](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/io/codec/xml.md) — the node model being manipulated.

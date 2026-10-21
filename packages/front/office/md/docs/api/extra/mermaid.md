@@ -59,6 +59,7 @@ m.renderHtml('```mermaid\ngraph TD; A-->B;\n```');
 
 ## Notes
 
+- A ` ```mermaid ` fence and a ` ```language-mermaid ` fence both render as a diagram: the code-block renderer writes `class="language-mermaid"` for either (it does not repeat the `language-` prefix).
 - Only affects HTML rendering — `renderMarkdown` / `renderXml` produce a standard `code_block`.
 - `<` `>` `&` `"` in the source stay escaped (`&lt;`, `&gt;`, `&amp;`, `&quot;`). The rewrite runs AFTER `render` — after the `safe` and `sanitize` passes — so the body is never unescaped: a fence holding `<img src=x onerror=…>` or `</div><script>…` stays inert text under every option set. The element's `textContent` (and Mermaid's own entity decoding) gives back the exact source.
 - The `<div class="mermaid">` wrapper is added after a `sanitize: true` pass ran, so the sanitiser's allowlist never sees it.

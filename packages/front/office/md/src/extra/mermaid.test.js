@@ -27,6 +27,11 @@ describe('mdMermaid', () => {
         expect(out).toBe('<div class="mermaid">x-&gt;y</div>');
     });
 
+    test('a fence whose info is language-mermaid renders as a diagram too', () => {
+        const m = createMd().use(mdMermaid);
+        expect(m.renderHtml('```language-mermaid\nA-->B\n```\n')).toBe('<div class="mermaid">A--&gt;B\n</div>\n');
+    });
+
     test('leaves other fenced code blocks alone', () => {
         const m = createMd().use(mdMermaid);
         const html = m.renderHtml('```js\nconst x = 1;\n```\n');

@@ -64,7 +64,9 @@ const { document } = bp.parse('# Hi *there*', { inlineParser: ip.parse });
 
 ## Notes
 
-- Link reference definitions are detected while finalizing paragraphs — not in the inline phase (per spec §4.7).
+- Link reference definitions are detected while finalizing paragraphs — not in the inline phase (per spec §4.7). A label may hold a backslash just before a line end (`[\` then `foo]: /uri`). A definition whose next line starts with an empty title and goes on with text (`[a]: /u` then `""text`) keeps the definition and drops the title (a title followed by text is not part of the definition); the text line stays a paragraph.
+- Every U+0000 (NUL) in the input is replaced with U+FFFD, as CommonMark §2.3 requires, whatever its line holds; the replacement takes one UTF-16 unit like the NUL, so source positions do not move.
+- Parsing is linear in the input for deeply nested lists (`- - - … x`), for blank lines after a deep list and for the `maxDepth` check.
 - Full lazy-continuation handling: a paragraph can continue across multiple lines even inside block quotes / list items.
 - GFM tables are parsed if the line following the header is a valid separator row (`| --- | :--- | ---: |`).
 - The parser is split into this orchestrator plus the `mdBlock*` sub-modules listed above as dependencies.

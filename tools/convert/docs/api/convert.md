@@ -26,10 +26,11 @@ On success, a [`ConvertOutput`](./types.md#convertoutput):
 | Field | Type | Meaning |
 |---|---|---|
 | `error` | `null` | Marks success. |
-| `bytes` | `Uint8Array` | The converted document. `pdf` output is byte-reproducible. `docx` and `odt` output is a zip whose entry timestamps change on every call. |
+| `bytes` | `Uint8Array` | The converted document. The output is byte-reproducible for every target: the same input gives the same bytes, and `docx` and `odt` zip entries carry a fixed date. |
 | `format` | `string` | The resolved source format. |
 | `target` | `string` | The resolved target. |
 | `losses` | [`Loss[]`](./types.md#loss) | Reader losses, then writer losses. |
+| `lossSummary` | [`LossSummaryEntry[]`](./types.md#losssummaryentry) | `losses` grouped by `code` + `detail`, with a count, in order of first occurrence. |
 | `lossy` | `boolean` | `losses.length > 0`. |
 
 On failure, a [`CoreError`](./types.md#coreerror). The function never
@@ -62,8 +63,8 @@ console.log(pdf.format, pdf.target, pdf.bytes.byteLength, pdf.lossy);
 Output:
 
 ```text
-null docx odt 1989 false
-docx pdf 1555 false
+null docx odt 2498 false
+docx pdf 1636 false
 ```
 
 Errors:

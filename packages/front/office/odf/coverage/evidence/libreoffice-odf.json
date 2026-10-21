@@ -1,0 +1,5321 @@
+{
+  "suite": {
+    "id": "libreoffice-odf",
+    "version": "libreoffice@26.8.0.3",
+    "source": null
+  },
+  "criterion": "per file, the odf reader of the file kind (odt, ods, odp) reads it; ok when it returns or throws an error of the package's own hierarchy (OdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child",
+  "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+  "host": "container",
+  "image": "awa-robustness-bun:1.3.13",
+  "imageId": "sha256:1a93710c3b0b8ee72a6876fc61e8975217fef39faee9a7c4b224560e6829de84",
+  "bun": "1.3.13",
+  "memoryMax": "1342177280",
+  "counts": {
+    "returned": 654,
+    "refused": 7,
+    "untyped": 0,
+    "hang": 0,
+    "memory": 0,
+    "crash": 0
+  },
+  "cases": [
+    {
+      "case": "lo-odfexport/DUMMY2.odt",
+      "bytes": 11086,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75796
+    },
+    {
+      "case": "lo-odfexport/DUMMY2B.odt",
+      "bytes": 11132,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78348
+    },
+    {
+      "case": "lo-odfexport/Formcontrol needs high z-index.odt",
+      "bytes": 25828,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76376
+    },
+    {
+      "case": "lo-odfexport/MadeByLO7.odt",
+      "bytes": 17354,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76376
+    },
+    {
+      "case": "lo-odfexport/WordTest_edit.odt",
+      "bytes": 6496,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76376
+    },
+    {
+      "case": "lo-odfexport/allow-overlap.odt",
+      "bytes": 9853,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76376
+    },
+    {
+      "case": "lo-odfexport/arabic-zero-numbering.odt",
+      "bytes": 8730,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76376
+    },
+    {
+      "case": "lo-odfexport/arabic-zero3-numbering.odt",
+      "bytes": 9166,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76376
+    },
+    {
+      "case": "lo-odfexport/arabic-zero4-numbering.odt",
+      "bytes": 8702,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76376
+    },
+    {
+      "case": "lo-odfexport/arabic-zero5-numbering.odt",
+      "bytes": 8779,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/border_types.odt",
+      "bytes": 10656,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/btlr-cell.odt",
+      "bytes": 9174,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/btlr-frame.odt",
+      "bytes": 8564,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/chapter-number-new-line.odt",
+      "bytes": 8649,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/charborder.odt",
+      "bytes": 8704,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/embedded-pdf.odt",
+      "bytes": 23502,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/fdo38244.odt",
+      "bytes": 10334,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/fdo43807.odt",
+      "bytes": 7630,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/fdo60769.odt",
+      "bytes": 9482,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/fdo79358.odt",
+      "bytes": 9356,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/fdo86963.odt",
+      "bytes": 39845,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90128
+    },
+    {
+      "case": "lo-odfexport/fillbitmap3.odt",
+      "bytes": 10748,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/framebackgrounds.odt",
+      "bytes": 14327,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76940
+    },
+    {
+      "case": "lo-odfexport/gerrit13858.odt",
+      "bytes": 10200,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76580
+    },
+    {
+      "case": "lo-odfexport/gutter-left.odt",
+      "bytes": 8519,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/image-mimetype.odt",
+      "bytes": 88597,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/listformat.odt",
+      "bytes": 9221,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/nestedTableInFooter.odt",
+      "bytes": 8611,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/ooo321_stylepagenumber.odt",
+      "bytes": 8558,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/page-content-bottom.odt",
+      "bytes": 8502,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/page-content-top.odt",
+      "bytes": 8561,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/pagestyle_background_lo64.odt",
+      "bytes": 9947,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/pagestyle_background_lo70.odt",
+      "bytes": 10125,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/pagestyle_background_ooo33.odt",
+      "bytes": 9127,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 76568
+    },
+    {
+      "case": "lo-odfexport/personalmetadata.odt",
+      "bytes": 11313,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76760
+    },
+    {
+      "case": "lo-odfexport/qrcode-properties.odt",
+      "bytes": 11634,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/redlineTextFrame.odt",
+      "bytes": 8560,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/referencelanguage.odt",
+      "bytes": 16137,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77312
+    },
+    {
+      "case": "lo-odfexport/relh-page-tdf80282.odt",
+      "bytes": 128045,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/relh-page.odt",
+      "bytes": 10183,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/relw-page.odt",
+      "bytes": 10221,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/resolved-comment.odt",
+      "bytes": 8912,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/rovas-numbering.odt",
+      "bytes": 8786,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/ruby-position.odt",
+      "bytes": 8325,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/sha1_correct.odt",
+      "bytes": 8587,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 76952,
+      "code": "odf/parse-error/meta"
+    },
+    {
+      "case": "lo-odfexport/sha1_wrong.odt",
+      "bytes": 8435,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 76952,
+      "code": "odf/parse-error/meta"
+    },
+    {
+      "case": "lo-odfexport/shape-relsize.odt",
+      "bytes": 10706,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/shape-with-hyperlink.odt",
+      "bytes": 10149,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/shapes-hyperlink.odt",
+      "bytes": 12199,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/spellout-numberingtypes.odt",
+      "bytes": 10222,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/sw_hatch.odt",
+      "bytes": 6560,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/table-in-frame-in-table-in-header-base.odt",
+      "bytes": 10398,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/table_styles_1.odt",
+      "bytes": 9874,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/table_styles_2.odt",
+      "bytes": 10727,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77112
+    },
+    {
+      "case": "lo-odfexport/table_styles_3.odt",
+      "bytes": 9376,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/table_styles_4.odt",
+      "bytes": 9094,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf100492.odt",
+      "bytes": 19671,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 85852
+    },
+    {
+      "case": "lo-odfexport/tdf101710.odt",
+      "bytes": 9350,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf101856.odt",
+      "bytes": 9406,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf101856_overlapped.odt",
+      "bytes": 9233,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf103567.odt",
+      "bytes": 13562,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf104254_noHeaderWrapping.odt",
+      "bytes": 63167,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf107292.odt",
+      "bytes": 9921,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf107696.odt",
+      "bytes": 11122,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf111891_frameVertStyle.odt",
+      "bytes": 8814,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76952
+    },
+    {
+      "case": "lo-odfexport/tdf114287.odt",
+      "bytes": 10067,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf115815.odt",
+      "bytes": 9809,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf118502.odt",
+      "bytes": 76491,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf118637.odt",
+      "bytes": 10547,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf121658.odt",
+      "bytes": 20057,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf124470TableAndEmbeddedUsedFonts.odt",
+      "bytes": 10880,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf130950.odt",
+      "bytes": 28785,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77352
+    },
+    {
+      "case": "lo-odfexport/tdf131025_noZerosInTable.odt",
+      "bytes": 11544,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf131812.odt",
+      "bytes": 8683,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf132642_keepWithNextTable.odt",
+      "bytes": 10030,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf133507_contextualSpacingSection.odt",
+      "bytes": 40288,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf135338_firstLeftPageFooter.odt",
+      "bytes": 10687,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf136645.odt",
+      "bytes": 18408,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf139126.odt",
+      "bytes": 11105,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf140437.odt",
+      "bytes": 8641,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf142483.odt",
+      "bytes": 9011,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf143605.odt",
+      "bytes": 8729,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf143793_noBodyWrapping.odt",
+      "bytes": 117036,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77144
+    },
+    {
+      "case": "lo-odfexport/tdf144319.odt",
+      "bytes": 28531,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78464
+    },
+    {
+      "case": "lo-odfexport/tdf145361.odt",
+      "bytes": 9513,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf145871.odt",
+      "bytes": 15877,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf146264.odt",
+      "bytes": 13422,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf149248.odt",
+      "bytes": 20313,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf149324.odt",
+      "bytes": 20206,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf149420.odt",
+      "bytes": 38885,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 79000
+    },
+    {
+      "case": "lo-odfexport/tdf150394.odt",
+      "bytes": 35943,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf152710.odt",
+      "bytes": 11650,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf156905.odt",
+      "bytes": 30831,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 89820
+    },
+    {
+      "case": "lo-odfexport/tdf159027.odt",
+      "bytes": 11008,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77932
+    },
+    {
+      "case": "lo-odfexport/tdf160700.odt",
+      "bytes": 10398,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf160877.odt",
+      "bytes": 11590,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf164712.odt",
+      "bytes": 11449,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf169882.odt",
+      "bytes": 15453,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 78396
+    },
+    {
+      "case": "lo-odfexport/tdf57317_autoListName.odt",
+      "bytes": 10953,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf66305.odt",
+      "bytes": 12685,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf71583.odt",
+      "bytes": 10153,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/tdf77961.odt",
+      "bytes": 11510,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/testTdf52065_centerTabs.odt",
+      "bytes": 11274,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/textbox-rounded-corners.odt",
+      "bytes": 13249,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/textframe-gradient.odt",
+      "bytes": 9800,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/textframe-transparent-shadow.odt",
+      "bytes": 9634,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/textframe-vertadjust.odt",
+      "bytes": 12850,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/user-field-decl-fly.odt",
+      "bytes": 9167,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/user-field-decl.odt",
+      "bytes": 8597,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/userdefattr-tablecell.odt",
+      "bytes": 9172,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/whitespace.odt",
+      "bytes": 10981,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-odfexport/z-index-header.odt",
+      "bytes": 9175,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/3AnchorTypes.ods",
+      "bytes": 79920,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/CommentTextHAlign.ods",
+      "bytes": 7749,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/CommentTextVAlign.ods",
+      "bytes": 7796,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/LargeAnchorOffset.ods",
+      "bytes": 8564,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/ManualColWidthRowHeight.ods",
+      "bytes": 8962,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/NamedExpressionsHidden.ods",
+      "bytes": 16611,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/RowHeightTdf165003.ods",
+      "bytes": 12162,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/SolverModel.ods",
+      "bytes": 19482,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/alldefaultheights.ods",
+      "bytes": 7535,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/autofilter-colbutton.ods",
+      "bytes": 9626,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/autofilter-colors.ods",
+      "bytes": 10991,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/autoheight2rows.ods",
+      "bytes": 11327,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/autostyle-name-is-single-char.ods",
+      "bytes": 9349,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/basic-cell-content.ods",
+      "bytes": 10552,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/border.ods",
+      "bytes": 7718,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/borders_ooo33.ods",
+      "bytes": 8980,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/bug-fixes.ods",
+      "bytes": 9828,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/cachedValue.ods",
+      "bytes": 9433,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/caseinsensitive-duplicate-fields.ods",
+      "bytes": 9814,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/ceiling-floor.ods",
+      "bytes": 8154,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/cell-anchored-shapes.ods",
+      "bytes": 9127,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/change-tracking.ods",
+      "bytes": 9782,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/chart-import-basic.ods",
+      "bytes": 12232,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/chart2dataprovider.ods",
+      "bytes": 10229,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/childDir/tdf138824_linkToParentDirectory.ods",
+      "bytes": 11436,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/colorscale.ods",
+      "bytes": 8902,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/comment.ods",
+      "bytes": 8636,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/conditionalformat_containstext.ods",
+      "bytes": 7739,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/conditionalformat_rangelist.ods",
+      "bytes": 7077,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/cool15769_minimal_DB_ranges.ods",
+      "bytes": 8772,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/copy-merged-number-formats.ods",
+      "bytes": 23185,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/custom-numfmt-hybrid-cell.ods",
+      "bytes": 7823,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/custom_column_width.ods",
+      "bytes": 8804,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/dataValidity.ods",
+      "bytes": 9493,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/databar.ods",
+      "bytes": 9327,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/database-functions.ods",
+      "bytes": 29630,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/database.ods",
+      "bytes": 9155,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/date-time-functions.ods",
+      "bytes": 12671,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/deleteCircleInMergedCell.ods",
+      "bytes": 7976,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/deleteCirclesInRowAndCol.ods",
+      "bytes": 9109,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/dependencyTree.ods",
+      "bytes": 7967,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/different-column-width.ods",
+      "bytes": 7295,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/document_with_linked_graphic.ods",
+      "bytes": 41370,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/document_with_two_images.ods",
+      "bytes": 221281,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/external-ref-cache.ods",
+      "bytes": 10193,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/external_hyperlink.ods",
+      "bytes": 9928,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/fdo30900-1.ods",
+      "bytes": 11339,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/fdo36933test.ods",
+      "bytes": 12417,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/fdo43534test.ods",
+      "bytes": 18047,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/fdo43700test.ods",
+      "bytes": 8075,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/fdo62729.ods",
+      "bytes": 6772,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/fdo64229b.ods",
+      "bytes": 14746,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/fdo67682-2.ods",
+      "bytes": 128075,
+      "class": "returned",
+      "ok": true,
+      "ms": 124,
+      "maxRssKiB": 156344
+    },
+    {
+      "case": "lo-ods/fdo79305.ods",
+      "bytes": 12939,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/formats.ods",
+      "bytes": 18545,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/formula-across-sheets.ods",
+      "bytes": 15572,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77976
+    },
+    {
+      "case": "lo-ods/formula-delete-contents.ods",
+      "bytes": 28312,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/formula-quote-in-sheet-name.ods",
+      "bytes": 7044,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/functions.ods",
+      "bytes": 36499,
+      "class": "returned",
+      "ok": true,
+      "ms": 22,
+      "maxRssKiB": 97140
+    },
+    {
+      "case": "lo-ods/hard-recalc.ods",
+      "bytes": 7556,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/header-footer-content.ods",
+      "bytes": 8048,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/header-image.ods",
+      "bytes": 12036,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/hidden-empty-rows.ods",
+      "bytes": 8255,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/hideColsShow.ods",
+      "bytes": 9425,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/hybrid-shared-string.ods",
+      "bytes": 12479,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/hyperlink_frame.ods",
+      "bytes": 7703,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/images_with_special_IDs.ods",
+      "bytes": 175735,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/keep-preview-missing-obj-link.ods",
+      "bytes": 18464,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/legacycellanchoredrotatedclippedshape.ods",
+      "bytes": 8338,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/legacycellanchoredrotatedhiddenshape.ods",
+      "bytes": 8333,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77336
+    },
+    {
+      "case": "lo-ods/legacycellanchoredrotatedshape.ods",
+      "bytes": 7917,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/loadVerticalFlip.ods",
+      "bytes": 10112,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/many_charts.ods",
+      "bytes": 192672,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 81860
+    },
+    {
+      "case": "lo-ods/matrix.ods",
+      "bytes": 12934,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81708
+    },
+    {
+      "case": "lo-ods/measurelineHideColSave.ods",
+      "bytes": 9641,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/merged.ods",
+      "bytes": 7723,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/miscemptyrepeatedrowheights.ods",
+      "bytes": 7038,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/move-cell-anchored-shapes.ods",
+      "bytes": 12100,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/multilineoptimal.ods",
+      "bytes": 8407,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/named-range-conflict.ods",
+      "bytes": 9683,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/named-ranges-global.ods",
+      "bytes": 8476,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/named-ranges-hidden.ods",
+      "bytes": 15848,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/new_cond_format_test.ods",
+      "bytes": 13124,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77712
+    },
+    {
+      "case": "lo-ods/new_cond_format_test_export.ods",
+      "bytes": 13124,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/notes-on-3-sheets.ods",
+      "bytes": 11803,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/numgroup_example.ods",
+      "bytes": 17689,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/offsetIllegalParam.ods",
+      "bytes": 11513,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/ooo88173-1.ods",
+      "bytes": 10053,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/compiler/horizontal.ods",
+      "bytes": 8438,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/compiler/ineq.ods",
+      "bytes": 10185,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/compiler/nested.ods",
+      "bytes": 8521,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/compiler/precision.ods",
+      "bytes": 7648,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/compiler/string.ods",
+      "bytes": 10018,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/financial/Duration.ods",
+      "bytes": 13996,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/Abs.ods",
+      "bytes": 18827,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcCos.ods",
+      "bytes": 43122,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 96552
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcCosHyp.ods",
+      "bytes": 32989,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 100700
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcCot.ods",
+      "bytes": 43843,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 100980
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcCotHyp.ods",
+      "bytes": 43782,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 101464
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcSin.ods",
+      "bytes": 44706,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 101432
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcSinHyp.ods",
+      "bytes": 44743,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 100868
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcTan.ods",
+      "bytes": 45658,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 100308
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcTan2.ods",
+      "bytes": 59986,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 108068
+    },
+    {
+      "case": "lo-ods/opencl/math/ArcTanHyp.ods",
+      "bytes": 45048,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 100316
+    },
+    {
+      "case": "lo-ods/opencl/math/BitAnd.ods",
+      "bytes": 44870,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 108168
+    },
+    {
+      "case": "lo-ods/opencl/math/BitLshift.ods",
+      "bytes": 13975,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/BitOr.ods",
+      "bytes": 13224,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/BitRshift.ods",
+      "bytes": 16679,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 93672
+    },
+    {
+      "case": "lo-ods/opencl/math/BitXor.ods",
+      "bytes": 13302,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/Ceil.ods",
+      "bytes": 15370,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/Kombin.ods",
+      "bytes": 13723,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/Quotient.ods",
+      "bytes": 13710,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/cot.ods",
+      "bytes": 11689,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/coth.ods",
+      "bytes": 11476,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/csc.ods",
+      "bytes": 12203,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/csch.ods",
+      "bytes": 12051,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/exp.ods",
+      "bytes": 11879,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "lo-ods/opencl/math/floor.ods",
+      "bytes": 9086,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/math/log10.ods",
+      "bytes": 11916,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/math/power.ods",
+      "bytes": 12184,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/math/sec.ods",
+      "bytes": 12081,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/math/sech.ods",
+      "bytes": 12092,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/statistical/BetaDist.ods",
+      "bytes": 17575,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/statistical/CHISQDIST.ods",
+      "bytes": 19796,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/statistical/CHISQINV.ods",
+      "bytes": 17130,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/statistical/Correl.ods",
+      "bytes": 17291,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/statistical/LogNormDist.ods",
+      "bytes": 15340,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/opencl/statistical/parallel_count_bug_243.ods",
+      "bytes": 22925,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83460
+    },
+    {
+      "case": "lo-ods/outline.ods",
+      "bytes": 7834,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/password.ods",
+      "bytes": 10042,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 77720,
+      "code": "odf/parse-error/ods"
+    },
+    {
+      "case": "lo-ods/passwordOld.ods",
+      "bytes": 6447,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 77720,
+      "code": "odf/parse-error/ods"
+    },
+    {
+      "case": "lo-ods/passwordWrongSHA.ods",
+      "bytes": 6560,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 77720,
+      "code": "odf/parse-error/ods"
+    },
+    {
+      "case": "lo-ods/pivot-table-basic.ods",
+      "bytes": 10173,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/pivot-table-err-in-cache.ods",
+      "bytes": 9362,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/pivot-table-median.ods",
+      "bytes": 13835,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/pivot-table-named-range-source.ods",
+      "bytes": 16927,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/pivot-table-num-fmt.ods",
+      "bytes": 13706,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/pivot-table-shared-cache-with-group.ods",
+      "bytes": 28325,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 97992
+    },
+    {
+      "case": "lo-ods/pivot-table-str-and-err-in-data.ods",
+      "bytes": 9540,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/pivottable_fieldInRowsAndData.ods",
+      "bytes": 9815,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/pivottable_no_columns_layout.ods",
+      "bytes": 13643,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77720
+    },
+    {
+      "case": "lo-ods/pivottable_restore_query_filter.ods",
+      "bytes": 11733,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77912
+    },
+    {
+      "case": "lo-ods/print-range.ods",
+      "bytes": 6876,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77912
+    },
+    {
+      "case": "lo-ods/ranges-column-2000.ods",
+      "bytes": 9875,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77912
+    },
+    {
+      "case": "lo-ods/repeatedColumns.ods",
+      "bytes": 7475,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77912
+    },
+    {
+      "case": "lo-ods/rich-text-cells.ods",
+      "bytes": 20162,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77912
+    },
+    {
+      "case": "lo-ods/row-height-import.ods",
+      "bytes": 9656,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77912
+    },
+    {
+      "case": "lo-ods/shared-formula/3d-reference.ods",
+      "bytes": 19271,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77912
+    },
+    {
+      "case": "lo-ods/shared-formula/column-labels.ods",
+      "bytes": 10129,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/shared-formula/column-row-labels.ods",
+      "bytes": 11711,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/shared-formula/sort-crash.ods",
+      "bytes": 51675,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 79400
+    },
+    {
+      "case": "lo-ods/sheet-protection.ods",
+      "bytes": 10547,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/sheet_name_with_dots.ods",
+      "bytes": 7643,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/single-note.ods",
+      "bytes": 11474,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/sort-with-sheet-external-references.ods",
+      "bytes": 28812,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/spreadsheet13e.ods",
+      "bytes": 7211,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/sum-whole-column-row.ods",
+      "bytes": 8023,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf100458_lost_zero_value.ods",
+      "bytes": 6965,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf101104.ods",
+      "bytes": 11883,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf102370_ExponentWithoutSign.ods",
+      "bytes": 7345,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf103092_RotatedImage.ods",
+      "bytes": 15393,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf103734.ods",
+      "bytes": 11871,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78472
+    },
+    {
+      "case": "lo-ods/tdf103829_textTab.ods",
+      "bytes": 10515,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf104026.ods",
+      "bytes": 9978,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf104502_hiddenColsCountedInPageCount.ods",
+      "bytes": 8203,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf106181.ods",
+      "bytes": 8387,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf108188_pagestyle.ods",
+      "bytes": 7890,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf108244.ods",
+      "bytes": 8039,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78104
+    },
+    {
+      "case": "lo-ods/tdf109409.ods",
+      "bytes": 13623,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf112567.ods",
+      "bytes": 8205,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf112780.ods",
+      "bytes": 25368,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78296,
+      "code": "odf/parse-error/ods"
+    },
+    {
+      "case": "lo-ods/tdf113500_autofillMixed.ods",
+      "bytes": 18580,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78552
+    },
+    {
+      "case": "lo-ods/tdf113646.ods",
+      "bytes": 9220,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf113991_relativeNamedRanges.ods",
+      "bytes": 9877,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf115655_HideDetail.ods",
+      "bytes": 28062,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf117948_CollapseBeforeShape.ods",
+      "bytes": 10302,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf118086.ods",
+      "bytes": 17202,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 79132
+    },
+    {
+      "case": "lo-ods/tdf118561.ods",
+      "bytes": 13386,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf118561_external.ods",
+      "bytes": 16023,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf118624.ods",
+      "bytes": 11783,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf119191_FitToCellSize.ods",
+      "bytes": 10623,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf119191_transformedShape.ods",
+      "bytes": 10269,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf119533.ods",
+      "bytes": 8988,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf121040.ods",
+      "bytes": 8575,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf121260.ods",
+      "bytes": 13995,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf121612.ods",
+      "bytes": 48719,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 89300
+    },
+    {
+      "case": "lo-ods/tdf121716_EvenHeaderFooter.ods",
+      "bytes": 9487,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf121718_UseFirstPageNumber.ods",
+      "bytes": 9119,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf121963.ods",
+      "bytes": 18097,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80188
+    },
+    {
+      "case": "lo-ods/tdf122331.ods",
+      "bytes": 17896,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf122643.ods",
+      "bytes": 13045,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf123225_pivotTable_empty_row_col_items.ods",
+      "bytes": 22447,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf123225_pivotTable_no_col_items.ods",
+      "bytes": 17622,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf123225_pivotTable_row_col_items.ods",
+      "bytes": 21673,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81836
+    },
+    {
+      "case": "lo-ods/tdf123421_1datafield.ods",
+      "bytes": 12293,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf123421_2datafields.ods",
+      "bytes": 12195,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf124454.ods",
+      "bytes": 7555,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf124651_simplePivotTable.ods",
+      "bytes": 10427,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf125099.ods",
+      "bytes": 10144,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf125580.ods",
+      "bytes": 18968,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf125938_anchor_after_copy_paste.ods",
+      "bytes": 11050,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf126305.ods",
+      "bytes": 7153,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf127982.ods",
+      "bytes": 12663,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf128895_emptyHiddenCols.ods",
+      "bytes": 7210,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf129410.ods",
+      "bytes": 13238,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf129681.ods",
+      "bytes": 13986,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf129789.ods",
+      "bytes": 90171,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf129940.ods",
+      "bytes": 3773,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf130108.ods",
+      "bytes": 10181,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf130132.ods",
+      "bytes": 9252,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf130556.ods",
+      "bytes": 17216,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf130583.ods",
+      "bytes": 10758,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf131372.ods",
+      "bytes": 9390,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf131471.ods",
+      "bytes": 10225,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf132105.ods",
+      "bytes": 12608,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf132105_external.ods",
+      "bytes": 14442,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf132278.ods",
+      "bytes": 35018,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 95452
+    },
+    {
+      "case": "lo-ods/tdf133327.ods",
+      "bytes": 7313,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf133688_dont_save_precedents_to_xlsx.ods",
+      "bytes": 11361,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf134161.ods",
+      "bytes": 39542,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 97488
+    },
+    {
+      "case": "lo-ods/tdf134234.ods",
+      "bytes": 10523,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf134332.ods",
+      "bytes": 22292,
+      "class": "returned",
+      "ok": true,
+      "ms": 47,
+      "maxRssKiB": 130184
+    },
+    {
+      "case": "lo-ods/tdf136551.ods",
+      "bytes": 106422,
+      "class": "returned",
+      "ok": true,
+      "ms": 172,
+      "maxRssKiB": 243388
+    },
+    {
+      "case": "lo-ods/tdf137020_FlipVertical.ods",
+      "bytes": 8893,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137033_FlipHoriRotCustomShape.ods",
+      "bytes": 9008,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137033_RotShearCellAnchor.ods",
+      "bytes": 9145,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137033_RotShearResizeAnchor.ods",
+      "bytes": 9369,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137044_CoverHiddenRows.ods",
+      "bytes": 8726,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137081_RTL_page_anchored.ods",
+      "bytes": 10079,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137082_LTR_arrow_image.ods",
+      "bytes": 10430,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137082_RTL_cell_anchored.ods",
+      "bytes": 9779,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137205_AutofillDatesInMergedCells.ods",
+      "bytes": 15460,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137216_HideCol.ods",
+      "bytes": 8666,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137355_UndoHideRows.ods",
+      "bytes": 10794,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137453.ods",
+      "bytes": 8451,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137576_Measureline.ods",
+      "bytes": 8875,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137621_autofillMergedBool.ods",
+      "bytes": 13240,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137624_autofillMergedMixed.ods",
+      "bytes": 17389,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137625_autofillMergedUserlist.ods",
+      "bytes": 18739,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf137653_137654_autofillUserlist.ods",
+      "bytes": 18843,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf138138_MoveCellWithRotatedShape.ods",
+      "bytes": 8897,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78296
+    },
+    {
+      "case": "lo-ods/tdf138507.ods",
+      "bytes": 22513,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 95636
+    },
+    {
+      "case": "lo-ods/tdf138824_externalSource.ods",
+      "bytes": 10762,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf139083_copy_without_resize.ods",
+      "bytes": 10457,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf139258_rotated_image.ods",
+      "bytes": 8856,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf139612.ods",
+      "bytes": 14636,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf139782.ods",
+      "bytes": 7211,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf140098.ods",
+      "bytes": 11383,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf140866.ods",
+      "bytes": 10823,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf141914.ods",
+      "bytes": 21832,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf142231.ods",
+      "bytes": 11244,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf142578.ods",
+      "bytes": 10954,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf142607.ods",
+      "bytes": 9525,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf142764.ods",
+      "bytes": 8421,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf143220.ods",
+      "bytes": 10016,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80376
+    },
+    {
+      "case": "lo-ods/tdf143619_validationCirclePos.ods",
+      "bytes": 8367,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf143809.ods",
+      "bytes": 13595,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf144209.ods",
+      "bytes": 9550,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf144740.ods",
+      "bytes": 7908,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf145059.ods",
+      "bytes": 15610,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf146722.ods",
+      "bytes": 8824,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf149484.ods",
+      "bytes": 9537,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf149679.ods",
+      "bytes": 9967,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf149752.ods",
+      "bytes": 13463,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf149940.ods",
+      "bytes": 40392,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 101792
+    },
+    {
+      "case": "lo-ods/tdf150815.ods",
+      "bytes": 10947,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf151046.ods",
+      "bytes": 8533,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf151484.ods",
+      "bytes": 7966,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf151958.ods",
+      "bytes": 33175,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf152081_UndoHideColsWithNotes.ods",
+      "bytes": 12142,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf152724-Blank-width-char.ods",
+      "bytes": 8782,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf153924.ods",
+      "bytes": 12577,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf153993-Exponent-lower-case.ods",
+      "bytes": 10442,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf154005.ods",
+      "bytes": 12162,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf154821_shape_in_group.ods",
+      "bytes": 10576,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf155091_paste_duplicates.ods",
+      "bytes": 15433,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf155093_double_names.ods",
+      "bytes": 13978,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf155094_paste_transposed.ods",
+      "bytes": 13070,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf155095_shape_over_collapsed_group.ods",
+      "bytes": 13857,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf155368.ods",
+      "bytes": 10126,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf156449-Blank-In-Exponent.ods",
+      "bytes": 9458,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf156815.ods",
+      "bytes": 11995,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf157318.ods",
+      "bytes": 11790,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf158735.ods",
+      "bytes": 21112,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf158921.ods",
+      "bytes": 11038,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf160003_page_anchored_object.ods",
+      "bytes": 19164,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf160329_sortWithHiddenRows.ods",
+      "bytes": 16799,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf160368.ods",
+      "bytes": 25405,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 109184
+    },
+    {
+      "case": "lo-ods/tdf160369_groupshape.ods",
+      "bytes": 97614,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf161948_NaturalSortSaveLoad.ods",
+      "bytes": 10882,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf162262_summarybelow.ods",
+      "bytes": 12760,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf165383.ods",
+      "bytes": 9947,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf166669.ods",
+      "bytes": 9375,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf167450_source.ods",
+      "bytes": 58008,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf167450_target.ods",
+      "bytes": 7111,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf167636.ods",
+      "bytes": 14995,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "lo-ods/tdf168979.ods",
+      "bytes": 65834,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 111048
+    },
+    {
+      "case": "lo-ods/tdf170249.ods",
+      "bytes": 10442,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf170292.ods",
+      "bytes": 7723,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf170565_empty_functions.ods",
+      "bytes": 10887,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf170670-Blank-width-char.ods",
+      "bytes": 7751,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf170963_row_breaks.ods",
+      "bytes": 10764,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf31231.ods",
+      "bytes": 12599,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf35636.ods",
+      "bytes": 9366,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf36038_ExtendedLCID.ods",
+      "bytes": 12098,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf37341.ods",
+      "bytes": 28623,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 82932
+    },
+    {
+      "case": "lo-ods/tdf40993_fillMergedCells.ods",
+      "bytes": 9894,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf42481.ods",
+      "bytes": 10904,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf53431_autofilterFilldown.ods",
+      "bytes": 8361,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf62268.ods",
+      "bytes": 9096,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf64401.ods",
+      "bytes": 9645,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf75702_textLineBreak.ods",
+      "bytes": 1969,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf76310.ods",
+      "bytes": 1994,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf76949.ods",
+      "bytes": 11912,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf79398_NatNum5.ods",
+      "bytes": 7871,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf79998.ods",
+      "bytes": 41951,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf84874.ods",
+      "bytes": 9662,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf85553.ods",
+      "bytes": 12754,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf87973_externalLinkSkipUnuseds.ods",
+      "bytes": 12938,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf87973_externalSource.ods",
+      "bytes": 10762,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf88657.ods",
+      "bytes": 7214,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf88782_AutofillLinearNumbersInMergedCells.ods",
+      "bytes": 24452,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf88827_borderDoubleThin.ods",
+      "bytes": 9410,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf90391.ods",
+      "bytes": 15069,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80760
+    },
+    {
+      "case": "lo-ods/tdf91286.ods",
+      "bytes": 10152,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/tdf92963.ods",
+      "bytes": 11036,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/tdf95640.ods",
+      "bytes": 8406,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/tdf95640_standard_list.ods",
+      "bytes": 9684,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/tdf98657.ods",
+      "bytes": 13965,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 82920
+    },
+    {
+      "case": "lo-ods/tdf98844.ods",
+      "bytes": 9221,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/tdf99856_dataValidationTest.ods",
+      "bytes": 11891,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/testNumberFormats.ods",
+      "bytes": 30997,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/test_borders_export.ods",
+      "bytes": 15851,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/text_box_hyperlink.ods",
+      "bytes": 8538,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/too-many-cols-rows.ods",
+      "bytes": 9646,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/two-col-shape.ods",
+      "bytes": 11423,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/universal-content.ods",
+      "bytes": 8764,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/updateCircleInMergedCell.ods",
+      "bytes": 8689,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/user-defined-function.ods",
+      "bytes": 12180,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/validation-copypaste.ods",
+      "bytes": 9868,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/value-in-column-2000.ods",
+      "bytes": 14389,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ods/vba_macro_functions.ods",
+      "bytes": 13283,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/151384Hyperlink.odt",
+      "bytes": 9372,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/Simple-TOC.odt",
+      "bytes": 10289,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/SvgImageTest.odt",
+      "bytes": 13608,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/Table-of-Figures.odt",
+      "bytes": 9748,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/TestPuzzleExport.odt",
+      "bytes": 15349,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/activex_control_align.odt",
+      "bytes": 9737,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/activex_control_at_run_end.odt",
+      "bytes": 9601,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/bezier.odt",
+      "bytes": 12174,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/bnc637947.odt",
+      "bytes": 9408,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/bnc834035.odt",
+      "bytes": 18557,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/btlr-frame.odt",
+      "bytes": 8564,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/charborder.odt",
+      "bytes": 8052,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/comment_initials.odt",
+      "bytes": 9335,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/comment_with_children.odt",
+      "bytes": 9499,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/comments-nested.odt",
+      "bytes": 11343,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/cp1000015.odt",
+      "bytes": 8044,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/croppedAndRotated.odt",
+      "bytes": 11188,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/dml-zorder.odt",
+      "bytes": 9704,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/duplicate-east-asia.odt",
+      "bytes": 9514,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/embedded_chart.odt",
+      "bytes": 23955,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/embedded_images.odt",
+      "bytes": 19334,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/empty-date-control.odt",
+      "bytes": 8668,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/empty.odt",
+      "bytes": 8466,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/fail_bracePair.odt",
+      "bytes": 9394,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/fdo48557.odt",
+      "bytes": 16782,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/fdo51034.odt",
+      "bytes": 9922,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/fdo51550.odt",
+      "bytes": 13611,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/fdo58577.odt",
+      "bytes": 9427,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/fdo60990.odt",
+      "bytes": 10945,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/flip_and_rotate.odt",
+      "bytes": 9403,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/floattable-nested-cell-start.odt",
+      "bytes": 12811,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/floattable-nested.odt",
+      "bytes": 11635,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/hyperlink-field.odt",
+      "bytes": 15543,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/hyphenation.odt",
+      "bytes": 16416,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/internal_hyperlink_frame.odt",
+      "bytes": 9021,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/internal_hyperlink_ole.odt",
+      "bytes": 13400,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/internal_hyperlink_region.odt",
+      "bytes": 8744,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/internal_hyperlink_table.odt",
+      "bytes": 8866,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/kde216114-1.odt",
+      "bytes": 22717,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/kde302504-1.odt",
+      "bytes": 10014,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/missing_newline.odt",
+      "bytes": 10524,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/n822175.odt",
+      "bytes": 7633,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/nested-text-frames.odt",
+      "bytes": 13013,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/no-numlevel-but-indented.odt",
+      "bytes": 19535,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/number-portion-format.odt",
+      "bytes": 8984,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/numlist-zhcn.odt",
+      "bytes": 10410,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/numlist-zhtw.odt",
+      "bytes": 10419,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/object_cross_reference.odt",
+      "bytes": 38788,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/ooo106020-1.odt",
+      "bytes": 11044,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 80952
+    },
+    {
+      "case": "lo-ooxmlexport/ooo34469-1.odt",
+      "bytes": 16812,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81784
+    },
+    {
+      "case": "lo-ooxmlexport/ooo39845-7.odt",
+      "bytes": 14361,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 81144
+    },
+    {
+      "case": "lo-ooxmlexport/ooo47778-3.odt",
+      "bytes": 9872,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81144
+    },
+    {
+      "case": "lo-ooxmlexport/ooo47778-4.odt",
+      "bytes": 9815,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81144
+    },
+    {
+      "case": "lo-ooxmlexport/ooo67471-2.odt",
+      "bytes": 9511,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81144
+    },
+    {
+      "case": "lo-ooxmlexport/ooo72950-1.odt",
+      "bytes": 12591,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 81144
+    },
+    {
+      "case": "lo-ooxmlexport/ooo96040-2.odt",
+      "bytes": 289270,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 97068
+    },
+    {
+      "case": "lo-ooxmlexport/outline-number-types.odt",
+      "bytes": 13600,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/page-graphic-background.odt",
+      "bytes": 32296,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/pageBreak_after.odt",
+      "bytes": 10162,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/paragraph-mark-nonempty.odt",
+      "bytes": 8769,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/parasplit-on-section-border.odt",
+      "bytes": 17642,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/picture_colormode_black_white.odt",
+      "bytes": 32725,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/picture_colormode_watermark.odt",
+      "bytes": 32345,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/sectionprot.odt",
+      "bytes": 8612,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/sectionprot2.odt",
+      "bytes": 8568,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/table.odt",
+      "bytes": 8889,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/table_cross_reference.odt",
+      "bytes": 10243,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/table_cross_reference_custom_format.odt",
+      "bytes": 12089,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf100581.odt",
+      "bytes": 24334,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 81856
+    },
+    {
+      "case": "lo-ooxmlexport/tdf101122_noFillForCustomShape.odt",
+      "bytes": 15232,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf101589_dontSplitTable.odt",
+      "bytes": 11314,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf103090.odt",
+      "bytes": 8845,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf104418.odt",
+      "bytes": 12437,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf104539.odt",
+      "bytes": 12783,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf104707_urlComment.odt",
+      "bytes": 9942,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf106001-2.odt",
+      "bytes": 8159,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf106062_nonHangingFootnote.odt",
+      "bytes": 14255,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf106541_noinheritChapterNumbering.odt",
+      "bytes": 13859,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf107626.odt",
+      "bytes": 12912,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf107684.odt",
+      "bytes": 12357,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf107837.odt",
+      "bytes": 9059,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf108944_footnoteSeparator2.odt",
+      "bytes": 10646,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf112169.odt",
+      "bytes": 23366,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf112312_AutoFitForLegacyShapes.odt",
+      "bytes": 11123,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf116371.odt",
+      "bytes": 13384,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf116436_rowFill.odt",
+      "bytes": 10835,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf117805.odt",
+      "bytes": 14897,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf118242.odt",
+      "bytes": 30562,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf118535.odt",
+      "bytes": 12032,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf118702.odt",
+      "bytes": 8620,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf119037.odt",
+      "bytes": 12291,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf121374_sectionHF.odt",
+      "bytes": 9719,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf121456_tabsOffset.odt",
+      "bytes": 14208,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf121597.odt",
+      "bytes": 10592,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf121867.odt",
+      "bytes": 7856,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf122186_input_list.odt",
+      "bytes": 8068,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf122201_editUnprotectedText.odt",
+      "bytes": 7104,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf123116_oversizedRowSplit.odt",
+      "bytes": 11843,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf123569_rotWriterImage_46deg.odt",
+      "bytes": 18450,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf123628.odt",
+      "bytes": 8410,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf123912_protectedForm.odt",
+      "bytes": 9604,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf124678_no_leading_paragraph.odt",
+      "bytes": 9122,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf124678_with_leading_paragraph.odt",
+      "bytes": 9164,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf125268.odt",
+      "bytes": 8432,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf125518.odt",
+      "bytes": 34438,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf126792.odt",
+      "bytes": 8403,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf126795_TabsRelativeToIndent0.odt",
+      "bytes": 16401,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf126795_TabsRelativeToIndent1.odt",
+      "bytes": 16424,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf127116.odt",
+      "bytes": 8573,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf127316_autoEscapement.odt",
+      "bytes": 11475,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf127362.odt",
+      "bytes": 9702,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf127579.odt",
+      "bytes": 8551,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81336
+    },
+    {
+      "case": "lo-ooxmlexport/tdf127605.odt",
+      "bytes": 9958,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf127925.odt",
+      "bytes": 8677,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf128290.odt",
+      "bytes": 9782,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf128304.odt",
+      "bytes": 15138,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf128460.odt",
+      "bytes": 9818,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf129522_removeShadowStyle.odt",
+      "bytes": 14253,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf131537.odt",
+      "bytes": 15318,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf131539.odt",
+      "bytes": 35907,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf131540.odt",
+      "bytes": 36613,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf132149_pgBreak.odt",
+      "bytes": 14309,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf132149_pgBreak2.odt",
+      "bytes": 17550,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf132149_pgBreakB.odt",
+      "bytes": 14621,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf133065.odt",
+      "bytes": 64161,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf133334_followPgStyle.odt",
+      "bytes": 19219,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf133370_columnBreak.odt",
+      "bytes": 18388,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf133771.odt",
+      "bytes": 12738,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 81528,
+      "code": "odf/parse-error/meta"
+    },
+    {
+      "case": "lo-ooxmlexport/tdf134951_duplicates.odt",
+      "bytes": 59232,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf135329_lostImage.odt",
+      "bytes": 29541,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf135595_HFtableWrap.odt",
+      "bytes": 97647,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf135655.odt",
+      "bytes": 18707,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf135667.odt",
+      "bytes": 16180,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf135973.odt",
+      "bytes": 14301,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf136059.odt",
+      "bytes": 17964,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf136386_WrapPolygonCurve.odt",
+      "bytes": 15739,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf136386_WrapPolygonLineShape.odt",
+      "bytes": 15715,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf136441_commentInFootnote.odt",
+      "bytes": 11777,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf136814.odt",
+      "bytes": 8249,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf136929_framesOfParagraph.odt",
+      "bytes": 179339,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83552
+    },
+    {
+      "case": "lo-ooxmlexport/tdf136952_pgBreak3B.odt",
+      "bytes": 14321,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf138374.odt",
+      "bytes": 10053,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf138780.odt",
+      "bytes": 9383,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf139128.odt",
+      "bytes": 8645,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf139580.odt",
+      "bytes": 17378,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81528
+    },
+    {
+      "case": "lo-ooxmlexport/tdf140336_paraNoneShading.odt",
+      "bytes": 10529,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf142361ShadowDirection.odt",
+      "bytes": 9135,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf142404_tabOverSpacingC15.odt",
+      "bytes": 16596,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf142433_WrapPolygonCustomShape.odt",
+      "bytes": 13306,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf142486_FrameShadow.odt",
+      "bytes": 14129,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf143269_emptyChart.odt",
+      "bytes": 9760,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf143269_missingEmbeddings.odt",
+      "bytes": 37606,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf143432_Frame_WrapTextMode.odt",
+      "bytes": 14147,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf143860_NonPrimitiveCustomShape.odt",
+      "bytes": 9408,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf144362.odt",
+      "bytes": 10328,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf144668.odt",
+      "bytes": 8913,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf145998_unnecessaryPageStyles.odt",
+      "bytes": 11742,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf146491.odt",
+      "bytes": 31278,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf146515.odt",
+      "bytes": 12991,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf146955.odt",
+      "bytes": 77189,
+      "class": "returned",
+      "ok": true,
+      "ms": 33,
+      "maxRssKiB": 106308
+    },
+    {
+      "case": "lo-ooxmlexport/tdf147810.odt",
+      "bytes": 10890,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf147978_enhancedPath_commandABVW.odt",
+      "bytes": 11581,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf148294_crossReferences.odt",
+      "bytes": 24097,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf148720.odt",
+      "bytes": 11848,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf148834_lineNumbering.odt",
+      "bytes": 17756,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf148952.odt",
+      "bytes": 11038,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf152636_lostPageBreak.odt",
+      "bytes": 8632,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf155903.odt",
+      "bytes": 11839,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf156105_percentSuffix.odt",
+      "bytes": 13301,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf158044.odt",
+      "bytes": 14032,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf159158_zOrder_headerBehind.odt",
+      "bytes": 19537,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf167721_zeroCh.odt",
+      "bytes": 17032,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf168237_emf_calc_smaller_taller_shear.odt",
+      "bytes": 69638,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf168237_emf_excel.odt",
+      "bytes": 46488,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf168237_emf_excel_smaller_taller_shear.odt",
+      "bytes": 39707,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf168886_emf_origin.odt",
+      "bytes": 31690,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf168964.odt",
+      "bytes": 14773,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf170389_manyTabstops.odt",
+      "bytes": 11780,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf170438_dropdown.odt",
+      "bytes": 10606,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf170767_verticalEscape.odt",
+      "bytes": 9407,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf170908_delText_sdt.odt",
+      "bytes": 27656,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf171360_unique_props.odt",
+      "bytes": 7814,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf41542_borderlessPadding.odt",
+      "bytes": 15669,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf41542_imagePadding.odt",
+      "bytes": 17926,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf43767_caseMapNumbering.odt",
+      "bytes": 21107,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf44832_section_new_header.odt",
+      "bytes": 19830,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf48569.odt",
+      "bytes": 13858,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf55427_footnote2endnote.odt",
+      "bytes": 13291,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf65955.odt",
+      "bytes": 8827,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf65955_2.odt",
+      "bytes": 8898,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf76022_textboxWrap.odt",
+      "bytes": 13878,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf81567.odt",
+      "bytes": 10892,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf88583.odt",
+      "bytes": 8471,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf90681-1.odt",
+      "bytes": 13089,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf90681-2.odt",
+      "bytes": 16590,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "lo-ooxmlexport/tdf92521.odt",
+      "bytes": 8891,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf92526_ShapeLineWidth.odt",
+      "bytes": 9163,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf93676-1.odt",
+      "bytes": 19502,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf98000_changePageStyle.odt",
+      "bytes": 9418,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf98620_environmentBiDi.odt",
+      "bytes": 9321,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf98700_keepWithNext.odt",
+      "bytes": 12680,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf99602_charStyleSubscript2.odt",
+      "bytes": 12475,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/tdf99810-lost-arrow.odt",
+      "bytes": 9720,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/testCustomShapePresetExport.odt",
+      "bytes": 86157,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/textframes.odt",
+      "bytes": 8853,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/textinput.odt",
+      "bytes": 9544,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 82680
+    },
+    {
+      "case": "lo-ooxmlexport/too_many_styles.odt",
+      "bytes": 59480,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 108724
+    }
+  ],
+  "commit": "8f2489052efce3ee0d45190cb4963ca7f6123b6d",
+  "date": "2026-10-16"
+}

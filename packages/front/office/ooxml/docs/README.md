@@ -25,7 +25,7 @@ Top-level: see the [API index](./api/README.md). Per sub-domain:
 - [Math (OMML)](./api/math.md)
 - [OPC container](./api/opc/package.md)
 - [Markup Compatibility](./api/mc.md)
-- XML parser: consumed from [`@awacloud/fw/io/codec/xml.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/api/io/codec/xml.md)
+- XML parser: consumed from [`@awacloud/fw/io/codec/xml.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/io/codec/xml.md)
 - **[Extras (opt-in modules)](./api/extra/README.md)** — the opt-in modules that promote elements from the `_extras` fallback to typed fields
 - **[Bundles](./api/bundles/README.md)** — `docx-large`, `docx-full`, `xlsx-large`, `xlsx-full`, `pptx-large`, `pptx-full`
 
@@ -81,5 +81,5 @@ The modules registered in `modules[]` (`src/main.js`), topologically ordered.
 
 ## See also
 
-- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.0.0/packages/front/fw) — runtime + zip + crc32 + codecs (mandatory dependency)
-- [Doc format spec (fw)](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/guide/doc-format.md) — page convention used here
+- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.1.0/packages/front/fw) — runtime + zip + crc32 + codecs (mandatory dependency)
+- [Doc format spec (fw)](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/guide/doc-format.md) — page convention used here

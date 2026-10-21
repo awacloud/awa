@@ -203,6 +203,13 @@ Choose the algorithm by where the document will be checked: **ECDSA
 P-256 when Acrobat must validate the signature**; Ed25519 when the
 verifiers are known to support EdDSA.
 
+The same holds when Acrobat is used as test evidence. Adobe Acrobat Reader
+does not validate EdDSA signatures: it reports "error in the formatting or
+information contained in the signature" on Ed25519 PAdES outputs and on an
+OpenSSL-produced Ed25519 CMS alike, while OpenSSL 3.5 verifies them. Never
+treat that Acrobat error on Ed25519 as a CMS defect; use ECDSA P-256 for
+Acrobat interop evidence.
+
 `useSignedAttrs: true` adds the ESS `signing-certificate-v2` attribute
 (RFC 5035); it is required for T/LT/LTA (the timestamp token lives in
 `unsignedAttrs`, only emitted alongside `signedAttrs`) and optional for
@@ -447,6 +454,14 @@ non-exact gap gives `verified: false` with the same two codes in
 `errors`, even when the imprint matched (`imprintVerified: true`), and
 each entry names the accepted form in `gapForm` — `'token'`,
 `'digits'`, or `null` for any other gap.
+
+**`verified` says nothing about whether the document still parses.**
+`verifyAllSignatures` locates the signatures by scanning the bytes, not by
+reading the object graph. A signature verifier that byte-scans can report
+`verified: true` on a document whose object graph the signer just
+corrupted. Never treat a successful signature verification as evidence that
+the document still parses: measure verification AND a full read of the
+signed output.
 
 This is row 5 of the claim matrix, in the exact wording every public
 sentence about verification must quote:

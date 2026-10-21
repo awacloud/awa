@@ -25,7 +25,9 @@ const shared = runtime.resolve('ooxmlShared');
 //     wordRootAttrs,
 //     encodeText, decodeText,
 //     createRidAllocator,
-//     createDmlColorCodec, createXlsxColorCodec }
+//     createTypedColorCodec, parseSrcRect, srcRectAttrs,
+//     createDmlColorCodec, createXlsxColorCodec,
+//     sequence, orderBySequence }
 ```
 
 ## API
@@ -43,12 +45,17 @@ const shared = runtime.resolve('ooxmlShared');
 | `partExt(partName)` | `(string) => string` | Lower-case OPC extension, without the dot. Empty string when there is no dot. |
 | `lookupCT(pkg, partName)` | `(pkg, string) => string\|null` | Content-type of a part from a whole `pkg`: overrides first, then per-extension defaults. `null` when nothing matches. |
 | `trackUnmodelledParts(pkg, consume)` | `(pkg, (pkg) => T) => { value: T, unmodelledParts: Array<{ partName, contentType }> }` | Runs `consume(pkg)` while recording which entries of `pkg.parts` it looks up; returns its value plus every part never looked up, sorted by `partName`, with its declared content type (`null` when undeclared). The original parts map is restored before it returns or throws. Used by the `docx` / `xlsx` / `pptx` readers to fill `unmodelledParts`. |
-| `wordRootAttrs(nodes)` | `(nodes: XmlNode[]) => object` | The root namespace attributes of a WordprocessingML part whose root holds `nodes`: `w` and `r` always; `mc`, the Word 2012 namespace and `mc:Ignorable` when the nodes hold a `w15:` element (searched at any depth; non-element entries ignored). Returns a new object, keys in the order `xmlns:w`, `xmlns:r`, `xmlns:mc`, `xmlns:w15`, `mc:Ignorable`. Used by the `w:document`, header, footer, footnotes, endnotes and comments writers. |
+| `wordRootAttrs(nodes, opts?)` | `(nodes: XmlNode[], opts?: { r?: boolean }) => object` | The root namespace attributes of a WordprocessingML part whose root holds `nodes`: `w` and `r` always; then each known prefix (`wp`, `a`, `pic`, `wps`, `wpg`, `wpc`, `c`, `m`, `v`, `o`, `w10`, `wp14`, `w14`, `w15`, `w16`, `w16cex`, `w16cid`, `w16se`, `w16sdtdh`, in that order) that an element or attribute name of `nodes` uses outside the scope of its own `xmlns:` declaration (searched at any depth; non-element entries ignored). A `w15:` element always declares `w15`. When an Office extension prefix (`wp14`, `w14`, `w15`, `w16*`) is declared, `xmlns:mc` comes right after `r` and `mc:Ignorable` lists the extensions last; an undeclared `mc:` name declares `mc` too. The prefixes an `mc:Choice` lists in `Requires` count as used (ECMA-376 Part 3 §10.2.1). A prefix with no known namespace is left undeclared. `opts.r: false` declares `r` only when a name uses it (the `w:styles` and `w:numbering` roots). Returns a new object, keys in the order `xmlns:w`, `xmlns:r`, `xmlns:mc`, the other declarations in table order, `mc:Ignorable`. Used by the `w:document`, header, footer, footnotes, endnotes, comments, styles and numbering writers. |
 | `encodeText(s)` | `(string) => Uint8Array` | UTF-8 encode through the instance's shared `TextEncoder`. |
 | `decodeText(bytes)` | `(Uint8Array) => string` | UTF-8 decode through the instance's shared `TextDecoder`. |
 | `createRidAllocator(opts?)` | `({prefix?, start?, existing?}) => allocator` | Fresh relationship-id allocator; returns `{ next, peek, reset, usedIds, claim, register }`. |
+| `createTypedColorCodec(xml)` | `(xml) => { parse, render }` | The typed colour of shape fills and text runs: `parse(el)` turns an `a:srgbClr` / `a:schemeClr` element into `{ rgb }` / `{ schemeColor }` plus `mods: [{ name, val? }]` for its colour-transform children (document order, `val` a number), or `null` for another colour kind or a child that does not fit (another attribute, nested elements, a `val` that does not survive `Number` → `String`); `render(color)` builds the element back. |
+| `parseSrcRect(el)` | `(el) => { l?, t?, r?, b? }` | The crop of an `a:srcRect` element, numbers in 1/1000 of a percent; `{}` when it has none. |
+| `srcRectAttrs(rect)` | `({ l?, t?, r?, b? }) => object` | The attribute object of `a:srcRect` for a crop (present sides only). |
 | `createDmlColorCodec(xml)` | `(xml) => codec` | DrawingML colour codec; returns `{ COLOR_TAGS, parseColor, renderColor, parseColorMod, renderColorMod, parseColorMods, findFirstColor, srgbClr }`. |
 | `createXlsxColorCodec(xml)` | `(xml) => codec` | SpreadsheetML colour codec; returns `{ parseColor, renderColor }`. |
+| `sequence(names)` | `(names: Array<string\|string[]>) => seq` | Indexes an `xsd:sequence` of child names for `orderBySequence`; an entry that is an array names elements sharing one place (a choice inside the sequence). |
+| `orderBySequence(children, seq)` | `(XmlNode[], seq) => XmlNode[]` | A new array of `children` sorted by their place in `seq`, stably. An `mc:AlternateContent` takes the place of the element its `mc:Fallback` (else its first `mc:Choice`) holds; a name `seq` does not list goes before the sequence's trailing `…Change` entry when it has one, else last. The docx writers use it to put the elements a read preserved in `_extras` back among the typed ones. |
 
 ### `createRidAllocator(opts)`
 

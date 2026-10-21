@@ -83,7 +83,7 @@ flattenNode(emphNode); // emphNode's children take its place
 ## Notes
 
 - `replaceNode` / `wrapNode` / `flattenNode` throw `ContractError` (codes `md/replace-node-no-parent`, `md/wrap-node-no-parent`, `md/flatten-node-no-parent`) if the node argument has no parent.
-- `cloneNode` defaults to **shallow**: copies the scalar slots (`type`, `level`, `literal`, …) + `data` (shallow `Object.assign`). With `deep=true`, recursively copies children.
+- `cloneNode` defaults to **shallow**: copies the scalar slots (`type`, `level`, `literal`, …) + `data` (shallow `Object.assign`). With `deep=true`, copies the whole subtree with an explicit stack (no recursion limit: a document nested tens of thousands of levels deep copies without a `RangeError`).
 - `findFirst` / `findAll` traverse depth-first via `Walker`; for a predicate that doesn't depend on the parent, this is optimal.
 - The operations preserve `prev` / `next` / `parent` linked-list consistency — no leaks.
 

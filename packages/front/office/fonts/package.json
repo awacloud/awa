@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/fonts",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Matthieu Bouilloux",
@@ -77,7 +77,7 @@
     "gen:bundles": "bun run tools/generate-bundles.mjs",
     "lint": "eslint . --max-warnings 0"
   },
-  "awa": { "maturity": "L4", "coverageFloor": 0.87 },
+  "awa": { "maturity": "L4", "coverageFloor": 0.882, "coverageBasis": ["src/**"] },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/awacloud/awa.git",

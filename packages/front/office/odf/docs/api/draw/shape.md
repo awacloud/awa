@@ -30,5 +30,5 @@ Model:
 |---------|-------------|
 | `isShapeName(name)` | Indicates whether the tag is a recognised shape. |
 | `parseShape(el)` | Converts a node into the model. |
-| `renderShape(s)` | Builds a node. |
+| `renderShape(s)` | Builds a node: `children`, then `_extras.children`, then (custom shapes) `draw:enhanced-geometry` last, after the shape's text, as the schema orders them. |
 | `KINDS` | The underlying `Set` of recognised shape tag names (`draw:rect`, `draw:circle`, `draw:ellipse`, `draw:line`, `draw:polyline`, `draw:polygon`, `draw:path`, `draw:custom-shape`). |

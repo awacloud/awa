@@ -19,7 +19,10 @@
  * **Images (typed write).** A paragraph `image` run is rendered as
  * `<draw:frame><draw:image/></draw:frame>` through the write ctx's
  * `renderImage` sink, composed here from `drawFrame` + `drawImage`. On read
- * the frame stays untyped in the paragraph's `_extras.children`.
+ * the frame stays untyped in the paragraph's `_extras.children` — unless
+ * `read(bytes, { framesInRuns: true })`: every paragraph-level frame is then
+ * a `{ type: 'frame', ...drawFrame model }` run at its place in the text,
+ * and `write` renders a frame run in place (`renderFrame` sink).
  *
  * Result of `read()` :
  *
@@ -110,7 +113,12 @@ export const odt = {
          * Read a `.odt` byte stream into a typed document model.
          *
          * @param {Uint8Array} bytes
-         * @param {object} [opts] forwarded to pkgPackage.read — { maxParts?, maxUncompressed?, maxRatio? }
+         * @param {object} [opts] forwarded to pkgPackage.read — { maxParts?, maxUncompressed?, maxRatio? } —
+         *   plus `framesInRuns` (default `false`, the 1.0.0 model): `true`
+         *   types every `draw:frame` of a paragraph, heading, span or link
+         *   body as a `{ type: 'frame', ...drawFrame model }` run at its place
+         *   instead of leaving it in `_extras.children` (or, in a span, as a
+         *   raw element entry).
          * @returns {object}
          */
         function read(bytes, opts) {
@@ -133,7 +141,8 @@ export const odt = {
             const result = { mimetype: p.mimetype, body: [], package: p };
             readSidecars(result, p, { metaMod, settingsMod, stylesMod });
 
-            const parsed = parseContent(shared.decodeText(contentBytes), result.styles);
+            const parsed = parseContent(shared.decodeText(contentBytes), result.styles,
+                !!(opts && opts.framesInRuns));
             result.body = parsed.body;
             if (parsed.autoStyles) result.autoStyles = parsed.autoStyles;
             if (parsed.fontFaces) result.fontFaces = parsed.fontFaces;
@@ -172,9 +181,10 @@ export const odt = {
          * @param {string} xmlString
          * @param {object} [stylesModel] — parsed `styles.xml` model, used
          *   read-only for named-style / font-face resolution.
+         * @param {boolean} [framesInRuns] — type frames as runs in place.
          * @returns {{body: Array<object>, autoStyles?: object, fontFaces?: Array<object>}}
          */
-        function parseContent(xmlString, stylesModel) {
+        function parseContent(xmlString, stylesModel, framesInRuns) {
             const root = parseXmlOrThrow(xmlString, 'odt',
                 { part: 'content.xml', module: 'odt' });
             if (root.name !== 'office:document-content') {
@@ -200,7 +210,12 @@ export const odt = {
                 : undefined;
 
             const textEl = xml.findChild(bodyEl, 'office:text');
-            const out = { body: textEl ? contentMod.parseBody(textEl, resolver) : [] };
+            // The read ctx: the resolver, plus the frame parser when frames
+            // are typed in place (`consumed` is the same Set either way).
+            const readCtx = framesInRuns
+                ? { ...(resolver || {}), parseFrame: frameMod.parseFrame }
+                : resolver;
+            const out = { body: textEl ? contentMod.parseBody(textEl, readCtx) : [] };
 
             const consumed = resolver ? resolver.consumed : new Set();
 
@@ -260,7 +275,9 @@ export const odt = {
          * a carried part never overrides a picture of the same path.
          *
          * @param {object} doc — `{ body, autoStyles?, fontFaces?, pictures?, meta?, settings?, styles?, package? }`
-         * @param {object} [opts] — `{ meta, settings, styles }`, each overriding the `doc.*` sidecar
+         * @param {object} [opts] — `{ meta, settings, styles }`, each overriding the `doc.*` sidecar,
+         *        and `mtime` (`number|Date`), the ZIP entry date passed to `pkgPackage.write`
+         *        (default 1980-01-01 00:00:00: the output is byte-reproducible)
          * @returns {Uint8Array}
          */
         function write(doc, opts) {
@@ -295,7 +312,7 @@ export const odt = {
 
             carryParts(p, doc.package, { pkg, manifestMod });
 
-            return pkg.write(p);
+            return pkg.write(p, { mtime: opts.mtime });
         }
 
         /** Emit `doc.pictures` as parts; media type sniffed from the bytes. */
@@ -327,9 +344,9 @@ export const odt = {
             return frameMod.renderFrame(frame);
         }
 
-        /** The write ctx: the style registry's members plus the image sink. */
+        /** The write ctx: the style registry's members plus the image and frame sinks. */
         function writeCtx(registry) {
-            return { ...(registry || {}), renderImage: renderImageRun };
+            return { ...(registry || {}), renderImage: renderImageRun, renderFrame: frameMod.renderFrame };
         }
 
         /** Names already taken by the passthrough automatic-styles model. */

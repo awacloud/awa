@@ -218,6 +218,63 @@ export const pdfBuilder = {
                     { context });
             }
 
+            /** Built-in encoding of the two symbolic Standard 14 faces. */
+            const SYMBOLIC14 = Object.freeze(['Symbol', 'ZapfDingbats']);
+            const stdDescNums = new Map();         // baseFont -> descriptor num
+
+            /**
+             * The opt-in `standard14` metrics of a legacy registration: the
+             * `@awacloud/fonts` `standard14Lookup` API (as `pdfFont.typeFont`
+             * takes it). PDF 2.0 requires `FirstChar`, `LastChar`, `Widths`
+             * and `FontDescriptor` for every simple font, the Standard 14
+             * included (ISO 32000-2 Table 109). The record's width table is
+             * per WinAnsi code for the 12 Latin faces and per built-in code
+             * for Symbol and ZapfDingbats, so those are the encodings taken.
+             * @returns {object} the entries to add to the font dictionary
+             */
+            function standard14Entries(spec, subtype) {
+                const lookup = spec.standard14;
+                const baseFont = String(spec.baseFont);
+                const isApi = !!(lookup && typeof lookup.isStandard14 === 'function'
+                    && typeof lookup.lookupStandard14 === 'function');
+                if (!isApi || subtype !== 'Type1' || !lookup.isStandard14(baseFont)) {
+                    throw badFont({ name: spec.name, baseFont, subtype, standard14: isApi ? 'not a Standard 14 Type1 face' : 'not a standard14Lookup API' });
+                }
+                const symbolic = SYMBOLIC14.includes(baseFont);
+                if (symbolic ? spec.encoding !== undefined : spec.encoding !== 'WinAnsiEncoding') {
+                    throw badFont({ name: spec.name, baseFont, encoding: spec.encoding,
+                        standard14: symbolic ? 'no /Encoding (built-in)' : 'WinAnsiEncoding only' });
+                }
+                const rec = lookup.lookupStandard14(baseFont);
+                let descNum = stdDescNums.get(baseFont);
+                if (descNum === undefined) {
+                    const d = {
+                        Type:        obj.name('FontDescriptor'),
+                        FontName:    obj.name(baseFont),
+                        Flags:       obj.int(rec.flags),
+                        FontBBox:    obj.array(rec.fontBBox.map(numObj)),
+                        ItalicAngle: numObj(rec.italicAngle),
+                        Ascent:      numObj(rec.ascent),
+                        Descent:     numObj(rec.descent)
+                    };
+                    for (const [key, field] of [['CapHeight', 'capHeight'], ['XHeight', 'xHeight'],
+                        ['StemV', 'stemV'], ['StemH', 'stemH']]) {
+                        if (Number.isFinite(rec[field])) d[key] = numObj(rec[field]);
+                    }
+                    descNum = alloc();
+                    pushIndirect(descNum, obj.dict(d));
+                    stdDescNums.set(baseFont, descNum);
+                }
+                const widths = [];
+                for (let code = 32; code <= 255; code++) widths.push(numObj(rec.widths[code] || 0));
+                return {
+                    FirstChar:      obj.int(32),
+                    LastChar:       obj.int(255),
+                    Widths:         obj.array(widths),
+                    FontDescriptor: obj.ref(descNum, 0)
+                };
+            }
+
             /**
              * Allocate every indirect an embed result needs, ONCE per result
              * object (identity cache) — the same `embedded` registered on
@@ -331,10 +388,14 @@ export const pdfBuilder = {
                     if (spec.encoding !== undefined) {
                         fontEntries.Encoding = obj.name(spec.encoding);
                     }
+                    // Opt-in metrics; `undefined` = absent: the legacy bytes.
+                    const metrics = spec.standard14 !== undefined
+                        ? standard14Entries(spec, subtype) : null;
                     const key = String(spec.baseFont) + '\0' + subtype
-                        + '\0' + (spec.encoding ?? '');
+                        + '\0' + (spec.encoding ?? '') + (metrics ? '\0standard14' : '');
                     num = stdFontNums.get(key);
                     if (num === undefined) {
+                        if (metrics) Object.assign(fontEntries, metrics);
                         num = alloc();
                         pushIndirect(num, obj.dict(fontEntries));
                         stdFontNums.set(key, num);

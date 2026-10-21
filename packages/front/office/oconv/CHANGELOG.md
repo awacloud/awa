@@ -9,6 +9,186 @@ See [`README.md`](./README.md) for the usage guide.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-21
+
+### Added
+
+- **GFM task-list checkboxes reach docx, odt and markdown.** The md
+  reader carries a task item's `[ ]` / `[x]` in `listItem.escapes.md`
+  (`{ task: 'unchecked' }` / `{ task: 'checked' }`) instead of dropping
+  it. `fromMd` to docx or odt writes it as a leading `☐ ` / `☒ ` run of
+  the item's first paragraph; the markdown writer writes `[ ]` / `[x]`
+  back. The pdf writer draws the glyph when the regular face covers it:
+  the pdf measurer gains `covers(text, style)`, which says whether a
+  style's face draws every character of a string.
+- **PNG images in pdf.** `fromMd` / `convert` to pdf place PNG images,
+  where they were refused: a colour type 0 or 2 PNG embeds its `IDAT`
+  stream as `/FlateDecode` behind a PNG predictor; a palette, alpha or
+  colour-key PNG is decoded (the inflate bounded by the size its header
+  declares, 64 MiB at most) into its colour samples and an `/SMask`. An
+  interlaced or malformed PNG is still refused (`layout/image-dropped`,
+  `format: 'png'`). `oconvIrToPdf` gains fw `zlib` as an optional
+  dependency (`standard14Lookup`, below, comes after it); a hand-wired
+  factory call without it refuses the decoded PNG kinds as before.
+  **Release note**: a PNG that used to be refused with
+  `layout/image-dropped` is now drawn, so that record leaves the ledger
+  and the pdf bytes of such a document change.
+- **Code blocks, quotes and rules in odt.** `fromMd` / `convert` to odt
+  write a code block as `Preformatted Text` paragraphs, one per line,
+  its indentation kept as `text:s` spaces; a quote's paragraphs as
+  `Quotations` paragraphs; a thematic break as an empty `Horizontal Line`
+  paragraph — LibreOffice's own style names, added to the fixed styles
+  part. The `block/degraded` (`codeBlock`, `blockquote`) and
+  `block/dropped` (`hr`) losses are no longer recorded on this target;
+  what odt cannot nest records `block/degraded` `blockquote:nested` or
+  `blockquote-child:<kind>`. `toMd` / `convert` from odt read
+  consecutive `Preformatted Text` paragraphs as one fenced code block,
+  consecutive `Quotations` paragraphs as one blockquote and an empty
+  `Horizontal Line` paragraph as a thematic break (also through an
+  automatic style's parent), where they read as plain paragraphs.
+  **Release note**: a ledger consumer that matched the retired records no
+  longer sees them, and the `.odt` bytes of a document with a code
+  block, a quote or a rule change.
+- **Images keep their own size and their alt text in docx and odt.**
+  `fromMd` / `convert` to docx and odt place an image at the size its
+  header gives — PNG (`pHYs` resolution), JPEG (JFIF density) or GIF, 96
+  dpi when the file states none, scaled down to fit 6 in × 8 in — and
+  write its alt text as the docx picture description or the odt frame
+  title, both read back as the alt. `image/size-defaulted` is now
+  recorded only for a header that gives no size (the default box is
+  kept for it). **Release note**: every placed image used to sit in the
+  default box and record `image/size-defaulted`; the record now marks the
+  exception, and the size of every image in a `.docx` or `.odt` written
+  by `fromMd` or `convert` changes.
+- **Code blocks, quotes and rules in docx.** `fromMd` / `convert` to docx
+  write a code block as one `SourceCode` paragraph (Courier New, a line
+  break between source lines), a quote's paragraphs as `BlockText`
+  paragraphs and a thematic break as an empty `HorizontalRule` paragraph
+  with a bottom border; the three styles join the fixed styles part. The
+  `block/degraded` (`codeBlock`, `blockquote`) and `block/dropped` (`hr`)
+  losses are no longer recorded on this target; what docx cannot nest
+  records `block/degraded` `blockquote:nested` or
+  `blockquote-child:<kind>`. A code block's info string is not written.
+  **Release note**: a ledger consumer that matched the retired records no
+  longer sees them, and the `.docx` bytes of a document with a code
+  block, a quote or a rule change.
+- **docx code blocks, quotes and rules are read.** `toMd` / `convert`
+  from docx read a paragraph styled `Source Code` as a fenced code block
+  (line breaks and tabs kept), consecutive paragraphs styled `Block Text`,
+  `Quote` or `Intense Quote` as one blockquote, and an empty `Horizontal
+  Rule` paragraph as a thematic break — by the style's built-in name,
+  else by its ID, so pandoc's docx output resolves too. Such paragraphs
+  used to read as plain paragraphs.
+- **odt images reach the IR.** An image frame of an `.odt` source (read
+  with `@awacloud/odf`'s `framesInRuns`, as `oconv` does) becomes an IR
+  `image` at its place: `name` = the frame's `draw:name`, else the picture
+  path's basename; `alt` = its title, else its description; the picture
+  part's bytes travel in the new `escapes.odt` (`{ bytes, contentType }`).
+  Every writer reads them after `escapes.docx`, so `toMd` lists the image
+  as an asset and `convert` from odt places it in docx, odt and pdf, where
+  it used to record `image/unresolved`. A missing or external picture part
+  records `image/bytes-unavailable` (the reference is kept); an image
+  inside a link records `inline/dropped` (detail `link-target`). Text-box
+  and object frames still record `image/unresolved`.
+
+### Changed
+
+- **Standard 14 font dictionaries carry their metrics.** PDF 2.0
+  requires `FirstChar`, `LastChar`, `Widths` and `FontDescriptor` in
+  every simple font dictionary; the pdf target's Standard 14 route now
+  registers its faces with `@awacloud/pdf`'s opt-in `standard14` metrics
+  (`oconvIrToPdf` gains `standard14Lookup` as its last, optional
+  dependency; a hand-wired call without it writes the bare
+  dictionaries). Every Standard 14 `.pdf` output gains these keys and
+  one font descriptor per face. **Release note**: the bytes of every
+  `.pdf` that uses a Standard 14 face change; a stored hash of such an
+  output is re-baselined.
+- **`.pdf` output carries an `/ID`.** PDF 2.0 requires the trailer
+  `/ID`, which the pdf target never wrote; `@awacloud/pdf`'s writer now
+  derives it from the written bytes, so every `fromMd` and `convert`
+  `.pdf` output gains it and stays byte-reproducible. **Release note**:
+  the bytes of every `.pdf` output change.
+- **`.odt` output is byte-reproducible.** Every zip entry of an `.odt`
+  written by `fromMd` or by `convert` (`docx → odt`) now carries the fixed
+  date 1980-01-01 00:00 that `@awacloud/odf` stamps, where it carried the
+  time of the write; two identical calls give identical bytes, as the
+  `.docx` and `.pdf` targets already did. **Release note**: the bytes of
+  every `.odt` output change (the entry dates); a stored hash of an
+  `.odt` output is re-baselined once.
+- **`list/task-marker-dropped` is recorded by the writers, not the md
+  reader.** `fromMd` to docx and odt no longer records it. On pdf the
+  Standard 14 faces and the Liberation pack have no ☐ / ☒ glyph, so the
+  list renderer records it once per task item (with the block's `index`
+  and `kind`, after the reader's losses); every writer records it for a
+  task item whose first block is not a paragraph. **Release note**: a
+  ledger consumer that matched `list/task-marker-dropped` on a docx or
+  odt output no longer sees it; on pdf it still does, after the reader's
+  losses.
+
+### Fixed
+
+- **pdf → Markdown reads fonts whose `/Encoding` is indirect.** A
+  simple font whose `/Encoding` (or the `/Differences` /
+  `/BaseEncoding` inside it) is an indirect reference — what pdfLaTeX
+  writes on every Type 1 font, so most arXiv papers — failed to build a
+  decoder: every string shown in it was counted undecodable and the
+  font recorded as `text/font-unresolved`, so `toMd` returned almost no
+  text for such documents. The reader now resolves these references
+  before reading the encoding; such documents gain their text.
+- **Image assets keyed by the destination as written.** `fromMd` looked
+  `assets` up by the destination as the Markdown reader normalises it, so
+  a destination in angle brackets or with a non-ASCII character
+  (`![A](<my diagram.png>)`, `![A](café.png)`) missed the key the
+  documentation names (`my diagram.png`, `café.png`) and the image was
+  dropped — in particular every docx picture whose name holds a space,
+  written back by `toMd` as `<Grafik 1>`. After an exact miss the docx,
+  odt and pdf writers now look the percent-decoded name up; a key that
+  matched before still wins.
+- **No spurious line overflow in pdf.** The md → pdf typesetter compared a
+  line's width to its column strictly, so a token measured equal to its
+  column within floating-point noise (a table header cell such as
+  "Center": 34.837 against 34.83699999999999) recorded a
+  `layout/line-overflow` and could wrap a fitting word. A line now fits
+  within 1e-6 pt of its column; a real overflow is recorded as before.
+- **Table header cells keep each run's face in pdf.** A header cell was
+  drawn in one class, so a cell mixing italic and roman runs lost its
+  italics and inline code its monospace face. Each run is now bold, bold
+  italic, or monospace as it should be. `oconvPdfLinebreak.tokenize` /
+  `breakInlines` accept a function as `styleOverride` (one class per run)
+  besides the string form.
+- **An empty fenced code block is accounted.** Its renderer returns an
+  explicit `height: 0`, which declares the block empty, so
+  `oconvPdfStack.unaccounted` no longer reports a document made of one
+  empty fence; a renderer that returns nothing without stating a height
+  is still reported.
+- **A refused image names its format.** `layout/image-dropped` now
+  carries `format` for a GIF, WebP, BMP, TIFF or a refused (CMYK) JPEG,
+  from the signature, and failing that from the content type a reader
+  carried with the bytes (`image/gif` → `gif`); it was missing for every
+  refusal but a PNG of colour type 0 or 2.
+- **odt frames inside links are recorded.** `oconv` now reads `.odt` with
+  `@awacloud/odf`'s `framesInRuns` option, and `odtToIr` maps a `frame` run
+  like the raw frame it replaces (`image/unresolved`, a span frame's text
+  kept; an image frame is read into the IR, above). A frame inside a link —
+  silently dropped before — is now recorded: an image frame as
+  `inline/dropped` (detail `link-target`), any other frame as
+  `image/unresolved`; frame losses follow document order. A result read
+  without the option maps as before.
+- **A link's fields and references keep their text.** `odtToIr` ignored a
+  link run's own untyped children (a field, a reference or a bookmark inside
+  a `<text:a>`), so their text vanished with no loss recorded. They now
+  follow the span field-text rule — the text kept as a run carrying the
+  link (`inline/flattened`), an empty element recorded `inline/dropped`.
+- **Hard line breaks reach markdown.** `toMd` wrote a line break of the
+  source (an odt `text:line-break`, a `\n` in an IR run) as a bare newline,
+  a CommonMark soft break that renders as a space, with no loss recorded. A
+  paragraph now writes a hard break (a backslash at the end of the line); a
+  heading or a table cell, which cannot hold one, writes a space and records
+  `inline/linebreak-degraded`.
+- **Markdown block quotes end cleanly.** `toMd` no longer ends a block
+  quote with a bare `>` line (an `@awacloud/md` `renderMarkdown` fix); the
+  next block follows after a blank line. Same document once parsed.
+
 ## [1.0.0] - 2026-10-07
 
 ### Added

@@ -37,7 +37,7 @@ directly is for a caller composing the IR itself.
 
 `opts.assets` maps a markdown image destination (`![alt](diagram.png)` →
 key `diagram.png`) to its encoded bytes; caller bytes win over the
-reader-carried `escapes.docx.bytes` (see Notes). Omitted or `undefined`
+reader-carried `escapes.docx.bytes` / `escapes.odt.bytes` (see Notes). Omitted or `undefined`
 reproduces the writer's original image-free behaviour exactly.
 
 ## Examples
@@ -88,9 +88,13 @@ image, no unsupported block).
   `word/styles.xml` through `docx.write`'s `opts.styles`, headings or not,
   with exactly these style ids: `Normal` (default paragraph style),
   `Heading1`..`Heading6` (based on / next `Normal`, bold, 16/14/13/12/11/11
-  pt, 12 pt before / 4 pt after) and `TableGrid` (`Table Grid`, single
-  borders on all six edges, 108 twips / 0.19 cm left and right cell
-  padding), plus `docDefaults` Calibri 11 pt. Every
+  pt, 12 pt before / 4 pt after), `SourceCode` (`Source Code`, Courier New
+  10 pt, no spacing before / after), `BlockText` (`Block Text`, 0.5 in left
+  and right indent), `HorizontalRule` (`Horizontal Rule`, a single 3/4 pt
+  bottom paragraph border — carried in the style's `pPr._extras`, as
+  `@awacloud/ooxml` types no paragraph border) and `TableGrid` (`Table
+  Grid`, single borders on all six edges, 108 twips / 0.19 cm left and
+  right cell padding), plus `docDefaults` Calibri 11 pt. Every
   referenced `w:pStyle` is defined; no unreferenced style is emitted.
   There is no option to supply or alter styles — tier 3 (caller styling)
   is still not promised.
@@ -103,11 +107,31 @@ image, no unsupported block).
   `tblPr.cellMargins`). The direct borders and padding render whether or not a
   consumer resolves the style reference; without the padding, cell text
   touched the grid lines in Word (owner review, 2026-10-01).
+- **Images keep their alt text and their own size**: a placed image is
+  written with the IR `alt` as the drawing description (`wp:docPr
+  descr`, read back as the alt) and, when its size is read from the image header (PNG `IHDR` + `pHYs`, JPEG `SOFn` + JFIF density, GIF screen size; 96 dpi when the file states none), scaled down to fit 6 in × 8 in with its aspect kept, as its
+  `cx` / `cy`. The header is read for its geometry only, never decoded;
+  a header that cannot be read keeps `@awacloud/ooxml`'s default 2 in ×
+  4:3 box and records `image/size-defaulted`.
 - **`run.code` round-trips inline code symmetrically**: it writes
   `font: 'Courier New'` into the run's `rPr`, `@awacloud/ooxml` round-trips
   `rPr.font` through `<w:rFonts>`, and `../read/docx-to-ir.js`'s frozen
   monospace allowlist recognises `'courier new'` on the return leg — so
   `md → docx → md` keeps inline code as backticks.
+- **Code blocks, quotes and rules are styled, and read back**: a
+  `codeBlock` is ONE `SourceCode` paragraph holding one Courier New run,
+  its source lines separated by line breaks (a blank line is two adjacent
+  breaks, the text's one trailing newline writes none, leading spaces are
+  kept); its `info` string is not written — docx has no carrier for it,
+  and no loss is recorded (as on the pdf target). A `blockquote`'s
+  paragraphs are `BlockText` paragraphs; a quote nested in a quote is
+  written as `BlockText` paragraphs with a direct indent of one more level
+  each (`block/degraded`, `blockquote:nested`), and any other block inside
+  a quote keeps its own mapping (`block/degraded`,
+  `blockquote-child:<kind>`). An `hr` is an empty `HorizontalRule`
+  paragraph. `../read/docx-to-ir.js` reads the three styles back, so
+  `md → docx → md` keeps a fenced code block (without its info string), a
+  quote and a rule; consecutive quoted paragraphs re-read as one quote.
 - **One numbering instance per top-level list**: every top-level IR
   `list` gets its own `numId`, allocated in document order starting at 1
   (a fresh `w:num` per list, backed by the bullet or the decimal abstract
@@ -131,10 +155,9 @@ image, no unsupported block).
   give byte-identical containers, `word/styles.xml` and `word/document.xml`
   included (`src/write/ir-to-docx.test.js` "two calls produce byte-identical
   containers (fixed zip entry timestamp)"; `src/oconv.test.js` "the docx
-  target is byte-reproducible across two calls"). The `odt` target is not: the
-  ODF package writer stamps the current time, so two identical calls give
-  equal document models but may give different bytes. The `pdf` target is
-  byte-reproducible.
+  target is byte-reproducible across two calls"). The `odt` target is
+  byte-reproducible too (`@awacloud/odf` stamps the same fixed timestamp), and
+  so is the `pdf` target.
 - See the [loss matrix](../../loss-matrix.md) for the published
   Preserved/Degraded/Dropped classification of every code below.
 
@@ -143,15 +166,17 @@ image, no unsupported block).
 | Code | Detail | Meaning |
 |---|---|---|
 | `list/depth-clamped` | `'ilvl>8'` | a list nested deeper than `ilvl` 8 was clamped to 8 |
+| `list/task-marker-dropped` | `'[x]'` or `'[ ]'` | a GFM task item (`listItem.escapes.md.task`) whose first block is not a paragraph, so its checkbox has no line to lead; otherwise the checkbox is a leading `☐ ` / `☒ ` run of the first paragraph, no loss |
 | `block/degraded` | `'listItem-child:<kind>'` | a non-paragraph, non-list block inside a `listItem` was emitted after the item's paragraph rather than inside it |
-| `block/degraded` | `'codeBlock'` | code block written as plain paragraphs, one per source line |
-| `block/degraded` | `'blockquote'` | quotation written as its bare child blocks |
-| `block/dropped` | `'hr'` | thematic break dropped |
-| `image/dropped` | the image `name` | no bytes reachable — neither `opts.assets[name]` nor `escapes.docx.bytes` |
-| `image/size-defaulted` | the image `name` | bytes were reachable and the image is placed at `@awacloud/ooxml`'s default 2 in × 4:3 box (no `cx`/`cy` passed — the image's intrinsic size is not applied) |
+| `block/degraded` | `'blockquote:nested'` | a quote nested in a quote was written as more-indented `BlockText` paragraphs — docx has no quote nesting, the return leg reads one flat quote (one loss per nested quote) |
+| `block/degraded` | `'blockquote-child:<kind>'` | a non-paragraph, non-quote block inside a quote was written with its own mapping, outside the quote style |
+| `image/dropped` | the image `name` | no bytes reachable — neither `opts.assets[name]` (or its percent-decoded form) nor `escapes.docx.bytes` / `escapes.odt.bytes` |
+| `image/size-defaulted` | the image `name` | bytes were reachable and the image is placed, but no size could be read from its header (not a PNG, JPEG or GIF one, or a malformed one), so it sits in `@awacloud/ooxml`'s default 2 in × 4:3 box |
 
 A degraded block nested in a `listItem` emits BOTH its
-`listItem-child:<kind>` loss and its own degrade loss.
+`listItem-child:<kind>` loss and its own degrade losses (a quote holding a
+table in a list item: `listItem-child:blockquote`, then
+`blockquote-child:table`).
 
 ## See also
 

@@ -43,7 +43,7 @@ callable; `.derive(...)` alias. `password`/`salt` accept `string`
 | RFC 7914 / PKCS #5 (de-facto) | TC 3 (c=4096) | `c=4096, dkLen=256 bits` | byte-exact KAT (nominal count) |
 | RFC 7914 / PKCS #5 (de-facto) | TC 4 (long P/S) | `c=4096, dkLen=320 bits` | byte-exact KAT, multi-block T_2 |
 | **PBKDF-1.0** | AFT 25/50 (sub-sample 1/2) | `pbkdf2 - PBKDF-1.0 / AFT` | byte-exact dkm (HMAC-SHA-224 × 25 vectors) |
-| **Cross-check against Python `hashlib.pbkdf2_hmac()`** (B4) | 9 families × 5 cases = 45 vectors | `pbkdf2 - itération B4 (10-family cross-check)` | byte-exact against the `hashlib.pbkdf2_hmac()` reference (SHA-2-256/384/512, SHA-512/{224,256}, SHA-3-{224,256,384,512}) |
+| **Cross-check against Python `hashlib.pbkdf2_hmac()`** (B4) | 9 families × 5 cases = 45 vectors | `pbkdf2 - iteration B4 (10-family cross-check)` | byte-exact against the `hashlib.pbkdf2_hmac()` reference (SHA-2-256/384/512, SHA-512/{224,256}, SHA-3-{224,256,384,512}) |
 
 #### AFT sub-sampling strategy
 

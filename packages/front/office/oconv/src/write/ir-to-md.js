@@ -88,8 +88,12 @@
 
 /**
  * One entry of the loss ledger. Codes in use: `block/dropped` (an IR node
- * markdown cannot express) and `link/target-missing` (a run flagged as a
- * link with an empty target).
+ * markdown cannot express), `link/target-missing` (a run flagged as a
+ * link with an empty target) and `inline/linebreak-degraded` (a `\n` hard
+ * line break in a heading or a table cell, written as a space — a
+ * paragraph writes it as a backslash line end) and
+ * `list/task-marker-dropped` (a GFM task item — `listItem.escapes.md.task`,
+ * written back as `[ ]` / `[x]` — whose first block is not a paragraph).
  *
  * @typedef {Object} OconvLoss
  * @property {string} code
@@ -98,7 +102,7 @@
 
 /**
  * One entry of the asset manifest. `bytes` appears only when the reader
- * stored the binary on the IR node (`escapes.docx.bytes`); passed through
+ * stored the binary on the IR node (`escapes.docx.bytes` / `escapes.odt.bytes`); passed through
  * BY REFERENCE, never serialized into the YAML.
  *
  * @typedef {Object} OconvAsset
@@ -193,38 +197,82 @@ export const oconvIrToMd = {
             return t;
         }
 
-        function wrap(type, child) {
+        function wrap(type, children) {
             const el = new Node(type);
-            el.appendChild(child);
+            for (const c of children) el.appendChild(c);
             return el;
         }
 
-        /** `run` → text/code leaf wrapped by strike → emph → strong → link. */
-        function runNode(n, ctx) {
-            const literal = typeof n.text === 'string' ? n.text : '';
-            let el;
-            if (n.code) {
-                el = new Node('code');
-                el.literal = literal;
-            } else {
-                el = textNode(literal);
+        /**
+         * Leaves of a run's text. A `\n` is a hard line break in the IR (odt
+         * `text:line-break`): with `hard`, a `linebreak` node (written as a
+         * backslash line end); without (a heading or a table cell, which
+         * cannot hold one), a space and one `inline/linebreak-degraded` loss.
+         */
+        function textLeaves(literal, hard, ctx) {
+            if (literal.indexOf('\n') < 0) return [textNode(literal)];
+            const parts = literal.split('\n');
+            if (!hard) {
+                for (let i = 1; i < parts.length; i++) {
+                    ctx.losses.push({ code: 'inline/linebreak-degraded', detail: 'hard break' });
+                }
+                return [textNode(parts.join(' '))];
             }
-            if (n.strike) el = wrap('strikethrough', el);
-            if (n.italic) el = wrap('emph', el);
-            if (n.bold) el = wrap('strong', el);
+            const out = [];
+            parts.forEach((part, i) => {
+                if (i > 0) out.push(new Node('linebreak'));
+                if (part) out.push(textNode(part));
+            });
+            return out;
+        }
+
+        /** `run` → text/code leaves wrapped by strike → emph → strong → link. */
+        function runNode(n, ctx, hard) {
+            const literal = typeof n.text === 'string' ? n.text : '';
+            let els;
+            if (n.code) {
+                const el = new Node('code');
+                el.literal = literal;
+                els = [el];
+            } else {
+                els = textLeaves(literal, hard, ctx);
+            }
+            if (n.strike) els = [wrap('strikethrough', els)];
+            if (n.italic) els = [wrap('emph', els)];
+            if (n.bold) els = [wrap('strong', els)];
             if (typeof n.link === 'string') {
                 if (n.link) {
-                    const link = new Node('link');
+                    const link = wrap('link', els);
                     link.destination = n.link;
-                    link.appendChild(el);
-                    el = link;
+                    els = [link];
                 } else {
                     ctx.losses.push({
                         code: 'link/target-missing', detail: literal
                     });
                 }
             }
-            return el;
+            return els;
+        }
+
+        /**
+         * Drop the line breaks that end a block (and a wrapper they leave
+         * empty): CommonMark gives a hard break at the end of a block no
+         * meaning, and a trailing backslash would read as a literal one.
+         */
+        function dropTrailingBreaks(parent) {
+            let last = parent.lastChild;
+            while (last) {
+                if (last.type === 'linebreak') {
+                    last.unlink();
+                } else if (last.firstChild && last.type !== 'image') {
+                    dropTrailingBreaks(last);
+                    if (last.firstChild) return;
+                    last.unlink();
+                } else {
+                    return;
+                }
+                last = parent.lastChild;
+            }
         }
 
         /** `image` → md image node, and one asset-manifest entry. */
@@ -233,7 +281,7 @@ export const oconvIrToMd = {
             if (!ctx.assetNames.has(name)) {
                 ctx.assetNames.add(name);
                 const asset = { kind: 'image', name };
-                const esc = n.escapes && n.escapes.docx;
+                const esc = n.escapes && (n.escapes.docx || n.escapes.odt);
                 const bytes = esc && esc.bytes;
                 if (bytes !== undefined) asset.bytes = bytes;
                 ctx.assets.push(asset);
@@ -245,12 +293,18 @@ export const oconvIrToMd = {
         }
 
         function appendInlines(parent, list, ctx) {
+            // Only a paragraph can hold a hard line break.
+            const hard = parent.type === 'paragraph';
             for (const n of list || []) {
                 if (!n || typeof n !== 'object') continue;
-                if (n.kind === 'run') { parent.appendChild(runNode(n, ctx)); continue; }
+                if (n.kind === 'run') {
+                    for (const el of runNode(n, ctx, hard)) parent.appendChild(el);
+                    continue;
+                }
                 if (n.kind === 'image') { parent.appendChild(imageNode(n, ctx)); continue; }
                 drop(ctx, 'inline ' + String(n.kind));
             }
+            if (hard) dropTrailingBreaks(parent);
         }
 
         /**
@@ -315,6 +369,19 @@ export const oconvIrToMd = {
                 if (!item || typeof item !== 'object') continue;
                 const li = new Node('item');
                 appendBlocks(li, item.children, ctx);
+                // A GFM task marker (`escapes.md.task`, set by the md
+                // reader) leads the item's first paragraph: `[ ]` / `[x]`.
+                const task = item.escapes && item.escapes.md && item.escapes.md.task;
+                if (task === 'checked' || task === 'unchecked') {
+                    if (li.firstChild && li.firstChild.type === 'paragraph') {
+                        li.checked = task === 'checked';
+                    } else {
+                        ctx.losses.push({
+                            code: 'list/task-marker-dropped',
+                            detail: task === 'checked' ? '[x]' : '[ ]'
+                        });
+                    }
+                }
                 list.appendChild(li);
             }
             return list;

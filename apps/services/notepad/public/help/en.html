@@ -1,0 +1,94 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Help — AWA Notepad</title>
+    <link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+    <link rel="stylesheet" href="help.css">
+</head>
+<body>
+    <header class="help-header">
+        <img src="../icons/icon.svg" alt="" width="28" height="28">
+        <h1>AWA Notepad — Help</h1>
+        <a href="fr.html" hreflang="fr" lang="fr">Français</a>
+    </header>
+    <main>
+        <p>AWA Notepad writes and edits plain-text files on your device, online or offline. Nothing is uploaded: your files are opened and saved by your browser, on your computer.</p>
+        <nav aria-label="Contents">
+            <ul>
+                <li><a href="#files">Open, save, rename</a></li>
+                <li><a href="#edit">Edit, find, undo</a></li>
+                <li><a href="#format">Encodings and line endings</a></li>
+                <li><a href="#keys">Keyboard shortcuts</a></li>
+                <li><a href="#recover">Unsaved text comes back</a></li>
+                <li><a href="#install">Install the app</a></li>
+                <li><a href="#update">Updates</a></li>
+                <li><a href="#offline">Offline and privacy</a></li>
+            </ul>
+        </nav>
+
+        <h2 id="files">Open, save, rename</h2>
+        <ul>
+            <li><strong>Open</strong> (<kbd>Ctrl</kbd>+<kbd>O</kbd>), or drop a file on the page. Several files at once: the first opens; the others wait on a line under the header, and each <strong>Open … in a new window</strong> opens the next one.</li>
+            <li>In Chrome and Edge, <strong>Save</strong> (<kbd>Ctrl</kbd>+<kbd>S</kbd>) writes back to the file you opened; <strong>Save as</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>) asks where.</li>
+            <li>Firefox and Safari cannot write back to a file: the button says <strong>Download a copy</strong>, and each save puts a new copy in your downloads.</li>
+            <li>The document's name is in the toolbar: click it to rename. In Chrome and Edge the file itself is renamed when the browser allows it; otherwise the name is used for the next save.</li>
+            <li>Binary files and files over 16 MB are refused, never damaged. Large files are read with a progress bar and a <strong>Cancel</strong>; past a few MB, typing gets slower (a limit of the browser's text area).</li>
+        </ul>
+
+        <h2 id="edit">Edit, find, undo</h2>
+        <ul>
+            <li><strong>Find</strong> (<kbd>Ctrl</kbd>+<kbd>F</kbd>) marks every match in the text as you type and outlines the current one; <kbd>Enter</kbd> or <kbd>F3</kbd> goes to the next, <kbd>Shift</kbd>+<kbd>F3</kbd> to the previous.</li>
+            <li><strong>Replace</strong> (<kbd>Ctrl</kbd>+<kbd>H</kbd>): one at a time, or all. <strong>Go to line</strong> (<kbd>Ctrl</kbd>+<kbd>G</kbd>).</li>
+            <li><strong>Undo</strong> (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) and <strong>Redo</strong> (<kbd>Ctrl</kbd>+<kbd>Y</kbd>): typing is undone a word group at a time, and Replace all or the date (<kbd>F5</kbd>) in one step.</li>
+            <li>Word wrap, and the text size (<kbd>Ctrl</kbd>+wheel too), are remembered.</li>
+        </ul>
+
+        <h2 id="format">Encodings and line endings</h2>
+        <p>The status bar shows how the file is written: line endings (Windows CRLF, Unix LF, old Mac CR) and the encoding (UTF-8, UTF-8 with BOM, UTF-16, Windows-1252). Both are detected when the file opens and kept when you save; change them from the status bar. Saving characters Windows-1252 cannot hold asks first.</p>
+
+        <h2 id="keys">Keyboard shortcuts</h2>
+        <table>
+            <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+            <tbody>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd> / <kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>New / Open</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save / Save as</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd> / <kbd>Ctrl</kbd>+<kbd>H</kbd> / <kbd>Ctrl</kbd>+<kbd>G</kbd></td><td>Find / Replace / Go to line</td></tr>
+                <tr><td><kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd></td><td>Next / previous match</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> (or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>)</td><td>Undo / Redo</td></tr>
+                <tr><td><kbd>F5</kbd></td><td>Insert the time and date</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+wheel</td><td>Text size</td></tr>
+                <tr><td><kbd>Escape</kbd></td><td>Close the find or go-to bar</td></tr>
+            </tbody>
+        </table>
+
+        <h2 id="recover">Unsaved text comes back</h2>
+        <p>While you type, your changes are kept on this device. If the window closes before you save (a crash, a closed tab, an update), the next window of the notepad brings the text back, still unsaved — and in Chrome and Edge, still linked to its file. A window that is open keeps its own text: a second window never takes it.</p>
+
+        <h2 id="install">Install the app</h2>
+        <h3>Chrome, Edge</h3>
+        <p>Use the <strong>Install</strong> button in the header when it appears, the install icon in the address bar, or the browser's menu (<em>Install AWA Notepad</em> or <em>Apps → Install this site as an app</em>).</p>
+        <h3>Firefox (Windows)</h3>
+        <p>Use the <strong>Add to taskbar</strong> button in the address bar.</p>
+        <h3>Safari</h3>
+        <p>On a Mac: <em>File → Add to Dock</em>. On an iPhone or iPad: <em>Share → Add to Home Screen</em>.</p>
+        <h3>Open your files with the app (Windows)</h3>
+        <p>Installed from Chrome or Edge, the notepad appears in <em>Open with</em> when you right-click a text file (<code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.log</code>, source and configuration files…). To make it the default: <em>Settings → Apps → Default apps</em>. Each file opens in a window of its own.</p>
+
+        <h2 id="update">Updates</h2>
+        <p>A new version installs in the background and never interrupts you: a line in the header says a new version is ready; <strong>Update now</strong> reloads the notepad and your unsaved text comes back (or choose <strong>Later</strong>). To check yourself: <strong>About → Check for updates</strong>.</p>
+
+        <h2 id="offline">Offline and privacy</h2>
+        <p>Once visited (or installed), the notepad works without a connection. Your text is never sent anywhere.</p>
+        <p class="note">Licences, notices and the version: <strong>About</strong>, in the header.</p>
+    </main>
+</body>
+</html>

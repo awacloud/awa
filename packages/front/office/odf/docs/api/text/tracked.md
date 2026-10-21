@@ -48,7 +48,7 @@ const tracked = runtime.resolve('textTracked');
 | `isChangeMarkerName(name)` | Returns whether `name` is a recognised inline change-marker element name. |
 | `parseChangeMarker(el)` / `renderChangeMarker(m)` | Inline marker roundtrip. |
 | `parseTrackedChanges(el)` | Parses the `<text:tracked-changes>` container. |
-| `renderTrackedChanges(t)` | Renders the container. |
+| `renderTrackedChanges(t)` | Renders the container. A region with an `id` is written with `xml:id` (its required ID since ODF 1.2, which the markers' `text:change-id` refers to) and `text:id`, same value. |
 | `MARKER_KINDS` | `Set` of the three inline marker element names. |
 
 ## Examples
@@ -68,6 +68,7 @@ tracked.renderTrackedChanges(t);
 
 ## Notes
 
+- A region's `id` is read from `text:id`, else `xml:id`.
 - The paragraph body of a `text:deletion` region (when present) is preserved verbatim on `body` as raw XML nodes.
 - Unknown attributes on the change wrapper (`text:insertion`/`text:deletion`/`text:format-change`) are kept under `_extras.attrs` with a `_changeAttr:` prefix.
 

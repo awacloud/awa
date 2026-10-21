@@ -51,7 +51,7 @@ export const fontWoff = {
     dependencies: ['fontErrors', 'fontsShared', 'fontReader', 'fontWriter', 'fontTag', 'zlib'],
     deps: [fontErrors, fontsShared, fontReader, fontWriter, fontTag, zlib],
     factory(errors, shared, readerMod, writerMod, tagMod, zlibMod) {
-        const { ParseError, ContractError } = errors;
+        const { FontError, ParseError, ContractError } = errors;
         const { WOFF_MAGIC, sfntSearchParams } = shared;
         const { BinaryReader } = readerMod;
         const { BinaryWriter } = writerMod;
@@ -117,7 +117,17 @@ export const fontWoff = {
                 if (entry.compLength === entry.origLength) {
                     table = new Uint8Array(raw);
                 } else {
-                    const inflated = unzlibSync(raw);
+                    let inflated;
+                    try {
+                        inflated = unzlibSync(raw);
+                    } catch (e) {
+                        // An injected decoder may throw typed errors itself;
+                        // the fw decoder throws plain Errors.
+                        if (e instanceof FontError) throw e;
+                        throw new ParseError('fonts/woff1-bad-inflate',
+                            `WOFF1 table '${untag(entry.tag)}' does not inflate: ${e && e.message}`,
+                            { context: { tag: untag(entry.tag) }, cause: e });
+                    }
                     if (inflated.length !== entry.origLength)
                         throw new ParseError('fonts/woff1-bad-inflate',
                             `inflated length ${inflated.length} ≠ origLength ${entry.origLength}`,

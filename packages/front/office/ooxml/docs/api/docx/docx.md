@@ -83,6 +83,17 @@ relationships. So `write(result.document, { headers, footers, footnotes,
 endnotes, comments })` keeps every resolvable link without passing
 `hyperlinks`.
 
+Pictures and charts follow the same rule. `images` and `charts` hold the
+document part's relationships; a drawing in a header, footer, footnotes,
+endnotes or comments part is resolved against that part's own
+relationships, and its bytes (`drawing.image`) or chart spec
+(`drawing.chart`) are copied onto the drawing. On write, each story part
+gets its own image / chart relationships (rIds kept clear of its hyperlink
+rIds) to media parts shared with the body — the same bytes (by identity)
+are written once — and to its own chart parts, numbered after the body's.
+So `write(result.document, { headers, footers, footnotes, endnotes,
+comments, images })` writes every story picture back.
+
 `unmodelledParts` is the loss record of the read: every package part the read
 did not consume, sorted by `partName`, with its content type from
 `[Content_Types].xml` (`null` when none is declared). `[Content_Types].xml` and
@@ -167,16 +178,16 @@ returning the enriched instance.
 
 ## Notes
 
-- `opts.maxParts`, `opts.maxUncompressed` and `opts.maxRatio` override the archive limits of [`opc.read`](../opc/package.md) (defaults kept; `0` disables a check).
+- `opts.maxParts`, `opts.maxUncompressed`, `opts.maxRatio` and `opts.maxDepth` override the archive limits of [`opc.read`](../opc/package.md) (defaults kept; `0` disables a check).
 - Inside a modelled part, unknown elements at any level land in `_extras` and are re-emitted verbatim. A whole part outside the model is not written back; `read()` lists it in `unmodelledParts`.
 - `headers`/`footers` are never auto-generated; pass them explicitly with an `rId` matching `sectPr`.
 - `markupCompatibility.process` runs on read on `word/document.xml` and on every header, footer, footnotes, endnotes and comments part, with `keepElements` = the two repeating-section elements and no `supportedPrefixes`, so every `mc:Choice` falls through to its Fallback branch and other ignorable `w14` / `w15` content is dropped.
-- Inline drawings materialise as `{type:'drawing'}` runs; the binary image is reachable through `embedRef` → `result.images[rId]` (or `pkg.parts`).
-- Extension hooks recognised by [`docxWalker`](../../../src/docx/docx-walker.js): `hydrate*` / `dehydrate*` for `RunProperties`, `ParagraphProperties`, `Table`, `Row`, `TcPr` and `Settings`.
+- Inline drawings materialise as `{type:'drawing'}` runs carrying the image bytes on `drawing.image` (the body's `embedRef` is also a key of `result.images`; a story part's `embedRef` belongs to that part's own relationships).
+- Extension hooks recognised by [`docxWalker`](../../../src/docx/docx-walker.js): `hydrate*` / `dehydrate*` for `RunProperties`, `ParagraphProperties`, `Table`, `Row`, `TcPr` and `Settings`. `word/settings.xml` is written from the object `dehydrateSettings` returns (`wmlSettings` returns a new one and leaves `opts.settings` as given).
 - Hyperlink relationships are written per part. The document part's table is the map derived from the body's `hyperlink` nodes (each node's `rId` + `target`; `TargetMode="External"` unless the node's `external` is `false`), or `opts.hyperlinks` when passed. `write()` also writes each header, footer, footnotes, endnotes and comments part's hyperlink relationships, derived the same way from that part's nodes, into the part's own relationship table (none is written for a part without a hyperlink). `opts.hyperlinks` only covers the document body.
 - A hyperlink node with a non-empty `target`, no `rId` and no `anchor` makes `write()` throw `ContractError` `docx/hyperlink-missing-rid` (`context.target`) before any part is rendered, instead of writing a `<w:hyperlink>` whose target is lost; the check covers the body and every header, footer, footnotes, endnotes and comments body, whether or not `opts.hyperlinks` is passed. Pass an explicit `rId`, using a prefix distinct from the `rId1`, `rId2`… ids `write()` auto-allocates for the `styles`/`numbering`/`settings`/etc. parts (a collision duplicates the `Id` in the relationships part). An internal link (`anchor`, no `rId`) and a hyperlink with neither `target`, `rId` nor `anchor` are written as given.
 - A hyperlink node whose non-empty `rId` is not a key of the table written for its part makes `write()` throw `ContractError` `docx/hyperlink-unresolved-rid` before any part is rendered, instead of writing an `r:id` that dangles. `context` is `{ rId, story }` — `story` is `'document'`, `'header'`, `'footer'`, `'footnotes'`, `'endnotes'` or `'comments'` — plus `key` (the `opts.headers` / `opts.footers` key) for a header or footer. In practice: a node with an `rId` but no `target` (a node `read()` could not resolve, or one built by hand), or a body node whose `rId` is not a key of a supplied `opts.hyperlinks` — `opts.hyperlinks`, when passed, REPLACES the whole derived map rather than merging into it, so a body node whose `rId` is a key of it is written with the map's target, not the node's.
-- `write()` never derives `word/numbering.xml`: a paragraph whose `pPr.numPr` references a non-zero `numId` (body, header or footer), written without `opts.numbering`, makes `write()` throw `ContractError` `docx/numbering-missing` (`context.numId`) before any part is rendered. `numId` 0 removes numbering and is not a reference. Pass the `numbering` object `read()` returned, or build one as in the example above.
+- `write()` never derives `word/numbering.xml`: a `pPr.numPr` that references a non-zero `numId` — in the body, a header, footer, footnotes, endnotes or comments part, or `opts.styles` (a style or the docDefaults) — written without `opts.numbering`, makes `write()` throw `ContractError` `docx/numbering-missing` before any part is rendered; with `opts.numbering`, a `numId` its `nums` do not declare throws `docx/numbering-unknown-num`. Both carry `context.numId` and `context.story` (`'document'`, `'header'`, `'footer'`, `'footnotes'`, `'endnotes'`, `'comments'`, `'styles'`), plus `context.key` for a header or footer and `context.styleId` for a style. `numId` 0 removes numbering and is not a reference; `numId` is compared as a number (`'1'` matches `1`). Pass the `numbering` object `read()` returned, or build one as in the example above.
 - All checks run in this order — every missing-rid check, then unresolved-rid, then numbering; the first offending node in document order wins — and before the extension dehydrate pass, so a throw leaves the caller's tree untouched.
 
 ## See also

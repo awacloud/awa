@@ -28,8 +28,10 @@
  * `filter: null` is **not** a placeholder for "figure it out later": a PNG's
  * `IDAT` zlib stream is a *sequence of filtered scanlines*, not a PDF image
  * stream, so `/FlateDecode` over the raw file bytes would render garbage.
- * A caller must therefore treat `filter === null` as "geometry known,
- * placement REFUSED" and record an honest loss. `filter: 'DCTDecode'` is the
+ * A caller must therefore never embed those bytes behind a bare
+ * `/FlateDecode`: `oconvPdfRenderImage` routes a PNG through its own PNG
+ * path (a PNG predictor, or a bounded decode) before it reads this
+ * header, and records an honest loss for what it cannot place. `filter: 'DCTDecode'` is the
  * opposite: JPEG entropy-coded data IS directly embeddable, so those bytes
  * go into the PDF verbatim.
  *

@@ -1,0 +1,489 @@
+/*
+ * Copyright (c) 2026 AwaCloud SAS
+ * Author: Matthieu Bouilloux
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Dual-licensed; see the NOTICE file for licensing and any additional terms.
+ */
+
+/* apps/services/viewer/src/styles/viewer.css — the viewer component sheet.
+ * Painted with the awaforge tokens (tokens.css, linked first, or the host
+ * site's own awaforge layer). Every rule is scoped under `.awv`, so the sheet
+ * can be linked into any page without touching the host's styles.
+ *
+ * Two palettes: the CHROME follows the reader's scheme through the --af-*
+ * tokens (dark by default); the PAPER — a document page — is paper in both
+ * schemes, painted with the awaforge LIGHT values, declared once below. */
+
+/* ── 1. Aliases ────────────────────────────────────────────────────────────── */
+.awv {
+    --awv-bg: var(--af-bg);
+    --awv-fg: var(--af-fg);
+    --awv-muted: var(--af-muted);
+    --awv-accent: var(--af-accent);
+    --awv-surface: var(--af-surface);
+    --awv-rule: var(--af-rule);
+    --awv-border: var(--af-muted);            /* control boundary, >= 3:1 (WCAG 1.4.11) */
+    --awv-shadow: var(--af-shadow);
+    --awv-btn-bg: var(--af-hero-cta-bg);
+    --awv-btn-fg: var(--af-hero-cta-fg);
+    --awv-focus: var(--af-accent);
+    --awv-sans: var(--af-sans);
+    --awv-mono: var(--af-mono);
+    --awv-radius: var(--fw-radius-md);
+    --awv-gap: var(--fw-space-6);             /* 24 px: between and around pages (stage.js GAP) */
+    --awv-target: 2.25rem;                    /* 36 px controls; 44 px under coarse pointers */
+    --awv-stage: var(--af-bg);                /* the desk the pages lie on */
+
+    /* The paper palette: the awaforge light scheme, in both schemes. */
+    --awv-paper: #ffffff;
+    --awv-ink: #212529;                       /* awa ink */
+    --awv-paper-muted: #003462;               /* awa navy-2 */
+    --awv-paper-link: #0078b3;                /* awa blue */
+    --awv-paper-rule: #d5e6ee;
+    --awv-paper-code: #eef6fa;
+    --awv-paper-code-fg: #00263d;
+    --awv-paper-w: 816px;                     /* US Letter, 8.5 in (view.js PAPER_WIDTH) */
+}
+@media (pointer: coarse) {
+    .awv { --awv-target: 2.75rem; }
+}
+@media (prefers-color-scheme: light) {
+    /* White paper on a white page would lose its edge: a tinted desk. */
+    .awv { --awv-stage: var(--af-rule); }
+}
+
+/* ── 2. Frame ──────────────────────────────────────────────────────────────── */
+awa-viewer { display: block; }
+.awv {
+    container-type: inline-size;
+    display: grid;
+    /* minmax(0, …): a wide page scrolls inside the stage, never widens the viewer. */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: 100%;
+    min-height: 24rem;
+    color: var(--awv-fg);
+    background: var(--awv-bg);
+    font: 400 var(--af-step-0)/1.5 var(--awv-sans);
+    position: relative;
+}
+.awv *, .awv *::before, .awv *::after { box-sizing: border-box; }
+.awv:fullscreen { height: 100vh; }
+.awv[data-dragover="true"]::after {
+    content: "";
+    position: absolute;
+    inset: var(--fw-space-2);
+    border: 2px dashed var(--awv-accent);
+    border-radius: var(--fw-radius-lg);
+    pointer-events: none;
+}
+.awv :focus-visible { outline: 2px solid var(--awv-focus); outline-offset: 2px; }
+/* On paper (white in both schemes) the dark scheme's pale accent is about
+   1.4:1: links and anchors inside a document take the paper navy (13:1). */
+.awv-page :focus-visible, .awv-paper :focus-visible, .awv-grid :focus-visible, .awv-slide :focus-visible {
+    outline-color: var(--awv-paper-muted);
+}
+
+.awv-visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* ── 3. Toolbar ────────────────────────────────────────────────────────────── */
+.awv-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fw-space-2) var(--fw-space-4);
+    padding: var(--fw-space-2) var(--fw-space-3);
+    background: var(--awv-surface);
+    border-bottom: 1px solid var(--awv-rule);
+}
+.awv-group { display: flex; align-items: center; gap: var(--fw-space-1); }
+.awv-group--end { margin-inline-start: auto; }
+/* Help sits at the end; next to the document tools, the end group already took the space. */
+.awv-group--help { margin-inline-start: auto; }
+.awv-group--end:not([hidden]) + .awv-group--help { margin-inline-start: 0; }
+.awv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--fw-space-2);
+    min-width: var(--awv-target);
+    min-height: var(--awv-target);
+    padding: 0 var(--fw-space-3);
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--awv-radius);
+    cursor: pointer;
+}
+.awv-btn--icon { padding: 0; }
+.awv-btn:hover:not(:disabled) { border-color: var(--awv-border); }
+.awv-btn:disabled { cursor: default; color: var(--awv-muted); }
+.awv-btn[aria-pressed="true"], .awv-btn[aria-expanded="true"] {
+    color: var(--awv-btn-fg);
+    background: var(--awv-btn-bg);
+}
+.awv-btn--primary {
+    min-height: 2.75rem;
+    padding: 0 var(--fw-space-4);
+    font-weight: 600;
+    color: var(--awv-btn-fg);
+    background: var(--awv-btn-bg);
+}
+.awv-icon {
+    width: 1.25rem; height: 1.25rem;
+    fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+}
+.awv-field {
+    min-height: var(--awv-target);
+    font: inherit;
+    color: var(--awv-fg);
+    background: var(--awv-bg);
+    border: 1px solid var(--awv-border);
+    border-radius: var(--awv-radius);
+}
+.awv-page-input { width: 3.5em; text-align: center; font-variant-numeric: tabular-nums; }
+.awv-page-total { color: var(--awv-muted); white-space: nowrap; padding-inline-end: var(--fw-space-1); }
+.awv-zoom { padding: 0 var(--fw-space-2); font-variant-numeric: tabular-nums; }
+.awv-zoom:disabled, .awv-field:disabled { color: var(--awv-muted); }
+
+/* ── 4. Body, stage, details panel ─────────────────────────────────────────── */
+.awv-body { display: flex; min-height: 0; min-width: 0; }
+.awv-stage {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    position: relative;
+    background: var(--awv-stage);
+}
+.awv-stage:focus-visible { outline-offset: -2px; }
+.awv-info {
+    flex: 0 0 20rem;
+    overflow: auto;
+    padding: var(--fw-space-4);
+    background: var(--awv-surface);
+    border-inline-start: 1px solid var(--awv-rule);
+}
+.awv-info-title { margin: 0 0 var(--fw-space-3); font-size: var(--af-step-1); }
+.awv-info-subtitle { margin: var(--fw-space-6) 0 var(--fw-space-2); font-size: var(--af-step-0); }
+.awv-kv { display: grid; grid-template-columns: max-content 1fr; gap: var(--fw-space-1) var(--fw-space-3); margin: 0; }
+.awv-kv dt { color: var(--awv-muted); }
+.awv-kv dd { margin: 0; overflow-wrap: anywhere; }
+.awv-info-list { margin: 0; padding-inline-start: 1.25rem; }
+.awv-note { color: var(--awv-muted); }
+@container (max-width: 30rem) {
+    /* Narrow: the zoom buttons stay, the preset menu goes. */
+    .awv-zoom, .awv [data-action="fitWidth"] { display: none; }
+    .awv-bar { gap: var(--fw-space-1) var(--fw-space-2); padding-inline: var(--fw-space-2); }
+}
+@container (max-width: 44rem) {
+    .awv-body { flex-direction: column; }
+    .awv-info { flex: 0 0 auto; max-height: 45%; border-inline-start: 0; border-top: 1px solid var(--awv-rule); }
+    .awv-group--end { margin-inline-start: 0; }
+}
+
+/* ── 5. Intake, progress, alert ────────────────────────────────────────────── */
+.awv-content { min-height: 100%; }
+/* A grid while it holds the intake: its row stretches to the stage, so the
+   intake's own centring is on the middle of the page, not just its top. */
+.awv-content:has(> .awv-intake:not([hidden])) { display: grid; }
+.awv-intake {
+    display: grid;
+    place-content: center;
+    /* Every row centred: the samples line is wider than the dropzone and sets the column. */
+    justify-items: center;
+    gap: var(--fw-space-4);
+    min-height: 100%;
+    padding: var(--fw-space-8) var(--fw-space-4);
+}
+.awv-intake-title { margin: 0; font-size: var(--af-step-2); text-align: center; }
+.awv-dropzone {
+    display: grid;
+    justify-items: center;
+    gap: var(--fw-space-1);
+    width: min(36rem, 100%);
+    min-height: 12rem;
+    padding: var(--fw-space-8) var(--fw-space-6);
+    text-align: center;
+    border: 2px dashed var(--awv-border);
+    border-radius: var(--fw-radius-lg);
+    background: var(--awv-surface);
+    cursor: pointer;
+}
+.awv-dropzone:hover, .awv-dropzone[data-dragover="true"] { border-style: solid; border-color: var(--awv-accent); }
+.awv-dropzone-icon .awv-icon { width: 3rem; height: 3rem; stroke-width: 1.5; color: var(--awv-accent); }
+.awv-link { color: var(--awv-accent); text-decoration: underline; font-weight: 600; }
+/* "No document at hand? Try a sample: PDF · Word · …" under the dropzone. */
+.awv-samples { display: flex; flex-wrap: wrap; justify-content: center; max-width: 36rem; align-items: center; gap: var(--fw-space-1) var(--fw-space-2); margin: var(--fw-space-3) 0 0; color: var(--awv-muted); }
+.awv-sample { padding: 0; font: inherit; background: none; border: 0; cursor: pointer; }
+.awv-sep { color: var(--awv-muted); }
+.awv-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--fw-space-3);
+    margin: 0;
+    padding: var(--fw-space-8) var(--fw-space-4);
+    color: var(--awv-muted);
+}
+.awv-progress::before {
+    content: "";
+    width: 1.25rem; height: 1.25rem;
+    border: 2px solid var(--awv-rule);
+    border-top-color: var(--awv-accent);
+    border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .awv-progress::before { animation: awv-spin 0.9s linear infinite; }
+    @keyframes awv-spin { to { transform: rotate(1turn); } }
+}
+.awv-alert {
+    display: grid;
+    gap: var(--fw-space-2);
+    justify-items: start;
+    max-width: 36rem;
+    margin: var(--fw-space-8) auto;
+    padding: var(--fw-space-4) var(--fw-space-6);
+    background: var(--awv-surface);
+    border-inline-start: 3px solid var(--awv-accent);
+    border-radius: var(--awv-radius);
+}
+.awv-alert p { margin: 0; }
+.awv-alert small { color: var(--awv-muted); font-family: var(--awv-mono); }
+
+/* ── 6. Pages (paged views) ────────────────────────────────────────────────── */
+.awv-pages, .awv-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--awv-gap);
+    width: max-content;
+    min-width: 100%;
+    padding: var(--awv-gap);
+}
+.awv-page {
+    position: relative;
+    flex: none;
+    background: var(--awv-paper);
+    box-shadow: 0 1px 4px var(--awv-shadow);
+    overflow: hidden;
+}
+.awv-page-surface { position: absolute; inset: 0; }
+/* A page whose drawing failed says so on the page (stage.js). */
+.awv-page-failed {
+    position: absolute;
+    inset: auto var(--fw-space-4) var(--fw-space-4);
+    margin: 0;
+    padding: var(--fw-space-2) var(--fw-space-3);
+    color: var(--awv-paper-muted);
+    border: 1px dashed var(--awv-paper-muted);
+    font-size: var(--af-step--1);
+}
+.awv-page-surface > canvas { display: block; width: 100%; height: 100%; }
+/* The text layer: transparent, selectable, read by assistive technology. */
+.awv-textlayer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    line-height: 1;
+    font-family: sans-serif;
+    white-space: pre;
+    color: transparent;
+}
+.awv-textlayer > span { position: absolute; transform-origin: 0 0; white-space: pre; cursor: text; }
+.awv-textlayer ::selection { color: transparent; background: rgb(0 120 179 / 0.3); }
+.awv-linkannot { position: absolute; display: block; }
+.awv-linkannot:hover { background: rgb(0 120 179 / 0.12); }
+
+/* ── 7. Paper (flow views) ─────────────────────────────────────────────────── */
+.awv-paper {
+    width: var(--awv-paper-w);
+    min-height: 11in;
+    padding: 1in;
+    color: var(--awv-ink);
+    background: var(--awv-paper);
+    box-shadow: 0 1px 4px var(--awv-shadow);
+    overflow-wrap: break-word;
+}
+/* Every link drawn on paper, not only flow documents: cell and slide links
+   would otherwise take the dark scheme's default link colour (about 2.4:1). */
+.awv-paper a, .awv-grid a, .awv-slide a { color: var(--awv-paper-link); }
+.awv-paper--text { padding: 0.75in; }
+.awv-text { margin: 0; font: 400 0.8125rem/1.5 var(--awv-mono); white-space: pre-wrap; tab-size: 4; }
+.awv-blocked {
+    display: inline-block;
+    padding: 0 var(--fw-space-2);
+    color: var(--awv-paper-muted);
+    border: 1px dashed var(--awv-paper-muted);
+    border-radius: var(--fw-radius-sm);
+}
+
+/* Prose (Markdown): headings sized by their ORIGINAL level (html.js data-level). */
+.awv-prose { font: 400 1rem/1.6 var(--awv-sans); }
+.awv-prose [data-level] { line-height: 1.25; margin: 1.5em 0 0.5em; font-weight: 700; }
+.awv-prose [data-level="1"] { font-size: 2rem; }
+.awv-prose [data-level="2"] { font-size: 1.5rem; padding-bottom: 0.25em; border-bottom: 1px solid var(--awv-paper-rule); }
+.awv-prose [data-level="3"] { font-size: 1.25rem; }
+.awv-prose [data-level="4"] { font-size: 1.0625rem; }
+.awv-prose [data-level="5"], .awv-prose [data-level="6"] { font-size: 1rem; }
+.awv-prose > :first-child { margin-top: 0; }
+.awv-prose code, .awv-prose pre {
+    font-family: var(--awv-mono);
+    font-size: 0.875em;
+    color: var(--awv-paper-code-fg);
+    background: var(--awv-paper-code);
+    border-radius: var(--fw-radius-sm);
+}
+.awv-prose code { padding: 0.1em 0.3em; }
+.awv-prose pre { padding: var(--fw-space-3) var(--fw-space-4); overflow: auto; white-space: pre-wrap; }
+.awv-prose pre code { padding: 0; background: none; }
+.awv-prose blockquote { margin: 1em 0; padding: 0 1em; color: var(--awv-paper-muted); border-inline-start: 3px solid var(--awv-paper-rule); }
+.awv-prose table { border-collapse: collapse; margin: 1em 0; }
+.awv-prose th, .awv-prose td { padding: 0.375em 0.75em; border: 1px solid var(--awv-paper-rule); text-align: start; }
+/* Column alignment from the Markdown (`|:-:|`, `|--:|`), which the rule above would override. */
+.awv-prose [align="center"] { text-align: center; }
+.awv-prose [align="right"] { text-align: right; }
+.awv-prose th { background: var(--awv-paper-code); }
+.awv-prose img { max-width: 100%; }
+.awv-prose hr { border: 0; border-top: 1px solid var(--awv-paper-rule); margin: 2em 0; }
+
+/* Word-processing documents (docx.js, odt.js): paper sheets, direct formatting inline. */
+.awv-sheets { display: contents; }
+.awv-doc {
+    position: relative;
+    isolation: isolate;   /* a drawing behind the text stays on the paper */
+    font: 400 11pt/1.15 Carlito, Calibri, "Segoe UI", Arial, sans-serif;
+}
+.awv-doc-header, .awv-doc-footer { position: absolute; }
+.awv-doc-body > :first-child { margin-top: 0 !important; }
+.awv-p { position: relative; margin: 0; min-height: 1em; white-space: pre-wrap; tab-size: 0.5in; }
+/* A floating drawing with no text wrapping, placed over its paragraph. */
+.awv-doc .awv-anchor { position: absolute; max-width: none; }
+/* Heading fallbacks for styles the file names but never defines; a style's
+   own formatting is inline and wins. */
+.awv-doc [data-level] { font-weight: 700; }
+.awv-doc [data-level="1"] { font-size: 16pt; }
+.awv-doc [data-level="2"] { font-size: 13pt; }
+.awv-doc [data-level="3"] { font-size: 12pt; }
+.awv-doc [data-level="4"], .awv-doc [data-level="5"], .awv-doc [data-level="6"] { font-size: inherit; }
+.awv-doc [data-title] { font-size: 26pt; font-weight: 400; }
+.awv-marker { display: inline-block; text-indent: 0; }
+.awv-list { margin: 0; }
+.awv-list > li > .awv-p { text-indent: 0; }
+.awv-table { border-collapse: collapse; margin: 0; table-layout: auto; }
+.awv-table td, .awv-table th { vertical-align: top; text-align: start; font-weight: inherit; }
+.awv-doc img { max-width: 100%; height: auto; vertical-align: bottom; }
+.awv-crop { position: relative; display: inline-block; max-width: 100%; vertical-align: bottom; }
+.awv-missing {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0.25em;
+    color: var(--awv-paper-muted);
+    font: 400 0.75rem/1.3 var(--awv-sans, sans-serif);
+    text-align: center;
+    max-width: 100%;
+    background: repeating-linear-gradient(135deg, var(--awv-paper-code) 0 8px, var(--awv-paper) 8px 16px);
+    border: 1px dashed var(--awv-paper-rule);
+    vertical-align: bottom;
+}
+/* What the placeholder stands for, on screen too (its name is aria-label). */
+.awv-missing[aria-label]::after { content: attr(aria-label); }
+.awv-noteref a { text-decoration: none; }
+.awv-notes-rule { width: 33%; margin: 2em 0 0.5em; border: 0; border-top: 1px solid var(--awv-paper-rule); }
+.awv-notes { margin: 0; padding-inline-start: 1.5em; font-size: 0.9em; }
+.awv-noteback { margin-inline-start: 0.5em; text-decoration: none; }
+
+/* Spreadsheet grids (sheet.js): paper-white cells, sticky headers. */
+.awv-sheet { display: inline-block; min-width: 100%; padding: 0; }
+.awv-sheetview { min-height: 100%; }
+.awv-sheet-empty { margin: 0; padding: var(--fw-space-2) var(--fw-space-4); color: var(--awv-muted); }
+.awv-grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    font: 400 11pt/1.2 Carlito, Calibri, "Segoe UI", Arial, sans-serif;
+    color: var(--awv-ink);
+    background: var(--awv-paper);
+}
+.awv-grid td {
+    height: 20px;
+    padding: 1px 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
+    border-right: 1px solid var(--awv-paper-rule);
+    border-bottom: 1px solid var(--awv-paper-rule);
+}
+.awv-grid td.awv-overflow { overflow: visible; }
+.awv-grid th {
+    position: sticky;
+    z-index: 1;
+    padding: 0 4px;
+    font: 400 0.75rem/1.6 var(--awv-sans);
+    color: var(--awv-paper-muted);
+    background: var(--awv-paper-code);
+    border-right: 1px solid var(--awv-paper-rule);
+    border-bottom: 1px solid var(--awv-paper-rule);
+}
+.awv-grid thead th { top: 0; text-align: center; }
+.awv-grid tbody th { left: 0; text-align: right; }
+.awv-grid .awv-grid-corner { left: 0; z-index: 2; }
+
+/* Slides (slides.js): built at natural size, scaled per zoom. */
+.awv-slide {
+    position: relative;
+    overflow: hidden;
+    transform-origin: 0 0;
+    color: var(--awv-ink);
+    font: 400 18pt/1.2 Carlito, Calibri, "Segoe UI", Arial, sans-serif;
+}
+.awv-shape { position: absolute; display: flex; flex-direction: column; }
+.awv-shape > img { display: block; width: 100%; height: 100%; }
+.awv-shape-text {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow-wrap: break-word;
+}
+.awv-slide-p { margin: 0; line-height: 1.15; white-space: pre-wrap; }
+.awv-slide-bullet { display: inline-block; min-width: 1.2em; text-indent: 0; }
+.awv-shape .awv-list { padding-inline-start: 1.2em; margin: 0; }
+.awv-slide-table { width: 100%; border-collapse: collapse; font-size: 14pt; }
+.awv-slide-table :is(td, th) { padding: 4px 8px; border: 1px solid var(--awv-paper); vertical-align: top; text-align: start; font-weight: inherit; }
+.awv-slide-table .awv-shape-text { height: auto; }
+
+/* ── 8. Sheets ─────────────────────────────────────────────────────────────── */
+.awv-tabbar {
+    display: flex;
+    overflow-x: auto;
+    background: var(--awv-surface);
+    border-top: 1px solid var(--awv-rule);
+}
+.awv-tabs { display: flex; gap: var(--fw-space-1); padding: var(--fw-space-1) var(--fw-space-2); }
+.awv-tab {
+    min-height: var(--awv-target);
+    padding: 0 var(--fw-space-4);
+    font: inherit;
+    color: inherit;
+    white-space: nowrap;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--awv-radius);
+    cursor: pointer;
+}
+.awv-tab:hover { border-color: var(--awv-border); }
+.awv-tab[aria-selected="true"] { color: var(--awv-btn-fg); background: var(--awv-btn-bg); font-weight: 600; }
+
+/* ── 9. Last: [hidden] beats every component `display` ─────────────────────── */
+.awv [hidden], .awv[hidden] { display: none !important; }

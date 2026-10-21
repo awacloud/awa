@@ -32,7 +32,7 @@ function build() {
     const table = tableTable.factory(xml, row);
     const content = textContent.factory(xml, para, head, list, sect, table);
     const image = drawImage.factory(xml);
-    const frame = drawFrame.factory(xml, image);
+    const frame = drawFrame.factory(xml, image, errors);
     return { xml, s: slide.factory(xml, para, content, frame) };
 }
 

@@ -12,14 +12,14 @@ pipeline detects are recorded; the known silent cases are listed in the
 
 No network access, no external tool, no bundler. Its only runtime
 dependencies are
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.0.0/packages/front/fw)
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/fw)
 and the office packages it composes:
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.0.0/packages/front/office/ooxml),
-[`@awacloud/odf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.0.0/packages/front/office/odf),
-[`@awacloud/md`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.0.0/packages/front/office/md),
-[`@awacloud/pdf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.0.0/packages/front/office/pdf)
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/ooxml),
+[`@awacloud/odf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/odf),
+[`@awacloud/md`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/md),
+[`@awacloud/pdf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/pdf)
 and
-[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.0.0/packages/front/office/fonts).
+[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/fonts).
 
 Bounds, stated up front: `fromMd` is structural only (one fixed built-in style
 set per target, never caller styling); `pdf → md` reads text only (no scanned
@@ -148,10 +148,15 @@ styles still yields `run/format-unresolved` or `list/numbering-unresolved`.
 The target comes from `target`, else from `name`'s extension. Each target
 carries one fixed, built-in style set and no caller styling:
 
-- `docx`: `Normal`, `Heading1` to `Heading6` and the `TableGrid` table
-  style; tables are bordered and padded.
-- `odt`: `Standard`, `Text body`, `Heading` and `Heading 1` to `Heading 6`;
-  tables are bordered.
+- `docx`: `Normal`, `Heading1` to `Heading6`, `SourceCode` (code blocks),
+  `BlockText` (quotes), `HorizontalRule` (thematic breaks) and the
+  `TableGrid` table style; tables are bordered and padded. Reading a docx
+  back maps those paragraph styles to a code block, a quote and a rule.
+- `odt`: `Standard`, `Text body`, `Heading`, `Heading 1` to `Heading 6`,
+  `Preformatted Text` (code blocks), `Quotations` (quotes) and `Horizontal
+  Line` (thematic breaks) — LibreOffice's own names; tables are bordered.
+  Reading an odt back maps those three paragraph styles to a code block, a
+  quote and a rule.
 - `pdf`: the bounded typesetter. `opts.pdf` sets page size, margin, type
   sizes, page numbers and embedded font programs;
   [`docs/pdf-writer.md`](./docs/pdf-writer.md) is the option, font-route and
@@ -174,8 +179,17 @@ const letter = await oconv.fromMd({
 console.log(letter.losses);     // []
 ```
 
+A GFM task-list item (`- [x] done`, `- [ ] todo`) keeps its checkbox. `docx`
+and `odt` write it as a leading `☒ ` / `☐ ` run of the item's first paragraph,
+with no loss. `pdf` draws the glyph only when the regular face covers it,
+which neither the Standard 14 faces nor the Liberation pack do, so there the
+writer records `list/task-marker-dropped`, once per item. `toMd` writes
+`[x]` / `[ ]` back from an item that came from Markdown; read back from a
+`docx` or `odt`, the item carries the `☒` / `☐` text instead.
+
 Images come in through `assets`, which maps a Markdown image destination,
-exactly as written, to its encoded bytes. Nothing is fetched; caller bytes win
+exactly as written (`![Diagram](<my diagram.jpg>)` is the key
+`my diagram.jpg`), to its encoded bytes. Nothing is fetched; caller bytes win
 over any the reader carried; a key no image references is ignored:
 
 ```js
@@ -189,30 +203,37 @@ console.log(illustrated.losses);   // [], the JPEG was placed
 
 What happens next depends on the target, and the ledger says which:
 
-- `docx` places the image in `@awacloud/ooxml`'s default 2 in × 4:3 box and
-  records `image/size-defaulted`.
-- `pdf` places JPEG with 1 or 3 colour components. PNG, CMYK JPEG and every
-  other encoding are refused with `layout/image-dropped` and
-  `reason: 'unsupported-encoding'` (see
+- `docx` places the image at its own size, read from its header (PNG,
+  JPEG or GIF; 96 dpi when the file states none; scaled down to fit
+  6 in × 8 in), with its alt text as the picture description. A header it
+  cannot read gives `@awacloud/ooxml`'s default 2 in × 4:3 box and records
+  `image/size-defaulted`.
+- `pdf` places JPEG with 1 or 3 colour components and non-interlaced PNG
+  (alpha and `tRNS` transparency as a soft mask). An interlaced or
+  malformed PNG, CMYK JPEG and every other encoding are refused with
+  `layout/image-dropped`, `reason: 'unsupported-encoding'` and a `format`
+  when it can be named (see
   [`docs/pdf-writer.md`](./docs/pdf-writer.md#images)).
 - `odt` places an image whose bytes are reachable (a caller `assets` entry, or
-  bytes the reader carried) as a `Pictures/` part in a 2 in × 1.5 in inline
-  frame and records `image/size-defaulted`. With no bytes it records
-  `image/dropped`. Read back through `toMd`, the frame surfaces as
-  `image/unresolved` with detail `draw:frame`.
+  bytes the reader carried) as a `Pictures/` part in an inline frame sized
+  by the same rule as docx, its alt text as the frame title (a header it
+  cannot read gives a 2 in × 1.5 in frame and records
+  `image/size-defaulted`). With no bytes it records `image/dropped`. Read
+  back through `toMd`, the frame surfaces as an image asset with its bytes
+  and its alt text, named after its picture path (the writer writes no
+  frame name).
 
 `assets` must be a non-null, non-array object of `Uint8Array` values, else
 `fromMd` throws `oconv: bad assets`.
 
-Provenance and reproducibility differ by target. A `.docx` carries no
-document-properties part at all. A `.odt` always carries
-`meta:generator: '@awacloud/odf'` in `meta.xml`. A `.pdf` always carries
-`/Producer` and `/Creator`, both `'@awacloud/oconv'`. The `docx` target is
-byte-reproducible: `@awacloud/ooxml` stamps every zip entry with a fixed
-1980-01-01 00:00 timestamp. The `odt` target is not: the ODF package writer
-stamps the current time, so two identical calls give equal document models but
-may give different bytes. The `pdf` target is byte-reproducible: it writes no
-date and no `/ID`.
+Provenance differs by target. A `.docx` carries no document-properties part
+at all. A `.odt` always carries `meta:generator: '@awacloud/odf'` in
+`meta.xml`. A `.pdf` always carries `/Producer` and `/Creator`, both
+`'@awacloud/oconv'`. Every target is byte-reproducible: two identical calls
+give byte-identical bytes. `@awacloud/ooxml` and `@awacloud/odf` stamp every
+zip entry of a `.docx` and an `.odt` with a fixed 1980-01-01 00:00 timestamp,
+and the `.pdf` target writes no date, its `/ID` derived from the written
+bytes.
 
 ## Cross-format conversion
 
@@ -230,7 +251,7 @@ covers the signature, the error order and the worker message.
 
 With no `opts.pdf.fonts`, the pdf writer uses the Standard 14 fonts (WinAnsi
 text only). Registering the optional
-[`@awacloud/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.0.0/packages/front/office/oconv-fonts)
+[`@awacloud/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/oconv-fonts)
 pack switches every style class you did not supply to embedded Liberation
 faces. This package never imports the pack and does not list it as a
 dependency; the writer finds it by the module name `oconvDefaultFaces`.
@@ -366,9 +387,9 @@ Copyright (c) 2026 AwaCloud SAS
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/oconv`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.0.0/packages/front/office/oconv)
+- Source: [`packages/front/office/oconv`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/oconv)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/oconv@1.0.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/oconv@1.1.0/SECURITY.md
 - Documentation: [index](./docs/README.md),
   [getting started](./docs/guide/getting-started.md),
   [API reference](./docs/api/README.md),

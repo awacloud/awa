@@ -271,30 +271,103 @@ export const ooxmlShared = {
         }
 
         // --- WordprocessingML root namespaces ----------------------
+        // Prefixes a WordprocessingML part can carry below its root, in
+        // declaration order: [prefix, namespace URI, ignorable]. Ignorable
+        // ones are Office extensions, listed in `mc:Ignorable`.
+        const WORD_ROOT_PREFIXES = Object.freeze([
+            ['wp',       NS.WP, false],
+            ['a',        NS.A, false],
+            ['pic',      NS.PIC, false],
+            ['wps',      'http://schemas.microsoft.com/office/word/2010/wordprocessingShape', false],
+            ['wpg',      'http://schemas.microsoft.com/office/word/2010/wordprocessingGroup', false],
+            ['wpc',      'http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas', false],
+            ['c',        NS.C, false],
+            ['m',        NS.M, false],
+            ['v',        'urn:schemas-microsoft-com:vml', false],
+            ['o',        'urn:schemas-microsoft-com:office:office', false],
+            ['w10',      'urn:schemas-microsoft-com:office:word', false],
+            ['wp14',     'http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing', true],
+            ['w14',      'http://schemas.microsoft.com/office/word/2010/wordml', true],
+            ['w15',      NS.W15, true],
+            ['w16',      'http://schemas.microsoft.com/office/word/2018/wordml', true],
+            ['w16cex',   'http://schemas.microsoft.com/office/word/2018/wordml/cex', true],
+            ['w16cid',   'http://schemas.microsoft.com/office/word/2016/wordml/cid', true],
+            ['w16se',    'http://schemas.microsoft.com/office/word/2015/wordml/symex', true],
+            ['w16sdtdh', 'http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash', true]
+        ]);
+
         /**
          * Root namespace attributes of a WordprocessingML part whose root
          * element will hold `nodes`.
          *
-         * Always declares `w` and `r`. When some element of `nodes`
-         * (searched recursively through `children`) has a `w15:` name, the
-         * Word 2012 namespace is declared too, together with `mc` and
-         * `mc:Ignorable="w15"`, so consumers that do not know the extension
-         * skip it. Other prefixes are never declared here. Non-element
-         * entries of `nodes` are ignored.
+         * Always declares `w` and `r`. Every other prefix of the table above
+         * that an element or attribute name of `nodes` uses OUTSIDE the
+         * scope of an `xmlns:` declaration of its own (searched recursively
+         * through `children`) is declared too, in table order (a
+         * `wp:` drawing used to be written with no `xmlns:wp`). An element
+         * with a `w15:` name always declares `w15`, as before. When an
+         * extension prefix (`w14`, `w15`, …) is declared, `mc` is declared
+         * right after `r` and `mc:Ignorable` lists the extensions last, so
+         * consumers that do not know them skip them. The prefixes an
+         * `mc:Choice` names in `Requires` count as used. A prefix with no
+         * known namespace is left undeclared. Non-element entries are
+         * ignored.
          *
          * @param {Array<object>} nodes XML nodes as built by `xml.el`.
+         * @param {object} [opts]
+         * @param {boolean} [opts.r=true] `false` declares `r` only when a
+         *   name uses it outside a declaration (the styles and numbering
+         *   roots, which never carried it).
          * @returns {Object<string, string>} A new attribute object, keys in
-         *   the order `xmlns:w`, `xmlns:r`, then `xmlns:mc`, `xmlns:w15`,
-         *   `mc:Ignorable` when needed.
+         *   the order `xmlns:w`, `xmlns:r`, then `xmlns:mc` when needed, the
+         *   other declarations in table order, `mc:Ignorable` when needed.
          */
-        function wordRootAttrs(nodes) {
-            const attrs = { 'xmlns:w': NS.W, 'xmlns:r': NS.R };
-            if (hasWord2012Element(nodes)) {
-                attrs['xmlns:mc'] = NS.MC;
-                attrs['xmlns:w15'] = NS.W15;
-                attrs['mc:Ignorable'] = 'w15';
-            }
+        function wordRootAttrs(nodes, opts) {
+            const alwaysR = !(opts && opts.r === false);
+            const used = new Set();
+            collectUnscopedPrefixes(nodes, new Set(alwaysR ? ['w', 'r'] : ['w']), used);
+            const attrs = alwaysR || used.has('r')
+                ? { 'xmlns:w': NS.W, 'xmlns:r': NS.R } : { 'xmlns:w': NS.W };
+            if (hasWord2012Element(nodes)) used.add('w15');
+            const declared = WORD_ROOT_PREFIXES.filter(([p]) => used.has(p));
+            const ignorable = declared.filter(([, , ext]) => ext).map(([p]) => p);
+            if (used.has('mc') || ignorable.length) attrs['xmlns:mc'] = NS.MC;
+            for (const [p, uri] of declared) attrs['xmlns:' + p] = uri;
+            if (ignorable.length) attrs['mc:Ignorable'] = ignorable.join(' ');
             return attrs;
+        }
+
+        // Adds to `used` the prefix of every element or attribute name of
+        // `nodes` (recursively) that no enclosing `xmlns:` declaration (nor
+        // `scope`) covers.
+        function collectUnscopedPrefixes(nodes, scope, used) {
+            for (const n of nodes || []) {
+                if (!n || n.type !== 'element' || typeof n.name !== 'string') continue;
+                const attrs = n.attrs || {};
+                let inner = scope;
+                for (const k of Object.keys(attrs)) {
+                    if (!k.startsWith('xmlns:')) continue;
+                    if (inner === scope) inner = new Set(scope);
+                    inner.add(k.slice(6));
+                }
+                addUnscoped(n.name, inner, used);
+                for (const k of Object.keys(attrs)) addUnscoped(k, inner, used);
+                // Markup compatibility (ECMA-376 Part 3 §10.2.1): the
+                // prefixes listed in `Requires` must be in scope as well.
+                if (n.name.endsWith(':Choice') && typeof attrs.Requires === 'string') {
+                    for (const p of attrs.Requires.split(/\s+/)) {
+                        if (p) addUnscoped(p + ':', inner, used);
+                    }
+                }
+                collectUnscopedPrefixes(n.children, inner, used);
+            }
+        }
+
+        function addUnscoped(qname, scope, used) {
+            const i = qname.indexOf(':');
+            if (i < 0) return;
+            const prefix = qname.slice(0, i);
+            if (prefix !== 'xml' && prefix !== 'xmlns' && !scope.has(prefix)) used.add(prefix);
         }
 
         // True when an element of `nodes`, at any depth, has a `w15:` name.
@@ -379,6 +452,80 @@ export const ooxmlShared = {
                 if (id) used.add(id);
             }
             return { next, peek, reset, usedIds, claim, register };
+        }
+
+        // --- Picture crop (a:blipFill/a:srcRect) --------------------
+        // `{ l?, t?, r?, b? }` (1/1000 of a percent of the image, ECMA-376
+        // §20.1.8.55) from an `a:srcRect` element's attributes — `{}` for an
+        // empty one — and back to its attribute object.
+        function parseSrcRect(el) {
+            const out = {};
+            for (const k of ['l', 't', 'r', 'b']) {
+                const v = el.attrs && el.attrs[k];
+                if (v != null && Number.isFinite(Number(v))) out[k] = Number(v);
+            }
+            return out;
+        }
+        function srcRectAttrs(rect) {
+            const out = {};
+            for (const k of ['l', 't', 'r', 'b']) {
+                if (rect && rect[k] != null) out[k] = String(rect[k]);
+            }
+            return out;
+        }
+
+        // --- Typed DrawingML colour (rgb / scheme + transforms) -----
+        /**
+         * Codec of the typed colour carried by shape fills and text runs:
+         * `{ rgb }` for `a:srgbClr`, `{ schemeColor }` for `a:schemeClr`,
+         * plus `mods: [{ name, val? }]` for its colour-transform children
+         * (ECMA-376 §20.1.2.3 — `lumMod`, `lumOff`, `tint`, `shade`,
+         * `alpha`, `satMod`, `comp`, …), in document order, `val` a number.
+         *
+         * `parse(el)` returns `null` for another colour kind, or when a
+         * child does not fit `{ name, val? }` (another attribute, nested
+         * elements, a `val` that does not survive `Number` → `String`), so
+         * a caller can keep that colour verbatim instead.
+         *
+         * @param {object} xml the fw `xml` module.
+         * @returns {{ parse: (el: object) => object|null,
+         *   render: (color: object) => object|null }}
+         */
+        function createTypedColorCodec(xml) {
+            function parse(el) {
+                let out;
+                if (el && el.name === 'a:srgbClr') out = { rgb: el.attrs.val };
+                else if (el && el.name === 'a:schemeClr') out = { schemeColor: el.attrs.val };
+                else return null;
+                const mods = [];
+                for (const c of el.children || []) {
+                    if (c.type !== 'element') continue;
+                    if (!c.name.startsWith('a:')) return null;
+                    const attrs = c.attrs || {};
+                    if (Object.keys(attrs).some(k => k !== 'val')) return null;
+                    if ((c.children || []).some(n => n.type === 'element')) return null;
+                    const m = { name: c.name.slice(2) };
+                    if (attrs.val != null) {
+                        const v = Number(attrs.val);
+                        if (!Number.isFinite(v) || String(v) !== attrs.val) return null;
+                        m.val = v;
+                    }
+                    mods.push(m);
+                }
+                if (mods.length) out.mods = mods;
+                return out;
+            }
+            function render(color) {
+                if (!color || typeof color !== 'object') return null;
+                const mods = (color.mods || []).map(m =>
+                    xml.el('a:' + m.name, m.val != null ? { val: String(m.val) } : {}));
+                if (color.rgb) {
+                    return xml.el('a:srgbClr', { val: String(color.rgb).replace(/^#/, '') }, mods);
+                }
+                if (color.schemeColor) return xml.el('a:schemeClr', { val: color.schemeColor }, mods);
+                return null;
+            }
+            return { parse, render };
         }
 
         // --- DrawingML color codec ----------------------------------
@@ -578,6 +725,46 @@ export const ooxmlShared = {
             return { parseColor, renderColor };
         }
 
+        // --- Schema order ---
+        // OOXML child lists are sequences: a preserved element must go back
+        // to its place among the typed ones. `sequence(names)` indexes a
+        // sequence (an entry may be an array of names sharing one place);
+        // `orderBySequence(children, seq)` sorts element children by that
+        // index, stably; an `mc:AlternateContent` takes the place of the
+        // element its Fallback (else its first Choice) holds; a name not
+        // listed goes before the sequence's trailing `...Change` entry when
+        // it has one, else last. Mirrored in ooxmlShared and docxProperties
+        // — keep byte-identical (order-by-sequence-drift.test.js).
+        function sequence(names) {
+            const rank = new Map();
+            let change = -1;
+            names.forEach((entry, i) => {
+                for (const n of Array.isArray(entry) ? entry : [entry]) {
+                    rank.set(n, i);
+                    if (change < 0 && /Change$/.test(n)) change = i;
+                }
+            });
+            return { rank, other: change >= 0 ? change - 0.5 : names.length };
+        }
+
+        function orderBySequence(children, seq) {
+            const firstElement = el => (el && el.children || []).find(k => k && k.type === 'element');
+            const nameOf = c => {
+                if (c.name !== 'mc:AlternateContent') return c.name;
+                const branches = (c.children || []).filter(k => k && k.type === 'element');
+                const branch = branches.find(k => k.name === 'mc:Fallback') || branches.find(k => k.name === 'mc:Choice');
+                const inner = firstElement(branch);
+                return inner ? inner.name : c.name;
+            };
+            return children
+                .map((c, i) => {
+                    const n = c && c.type === 'element' ? nameOf(c) : null;
+                    return { c, i, r: n !== null && seq.rank.has(n) ? seq.rank.get(n) : seq.other };
+                })
+                .sort((a, b) => a.r - b.r || a.i - b.i)
+                .map(x => x.c);
+        }
+
         return {
             NS, REL_TYPE, CT,
             EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96,
@@ -587,8 +774,11 @@ export const ooxmlShared = {
             wordRootAttrs,
             encodeText, decodeText,
             createRidAllocator,
+            createTypedColorCodec,
+            parseSrcRect, srcRectAttrs,
             createDmlColorCodec,
-            createXlsxColorCodec
+            createXlsxColorCodec,
+            sequence, orderBySequence
         };
     }
 };

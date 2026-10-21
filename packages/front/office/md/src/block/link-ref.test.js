@@ -53,4 +53,40 @@ describe('link-ref module', () => {
         parseReference('[FoO]: /x\n', refmap);
         expect(refmap.FOO).toBeDefined();
     });
+
+    test('a label may hold a backslash just before a line end', () => {
+        for (const src of ['[\\\nfoo]: /uri\n', '[a\\\nfoo]: /uri\n']) {
+            const refmap = {};
+            expect(parseReference(src, refmap)).toBe(src.length);
+            expect(Object.values(refmap)[0].destination).toBe('/uri');
+        }
+    });
+
+    test('an empty title followed by text is dropped, the definition is kept', () => {
+        for (const second of ['""third [test]\n', "''third\n", '()third\n']) {
+            for (const first of ['[test]:example\n', '[test]: example\n']) {
+                const refmap = {};
+                expect(parseReference(first + second, refmap)).toBe(first.length);
+                expect(refmap.TEST.destination).toBe('example');
+                expect(refmap.TEST.title).toBeNull();
+            }
+        }
+    });
+
+    test('a title that ends the line is kept, an empty one included', () => {
+        const refmap = {};
+        expect(parseReference('[a]: /u ""\n', refmap)).toBe(11);
+        expect(refmap.A.destination).toBe('/u');
+        const withTitle = {};
+        expect(parseReference('[b]: /u\n"t"\n', withTitle)).toBe(12);
+        expect(withTitle.B.title).toBe('t');
+    });
+
+    test('text after the destination or after a same-line title rejects the definition', () => {
+        for (const src of ['[a]: /u x\n', '[a]: /u "t" x\n', '[a]: /u "" x\n']) {
+            const refmap = {};
+            expect(parseReference(src, refmap)).toBe(0);
+            expect(Object.keys(refmap)).toEqual([]);
+        }
+    });
 });

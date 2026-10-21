@@ -26,6 +26,15 @@ const myExtra = { name: 'myExtra', install(md) { /* patch md.parse, md.render, m
 - Post-process the AST (between parse and render — e.g. `emoji`, `math`, `highlight`, `subsuper`, `wikilinks`).
 - Wrap HTML rendering (e.g. `mermaid`, math display).
 
+An extension may also carry an optional `inlineSyntax` array that asks the core inline parser for a syntax it must claim before any other inline construct. `'math'` is the one value read: with it, `md.parse` claims every `$…$` / `$$…$$` span on one line as a `math_inline` / `math_block` node holding the source verbatim (`mdMath` declares it, see [`extra/math`](../api/extra/math.md)), so a later emphasis, strikethrough or sub/superscript pass cannot split it. Other values are ignored.
+
+```js
+const claimMath = { name: 'claimMath', inlineSyntax: ['math'], install() {} };
+const m = md.createMd().use(claimMath);
+m.parse('$H~2~O$').firstChild.firstChild.type;  // 'math_inline'
+md.createMd().parse('$H~2~O$').firstChild.firstChild.type;  // 'text'
+```
+
 ## Skeleton of an extra
 
 Every extra of the package is an `@awacloud/fw` factory descriptor whose `factory(...deps)` returns the installable `{ name, install }` object; the descriptor's `dependencies` name the md modules it needs (`mdNode` for the `Node` class, `mdAstWalker` for `walk`, …):
@@ -44,7 +53,8 @@ const mdMyExtra = {
                     // post-process `ast` here
                     return ast;
                 };
-                // Re-route renderHtml(string) so it goes through the patched parse.
+                // renderHtml(string) already goes through the patched parse;
+                // re-wiring it makes renderHtml(ast) accepted as well.
                 md.renderHtml = function (textOrAst, renderOpts) {
                     const ast = typeof textOrAst === 'string' ? md.parse(textOrAst) : textOrAst;
                     return md.render(ast, renderOpts);
@@ -159,7 +169,7 @@ Concrete examples: [`src/extra/frontmatter.js`](../../src/extra/frontmatter.js),
 
 ## Pattern: post-rewrite of the HTML
 
-For cases where patching the AST is too invasive, wrap `md.render` (the method that produces HTML from an AST) and do a regex replace, then re-route `renderHtml` so text input goes through the wrapped `render`:
+For cases where patching the AST is too invasive, wrap `md.render` (the method that produces HTML from an AST) and do a regex replace. Text input to the core `renderHtml` already goes through the wrapped `render`; re-wiring `renderHtml` as below makes it accept an AST too:
 
 ```js
 const mdBox = {
@@ -245,5 +255,5 @@ In short: **inside the md package → `Walker`**; **in multi-AST code → `treeW
 - [Existing extras](../api/extra/README.md) — copy the closest one as a base
 - [`api/md`](../api/md.md) — API surface to patch
 - [Coverage](./coverage.md) — what is already handled
-- [fw module pattern](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/guide/module-pattern.md)
-- [fw treeWalker](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/io/structures/tree-walker.md) — generic alternative
+- [fw module pattern](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/guide/module-pattern.md)
+- [fw treeWalker](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/io/structures/tree-walker.md) — generic alternative

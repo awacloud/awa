@@ -314,6 +314,54 @@ describe('render — spacing', () => {
     });
 });
 
+describe('render — GFM task markers (`listItem.escapes.md.task`)', () => {
+    /** A task item: the flag in the md escapes bag. */
+    const taskItem = (task, ...children) => ({ kind: 'listItem', escapes: { md: { task } }, children });
+    /** The text of every body line, marker items excluded. */
+    const lineTexts = (items) => items.filter((it) => it.tokens)
+        .map((it) => it.tokens.map((t) => t.text).join(''));
+
+    test('Standard 14 cannot draw ☐ / ☒: items drawn without it, one loss per marker', () => {
+        const node = list(false, taskItem('checked', para('done')), taskItem('unchecked', para('todo')), item(para('plain')));
+        const { items, losses } = renderList.render(node, makeCtx());
+        expect(lineTexts(items)).toEqual(['done', 'todo', 'plain']);
+        expect(losses).toEqual([
+            { code: 'list/task-marker-dropped', detail: '[x]' },
+            { code: 'list/task-marker-dropped', detail: '[ ]' }
+        ]);
+    });
+
+    test('a face that covers the glyphs draws them ahead of the first paragraph, no loss', () => {
+        const covering = { ...measurer, covers: () => true };
+        const node = list(false, taskItem('checked', para('done')), taskItem('unchecked', para('todo')));
+        const { items, losses } = renderList.render(node, makeCtx({ measurer: covering }));
+        expect(losses).toEqual([]);
+        expect(lineTexts(items)).toEqual(['☒ done', '☐ todo']);
+    });
+
+    test('the glyph is asked of the regular face, the IR is not mutated', () => {
+        const asked = [];
+        const covering = { ...measurer, covers: (text, style) => { asked.push([text, style]); return true; } };
+        const node = list(false, taskItem('checked', para('done')));
+        const before = JSON.stringify(node);
+        renderList.render(node, makeCtx({ measurer: covering }));
+        expect(asked).toEqual([['☒', 'regular']]);
+        expect(JSON.stringify(node)).toBe(before);
+    });
+
+    test('a measurer without `covers` and an item without a leading paragraph both record the loss', () => {
+        const bare = { widthOf: measurer.widthOf, face: measurer.face };
+        const one = renderList.render(list(false, taskItem('checked', para('done'))), makeCtx({ measurer: bare }));
+        expect(one.losses).toEqual([{ code: 'list/task-marker-dropped', detail: '[x]' }]);
+
+        const covering = { ...measurer, covers: () => true };
+        const nested = list(false, taskItem('unchecked', list(false, item(para('inner')))));
+        const two = renderList.render(nested, makeCtx({ measurer: covering }));
+        expect(two.losses).toEqual([{ code: 'list/task-marker-dropped', detail: '[ ]' }]);
+        expect(lineTexts(two.items)).toEqual(['inner']);
+    });
+});
+
 describe('render — token width and item attribution', () => {
     test('every token carries a finite `width`; the marker item is a plain `text`, not `tokens`', () => {
         const { items } = renderList.render(list(false, item(para('hello world'))), makeCtx());
@@ -433,6 +481,20 @@ describe('the delivered facade — `list` reaches the renderer end to end', () =
         expect(latin1).toContain('(2.)');
         expect(latin1).toMatch(/\(First\)/);
         expect(latin1).toMatch(/\(Second\)/);
+    });
+
+    test('a task list on the Standard 14 route: the writer records the marker, nothing unencodable', () => {
+        const irToPdf = runtime.resolve('oconvIrToPdf');
+        const ir = { kind: 'document', children: [
+            list(false, { kind: 'listItem', escapes: { md: { task: 'checked' } }, children: [para('Shipped')] })
+        ] };
+        const written = irToPdf.irToPdf(ir);
+        expect(written.losses).toEqual([
+            { index: '0', kind: 'list', code: 'list/task-marker-dropped', detail: '[x]' }
+        ]);
+        let latin1 = '';
+        for (const b of written.bytes) latin1 += String.fromCharCode(b);
+        expect(latin1).toMatch(/\(Shipped\)/);
     });
 
     test('an item containing a paragraph + a nested list + a nested code block, end to end', () => {

@@ -22,12 +22,41 @@ export const mdInlineHelpers = {
     deps: [mdNode, mdAstTypes],
     factory(nodeApi, astTypes) {
         const { Node } = nodeApi;
-        const { T_TEXT } = astTypes;
+        const { T_TEXT, T_MATH_INLINE, T_MATH_BLOCK } = astTypes;
         /** Build a text node carrying the given literal. */
         function makeText(s) {
             const n = new Node(T_TEXT);
             n.literal = s;
             return n;
+        }
+
+        /** Build a `math_inline` (or, `display`, `math_block`) node. */
+        function makeMath(s, display) {
+            const n = new Node(display ? T_MATH_BLOCK : T_MATH_INLINE);
+            n.literal = s;
+            return n;
+        }
+
+        /**
+         * End (index after the closing run) of a `$…$` / `$$…$$` math span
+         * opening at `p` in `s`, or `-1` — the rules of `mdMath.splitMath`,
+         * on one line: `$$` closes at the next `$$`; a single `$` at the
+         * next `$` not escaped by a backslash, with at least one character
+         * between.
+         */
+        function mathSpanEnd(s, p) {
+            if (s.charCodeAt(p + 1) === 0x24) {
+                const end = s.indexOf('$$', p + 2);
+                const nl = s.indexOf('\n', p + 2);
+                return end >= 0 && (nl < 0 || end < nl) ? end + 2 : -1;
+            }
+            for (let j = p + 1; j < s.length; j++) {
+                const c = s.charCodeAt(j);
+                if (c === 0x0A) return -1;
+                if (c === 0x5C) { j++; continue; }
+                if (c === 0x24) return j > p + 1 ? j + 1 : -1;
+            }
+            return -1;
         }
 
         /** Safe `String.fromCodePoint` with U+FFFD fallback. */
@@ -66,6 +95,6 @@ export const mdInlineHelpers = {
             return str.slice(start, end + 1);
         }
 
-        return { makeText, fromCodePoint, normalizeReference, trim, isSpace };
+        return { makeText, makeMath, mathSpanEnd, fromCodePoint, normalizeReference, trim, isSpace };
     }
 };

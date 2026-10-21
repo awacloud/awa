@@ -551,14 +551,14 @@ describe('oconv.fromMd — losses merged reader-then-writer (order falsification
     // this test is the MERGE ORDER, not that particular code — it is re-pinned onto
     // `block/dropped` (`hr`), which remains an odt writer loss, and the link is
     // now asserted to survive with its target intact.
-    test('a front-matter block AND an odt-unwritable block produce reader loss THEN writer loss, in that order', async () => {
+    test('a front-matter block AND an odt-unplaceable image produce reader loss THEN writer loss, in that order', async () => {
         const markdown = [
             '---',
             'title: x',
             '---',
             '[click here](http://example.com)',
             '',
-            '***',
+            '![a](missing.png)',
             ''
         ].join('\n');
 
@@ -566,11 +566,11 @@ describe('oconv.fromMd — losses merged reader-then-writer (order falsification
 
         expect(result.lossy).toBe(true);
         expect(result.losses[0]).toEqual({ code: 'frontmatter/stripped', detail: 'yaml' });
-        expect(result.losses.some(l => l.code === 'block/dropped' && l.detail === 'hr')).toBe(true);
+        expect(result.losses.some(l => l.code === 'image/dropped' && l.detail === 'missing.png')).toBe(true);
         // Reader loss precedes the writer loss — the merge order the plan prescribes.
         const frontmatterIdx = result.losses.findIndex(l => l.code === 'frontmatter/stripped');
-        const hrIdx = result.losses.findIndex(l => l.code === 'block/dropped');
-        expect(frontmatterIdx).toBeLessThan(hrIdx);
+        const imageIdx = result.losses.findIndex(l => l.code === 'image/dropped');
+        expect(frontmatterIdx).toBeLessThan(imageIdx);
 
         // The link is no longer a loss at all (GAP-ODF-4, closed by BATCH_27/02+06).
         expect(result.losses.some(l => l.code === 'link/target-unwritable')).toBe(false);
@@ -733,17 +733,22 @@ describe('oconv.fromMd — assets validation', () => {
 describe('oconv.fromMd — assets per target', () => {
     const MD = '# T\n\n![Alt](diagram.png)\n';
 
-    test('docx: the image is placed, ledger carries image/size-defaulted and NO image/dropped', async () => {
+    test('docx: the image is placed at its intrinsic size with its alt text, no image loss', async () => {
         const result = await oconvApi.fromMd({
             markdown: MD, target: 'docx', assets: { 'diagram.png': PX_PNG }
         });
         const read = docxApi.read(result.bytes);
         expect(Object.keys(read.images).length).toBeGreaterThan(0);
-        expect(result.losses.map((l) => l.code)).toContain('image/size-defaulted');
-        expect(result.losses.map((l) => l.code)).not.toContain('image/dropped');
+        expect(result.losses.filter((l) => l.code.startsWith('image/'))).toEqual([]);
+        // The 1 x 1 px fixture at 96 dpi: 9525 EMU square.
+        const drawing = read.document.body[1].children[0].children[0];
+        expect(drawing).toMatchObject({ cx: 9525, cy: 9525, description: 'Alt' });
+
+        const back = await oconvApi.toMd({ name: 'd.docx', bytes: result.bytes, convertedAt: '2026-10-12T00:00:00Z' });
+        expect(back.markdown).toContain('![Alt](');
     });
 
-    test('odt: the image is placed, ledger carries image/size-defaulted and NO image/dropped', async () => {
+    test('odt: the image is placed at its intrinsic size with its alt text, no image loss', async () => {
         const result = await oconvApi.fromMd({
             markdown: MD, target: 'odt', assets: { 'diagram.png': PX_PNG }
         });
@@ -752,24 +757,22 @@ describe('oconv.fromMd — assets per target', () => {
         expect(Object.keys(read.package.parts).filter((p) => p.startsWith('Pictures/')))
             .toEqual(['Pictures/image1.png']);
         expect(read.package.parts['Pictures/image1.png']).toEqual(PX_PNG);
-        expect(result.losses.map((l) => l.code)).toContain('image/size-defaulted');
-        expect(result.losses.map((l) => l.code)).not.toContain('image/dropped');
+        expect(result.losses.filter((l) => l.code.startsWith('image/'))).toEqual([]);
+
+        const back = await oconvApi.toMd({ name: 'd.odt', bytes: result.bytes, convertedAt: '2026-10-12T00:00:00Z' });
+        expect(back.markdown).toContain('![Alt](');
     });
 
-    test('pdf: a JPEG places (no image loss), the PNG records the honest refusal', async () => {
+    test('pdf: a JPEG and a PNG both place (no image loss)', async () => {
         const placed = await oconvApi.fromMd({
             markdown: MD, target: 'pdf', assets: { 'diagram.png': PX_JPEG }
         });
         expect(placed.losses.some((l) => l.code === 'layout/image-dropped')).toBe(false);
 
-        const refused = await oconvApi.fromMd({
+        const png = await oconvApi.fromMd({
             markdown: MD, target: 'pdf', assets: { 'diagram.png': PX_PNG }
         });
-        const loss = refused.losses.find((l) => l.code === 'layout/image-dropped');
-        expect(loss.detail).toMatchObject({
-            name: 'diagram.png', alt: 'Alt',
-            reason: 'unsupported-encoding', format: 'png'
-        });
+        expect(png.losses.some((l) => l.code === 'layout/image-dropped')).toBe(false);
     });
 
     test('the markdown destination is the key VERBATIM — no normalisation, no path handling', async () => {
@@ -777,12 +780,42 @@ describe('oconv.fromMd — assets per target', () => {
         const result = await oconvApi.fromMd({
             markdown: md, target: 'docx', assets: { 'sub/dir/My_Diagram.PNG': PX_PNG }
         });
-        expect(result.losses.map((l) => l.code)).toContain('image/size-defaulted');
+        expect(result.losses.map((l) => l.code)).not.toContain('image/dropped');
+        expect(Object.keys(docxApi.read(result.bytes).images)).toHaveLength(1);
 
         const missed = await oconvApi.fromMd({
             markdown: md, target: 'docx', assets: { 'My_Diagram.PNG': PX_PNG }
         });
         expect(missed.losses.map((l) => l.code)).toContain('image/dropped');
+    });
+
+    test('a destination the Markdown reader percent-encodes is keyed as written (angle brackets, non-ASCII)', async () => {
+        for (const [dest, key] of [['<my diagram.png>', 'my diagram.png'], ['café.png', 'café.png']]) {
+            const md = `# T\n\n![A](${dest})\n`;
+            const docx = await oconvApi.fromMd({ markdown: md, target: 'docx', assets: { [key]: PX_PNG } });
+            expect(docx.losses.map((l) => l.code)).not.toContain('image/dropped');
+            expect(Object.keys(docxApi.read(docx.bytes).images)).toHaveLength(1);
+            const odt = await oconvApi.fromMd({ markdown: md, target: 'odt', assets: { [key]: PX_PNG } });
+            expect(odt.losses.map((l) => l.code)).not.toContain('image/dropped');
+            expect(odtApi.read(odt.bytes).package.parts['Pictures/image1.png']).toEqual(PX_PNG);
+            const pdf = await oconvApi.fromMd({ markdown: md, target: 'pdf', assets: { [key]: PX_JPEG } });
+            expect(pdf.losses.map((l) => l.code)).not.toContain('layout/image-dropped');
+        }
+    });
+
+    test('the name the reader gives still wins over its decoded form; an undecodable name matches nothing new', async () => {
+        const both = await oconvApi.fromMd({
+            markdown: '# T\n\n![A](<my diagram.png>)\n',
+            target: 'odt',
+            assets: { 'my%20diagram.png': PX_PNG, 'my diagram.png': PX_JPEG }
+        });
+        expect(odtApi.read(both.bytes).package.parts['Pictures/image1.png']).toEqual(PX_PNG);
+
+        // `%E0%A4%A` reads as `%E0%A4%25A`, whose decoding throws (a cut UTF-8 sequence).
+        const broken = await oconvApi.fromMd({
+            markdown: '# T\n\n![A](%E0%A4%A.png)\n', target: 'docx', assets: { '%E0%A4%A.png': PX_PNG }
+        });
+        expect(broken.losses.map((l) => l.code)).toContain('image/dropped');
     });
 });
 

@@ -12,7 +12,7 @@
  * composed from `src/main.js`) on a business-shaped markdown document —
  * headings 1-3, bold/italic prose, one bullet list, three pipe tables —
  * and asserts the container is presentable by construction: a
- * `styles.xml` defining the nine named paragraph styles every heading
+ * `styles.xml` defining the twelve named paragraph styles every heading
  * references, every table cell bordered, every table margins-aligned, and
  * list levels carrying the label-alignment geometry with no bullet font.
  *
@@ -43,7 +43,8 @@ const FIXTURE = readFileSync(
 const STYLE_NAMES = [
     'Standard', 'Text_20_body', 'Heading',
     'Heading_20_1', 'Heading_20_2', 'Heading_20_3',
-    'Heading_20_4', 'Heading_20_5', 'Heading_20_6'
+    'Heading_20_4', 'Heading_20_5', 'Heading_20_6',
+    'Preformatted_20_Text', 'Quotations', 'Horizontal_20_Line'
 ];
 
 /** Text of one named part of the produced `.odt`. */
@@ -70,7 +71,7 @@ describe('fromMd odt — presentable output (BL-1794)', () => {
             expect(entries).toContain(part);
         }
 
-        // Nine named styles, in order.
+        // Twelve named styles, in order.
         const styles = odfStyles.parse(partText(bytes, 'styles.xml')).styles;
         expect(styles.map(e => e.attrs['style:name'])).toEqual(STYLE_NAMES);
 
@@ -194,5 +195,41 @@ describe('fromMd odt — presentable output (BL-1794)', () => {
         const body = markdown.slice(markdown.indexOf('# Lists'));
         // Byte-for-byte the same list markup the fixture was authored with.
         expect(body.trimEnd()).toBe(nested.trimEnd());
+    });
+
+    test('code block, quote and rule: styled, loss-free, and kept by md -> odt -> md', async () => {
+        const source = [
+            'Intro.',
+            '',
+            '```js',
+            'const a = 1;',
+            '',
+            '  call(a,  b);',
+            '```',
+            '',
+            '> Quoted *line*.',
+            '>',
+            '> Second quoted paragraph.',
+            '',
+            '---',
+            '',
+            'Outro.',
+            ''
+        ].join('\n');
+        const { bytes, losses } = await oconv.fromMd({ markdown: source, target: 'odt' });
+        expect(losses).toEqual([]);
+        expect(odtApi.read(bytes).body.map(b => b.styleName).filter(Boolean)).toEqual([
+            'Preformatted_20_Text', 'Preformatted_20_Text', 'Preformatted_20_Text',
+            'Quotations', 'Quotations', 'Horizontal_20_Line'
+        ]);
+
+        const { markdown, losses: readLosses } = await oconv.toMd({
+            name: 'blocks.odt', bytes, convertedAt: '2026-10-12T00:00:00Z'
+        });
+        expect(readLosses).toEqual([]);
+        expect(markdown).toContain('```\nconst a = 1;\n\n  call(a,  b);\n```');
+        expect(markdown).toContain('> Quoted *line*.\n>\n> Second quoted paragraph.');
+        expect(markdown).toMatch(/\n(\*\*\*|---|___)\n/);
+        expect(markdown).toContain('Outro.');
     });
 });

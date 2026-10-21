@@ -56,7 +56,18 @@ export const docxDrawing = {
     deps: [xml, drawingmlShape, ooxmlShared],
 
     factory(xml, shapeMod, shared) {
-        const { NS, REL_TYPE } = shared;
+        const { NS, REL_TYPE, parseSrcRect, srcRectAttrs } = shared;
+        // CT_Anchor order (ECMA-376 Part 1 § 20.4.2.3), then the Word 2010
+        // wp14:sizeRelH / sizeRelV; any other child follows in the order
+        // read. A hand-wired ooxmlShared without the ordering helper writes
+        // the children in the old order.
+        const ANCHOR_SEQ = shared.sequence ? shared.sequence([
+            'wp:simplePos', 'wp:positionH', 'wp:positionV', 'wp:extent', 'wp:effectExtent',
+            ['wp:wrapNone', 'wp:wrapSquare', 'wp:wrapTight', 'wp:wrapThrough', 'wp:wrapTopAndBottom'],
+            'wp:docPr', 'wp:cNvGraphicFramePr', 'a:graphic', 'wp14:sizeRelH', 'wp14:sizeRelV'
+        ]) : null;
+        const anchorOrdered = (children) => (ANCHOR_SEQ && shared.orderBySequence
+            ? shared.orderBySequence(children, ANCHOR_SEQ) : children);
         const WP_NS = NS.WP;
         const A_NS = NS.A;
         const PIC_NS = NS.PIC;
@@ -245,6 +256,8 @@ export const docxDrawing = {
                     if (blip.attrs['r:embed']) out.embedRef = blip.attrs['r:embed'];
                     if (blip.attrs['r:link'])  out.linkRef = blip.attrs['r:link'];
                 }
+                const srcRect = xml.findChild(blipFill, 'a:srcRect');
+                if (srcRect) out.srcRect = parseSrcRect(srcRect);
             }
             // pic/spPr/prstGeom + xfrm
             const spPr = xml.findChild(picEl, 'pic:spPr');
@@ -324,7 +337,7 @@ export const docxDrawing = {
                 })
             ]));
             children.push(renderGraphic(d));
-            return xml.el('wp:anchor', a, children);
+            return xml.el('wp:anchor', a, anchorOrdered(children));
         }
 
         function renderDocPr(d) {
@@ -397,6 +410,8 @@ export const docxDrawing = {
                     xml.el('a:blip', d.embedRef
                         ? { 'r:embed': d.embedRef }
                         : (d.linkRef ? { 'r:link': d.linkRef } : {})),
+                    // CT_BlipFillProperties order: blip, srcRect, stretch.
+                    ...(d.srcRect ? [xml.el('a:srcRect', srcRectAttrs(d.srcRect))] : []),
                     xml.el('a:stretch', {}, [xml.el('a:fillRect', {})])
                 ]),
                 xml.el('pic:spPr', {}, [

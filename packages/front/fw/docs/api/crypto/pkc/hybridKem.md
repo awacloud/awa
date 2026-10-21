@@ -124,7 +124,7 @@ const kp = await worker.call('hybridKem.xwing.keygen');
 
 ## Positioning & liability
 
-awa ships X-Wing as a **certifiable cryptographic component**, not a certified
+AWA ships X-Wing as a **certifiable cryptographic component**, not a certified
 product: no ANSSI/FIPS certification of the composite scheme is claimed here. The
 underlying ML-KEM-768 is ACVP-green (`src/crypto/pkc/ml_kem.acvp.md`); X25519 is
 RFC 7748 vector-green. Correctness is anchored to the **official IETF X-Wing KAT**

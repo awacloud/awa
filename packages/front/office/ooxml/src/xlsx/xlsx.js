@@ -24,7 +24,7 @@
  * ```js
  * { type: 'workbook',
  *   sheets: [{
- *     name, rows, merges?, cols?,
+ *     name, rows, rowProps?, merges?, cols?,
  *     sheetViews?, autoFilter?, hyperlinks?, dataValidations?,
  *     tableRefs?,    // references to tables defined in `tables` below
  *     _extras?
@@ -655,6 +655,12 @@ export const xlsx = {
             const rows = (sheet.rows || []).map((row, r) => {
                 const cells = row.map((val, c) => renderCell(val, r, c, internString));
                 const a = { r: String(r + 1) };
+                const p = sheet.rowProps && sheet.rowProps[r];
+                if (p) {
+                    if (p.height != null) a.ht = String(p.height);
+                    if (p.customHeight) a.customHeight = '1';
+                    if (p.hidden) a.hidden = '1';
+                }
                 return xml.el('row', a, cells);
             });
             children.push(xml.el('sheetData', {}, rows));
@@ -853,7 +859,7 @@ export const xlsx = {
         // The archive limits of `opc.read`, picked from the read options;
         // an absent key keeps the opc default, 0 disables that check.
         function archiveLimits(o) {
-            return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio } : undefined;
+            return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio, maxDepth: o.maxDepth } : undefined;
         }
 
         /**
@@ -869,13 +875,38 @@ export const xlsx = {
          *        to `opc.read` (default 256 MiB in total; `0` disables).
          * @param {number} [readOpts.maxRatio] archive limit forwarded to
          *        `opc.read` (default 200 per entry; `0` disables).
+         * @param {number} [readOpts.maxDepth] archive limit forwarded to
+         *        `opc.read`: element depth of any XML part (default
+         *        1000; `0` disables).
+         * @param {boolean} [readOpts.typedRunColors] type the text-run fills
+         *        of drawing shapes that a bare `'RRGGBB'` cannot express
+         *        (scheme colours, colour transforms) as `rPr.color = { rgb |
+         *        schemeColor, mods? }` (default `false`: such fills stay
+         *        verbatim in `rPr._extras`).
          */
         function read(bytes, readOpts) {
             const pkg = opc.read(bytes, archiveLimits(readOpts));
             const { value: result, unmodelledParts } =
-                trackUnmodelledParts(pkg, p => readPackage(p, readOpts));
+                trackUnmodelledParts(pkg, p => {
+                    try {
+                        return readPackage(p, readOpts);
+                    } catch (e) {
+                        throw typedPartXml(e);
+                    }
+                });
             result.unmodelledParts = unmodelledParts;
             return result;
+        }
+
+        // A part the read pass parses without a typed wrapper of its own
+        // (shared strings, styles, tables, comments, drawings …): the fw
+        // XML parser's `xml/parse-error` becomes this package's
+        // ParseError, the parser's error kept as `cause`. Any other error
+        // is returned as it is.
+        function typedPartXml(e) {
+            if (!e || e.code !== 'xml/parse-error') return e;
+            return new ParseError('xlsx/invalid-part-xml',
+                `xlsx: failed to parse a part's XML (${e.message})`, { cause: e });
         }
 
         // The read pass proper, over an access-tracking view of
@@ -1032,7 +1063,8 @@ export const xlsx = {
                             const drawingPart = relsMod.resolveTarget(wsPart, drawingRel.Target);
                             const dBytes = pkg.parts[drawingPart];
                             if (dBytes) {
-                                const parsed = drawingsMod.parse(decodeText(dBytes));
+                                const parsed = drawingsMod.parse(decodeText(dBytes),
+                                    { typedRunColors: !!(readOpts && readOpts.typedRunColors) });
                                 const drawingRels = pkg.rels[drawingPart] || [];
                                 sheet.drawings = resolveDrawingEntries(
                                     parsed.entries, drawingPart, drawingRels, pkg);
@@ -1148,7 +1180,14 @@ export const xlsx = {
 
         function parseSheet(text, sharedStrings, wsRels, limits, partName) {
             preScanSheet(text, limits, partName);
-            const root = mc.process(xml.parse(text));
+            let root;
+            try {
+                root = mc.process(xml.parse(text));
+            } catch (e) {
+                throw new ParseError('xlsx/invalid-sheet-xml',
+                    'xlsx: failed to parse worksheet XML',
+                    { context: { partName }, cause: e });
+            }
             const sheet = { rows: [] };
 
             const svs = xml.findChild(root, 'sheetViews');
@@ -1168,6 +1207,8 @@ export const xlsx = {
                         throw limitExceeded('maxRowsPerSheet',
                             limits.maxRowsPerSheet, sheet.rows.length + 1, partName);
                     }
+                    const props = parseRowProps(rEl, sheet.rows.length + 1);
+                    if (props) (sheet.rowProps || (sheet.rowProps = {}))[sheet.rows.length] = props;
                     sheet.rows.push(parseRow(rEl, sharedStrings, budget));
                 }
             }
@@ -1245,10 +1286,24 @@ export const xlsx = {
         function parseColEl(c) {
             const out = { min: Number(c.attrs.min), max: Number(c.attrs.max) };
             if (c.attrs.width)         out.width = Number(c.attrs.width);
-            if (c.attrs.hidden === '1') out.hidden = true;
+            if (readBoolAttr(c.attrs.hidden)) out.hidden = true;
             if (c.attrs.style != null)  out.style = Number(c.attrs.style);
-            if (c.attrs.bestFit === '1') out.bestFit = true;
+            if (readBoolAttr(c.attrs.bestFit)) out.bestFit = true;
             return out;
+        }
+
+        // The typed `<row>` attributes — height (`ht`), `customHeight`,
+        // `hidden` — with the row's 1-based number `r` (its `r` attribute,
+        // else `fallbackR`); `null` when the row carries none of them.
+        function parseRowProps(rEl, fallbackR) {
+            const a = rEl.attrs;
+            const out = {};
+            if (a.ht != null && Number.isFinite(Number(a.ht))) out.height = Number(a.ht);
+            if (readBoolAttr(a.customHeight)) out.customHeight = true;
+            if (readBoolAttr(a.hidden)) out.hidden = true;
+            if (!Object.keys(out).length) return null;
+            const r = Number(a.r);
+            return { r: Number.isInteger(r) && r > 0 ? r : fallbackR, ...out };
         }
 
         function parseDataValidation(el) {

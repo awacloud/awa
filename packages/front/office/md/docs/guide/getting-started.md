@@ -1,6 +1,6 @@
 # Getting Started
 
-`@awacloud/md` is a pure-JS, browser-only Markdown parsing/serialization library. No dependency beyond [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.0.0/packages/front/fw) (workspace). This guide takes you from installation to a first parse and render, and to the pre-built bundles.
+`@awacloud/md` is a pure-JS, browser-only Markdown parsing/serialization library. No dependency beyond [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/fw) (workspace). This guide takes you from installation to a first parse and render, and to the pre-built bundles.
 
 **Prerequisites**: an ES-module environment (a browser with an import map, Bun, or Node) with `@awacloud/fw` and `@awacloud/md` resolvable; no Node-only API is used by the package.
 
@@ -26,7 +26,7 @@ In an HTML page, import map:
 
 ## Factory pattern
 
-Every module follows the `@awacloud/fw` contract (see [module-pattern](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/guide/module-pattern.md)):
+Every module follows the `@awacloud/fw` contract (see [module-pattern](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/guide/module-pattern.md)):
 
 ```js
 const descriptor = {

@@ -97,8 +97,10 @@
  *
  * ## Determinism (measured)
  *
- * `irToPdf` injects NO date and NO document `/ID`: it calls `addMetadata`
- * with `Producer`/`Creator` only, never `setId`. `@awacloud/pdf`'s plain
+ * `irToPdf` injects NO date and gives NO document `/ID`: it calls
+ * `addMetadata` with `Producer`/`Creator` only, never `setId`, so
+ * `@awacloud/pdf`'s writer derives the `/ID` PDF 2.0 requires from the bytes
+ * it wrote before the trailer (a SHA-256). `@awacloud/pdf`'s plain
  * write path reads no clock and no randomness — `document/builder.js`'s only
  * date handling is the `DATE_INFO` classifier applied to CALLER-supplied
  * metadata, and `document/writer.js` + `syntax/serializer.js` contain
@@ -170,6 +172,14 @@
  * | `RESOURCE_NAMES` | style class → PDF resource name |
  * | `irToPdf(ir, pdfOpts?, writeOpts?)` | {@link IrToPdfResult} |
  *
+ * `zlib` is optional: it reaches the image renderer as `ctx.zlib` for the
+ * PNGs that need inflating; a hand-wired factory call without it refuses
+ * those PNGs (`layout/image-dropped`, `format: 'png'`). `standard14Lookup`,
+ * the LAST dependency, is optional too: given, every Standard 14 face is
+ * registered with `pdfBuilder.addFont`'s `standard14` metrics (`FirstChar`,
+ * `LastChar`, `Widths`, `FontDescriptor`, which PDF 2.0 requires); a
+ * hand-wired call without it writes the bare font dictionaries as before.
+ *
  * @type {{name: string, dependencies: string[], factory: Function}}
  */
 import { oconvIr } from '../ir/ir.js';
@@ -184,14 +194,21 @@ import { oconvPdfRenderTable } from './pdf/render/table.js';
 import { oconvPdfRenderImage } from './pdf/render/image.js';
 import { pdfBuilder } from '@awacloud/pdf';
 import { pdfFontEmbed } from '@awacloud/pdf';
-import { fonts } from '@awacloud/fonts';
+import { fonts, standard14Lookup } from '@awacloud/fonts';
 // Aliased to the dependency NAME: `deps` entries must read as `dependencies`
 // (fw-codegen deps --check compares them textually, the `mdMod as md` A3
 // precedent); the bound value is the `oconvDefaultFacesAbsent` stand-in.
 import { oconvDefaultFacesAbsent as oconvDefaultFaces } from './pdf/default-faces.js';
+import { zlib } from '@awacloud/fw/io/compress/zlib.js';
 
 export const oconvIrToPdf = {
     name: 'oconvIrToPdf',
+    // `zlib` and `standard14Lookup` are the LAST dependencies and optional:
+    // a hand-wired `factory(...)` call written for the first fourteen keeps
+    // working, its renderer refusing the PNGs that need inflating (palette,
+    // alpha, colour key) exactly as before (see `./pdf/render/image.js`);
+    // one written for the first fifteen writes the bare Standard 14 font
+    // dictionaries as before.
     dependencies: [
         'oconvIr',
         'oconvPdfMetrics', 'oconvPdfBox', 'oconvPdfLinebreak', 'oconvPdfStack',
@@ -199,13 +216,17 @@ export const oconvIrToPdf = {
         'oconvPdfRenderList', 'oconvPdfRenderCode',
         'oconvPdfRenderTable', 'oconvPdfRenderImage',
         'pdfBuilder', 'pdfFontEmbed', 'fonts',
-        'oconvDefaultFaces'
+        'oconvDefaultFaces',
+        'zlib',
+        'standard14Lookup'
     ],
-    deps: [oconvIr, oconvPdfMetrics, oconvPdfBox, oconvPdfLinebreak, oconvPdfStack, oconvPdfRenderText, oconvPdfRenderList, oconvPdfRenderCode, oconvPdfRenderTable, oconvPdfRenderImage, pdfBuilder, pdfFontEmbed, fonts, oconvDefaultFaces],
+    deps: [oconvIr, oconvPdfMetrics, oconvPdfBox, oconvPdfLinebreak, oconvPdfStack, oconvPdfRenderText, oconvPdfRenderList, oconvPdfRenderCode, oconvPdfRenderTable, oconvPdfRenderImage, pdfBuilder, pdfFontEmbed, fonts, oconvDefaultFaces, zlib, standard14Lookup],
 
     factory(irApi, metrics, box, linebreak, stack, renderText,
             renderList, renderCode, renderTable, renderImage,
-            pdfBuilderApi, pdfFontEmbedApi, fontsApi, defaultFacesApi) {
+            pdfBuilderApi, pdfFontEmbedApi, fontsApi, defaultFacesApi, zlibApi, standard14Api) {
+        const standard14 = standard14Api && typeof standard14Api.lookupStandard14 === 'function'
+            ? standard14Api : undefined;
         // `fonts` is part of the declared dependency set so this facade's own
         // registration graph is complete and `fw-codegen deps` can resolve
         // every name: the parsed `Font` objects it hands to `pdfFontEmbed`
@@ -501,7 +522,10 @@ export const oconvIrToPdf = {
                 render,
                 assets: writeOpts && writeOpts.assets,
                 builder: imageSink,
-                imageCounter: { n: 0 }
+                imageCounter: { n: 0 },
+                // Inflates and re-deflates the PNGs that need it; absent on
+                // a hand-wired factory call (those PNGs are then refused).
+                zlib: zlibApi
             };
             // Assigned after the literal so the closure can name `ctx`
             // itself. Renderers receive their OWN bound copy from `render`;
@@ -535,7 +559,7 @@ export const oconvIrToPdf = {
                     if (!entry) continue;
                     builder.addFont(entry.source === 'embedded'
                         ? { name: res, embedded: entry.embedded }
-                        : { name: res, baseFont: entry.baseFont, subtype: 'Type1', encoding: 'WinAnsiEncoding' });
+                        : { name: res, baseFont: entry.baseFont, subtype: 'Type1', encoding: 'WinAnsiEncoding', standard14 });
                 }
                 // Register only the images this page's items actually draw:
                 // an image whose block was clipped away never placed an item
@@ -563,7 +587,8 @@ export const oconvIrToPdf = {
                 });
             }
 
-            // NO date, NO /ID — see the determinism note in the header.
+            // NO date, no setId (the writer derives the /ID) — see the
+            // determinism note in the header.
             builder.addMetadata({ Producer: '@awacloud/oconv', Creator: '@awacloud/oconv' });
 
             return { bytes: builder.build(), losses, pages: pages.length };

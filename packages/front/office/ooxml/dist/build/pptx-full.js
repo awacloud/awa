@@ -44,7 +44,12 @@ export const pptxFullPackage = {
     class OoxmlError extends Error {
       constructor(code, message, opts) {
         super(message);
-        this.name = new.target.name;
+        Object.defineProperty(this, "name", {
+          value: new.target.name,
+          writable: !0,
+          enumerable: !0,
+          configurable: !0
+        });
         this.code = code;
         if (opts && opts.context)
           this.context = opts.context;
@@ -315,14 +320,73 @@ export const pptxFullPackage = {
       const unmodelledParts = Object.keys(plain).filter((name) => !consumed.has(name)).sort().map((partName) => ({ partName, contentType: lookupCT(pkg, partName) }));
       return { value, unmodelledParts };
     }
-    function wordRootAttrs(nodes) {
-      const attrs = { "xmlns:w": NS.W, "xmlns:r": NS.R };
-      if (hasWord2012Element(nodes)) {
+    const WORD_ROOT_PREFIXES = Object.freeze([
+      ["wp", NS.WP, !1],
+      ["a", NS.A, !1],
+      ["pic", NS.PIC, !1],
+      ["wps", "http://schemas.microsoft.com/office/word/2010/wordprocessingShape", !1],
+      ["wpg", "http://schemas.microsoft.com/office/word/2010/wordprocessingGroup", !1],
+      ["wpc", "http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas", !1],
+      ["c", NS.C, !1],
+      ["m", NS.M, !1],
+      ["v", "urn:schemas-microsoft-com:vml", !1],
+      ["o", "urn:schemas-microsoft-com:office:office", !1],
+      ["w10", "urn:schemas-microsoft-com:office:word", !1],
+      ["wp14", "http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing", !0],
+      ["w14", "http://schemas.microsoft.com/office/word/2010/wordml", !0],
+      ["w15", NS.W15, !0],
+      ["w16", "http://schemas.microsoft.com/office/word/2018/wordml", !0],
+      ["w16cex", "http://schemas.microsoft.com/office/word/2018/wordml/cex", !0],
+      ["w16cid", "http://schemas.microsoft.com/office/word/2016/wordml/cid", !0],
+      ["w16se", "http://schemas.microsoft.com/office/word/2015/wordml/symex", !0],
+      ["w16sdtdh", "http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash", !0]
+    ]);
+    function wordRootAttrs(nodes, opts) {
+      const alwaysR = !(opts && opts.r === !1), used = new Set;
+      collectUnscopedPrefixes(nodes, new Set(alwaysR ? ["w", "r"] : ["w"]), used);
+      const attrs = alwaysR || used.has("r") ? { "xmlns:w": NS.W, "xmlns:r": NS.R } : { "xmlns:w": NS.W };
+      if (hasWord2012Element(nodes))
+        used.add("w15");
+      const declared = WORD_ROOT_PREFIXES.filter(([p]) => used.has(p)), ignorable = declared.filter(([, , ext]) => ext).map(([p]) => p);
+      if (used.has("mc") || ignorable.length)
         attrs["xmlns:mc"] = NS.MC;
-        attrs["xmlns:w15"] = NS.W15;
-        attrs["mc:Ignorable"] = "w15";
-      }
+      for (const [p, uri] of declared)
+        attrs["xmlns:" + p] = uri;
+      if (ignorable.length)
+        attrs["mc:Ignorable"] = ignorable.join(" ");
       return attrs;
+    }
+    function collectUnscopedPrefixes(nodes, scope, used) {
+      for (const n of nodes || []) {
+        if (!n || n.type !== "element" || typeof n.name !== "string")
+          continue;
+        const attrs = n.attrs || {};
+        let inner = scope;
+        for (const k of Object.keys(attrs)) {
+          if (!k.startsWith("xmlns:"))
+            continue;
+          if (inner === scope)
+            inner = new Set(scope);
+          inner.add(k.slice(6));
+        }
+        addUnscoped(n.name, inner, used);
+        for (const k of Object.keys(attrs))
+          addUnscoped(k, inner, used);
+        if (n.name.endsWith(":Choice") && typeof attrs.Requires === "string") {
+          for (const p of attrs.Requires.split(/\s+/))
+            if (p)
+              addUnscoped(p + ":", inner, used);
+        }
+        collectUnscopedPrefixes(n.children, inner, used);
+      }
+    }
+    function addUnscoped(qname, scope, used) {
+      const i = qname.indexOf(":");
+      if (i < 0)
+        return;
+      const prefix = qname.slice(0, i);
+      if (prefix !== "xml" && prefix !== "xmlns" && !scope.has(prefix))
+        used.add(prefix);
     }
     function hasWord2012Element(nodes) {
       for (const n of nodes || []) {
@@ -387,6 +451,67 @@ export const pptxFullPackage = {
           used.add(id);
       }
       return { next, peek, reset, usedIds, claim, register };
+    }
+    function parseSrcRect(el) {
+      const out = {};
+      for (const k of ["l", "t", "r", "b"]) {
+        const v = el.attrs && el.attrs[k];
+        if (v != null && Number.isFinite(Number(v)))
+          out[k] = Number(v);
+      }
+      return out;
+    }
+    function srcRectAttrs(rect) {
+      const out = {};
+      for (const k of ["l", "t", "r", "b"])
+        if (rect && rect[k] != null)
+          out[k] = String(rect[k]);
+      return out;
+    }
+    function createTypedColorCodec(xml) {
+      function parse(el) {
+        let out;
+        if (el && el.name === "a:srgbClr")
+          out = { rgb: el.attrs.val };
+        else if (el && el.name === "a:schemeClr")
+          out = { schemeColor: el.attrs.val };
+        else
+          return null;
+        const mods = [];
+        for (const c of el.children || []) {
+          if (c.type !== "element")
+            continue;
+          if (!c.name.startsWith("a:"))
+            return null;
+          const attrs = c.attrs || {};
+          if (Object.keys(attrs).some((k) => k !== "val"))
+            return null;
+          if ((c.children || []).some((n) => n.type === "element"))
+            return null;
+          const m = { name: c.name.slice(2) };
+          if (attrs.val != null) {
+            const v = Number(attrs.val);
+            if (!Number.isFinite(v) || String(v) !== attrs.val)
+              return null;
+            m.val = v;
+          }
+          mods.push(m);
+        }
+        if (mods.length)
+          out.mods = mods;
+        return out;
+      }
+      function render(color) {
+        if (!color || typeof color !== "object")
+          return null;
+        const mods = (color.mods || []).map((m) => xml.el("a:" + m.name, m.val != null ? { val: String(m.val) } : {}));
+        if (color.rgb)
+          return xml.el("a:srgbClr", { val: String(color.rgb).replace(/^#/, "") }, mods);
+        if (color.schemeColor)
+          return xml.el("a:schemeClr", { val: color.schemeColor }, mods);
+        return null;
+      }
+      return { parse, render };
     }
     function createDmlColorCodec(xml) {
       const COLOR_TAGS = Object.freeze([
@@ -599,6 +724,30 @@ export const pptxFullPackage = {
       }
       return { parseColor, renderColor };
     }
+    function sequence(names) {
+      const rank = new Map;
+      let change = -1;
+      names.forEach((entry, i) => {
+        for (const n of Array.isArray(entry) ? entry : [entry]) {
+          rank.set(n, i);
+          if (change < 0 && /Change$/.test(n))
+            change = i;
+        }
+      });
+      return { rank, other: change >= 0 ? change - 0.5 : names.length };
+    }
+    function orderBySequence(children, seq) {
+      const firstElement = (el) => (el && el.children || []).find((k) => k && k.type === "element"), nameOf = (c) => {
+        if (c.name !== "mc:AlternateContent")
+          return c.name;
+        const branches = (c.children || []).filter((k) => k && k.type === "element"), branch = branches.find((k) => k.name === "mc:Fallback") || branches.find((k) => k.name === "mc:Choice"), inner = firstElement(branch);
+        return inner ? inner.name : c.name;
+      };
+      return children.map((c, i) => {
+        const n = c && c.type === "element" ? nameOf(c) : null;
+        return { c, i, r: n !== null && seq.rank.has(n) ? seq.rank.get(n) : seq.other };
+      }).sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.c);
+    }
     return {
       NS,
       REL_TYPE,
@@ -620,16 +769,69 @@ export const pptxFullPackage = {
       encodeText,
       decodeText,
       createRidAllocator,
+      createTypedColorCodec,
+      parseSrcRect,
+      srcRectAttrs,
       createDmlColorCodec,
-      createXlsxColorCodec
+      createXlsxColorCodec,
+      sequence,
+      orderBySequence
     };
   } });
     __register({ name: "opcPackage", dependencies: ["ooxmlErrors","zip","opcContentTypes","opcRelationships","ooxmlShared"], factory: function(errors, zipMod, contentTypesMod, relsMod, shared) {
     const { ParseError, RenderError, ContractError } = errors, DEFAULT_LIMITS = Object.freeze({
       maxParts: 1024,
       maxUncompressed: 268435456,
-      maxRatio: 200
-    }), LEADING_SLASH_RE = /^\//, { encodeText, decodeText } = shared;
+      maxRatio: 200,
+      maxDepth: 1000
+    }), XML_PART_RE = /\.(xml|rels|vml)$/i;
+    function deeperThan(s, limit) {
+      const n = s.length;
+      let depth = 0, i = s.indexOf("<");
+      while (i !== -1 && i < n) {
+        const c = s.charCodeAt(i + 1);
+        let end;
+        if (c === 47) {
+          depth--;
+          end = s.indexOf(">", i + 2);
+        } else if (c === 63) {
+          end = s.indexOf("?>", i + 2);
+          if (end !== -1)
+            end += 1;
+        } else if (c === 33)
+          if (s.startsWith("<!--", i)) {
+            end = s.indexOf("-->", i + 4);
+            if (end !== -1)
+              end += 2;
+          } else if (s.startsWith("<![CDATA[", i)) {
+            end = s.indexOf("]]>", i + 9);
+            if (end !== -1)
+              end += 2;
+          } else
+            end = s.indexOf(">", i + 2);
+        else {
+          let j = i + 1, quote = 0;
+          for (;j < n; j++) {
+            const b = s.charCodeAt(j);
+            if (quote) {
+              if (b === quote)
+                quote = 0;
+            } else if (b === 34 || b === 39)
+              quote = b;
+            else if (b === 62)
+              break;
+          }
+          end = j < n ? j : -1;
+          if (end !== -1 && s.charCodeAt(end - 1) !== 47 && ++depth > limit)
+            return !0;
+        }
+        if (end === -1)
+          return !1;
+        i = s.indexOf("<", end + 1);
+      }
+      return !1;
+    }
+    const LEADING_SLASH_RE = /^\//, { encodeText, decodeText } = shared;
     function bytesToString(u8) {
       return decodeText(u8);
     }
@@ -639,7 +841,7 @@ export const pptxFullPackage = {
     function read(bytes, opts) {
       if (!(bytes instanceof Uint8Array))
         throw new ContractError("opc/invalid-input", "OPC read: bytes must be a Uint8Array", { context: { received: bytes === null ? "null" : typeof bytes } });
-      const maxParts = opts && opts.maxParts !== void 0 ? opts.maxParts : DEFAULT_LIMITS.maxParts, maxUncompressed = opts && opts.maxUncompressed !== void 0 ? opts.maxUncompressed : DEFAULT_LIMITS.maxUncompressed, maxRatio = opts && opts.maxRatio !== void 0 ? opts.maxRatio : DEFAULT_LIMITS.maxRatio;
+      const maxParts = opts && opts.maxParts !== void 0 ? opts.maxParts : DEFAULT_LIMITS.maxParts, maxUncompressed = opts && opts.maxUncompressed !== void 0 ? opts.maxUncompressed : DEFAULT_LIMITS.maxUncompressed, maxRatio = opts && opts.maxRatio !== void 0 ? opts.maxRatio : DEFAULT_LIMITS.maxRatio, maxDepth = opts && opts.maxDepth !== void 0 ? opts.maxDepth : DEFAULT_LIMITS.maxDepth;
       let partCount = 0, uncompressedTotal = 0;
       const seen = [];
       try {
@@ -679,6 +881,13 @@ export const pptxFullPackage = {
       } catch (e) {
         throw new ParseError("opc/invalid-zip", "OPC: failed to unzip archive: " + (e && e.message), { cause: e });
       }
+      if (maxDepth)
+        for (const path of Object.keys(files)) {
+          if (!XML_PART_RE.test(path))
+            continue;
+          if (deeperThan(bytesToString(files[path]), maxDepth))
+            throw new ParseError("opc/xml-too-deep", `OPC: part ${path} nests elements deeper than ${maxDepth}`, { context: { limit: "maxDepth", max: maxDepth, partName: path } });
+        }
       const ctRaw = files["[Content_Types].xml"];
       if (!ctRaw)
         throw new ParseError("opc/missing-content-types", "OPC: missing [Content_Types].xml", { context: { partName: "[Content_Types].xml" } });
@@ -1235,8 +1444,46 @@ export const pptxFullPackage = {
       ptToEmu,
       readBoolAttr,
       writeBoolAttr
-    } = shared, A_NS = NS.A, srgbClr = shared.createDmlColorCodec(xml).srgbClr;
-    function parseRunProperties(rPrEl) {
+    } = shared, A_NS = NS.A, srgbClr = shared.createDmlColorCodec(xml).srgbClr, typedColor = shared.createTypedColorCodec(xml), orderSeq = shared.sequence ? shared.sequence : () => null, ordered = (children, seq) => seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children, PPR_SEQ = orderSeq([
+      "a:lnSpc",
+      "a:spcBef",
+      "a:spcAft",
+      ["a:buClrTx", "a:buClr"],
+      ["a:buSzTx", "a:buSzPct", "a:buSzPts"],
+      ["a:buFontTx", "a:buFont"],
+      ["a:buNone", "a:buAutoNum", "a:buChar", "a:buBlip"],
+      "a:tabLst",
+      "a:defRPr",
+      "a:extLst"
+    ]), RPR_SEQ = orderSeq([
+      "a:ln",
+      ["a:noFill", "a:solidFill", "a:gradFill", "a:blipFill", "a:pattFill", "a:grpFill"],
+      ["a:effectLst", "a:effectDag"],
+      "a:highlight",
+      ["a:uLnTx", "a:uLn"],
+      ["a:uFillTx", "a:uFill"],
+      "a:latin",
+      "a:ea",
+      "a:cs",
+      "a:sym",
+      "a:hlinkClick",
+      "a:hlinkMouseOver",
+      "a:rtl",
+      "a:extLst"
+    ]);
+    function runColor(solidFill, opts) {
+      if (!(opts && opts.typedRunColors)) {
+        const cl = solidFill.children.find((n) => n.type === "element" && n.name === "a:srgbClr");
+        return cl ? cl.attrs.val : void 0;
+      }
+      const el = solidFill.children.find((n) => n.type === "element");
+      if (!el)
+        return;
+      if (el.name === "a:srgbClr" && !el.children.some((n) => n.type === "element"))
+        return el.attrs.val;
+      return typedColor.parse(el) || void 0;
+    }
+    function parseRunProperties(rPrEl, opts) {
       if (!rPrEl)
         return;
       const a = rPrEl.attrs, out = {};
@@ -1259,9 +1506,9 @@ export const pptxFullPackage = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:solidFill") {
-          const cl = c.children.find((n) => n.type === "element" && n.name === "a:srgbClr");
-          if (cl)
-            out.color = cl.attrs.val;
+          const color = runColor(c, opts);
+          if (color !== void 0)
+            out.color = color;
           else
             extras.push(c);
         } else if (c.name === "a:latin")
@@ -1292,16 +1539,19 @@ export const pptxFullPackage = {
       if (rPr.baseline != null)
         a.baseline = String(rPr.baseline);
       const children = [];
-      if (rPr.color)
-        children.push(xml.el("a:solidFill", {}, [srgbClr(rPr.color)]));
+      if (rPr.color) {
+        const el = typeof rPr.color === "string" ? srgbClr(rPr.color) : typedColor.render(rPr.color);
+        if (el)
+          children.push(xml.el("a:solidFill", {}, [el]));
+      }
       if (rPr.font)
         children.push(xml.el("a:latin", { typeface: rPr.font }));
       if (rPr._extras)
         for (const ex of rPr._extras)
           children.push(ex);
-      return xml.el("a:rPr", a, children);
+      return xml.el("a:rPr", a, ordered(children, RPR_SEQ));
     }
-    function parseParagraphProperties(pPrEl) {
+    function parseParagraphProperties(pPrEl, opts) {
       if (!pPrEl)
         return;
       const a = pPrEl.attrs, out = {};
@@ -1324,7 +1574,7 @@ export const pptxFullPackage = {
         else if (c.name === "a:buAutoNum")
           out.bullet = { autoNumType: c.attrs.type };
         else if (c.name === "a:defRPr")
-          out.defRPr = parseRunProperties(c);
+          out.defRPr = parseRunProperties(c, opts);
         else
           extras.push(c);
       }
@@ -1361,10 +1611,10 @@ export const pptxFullPackage = {
           children.push(ex);
       if (!Object.keys(a).length && !children.length)
         return null;
-      return xml.el("a:pPr", a, children);
+      return xml.el("a:pPr", a, ordered(children, PPR_SEQ));
     }
-    function parseRun(rEl) {
-      const rPrEl = xml.findChild(rEl, "a:rPr"), tEl = xml.findChild(rEl, "a:t"), out = { type: "text", value: tEl ? xml.textContent(tEl) : "" }, rPr = parseRunProperties(rPrEl);
+    function parseRun(rEl, opts) {
+      const rPrEl = xml.findChild(rEl, "a:rPr"), tEl = xml.findChild(rEl, "a:t"), out = { type: "text", value: tEl ? xml.textContent(tEl) : "" }, rPr = parseRunProperties(rPrEl, opts);
       if (rPr)
         out.rPr = rPr;
       return out;
@@ -1376,14 +1626,14 @@ export const pptxFullPackage = {
       children.push(xml.el("a:t", {}, [xml.text(run.value || "")]));
       return xml.el("a:r", {}, children);
     }
-    function parseField(fEl) {
+    function parseField(fEl, opts) {
       const out = {
         type: "field",
         id: fEl.attrs.id
       };
       if (fEl.attrs.type)
         out.fieldType = fEl.attrs.type;
-      const rPrEl = xml.findChild(fEl, "a:rPr"), tEl = xml.findChild(fEl, "a:t"), rPr = parseRunProperties(rPrEl);
+      const rPrEl = xml.findChild(fEl, "a:rPr"), tEl = xml.findChild(fEl, "a:t"), rPr = parseRunProperties(rPrEl, opts);
       if (rPr)
         out.rPr = rPr;
       if (tEl)
@@ -1401,8 +1651,8 @@ export const pptxFullPackage = {
         children.push(xml.el("a:t", {}, [xml.text(f.value)]));
       return xml.el("a:fld", a, children);
     }
-    function parseBreak(brEl) {
-      const out = { type: "break" }, rPrEl = xml.findChild(brEl, "a:rPr"), rPr = parseRunProperties(rPrEl);
+    function parseBreak(brEl, opts) {
+      const out = { type: "break" }, rPrEl = xml.findChild(brEl, "a:rPr"), rPr = parseRunProperties(rPrEl, opts);
       if (rPr)
         out.rPr = rPr;
       return out;
@@ -1411,19 +1661,19 @@ export const pptxFullPackage = {
       const rPrEl = renderRunProperties(b.rPr);
       return xml.el("a:br", {}, rPrEl ? [rPrEl] : []);
     }
-    function parseParagraph(pEl) {
-      const pPrEl = xml.findChild(pEl, "a:pPr"), pPr = parseParagraphProperties(pPrEl), runs = [], extras = [];
+    function parseParagraph(pEl, opts) {
+      const pPrEl = xml.findChild(pEl, "a:pPr"), pPr = parseParagraphProperties(pPrEl, opts), runs = [], extras = [];
       for (const c of pEl.children) {
         if (c.type !== "element")
           continue;
         if (c.name === "a:pPr")
           continue;
         if (c.name === "a:r")
-          runs.push(parseRun(c));
+          runs.push(parseRun(c, opts));
         else if (c.name === "a:br")
-          runs.push(parseBreak(c));
+          runs.push(parseBreak(c, opts));
         else if (c.name === "a:fld")
-          runs.push(parseField(c));
+          runs.push(parseField(c, opts));
         else if (c.name === "m:oMath" && mathMod)
           runs.push(mathMod.parseOMath(c));
         else if (c.name === "a:endParaRPr")
@@ -1456,7 +1706,7 @@ export const pptxFullPackage = {
           children.push(ex);
       return xml.el("a:p", {}, children);
     }
-    function parseTextBody(tbEl) {
+    function parseTextBody(tbEl, opts) {
       const out = { paragraphs: [] };
       for (const c of tbEl.children) {
         if (c.type !== "element")
@@ -1466,7 +1716,7 @@ export const pptxFullPackage = {
         else if (c.name === "a:lstStyle")
           out.lstStyle = c;
         else if (c.name === "a:p")
-          out.paragraphs.push(parseParagraph(c));
+          out.paragraphs.push(parseParagraph(c, opts));
       }
       return out;
     }
@@ -1519,7 +1769,7 @@ export const pptxFullPackage = {
     };
   } });
     __register({ name: "pptxPicture", dependencies: ["xml","ooxmlShared"], factory: function(xml, shared) {
-    const { NS, REL_TYPE } = shared, A_NS = NS.A, REL_TYPE_IMAGE = REL_TYPE.IMAGE;
+    const { NS, REL_TYPE, parseSrcRect, srcRectAttrs } = shared, A_NS = NS.A, REL_TYPE_IMAGE = REL_TYPE.IMAGE;
     function sniffImageType(bytes) {
       if (!bytes || bytes.length < 4)
         return "application/octet-stream";
@@ -1612,6 +1862,9 @@ export const pptxFullPackage = {
           if (blip.attrs["r:link"])
             out.linkRef = blip.attrs["r:link"];
         }
+        const srcRect = xml.findChild(blipFill, "a:srcRect");
+        if (srcRect)
+          out.srcRect = parseSrcRect(srcRect);
       }
       const spPr = xml.findChild(picEl, "p:spPr");
       if (spPr) {
@@ -1661,6 +1914,7 @@ export const pptxFullPackage = {
         ]),
         xml.el("p:blipFill", {}, [
           xml.el("a:blip", blipAttrs),
+          ...p.srcRect ? [xml.el("a:srcRect", srcRectAttrs(p.srcRect))] : [],
           xml.el("a:stretch", {}, [xml.el("a:fillRect", {})])
         ]),
         xml.el("p:spPr", {}, [
@@ -1721,7 +1975,7 @@ export const pptxFullPackage = {
   } });
     __register({ name: "pptxTable", dependencies: ["xml","drawingml","ooxmlShared"], factory: function(xml, dml, shared) {
     const { NS, readBoolAttr, writeBoolAttr } = shared, A_NS = NS.A, R_NS = NS.R;
-    function parseCell(tcEl) {
+    function parseCell(tcEl, opts) {
       const out = {}, extras = [];
       for (const k of ["gridSpan", "rowSpan"])
         if (tcEl.attrs[k] != null)
@@ -1733,7 +1987,7 @@ export const pptxFullPackage = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:txBody")
-          out.txBody = dml.parseTextBody(c);
+          out.txBody = dml.parseTextBody(c, opts);
         else if (c.name === "a:tcPr")
           out.tcPr = c;
         else
@@ -1768,7 +2022,7 @@ export const pptxFullPackage = {
           children.push(ex);
       return xml.el("a:tc", a, children);
     }
-    function parseRow(trEl) {
+    function parseRow(trEl, opts) {
       const out = {
         height: trEl.attrs.h != null ? Number(trEl.attrs.h) : 370840,
         cells: []
@@ -1777,7 +2031,7 @@ export const pptxFullPackage = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:tc")
-          out.cells.push(parseCell(c));
+          out.cells.push(parseCell(c, opts));
       }
       return out;
     }
@@ -1792,7 +2046,7 @@ export const pptxFullPackage = {
       "bandRow",
       "bandCol"
     ];
-    function parseTable(tblEl) {
+    function parseTable(tblEl, opts) {
       const out = { columns: [], rows: [] }, tblPr = xml.findChild(tblEl, "a:tblPr");
       if (tblPr) {
         const flags = {};
@@ -1812,7 +2066,7 @@ export const pptxFullPackage = {
             width: col.attrs.w != null ? Number(col.attrs.w) : 0
           });
       for (const tr of xml.findAll(tblEl, "a:tr"))
-        out.rows.push(parseRow(tr));
+        out.rows.push(parseRow(tr, opts));
       return out;
     }
     function renderTable(t) {
@@ -1830,7 +2084,7 @@ export const pptxFullPackage = {
         ...(t.rows || []).map(renderRow)
       ]);
     }
-    function parseGraphicFrame(gfEl) {
+    function parseGraphicFrame(gfEl, opts) {
       const graphic = xml.findChild(gfEl, "a:graphic");
       if (!graphic)
         return null;
@@ -1840,7 +2094,7 @@ export const pptxFullPackage = {
       const tbl = xml.findChild(gd, "a:tbl");
       if (!tbl)
         return null;
-      const out = parseTable(tbl);
+      const out = parseTable(tbl, opts);
       out.type = "table";
       const nv = xml.findChild(gfEl, "p:nvGraphicFramePr");
       if (nv) {
@@ -1986,41 +2240,18 @@ export const pptxFullPackage = {
         xml.el("c:order", { val: String(idx) })
       ];
       children.push(xml.el("c:tx", {}, [
-        xml.el("c:strRef", {}, [
-          xml.el("c:f", {}, [xml.text(`"${series.name || ""}"`)]),
-          renderStrLit([series.name || ""])
-        ])
+        xml.el("c:v", {}, [xml.text(String(series.name || ""))])
       ]));
       if (series.color)
         children.push(renderSpPrSolid(series.color));
       if (plotType === "scatter") {
         const xVals = series.xValues || (series.categories || []), yVals = series.yValues || series.values || [];
-        children.push(xml.el("c:xVal", {}, [
-          xml.el("c:numRef", {}, [
-            xml.el("c:f", {}, [xml.text('""')]),
-            renderNumLit(xVals.map(Number), formatCode)
-          ])
-        ]));
-        children.push(xml.el("c:yVal", {}, [
-          xml.el("c:numRef", {}, [
-            xml.el("c:f", {}, [xml.text('""')]),
-            renderNumLit(yVals.map(Number), formatCode)
-          ])
-        ]));
+        children.push(xml.el("c:xVal", {}, [renderNumLit(xVals.map(Number), formatCode)]));
+        children.push(xml.el("c:yVal", {}, [renderNumLit(yVals.map(Number), formatCode)]));
       } else {
         if (series.categories && series.categories.length)
-          children.push(xml.el("c:cat", {}, [
-            xml.el("c:strRef", {}, [
-              xml.el("c:f", {}, [xml.text('""')]),
-              renderStrLit(series.categories)
-            ])
-          ]));
-        children.push(xml.el("c:val", {}, [
-          xml.el("c:numRef", {}, [
-            xml.el("c:f", {}, [xml.text('""')]),
-            renderNumLit(series.values || [], formatCode)
-          ])
-        ]));
+          children.push(xml.el("c:cat", {}, [renderStrLit(series.categories)]));
+        children.push(xml.el("c:val", {}, [renderNumLit(series.values || [], formatCode)]));
       }
       return xml.el("c:ser", {}, children);
     }
@@ -2032,7 +2263,7 @@ export const pptxFullPackage = {
       if (tx) {
         const sr = xml.findChild(tx, "c:strRef"), sl = xml.findChild(tx, "c:strLit"), v = xml.findChild(tx, "c:v");
         if (sr) {
-          const inner = xml.findChild(sr, "c:strLit");
+          const inner = xml.findChild(sr, "c:strCache") || xml.findChild(sr, "c:strLit");
           if (inner)
             out.name = parseLitValues(inner)[0] || "";
           else {
@@ -2067,7 +2298,7 @@ export const pptxFullPackage = {
     function readStrData(parentEl) {
       const strRef = xml.findChild(parentEl, "c:strRef");
       if (strRef) {
-        const lit = xml.findChild(strRef, "c:strLit");
+        const lit = xml.findChild(strRef, "c:strCache") || xml.findChild(strRef, "c:strLit");
         if (lit)
           return parseStrLit(lit);
       }
@@ -2076,16 +2307,19 @@ export const pptxFullPackage = {
         return parseStrLit(strLit);
       const numRef = xml.findChild(parentEl, "c:numRef");
       if (numRef) {
-        const lit = xml.findChild(numRef, "c:numLit");
+        const lit = xml.findChild(numRef, "c:numCache") || xml.findChild(numRef, "c:numLit");
         if (lit)
           return parseLitValues(lit);
       }
+      const numLit = xml.findChild(parentEl, "c:numLit");
+      if (numLit)
+        return parseLitValues(numLit);
       return [];
     }
     function readNumData(parentEl) {
       const numRef = xml.findChild(parentEl, "c:numRef");
       if (numRef) {
-        const lit = xml.findChild(numRef, "c:numLit");
+        const lit = xml.findChild(numRef, "c:numCache") || xml.findChild(numRef, "c:numLit");
         if (lit)
           return parseNumLit(lit);
       }
@@ -2455,32 +2689,21 @@ export const pptxFullPackage = {
     };
   } });
     __register({ name: "drawingmlShape", dependencies: ["xml","ooxmlShared"], factory: function(xml, shared) {
-    const { NS } = shared, A_NS = NS.A;
+    const { NS } = shared, A_NS = NS.A, typedColor = shared.createTypedColorCodec(xml);
     function parseColorChild(parent) {
       for (const c of parent.children) {
         if (c.type !== "element")
           continue;
-        if (c.name === "a:srgbClr")
-          return { rgb: c.attrs.val };
-        if (c.name === "a:schemeClr")
-          return { schemeColor: c.attrs.val };
+        if (c.name === "a:srgbClr" || c.name === "a:schemeClr")
+          return typedColor.parse(c) || (c.name === "a:srgbClr" ? { rgb: c.attrs.val } : { schemeColor: c.attrs.val });
       }
       return null;
     }
+    function renderColorChild(color) {
+      return typedColor.render(color);
+    }
     function renderSrgbClr(rgb) {
       return xml.el("a:srgbClr", { val: String(rgb).replace(/^#/, "") });
-    }
-    function renderSchemeClr(name) {
-      return xml.el("a:schemeClr", { val: name });
-    }
-    function renderColorChild(color) {
-      if (!color)
-        return null;
-      if (color.rgb)
-        return renderSrgbClr(color.rgb);
-      if (color.schemeColor)
-        return renderSchemeClr(color.schemeColor);
-      return null;
     }
     function parsePrstGeom(prstEl) {
       if (!prstEl)
@@ -2668,6 +2891,11 @@ export const pptxFullPackage = {
       return xml.el(tag, {}, children);
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
+    function withMods(color, from) {
+      if (Array.isArray(from.mods) && from.mods.length)
+        color.mods = from.mods.map((m) => ({ ...m }));
+      return color;
+    }
     function shapeProps(opts = {}) {
       const out = {};
       if (opts.geom)
@@ -2692,9 +2920,9 @@ export const pptxFullPackage = {
         else if (typeof opts.fill === "string")
           out.fill = { rgb: opts.fill };
         else if (opts.fill && opts.fill.rgb)
-          out.fill = { rgb: opts.fill.rgb };
+          out.fill = withMods({ rgb: opts.fill.rgb }, opts.fill);
         else if (opts.fill && opts.fill.schemeColor)
-          out.fill = { schemeColor: opts.fill.schemeColor };
+          out.fill = withMods({ schemeColor: opts.fill.schemeColor }, opts.fill);
       }
       if (opts.line !== void 0)
         if (opts.line === "none" || opts.line === null)
@@ -2765,8 +2993,34 @@ export const pptxFullPackage = {
     };
   } });
     __register({ name: "pptxSlide", dependencies: ["ooxmlErrors","xml","drawingml","pptxPicture","pptxTable","pptxChart","drawingmlShape","ooxmlShared"], factory: function(errors, xml, dml, picMod, tblMod, chartMod, shapeMod, shared) {
-    const { ParseError } = errors, { NS, REL_TYPE, CT, encodeText, decodeText } = shared, P_NS = NS.P, A_NS = NS.A, R_NS = NS.R;
-    function parseShape(spEl) {
+    const { ParseError } = errors, { NS, REL_TYPE, CT, encodeText, decodeText } = shared, P_NS = NS.P, A_NS = NS.A, R_NS = NS.R, ROOT_ONLY = new Set([
+      "p:transition",
+      "p:timing",
+      "p:hf",
+      "p:clrMap",
+      "p:clrMapOvr",
+      "p:sldLayoutIdLst",
+      "p:txStyles"
+    ]), CSLD_ONLY = new Set(["p:custDataLst", "p:controls"]);
+    function placedName(c) {
+      if (!c || c.type !== "element")
+        return null;
+      if (c.name !== "mc:AlternateContent")
+        return c.name;
+      const branches = (c.children || []).filter((k) => k && k.type === "element"), branch = branches.find((k) => k.name === "mc:Fallback") || branches.find((k) => k.name === "mc:Choice"), inner = branch && (branch.children || []).find((k) => k && k.type === "element");
+      return inner ? inner.name : c.name;
+    }
+    const orderSeq = shared.sequence ? shared.sequence : () => null, ordered = (children, seq) => seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children, CSLD_SEQ = orderSeq(["p:bg", "p:spTree", "p:custDataLst", "p:controls", "p:extLst"]), ROOT_SEQ = orderSeq([
+      "p:cSld",
+      ["p:clrMap", "p:clrMapOvr"],
+      "p:sldLayoutIdLst",
+      "p:transition",
+      "p:timing",
+      "p:hf",
+      "p:txStyles",
+      "p:extLst"
+    ]);
+    function parseShape(spEl, opts) {
       const out = { type: "shape" }, nvSpPr = xml.findChild(spEl, "p:nvSpPr");
       if (nvSpPr) {
         const cNvPr = xml.findChild(nvSpPr, "p:cNvPr");
@@ -2804,7 +3058,7 @@ export const pptxFullPackage = {
         out.style = styleEl;
       const txBody = xml.findChild(spEl, "p:txBody");
       if (txBody)
-        out.txBody = dml.parseTextBody(txBody);
+        out.txBody = dml.parseTextBody(txBody, opts);
       return out;
     }
     function renderShape(shape) {
@@ -2846,20 +3100,20 @@ export const pptxFullPackage = {
         xml.el("p:nvPr", {}, nvPrChildren)
       ]);
     }
-    function parseSpTree(treeEl) {
+    function parseSpTree(treeEl, opts) {
       const shapes = [], extras = [];
       for (const c of treeEl.children) {
         if (c.type !== "element")
           continue;
         switch (c.name) {
           case "p:sp":
-            shapes.push(parseShape(c));
+            shapes.push(parseShape(c, opts));
             break;
           case "p:pic":
             shapes.push(picMod.parsePicture(c));
             break;
           case "p:graphicFrame": {
-            const tbl = tblMod.parseGraphicFrame(c);
+            const tbl = tblMod.parseGraphicFrame(c, opts);
             if (tbl) {
               shapes.push(tbl);
               break;
@@ -2909,7 +3163,7 @@ export const pptxFullPackage = {
         children.push(ex);
       return xml.el("p:spTree", {}, children);
     }
-    function parseCSld(cSldEl) {
+    function parseCSld(cSldEl, opts) {
       const out = {}, extras = [];
       if (cSldEl.attrs.name)
         out.name = cSldEl.attrs.name;
@@ -2919,7 +3173,7 @@ export const pptxFullPackage = {
         if (c.name === "p:bg")
           out.bg = c;
         else if (c.name === "p:spTree") {
-          const tree = parseSpTree(c);
+          const tree = parseSpTree(c, opts);
           out.shapes = tree.shapes;
           if (tree.extras.length)
             out.spTreeExtras = tree.extras;
@@ -2943,13 +3197,14 @@ export const pptxFullPackage = {
         shapes: content.shapes || [],
         extras: content.spTreeExtras
       }));
-      if (content._extras)
-        for (const ex of content._extras)
+      const own = Array.isArray(content.cSldExtras) ? content.cSldExtras : content._extras;
+      for (const ex of own || [])
+        if (!ROOT_ONLY.has(placedName(ex)))
           children.push(ex);
-      return xml.el("p:cSld", a, children);
+      return xml.el("p:cSld", a, ordered(children, CSLD_SEQ));
     }
     function buildParser(rootTag, defaults) {
-      return function parse(input) {
+      return function parse(input, opts) {
         let root;
         if (input && input.type === "element")
           root = input;
@@ -2961,7 +3216,11 @@ export const pptxFullPackage = {
           throw new ParseError(`pptx/${rootTag.replace(/^p:/, "")}-bad-root`, `pptx ${rootTag}: expected <${rootTag}>, got <${root.name}>`, { context: { expected: rootTag, elementName: root && root.name } });
         const out = { type: defaults.type }, cSld = xml.findChild(root, "p:cSld");
         if (cSld)
-          Object.assign(out, parseCSld(cSld));
+          Object.assign(out, parseCSld(cSld, opts));
+        if (opts && opts.slideExtrasByPart) {
+          out.cSldExtras = out._extras || [];
+          delete out._extras;
+        }
         const extras = [];
         for (const c of root.children) {
           if (c.type !== "element" || c.name === "p:cSld")
@@ -2998,10 +3257,12 @@ export const pptxFullPackage = {
           children.push(renderSldLayoutIdLst(obj.layoutIds));
         if (obj.txStyles)
           children.push(obj.txStyles);
-        if (obj._extras)
+        if (obj._extras) {
           for (const ex of obj._extras)
-            children.push(ex);
-        return xml.serialize(xml.el(rootTag, ns, children));
+            if (!CSLD_ONLY.has(placedName(ex)))
+              children.push(ex);
+        }
+        return xml.serialize(xml.el(rootTag, ns, ordered(children, ROOT_SEQ)));
       };
     }
     function parseSldLayoutIdLst(el) {
@@ -3491,21 +3752,30 @@ export const pptxFullPackage = {
       createRidAllocator,
       trackUnmodelledParts
     } = shared, P_NS = slideMod.P_NS, A_NS = slideMod.A_NS, R_NS = slideMod.R_NS, REL_TYPE_DOC = REL_TYPE.DOC, CT_PRESENTATION = CT.PRESENTATION;
+    function attachPictureImage(shape, rels, part, pkg) {
+      const rel = rels.find((r) => r.Id === shape.embedRef);
+      if (!rel || rel.Type !== picMod.REL_TYPE_IMAGE)
+        return;
+      const partName = relsMod.resolveTarget(part, rel.Target), data = pkg.parts[partName];
+      if (!data)
+        return;
+      const declared = lookupCT(pkg, partName);
+      shape.image = shape.image || {};
+      shape.image.data = data;
+      shape.image.contentType = declared || picMod.sniffImageType(data);
+      shape.image.rId = shape.embedRef;
+    }
+    function attachTemplateImages(template, part, pkg) {
+      const rels = pkg.rels[part] || [];
+      for (const shape of template.shapes || [])
+        if (shape.type === "picture" && shape.embedRef)
+          attachPictureImage(shape, rels, part, pkg);
+    }
     function attachSlideImages(slide, slideRels, slidePart, pkg) {
       for (const shape of slide.shapes || [])
-        if (shape.type === "picture" && shape.embedRef) {
-          const rel = slideRels.find((r) => r.Id === shape.embedRef);
-          if (rel && rel.Type === picMod.REL_TYPE_IMAGE) {
-            const partName = relsMod.resolveTarget(slidePart, rel.Target), data = pkg.parts[partName];
-            if (data) {
-              const declared = lookupCT(pkg, partName);
-              shape.image = shape.image || {};
-              shape.image.data = data;
-              shape.image.contentType = declared || picMod.sniffImageType(data);
-              shape.image.rId = shape.embedRef;
-            }
-          }
-        } else if (shape.type === "chart" && shape.chartRef) {
+        if (shape.type === "picture" && shape.embedRef)
+          attachPictureImage(shape, slideRels, slidePart, pkg);
+        else if (shape.type === "chart" && shape.chartRef) {
           const rel = slideRels.find((r) => r.Id === shape.chartRef);
           if (rel && rel.Type === chartPartMod.REL_TYPE_CHART) {
             const partName = relsMod.resolveTarget(slidePart, rel.Target), data = pkg.parts[partName];
@@ -3560,14 +3830,28 @@ export const pptxFullPackage = {
       };
     }
     function archiveLimits(o) {
-      return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio } : void 0;
+      return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio, maxDepth: o.maxDepth } : void 0;
     }
     function read(bytes, opts) {
-      const pkg = opc.read(bytes, archiveLimits(opts)), { value: result, unmodelledParts } = trackUnmodelledParts(pkg, readPackage);
+      const pkg = opc.read(bytes, archiveLimits(opts)), textOpts = { typedRunColors: !!(opts && opts.typedRunColors) };
+      if (opts && opts.slideExtrasByPart)
+        textOpts.slideExtrasByPart = !0;
+      const { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
+        try {
+          return readPackage(p, textOpts);
+        } catch (e) {
+          throw typedPartXml(e);
+        }
+      });
       result.unmodelledParts = unmodelledParts;
       return result;
     }
-    function readPackage(pkg) {
+    function typedPartXml(e) {
+      if (!e || e.code !== "xml/parse-error")
+        return e;
+      return new ParseError("pptx/invalid-part-xml", `pptx: failed to parse a part's XML (${e.message})`, { cause: e });
+    }
+    function readPackage(pkg, textOpts) {
       const docRel = (pkg.rels["/"] || []).find((r) => r.Type === REL_TYPE_DOC || r.Type.endsWith("/officeDocument"));
       if (!docRel)
         throw new ParseError("pptx/missing-officeDocument-rel", "pptx: no officeDocument relationship");
@@ -3588,7 +3872,7 @@ export const pptxFullPackage = {
         rId: m.attrs["r:id"]
       })) : [];
       let sldSize;
-      const ssEl = xml.findChild(presRoot, "p:sldSize");
+      const ssEl = xml.findChild(presRoot, "p:sldSz") || xml.findChild(presRoot, "p:sldSize");
       if (ssEl) {
         sldSize = {
           cx: Number(ssEl.attrs.cx),
@@ -3606,7 +3890,7 @@ export const pptxFullPackage = {
         const slidePart = relsMod.resolveTarget(presPart, rel.Target), sBytes = pkg.parts[slidePart];
         if (!sBytes)
           continue;
-        const slideRoot = mc.process(xml.parse(decodeText(sBytes))), slide = slideMod.parseSlide(slideRoot), slideRels = pkg.rels[slidePart] || [];
+        const slideRoot = mc.process(xml.parse(decodeText(sBytes))), slide = slideMod.parseSlide(slideRoot, textOpts), slideRels = pkg.rels[slidePart] || [];
         slide._partName = slidePart;
         attachSlideImages(slide, slideRels, slidePart, pkg);
         slides.push(slide);
@@ -3616,7 +3900,8 @@ export const pptxFullPackage = {
           if (!slideLayouts.some((l) => l._partName === layoutPart)) {
             const lBytes = pkg.parts[layoutPart];
             if (lBytes) {
-              const layoutRoot = mc.process(xml.parse(decodeText(lBytes))), layout = slideMod.parseSlideLayout(layoutRoot);
+              const layoutRoot = mc.process(xml.parse(decodeText(lBytes))), layout = slideMod.parseSlideLayout(layoutRoot, textOpts);
+              attachTemplateImages(layout, layoutPart, pkg);
               layout._partName = layoutPart;
               slideLayouts.push(layout);
             }
@@ -3631,7 +3916,8 @@ export const pptxFullPackage = {
         const masterPart = relsMod.resolveTarget(presPart, rel.Target), mBytes = pkg.parts[masterPart];
         if (!mBytes)
           continue;
-        const masterRoot = mc.process(xml.parse(decodeText(mBytes))), master = slideMod.parseSlideMaster(masterRoot);
+        const masterRoot = mc.process(xml.parse(decodeText(mBytes))), master = slideMod.parseSlideMaster(masterRoot, textOpts);
+        attachTemplateImages(master, masterPart, pkg);
         master._partName = masterPart;
         slideMasters.push(master);
         const themeRel = (pkg.rels[masterPart] || []).find((r) => r.Type === themeMod.REL_TYPE_THEME);
@@ -3690,9 +3976,21 @@ export const pptxFullPackage = {
               rId
             }));
       opc.setPart(pkg, "/ppt/theme/theme1.xml", themeMod.bytesOf(theme), themeMod.CT_THEME);
+      const writtenLayoutRids = new Set(masterRels);
+      let maxLayoutId = 2147483648 + masters.length - 1;
+      for (const m of masters)
+        for (const li of m.layoutIds || []) {
+          const n = Number(li.id);
+          if (writtenLayoutRids.has(li.rId) && n > maxLayoutId)
+            maxLayoutId = n;
+        }
+      function writtenLayoutIds(master) {
+        const kept = (master.layoutIds || []).filter((li) => writtenLayoutRids.has(li.rId)), listed = new Set(kept.map((li) => li.rId)), added = masterRels.filter((rId) => !listed.has(rId)).map((rId) => ({ id: String(++maxLayoutId), rId }));
+        return kept.length === (master.layoutIds || []).length && !added.length ? master : { ...master, layoutIds: [...kept, ...added] };
+      }
       masters.forEach((master, i) => {
         const masterPath = `/ppt/slideMasters/slideMaster${i + 1}.xml`;
-        opc.setPart(pkg, masterPath, slideMod.slideMasterBytes(master), slideMod.CT_SLIDE_MASTER);
+        opc.setPart(pkg, masterPath, slideMod.slideMasterBytes(writtenLayoutIds(master)), slideMod.CT_SLIDE_MASTER);
         const masterRelsArr = [];
         layouts.forEach((_, j) => {
           masterRelsArr.push({
@@ -3792,7 +4090,7 @@ export const pptxFullPackage = {
       const sldSize = pres.sldSize || { cx: 9144000, cy: 6858000, type: "screen4x3" }, sa = { cx: String(sldSize.cx), cy: String(sldSize.cy) };
       if (sldSize.type)
         sa.type = sldSize.type;
-      presChildren.push(xml.el("p:sldSize", sa));
+      presChildren.push(xml.el("p:sldSz", sa));
       presChildren.push(xml.el("p:notesSz", { cx: "6858000", cy: "9144000" }));
       const presXml = xml.serialize(xml.el("p:presentation", { "xmlns:p": P_NS, "xmlns:a": A_NS, "xmlns:r": R_NS }, presChildren));
       opc.setPart(pkg, "/ppt/presentation.xml", encodeText(presXml), CT_PRESENTATION);

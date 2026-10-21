@@ -4,6 +4,244 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-21
+
+### Added
+
+- **docx run fonts keep every `w:rFonts` attribute.** The run properties
+  of runs, paragraph marks, styles, docDefaults and numbering levels gain
+  an optional `fonts` field: every attribute of `<w:rFonts>` by its local
+  name (`ascii`, `hAnsi`, `eastAsia`, `cs`, `hint` and the four theme
+  attributes), written back as read. `font` keeps its meaning: a changed
+  `font` is written to `ascii`, `hAnsi` and `cs` (their theme attributes
+  dropped so the edit applies), a removed one removes them; `eastAsia`
+  and `hint` always stay. A `<w:rFonts>` holding only `w:hint` — with its
+  `<w:rPr>` — now survives a read and a write. Models without `fonts` are
+  written as before; a read model compared field by field now shows
+  `fonts` beside `font`.
+
+- **`slideExtrasByPart` read option** (`pptx.read`, and the second
+  argument of `parseSlide` / `parseSlideLayout` / `parseSlideMaster`).
+  With `true`, the leftovers of each slide, layout and master's `<p:cSld>`
+  are kept in a new `cSldExtras` array and `_extras` holds the root's only;
+  by default both go to `_extras` and the root's replace those of
+  `<p:cSld>` (a `<p:cSld>` `<p:extLst>` beside a `<p:timing>` was lost).
+  The writers put a split model's elements back at the level each came
+  from, each written once. The default model is unchanged.
+
+- **DrawingML colours keep their transforms.** Shape fills (`{ rgb }` /
+  `{ schemeColor }`) carry `mods: [{ name, val? }]` (`lumMod`, `lumOff`,
+  `tint`, `shade`, `alpha`, …) and write them back, `shapeProps` included.
+  `ooxmlShared` gains `createTypedColorCodec`, the codec behind the typed
+  colour.
+- **`typedRunColors` read option** (`pptx.read`, `xlsx.read`, and the
+  `drawingml` / `pptxSlide` / `pptxTable` / `xlsxDrawings` parse functions).
+  With `true`, a text-run fill that a bare `'RRGGBB'` cannot express — a
+  theme colour, or any colour with transforms — is typed as `rPr.color = {
+  rgb | schemeColor, mods? }` instead of staying verbatim in `rPr._extras`.
+  The default keeps the 1.0.0 model; `renderRunProperties` writes both
+  forms.
+- **Picture crop.** `a:blipFill/a:srcRect` reaches the docx drawing node
+  and the pptx picture as `srcRect: { l?, t?, r?, b? }` (sides in 1/1000 of
+  a percent) and is written back. `ooxmlShared` gains `parseSrcRect` and
+  `srcRectAttrs`.
+- **`xlsx` row heights and hidden rows.** The `<row>` attributes `ht`,
+  `customHeight` and `hidden` reach the model as `sheet.rowProps` (keyed by
+  row index, with the row number `r`) and are written back; a sheet with
+  none of them has no `rowProps`.
+
+### Changed
+
+- **A new archive limit, `maxDepth`, refuses an XML part nested deeper
+  than 1,000 elements.** `opc.read` scans every `.xml`, `.rels` and
+  `.vml` part before any is parsed and throws `ParseError`
+  `opc/xml-too-deep` (`context.limit`, `context.max`, `context.partName`) for a part
+  whose elements nest past the limit; `docx.read`, `xlsx.read` and
+  `pptx.read` forward `maxDepth` from their options, and `0` disables
+  it. The readers and every consumer of the model walk the trees
+  recursively: a document of 5,000 nested tables overflowed the call
+  stack with an untyped `RangeError`. **Release note**: a document whose
+  XML nests deeper than 1,000 elements, which used to read up to the
+  stack limit, is now refused by default — no real file of the 2,938
+  measured (Apache POI and LibreOffice test documents) nests past 52;
+  pass `maxDepth` to read deeper ones. `defaultLimits` gains
+  `maxDepth: 1000`.
+
+- **`xlsx` reads `true` as well as `1` for boolean attributes.** A `<col>`
+  with `hidden="true"` or `bestFit="true"` was read as neither hidden nor
+  best-fit; it now reads `hidden: true` / `bestFit: true`, as the `<row>`
+  attributes of `sheet.rowProps` do.
+- **`docx.write` checks every list reference.** `docx/numbering-missing`
+  now also covers footnotes, endnotes, comments and `opts.styles` (each
+  style and the docDefaults), and a `numId` that `opts.numbering.nums` does
+  not declare throws the new `ContractError` `docx/numbering-unknown-num`;
+  both carry `context.story` (plus `key` / `styleId`). A write that used to
+  emit a dangling `w:numId` now throws instead.
+- **docx block math sits inside a paragraph.** The schema allows
+  `m:oMathPara` only inside a `w:p`, so `docx.write` now writes a
+  body-level `oMathPara` node (document body and story parts) as a `w:p`
+  with no `w:pPr` holding only that `m:oMathPara`, as Word does; it used to
+  write it straight under `w:body`, which validators reject. Release note
+  for readers: `docx.read` now turns such a paragraph — no `w:pPr`, one
+  `m:oMathPara` as its only element child, the usual shape of a display
+  equation in a Word file — into the body-level `{ type: 'oMathPara' }`
+  node, where 1.0.0 read it as a `paragraph` with the `m:oMathPara` in its
+  `_extras`. A paragraph with a `w:pPr` or any other child keeps the 1.0.0
+  shape, and a bare body-level `m:oMathPara` still reads as before.
+
+### Fixed
+
+- **Pictures on slide layouts and slide masters carry their image.**
+  `pptx.read` resolved the `image` (`data`, `contentType`, `rId`) of the
+  pictures of slides only; a picture of a layout or a master, such as a
+  template logo, kept its `embedRef` with no bytes. It is now resolved
+  through the layout's or the master's own relationships. `write()` is
+  unchanged: it does not read `image` on layout or master shapes.
+
+- **A malformed XML part is a typed refusal in every reader.** A part
+  `docx.read`, `xlsx.read` or `pptx.read` parses without a typed wrapper
+  of its own (docx styles, numbering, settings, notes, comments,
+  headers, footers, charts; xlsx shared strings, styles, tables,
+  comments, drawings, charts; pptx slides, layouts, masters, theme,
+  charts) let the fw `XmlParseError` (`xml/parse-error`) through,
+  against the documented rule that every throw of the package is an
+  `OoxmlError`. It now throws `ParseError` `docx/invalid-part-xml`,
+  `xlsx/invalid-part-xml` or `pptx/invalid-part-xml`, the parser's
+  error kept as `cause`; a malformed worksheet part of `xlsx.read` throws
+  `xlsx/invalid-sheet-xml` (with `context.partName`), like
+  `xlsx/invalid-workbook-xml`. **Release note**: code that caught these
+  reads by the fw `xml/parse-error` code must now test for the
+  `ParseError` class or the new codes. Any other error is unchanged.
+
+- **docx revision tracking is `w:trackRevisions`.** `trackChanges: true`
+  in the settings was written as `<w:trackChanges/>`, an element the
+  settings schema does not have, and a real file's `<w:trackRevisions>`
+  stayed untyped in `_extras`. The writer now writes `<w:trackRevisions/>`
+  and the reader types `<w:trackRevisions>` — and the `<w:trackChanges>`
+  1.0.0 wrote — as `trackChanges`; an `_extras` copy is not written twice.
+  With `wmlSettings`, a real file still reads as the `trackRevisions`
+  toggle, and the core boolean is no longer written as
+  `<w:trackChanges/>`.
+- **docx settings demoted by an extension are written.** `docx.write`
+  ran the `dehydrateSettings` hooks but wrote `opts.settings` as given,
+  while `wmlSettings` returns the demoted settings as a new object: every
+  typed flag of that extension (`autoHyphenation`, `trackRevisions`,
+  `decimalSymbol` …) was left out of `word/settings.xml`. The part is now
+  written from what the hook returns; `opts.settings` is still left as
+  given.
+- **pptx masters list only the layouts written.** `pptx.read` keeps the
+  layouts the slides use but the master's whole `layoutIds` list, and
+  `pptx.write` numbers the written layouts' relationships `rId1`…`rIdK`
+  and wrote that list unchanged, so a deck with unused layouts was
+  written with `p:sldLayoutId` entries naming missing (or wrong)
+  relationships. Each master's `p:sldLayoutIdLst` now names exactly the
+  written layouts: other entries are left out, a missing one gets a fresh
+  id. The model is not modified.
+- **pptx slide-level elements written once, at the slide level.** A
+  slide, layout or master's `_extras` holds the leftovers of the root, or
+  those of `<p:cSld>` when the root has none; the writers put every one of
+  them inside `<p:cSld>` AND at the root, so a slide's `<p:transition>` or
+  `<p:timing>` was written twice, once where validators reject it. Each
+  element is now written where the schema places it — `<p:transition>`,
+  `<p:timing>`, `<p:hf>` at the root (in a master, before `<p:txStyles>`),
+  `<p:custDataLst>` and `<p:controls>` inside `<p:cSld>` — in schema order;
+  `<p:extLst>` keeps its two copies, except in a model read with
+  `slideExtrasByPart`, which writes each leftover once, at its own level.
+  The read model is unchanged.
+- **DrawingML text properties in schema order.** The paragraph and run
+  properties of every DrawingML text body (pptx slides, masters, layouts
+  and tables, xlsx drawings, charts) were written with the typed children
+  first — the bullet, `defRPr`, the fill, `latin` — and the preserved ones
+  after, so a read → write of real files put, for example, `a:buChar`
+  before `a:spcBef` or `a:latin` before `a:effectLst`, which validators
+  reject. `a:pPr`, `a:rPr` and `a:defRPr` now follow the schema order; the
+  read models are unchanged.
+- **docx anchored drawings in schema order.** `docx.write` wrote the
+  preserved positioning and wrap children of a `wp:anchor` (`simplePos`,
+  `positionH`, `positionV`, `wrapNone` …) before `wp:extent`, so every
+  floating picture read from a Word file was written back out of the
+  `CT_Anchor` order, which validators reject. The children now follow the
+  schema order, the Word 2010 `wp14:sizeRelH` / `wp14:sizeRelV` after the
+  graphic; the read model is unchanged.
+- **xlsx threaded-comment ids in upper case.** `generateId` (used by the
+  xlsx writer for comment, person and parent ids it creates) wrote the
+  GUID in lower-case hexadecimal; the schema's `ST_Guid` pattern, and
+  Excel, use upper case, so validators rejected every generated id. Ids
+  a caller passes are still written as given.
+- **docx drawing ids unique in the document.** Every drawing built
+  through the API (`imageRun`, `chartRun`, `shapeRun`) was written with
+  `<wp:docPr id="1">`, so a document with two drawings carried a duplicate
+  id, which validators reject (ECMA-376 Part 1 § 20.4.2.5). `docx.write`
+  now gives each drawing of the body and of the story parts an id unique
+  among them, keeping the ids it is given when they do not clash, and
+  patches `docId` in place.
+- **docx parts written in schema order.** Every docx writer emitted its
+  typed children, then the elements a read preserved in `_extras`, at the
+  end; OOXML child lists are sequences, so a read then write of a real
+  document produced invalid styles, numbering, settings, section, run,
+  paragraph and table properties, and table rows (`w:trPr` after the
+  cells). Run properties also wrote `w:u` before `w:highlight`. The run,
+  paragraph and table properties, styles (each style and the part),
+  numbering (levels, abstract numberings, the part), settings and section
+  properties now order their children by their ECMA-376 sequence, an
+  `mc:AlternateContent` taking the place of the element it stands for;
+  rows write `w:tblPrEx` and `w:trPr` before the cells. `ooxmlShared` and
+  `docxProperties` gain `sequence` and `orderBySequence`.
+- **Chart series data in the form the schema allows, and Office charts
+  read with their values.** The chart writer put each literal inside a
+  reference (`<c:strRef>` holding `<c:strLit>`, `<c:numRef>` holding
+  `<c:numLit>`, with an empty formula), which `CT_StrRef` / `CT_NumRef`
+  forbid: validators rejected every chart written in docx, xlsx and pptx.
+  It now writes the name as `<c:tx><c:v>`, categories as `<c:strLit>` and
+  values as `<c:numLit>` directly under their data element. The reader
+  looked for that same nesting and never for the cache a reference holds
+  (`<c:strCache>` / `<c:numCache>`), so a chart written by Office read
+  with empty series; it now reads the cache, and the earlier form still
+  reads the same.
+- **pptx slide size under its schema name.** The writer emitted the slide
+  size as `p:sldSize`, an element `CT_Presentation` does not have
+  (`p:sldSz`), so validators rejected every written presentation; the
+  reader looked for the same wrong name, so the `p:sldSz` of a real file
+  was never typed (`presentation.sldSize` stayed absent) and a read then
+  write replaced its size by the 4:3 default. Both now use `p:sldSz`; a
+  file this package wrote before still reads its `p:sldSize`.
+- **docx tables carry the `w:tblPr` and `w:tblGrid` the schema requires.**
+  A table built through the API (`tableFromRows`, or any table node read
+  with no grid) was written without `w:tblGrid`, and without `w:tblPr` when
+  it had no properties; `CT_Tbl` requires both, and OOXML validators reject
+  such a table. The writer now emits an empty `w:tblPr` when the table has
+  none, then the preserved grid or one derived from the rows: one
+  `w:gridCol` per column of the widest row (a cell counting its
+  `gridSpan`), with `w:w` when a span-free row as wide as the grid gives
+  every cell a `dxa` width. Read back, both sit in the table's `_extras`,
+  so a second write gives the same bytes.
+- **Pictures and charts in headers, footers, notes and comments.** On
+  write, a story-part drawing got no media / chart part and no
+  relationship in that part's table, so its `r:embed` / `r:id` dangled;
+  on read, story drawings were resolved against the document part's
+  relationships, so a header picture never came back (or came back as
+  the body picture sharing its rId). Each story part now reads and writes
+  its own image and chart relationships; media parts are shared with the
+  body. `write()` patches `embedRef` and `chartRef` in place on those
+  drawings, as it does on the body's.
+- **The docx root declares every prefix it uses.** `docx.write` emitted
+  inline and anchored pictures as `wp:` elements with no `xmlns:wp` in
+  scope, so Word refused the file. `ooxmlShared.wordRootAttrs`
+  now declares each known prefix used outside a declaration of its own
+  (`wp`, `v`, `o`, `m`, `w14`, …) and every prefix an `mc:Choice` names in
+  `Requires`, extensions listed in `mc:Ignorable`, on the document, header,
+  footer, notes, comments, styles and numbering roots (styles kept
+  `w14:ligatures` and numbering kept `mc:AlternateContent` undeclared on a
+  read → write of real Word files). A part without such prefixes keeps its
+  root byte for byte. `wordRootAttrs(nodes, opts?)` takes `opts.r: false`
+  to declare `r` only where a name uses it, as the styles and numbering
+  roots do.
+- **Errors survive the fw sanity layer.** `OoxmlError` defined `name` by
+  assignment, which throws a `TypeError` once `applyBase()` has frozen
+  `Error.prototype`, so the typed error (code, context) was lost. `name` is
+  now an own property set with `Object.defineProperty` (same shape:
+  writable, enumerable, configurable).
+
 ## [1.0.0] - 2026-10-07
 
 ### Added

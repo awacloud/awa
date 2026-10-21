@@ -140,7 +140,7 @@ const { sanitizeHtml } = runtime.resolve('sanitize');   // the fw module registe
 const safe2 = sanitizeHtml(dirty);
 ```
 
-The default fw allowlist is strict: common formatting tags + `<a>`, `<img>`, `<code>`, `<pre>`; `<input>` is **out** of the allowlist (override via `sanitizeOpts.allowedTags`); `data:` URLs are always removed from `href` / `src` (the fw sanitizer has no opt-in; `allowDataImage` only applies to `safe: true`). See the fw doc: [`fw/docs/api/dom/rendering/sanitize.md`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
+The default fw allowlist is strict: common formatting tags + `<a>`, `<img>`, `<code>`, `<pre>`; `<input>` is **out** of the allowlist (override via `sanitizeOpts.allowedTags`); `data:` URLs are always removed from `href` / `src` (the fw sanitizer has no opt-in; `allowDataImage` only applies to `safe: true`). See the fw doc: [`fw/docs/api/dom/rendering/sanitize.md`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
 
 For a complete, sanitised HTML *document* rather than a fragment — one or several Markdown sources assembled into a single self-contained `.html` file with a theme, sidebar and cross-links — see [`mdHtmlDocument`](../api/document/html-document.md) instead: it runs the same fw sanitiser unconditionally, as its only security boundary.
 
@@ -209,4 +209,4 @@ Labels are normalized (Unicode case-fold + collapsed whitespace).
 - [Coverage](./coverage.md) — which Markdown cases are handled
 - [`api/md`](../api/md.md) — full API surface of the instance
 - [`api/render/`](../api/render/) — details of each renderer
-- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — XSS hardening (consumed through the facade's `sanitize: true` option)
+- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — XSS hardening (consumed through the facade's `sanitize: true` option)

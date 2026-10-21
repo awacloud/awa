@@ -45,6 +45,12 @@ describe('md façade', () => {
         expect(() => m.use(null)).toThrow(ContractError);
         expect(() => m.use({ name: 'x' })).toThrow(ContractError);
     });
+
+    test('U+0000 is replaced with U+FFFD in every output (CommonMark 2.3)', () => {
+        expect(md.renderHtml('abc\u0000de\u0000')).toBe('<p>abc�de�</p>\n');
+        expect(md.renderHtml('`a\u0000` [x](/u\u0000v)\n')).toBe('<p><code>a�</code> <a href="/u%EF%BF%BDv">x</a></p>\n');
+        expect(md.renderMarkdown('a\u0000\n')).toBe('a�\n');
+    });
 });
 
 describe('md façade — renderMarkdown(string) parses with md.parse (extension passes included)', () => {
@@ -93,5 +99,45 @@ describe('md façade — renderMarkdown(string) parses with md.parse (extension 
         // control: a string argument does go through md.parse
         m.renderMarkdown('y\n');
         expect(calls).toBe(1);
+    });
+});
+
+describe('md façade — renderHtml(string) goes through md.parse and md.render (extension passes included)', () => {
+    const upperParse = {
+        name: 'test-upper-parse',
+        install(m) {
+            const original = m.parse;
+            m.parse = function (text) {
+                const ast = original.call(m, text);
+                for (const ev of walk(ast)) {
+                    if (ev.entering && ev.node.type === T_TEXT) ev.node.literal = ev.node.literal.toUpperCase();
+                }
+                return ast;
+            };
+        }
+    };
+    const tagRender = {
+        name: 'test-tag-render',
+        install(m) {
+            const original = m.render;
+            m.render = function (ast, opts) { return '<!--x-->' + original.call(m, ast, opts); };
+        }
+    };
+
+    test('a parse-wrapping extension that does not re-wire renderHtml is applied', () => {
+        const m = createMd().use(upperParse);
+        expect(m.renderHtml('a *b*\n')).toBe('<p>A <em>B</em></p>\n');
+        expect(m.renderHtml('a *b*\n')).toBe(m.render(m.parse('a *b*\n')));
+    });
+
+    test('a render-wrapping extension is applied too', () => {
+        expect(createMd().use(tagRender).renderHtml('a\n')).toBe('<!--x--><p>a</p>\n');
+    });
+
+    test('an AST argument still throws md/parse-not-string on the core instance', () => {
+        let err = null;
+        try { createMd().use(upperParse).renderHtml(md.parse('a\n')); } catch (e) { err = e; }
+        expect(err).toBeInstanceOf(ContractError);
+        expect(err.code).toBe('md/parse-not-string');
     });
 });

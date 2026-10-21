@@ -103,22 +103,33 @@ export const mdAstManipulation = {
             'listBulletChar', 'listPadding', 'listMarkerOffset',
             'checked', 'align', 'cellAlign', 'isHeader', 'delimiterCount'
         ];
-        function cloneNode(node, deep) {
-            if (!node) throw new TypeError('cloneNode: node required');
+        function copyOne(node) {
             const copy = new NodeCtor(node.type, node.sourcepos ? [
                 node.sourcepos[0].slice(),
                 node.sourcepos[1].slice()
             ] : null);
             for (const k of SCALAR_KEYS) copy[k] = node[k];
             copy.data = node.data ? Object.assign({}, node.data) : null;
-            if (deep) {
-                let c = node.firstChild;
+            return copy;
+        }
+        function cloneNode(node, deep) {
+            if (!node) throw new TypeError('cloneNode: node required');
+            const root = copyOne(node);
+            if (!deep) return root;
+            // An explicit stack, not recursion: a tree nested tens of
+            // thousands of levels deep must not exhaust the call stack.
+            const stack = [[node, root]];
+            while (stack.length) {
+                const [src, copy] = stack.pop();
+                let c = src.firstChild;
                 while (c) {
-                    copy.appendChild(cloneNode(c, true));
+                    const child = copyOne(c);
+                    copy.appendChild(child);
+                    if (c.firstChild) stack.push([c, child]);
                     c = c.next;
                 }
             }
-            return copy;
+            return root;
         }
         return {
             replaceNode, wrapNode, flattenNode, findFirst, findAll, cloneNode,

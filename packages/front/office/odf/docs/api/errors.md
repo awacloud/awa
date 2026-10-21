@@ -72,6 +72,9 @@ catch (e) {
 - The base constructor takes `(code, message, { context, cause })`.
 - `e.name` reflects the subclass (`ParseError`, etc.).
 - No fixed internal `code` — each throw site chooses its own (e.g. `'odf/parse-error'`).
+- `pkgPackage` codes: `odf/parse-error/pkg` and `odf/parse-error/zip-bomb` (read), `odf/contract-error/pkg` (bad argument), `odf/render-error/pkg` (the ZIP writer refused the package on write — an `mtime` outside 1980-2099, say; the ZIP error is the `cause`).
+- `drawFrame` code: `odf/contract-error/frame` (a frame `child` of an unknown `kind`; `context.kind`).
+- `e.name` is an own, writable, enumerable property, so the typed error (code, context) survives an environment that froze `Error.prototype`.
 - **Breaking**: `ParseError` / `RenderError` / `ContractError` /
   `OdfError` are no longer re-exported at the top level from
   `@awacloud/odf`. Always go through `odfErrors.factory()` or

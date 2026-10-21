@@ -69,5 +69,43 @@ describe('tableTable module', () => {
             expect(back.rows).toHaveLength(2);
             expect(back.columns).toHaveLength(1);
         });
+
+        const cellsOf = (...specs) => specs.map((s) => ({ type: 'cell', children: [], ...s }));
+        const columnsOf = (node) => node.children.filter((c) => c.name === 'table:table-column');
+
+        test('no column in the model: one column repeated to the widest row, before the rows (schema)', () => {
+            const { xml, t } = build();
+            const m = {
+                type: 'table', name: 'S', columns: [], headerRows: 1,
+                rows: [
+                    { type: 'row', cells: cellsOf({}, {}) },
+                    { type: 'row', cells: cellsOf({ repeated: 3 }, {}) },
+                    { type: 'row', cells: cellsOf({}) }
+                ]
+            };
+            const before = JSON.stringify(m);
+            const node = t.renderTable(m);
+            expect(node.children.map((c) => c.name)).toEqual(['table:table-column', 'table:table-header-rows', 'table:table-row', 'table:table-row']);
+            expect(columnsOf(node)[0].attrs).toEqual({ 'table:number-columns-repeated': '4' });
+            expect(JSON.stringify(m)).toBe(before);
+            const back = t.parseTable(xml.parse(xml.serialize(node).replace(/^<\?xml[^?]*\?>\r?\n/, '')));
+            expect(back.columns).toEqual([{ repeated: 4 }]);
+        });
+
+        test('the width counts a span reaching past the last cell; width 1 writes no repeat; no cell gives width 1', () => {
+            const { t } = build();
+            const span = t.renderTable({ type: 'table', rows: [{ type: 'row', cells: cellsOf({}, { colSpan: 3 }) }] });
+            expect(columnsOf(span)[0].attrs).toEqual({ 'table:number-columns-repeated': '4' });
+            const one = t.renderTable({ type: 'table', rows: [{ type: 'row', cells: cellsOf({}) }] });
+            expect(columnsOf(one).map((c) => c.attrs)).toEqual([{}]);
+            const none = t.renderTable({ type: 'table', columns: [], rows: [] });
+            expect(columnsOf(none).map((c) => c.attrs)).toEqual([{}]);
+        });
+
+        test('columns in the model are written as given', () => {
+            const { xml, t } = build();
+            const m = { type: 'table', columns: [{ styleName: 'co1' }, { repeated: 2 }], rows: [{ type: 'row', cells: cellsOf({ repeated: 9 }) }] };
+            expect(xml.serialize(t.renderTable(m))).toContain('<table:table><table:table-column table:style-name="co1"/><table:table-column table:number-columns-repeated="2"/><table:table-row>');
+        });
     });
 });

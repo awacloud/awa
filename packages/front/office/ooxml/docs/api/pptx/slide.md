@@ -36,7 +36,7 @@ const sl = runtime.resolve('pptxSlide');
 | Method | Signature | Returns |
 |---------|-----------|---------|
 | `parseShape` / `renderShape` | `<p:sp>` | Shape with a typed `txBody`. |
-| `parseSlide` / `serializeSlide` / `slideBytes` | `<p:sld>` | Full slide. |
+| `parseSlide` / `serializeSlide` / `slideBytes` | `<p:sld>` | Full slide. Each `parse*` takes `(input, opts?)`; `opts.typedRunColors` reaches the text bodies (shapes, table cells). |
 | `parseSlideLayout` / `serializeSlideLayout` / `slideLayoutBytes` | `<p:sldLayout>` | Layout. |
 | `parseSlideMaster` / `serializeSlideMaster` / `slideMasterBytes` | `<p:sldMaster>` | Master. |
 | `parseCSld` | `(<p:cSld>) => { name?, bg?, shapes, spTreeExtras?, _extras? }` | Common slide data, flattened. |
@@ -71,13 +71,32 @@ slide := {
     clrMap?, clrMapOvr?,         // verbatim elements
     layoutIds?: [{ id, rId }],   // slideMaster only
     txStyles?: xmlNode,          // slideMaster only
-    _extras?: [xmlNode]          // <p:timing>, <p:transition>, …
+    _extras?: [xmlNode],         // <p:timing>, <p:transition>, …
+    cSldExtras?: [xmlNode]       // only with opts.slideExtrasByPart
 }
 ```
 
 There is **no `cSld` level in the typed model**: `parseCSld`'s output is merged
 into the slide object. Elements such as `<p:timing>` and `<p:transition>` are
-not typed by this module and stay verbatim in `_extras`.
+not typed by this module and stay verbatim in `_extras`. By default the
+leftovers of `<p:cSld>` (`<p:custDataLst>`, `<p:controls>`, `<p:extLst>`) go
+to `_extras` too, and when the root has leftovers of its own they replace
+them. With `opts.slideExtrasByPart: true` (the second argument of
+`parseSlide` / `parseSlideLayout` / `parseSlideMaster`, or of `pptx.read`),
+the `<p:cSld>` leftovers are kept in `cSldExtras` — always an array, empty
+when there are none — and `_extras` holds the root's only.
+
+On write, each `_extras` element goes where the schema places it: the
+slide-level ones (`<p:transition>`, `<p:timing>`, `<p:hf>`) at the root,
+after `<p:clrMap>` / `<p:clrMapOvr>` and `<p:sldLayoutIdLst>` and before
+`<p:txStyles>`, never inside `<p:cSld>`; the `<p:cSld>`-only ones
+(`<p:custDataLst>`, `<p:controls>`) inside `<p:cSld>` after `<p:spTree>`,
+never at the root. An `<mc:AlternateContent>` is placed as the element it
+holds. An element both lists allow (`<p:extLst>`) or neither names is
+written in both places, as before — unless the object has a `cSldExtras`
+array: `<p:cSld>` then takes its leftovers from `cSldExtras` only and the
+root from `_extras` only, so every element is written once, at the level
+it came from (the placement rules above still apply to both lists).
 
 ## Examples
 

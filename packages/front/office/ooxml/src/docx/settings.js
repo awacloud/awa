@@ -16,7 +16,7 @@
  *   defaultTabStop?: number,
  *   evenAndOddHeaders?: boolean,
  *   updateFields?: boolean,
- *   trackChanges?: boolean,
+ *   trackChanges?: boolean,  // <w:trackRevisions> (and the <w:trackChanges> 1.0.0 wrote)
  *   zoom?: { val?: string, percent?: number },
  *   _extras?: [xmlNode]    // verbatim for unknown elements
  * }
@@ -38,6 +38,42 @@ export const docxSettings = {
     deps: [ooxmlErrors, xml, ooxmlShared],
 
     factory(errors, xml, shared) {
+        // Schema order (ECMA-376 Part 1); a hand-wired ooxmlShared without
+        // the ordering helper writes children in the old order.
+        const orderSeq = shared.sequence ? shared.sequence : () => null;
+        const ordered = (children, seq) => (seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children);
+        const SETTINGS_SEQ = orderSeq([
+            'w:writeProtection', 'w:view', 'w:zoom', 'w:removePersonalInformation',
+            'w:removeDateAndTime', 'w:doNotDisplayPageBoundaries', 'w:displayBackgroundShape',
+            'w:printPostScriptOverText', 'w:printFractionalCharacterWidth', 'w:printFormsData',
+            'w:embedTrueTypeFonts', 'w:embedSystemFonts', 'w:saveSubsetFonts', 'w:saveFormsData',
+            'w:mirrorMargins', 'w:alignBordersAndEdges', 'w:bordersDoNotSurroundHeader',
+            'w:bordersDoNotSurroundFooter', 'w:gutterAtTop', 'w:hideSpellingErrors',
+            'w:hideGrammaticalErrors', 'w:activeWritingStyle', 'w:proofState', 'w:formsDesign',
+            'w:attachedTemplate', 'w:linkStyles', 'w:stylePaneFormatFilter',
+            'w:stylePaneSortMethod', 'w:documentType', 'w:mailMerge', 'w:revisionView',
+            ['w:trackRevisions', 'w:trackChanges'], 'w:doNotTrackMoves', 'w:doNotTrackFormatting',
+            'w:documentProtection', 'w:autoFormatOverride', 'w:styleLockTheme', 'w:styleLockQFSet',
+            'w:defaultTabStop', 'w:autoHyphenation', 'w:consecutiveHyphenLimit',
+            'w:hyphenationZone', 'w:doNotHyphenateCaps', 'w:showEnvelope', 'w:summaryLength',
+            'w:clickAndTypeStyle', 'w:defaultTableStyle', 'w:evenAndOddHeaders',
+            'w:bookFoldRevPrinting', 'w:bookFoldPrinting', 'w:bookFoldPrintingSheets',
+            'w:drawingGridHorizontalSpacing', 'w:drawingGridVerticalSpacing',
+            'w:displayHorizontalDrawingGridEvery', 'w:displayVerticalDrawingGridEvery',
+            'w:doNotUseMarginsForDrawingGridOrigin', 'w:drawingGridHorizontalOrigin',
+            'w:drawingGridVerticalOrigin', 'w:doNotShadeFormData', 'w:noPunctuationKerning',
+            'w:characterSpacingControl', 'w:printTwoOnOne', 'w:strictFirstAndLastChars',
+            'w:noLineBreaksAfter', 'w:noLineBreaksBefore', 'w:savePreviewPicture',
+            'w:doNotValidateAgainstSchema', 'w:saveInvalidXml', 'w:ignoreMixedContent',
+            'w:alwaysShowPlaceholderText', 'w:doNotDemarcateInvalidXml', 'w:saveXmlDataOnly',
+            'w:useXSLTWhenSaving', 'w:saveThroughXslt', 'w:showXMLTags',
+            'w:alwaysMergeEmptyNamespace', 'w:updateFields', 'w:hdrShapeDefaults', 'w:footnotePr',
+            'w:endnotePr', 'w:compat', 'w:docVars', 'w:rsids', 'm:mathPr', 'w:attachedSchema',
+            'w:themeFontLang', 'w:clrSchemeMapping', 'w:doNotIncludeSubdocsInStats',
+            'w:doNotAutoCompressPictures', 'w:forceUpgrade', 'w:captions', 'w:readModeInkLockDown',
+            'w:smartTagType', 'sl:schemaLibrary', 'w:shapeDefaults', 'w:doNotEmbedSmartTags',
+            'w:decimalSymbol', 'w:listSeparator'
+        ]);
         const { ParseError, RenderError } = errors;
         const { NS, REL_TYPE, CT, encodeText, decodeText } = shared;
 
@@ -154,6 +190,9 @@ export const docxSettings = {
                     case 'w:updateFields':
                         out.updateFields = readToggle(c);
                         break;
+                    // The schema's element is w:trackRevisions; w:trackChanges
+                    // is what 1.0.0 wrote, still read.
+                    case 'w:trackRevisions':
                     case 'w:trackChanges':
                         out.trackChanges = readToggle(c);
                         break;
@@ -185,7 +224,7 @@ export const docxSettings = {
                 children.push(xml.el('w:updateFields', {}));
             }
             if (obj.trackChanges === true) {
-                children.push(xml.el('w:trackChanges', {}));
+                children.push(xml.el('w:trackRevisions', {}));
             }
             if (obj.zoom) {
                 const a = {};
@@ -193,8 +232,17 @@ export const docxSettings = {
                 if (obj.zoom.percent != null) a['w:percent'] = String(obj.zoom.percent);
                 children.push(xml.el('w:zoom', a));
             }
-            if (obj._extras) for (const ex of obj._extras) children.push(ex);
-            return xml.serialize(xml.el('w:settings', rootAttrs(children), children));
+            // A typed trackChanges is written once: an _extras copy under
+            // either name is left out.
+            const typedTracking = typeof obj.trackChanges === 'boolean';
+            if (obj._extras) {
+                for (const ex of obj._extras) {
+                    if (typedTracking && (ex.name === 'w:trackRevisions' || ex.name === 'w:trackChanges')) continue;
+                    children.push(ex);
+                }
+            }
+            const kids = ordered(children, SETTINGS_SEQ);
+            return xml.serialize(xml.el('w:settings', rootAttrs(kids), kids));
         }
 
         function bytesOf(obj) { return encodeText(serialize(obj)); }

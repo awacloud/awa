@@ -70,10 +70,17 @@ describe('xlsxThreadedComments — persons part', () => {
 });
 
 describe('xlsxThreadedComments — generateId', () => {
-    test('produces well-formed GUIDs', () => {
-        const id = tc.generateId();
-        expect(id).toMatch(
-            /^\{[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\}$/);
+    test('produces well-formed GUIDs, upper case as ST_Guid requires (version 4, RFC 4122 variant)', () => {
+        for (let i = 0; i < 32; i++) {
+            expect(tc.generateId()).toMatch(
+                /^\{[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}\}$/);
+        }
+    });
+
+    test('ids a caller gives are written as given', () => {
+        const text = tc.serializeThreadedComments([{ id: '{c1}', ref: 'A1', personId: '{p1}', text: 't' }]);
+        expect(text).toContain('id="{c1}"');
+        expect(text).toContain('personId="{p1}"');
     });
 
     test('two consecutive returns are distinct', () => {
@@ -115,7 +122,7 @@ describe('xlsxThreadedComments — generateId random source (fail closed)', () =
         });
         try {
             expect(tc.generateId())
-                .toBe('{00010203-0405-4607-8809-0a0b0c0d0e0f}');
+                .toBe('{00010203-0405-4607-8809-0A0B0C0D0E0F}');
         } finally { restoreCrypto(); }
     });
 });

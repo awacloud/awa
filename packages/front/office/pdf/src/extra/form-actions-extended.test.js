@@ -7,6 +7,7 @@ import { describe, test, expect } from 'bun:test';
 import { pdfFormActionsExtended } from './form-actions-extended.js';
 import { pdfParserObj } from '../syntax/parser-obj.js';
 import { pdfErrors } from '../errors.js';
+import { pdfSandbox } from './pdf-sandbox.js';
 const _pdfErrors_TD1 = pdfErrors.factory();
 const _errors = _pdfErrors_TD1;
 const { ParseError } = _errors;
@@ -95,6 +96,36 @@ describe('typeExtendedAction', () => {
         const d = action('JavaScript', { JS: obj.string(bytes('app.alert(1)')) });
         const r = typeExtendedAction(d);
         expect(r.sandboxed).toBe(true);
+    });
+
+    // A stream inside a dictionary is always an indirect reference
+    // (ISO 32000-2 7.3.8): a script held in a stream reaches the typer as one.
+    test('JavaScript with /JS by reference keeps the reference', () => {
+        const r = typeExtendedAction(action('JavaScript', { JS: obj.ref(12, 0) }));
+        expect(r.kind).toBe('JavaScript');
+        expect(r.js).toEqual({ type: 'ref', num: 12, gen: 0 });
+        expect(r.sandboxed).toBe(true);
+        expect(() => typeExtendedAction(action('JavaScript', { JS: obj.int(1) })))
+            .toThrow(expect.objectContaining({ code: 'pdf/extra/action-ext/bad-js' }));
+    });
+
+    test('Rendition with /JS by reference keeps the reference', () => {
+        const r = typeExtendedAction(action('Rendition', { OP: obj.int(0), JS: obj.ref(12, 0) }));
+        expect(r.js).toEqual({ type: 'ref', num: 12, gen: 0 });
+        expect(r.sandboxed).toBe(true);
+        // another type is still not a script
+        const other = typeExtendedAction(action('Rendition', { OP: obj.int(0), JS: obj.int(1) }));
+        expect([other.js, other.sandboxed]).toEqual([null, undefined]);
+    });
+
+    test('the sandbox linter sees a stream script held by reference', () => {
+        const { lintActions } = pdfSandbox.factory(_errors);
+        const records = [
+            typeExtendedAction(action('JavaScript', { JS: obj.ref(12, 0) })),
+            typeExtendedAction(action('Rendition', { OP: obj.int(0), JS: obj.ref(13, 0) }))
+        ];
+        expect(lintActions(records).issues.map((i) => i.code))
+            .toEqual(['pdf/sandbox/active-javascript', 'pdf/sandbox/active-rendition']);
     });
 
     test('malformed: missing required entries throw', () => {

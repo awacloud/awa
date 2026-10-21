@@ -119,6 +119,28 @@ describe('integration — read → write → read roundtrip', () => {
     });
 });
 
+// Remove every `class X [extends Y] { … }` from `src`, matching braces so a
+// nested `}` (an object literal in a constructor) does not end the body.
+function stripClassBodies(src) {
+    const head = /class\s+\w+(?:\s+extends\s+\w+)?\s*\{/g;
+    let out = '';
+    let from = 0;
+    let m;
+    while ((m = head.exec(src)) !== null) {
+        let depth = 1;
+        let i = m.index + m[0].length;
+        while (i < src.length && depth > 0) {
+            if (src[i] === '{') depth++;
+            else if (src[i] === '}') depth--;
+            i++;
+        }
+        out += src.slice(from, m.index);
+        from = i;
+        head.lastIndex = i;
+    }
+    return out + src.slice(from);
+}
+
 describe('integration — worker safety surface', () => {
     test('every factory.toString() is transportable', () => {
         for (const m of modules) {
@@ -128,13 +150,18 @@ describe('integration — worker safety surface', () => {
             // the descriptor object during serialised transport). It IS
             // allowed inside nested class constructors declared in the
             // body (e.g. `pdfErrors` declares its error hierarchy with
-            // `this.name = …`) — those `this` bindings refer to the
+            // `this.code = …`) — those `this` bindings refer to the
             // class instance, not to the descriptor, and are safe.
             // Strip class bodies before checking.
-            const stripped = s.replace(
-                /class\s+\w+(?:\s+extends\s+\w+)?\s*\{[\s\S]*?\n\s*\}/g, ''
-            );
-            expect(stripped).not.toContain('this.');
+            expect(stripClassBodies(s)).not.toContain('this.');
         }
+    });
+
+    test('the class-body strip matches braces (non-vacuity)', () => {
+        const src = 'factory() { class A extends Error { constructor() {'
+            + ' Object.defineProperty(this, "name", {\n value: 1,\n });\n this.code = 2; } }'
+            + ' return { A }; }';
+        expect(stripClassBodies(src)).toBe('factory() {  return { A }; }');
+        expect(stripClassBodies(src + ' function f() { this.x = 1; }')).toContain('this.');
     });
 });

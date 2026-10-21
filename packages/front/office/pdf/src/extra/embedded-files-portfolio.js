@@ -98,6 +98,9 @@ export const pdfEmbeddedFilesPortfolio = {
             }
             const fields = {};
             for (const [k, v] of Object.entries(schemaDict.entries)) {
+                // The optional /Type /CollectionSchema (ISO 32000-2 Table 155)
+                // names the dictionary; it is not a field definition.
+                if (k === 'Type' && isName(v)) continue;
                 fields[k] = typeSchemaField(k, v);
             }
             return { fields, raw: schemaDict };

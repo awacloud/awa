@@ -53,4 +53,4 @@ Scripts use **bun** by default, but **all tools also run under Node**:
 - **standalone**: `--min` via `esbuild.transform` under Node (otherwise `Bun.build`).
 - **aot / precompilation / codegen / audit**: `node:*` APIs only → Node-capable as-is.
 
-Under Node, the fw-private `tools/rendering/**` scripts target `index.js` explicitly (`node tools/rendering/<sub>/index.js`); the mutualized `fw-bundler`/`fw-codegen` tools run via their exported `runCli` entry points — the shipped form is `bun run prebuild:node` — or, inside the awa monorepo, its own task router. Full task table + prerequisites: [`../dev/runtime.md`](../dev/runtime.md).
+Under Node, the fw-private `tools/rendering/**` scripts target `index.js` explicitly (`node tools/rendering/<sub>/index.js`); the mutualized `fw-bundler`/`fw-codegen` tools run via their exported `runCli` entry points — the shipped form is `bun run prebuild:node` — or, inside the AWA monorepo, its own task router. Full task table + prerequisites: [`../dev/runtime.md`](../dev/runtime.md).

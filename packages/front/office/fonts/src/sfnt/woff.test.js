@@ -146,4 +146,28 @@ describe('fontWoff', () => {
         const noZlibApi = fontWoff.factory(errs, shared, rdr, wtr, tg, null);
         expect(() => noZlibApi.decodeWoff1(woff, {})).toThrow(ContractError);
     });
+
+    test('a corrupt zlib table body throws the typed fonts/woff1-bad-inflate, the decoder error as cause', () => {
+        const { woff } = buildWoff1Compressed();
+        const start = parseWoff1Header(woff).directory[0].offset;
+        for (const k of [0, 2]) {
+            const bad = woff.slice();
+            bad[start + k] ^= 0xff;
+            let err;
+            try { decodeWoff1(bad, { zlib: zlibMod }); } catch (e) { err = e; }
+            expect(err).toBeInstanceOf(ParseError);
+            expect(err.code).toBe('fonts/woff1-bad-inflate');
+            expect(err.context).toEqual({ tag: 'zzzz' });
+            expect(err.cause).toBeInstanceOf(Error);
+            expect(err.cause).not.toBeInstanceOf(ParseError);
+        }
+    });
+
+    test('a typed font error thrown by an injected decoder passes through unchanged', () => {
+        const { woff } = buildWoff1Compressed();
+        const own = new ParseError('fonts/x-test', 'stand-in');
+        let err;
+        try { decodeWoff1(woff, { zlib: { unzlibSync() { throw own; } } }); } catch (e) { err = e; }
+        expect(err).toBe(own);
+    });
 });

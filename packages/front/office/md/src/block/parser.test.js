@@ -244,3 +244,18 @@ describe('blockParser — Empty / edge cases', () => {
         expect(() => parse(123)).toThrow();
     });
 });
+
+describe('blockParser — U+0000 (CommonMark 2.3, insecure characters)', () => {
+    test('every NUL is replaced with U+FFFD, positions unchanged', () => {
+        const nul = parse('```\na\u0000b\n```\n\n    c\u0000\n').document;
+        const fffd = parse('```\na�b\n```\n\n    c�\n').document;
+        expect(nul.firstChild.literal).toBe('a�b\n');
+        expect(nul.lastChild.literal).toBe('c�\n');
+        expect(nul.firstChild.sourcepos).toEqual(fffd.firstChild.sourcepos);
+        expect(nul.lastChild.sourcepos).toEqual(fffd.lastChild.sourcepos);
+    });
+
+    test('an HTML block keeps no NUL', () => {
+        expect(parse('<div>\u0000</div>\n').document.firstChild.literal).toBe('<div>�</div>');
+    });
+});

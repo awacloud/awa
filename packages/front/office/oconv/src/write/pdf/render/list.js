@@ -93,6 +93,17 @@
  * A renderer NEVER edits `../../ir-to-pdf.js`: `render` and `flowChildren`
  * are defined there once, for all four kinds.
  *
+ * ## GFM task markers
+ *
+ * A task item (`listItem.escapes.md.task`, set by the md reader) gets a
+ * leading `☐ ` (U+2610, unchecked) or `☒ ` (U+2612, checked) run in its
+ * first paragraph — only when `ctx.measurer.covers` says the regular face
+ * draws the glyph. Otherwise (the Standard 14 faces are WinAnsi and carry
+ * neither; a measurer without `covers`; a first block that is not a
+ * paragraph) the item is drawn without it and the renderer returns
+ * `{code: 'list/task-marker-dropped', detail: '[x]' | '[ ]'}` — never a
+ * `.notdef` / `?` in its place.
+ *
  * Capture-free (`fw/no-factory-capture`), worker-safe.
  *
  * @module oconv/write/pdf/render/list
@@ -195,6 +206,38 @@ export const oconvPdfRenderList = {
             if (depth <= 1) return `${n}.`;
             if (depth === 2) return `${toAlpha(n)}.`;
             return `${toRoman(n)}.`;
+        }
+
+        /**
+         * The blocks one item flows, a GFM task item's marker
+         * (`escapes.md.task`) drawn as a leading glyph run of its first
+         * paragraph when the regular face covers it; otherwise a
+         * `list/task-marker-dropped` loss is pushed to `losses`. The IR is
+         * not mutated.
+         *
+         * @param {object} li `listItem` node.
+         * @param {object} measurer `ctx.measurer`.
+         * @param {object[]} losses Sink.
+         * @returns {object[]}
+         */
+        function itemBlocks(li, measurer, losses) {
+            const glyphs = { unchecked: '☐', checked: '☒' };
+            const blocks = li.children || [];
+            const task = li.escapes && li.escapes.md && li.escapes.md.task;
+            if (!Object.hasOwn(glyphs, task)) return blocks;
+            const [first, ...rest] = blocks;
+            const drawable = !!first && first.kind === 'paragraph'
+                && typeof measurer.covers === 'function'
+                && measurer.covers(glyphs[task], 'regular') === true;
+            if (!drawable) {
+                losses.push({ code: 'list/task-marker-dropped', detail: task === 'checked' ? '[x]' : '[ ]' });
+                return blocks;
+            }
+            const glyph = {
+                kind: 'run', text: glyphs[task] + ' ',
+                bold: false, italic: false, strike: false, code: false, link: null
+            };
+            return [{ ...first, children: [glyph, ...(first.children || [])] }, ...rest];
         }
 
         /**
@@ -309,6 +352,7 @@ export const oconvPdfRenderList = {
                 const colRight = layout.margin + (Number.isFinite(ctx.indent) ? ctx.indent : 0) + MARKER_COLUMN;
 
                 const items = [];
+                const losses = [];
                 let runningY = 0;
 
                 listItems.forEach((li, i) => {
@@ -316,7 +360,7 @@ export const oconvPdfRenderList = {
                     const marker = markerFor(ordered, depth, i + 1);
                     const markerWidth = ctx.measurer.widthOf(marker, 'regular', sizePt);
 
-                    const flowed = ctx.flowChildren(li.children || [], {
+                    const flowed = ctx.flowChildren(itemBlocks(li, ctx.measurer, losses), {
                         indentDelta: INDENT_STEP, ruleX: null
                     }) || { blocks: [] };
                     // Placed into a SEPARATE sink first (never `items`
@@ -356,7 +400,7 @@ export const oconvPdfRenderList = {
                     };
                 }
 
-                return { items, losses: [], height: runningY };
+                return { items, losses, height: runningY };
             } finally {
                 depth -= 1;
             }

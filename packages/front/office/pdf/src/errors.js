@@ -57,7 +57,11 @@ export const pdfErrors = {
         class PdfError extends Error {
             constructor(code, message, opts) {
                 super(message);
-                this.name = new.target.name;
+                // Error.prototype is frozen under the fw sanity layer: assigning the
+                // inherited `name` would throw, so define it as an own property.
+                Object.defineProperty(this, 'name', {
+                    value: new.target.name, writable: true, enumerable: true, configurable: true,
+                });
                 this.code = code;
                 if (opts && opts.context) this.context = opts.context;
                 if (opts && opts.cause)   this.cause = opts.cause;

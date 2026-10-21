@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) 2026 AwaCloud SAS
+ * Author: Matthieu Bouilloux
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Dual-licensed; see the NOTICE file for licensing and any additional terms.
+ */
+
+/* apps/services/viewer/src/styles/tokens.css — DERIVED COPY of apps/awaforge/assets/tokens.css (sha256 acd36fbdf3029af7a977b043751144ccb6a9003062398b0b430b338df4e64e10 at copy time). The awaforge token layer: the viewer's identity. Never edit here: re-copy from the source; src/styles/tokens.test.js pins equality. */
+/* apps/awaforge — token layer (sites-design W1, D5 / P2 dark-first). Custom properties ONLY;
+ * emitted FIRST. color-scheme lives in styles.css (LAST) — F1.
+ * Two rules, no more: `:root` (the dark default) and `:root` under the light preference.
+ * Every colour the design sheet paints is declared HERE; the AA pairs are gated by
+ * tests/chrome-contrast.test.js. */
+:root {
+    /* dark scheme — the default (P2) */
+    --af-bg: #0f1720;
+    --af-fg: #e6edf3;
+    --af-muted: #9fb3c8;
+    --af-accent: #b3dfef;      /* the awa sky, a P1 palette member */
+    --af-border: #003462;      /* awa navy-2 */
+    --af-code-bg: #00263D;     /* awa navy */
+    --af-code-fg: #e6edf3;
+    --af-surface: #16222e;     /* cards, table heads, callouts */
+    --af-chrome-bg: #0a1118;   /* header band + footer band */
+    --af-rule: #22364a;        /* hairlines inside surfaces */
+    --af-shadow: rgba(0, 0, 0, 0.45);
+
+    /* the hero band is awa navy in BOTH schemes — the family anchor shared with awacloud */
+    --af-hero-bg: #00263D;
+    --af-hero-bg-2: #003462;
+    --af-hero-fg: #ffffff;
+    --af-hero-sub: #b3dfef;
+    --af-hero-grid: rgba(179, 223, 239, 0.07);
+    --af-hero-cta-bg: #b3dfef;
+    --af-hero-cta-fg: #00263D;
+    /* the header band: text on --af-chrome-bg */
+    --af-chrome-fg: #ffffff;
+    --af-chrome-muted: #b3dfef;
+
+    --fw-color-bg: var(--af-bg);
+    --fw-color-fg: var(--af-fg);
+    --fw-color-muted: var(--af-muted);
+    --fw-color-accent: var(--af-accent);
+    --fw-color-border: var(--af-border);
+    --fw-space-1: 0.25rem;
+    --fw-space-2: 0.5rem;
+    --fw-space-3: 0.75rem;
+    --fw-space-4: 1rem;
+    --fw-space-6: 1.5rem;
+    --fw-space-8: 2rem;
+    --fw-space-12: 3rem;
+    --fw-space-16: 4rem;
+    --fw-space-24: 6rem;
+    --fw-radius-sm: 0.125rem;
+    --fw-radius-md: 0.375rem;
+    --fw-radius-lg: 0.75rem;
+
+    /* type scale (rem) — the awacloud steps, shared by the family */
+    --af-step--1: 0.875rem;
+    --af-step-0: 1rem;
+    --af-step-1: 1.125rem;
+    --af-step-2: 1.375rem;
+    --af-step-3: 1.75rem;
+    --af-step-4: 2.25rem;
+    --af-step-5: 3.5rem;
+
+    --af-container: 75rem;     /* the outer spine, 1200px */
+    --af-measure: 44rem;       /* prose */
+    --af-measure-wide: 72rem;  /* code-forward blocks */
+    --af-header-h: 4rem;
+    --af-mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+    --af-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        --af-bg: #ffffff;
+        --af-fg: #212529;      /* awa ink */
+        --af-muted: #003462;   /* awa navy-2 */
+        --af-accent: #0078b3;  /* awa blue */
+        --af-border: #b3dfef;  /* awa sky */
+        --af-code-bg: #eef6fa;
+        --af-code-fg: #00263D;
+        --af-surface: #f4f9fc;
+        --af-chrome-bg: #00263D;   /* awa navy — the awacloud chrome */
+        --af-rule: #d5e6ee;
+        --af-shadow: rgba(0, 38, 61, 0.12);
+    }
+}

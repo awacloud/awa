@@ -33,9 +33,9 @@ it directly is for measuring/breaking a run of inline text in isolation.
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `tokenize` | `(inlines: object[], measurer: object, sizePt: number, styleOverride?: string) => Token[]` | style-tagged word/space tokens | — |
+| `tokenize` | `(inlines: object[], measurer: object, sizePt: number, styleOverride?: string \| (run => string)) => Token[]` | style-tagged word/space tokens | — |
 | `greedyBreak` | `(tokens: Token[], columnPt: number) => {lines: Line[], overflowLines: number}` | broken lines | — |
-| `breakInlines` | `(inlines: object[], measurer: object, sizePt: number, columnPt: number, styleOverride?: string) => {lines: Line[], losses: Loss[]}` | tokenize + break + loss recording: `layout/line-overflow` (one per overflowing line), then `inline/strike-dropped` and `inline/code-emphasis-dropped` (one each per call, when present) | — |
+| `breakInlines` | `(inlines: object[], measurer: object, sizePt: number, columnPt: number, styleOverride?: string \| (run => string)) => {lines: Line[], losses: Loss[]}` | tokenize + break + loss recording: `layout/line-overflow` (one per overflowing line), then `inline/strike-dropped` and `inline/code-emphasis-dropped` (one each per call, when present) | — |
 | `lineText` | `(line: Line) => string` | plain-text rendering of one line | — |
 
 ## Examples
@@ -85,11 +85,17 @@ and 11pt body size, first line `'The quick'`, `losses === []`.
   implementations are pinned identical by each module's own test suite.
 - **Latin script only (v1)** — no bidi, no CJK breaking; out of scope
   for this module and recorded nowhere.
-- `tokenize`'s `styleOverride` forces every token's style class regardless
-  of the run's own flags (e.g. `'code'` for a fenced code block passed
-  through this path, `'italic'` for a placeholder image caption) — used by
-  [`pdf/render/table`](./render/table.md)'s header-cell measurement and
-  [`pdf/render/image`](./render/image.md)'s placeholder path.
+- `tokenize`'s `styleOverride`, a string, forces every token's style
+  class regardless of the run's own flags (e.g. `'code'` for a fenced code
+  block passed through this path, `'italic'` for a placeholder image
+  caption — [`pdf/render/image`](./render/image.md)'s placeholder path); a
+  FUNCTION maps each run to its own class (a falsy result falls back to the
+  run's own) — [`pdf/render/table`](./render/table.md)'s header cells:
+  bold, italic runs bold italic, inline code in its monospace face.
+- **Fit tolerance**: a word fits when the line plus the word is within
+  1e-6 pt of the column, and a line is flagged `overflow` (one
+  `layout/line-overflow`) only beyond that — widths are float sums, so a
+  token measured equal to its column never records a spurious overflow.
 - `greedyBreak`'s FIRST word of a line always goes on, even alone
   overflowing — the typesetter refuses hyphenation, so an unbreakable token has nowhere
   else to go.

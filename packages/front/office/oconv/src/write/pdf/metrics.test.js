@@ -262,6 +262,14 @@ describe('createMeasurer — Standard 14 route (D-A default)', () => {
     test('the measurer is frozen', () => {
         expect(Object.isFrozen(s14)).toBe(true);
     });
+
+    test('covers: a WinAnsi character is drawable, a ballot box is not', () => {
+        expect(s14.covers(REFERENCE, 'regular')).toBe(true);
+        expect(s14.covers('• €', 'bold')).toBe(true);
+        expect(s14.covers('', 'regular')).toBe(true);
+        expect(s14.covers('☐', 'regular')).toBe(false);
+        expect(s14.covers('a☒', 'code')).toBe(false);
+    });
 });
 
 describe('createMeasurer — Standard 14 per-variant metrics (BL-954 gate)', () => {
@@ -351,6 +359,17 @@ describe('createMeasurer — embedded route on caller-supplied bytes (D-A)', () 
         const font = mixed.face('regular').font;
         const notdef = font.advanceWidth(0) * REFERENCE_SIZE / font.unitsPerEm;
         expect(mixed.widthOf('中', 'regular', REFERENCE_SIZE)).toBeCloseTo(notdef, 9);
+    });
+
+    test('covers: true iff the face maps every code point to a real glyph', () => {
+        const font = mixed.face('regular').font;
+        const drawn = [...REFERENCE].filter((c) => (font.glyphIndexForCodePoint(c.codePointAt(0)) || 0) > 0);
+        expect(drawn.length).toBeGreaterThan(0);
+        expect(mixed.covers(drawn.join(''), 'regular')).toBe(true);
+        expect(mixed.covers(drawn[0] + '中', 'regular')).toBe(false);
+        expect(mixed.covers('☐', 'regular')).toBe(false);
+        // The Standard 14 `code` class of the mixed route answers by WinAnsi.
+        expect(mixed.covers('•', 'code')).toBe(true);
     });
 
     test('supplying every class, `mono` included, is the pure `embedded` route', () => {

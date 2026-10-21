@@ -88,6 +88,18 @@ to `ctx.renderImage(run)` and places the returned node at the run's position.
 inside a `text:p` is not typed: it stays in the paragraph's
 `_extras.children`. `textOf` gives an image run no text.
 
+### Frame runs (opt-in)
+
+When the read `ctx` carries `parseFrame` — `odt.read(bytes, { framesInRuns:
+true })` passes the [`drawFrame`](../draw/frame.md) parser — every
+`draw:frame` of a paragraph, heading, span or link body becomes a
+`{ type: 'frame', ...drawFrame model }` run at its place in the text instead
+of staying in `_extras.children` (or, in a span, a raw element entry). On
+write, a frame run goes to `ctx.renderFrame(run)` at its position (`odt`
+provides the sink; without one it emits nothing). `textOf` reads a frame run
+as it reads the raw frame it replaces: no text at paragraph or link level,
+its character data inside a span.
+
 ### Emphasis flags
 
 `bold` / `italic` / `strike` / `monospace` are booleans, meaningful on `span`
@@ -133,6 +145,8 @@ The `ctx` members this module calls:
 | `ctx.textFlags(styleName)` | read | span emphasis resolution (table above) |
 | `ctx.textStyle(flags)` | write | allocating the automatic style of a flagged span without `styleName` |
 | `ctx.renderImage(run)` | write | rendering an `image` run; the returned node is placed at the run's position |
+| `ctx.parseFrame(el)` | read | typing a `draw:frame` as a `frame` run at its place (opt-in, see [Frame runs](#frame-runs-opt-in)) |
+| `ctx.renderFrame(run)` | write | rendering a `frame` run at its position |
 
 Each member is optional: a `ctx` that lacks it degrades exactly as a call
 without `ctx` does.
@@ -183,7 +197,7 @@ odt.write({
 
 ## Notes
 
-- Unrecognised children of the paragraph itself (`text:bookmark-start`, fields, frames, etc.) go into `_extras.children` and are re-emitted after the runs on write. Inside a `text:span` they keep their position instead (see [Span runs](#span-runs)).
+- Unrecognised children of the paragraph itself (`text:bookmark-start`, fields, frames, etc.) go into `_extras.children` and are re-emitted after the runs on write. Inside a `text:span` they keep their position instead (see [Span runs](#span-runs)). Frames keep their position everywhere with a `ctx.parseFrame` (see [Frame runs](#frame-runs-opt-in)).
 - [`textBookmarks`](./bookmarks.md) and [`textFields`](./fields.md) type such elements on demand; the paragraph parser does not call them.
 - **Standalone-render degrade** — emphasis flags with **no** `ctx` render a
   plain unstyled `<text:span>`, text intact. A standalone render (the `odp` /

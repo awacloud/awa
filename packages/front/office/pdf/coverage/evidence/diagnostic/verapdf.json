@@ -1,0 +1,2383 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "verapdf",
+    "version": "verapdf@1.30.3",
+    "source": "https://github.com/veraPDF/veraPDF-library/tree/df51e09dece1d6c11c360edd3b8b0635ef966c47"
+  },
+  "oracle": {
+    "image": "awa-oracle-verapdf:1.30.3",
+    "imageId": "sha256:a590632ce3fca5658b30c7173b39a2764e6dd653a719dac51c02ef20f57b3a89",
+    "version": "veraPDF 1.30.3\nBuilt: Wed Oct 07 13:52:00 GMT 2026\nDeveloped and released by the veraPDF Consortium.\nFunded by the PREFORMA project.\nReleased under the GNU General Public License v3\nand the Mozilla Public License v2 or later."
+  },
+  "criterion": "DIAGNOSTIC, no score: veraPDF 1.30.3 checks each document against PDF/A-4, PDF/UA-1, PDF/UA-2 and PDF/A-2b, which the writers do not claim; every failed rule and every processing exception is recorded by flavour, as the input of the post-merge PDF/A and PDF/UA work; documents: 10 (10 written, 0 round trips)",
+  "documents": [
+    {
+      "file": "pdf--builder-blank.pdf",
+      "kind": "written",
+      "sha256": "af98be7484924d6a23a66d1f271ac3485fce3c2f9326579a3fcb3b20536f1f4b",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        }
+      ]
+    },
+    {
+      "file": "pdf--builder-standard-14.pdf",
+      "kind": "written",
+      "sha256": "ed03ebaa6a0910eaec6e2da20071b9bdb83f6bda0d5ff73055fcfd51d4eb3906",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 3,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "5",
+          "failedChecks": 1,
+          "text": "If a document information dictionary is present, it shall only contain a ModDate entry"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.10.4.1",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "4",
+          "failedChecks": 1,
+          "text": "The Info key shall not be present in the trailer dictionary of PDF/A-4 conforming files unless there exists a PieceInfo entry in the document catalog dictionary"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.2",
+          "testNumber": "34",
+          "failedChecks": 3,
+          "text": "Natural language for text in page content shall be determined"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 3,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.21.4.1",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.5.5.1",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 3,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.11.4.1",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        }
+      ]
+    },
+    {
+      "file": "pdf--builder-standard-14-metrics.pdf",
+      "kind": "written",
+      "sha256": "a043c3e4e283af3485f9e466c3d28873de271f223524b149ec2ec7fe1fc95a0c",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 3,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.10.4.1",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 3,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.21.7",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "The Font dictionary of all fonts shall define the map of all used character codes to Unicode values, either via a ToUnicode entry, or other mechanisms as defined in ISO 14289-1, 7.21.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.21.4.1",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.2",
+          "testNumber": "34",
+          "failedChecks": 3,
+          "text": "Natural language for text in page content shall be determined"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.5.8",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "The Font dictionary of all fonts shall define the map of all used character codes to Unicode values, either via a ToUnicode entry, or other mechanisms as defined in ISO 14289-2, 8.4.5.8"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.5.5.1",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 3,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.11.4.1",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        }
+      ]
+    },
+    {
+      "file": "pdf--builder-embedded.pdf",
+      "kind": "written",
+      "sha256": "bbccbad482ef77ff22b0ec85fdd1e88e9f8b79e05ad65577e1c538ad908dc083",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 2,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 2,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.2",
+          "testNumber": "34",
+          "failedChecks": 2,
+          "text": "Natural language for text in page content shall be determined"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 2,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        }
+      ]
+    },
+    {
+      "file": "pdf--builder-image.pdf",
+      "kind": "written",
+      "sha256": "540992de10926c4548a4e7176ff4b6d2b99777ecab6c02f65252a433ee420acb",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "DeviceRGB shall only be used if a device independent DefaultRGB colour space has been set when the DeviceRGB colour space is used or if the current transparency blending space, when the DeviceRGB colour space is used, is a device independent RGB-based colour space or the current PDF/A OutputIntent, when the DeviceRGB colour space is used, contains an 'RGB ' destination profile"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.9",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "If the document does not contain a PDF/A output intent, then all pages that contain transparency shall either have a page-level PDF/A output intent or the page dictionary shall include the Group key, and the attribute dictionary that forms the value of that Group key shall include a CS entry whose value shall be used as the default blending colour space"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 1,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.10",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "If the document does not contain a PDF/A OutputIntent, then all Page objects that contain transparency shall include the Group key, and the attribute dictionary that forms the value of that Group key shall include a CS entry whose value shall be used as the default blending colour space"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "DeviceRGB shall only be used if a device independent DefaultRGB colour space has been set when the DeviceRGB colour space is used, or if the file has a PDF/A OutputIntent that contains an RGB destination profile"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        }
+      ]
+    },
+    {
+      "file": "pdf--write-standard-14.pdf",
+      "kind": "written",
+      "sha256": "ed03ebaa6a0910eaec6e2da20071b9bdb83f6bda0d5ff73055fcfd51d4eb3906",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "4",
+          "failedChecks": 1,
+          "text": "The Info key shall not be present in the trailer dictionary of PDF/A-4 conforming files unless there exists a PieceInfo entry in the document catalog dictionary"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 3,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "5",
+          "failedChecks": 1,
+          "text": "If a document information dictionary is present, it shall only contain a ModDate entry"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.10.4.1",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.21.4.1",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 3,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.2",
+          "testNumber": "34",
+          "failedChecks": 3,
+          "text": "Natural language for text in page content shall be determined"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 3,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.5.5.1",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 3,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.11.4.1",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        }
+      ]
+    },
+    {
+      "file": "pdf--write-embedded.pdf",
+      "kind": "written",
+      "sha256": "bbccbad482ef77ff22b0ec85fdd1e88e9f8b79e05ad65577e1c538ad908dc083",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 2,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 2,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.2",
+          "testNumber": "34",
+          "failedChecks": 2,
+          "text": "Natural language for text in page content shall be determined"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 2,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 2,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        }
+      ]
+    },
+    {
+      "file": "oconv--oconv-standard-14.pdf",
+      "kind": "written",
+      "sha256": "77206b6ff73d4c6eaa92a4d9a6165b3305fb34dd488af1514993a5b636c4cd32",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 32,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.10.4.1",
+          "testNumber": "1",
+          "failedChecks": 4,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "4",
+          "failedChecks": 1,
+          "text": "The Info key shall not be present in the trailer dictionary of PDF/A-4 conforming files unless there exists a PieceInfo entry in the document catalog dictionary"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "5",
+          "failedChecks": 1,
+          "text": "If a document information dictionary is present, it shall only contain a ModDate entry"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.21.4.1",
+          "testNumber": "1",
+          "failedChecks": 4,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.2",
+          "testNumber": "34",
+          "failedChecks": 27,
+          "text": "Natural language for text in page content shall be determined"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 32,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 32,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.5.5.1",
+          "testNumber": "1",
+          "failedChecks": 4,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 32,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.11.4.1",
+          "testNumber": "1",
+          "failedChecks": 4,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        }
+      ]
+    },
+    {
+      "file": "oconv--oconv-faces.pdf",
+      "kind": "written",
+      "sha256": "7b36f96f338085f09523998bb1979d21899b2697d5821f75f96cab1a9310e658",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 32,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "4",
+          "failedChecks": 1,
+          "text": "The Info key shall not be present in the trailer dictionary of PDF/A-4 conforming files unless there exists a PieceInfo entry in the document catalog dictionary"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "5",
+          "failedChecks": 1,
+          "text": "If a document information dictionary is present, it shall only contain a ModDate entry"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 32,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.2",
+          "testNumber": "34",
+          "failedChecks": 27,
+          "text": "Natural language for text in page content shall be determined"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 32,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 32,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        }
+      ]
+    },
+    {
+      "file": "oconv--oconv-images.pdf",
+      "kind": "written",
+      "sha256": "6cd80aebb6280e0d6c7b3a6efbe1e6cd5ec1b1b19b5a13a4a851dfec34ca8fca",
+      "errors": [
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "4",
+          "failedChecks": 1,
+          "text": "The Info key shall not be present in the trailer dictionary of PDF/A-4 conforming files unless there exists a PieceInfo entry in the document catalog dictionary"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.1.3",
+          "testNumber": "5",
+          "failedChecks": 1,
+          "text": "If a document information dictionary is present, it shall only contain a ModDate entry"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.7.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.10.4.1",
+          "testNumber": "1",
+          "failedChecks": 4,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "4",
+          "kind": "rule",
+          "specification": "ISO 19005-4:2020",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 33,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "8",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "10",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.21.4.1",
+          "testNumber": "1",
+          "failedChecks": 4,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "11",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.1",
+          "testNumber": "3",
+          "failedChecks": 33,
+          "text": "Content shall be marked as Artifact or tagged as real content"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "6.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "ua1",
+          "kind": "rule",
+          "specification": "ISO 14289-1:2014",
+          "clause": "7.2",
+          "testNumber": "34",
+          "failedChecks": 26,
+          "text": "Natural language for text in page content shall be determined"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.1",
+          "testNumber": "2",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.2",
+          "testNumber": "1",
+          "failedChecks": 33,
+          "text": "Content that is not considered real shall be an artifact"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.11.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.5.5.1",
+          "testNumber": "1",
+          "failedChecks": 4,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "6.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true"
+        },
+        {
+          "flavour": "ua2",
+          "kind": "rule",
+          "specification": "ISO 14289-2:2024",
+          "clause": "8.4.4",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.1.2",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.4.3",
+          "testNumber": "4",
+          "failedChecks": 33,
+          "text": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.6.2.1",
+          "testNumber": "1",
+          "failedChecks": 1,
+          "text": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML"
+        },
+        {
+          "flavour": "2b",
+          "kind": "rule",
+          "specification": "ISO 19005-2:2011",
+          "clause": "6.2.11.4.1",
+          "testNumber": "1",
+          "failedChecks": 4,
+          "text": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9"
+        }
+      ]
+    }
+  ],
+  "diagnostic": true,
+  "date": "2026-10-15",
+  "commit": "377967f32ab23fca62dca2981f80212cd9303169",
+  "summary": [
+    {
+      "flavour": "4",
+      "documents": 10,
+      "conforming": 0,
+      "classes": [
+        {
+          "key": "ISO 19005-4:2020 6.7.2.1-1",
+          "description": "The document catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-4:2020 6.2.4.3-4",
+          "description": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is in effect",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-4:2020 6.1.3-4",
+          "description": "The Info key shall not be present in the trailer dictionary of PDF/A-4 conforming files unless there exists a PieceInfo entry in the document catalog dictionary",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--write-standard-14.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-4:2020 6.1.3-5",
+          "description": "If a document information dictionary is present, it shall only contain a ModDate entry",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--write-standard-14.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-4:2020 6.2.10.4.1-1",
+          "description": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--write-standard-14.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-4:2020 6.2.4.3-2",
+          "description": "DeviceRGB shall only be used if a device independent DefaultRGB colour space has been set when the DeviceRGB colour space is used or if the current transparency blending space, when the DeviceRGB colour space is used, is a device independent RGB-based colour space or the current PDF/A OutputIntent, when the DeviceRGB colour space is used, contains an 'RGB ' destination profile",
+          "documents": [
+            "pdf--builder-image.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-4:2020 6.2.9-2",
+          "description": "If the document does not contain a PDF/A output intent, then all pages that contain transparency shall either have a page-level PDF/A output intent or the page dictionary shall include the Group key, and the attribute dictionary that forms the value of that Group key shall include a CS entry whose value shall be used as the default blending colour space",
+          "documents": [
+            "pdf--builder-image.pdf"
+          ]
+        }
+      ],
+      "exceptions": []
+    },
+    {
+      "flavour": "ua1",
+      "documents": 10,
+      "conforming": 0,
+      "classes": [
+        {
+          "key": "ISO 14289-1:2014 6.1-1",
+          "description": "The file header shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-1:2014 6.2-1",
+          "description": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-1:2014 7.1-10",
+          "description": "The document catalog dictionary shall include a ViewerPreferences dictionary containing a DisplayDocTitle key, whose value shall be true",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-1:2014 7.1-11",
+          "description": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-1:2008, 14.7",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-1:2014 7.1-8",
+          "description": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-1:2014 7.1-3",
+          "description": "Content shall be marked as Artifact or tagged as real content",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-1:2014 7.2-34",
+          "description": "Natural language for text in page content shall be determined",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-1:2014 7.21.4.1-1",
+          "description": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--write-standard-14.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-1:2014 7.21.7-1",
+          "description": "The Font dictionary of all fonts shall define the map of all used character codes to Unicode values, either via a ToUnicode entry, or other mechanisms as defined in ISO 14289-1, 7.21.7",
+          "documents": [
+            "pdf--builder-standard-14-metrics.pdf"
+          ]
+        }
+      ],
+      "exceptions": []
+    },
+    {
+      "flavour": "ua2",
+      "documents": 10,
+      "conforming": 0,
+      "classes": [
+        {
+          "key": "ISO 14289-2:2024 6.2-1",
+          "description": "The document catalog dictionary shall include a MarkInfo dictionary containing an entry, Marked, whose value shall be true",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-2:2024 8.11.1-2",
+          "description": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-2:2020, 14.3. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-2:2024 8.11.2-1",
+          "description": "The ViewerPreferences dictionary of the document catalog dictionary shall be present and shall contain at least the DisplayDocTitle key with a value of true, as described in ISO 32000-2:2020, Table 147",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-2:2024 8.2.1-1",
+          "description": "The logical structure of the conforming file shall be described by a structure hierarchy rooted in the StructTreeRoot entry of the document catalog dictionary, as described in ISO 32000-2:2020, 14.7",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-2:2024 8.4.4-1",
+          "description": "The default natural language for content and text strings shall be specified using the Lang entry, with a non-empty value, in the catalog dictionary",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-2:2024 8.2.2-1",
+          "description": "Content that is not considered real shall be an artifact",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-2:2024 8.4.5.5.1-1",
+          "description": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-2:2020, 9.9",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--write-standard-14.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 14289-2:2024 8.4.5.8-1",
+          "description": "The Font dictionary of all fonts shall define the map of all used character codes to Unicode values, either via a ToUnicode entry, or other mechanisms as defined in ISO 14289-2, 8.4.5.8",
+          "documents": [
+            "pdf--builder-standard-14-metrics.pdf"
+          ]
+        }
+      ],
+      "exceptions": []
+    },
+    {
+      "flavour": "2b",
+      "documents": 10,
+      "conforming": 0,
+      "classes": [
+        {
+          "key": "ISO 19005-2:2011 6.1.2-1",
+          "description": "The file header shall begin at byte zero and shall consist of \"%PDF-1.n\" followed by a single EOL marker, where 'n' is a single digit number between 0 (30h) and 7 (37h)",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-2:2011 6.6.2.1-1",
+          "description": "The Catalog dictionary of a conforming file shall contain the Metadata key whose value is a metadata stream as defined in ISO 32000-1:2008, 14.3.2. The metadata stream dictionary shall contain entry Type with value /Metadata and entry Subtype with value /XML",
+          "documents": [
+            "pdf--builder-blank.pdf",
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--builder-image.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-2:2011 6.2.4.3-4",
+          "description": "DeviceGray shall only be used if a device independent DefaultGray colour space has been set when the DeviceGray colour space is used, or if a PDF/A OutputIntent is present",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--builder-embedded.pdf",
+            "pdf--write-standard-14.pdf",
+            "pdf--write-embedded.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-faces.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-2:2011 6.2.11.4.1-1",
+          "description": "The font programs for all fonts used for rendering within a conforming file shall be embedded within that file, as defined in ISO 32000-1:2008, 9.9",
+          "documents": [
+            "pdf--builder-standard-14.pdf",
+            "pdf--builder-standard-14-metrics.pdf",
+            "pdf--write-standard-14.pdf",
+            "oconv--oconv-standard-14.pdf",
+            "oconv--oconv-images.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-2:2011 6.2.10-2",
+          "description": "If the document does not contain a PDF/A OutputIntent, then all Page objects that contain transparency shall include the Group key, and the attribute dictionary that forms the value of that Group key shall include a CS entry whose value shall be used as the default blending colour space",
+          "documents": [
+            "pdf--builder-image.pdf"
+          ]
+        },
+        {
+          "key": "ISO 19005-2:2011 6.2.4.3-2",
+          "description": "DeviceRGB shall only be used if a device independent DefaultRGB colour space has been set when the DeviceRGB colour space is used, or if the file has a PDF/A OutputIntent that contains an RGB destination profile",
+          "documents": [
+            "pdf--builder-image.pdf"
+          ]
+        }
+      ],
+      "exceptions": []
+    }
+  ]
+}

@@ -11,10 +11,15 @@
  *   - Display math : `$$x$$` (double dollar)
  *   - Fenced display math : ``` ```math … ``` ```
  *
- * Strategy : post-parse AST pass.
+ * Strategy : the extension declares `inlineSyntax: ['math']`, so an `md`
+ * instance it is installed on has its inline parser claim every `$...$` /
+ * `$$...$$` span first (code-span precedence: `$H~2~O$` is no
+ * strikethrough, `$a*b*c$` no emphasis), producing `math_inline` /
+ * `math_block` nodes whose `literal` is the LaTeX source verbatim. Then a
+ * post-parse AST pass:
  *   - Walk `text` nodes, split on `$$...$$` and `$...$` boundaries,
  *     producing `math_inline` / `math_block` nodes carrying `literal`
- *     = LaTeX source.
+ *     = LaTeX source (the path of an AST parsed without the claim).
  *   - Walk `code_block` nodes whose info string is `math` and replace
  *     them with a `math_block` node.
  *
@@ -99,7 +104,11 @@ export const mdMath = {
             return runs;
         }
 
-        function expandMathInAst(root) {
+        // `opts.textSpans === false` skips the text-node split: an AST parsed
+        // with the inline claim (see the file overview) already holds its
+        // math nodes, and what `$` is left in its text is literal (an
+        // escaped `\$`, an unclosed `$`).
+        function expandMathInAst(root, opts) {
             const codeReplacements = [];
             for (const { node, entering } of walk(root)) {
                 if (!entering) continue;
@@ -108,7 +117,7 @@ export const mdMath = {
                     if (info === 'math') codeReplacements.push(node);
                 }
             }
-            const runs = collectTextRuns(root);
+            const runs = opts && opts.textSpans === false ? [] : collectTextRuns(root);
             for (const run of runs) {
                 const parts = splitMath(run.joined);
                 if (!parts) continue;
@@ -171,6 +180,7 @@ export const mdMath = {
 
         return {
             name: 'mdMath',
+            inlineSyntax: ['math'],
             splitMath,
             expandMathInAst,
             lowerMathToHtml,
@@ -179,7 +189,11 @@ export const mdMath = {
                 const originalRender = md.render;
                 md.parse = function (text) {
                     const ast = originalParse.call(md, text);
-                    expandMathInAst(ast);
+                    // Installed through `md.use`, the extension sits in
+                    // `md.extensions` and the core parse claimed the spans.
+                    const claimed = Array.isArray(md.extensions) && md.extensions.some(e =>
+                        e && Array.isArray(e.inlineSyntax) && e.inlineSyntax.includes('math'));
+                    expandMathInAst(ast, { textSpans: !claimed });
                     return ast;
                 };
                 md.render = function (ast, renderOpts) {

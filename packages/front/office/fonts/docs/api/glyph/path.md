@@ -51,7 +51,8 @@ const { Path, pathFromSimpleGlyph } = runtime.resolve('fontPath');
 
 - On-curve points are anchors.
 - Two consecutive off-curve points imply an anchor at their midpoint.
-- If a contour has no on-curve point at all, it starts at the midpoint of the last→first off-curve pair.
+- Each contour starts where FreeType starts it: on point 0 when that point is on-curve; else on the last point when that one is on-curve (the walk then covers points 0 … n−2); else on the midpoint of the last and first points (the walk covers every point). A contour with no on-curve point at all is the last case.
+- A contour that ends on an off-curve point closes with a quadratic curve through that point to the contour's own start.
 - Each contour is closed (`close`) after iteration.
 
 ## Examples

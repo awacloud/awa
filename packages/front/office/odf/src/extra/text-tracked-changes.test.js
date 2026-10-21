@@ -39,6 +39,18 @@ describe('textTrackedChanges — parse/render', () => {
         expect(parsed.regions[0].kind).toBe('insertion');
         expect(parsed.regions[0].change.info.creator).toBe('Alice');
     });
+    test('a region is written with xml:id and text:id, same value (ODF 1.2+); none without an id', () => {
+        const tc = {
+            type: 'tracked-changes',
+            regions: [
+                { type: 'changed-region', id: 'ct1', kind: 'insertion', change: { attrs: {}, body: [] } },
+                { type: 'changed-region', id: '', kind: 'insertion', change: { attrs: {}, body: [] } }
+            ]
+        };
+        const el = ext.renderTrackedChanges(tc);
+        expect(el.children.map((c) => c.attrs)).toEqual([{ 'xml:id': 'ct1', 'text:id': 'ct1' }, {}]);
+        expect(ext.parseTrackedChanges(el).regions.map((r) => r.id)).toEqual(['ct1', '']);
+    });
 });
 
 describe('textTrackedChanges — change marker hooks', () => {

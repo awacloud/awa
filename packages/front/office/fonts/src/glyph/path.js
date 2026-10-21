@@ -115,6 +115,10 @@ export const fontPath = {
          *  - on-curve points are anchors,
          *  - consecutive off-curve points imply a midpoint on-curve,
          *  - contours close back to their start.
+         *
+         * Each contour starts where FreeType starts it: on point 0 when it
+         * is on-curve, else on the last point when that one is on-curve,
+         * else on the midpoint of the last and first points.
          */
         function pathFromSimpleGlyph(glyph) {
             const path = new Path();
@@ -125,32 +129,27 @@ export const fontPath = {
                 pIdx = endPt + 1;
                 if (contour.length === 0) continue;
 
-                // Find first on-curve as start, else use midpoint of first 2 off-curves
-                let firstOn = contour.findIndex(p => p.onCurve);
-                if (firstOn < 0) {
-                    // All off-curve: start at midpoint of last and first
-                    const last = contour[contour.length - 1];
-                    const first = contour[0];
-                    const startX = (last.x + first.x) / 2;
-                    const startY = (last.y + first.y) / 2;
-                    path.moveTo(startX, startY);
-                    firstOn = -1;  // signal special handling
+                const first = contour[0];
+                const last = contour[contour.length - 1];
+                let startX, startY, ordered;
+                if (first.onCurve) {
+                    // Start on point 0, walk the others, close via the start.
+                    startX = first.x;
+                    startY = first.y;
+                    ordered = contour.slice(1);
+                } else if (last.onCurve) {
+                    // Start on the last point, walk the others in order.
+                    startX = last.x;
+                    startY = last.y;
+                    ordered = contour.slice(0, -1);
                 } else {
-                    const s = contour[firstOn];
-                    path.moveTo(s.x, s.y);
+                    // Start on the implied anchor between the last and first
+                    // points, walk every point.
+                    startX = (last.x + first.x) / 2;
+                    startY = (last.y + first.y) / 2;
+                    ordered = contour;
                 }
-
-                // Rotate so we start at firstOn (or at midpoint when firstOn = -1)
-                const startIdx = firstOn < 0 ? 0 : firstOn;
-                const ordered = [];
-                // When the start is an on-curve anchor we already moveTo'd to it ;
-                // iterate the remaining (length-1) points then close via the start.
-                // When firstOn = -1 (all off-curve) we start at the midpoint and
-                // iterate all `length` points before closing.
-                const iterCount = firstOn < 0 ? contour.length : contour.length - 1;
-                for (let i = 1; i <= iterCount; i++) {
-                    ordered.push(contour[(startIdx + i) % contour.length]);
-                }
+                path.moveTo(startX, startY);
 
                 let pendingControl = null;
                 for (const p of ordered) {
@@ -171,9 +170,8 @@ export const fontPath = {
                     }
                 }
                 if (pendingControl) {
-                    // Close contour through this control to start point
-                    const startCmd = path.commands.find(c => c.type === 'M');
-                    path.quadTo(pendingControl.x, pendingControl.y, startCmd.x, startCmd.y);
+                    // Close the contour through this control to ITS start point.
+                    path.quadTo(pendingControl.x, pendingControl.y, startX, startY);
                 }
                 path.close();
             }

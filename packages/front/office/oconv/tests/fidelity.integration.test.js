@@ -10,7 +10,7 @@
  * `tests/_fixtures/corpus/` and asserts:
  *
  *  1. **docx spike corpus** (`corpus/docx/*.docx`, first-party, byte-copied
- *     from `ai/plans/oconv/spikes/w0-core/corpus/docx/` — GAP-OOXML-4:
+ *     from `ai/archives/plans/oconv/spikes/w0-core/corpus/docx/` — GAP-OOXML-4:
  *     regeneration is not byte-identical, so these are copied, never
  *     regenerated) — `losses: []` / `lossy: false` on `docx-smoke.docx` and
  *     `docx-bulk.docx`, the W0-measured result. A regression on either is a
@@ -19,10 +19,10 @@
  *     with NO `word/numbering.xml` part at all (`unzip -l` confirmed — the
  *     spike's own corpus-gen never wrote one), so the FROZEN, delivered
  *     reader (task 02) correctly reports `list/numbering-unresolved` twice —
- *     this is GAP-OOXML-4's sibling gap GAP-OOXML-2 (`ai/plans/oconv/
+ *     this is GAP-OOXML-4's sibling gap GAP-OOXML-2 (`ai/archives/plans/oconv/
  *     spikes/w0-core/FINDINGS.md`), already documented, firing on this exact
  *     fixture. The W0 spike's own throwaway prototype reader recorded no
- *     loss taxonomy at all (`ai/plans/oconv/spikes/w0-core/prototype/
+ *     loss taxonomy at all (`ai/archives/plans/oconv/spikes/w0-core/prototype/
  *     docx-to-ir.js`'s `orderedNumIds` silently defaults unresolved numIds
  *     to bulleted, unlike the frozen production reader — see the
  *     `docx-structured.docx` test below for the full explanation) — so the
@@ -683,11 +683,14 @@ describe('fidelity — md -> pdf (F9 bounded typesetter, office/BATCH_33)', () =
     //   before: no image entry; `some(code === 'layout/image-dropped')` false
     //   after : one entry at index `5.i0`, `reason: 'no-bytes'`, `bytes: 0`
     //
-    // The other structural loss (`layout/line-overflow` on the 3-column
-    // table's "Center" header cell) is unchanged and real: with a 481.89 pt
-    // column split three ways minus cell padding, the unbreakable "Center"
-    // token's measured width lands (by floating-point epsilon) just over
-    // the cell's column width.
+    // The 3-column table's "Center" header token measures EQUAL to its cell
+    // column to within floating-point noise (34.837 vs 34.83699999999999):
+    // the typesetter's fit tolerance places it without the spurious
+    // `layout/line-overflow` this ledger used to pin.
+    //
+    // The two task checkboxes travel in the IR (`listItem.escapes.md`) and
+    // the Standard 14 faces cannot draw ☐ / ☒, so the LIST RENDERER records
+    // them (block `6`), after the reader's losses and the image.
     test('md-degrade.md — fromMd(pdf): 1 page, EXACT measured loss ledger (the inline image is now RECORDED, reason no-bytes)', async () => {
         const src = fixtureText('./_fixtures/corpus/md/md-degrade.md');
         const written = await oconv.fromMd({ markdown: src, target: 'pdf' });
@@ -695,8 +698,6 @@ describe('fidelity — md -> pdf (F9 bounded typesetter, office/BATCH_33)', () =
         expect(written.losses).toEqual([
             { code: 'frontmatter/stripped', detail: 'yaml' },
             { code: 'inline/linebreak-degraded', detail: 'hard break' },
-            { code: 'list/task-marker-dropped', detail: '[x]' },
-            { code: 'list/task-marker-dropped', detail: '[ ]' },
             { code: 'table/align-dropped', detail: 'left,center,right' },
             {
                 index: '5.i0', kind: 'image', code: 'layout/image-dropped',
@@ -705,18 +706,16 @@ describe('fidelity — md -> pdf (F9 bounded typesetter, office/BATCH_33)', () =
                     reason: 'no-bytes', bytes: 0
                 }
             },
-            {
-                index: '7.0', kind: 'paragraph', code: 'layout/line-overflow',
-                detail: { tokens: 1, width: 34.837, column: 34.83699999999999, text: 'Center' }
-            }
+            { index: '6', kind: 'list', code: 'list/task-marker-dropped', detail: '[x]' },
+            { index: '6', kind: 'list', code: 'list/task-marker-dropped', detail: '[ ]' }
         ]);
         expect(pdfApi.read(written.bytes).pages.length).toBe(1);
     });
 
     // The other half of the same flip: supply the bytes and the loss goes
-    // away for a placeable encoding, or changes reason for one this wave
-    // refuses. Both legs measured, neither inherited.
-    test('md-degrade.md + assets — fromMd(pdf): a JPEG PLACES (no image loss); the PNG refuses with format named', async () => {
+    // away for a placeable encoding (JPEG, PNG). Both legs measured,
+    // neither inherited.
+    test('md-degrade.md + assets — fromMd(pdf): a JPEG and a PNG both PLACE (no image loss)', async () => {
         const src = fixtureText('./_fixtures/corpus/md/md-degrade.md');
 
         const placed = await oconv.fromMd({
@@ -727,16 +726,14 @@ describe('fidelity — md -> pdf (F9 bounded typesetter, office/BATCH_33)', () =
         for (const b of placed.bytes) latin1 += String.fromCharCode(b);
         expect(latin1).toContain('/Im0 Do Q');
 
-        const refused = await oconv.fromMd({
+        // The PNG fixture places too (greyscale, a PNG predictor stream).
+        const png = await oconv.fromMd({
             markdown: src, target: 'pdf', assets: { 'diagram.png': ASSET_PNG }
         });
-        expect(refused.losses.find((l) => l.code === 'layout/image-dropped').detail).toEqual({
-            index: '5.i0', name: 'diagram.png', alt: 'Diagram',
-            reason: 'unsupported-encoding', bytes: ASSET_PNG.length, format: 'png'
-        });
+        expect(png.losses.some((l) => l.code === 'layout/image-dropped')).toBe(false);
     });
 
-    test('md-degrade.md + assets — fromMd(docx): the image is PLACED, image/size-defaulted replaces image/dropped', async () => {
+    test('md-degrade.md + assets — fromMd(docx): the image is PLACED at its own size, no image loss replaces image/dropped', async () => {
         const src = fixtureText('./_fixtures/corpus/md/md-degrade.md');
 
         const bare = await oconv.fromMd({ markdown: src, target: 'docx' });
@@ -746,11 +743,23 @@ describe('fidelity — md -> pdf (F9 bounded typesetter, office/BATCH_33)', () =
         const withAssets = await oconv.fromMd({
             markdown: src, target: 'docx', assets: { 'diagram.png': ASSET_PNG }
         });
-        expect(withAssets.losses.map((l) => l.code)).toContain('image/size-defaulted');
-        expect(withAssets.losses.map((l) => l.code)).not.toContain('image/dropped');
+        expect(withAssets.losses.filter((l) => l.code.startsWith('image/'))).toEqual([]);
         const read = docxApi.read(withAssets.bytes);
         expect(Object.keys(read.images)).toHaveLength(1);
         expect([...read.images[Object.keys(read.images)[0]].data]).toEqual([...ASSET_PNG]);
+    });
+
+    test('md-degrade.md — fromMd(docx | odt): the task checkboxes are drawn as ☒ / ☐, no task loss', async () => {
+        const src = fixtureText('./_fixtures/corpus/md/md-degrade.md');
+        for (const target of ['docx', 'odt']) {
+            const written = await oconv.fromMd({ markdown: src, target });
+            expect(written.losses.map((l) => l.code)).not.toContain('list/task-marker-dropped');
+            const back = await oconv.toMd({
+                bytes: written.bytes, name: 'degrade.' + target,
+                convertedAt: '2026-10-12T00:00:00Z'
+            });
+            expect(back.markdown).toContain('- ☒ Completed task\n- ☐ Open task\n');
+        }
     });
 
     test('the four retired *-unrendered stub codes are absent from every md -> pdf ledger measured above', async () => {

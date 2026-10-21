@@ -49,6 +49,14 @@ export const tableCffIndexRecord = {
                 throw new ParseError('fonts/cff-index-bad-first-offset',
                     `CFF INDEX first offset must be 1, got ${offsets[0]}`,
                     { context: { startPos } });
+            // Offsets never decrease (an item cannot end before it starts),
+            // so the last one bounds every item to the INDEX data.
+            for (let i = 1; i <= count; i++) {
+                if (offsets[i] < offsets[i - 1])
+                    throw new ParseError('fonts/cff-index-bad-offset',
+                        `CFF INDEX offset ${i} (${offsets[i]}) is below offset ${i - 1} (${offsets[i - 1]})`,
+                        { context: { startPos, index: i, offset: offsets[i], previous: offsets[i - 1] } });
+            }
             // Data bytes begin one byte BEFORE the data section actually starts —
             // offsets are 1-based : offset 1 = first data byte.
             const totalDataLen = offsets[count] - 1;

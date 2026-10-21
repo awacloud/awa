@@ -53,12 +53,39 @@ export const mdBlockStarts = {
         const C_LESSTHAN     = 60;
         const C_OPEN_BRACKET = 91;
 
-        const reThematicBreak     = /^(?:\*[ \t]*){3,}$|^(?:_[ \t]*){3,}$|^(?:-[ \t]*){3,}$/;
         const reATXHeadingMarker  = /^#{1,6}(?:[ \t]+|$)/;
         const reCodeFence         = /^`{3,}(?!.*`)|^~{3,}/;
         const reSetextHeadingLine = /^(?:=+|-+)[ \t]*$/;
 
         function isSpaceOrTab(c) { return c === C_SPACE || c === C_TAB; }
+
+        /**
+         * Whether the rest of the line from `nextNonspace` is a thematic
+         * break: three or more `*`, `_` or `-` (the same one), with only
+         * spaces or tabs between and after. A scan that failed at index k
+         * fails from any later start before k as well, so the line keeps
+         * that index and skips such starts (cmark's kill position): the
+         * nested containers of one line (`- - - … x`) cost one scan.
+         */
+        function isThematicBreak(parser) {
+            const ln = parser.currentLine;
+            const start = parser.nextNonspace;
+            if (parser.thematicBreakLine === parser.lineNumber && parser.thematicBreakKill > start) return false;
+            const c = ln.charCodeAt(start);
+            let i = start;
+            let count = 0;
+            if (c === 42 /* * */ || c === 95 /* _ */ || c === 45 /* - */) {
+                for (; i < ln.length; i++) {
+                    const d = ln.charCodeAt(i);
+                    if (d === c) count++;
+                    else if (!isSpaceOrTab(d)) break;
+                }
+                if (count >= 3 && i === ln.length) return true;
+            }
+            parser.thematicBreakLine = parser.lineNumber;
+            parser.thematicBreakKill = i;
+            return false;
+        }
         function peek(ln, pos) { return pos < ln.length ? ln.charCodeAt(pos) : -1; }
 
         const blockStarts = [
@@ -188,7 +215,7 @@ export const mdBlockStarts = {
             function(parser) {
                 if (
                     !parser.indented &&
-                    reThematicBreak.test(parser.currentLine.slice(parser.nextNonspace))
+                    isThematicBreak(parser)
                 ) {
                     parser.closeUnmatchedBlocks();
                     parser.addChild(T_THEMATIC_BREAK, parser.nextNonspace);

@@ -142,8 +142,9 @@ block is named by that loss.
 - **The accounting invariant is a test oracle, not a comment**:
   `unaccounted(blocks, pages, losses)` returns `[]` exactly when every
   DRAWABLE flow block (`isDrawable`: has lines with ink, OR is a delegated
-  kind, OR is an `hr`) either placed at least one item or is named by a
-  loss record (`loss.index` or `loss.detail.index`).
+  kind not declared `empty` — its renderer returned no items and an
+  explicit `height: 0` —, OR is an `hr`) either placed at least one item
+  or is named by a loss record (`loss.index` or `loss.detail.index`).
 - **Determinism**: pure functions, no clock, no randomness, no ambient
   state — verified end-to-end by a `JSON.stringify` × 2 byte-identity
   test. `@awacloud/pdf`'s `document/builder.js` reads no clock either (its

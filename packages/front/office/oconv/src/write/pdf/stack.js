@@ -131,6 +131,12 @@ export const oconvPdfStack = {
          *   ONE leading line of the next block do not fit, both move to the
          *   next page. This is NOT widow/orphan control (the typesetter refuses that) —
          *   nothing is ever moved because of where a paragraph's lines land.
+         *   A delegated renderer's own `keepTogether` (the table's) is
+         *   informational and never copied here, by design: a table never
+         *   splits structurally, and keep-with-next is a heading rule.
+         * @property {boolean} [empty] Set on a delegated block whose renderer
+         *   returned no items and an explicit `height: 0` — declared empty,
+         *   so it is ink-free for `isDrawable` (an empty fenced code block).
          * @property {number} indent Left indent in points, added to
          *   `layout.margin` for the text x and subtracted from
          *   `layout.column` for the measuring column.
@@ -235,16 +241,19 @@ export const oconvPdfStack = {
          * and the accounting invariant (only drawable blocks must be placed
          * or named).
          *
-         * A DELEGATED block always counts as drawable: `list`, `codeBlock`,
+         * A DELEGATED block counts as drawable: `list`, `codeBlock`,
          * `table` and `image` are ink-bearing IR kinds by nature, so a
          * renderer that returns zero items without recording a loss is
-         * exactly the silent drop the invariant exists to catch.
+         * exactly the silent drop the invariant exists to catch — unless
+         * the renderer DECLARED the block empty by returning no items and
+         * an explicit `height: 0` (an empty fenced code block: nothing to
+         * draw, nothing lost), which `delegate()` marks `empty`.
          *
          * @param {FlowBlock} block
          * @returns {boolean}
          */
         function isDrawable(block) {
-            if (block.items) return true;
+            if (block.items) return !block.empty;
             if (block.kind === 'hr') return true;
             return (block.lines || []).some(lineHasInk);
         }
@@ -398,6 +407,7 @@ export const oconvPdfStack = {
                     indent,
                     sizePt: layout.sizeFor(kind === 'codeBlock' ? 'code' : 'paragraph')
                 };
+                if (items.length === 0 && rendered.height === 0) block.empty = true;
                 if (ruleX !== null && ruleX !== undefined) {
                     block.rule = { x: ruleX, width: QUOTE_RULE_WIDTH };
                 }

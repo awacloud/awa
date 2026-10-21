@@ -56,6 +56,7 @@ add new codes; removals are documented in `CHANGELOG.md`.
 | `opc/invalid-input` | ContractError | `bytes` is not a `Uint8Array`, or `pkg` is not an object |
 | `opc/invalid-zip` | ParseError | `unzipSync` failed (`cause` preserved) |
 | `opc/zip-bomb` | ParseError | `maxParts` / `maxUncompressed` / `maxRatio` exceeded — see `context.limit` |
+| `opc/xml-too-deep` | ParseError | an XML part nests elements deeper than `maxDepth` (default 1000; `0` disables) — `context.limit` (`'maxDepth'`), `context.max`, `context.partName` |
 | `opc/missing-content-types` | ParseError | archive has no `[Content_Types].xml` |
 | `opc/invalid-content-types` | ParseError | `[Content_Types].xml` failed to parse |
 | `opc/content-types-bad-root` | ParseError | root element of `[Content_Types].xml` is not `<Types>` |
@@ -73,12 +74,14 @@ add new codes; removals are documented in `CHANGELOG.md`.
 | `docx/invalid-body` | ContractError | `doc.body` is not an array |
 | `docx/hyperlink-missing-rid` | ContractError | `docx.write`: a hyperlink with a non-empty `target`, in the body or any story part (header, footer, footnotes, endnotes, comments), has neither an `rId` nor an `anchor`, so its target would be lost (`context.target`) |
 | `docx/hyperlink-unresolved-rid` | ContractError | `docx.write`: a hyperlink's `rId` has no relationship in the table written for its part (`context.rId`, `context.story`, `context.key?`) |
-| `docx/numbering-missing` | ContractError | `docx.write`: a paragraph's `pPr.numPr` references a non-zero `numId` but `opts.numbering` is missing (`context.numId`) |
+| `docx/numbering-missing` | ContractError | `docx.write`: a `pPr.numPr` (body, any story part, or a style / the docDefaults of `opts.styles`) references a non-zero `numId` but `opts.numbering` is missing (`context.numId`, `context.story`, plus `context.key` / `context.styleId`) |
+| `docx/numbering-unknown-num` | ContractError | `docx.write`: a `pPr.numPr` references a non-zero `numId` that `opts.numbering.nums` does not declare (same context as `docx/numbering-missing`) |
 | `docx/no-random-source` | RenderError | `generateStoreItemID` (and `docx.write` for a `customXml` item without `storeItemID`): `crypto.getRandomValues` is unavailable; pass `storeItemID` explicitly |
 | `docx/settings-unknown-prefix` | RenderError | `docxSettings.serialize` (and `docx.write` with `opts.settings`): the settings tree uses a prefix with no known namespace (`context.prefix`) |
 | `docx/missing-officeDocument-rel` | ParseError | package has no officeDocument relationship |
 | `docx/missing-document-part` | ParseError | declared `word/document.xml` not in archive |
 | `docx/invalid-xml` | ParseError | `document.xml` failed to parse (`cause` preserved) |
+| `docx/invalid-part-xml` | ParseError | another part `docx.read` parses (styles, numbering, settings, notes, comments, headers, footers, charts, custom XML properties …) failed to parse (`cause`: the XML parser's error) |
 | `docx/missing-body` | ParseError | `document.xml` has no `<w:body>` |
 | `docx/comments-bad-root` | ParseError | `comments.xml` root is not `<w:comments>` |
 | `docx/customxml-bad-root` | ParseError | customXml props root is not `<ds:datastoreItem>` |
@@ -100,6 +103,8 @@ add new codes; removals are documented in `CHANGELOG.md`.
 | `xlsx/missing-officeDocument-rel` | ParseError | package has no officeDocument relationship |
 | `xlsx/missing-workbook-part` | ParseError | declared workbook XML missing from archive |
 | `xlsx/invalid-workbook-xml` | ParseError | workbook XML failed to parse (`cause`) |
+| `xlsx/invalid-sheet-xml` | ParseError | a worksheet part's XML failed to parse (`context.partName`, `cause`) |
+| `xlsx/invalid-part-xml` | ParseError | another part `xlsx.read` parses (shared strings, styles, tables, comments, threaded comments, persons, drawings, charts …) failed to parse (`cause`: the XML parser's error) |
 | `xlsx/limit-exceeded` | ParseError | one of `maxSheets`, `maxRowsPerSheet`, `maxCellsPerSheet` breached (`context.limit`) |
 | `xlsx/comments-bad-root` | ParseError | comments root is not `<comments>` |
 | `xlsx/threaded-comments-bad-root` | ParseError | threadedComments root unexpected |
@@ -122,6 +127,7 @@ add new codes; removals are documented in `CHANGELOG.md`.
 | `pptx/missing-officeDocument-rel` | ParseError | package has no officeDocument relationship |
 | `pptx/missing-presentation-part` | ParseError | declared presentation XML missing from archive |
 | `pptx/invalid-presentation-xml` | ParseError | presentation XML failed to parse (`cause`) |
+| `pptx/invalid-part-xml` | ParseError | another part `pptx.read` parses (slides, layouts, masters, theme, charts …) failed to parse (`cause`: the XML parser's error) |
 | `pptx/<tag>-bad-root` | ParseError | a slide / layout / master part has an unexpected root (`<tag>` matches the expected local name without `p:` prefix) |
 | `pptx/theme-bad-root` | ParseError | theme root is not `<a:theme>` |
 
@@ -148,4 +154,4 @@ add new codes; removals are documented in `CHANGELOG.md`.
 
 - [`errors.js`](../../src/errors.js) — class definitions
 - [`README.md`](../../README.md#security) — security policy
-- [`tests/fuzz.test.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/office/ooxml/tests/fuzz.test.js) — regression fence
+- [`tests/fuzz.test.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/office/ooxml/tests/fuzz.test.js) — regression fence

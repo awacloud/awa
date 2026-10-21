@@ -123,7 +123,7 @@ const GOLDEN = [
     '```',
     '',
     '> quoted',
-    '>',
+    '',
     '---',
     '',
     '![Logo](logo.png)',
@@ -302,6 +302,38 @@ describe('oconvIrToMd — loss ledger', () => {
     });
 });
 
+describe('oconvIrToMd — GFM task markers (`listItem.escapes.md.task`)', () => {
+    /** A one-paragraph list item, flagged as a task when `task` is given. */
+    const item = (text, task) => node('listItem', task ? { escapes: { md: { task } } } : {}, [
+        node('paragraph', {}, [node('run', { text })])
+    ]);
+
+    test('checked / unchecked items are written back as [x] / [ ], no loss', () => {
+        const ir = doc([
+            node('list', { ordered: false }, [
+                item('done', 'checked'), item('todo', 'unchecked'), item('plain')
+            ])
+        ]);
+        const { markdown, losses } = irToMd(ir, META);
+        expect(losses).toEqual([]);
+        expect(markdown).toContain('\n- [x] done\n- [ ] todo\n- plain\n');
+    });
+
+    test('a task flag on an item without a leading paragraph is a writer loss', () => {
+        const ir = doc([
+            node('list', { ordered: false }, [
+                node('listItem', { escapes: { md: { task: 'checked' } } }, [
+                    node('codeBlock', { info: '', text: 'x\n' })
+                ])
+            ])
+        ]);
+        const { markdown, losses } = irToMd(ir, META);
+        expect(losses).toEqual([{ code: 'list/task-marker-dropped', detail: '[x]' }]);
+        // The front matter's ledger names the marker; the body never does.
+        expect(markdown.endsWith('---\n- ```\n  x\n  ```\n')).toBe(true);
+    });
+});
+
 describe('oconvIrToMd — GFM tables', () => {
     test('table body matches an equivalent hand-built md AST rendering', () => {
         const ir = doc([
@@ -413,5 +445,48 @@ describe('oconvIrToMd — provenance front matter', () => {
         const { markdown } = irToMd(doc([]), { sourceFormat: 'odt' });
         expect(markdown).toContain('sourceFormat: odt\n');
         expect(markdown).not.toContain('sourceSha256');
+    });
+});
+
+describe('oconvIrToMd — hard line breaks (a `\\n` in a run)', () => {
+    const bodyOf = (markdown) => markdown.slice(markdown.indexOf('\n---\n', 4) + 5);
+    const typesOf = (src) => {
+        const out = [];
+        const w = md.parse(src).walker();
+        let ev;
+        while ((ev = w.next())) if (ev.entering) out.push(ev.node.type);
+        return out;
+    };
+
+    test('a paragraph writes a hard break (backslash) that re-parses as linebreak, emphasis kept', () => {
+        const { markdown, losses } = irToMd(doc([node('paragraph', {}, [
+            node('run', { text: 'one\ntwo ' }), node('run', { text: 'x\ny', bold: true })
+        ])]), META);
+        const body = bodyOf(markdown);
+        expect(body).toBe('one\\\ntwo **x\\\ny**\n');
+        expect(typesOf(body).filter((t) => t === 'linebreak')).toHaveLength(2);
+        expect(losses).toEqual([]);
+    });
+
+    test('a trailing break of a paragraph is dropped (it has no meaning at the end of a block)', () => {
+        const { markdown } = irToMd(doc([node('paragraph', {}, [node('run', { text: 'end\n' })])]), META);
+        expect(bodyOf(markdown)).toBe('end\n');
+    });
+
+    test('a heading and a table cell cannot hold a break: a space and inline/linebreak-degraded', () => {
+        const { markdown, losses } = irToMd(doc([
+            node('heading', { level: 2 }, [node('run', { text: 'a\nb' })]),
+            node('table', {}, [node('row', { header: true }, [cell('c\nd')])])
+        ]), META);
+        expect(bodyOf(markdown)).toBe('## a b\n\n| c d |\n| --- |\n');
+        expect(losses).toEqual([
+            { code: 'inline/linebreak-degraded', detail: 'hard break' },
+            { code: 'inline/linebreak-degraded', detail: 'hard break' }
+        ]);
+    });
+
+    test('a code run keeps its newline inside the code span', () => {
+        const { markdown } = irToMd(doc([node('paragraph', {}, [node('run', { text: 'a\nb', code: true })])]), META);
+        expect(bodyOf(markdown)).toBe('`a\nb`\n');
     });
 });

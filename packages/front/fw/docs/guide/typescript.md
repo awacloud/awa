@@ -165,6 +165,15 @@ bun run types:registry # → types/registry.generated.d.ts
 
 `bun run types:registry:check` fails if the registry is stale (use in CI).
 
+### ⚠️ Self-referencing type queries in a `.d.ts`
+
+A type query that names the package's own public specifier from inside its
+own declarations fails silently:
+`import('<self-package>/typed').X` inside the package's own `.d.ts` collapses
+to `any` under `moduleResolution: bundler` and no tsc error is raised
+(`skipLibCheck` swallows it): verify such queries from inside AND outside the
+package, and prove them with a should-be-rejected value.
+
 ## Writing a module in TypeScript
 
 You can author modules in TypeScript provided the compiled JavaScript output preserves the factory shape for worker serialisation:

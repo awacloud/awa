@@ -123,6 +123,18 @@ describe('GFM strikethrough', () => {
     test('strike with emphasis inside', () => {
         check('~~*em*~~\n', '<p><del><em>em</em></del></p>\n');
     });
+    test('an unmatched intraword ** inside does not cancel the strike', () => {
+        check('~~x a**b y~~\n', '<p><del>x a**b y</del></p>\n');
+        check('~x a**b y~\n', '<p><del>x a**b y</del></p>\n');
+        check('~~a **b~~\n', '<p><del>a **b</del></p>\n');
+    });
+    test('a run of the other length inside does not cancel the strike', () => {
+        check('~~a~b~~\n', '<p><del>a~b</del></p>\n');
+        check('~a~~a~\n', '<p><del>a~~a</del></p>\n');
+    });
+    test('an unmatched ~~ does not cancel a strong emphasis around it', () => {
+        check('_a_b***a*b~~**~_x_y\n', '<p>_a_b<strong><em>a</em>b~~</strong>~_x_y</p>\n');
+    });
     test('emphasis with strike inside', () => {
         check('*~~struck~~*\n', '<p><em><del>struck</del></em></p>\n');
     });

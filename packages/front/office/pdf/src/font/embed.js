@@ -152,11 +152,21 @@ export const pdfFontEmbed = {
             return { descriptor: obj.dict(entries), fontFile, fontFileKey };
         }
 
+        /**
+         * `/Registry` and `/Ordering` are ASCII strings (ISO 32000-2
+         * Table 114), never names: `coerce` would make a name of a short
+         * identifier such as `Adobe`. A typed PDF value passes through.
+         */
+        function asciiString(v) {
+            if (v && typeof v === 'object' && typeof v.type === 'string') return v;
+            return obj.string(new TextEncoder().encode(String(v)));
+        }
+
         function wrapCidSysInfo(info) {
             if (!info || typeof info !== 'object') return obj.dict({});
             return obj.dict({
-                Registry:   coerce(info.Registry   || 'Adobe'),
-                Ordering:   coerce(info.Ordering   || 'Identity'),
+                Registry:   asciiString(info.Registry   || 'Adobe'),
+                Ordering:   asciiString(info.Ordering   || 'Identity'),
                 Supplement: coerce(info.Supplement != null ? info.Supplement : 0)
             });
         }

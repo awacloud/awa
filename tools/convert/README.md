@@ -206,9 +206,9 @@ gating a request. The mirror is exported as `TO_MD_FORMATS`,
 This tool advertises no conversion pair `@awacloud/oconv` does not
 measurably deliver, and lossy pairs say so (via the stderr loss count) —
 see `@awacloud/oconv`'s
-[loss matrix](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.0.0/packages/front/office/oconv/docs/loss-matrix.md)
+[loss matrix](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.1.0/packages/front/office/oconv/docs/loss-matrix.md)
 for the fidelity table per pair, and its
-[convert guide](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.0.0/packages/front/office/oconv/docs/convert.md)
+[convert guide](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.1.0/packages/front/office/oconv/docs/convert.md)
 for the cross-format pairs.
 
 ## MCP server
@@ -237,9 +237,9 @@ error and a generic one.
 
 | Tool | Needs | Loses |
 |---|---|---|
-| `to_md` | `path` **or** (`bytesBase64` + `name`); optional `format`, `includeNotes`, `at`, `outPath` | presentation/layout formatting and most inline styling beyond basic emphasis/headings — see the result's `losses` array |
-| `from_md` | `markdown` **or** `path`; required `target`; optional `name`, `outPath` | nothing this step introduces on its own — only as rich as the input Markdown; see `losses` |
-| `convert` | `path` **or** (`bytesBase64` + `name`); required `target`; optional `format`, `outPath` | whatever the docx/odt/pdf loss matrix records for that pair — see `losses`; a `pdf` target is one-way |
+| `to_md` | `path` **or** (`bytesBase64` + `name`); optional `format`, `includeNotes`, `at`, `outPath`, `lossView` | presentation/layout formatting and most inline styling beyond basic emphasis/headings — see the result's `losses` array |
+| `from_md` | `markdown` **or** `path`; required `target`; optional `name`, `outPath`, `lossView` | nothing this step introduces on its own — only as rich as the input Markdown; see `losses` |
+| `convert` | `path` **or** (`bytesBase64` + `name`); required `target`; optional `format`, `outPath`, `lossView` | whatever the docx/odt/pdf loss matrix records for that pair — see `losses`; a `pdf` target is one-way |
 | `to_html` | `markdown` **or** `path`; optional `outPath` | raw HTML (a block with its content; inline tags keep their text); `javascript:`, `vbscript:`, `file:` and `data:` URLs (images included) become an empty `href`/`src`; anything outside the sanitiser allowlist (task-list checkboxes stay, as disabled inputs); no embedded CSS, no table of contents, no footnotes, front matter or math; no `losses` field — the renderer does not itemise its drops |
 
 The tool names are the MCP tool registry of `src/mcp.ts` (`TOOLS`), not
@@ -255,13 +255,21 @@ one-line description — a model can choose between the four without reading
 
 `to_md`, `from_md` and `convert` are backed by `@awacloud/oconv`, which
 tracks fidelity losses per conversion: every successful result of these
-three carries `losses` (an array) and `lossy` (a boolean) from `src/core.ts`
+three carries `losses` (an array, one entry per occurrence), `lossSummary`
+(the same losses grouped by code and detail, with a count) and `lossy` (a
+boolean) from `src/core.ts`
 — inline with the content, or alongside the file-mode payload described
 below, never as a side channel a caller has to opt into. `to_html` carries
 no `losses` field: `@awacloud/md`'s renderer drops content (raw HTML,
 `javascript:`, `vbscript:`, `file:` and `data:` URLs, anything outside the
 sanitiser allowlist) but does not itemise it, so there is no list to
 return — the absence is a limit of the renderer, not a lossless render.
+
+The three ledger tools take an optional `lossView`: `"full"` (default)
+returns `losses` and `lossSummary`, `"summary"` leaves `losses` out. The
+tool descriptions recommend `"summary"`: `losses` grows with the
+document (48 losses in six groups cost about 830 estimated tokens as
+`losses`, about 140 as `lossSummary`).
 
 ### Large-output rule
 
@@ -366,8 +374,8 @@ Copyright (c) 2026 AwaCloud SAS
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`tools/convert`](https://github.com/awacloud/awa/tree/@awacloud/tool-convert@1.0.0/tools/convert)
+- Source: [`tools/convert`](https://github.com/awacloud/awa/tree/@awacloud/tool-convert@1.1.0/tools/convert)
 - Issues: https://github.com/awacloud/awa/issues (the package declares no
   `bugs` URL of its own)
 - Security policy and release verification:
-  https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.0.0/SECURITY.md
+  https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.1.0/SECURITY.md

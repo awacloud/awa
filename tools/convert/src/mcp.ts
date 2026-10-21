@@ -43,8 +43,14 @@
  *
  * `to_md`, `from_md` and `convert` are backed by `@awacloud/oconv`, which
  * tracks fidelity losses per conversion — every successful result of these
- * three carries `losses`/`lossy` from `./core.ts`, inline or alongside the
- * file-mode payload, never as a side channel. `to_html` renders Markdown
+ * three carries `losses`/`lossSummary`/`lossy` from `./core.ts`, inline or
+ * alongside the file-mode payload, never as a side channel. `losses` has one
+ * entry per occurrence and grows with the document; `lossSummary` has one
+ * counted entry per distinct `code` + `detail`. The optional `lossView`
+ * argument (`'full'`, the default, or `'summary'`) leaves `losses` out of
+ * the payload when it is `'summary'` — the tool descriptions recommend it,
+ * since a long document's ledger costs a caller far more tokens than its
+ * summary. `to_html` renders Markdown
  * through `@awacloud/md`'s safe, sanitised renderer, which drops raw HTML (a
  * block with its content, inline tags keeping their text), empties
  * `javascript:`, `vbscript:`, `file:` and `data:` URLs (images included) and
@@ -71,6 +77,7 @@ import {
     toHtml as coreToHtml,
     toMd as coreToMd,
     type Loss,
+    type LossSummaryEntry,
 } from './core.ts';
 import { timestampError } from './timestamp.ts';
 
@@ -237,16 +244,43 @@ export function deliverBinary(
     return { ...extra, mode: 'inline', bytesBase64: Buffer.from(bytes).toString('base64'), bytesLength: bytes.byteLength };
 }
 
-function lossFields(losses: Loss[], lossy: boolean): Record<string, unknown> {
-    return { losses, lossy };
+/** The values `lossView` accepts; `'full'` is the default. */
+const LOSS_VIEWS = ['full', 'summary'] as const;
+type LossView = (typeof LOSS_VIEWS)[number];
+
+/** The `lossView` argument, or a usage error message. Checked before the input is read. */
+function readLossView(value: unknown): LossView | { error: string } {
+    if (value === undefined) return 'full';
+    if ((LOSS_VIEWS as readonly unknown[]).includes(value)) return value as LossView;
+    return { error: `argument lossView: expected "full" or "summary", got ${JSON.stringify(value)}` };
 }
 
+function lossFields(
+    result: { losses: Loss[]; lossSummary: LossSummaryEntry[]; lossy: boolean },
+    view: LossView,
+): Record<string, unknown> {
+    if (view === 'summary') return { lossSummary: result.lossSummary, lossy: result.lossy };
+    return { losses: result.losses, lossSummary: result.lossSummary, lossy: result.lossy };
+}
+
+/** Schema description of the `lossView` argument. */
+const LOSS_VIEW_DESCRIPTION =
+    '"full" (default): "losses" (one entry per occurrence) and "lossSummary". "summary": "lossSummary" only. ' +
+    'Any other value is a usage error.';
+
+/** Shared description sentence of the three ledger tools. */
+const LOSS_VIEW_HINT =
+    `The result's "lossSummary" groups the losses by code and detail with a count; pass "lossView": "summary" ` +
+    `to receive it without the per-occurrence "losses" array (recommended — that array grows with the document).`;
+
 async function handleToMd(args: Record<string, unknown>): Promise<Record<string, unknown>> {
-    // Checked BEFORE readBinaryInput: a usage error in `at` must win even
-    // when the input cannot be read at all.
+    // Checked BEFORE readBinaryInput: a usage error in `at` or `lossView`
+    // must win even when the input cannot be read at all.
     const at = (args.at as string | undefined) ?? new Date().toISOString();
     const atError = timestampError(at);
     if (atError !== null) return { error: `argument at: ${atError}`, usage: true };
+    const view = readLossView(args.lossView);
+    if (typeof view === 'object') return { error: view.error, usage: true };
 
     const input = readBinaryInput({
         path: args.path as string | undefined,
@@ -263,10 +297,12 @@ async function handleToMd(args: Record<string, unknown>): Promise<Record<string,
         includeNotes: args.includeNotes as boolean | undefined,
     });
     if (isCoreError(result)) return { error: result.error, usage: result.usage };
-    return deliverText(result.markdown, 'md', 'markdown', args.outPath as string | undefined, lossFields(result.losses, result.lossy));
+    return deliverText(result.markdown, 'md', 'markdown', args.outPath as string | undefined, lossFields(result, view));
 }
 
 async function handleFromMd(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const view = readLossView(args.lossView);
+    if (typeof view === 'object') return { error: view.error, usage: true };
     const input = readTextInput({ path: args.path as string | undefined, text: args.markdown as string | undefined });
     if (isInputError(input)) return { error: input.error, usage: true };
 
@@ -280,11 +316,13 @@ async function handleFromMd(args: Record<string, unknown>): Promise<Record<strin
         result.bytes,
         result.target,
         args.outPath as string | undefined,
-        { target: result.target, ...lossFields(result.losses, result.lossy) },
+        { target: result.target, ...lossFields(result, view) },
     );
 }
 
 async function handleConvert(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const view = readLossView(args.lossView);
+    if (typeof view === 'object') return { error: view.error, usage: true };
     const input = readBinaryInput({
         path: args.path as string | undefined,
         bytesBase64: args.bytesBase64 as string | undefined,
@@ -303,7 +341,7 @@ async function handleConvert(args: Record<string, unknown>): Promise<Record<stri
         result.bytes,
         result.target,
         args.outPath as string | undefined,
-        { format: result.format, target: result.target, ...lossFields(result.losses, result.lossy) },
+        { format: result.format, target: result.target, ...lossFields(result, view) },
     );
 }
 
@@ -331,7 +369,8 @@ export const TOOLS: ToolDef[] = [
             `Options mirror the CLI's "to-md" verb: "format" overrides extension-based detection, "includeNotes" ` +
             `(pptx/odp only, default false) includes speaker notes, "at" pins the ISO-8601 provenance timestamp ` +
             `(default: now — @awacloud/oconv never defaults it itself). "outPath" writes the markdown to that ` +
-            `file instead of returning it inline; large output is written to a file automatically even without it.`,
+            `file instead of returning it inline; large output is written to a file automatically even without it. ` +
+            LOSS_VIEW_HINT,
         inputSchema: {
             type: 'object',
             properties: {
@@ -345,6 +384,7 @@ export const TOOLS: ToolDef[] = [
                     description: 'RFC 3339 date-time, e.g. 2026-01-01T00:00:00.000Z. Default: now. Any other value is a usage error.',
                 },
                 outPath: { type: 'string', description: 'Write the markdown to this file instead of returning it inline.' },
+                lossView: { type: 'string', description: LOSS_VIEW_DESCRIPTION },
             },
         },
         handler: handleToMd,
@@ -359,7 +399,8 @@ export const TOOLS: ToolDef[] = [
             `the input Markdown; any richer formatting from an original source was already lost at a prior ` +
             `to_md/convert step, not here. See the result's "losses" array for what @awacloud/oconv recorded ` +
             `for this specific target. "outPath" writes the output to that file instead of base64-inlining it; ` +
-            `large binary output is written to a file automatically even without it (never truncated in place).`,
+            `large binary output is written to a file automatically even without it (never truncated in place). ` +
+            LOSS_VIEW_HINT,
         inputSchema: {
             type: 'object',
             properties: {
@@ -368,6 +409,7 @@ export const TOOLS: ToolDef[] = [
                 name: { type: 'string', description: 'Output file name — its extension drives target detection when "target" is omitted.' },
                 target: { type: 'string', description: `Required. Target format: ${FROM_MD_TARGETS.join(' | ')}.` },
                 outPath: { type: 'string', description: 'Write the output bytes to this file instead of base64-inlining them.' },
+                lossView: { type: 'string', description: LOSS_VIEW_DESCRIPTION },
             },
             required: ['target'],
         },
@@ -384,7 +426,8 @@ export const TOOLS: ToolDef[] = [
             `result's "losses" array; a pdf target is one-way, nothing can be produced back from it, and pdf ` +
             `pairs typically carry layout-fidelity losses this pipeline does not correct for. "outPath" writes ` +
             `the output to that file instead of base64-inlining it; large binary output is written to a file ` +
-            `automatically even without it (never truncated in place).`,
+            `automatically even without it (never truncated in place). ` +
+            LOSS_VIEW_HINT,
         inputSchema: {
             type: 'object',
             properties: {
@@ -394,6 +437,7 @@ export const TOOLS: ToolDef[] = [
                 format: { type: 'string', description: 'Explicit source format, overrides name-based detection.' },
                 target: { type: 'string', description: `Required. Target format: ${CONVERT_PAIRS.map((p) => p.split('>')[1]).join(' | ')}.` },
                 outPath: { type: 'string', description: 'Write the output bytes to this file instead of base64-inlining them.' },
+                lossView: { type: 'string', description: LOSS_VIEW_DESCRIPTION },
             },
             required: ['target'],
         },

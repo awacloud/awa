@@ -115,7 +115,8 @@ export const tableCffCharstring = {
                 }
                 case 25: { // rlinecurve
                     let i = 0;
-                    while (i + 5 < stack.length) {
+                    // Every pair before the last six arguments is a line.
+                    while (stack.length - i > 6) {
                         lineTo(stack[i], stack[i + 1]); i += 2;
                     }
                     curveTo(stack[i], stack[i + 1], stack[i + 2], stack[i + 3], stack[i + 4], stack[i + 5]);
@@ -148,15 +149,11 @@ export const tableCffCharstring = {
                     let i = 0;
                     let alt = false;
                     while (i + 3 < stack.length) {
-                        if (!alt) {
-                            const lastY = (i + 4 < stack.length && (stack.length - i) % 8 === 5) ? stack[i + 4] : 0;
-                            curveTo(stack[i], 0, stack[i + 1], stack[i + 2], lastY, stack[i + 3]);
-                            i += 4 + (lastY ? 1 : 0);
-                        } else {
-                            const lastX = (i + 4 < stack.length && (stack.length - i) % 8 === 5) ? stack[i + 4] : 0;
-                            curveTo(0, stack[i], stack[i + 1], stack[i + 2], stack[i + 3], lastX);
-                            i += 4 + (lastX ? 1 : 0);
-                        }
+                        // The optional fifth argument belongs to the last curve only.
+                        const last = stack.length - i === 5 ? stack[i + 4] : 0;
+                        if (!alt) curveTo(stack[i], 0, stack[i + 1], stack[i + 2], last, stack[i + 3]);
+                        else curveTo(0, stack[i], stack[i + 1], stack[i + 2], stack[i + 3], last);
+                        i += stack.length - i === 5 ? 5 : 4;
                         alt = !alt;
                     }
                     stack.length = 0;
@@ -166,17 +163,44 @@ export const tableCffCharstring = {
                     let i = 0;
                     let alt = true;
                     while (i + 3 < stack.length) {
-                        if (!alt) {
-                            const lastY = (i + 4 < stack.length && (stack.length - i) % 8 === 5) ? stack[i + 4] : 0;
-                            curveTo(stack[i], 0, stack[i + 1], stack[i + 2], lastY, stack[i + 3]);
-                            i += 4 + (lastY ? 1 : 0);
-                        } else {
-                            const lastX = (i + 4 < stack.length && (stack.length - i) % 8 === 5) ? stack[i + 4] : 0;
-                            curveTo(0, stack[i], stack[i + 1], stack[i + 2], stack[i + 3], lastX);
-                            i += 4 + (lastX ? 1 : 0);
-                        }
+                        // The optional fifth argument belongs to the last curve only.
+                        const last = stack.length - i === 5 ? stack[i + 4] : 0;
+                        if (!alt) curveTo(stack[i], 0, stack[i + 1], stack[i + 2], last, stack[i + 3]);
+                        else curveTo(0, stack[i], stack[i + 1], stack[i + 2], stack[i + 3], last);
+                        i += stack.length - i === 5 ? 5 : 4;
                         alt = !alt;
                     }
+                    stack.length = 0;
+                    return;
+                }
+                case 0x0C23: { // flex: two curves, the flex depth (hinting) ignored
+                    const s = stack.slice(0, 12);
+                    curveTo(s[0], s[1], s[2], s[3], s[4], s[5]);
+                    curveTo(s[6], s[7], s[8], s[9], s[10], s[11]);
+                    stack.length = 0;
+                    return;
+                }
+                case 0x0C22: { // hflex: dx1 dx2 dy2 dx3 dx4 dx5 dx6, back to the starting y
+                    const [dx1, dx2, dy2, dx3, dx4, dx5, dx6] = stack;
+                    curveTo(dx1, 0, dx2, dy2, dx3, 0);
+                    curveTo(dx4, 0, dx5, -dy2, dx6, 0);
+                    stack.length = 0;
+                    return;
+                }
+                case 0x0C24: { // hflex1: dx1 dy1 dx2 dy2 dx3 dx4 dx5 dy5 dx6, back to the starting y
+                    const [dx1, dy1, dx2, dy2, dx3, dx4, dx5, dy5, dx6] = stack;
+                    curveTo(dx1, dy1, dx2, dy2, dx3, 0);
+                    curveTo(dx4, 0, dx5, dy5, dx6, -(dy1 + dy2 + dy5));
+                    stack.length = 0;
+                    return;
+                }
+                case 0x0C25: { // flex1: five pairs and d6, along the larger travel
+                    const s = stack;
+                    let dx = 0, dy = 0;
+                    for (let k = 0; k < 10; k += 2) { dx += s[k]; dy += s[k + 1]; }
+                    const horizontal = Math.abs(dx) > Math.abs(dy);
+                    curveTo(s[0], s[1], s[2], s[3], s[4], s[5]);
+                    curveTo(s[6], s[7], s[8], s[9], horizontal ? s[10] : -dx, horizontal ? -dy : s[10]);
                     stack.length = 0;
                     return;
                 }

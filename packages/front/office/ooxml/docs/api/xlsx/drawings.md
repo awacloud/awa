@@ -32,7 +32,7 @@ const dr = runtime.resolve('xlsxDrawings');
 
 | Method | Signature | Returns |
 |---------|-----------|---------|
-| `parse` | `(text\|bytes) => { entries, _extras? }` | Typed model of the part. |
+| `parse` | `(text\|bytes, opts?) => { entries, _extras? }` | Typed model of the part; `opts.typedRunColors` reaches the shapes' text bodies. |
 | `serialize` | `(obj) => string` | `<xdr:wsDr>` XML. |
 | `bytesOf` | `(obj) => Uint8Array` | UTF-8 bytes. |
 | `parseAnchor` / `renderAnchor` | symmetric | Anchor (twoCell/oneCell/absolute). |

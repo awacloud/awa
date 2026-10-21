@@ -508,21 +508,39 @@ describe('delegation to ctx.render (D-E)', () => {
         expect(rect.y).toBe(rect.rule.y);
     });
 
-    // BATCH_39 task 04 (claim pinning, FINDINGS § 5.4 C25 / BL-1012, open) —
-    // `delegate()` (`stack.js:382-402`) builds its `block` literal from
-    // `rendered.items`/`rendered.height`/`rendered.losses` only; it never
-    // reads `rendered.keepTogether`, so a renderer that returns one has no
-    // way to make its delegated block participate in the heading
-    // "keepTogether" rule (`FlowBlock.keepTogether`'s own JSDoc: "Set on
-    // headings only"). Pinned as CURRENT behaviour (the defect is BL-1012,
-    // already open — not fixed here).
-    test('a delegated renderer returning `keepTogether: true` has it dropped — the flag never reaches the flow block (BL-1012)', () => {
+    // BY DESIGN: `delegate()` builds its `block` literal from
+    // `rendered.items`/`rendered.height`/`rendered.losses` only. The stack's
+    // `keepTogether` is keep-with-next, a heading rule (`FlowBlock.
+    // keepTogether`'s own JSDoc: "Set on headings only"); a delegated
+    // renderer's `keepTogether` (the table's "never split") is informational
+    // — a table never splits structurally, and copying its flag would make
+    // every table keep-with-next.
+    test('a delegated renderer returning `keepTogether: true` has it dropped — the flag never reaches the flow block (by design)', () => {
         const render = () => ({ items: [{ x: 0, y: 10, style: 'regular', sizePt: 11, tokens: [] }], keepTogether: true });
         const doc = { kind: 'document', children: [{ kind: 'table', children: [] }] };
         const [b] = stack.flowBlocks(doc, makeCtx({ render }));
         expect(b.kind).toBe('table');
         expect(b.keepTogether).toBeUndefined();
         expect('keepTogether' in b).toBe(false);
+    });
+
+    test('accounting: a delegated block DECLARED empty (no items, explicit height 0) is ink-free; silent or tall ones are not', () => {
+        const empty = () => ({ items: [], losses: [], height: 0 });
+        const doc = { kind: 'document', children: [{ kind: 'codeBlock', info: '', text: '' }] };
+        const laid = stack.layoutDocument(doc, makeCtx({ render: empty }));
+        expect(laid.blocks[0].empty).toBe(true);
+        expect(stack.unaccounted(laid.blocks, laid.pages, laid.losses)).toEqual([]);
+
+        // The safety net stays: no height stated, or space taken, with
+        // nothing drawn and nothing lost.
+        const silent = () => ({ items: [], losses: [] });
+        const laidSilent = stack.layoutDocument(doc, makeCtx({ render: silent }));
+        expect(stack.unaccounted(laidSilent.blocks, laidSilent.pages, laidSilent.losses))
+            .toEqual(['0:codeBlock']);
+        const blank = () => ({ items: [], losses: [], height: 20 });
+        const laidBlank = stack.layoutDocument(doc, makeCtx({ render: blank }));
+        expect(stack.unaccounted(laidBlank.blocks, laidBlank.pages, laidBlank.losses))
+            .toEqual(['0:codeBlock']);
     });
 
     test('a renderer that reports no height has it derived from its items', () => {

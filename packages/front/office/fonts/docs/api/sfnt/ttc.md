@@ -41,6 +41,7 @@ const firstFont = extractFont(ttcBytes, 0);
 
 - TTC v2 DSIG is ignored (optional field not read).
 - `extractFont` recomputes `searchRange/entrySelector/rangeShift` via `sfntSearchParams`.
+- `extractFont` throws `ParseError` `fonts/ttc-bad-offset` when a table record of the member font runs past the end of the file (its `offset` + `length`).
 
 ## See also
 

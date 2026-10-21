@@ -51,6 +51,7 @@ const dr = runtime.resolve('docxDrawing');
     docId?, docName?, description?, title?,
     distT?, distB?, distL?, distR?,    // surrounding space
     embedRef?: string,                 // r:id of the image
+    srcRect?: { l?, t?, r?, b? },      // crop, 1/1000 of a percent (a:srcRect)
     prstGeom?: string,                 // 'rect' by default
     image?: { data?: Uint8Array, contentType?: string, rId?: string },
     anchorAttrs?: object,              // verbatim
@@ -94,9 +95,10 @@ dr.chart(chartSpec, { cx: '5in', cy: '3in' });
 
 ## Notes
 
-- `embedRef` is auto-assigned by `docx.write` (a fresh `rId` on the document's relationships part).
+- `embedRef` (and `chartRef` for a chart) is auto-assigned by `docx.write` (a fresh `rId` on the relationships part of the part holding the drawing: the document, or a header, footer, footnotes, endnotes or comments part) and patched in place on the drawing node.
+- `docId` (`<wp:docPr id>`) is made unique by `docx.write` across the document body and its headers, footers, footnotes, endnotes and comments: a drawing keeps its `docId` when no drawing before it holds the same one; a later duplicate and a drawing without one get the smallest unused id from 1, patched in place like `embedRef`.
 - `image.contentType` is sniffed when absent; the bytes are stored under `pkg.parts['/word/media/imageN.<ext>']`.
-- The `anchor` mode is preserved but its attributes are not typed — edit `anchorAttrs` / `anchorChildren` directly.
+- The `anchor` mode is preserved but its attributes are not typed — edit `anchorAttrs` / `anchorChildren` directly. The written `<wp:anchor>` children follow the `CT_Anchor` order whatever the order of `anchorChildren`: `simplePos`, `positionH`, `positionV`, `extent`, `effectExtent`, the wrap element, `docPr`, `cNvGraphicFramePr`, `a:graphic`, then `wp14:sizeRelH`, `wp14:sizeRelV` and any other child in the order given (an `mc:AlternateContent` takes the place of what it holds).
 - For chart parts, the chart XML goes to `/word/charts/chartN.xml` with a `…/chart` relationship.
 
 ## See also

@@ -5163,25 +5163,43 @@ export const fontsBundled = {
   } });
 
     // fonts-local factories — inlined and topo-ordered.
-    __register({ name: "fontErrors", dependencies: [], factory: function () {
-        class FontError extends Error {
-            constructor(code, message, opts) {
-                super(message);
-                this.name = new.target.name;
-                this.code = code;
-                if (opts && opts.context) this.context = opts.context;
-                if (opts && opts.cause)   this.cause = opts.cause;
-            }
-        }
-        class ParseError    extends FontError {}
-        class RenderError   extends FontError {}
-        class ContractError extends FontError {}
-        function isFontError(e) { return e instanceof FontError; }
-        return {
-            FontError, ParseError, RenderError, ContractError,
-            isFontError
-        };
-    } });
+    __register({ name: "fontErrors", dependencies: [], factory: function() {
+    class FontError extends Error {
+      constructor(code, message, opts) {
+        super(message);
+        Object.defineProperty(this, "name", {
+          value: new.target.name,
+          writable: !0,
+          enumerable: !0,
+          configurable: !0
+        });
+        this.code = code;
+        if (opts && opts.context)
+          this.context = opts.context;
+        if (opts && opts.cause)
+          this.cause = opts.cause;
+      }
+    }
+
+    class ParseError extends FontError {
+    }
+
+    class RenderError extends FontError {
+    }
+
+    class ContractError extends FontError {
+    }
+    function isFontError(e) {
+      return e instanceof FontError;
+    }
+    return {
+      FontError,
+      ParseError,
+      RenderError,
+      ContractError,
+      isFontError
+    };
+  } });
     __register({ name: "fontsShared", dependencies: [], factory: function() {
     const SFNT_FLAVOR = Object.freeze({
       TRUETYPE: "truetype",
@@ -5951,7 +5969,10 @@ export const fontsBundled = {
       return { format, length, language, subHeaderKeys, subHeaders, map };
     }
     function parseFormat4(r) {
-      const format = r.readUint16(), length = r.readUint16(), language = r.readUint16(), segCount = r.readUint16() / 2;
+      const format = r.readUint16(), length = r.readUint16(), language = r.readUint16(), segCountX2 = r.readUint16();
+      if (segCountX2 % 2 !== 0)
+        throw new ParseError("fonts/cmap-fmt4-odd-segcount", `cmap format 4: segCountX2 ${segCountX2} is odd (it is 2 \xD7 segCount)`, { context: { segCountX2 } });
+      const segCount = segCountX2 / 2;
       r.skip(6);
       const endCode = Array(segCount);
       for (let i = 0;i < segCount; i++)
@@ -7376,18 +7397,22 @@ export const fontsBundled = {
         pIdx = endPt + 1;
         if (contour.length === 0)
           continue;
-        let firstOn = contour.findIndex((p) => p.onCurve);
-        if (firstOn < 0) {
-          const last = contour[contour.length - 1], first = contour[0], startX = (last.x + first.x) / 2, startY = (last.y + first.y) / 2;
-          path.moveTo(startX, startY);
-          firstOn = -1;
+        const first = contour[0], last = contour[contour.length - 1];
+        let startX, startY, ordered;
+        if (first.onCurve) {
+          startX = first.x;
+          startY = first.y;
+          ordered = contour.slice(1);
+        } else if (last.onCurve) {
+          startX = last.x;
+          startY = last.y;
+          ordered = contour.slice(0, -1);
         } else {
-          const s = contour[firstOn];
-          path.moveTo(s.x, s.y);
+          startX = (last.x + first.x) / 2;
+          startY = (last.y + first.y) / 2;
+          ordered = contour;
         }
-        const startIdx = firstOn < 0 ? 0 : firstOn, ordered = [], iterCount = firstOn < 0 ? contour.length : contour.length - 1;
-        for (let i = 1;i <= iterCount; i++)
-          ordered.push(contour[(startIdx + i) % contour.length]);
+        path.moveTo(startX, startY);
         let pendingControl = null;
         for (const p of ordered)
           if (p.onCurve)
@@ -7403,10 +7428,8 @@ export const fontsBundled = {
             }
             pendingControl = p;
           }
-        if (pendingControl) {
-          const startCmd = path.commands.find((c) => c.type === "M");
-          path.quadTo(pendingControl.x, pendingControl.y, startCmd.x, startCmd.y);
-        }
+        if (pendingControl)
+          path.quadTo(pendingControl.x, pendingControl.y, startX, startY);
         path.close();
       }
       return path;

@@ -4,7 +4,7 @@ Pure JavaScript library to read and write OpenDocument documents
 (ODF — `.odt`, `.ods`, `.odp`) in the browser. No npm dependency beyond
 the monorepo framework: ZIP, XML parsing/serialization and the ODF
 package container are either implemented here or consumed from
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.0.0/packages/front/fw).
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/fw).
 
 The package exposes a typed document model for the three formats (a
 serializable JSON tree), a core set of parsers and orchestrators, and
@@ -15,10 +15,12 @@ not regenerate (pictures, thumbnails, embedded objects) byte-for-byte
 with their manifest media types, together with the read styles,
 settings and metadata; `meta:generator` is rewritten to
 `@awacloud/odf`. One limitation: a frame anchored directly in a paragraph
-is re-emitted after the paragraph's runs, not at its original position
+is re-emitted after the paragraph's runs, not at its original position,
+unless the document is read with `odt.read(bytes, { framesInRuns: true })`
 (inside a `text:span`, frames, fields, spacing and nested spans keep
-their position). It mirrors the architecture of the sibling package
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.0.0/packages/front/office/ooxml).
+their position). Two writes of the same document produce the same bytes:
+ZIP entries carry a fixed date, or the `opts.mtime` of `write`. It mirrors the architecture of the sibling package
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/office/ooxml).
 
 ## Installation
 
@@ -199,8 +201,8 @@ bun test packages/front/office/odf/
 
 ## See also
 
-- [`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.0.0/packages/front/office/ooxml) — sibling OOXML library
-- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.0.0/packages/front/fw) — shared runtime + zip + crc32 + codecs
+- [`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/office/ooxml) — sibling OOXML library
+- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/fw) — shared runtime + zip + crc32 + codecs
 - [`CHANGELOG.md`](./CHANGELOG.md) — L0 → L4 history
 
 ## Exposed sub-paths
@@ -249,6 +251,6 @@ as stated in [`NOTICE`](./NOTICE).
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/odf`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.0.0/packages/front/office/odf)
+- Source: [`packages/front/office/odf`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/office/odf)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/odf@1.0.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/odf@1.1.0/SECURITY.md

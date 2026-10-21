@@ -215,7 +215,8 @@ export const renderHtmlMod = {
                         let attr = '';
                         if (info) {
                             const lang = info.split(/\s+/)[0];
-                            if (lang) attr = ' class="language-' + escapeHtml(lang) + '"';
+                            // As the reference renderers: no second prefix on `language-r`.
+                            if (lang) attr = ' class="' + (lang.startsWith('language-') ? '' : 'language-') + escapeHtml(lang) + '"';
                         }
                         cr();
                         out('<pre><code' + attr + '>');
@@ -224,11 +225,17 @@ export const renderHtmlMod = {
                         cr();
                         break;
                     }
-                    case 'html_block':
+                    case 'html_block': {
+                        const html = safe && !node._mdTrustedHtml ? '' : filterHtml(node.literal || '');
                         cr();
-                        out(safe && !node._mdTrustedHtml ? '' : filterHtml(node.literal || ''));
-                        cr();
+                        out(html);
+                        // A literal that kept a trailing blank line (block closed by its
+                        // container or the document end) still gets its closing newline,
+                        // as in the reference renderers.
+                        if (html.length > 1 && html.endsWith('\n')) lit('\n');
+                        else cr();
                         break;
+                    }
                     case 'text':
                         out(escapeHtml(node.literal || ''));
                         break;

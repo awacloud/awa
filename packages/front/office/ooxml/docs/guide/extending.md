@@ -90,7 +90,7 @@ Extensions implement any subset of hooks; missing hooks are skipped. The docx wa
 
 ## Module skeleton
 
-Follow the [fw module pattern](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/guide/module-pattern.md):
+Follow the [fw module pattern](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/guide/module-pattern.md):
 
 ```js
 // my-extra.js
@@ -195,4 +195,4 @@ test('roundtrip caps', () => {
 
 - [Existing extras](../api/extra/README.md) — copy the closest one as a starting point
 - [Coverage guide](./coverage.md) — tiers and remaining gaps
-- [fw module pattern](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/guide/module-pattern.md)
+- [fw module pattern](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/guide/module-pattern.md)

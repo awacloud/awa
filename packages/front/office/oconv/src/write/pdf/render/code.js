@@ -34,13 +34,12 @@
  *   (`PARAGRAPH_SPACE_AFTER` in `../stack.js`), which is added ON TOP by
  *   the stack, not by this module.
  * - An EMPTY fence (`node.text` reduces to zero source lines) renders
- *   NOTHING and records NO loss — genuinely nothing to
- *   typeset and nothing lost. This is a narrow, deliberate exception to the
- *   general "a delegated kind is always drawable" rule (`stack.js`
- *   `isDrawable`: an empty `items` array from a delegated kind still reads
- *   as drawable, so a hypothetical full-document layout of a document whose
- *   ONLY content is one empty fence would report it unaccounted — this
- *   exact return shape is the module's contract for the case regardless).
+ *   NOTHING and records NO loss — genuinely nothing to typeset and nothing
+ *   lost. It returns `{ items: [], losses: [], height: 0 }`: the explicit
+ *   `height: 0` DECLARES the block empty, so `stack.js` marks it `empty`
+ *   and `isDrawable` counts it ink-free — the accounting invariant holds
+ *   for a document whose only content is one empty fence (a delegated
+ *   block with no items and NO stated height still counts as drawable).
  * - `node.info` (the fence's language tag) is read nowhere: the typesetter
  *   renders no syntax colouring, so there is nothing the info string would drive.
  *
@@ -143,7 +142,9 @@ export const oconvPdfRenderCode = {
             const text = node && typeof node.text === 'string' ? node.text : '';
             const lines = sourceLines(text);
 
-            if (lines.length === 0) return { items: [], losses: [] };
+            // Declared empty (no items, an explicit `height: 0`): the stack
+            // counts the block ink-free, so it is accounted, nothing lost.
+            if (lines.length === 0) return { items: [], losses: [], height: 0 };
 
             const items = [];
             const losses = [];

@@ -90,7 +90,6 @@ task item.
 
 ```console
 $ bun src/index.ts from-md note.md --target docx --out note.docx
-convert: 1 loss recorded
 $ echo $?
 0
 $ bun src/index.ts from-md note.md --target pdf | head -c 8
@@ -98,8 +97,9 @@ convert: 1 loss recorded
 %PDF-2.0
 ```
 
-The loss is the task checkbox (`list/task-marker-dropped`), which neither
-target can carry.
+The pdf loss is the task checkbox (`list/task-marker-dropped`): the
+built-in pdf faces have no ☒ glyph. The docx (and odt) output draws it
+as a leading `☒ ` run, with no loss.
 
 ```console
 $ bun src/index.ts from-md note.md

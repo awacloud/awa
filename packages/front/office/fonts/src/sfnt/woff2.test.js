@@ -118,6 +118,39 @@ describe('fontWoff2', () => {
         expect(() => noBrotliApi.decodeWoff2(woff2, {})).toThrow(ContractError);
     });
 
+    test('a corrupt Brotli body throws the typed fonts/woff2-bad-brotli, the decoder error as cause', () => {
+        const woff2 = buildWoff2({ 'aaaa': new Uint8Array([1, 2, 3, 4, 5]) });
+        const start = parseWoff2Header(woff2).directoryEnd;
+        woff2[start] ^= 0xff;
+        let err;
+        try { decodeWoff2(woff2, { brotli: brotliMod }); } catch (e) { err = e; }
+        expect(err).toBeInstanceOf(ParseError);
+        expect(err.code).toBe('fonts/woff2-bad-brotli');
+        expect(err.cause).toBeInstanceOf(Error);
+        expect(err.cause.code).toBe('EBADSTREAM');
+    });
+
+    test('a body that needs the unloaded static dictionary throws the typed fonts/woff2-no-dictionary', () => {
+        const woff2 = buildWoff2({ 'aaaa': new Uint8Array([42]) });
+        const needDict = Object.assign(new Error('brotli: static dictionary required'), { code: 'ENEEDDICT' });
+        const stub = { brotliDecompressSync() { throw needDict; } };
+        let err;
+        try { decodeWoff2(woff2, { brotli: stub }); } catch (e) { err = e; }
+        expect(err).toBeInstanceOf(ContractError);
+        expect(err.code).toBe('fonts/woff2-no-dictionary');
+        expect(err.message).toContain('brotliDictWords');
+        expect(err.cause).toBe(needDict);
+    });
+
+    test('a typed font error thrown by an injected decoder passes through unchanged', () => {
+        const woff2 = buildWoff2({ 'aaaa': new Uint8Array([42]) });
+        const own = new ParseError('fonts/x-test', 'stand-in');
+        const stub = { brotliDecompressSync() { throw own; } };
+        let err;
+        try { decodeWoff2(woff2, { brotli: stub }); } catch (e) { err = e; }
+        expect(err).toBe(own);
+    });
+
     test('the sfnt test runtime\'s brotli round-trips non-trivial input', () => {
         // Deterministic 16 KiB buffer: a repeated sentence interleaved with an LCG sequence.
         const sentence = new TextEncoder().encode('The quick brown fox jumps over the lazy dog. ');

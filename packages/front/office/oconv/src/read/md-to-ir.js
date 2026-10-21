@@ -34,7 +34,7 @@
  * | `code_block` | `codeBlock{info: info string or '', text: literal}` | |
  * | `block_quote` | `blockquote` | |
  * | `thematic_break` | `hr` | |
- * | `list` / `item` | `list{ordered: listType==='ordered'}` / `listItem` | nesting PRESERVED (a nested `list` block inside a `listItem` flows through the same block walker); `listStart > 1` on an ordered list → loss `{code:'list/start-dropped', detail:'start='+listStart}` (IR has no start prop); a GFM task-list checkbox on an item → strip the marker (already stripped by `@awacloud/md`'s block-phase post-pass), loss `{code:'list/task-marker-dropped', detail:'[x]'\|'[ ]'}` |
+ * | `list` / `item` | `list{ordered: listType==='ordered'}` / `listItem` | nesting PRESERVED (a nested `list` block inside a `listItem` flows through the same block walker); `listStart > 1` on an ordered list → loss `{code:'list/start-dropped', detail:'start='+listStart}` (IR has no start prop); a GFM task-list checkbox on an item (already stripped from the text by `@awacloud/md`'s block-phase post-pass) → `listItem.escapes.md = { task: 'checked'\|'unchecked' }`, no loss — each writer draws the marker or records `list/task-marker-dropped` itself |
  * | `table` / `table_row` / `table_cell` | `table` / `row{header: row.isHeader===true}` / `cell` | cell inlines wrapped in one `paragraph` block per cell; when `table.align` contains any non-null entry → ONE loss `{code:'table/align-dropped', detail: align.join(',')}` |
  * | `html_block` | dropped → loss `{code:'block/dropped', detail:'html_block'}` | |
  * | any other inline (e.g. `html_inline`) | dropped → loss `{code:'inline/dropped', detail:<type>}` | exhaustive-else: NO node type falls through silently |
@@ -46,7 +46,6 @@
  * |---|---|
  * | `frontmatter/stripped` | a leading `---`/`+++`/`;;;` fence was stripped before parsing; detail = `frontmatter.lang` |
  * | `list/start-dropped` | an ordered list started above 1; the IR `list` node has no start prop |
- * | `list/task-marker-dropped` | a GFM task-list checkbox was stripped from an item |
  * | `table/align-dropped` | a GFM table declared column alignment; the IR `row`/`cell` model has none |
  * | `inline/linebreak-degraded` | a hard line break degraded to a single space |
  * | `inline/dropped` | an unmapped inline node kind (detail = its `type`), or a non-empty link title |
@@ -232,13 +231,12 @@ export const oconvMdToIr = {
                 }
                 const items = [];
                 for (let it = l.firstChild; it; it = it.next) {
-                    if (it.checked !== null) {
-                        losses.push({
-                            code: 'list/task-marker-dropped',
-                            detail: it.checked ? '[x]' : '[ ]'
-                        });
-                    }
-                    items.push(irNode('listItem', {}, blocksFromNodes(it)));
+                    // A GFM task checkbox travels in the md escapes bag;
+                    // the writers draw it or record its loss.
+                    const props = (it.checked === true || it.checked === false)
+                        ? { escapes: { md: { task: it.checked ? 'checked' : 'unchecked' } } }
+                        : {};
+                    items.push(irNode('listItem', props, blocksFromNodes(it)));
                 }
                 return irNode('list', { ordered }, items);
             }

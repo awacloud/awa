@@ -176,7 +176,12 @@ export const textTracked = {
 
         function renderRegion(r) {
             const regAttrs = {};
-            if (r.id) regAttrs['text:id'] = r.id;
+            // `xml:id` is the region's required ID since ODF 1.2 (the
+            // markers' `text:change-id` refers to it); `text:id` repeats it.
+            if (r.id) {
+                regAttrs['xml:id'] = r.id;
+                regAttrs['text:id'] = r.id;
+            }
             const changeAttrs = {};
             if (r._extras && r._extras.attrs) {
                 for (const k of Object.keys(r._extras.attrs)) {

@@ -37,7 +37,7 @@ Each format module orchestrates read / write of its OPC package; lower-level bui
 
 ## Factory pattern
 
-Every module follows the same shape (see [fw module-pattern](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/docs/guide/module-pattern.md)). Factories that throw typed errors take `ooxmlErrors` as their first dependency:
+Every module follows the same shape (see [fw module-pattern](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/guide/module-pattern.md)). Factories that throw typed errors take `ooxmlErrors` as their first dependency:
 
 ```js
 {

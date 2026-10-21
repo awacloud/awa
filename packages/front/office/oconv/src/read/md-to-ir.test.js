@@ -9,14 +9,16 @@ import { fw_require as mdFwRequire, modules as mdModules } from '@awacloud/md';
 import { mdFrontmatter } from '@awacloud/md/extra/frontmatter.js';
 import { oconvIr } from '../ir/ir.js';
 import { oconvMdToIr } from './md-to-ir.js';
+import { oconvIrToMd } from '../write/ir-to-md.js';
 
 // Spike-proven pattern (`docx-to-ir.test.js`): a unit test hand-registers
 // the needed descriptors on a local `ModuleRuntime` rather than going
 // through a package composition root (task 04's concern). `md`'s own
 // `fw_require`/`modules` plus the opt-in `mdFrontmatter` extra are
 // registered exactly the way the plan's "Tests to cover" section
-// prescribes.
+// prescribes. `oconvIrToMd` serves the md -> IR -> md return legs.
 let mdToIr;
+let irToMd;
 let validate;
 
 beforeAll(() => {
@@ -26,8 +28,10 @@ beforeAll(() => {
     runtime.register(mdFrontmatter);
     runtime.register(oconvIr);
     runtime.register(oconvMdToIr);
+    runtime.register(oconvIrToMd);
 
     ({ mdToIr } = runtime.resolve('oconvMdToIr'));
+    ({ irToMd } = runtime.resolve('oconvIrToMd'));
     ({ validate } = runtime.resolve('oconvIr'));
 });
 
@@ -287,15 +291,29 @@ describe('oconvMdToIr — loss ledger falsification', () => {
         expect(ir.children).toEqual([]);
     });
 
-    test('list/task-marker-dropped: a GFM task-list checkbox', () => {
-        const { ir, losses } = mdToIr('- [x] done\n- [ ] todo\n');
-        expect(losses).toEqual([
-            { code: 'list/task-marker-dropped', detail: '[x]' },
-            { code: 'list/task-marker-dropped', detail: '[ ]' }
-        ]);
+    test('a GFM task-list checkbox travels in listItem.escapes.md, no loss', () => {
+        const { ir, losses } = mdToIr('- [x] done\n- [ ] todo\n- [X] upper\n- plain\n');
+        expect(losses).toEqual([]);
+        expect(validate(ir).ok).toBe(true);
         const items = ir.children[0].children;
+        expect(items[0].escapes).toEqual({ md: { task: 'checked' } });
+        expect(items[1].escapes).toEqual({ md: { task: 'unchecked' } });
+        expect(items[2].escapes).toEqual({ md: { task: 'checked' } });
+        expect('escapes' in items[3]).toBe(false);
         expect(items[0].children[0].children[0].text).toBe('done');
         expect(items[1].children[0].children[0].text).toBe('todo');
+    });
+
+    test('md -> IR -> md keeps the task markers, nested lists included', () => {
+        const src = '- [x] done\n- [ ] todo\n  - [ ] nested\n- plain\n';
+        const { ir, losses } = mdToIr(src);
+        const out = irToMd(ir, {
+            sourceFormat: 'md', sourceName: 'tasks.md', sourceBytes: src.length,
+            sourceSha256: '0'.repeat(64), convertedAt: '2026-10-12T00:00:00Z',
+            converter: 'oconv', converterVersion: '1.0.0', engine: 'bun', losses
+        });
+        expect(out.losses).toEqual([]);
+        expect(out.markdown.endsWith('---\n' + src)).toBe(true);
     });
 
     test('non-vacuity control: a plain loss-free fixture records zero losses', () => {

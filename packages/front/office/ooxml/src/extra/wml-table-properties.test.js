@@ -295,7 +295,9 @@ describe('extra/wml-table-properties — parity with the pre-BL-1766 shape', () 
         const out = xml.serializeNode(struct.renderTable(struct.parseTable(xml.parse(THEMED))));
         expect(out).toBe('<w:tbl><w:tblPr><w:tblBorders>'
             + '<w:top w:val="single" w:sz="4" w:space="0" w:color="auto" w:themeColor="accent1" w:themeTint="99" w:shadow="1" w:frame="0"/>'
-            + '<w:bottom w:val="nil"/></w:tblBorders></w:tblPr></w:tbl>');
+            + '<w:bottom w:val="nil"/></w:tblBorders></w:tblPr>'
+            // The writer adds the grid CT_Tbl requires (no row, no column).
+            + '<w:tblGrid/></w:tbl>');
     });
 
     test('lossless WITH the extension: hydrate then dehydrate re-emits every border attribute (themeTint included)', () => {

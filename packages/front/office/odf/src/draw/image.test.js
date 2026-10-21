@@ -6,6 +6,7 @@
 import { describe, test, expect } from 'bun:test';
 import { drawImage } from './image.js';
 import { drawFrame } from './frame.js';
+import { odfErrors } from '../errors.js';
 import { xml as fwXml } from '@awacloud/fw/io/codec/xml.js';
 
 function build() {
@@ -77,7 +78,7 @@ describe('drawImage module', () => {
         test('an image frame (renderFrame, kind image) carries draw:mime-type on its draw:image', () => {
             const xml = fwXml.factory();
             const image = drawImage.factory(xml);
-            const frame = drawFrame.factory(xml, image);
+            const frame = drawFrame.factory(xml, image, odfErrors.factory());
             const el = frame.renderFrame({ anchorType: 'as-char',
                 child: { kind: 'image', href: 'Pictures/a.png', mimeType: 'image/png' } });
             const img = el.children.find(c => c.name === 'draw:image');

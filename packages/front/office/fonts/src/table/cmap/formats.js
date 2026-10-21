@@ -106,6 +106,10 @@ export const tableCmapFormats = {
             const length = r.readUint16();
             const language = r.readUint16();
             const segCountX2 = r.readUint16();
+            if (segCountX2 % 2 !== 0)
+                throw new ParseError('fonts/cmap-fmt4-odd-segcount',
+                    `cmap format 4: segCountX2 ${segCountX2} is odd (it is 2 × segCount)`,
+                    { context: { segCountX2 } });
             const segCount = segCountX2 / 2;
             r.skip(6);    // searchRange, entrySelector, rangeShift
             const endCode = new Array(segCount);

@@ -146,3 +146,39 @@ describe('opcPackage.read — maxRatio', () => {
         expect(disabled.parts['/bin/zeros.bin']).toHaveLength(1024 * 1024);
     });
 });
+
+/** A package whose one XML part nests `depth` elements (stored: no ratio to trip). */
+function nestedPackage(opc, depth, extra = '') {
+    const pkg = opc.empty();
+    const text = '<?xml version="1.0"?>' + extra + '<a>'.repeat(depth) + '</a>'.repeat(depth);
+    opc.setPart(pkg, '/p/deep.xml', new TextEncoder().encode(text), CT_XML);
+    return opc.write(pkg);
+}
+
+describe('opcPackage.read — maxDepth', () => {
+    test('default 1,000: depth 1,000 reads, 1,001 throws opc/xml-too-deep with the part, 0 disables', () => {
+        const { opc } = build();
+        expect(opc.read(nestedPackage(opc, 1000)).parts['/p/deep.xml']).toBeDefined();
+        const err = thrown(() => opc.read(nestedPackage(opc, 1001)));
+        expect(err).not.toBeNull();
+        expect(err).toBeInstanceOf(_errors.ParseError);
+        expect(err.code).toBe('opc/xml-too-deep');
+        expect(err.context).toEqual({ limit: 'maxDepth', max: 1000, partName: 'p/deep.xml' });
+        expect(opc.read(nestedPackage(opc, 1001), { maxDepth: 0 }).parts['/p/deep.xml']).toBeDefined();
+        expect(thrown(() => opc.read(nestedPackage(opc, 11), { maxDepth: 10 })).code).toBe('opc/xml-too-deep');
+        expect(opc.read(nestedPackage(opc, 10), { maxDepth: 10 }).parts['/p/deep.xml']).toBeDefined();
+    });
+
+    test('only open elements count: empty elements, closes, comments, CDATA, instructions and quoted > do not', () => {
+        const { opc } = build();
+        const noise = '<!-- <a><a><a> --><![CDATA[<a><a>]]><?pi <a><a>?><!DOCTYPE x>'
+            + '<e/><e k="a>b" j=\'<a>\'/>';
+        const pkg = opc.empty();
+        const text = '<?xml version="1.0"?><r>' + noise.repeat(5) + '<a>'.repeat(9) + '</a>'.repeat(9) + '</r>';
+        opc.setPart(pkg, '/p/n.xml', new TextEncoder().encode(text), CT_XML);
+        const bytes = opc.write(pkg);
+        // r + nine a = depth 10.
+        expect(opc.read(bytes, { maxDepth: 10 }).parts['/p/n.xml']).toBeDefined();
+        expect(thrown(() => opc.read(bytes, { maxDepth: 9 })).code).toBe('opc/xml-too-deep');
+    });
+});

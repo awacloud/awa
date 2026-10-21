@@ -1,0 +1,80 @@
+{
+  "name": "@awacloud/viewer",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "description": "Browser-only document viewer (PDF, DOCX, XLSX, PPTX, ODT, ODS, ODP, Markdown, text): an installable PWA, or a component mounted inside any page. Nothing is uploaded.",
+  "keywords": [
+    "document-viewer",
+    "pdf",
+    "docx",
+    "xlsx",
+    "pptx",
+    "odt",
+    "ods",
+    "odp",
+    "markdown",
+    "pwa",
+    "offline",
+    "browser",
+    "office"
+  ],
+  "private": true,
+  "type": "module",
+  "main": "src/viewer.js",
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "src/styles/*.css",
+    "docs",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": "./src/viewer.js",
+    "./element.js": "./src/element.js",
+    "./viewer.css": "./src/styles/viewer.css",
+    "./tokens.css": "./src/styles/tokens.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "./src/main.js",
+    "./src/sanity.js"
+  ],
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.0"
+  },
+  "scripts": {
+    "test": "bun test .",
+    "build": "bun ../../../cli.ts site-kit app-dist --app . && bun ../../demo/_build/bundle-js.js --dist dist --label @awacloud/viewer && bun tools/build-csp.js && bun tools/build-sw.js",
+    "icons": "bun tools/build-icons.js",
+    "samples": "bun tools/build-samples.js",
+    "lint": "bunx eslint --no-warn-ignored ."
+  },
+  "dependencies": {
+    "@awacloud/fw": "workspace:*",
+    "@awacloud/pdf": "workspace:*",
+    "@awacloud/ooxml": "workspace:*",
+    "@awacloud/odf": "workspace:*",
+    "@awacloud/md": "workspace:*",
+    "@awacloud/fonts": "workspace:*",
+    "@awacloud/oconv": "workspace:*"
+  },
+  "awa": {
+    "maturity": "L1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "apps/services/viewer"
+  },
+  "homepage": "https://viewer.awacloud.com/",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

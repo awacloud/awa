@@ -2,9 +2,9 @@
 
 Pure JavaScript library to read and write PDF documents in the browser, with
 no runtime dependency beyond
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.0.0/packages/front/fw)
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.1.0/packages/front/fw)
 and
-[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.0.0/packages/front/office/fonts).
+[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.1.0/packages/front/office/fonts).
 The reference is ISO 32000-2:2020 (PDF 2.0); PDF 1.x files
 are read too. `pdf.write` emits a `%PDF-2.0` header; `pdfBuilder.setVersion`
 and `pdfWriter.writeDocument({ version })` emit the header they are given
@@ -30,6 +30,11 @@ Known limits, so they are not a surprise:
 - An encrypted file is refused by `read` (`pdf/document/encrypted`) unless
   you opt in to the raw container; decryption is done by calling the
   security-handler modules (`pdfSecurity`, `pdfStandardV4/V5/V6`) yourself.
+- A FlateDecode stream is inflated to at most 256 MiB (`pdfFlate.limits`):
+  past that `pdf/flate/output-limit` is thrown instead of a decompression
+  bomb filling memory. `pdfFlate.decode(bytes, params, { maxOutput })` sets
+  another ceiling (`0` disables it); see
+  [`docs/api/syntax/filters/flate.md`](docs/api/syntax/filters/flate.md).
 - Content streams are parsed to an operator list, not rendered.
 - `write` re-emits the objects it is given: it does not convert legacy
   content (XFA, RC4 encryption, LZW streams, Sound / Movie annotations) to
@@ -86,8 +91,20 @@ console.log(api.read(out).pages.length);  // the written file reads back
 
 `api.write(doc)` re-emits the read model's indirect object graph in canonical
 form: `%PDF-2.0` header, sequential objects, classical cross-reference table,
-trailer. The layered `dist/standalone` roots (`pdf-large`, `pdf-full`,
-`pdf-legacy` and the four `-rw` roots) are invocable the same way — see
+trailer. A `%PDF-2.0` file requires the trailer `/ID` (ISO 32000-2
+Table 15), so when the model carries none, `write` (and `pdfBuilder` without
+`setId`) derives one: both halves are the first 16 bytes of the SHA-256 of the
+bytes written before the trailer, so the same input still gives the same bytes.
+An explicit `/ID` is written as given and another version gets none; the
+cross-reference-stream writer (`pdfXrefStreamWriter`) derives none. PDF 2.0
+also requires `FirstChar`, `LastChar`, `Widths` and a `FontDescriptor` on every
+simple font, the Standard 14 included: `pdfBuilder.addFont({ name, baseFont,
+encoding, standard14 })` writes them from the `@awacloud/fonts`
+`standard14Lookup` metrics when you pass it, and keeps the legacy bytes
+otherwise ([`docs/api/document/builder.md`](docs/api/document/builder.md#standard-14-metrics)).
+
+The layered `dist/standalone` roots (`pdf-large`, `pdf-full`,
+`pdf-legacy` and the four `-rw` roots) are invocable the same way as `pdf` — see
 [Committed dist](#committed-dist--two-build-surfaces) below.
 
 ### With the `@awacloud/fw` runtime
@@ -263,7 +280,7 @@ src/
 
 API per module: [`docs/api/README.md`](docs/api/README.md). Sibling package
 with the same factory + bundles layout:
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.0.0/packages/front/office/ooxml).
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.1.0/packages/front/office/ooxml).
 
 ## Tests
 
@@ -359,6 +376,6 @@ Copyright (c) 2026 AwaCloud SAS
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/pdf`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.0.0/packages/front/office/pdf)
+- Source: [`packages/front/office/pdf`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.1.0/packages/front/office/pdf)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/pdf@1.0.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/pdf@1.1.0/SECURITY.md

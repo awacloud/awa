@@ -1,0 +1,179 @@
+/*
+ * Copyright (c) 2026 AwaCloud SAS
+ * Author: Matthieu Bouilloux
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Dual-licensed; see the NOTICE file for licensing and any additional terms.
+ */
+
+/* apps/services/viewer/src/styles/app.css — the STANDALONE page shell only
+ * (header band, About and Help panels, full-height layout). The viewer component itself is
+ * viewer.css; an embedding host never links this sheet. */
+
+:root { color-scheme: dark; }
+@media (prefers-color-scheme: light) {
+    :root { color-scheme: light; }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 100dvh;
+    height: 100dvh;
+    font: 400 var(--af-step-0)/1.5 var(--af-sans);
+    color: var(--af-fg);
+    background: var(--af-bg);
+}
+
+/* The header band: the awaforge chrome, with its `>_` wordmark. */
+.app-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fw-space-2) var(--fw-space-6);
+    padding: var(--fw-space-2) var(--fw-space-4);
+    color: var(--af-chrome-fg);
+    background: var(--af-chrome-bg);
+}
+.app-wordmark {
+    margin: 0;
+    font: 700 var(--af-step-1)/1.2 var(--af-mono);
+    letter-spacing: -0.01em;
+}
+/* The app's own icon before its name (not the awaforge prompt). */
+.app-brand { display: flex; align-items: center; gap: var(--fw-space-2); }
+.app-logo { display: block; width: 1.75rem; height: 1.75rem; }
+.app-tagline { margin: 0; color: var(--af-chrome-muted); font-size: var(--af-step--1); }
+.app-actions { display: flex; align-items: center; gap: var(--fw-space-3); margin-inline-start: auto; }
+.app-lang { display: flex; align-items: center; gap: var(--fw-space-2); font-size: var(--af-step--1); color: var(--af-chrome-muted); }
+.app-select, .app-install, .app-later {
+    min-height: 2.25rem;
+    font: inherit;
+    font-size: var(--af-step--1);
+    color: var(--af-chrome-fg);
+    background: transparent;
+    border: 1px solid var(--af-chrome-muted);
+    border-radius: var(--fw-radius-md);
+}
+.app-select option { color: var(--af-fg); background: var(--af-bg); }
+.app-install { padding: 0 var(--fw-space-3); cursor: pointer; color: var(--af-hero-cta-fg); background: var(--af-hero-cta-bg); border-color: var(--af-hero-cta-bg); font-weight: 600; }
+.app-later { padding: 0 var(--fw-space-3); cursor: pointer; }
+/* "A new version is ready": a line of its own inside the header band. */
+.app-update {
+    display: flex;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fw-space-2) var(--fw-space-3);
+    padding-block: var(--fw-space-2) var(--fw-space-1);
+    border-top: 1px solid var(--af-chrome-muted);
+    font-size: var(--af-step--1);
+}
+.app-update p { margin: 0; margin-inline-end: auto; }
+.app-header :focus-visible { outline: 2px solid var(--af-chrome-muted); outline-offset: 2px; }
+
+.app-main { min-height: 0; }
+.app-main > .awv { height: 100%; }
+
+/* The About panel: a modal dialog over the page (legal notices, release, updates). */
+.app-about {
+    width: min(34rem, calc(100vw - 2 * var(--fw-space-4)));
+    max-height: calc(100dvh - 2 * var(--fw-space-4));
+    padding: var(--fw-space-6);
+    color: var(--af-fg);
+    background: var(--af-surface);
+    border: 1px solid var(--af-border);
+    border-radius: var(--fw-radius-md);
+    box-shadow: var(--af-shadow);
+    font-size: var(--af-step--1);
+}
+.app-about::backdrop { background: rgb(0 0 0 / 0.5); }
+.app-about p { margin: 0 0 var(--fw-space-3); }
+.app-about-title { margin: 0 0 var(--fw-space-2); font: 700 var(--af-step-1)/1.2 var(--af-mono); }
+.app-about-version, .app-about-build { color: var(--af-muted); }
+.app-about-legal { font-weight: 600; }
+.app-about-files { margin: 0 0 var(--fw-space-3); padding-inline-start: 1.25em; }
+.app-about-update { display: flex; flex-wrap: wrap; align-items: center; gap: var(--fw-space-2) var(--fw-space-3); margin-bottom: var(--fw-space-3); }
+.app-about-update .app-about-status { margin: 0; }
+.app-offline { color: var(--af-muted); }
+.app-about-promo { padding-top: var(--fw-space-3); border-top: 1px solid var(--af-rule); }
+.app-about a { color: var(--af-accent); }
+.app-about-close { display: flex; justify-content: flex-end; }
+.app-button {
+    min-height: 2.25rem;
+    padding: 0 var(--fw-space-3);
+    font: inherit;
+    color: var(--af-fg);
+    background: transparent;
+    border: 1px solid var(--af-border);
+    border-radius: var(--fw-radius-md);
+    cursor: pointer;
+}
+.app-button:disabled { cursor: progress; opacity: 0.7; }
+.app-about :focus-visible { outline: 2px solid var(--af-accent); outline-offset: 2px; }
+/* The Help panel: the help page of the reader's language, over the app. */
+.app-help {
+    width: min(48rem, calc(100vw - 2 * var(--fw-space-4)));
+    height: calc(100dvh - 2 * var(--fw-space-4));
+    max-height: 52rem;
+    padding: 0;
+    color: var(--af-fg);
+    background: var(--af-surface);
+    border: 1px solid var(--af-border);
+    border-radius: var(--fw-radius-md);
+    box-shadow: 0 1rem 3rem var(--af-shadow);
+}
+.app-help[open] { display: flex; flex-direction: column; }
+.app-help::backdrop { background: rgb(0 0 0 / 0.5); }
+.app-help-head {
+    display: flex;
+    align-items: center;
+    gap: var(--fw-space-3);
+    padding: var(--fw-space-3) var(--fw-space-4) var(--fw-space-3) var(--fw-space-6);
+    color: var(--af-chrome-fg);
+    background: var(--af-chrome-bg);
+}
+.app-help-title { flex: 1; margin: 0; font: 700 var(--af-step-1)/1.2 var(--af-mono); }
+.app-help-close {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    font: inherit;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--af-chrome-muted);
+    border-radius: var(--fw-radius-md);
+    cursor: pointer;
+}
+.app-help-body {
+    flex: 1;
+    overflow: auto;
+    padding: var(--fw-space-4) var(--fw-space-6) var(--fw-space-6);
+    font-size: var(--af-step--1);
+    line-height: 1.6;
+}
+.app-help-body h2 { margin: var(--fw-space-6) 0 var(--fw-space-2); padding-bottom: var(--fw-space-1); font-size: var(--af-step-1); border-bottom: 1px solid var(--af-rule); }
+.app-help-body h3 { margin: var(--fw-space-4) 0 var(--fw-space-1); font-size: var(--af-step-0); }
+.app-help-body p { margin: 0 0 var(--fw-space-3); }
+.app-help-body ul { margin: 0 0 var(--fw-space-3); padding-inline-start: 1.25em; }
+.app-help-body a { color: var(--af-accent); }
+.app-help-body table { width: 100%; margin: var(--fw-space-2) 0; border-collapse: collapse; }
+.app-help-body th, .app-help-body td { padding: var(--fw-space-1) var(--fw-space-2); text-align: start; vertical-align: top; border: 1px solid var(--af-rule); }
+.app-help-body th { background: var(--af-code-bg); }
+.app-help-body kbd { padding: 0 0.35em; font: 0.9em var(--af-mono); background: var(--af-code-bg); border: 1px solid var(--af-rule); border-radius: 4px; }
+.app-help-note { color: var(--af-muted); }
+.app-help :focus-visible { outline: 2px solid var(--af-accent); outline-offset: 2px; }
+.app-help-head :focus-visible { outline-color: var(--af-chrome-muted); }
+@media (max-width: 40rem) {
+    .app-tagline { display: none; }
+    .app-header { padding: var(--fw-space-1) var(--fw-space-3); }
+    .app-lang > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+.app-noscript { margin: 0; padding: var(--fw-space-3) var(--fw-space-4); font-weight: 600; }
+[hidden] { display: none !important; }

@@ -39,7 +39,7 @@ const set = runtime.resolve('docxSettings');
     defaultTabStop?: number,         // twips
     evenAndOddHeaders?: boolean,     // enables odd/even headers and footers
     updateFields?: boolean,          // refresh fields on open
-    trackChanges?: boolean,
+    trackChanges?: boolean,          // <w:trackRevisions>: track revisions
     zoom?: { val?: 'none'|'fullPage'|'bestFit'|'textFit',
              percent?: number },
     _extras?: [xmlNode]              // everything else, verbatim
@@ -78,6 +78,7 @@ const out = set.bytesOf(obj);
 ## Notes
 
 - `evenAndOddHeaders: true` is required for `headerReferences` of type `'even'` to be honoured.
+- `trackChanges` is the schema's `<w:trackRevisions>` (ECMA-376 Part 1 § 17.15.1.89): `true` writes `<w:trackRevisions/>`, and both `<w:trackRevisions>` and the `<w:trackChanges>` that version 1.0.0 wrote read into it. When it is a boolean, an `_extras` element of either name is not written beside it.
 - `zoom.percent` is an integer percentage; it coexists with `zoom.val`.
 - Pass the object to `docx.write(doc, { settings: obj })`.
 - A root other than `<w:settings>` raises `ParseError('docx/settings-bad-root')`.

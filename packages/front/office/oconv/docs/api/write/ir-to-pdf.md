@@ -1,7 +1,7 @@
 ---
 module: oconvIrToPdf
 category: oconv/write
-dependencies: [oconvIr, oconvPdfMetrics, oconvPdfBox, oconvPdfLinebreak, oconvPdfStack, oconvPdfRenderText, oconvPdfRenderList, oconvPdfRenderCode, oconvPdfRenderTable, oconvPdfRenderImage, pdfBuilder, pdfFontEmbed, fonts, oconvDefaultFaces]
+dependencies: [oconvIr, oconvPdfMetrics, oconvPdfBox, oconvPdfLinebreak, oconvPdfStack, oconvPdfRenderText, oconvPdfRenderList, oconvPdfRenderCode, oconvPdfRenderTable, oconvPdfRenderImage, pdfBuilder, pdfFontEmbed, fonts, oconvDefaultFaces, zlib, standard14Lookup]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > `oconv-ir/v1` → `.pdf` bytes — the bounded typesetter's writer facade.
 
-**Module** `oconvIrToPdf` | **Source** `packages/front/office/oconv/src/write/ir-to-pdf.js` | **Deps** `oconvIr`, `oconvPdfMetrics`, `oconvPdfBox`, `oconvPdfLinebreak`, `oconvPdfStack`, `oconvPdfRenderText`, `oconvPdfRenderList`, `oconvPdfRenderCode`, `oconvPdfRenderTable`, `oconvPdfRenderImage`, `pdfBuilder`, `pdfFontEmbed`, `fonts`, `oconvDefaultFaces` | **Worker-safe** yes
+**Module** `oconvIrToPdf` | **Source** `packages/front/office/oconv/src/write/ir-to-pdf.js` | **Deps** `oconvIr`, `oconvPdfMetrics`, `oconvPdfBox`, `oconvPdfLinebreak`, `oconvPdfStack`, `oconvPdfRenderText`, `oconvPdfRenderList`, `oconvPdfRenderCode`, `oconvPdfRenderTable`, `oconvPdfRenderImage`, `pdfBuilder`, `pdfFontEmbed`, `fonts`, `oconvDefaultFaces`, `zlib` (optional), `standard14Lookup` (optional, last) | **Worker-safe** yes
 
 This is the only module in the family that talks to `@awacloud/pdf`. It owns
 the whole `md → pdf` write pipeline: option validation
@@ -109,17 +109,25 @@ all) nothing is recorded — it is the chosen route, not a fallback.
 ### Images
 
 `writeOpts.assets` carries `{ '<markdown image destination>': Uint8Array }`
-down to `oconvPdfRenderImage`. Placement scope: **JPEG only**
-(baseline/extended/progressive, 1 or 3 components) — placed with
-`/DCTDecode`, drawn `q w 0 0 h x y cm /Im<n> Do Q`, no loss. Every other
-case is refused with the italic `[image: <alt>]` placeholder still drawn
-and one `layout/image-dropped` loss: PNG (colour type 0 or 2) →
-`reason: 'unsupported-encoding'`, `format: 'png'`; PNG palette/alpha, CMYK
-JPEG, any other format, malformed bytes → `reason: 'unsupported-encoding'`
-(no `format`); nothing resolved at all → `reason: 'no-bytes'`,
-`bytes: 0`. See [`pdf-writer.md`](../../pdf-writer.md#images) for the full
-placement-geometry and format-boundary explanation (why PNG specifically is
-refused rather than guessed at).
+down to `oconvPdfRenderImage`. Placed, drawn `q w 0 0 h x y cm /Im<n> Do
+Q`, no loss: a **JPEG** (baseline/extended/progressive, 1 or 3 components)
+with `/DCTDecode`, and a **PNG** — a non-interlaced PNG of colour type 0 or 2 without `tRNS` embeds its `IDAT` zlib stream verbatim as `/FlateDecode` behind a PNG `/Predictor 15`; a palette, alpha or colour-key PNG is inflated (bounded by its `IHDR` size), unfiltered and split into its colour samples (a palette expanded to 8-bit RGB) and a DeviceGray `/SMask`, both re-deflated. The
+decoding uses fw `zlib`, an optional dependency of this facade (`ctx.zlib`
+for the renderer): a hand-wired factory call without it refuses those PNGs.
+The LAST dependency, `standard14Lookup` (optional too), reaches every
+Standard 14 registration as `pdfBuilder.addFont`'s `standard14` option, so
+the font dictionaries carry the `FirstChar`, `LastChar`, `Widths` and
+`FontDescriptor` PDF 2.0 requires; a hand-wired call without it writes the
+bare dictionaries.
+Every other case is refused with the italic `[image: <alt>]` placeholder
+still drawn and one `layout/image-dropped` loss, `reason:
+'unsupported-encoding'`: an interlaced or malformed PNG, or one above
+64 MiB of filtered data (`format: 'png'`), a CMYK JPEG (`format: 'jpeg'`),
+a GIF, WebP, BMP or TIFF (named from its signature), anything else (named
+from the content type a reader carried, else no `format`); nothing resolved
+at all → `reason: 'no-bytes'`, `bytes: 0`. See
+[`pdf-writer.md`](../../pdf-writer.md#images) for the full placement
+geometry and format boundary.
 
 ## Examples
 
@@ -142,8 +150,10 @@ Uint8Array`, `pages === 1`, `losses` is `[]`.
 
 ## Notes
 
-- **Determinism**: `irToPdf` injects NO date and NO document `/ID` — only
-  `addMetadata({Producer, Creator})`, never `setId`. `@awacloud/pdf`'s plain
+- **Determinism**: `irToPdf` injects NO date and sets no document `/ID` —
+  only `addMetadata({Producer, Creator})`, never `setId`; `@awacloud/pdf`'s
+  writer derives the trailer `/ID` PDF 2.0 requires from the bytes it wrote
+  (a SHA-256), so the output stays reproducible. `@awacloud/pdf`'s plain
   write path reads no clock and no randomness; this holds only on that
   path — `document/encryptedWriter.js` uses `Math.random()` for its file
   key, and `md → pdf` never enters it.
@@ -171,7 +181,7 @@ Uint8Array`, `pages === 1`, `losses` is `[]`.
   `{index, kind}`. The drawn bytes are those of the unflagged run.
 - Full loss-code table, error catalogue, worker-boundary behaviour
   (`opts.pdf` crosses, the `oconvDefaultFaces` descriptor never does) and
-  the measured `keepTogether` gap are on
+  the `keepTogether` design note are on
   [`pdf-writer.md`](../../pdf-writer.md) — not restated here to avoid two
   copies drifting apart.
 - See the [loss matrix](../../loss-matrix.md) for the published

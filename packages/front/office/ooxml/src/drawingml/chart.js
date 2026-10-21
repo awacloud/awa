@@ -126,12 +126,12 @@ export const drawingmlChart = {
                 xml.el('c:idx', { val: String(idx) }),
                 xml.el('c:order', { val: String(idx) })
             ];
-            // Series name
+            // Series name: CT_SerTx is a reference or a literal `c:v`. The
+            // model carries values only (no formula), so every data source
+            // below is written as a literal too (CT_StrRef / CT_NumRef hold
+            // a formula and a cache, never a literal).
             children.push(xml.el('c:tx', {}, [
-                xml.el('c:strRef', {}, [
-                    xml.el('c:f', {}, [xml.text(`"${series.name || ''}"`)]),
-                    renderStrLit([series.name || ''])
-                ])
+                xml.el('c:v', {}, [xml.text(String(series.name || ''))])
             ]));
             // Optional solid fill
             if (series.color) {
@@ -142,34 +142,14 @@ export const drawingmlChart = {
                 // <c:xVal> + <c:yVal>
                 const xVals = series.xValues || (series.categories || []);
                 const yVals = series.yValues || series.values || [];
-                children.push(xml.el('c:xVal', {}, [
-                    xml.el('c:numRef', {}, [
-                        xml.el('c:f', {}, [xml.text('""')]),
-                        renderNumLit(xVals.map(Number), formatCode)
-                    ])
-                ]));
-                children.push(xml.el('c:yVal', {}, [
-                    xml.el('c:numRef', {}, [
-                        xml.el('c:f', {}, [xml.text('""')]),
-                        renderNumLit(yVals.map(Number), formatCode)
-                    ])
-                ]));
+                children.push(xml.el('c:xVal', {}, [renderNumLit(xVals.map(Number), formatCode)]));
+                children.push(xml.el('c:yVal', {}, [renderNumLit(yVals.map(Number), formatCode)]));
             } else {
                 // Categories (optional — falls back to indices)
                 if (series.categories && series.categories.length) {
-                    children.push(xml.el('c:cat', {}, [
-                        xml.el('c:strRef', {}, [
-                            xml.el('c:f', {}, [xml.text('""')]),
-                            renderStrLit(series.categories)
-                        ])
-                    ]));
+                    children.push(xml.el('c:cat', {}, [renderStrLit(series.categories)]));
                 }
-                children.push(xml.el('c:val', {}, [
-                    xml.el('c:numRef', {}, [
-                        xml.el('c:f', {}, [xml.text('""')]),
-                        renderNumLit(series.values || [], formatCode)
-                    ])
-                ]));
+                children.push(xml.el('c:val', {}, [renderNumLit(series.values || [], formatCode)]));
             }
             return xml.el('c:ser', {}, children);
         }
@@ -184,7 +164,8 @@ export const drawingmlChart = {
                 const sl = xml.findChild(tx, 'c:strLit');
                 const v = xml.findChild(tx, 'c:v');
                 if (sr) {
-                    const inner = xml.findChild(sr, 'c:strLit');
+                    // Office: c:f + c:strCache; this package before: a literal inside.
+                    const inner = xml.findChild(sr, 'c:strCache') || xml.findChild(sr, 'c:strLit');
                     if (inner) out.name = parseLitValues(inner)[0] || '';
                     else {
                         const f = xml.findChild(sr, 'c:f');
@@ -215,27 +196,30 @@ export const drawingmlChart = {
         }
 
         function readStrData(parentEl) {
-            // <c:cat> wraps <c:strRef> (with possible cached <c:strLit>)
-            // or directly <c:strLit>.
+            // <c:cat> holds a reference (<c:strRef> / <c:numRef>: a formula
+            // and its cache) or a literal (<c:strLit> / <c:numLit>). A
+            // literal inside a reference is what this package wrote before.
             const strRef = xml.findChild(parentEl, 'c:strRef');
             if (strRef) {
-                const lit = xml.findChild(strRef, 'c:strLit');
+                const lit = xml.findChild(strRef, 'c:strCache') || xml.findChild(strRef, 'c:strLit');
                 if (lit) return parseStrLit(lit);
             }
             const strLit = xml.findChild(parentEl, 'c:strLit');
             if (strLit) return parseStrLit(strLit);
             const numRef = xml.findChild(parentEl, 'c:numRef');
             if (numRef) {
-                const lit = xml.findChild(numRef, 'c:numLit');
+                const lit = xml.findChild(numRef, 'c:numCache') || xml.findChild(numRef, 'c:numLit');
                 if (lit) return parseLitValues(lit);
             }
+            const numLit = xml.findChild(parentEl, 'c:numLit');
+            if (numLit) return parseLitValues(numLit);
             return [];
         }
 
         function readNumData(parentEl) {
             const numRef = xml.findChild(parentEl, 'c:numRef');
             if (numRef) {
-                const lit = xml.findChild(numRef, 'c:numLit');
+                const lit = xml.findChild(numRef, 'c:numCache') || xml.findChild(numRef, 'c:numLit');
                 if (lit) return parseNumLit(lit);
             }
             const numLit = xml.findChild(parentEl, 'c:numLit');

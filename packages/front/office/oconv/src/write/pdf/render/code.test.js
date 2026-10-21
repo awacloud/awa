@@ -173,11 +173,11 @@ describe('render — tabs and overflow', () => {
 });
 
 describe('render — the empty fence (plan: "nothing + no loss")', () => {
-    test('empty text → zero items, zero losses, no `height`', () => {
+    test('empty text → zero items, zero losses, an explicit `height: 0` (declared empty)', () => {
         const result = renderCode.render(codeNode(''), makeCtx());
         expect(result.items).toEqual([]);
         expect(result.losses).toEqual([]);
-        expect(result.height).toBeUndefined();
+        expect(result.height).toBe(0);
     });
 
     test('text that is only the trimmed trailing newline → the same empty result', () => {
@@ -206,6 +206,20 @@ describe('render — the stack accounting invariant (D-E: a delegated kind is al
         const laid = stack.layoutDocument(ir, ctx);
         expect(stack.unaccounted(laid.blocks, laid.pages, laid.losses)).toEqual([]);
         expect(laid.pages[0].items.length).toBeGreaterThan(0);
+    });
+
+    test('a document whose ONLY content is an empty fence is accounted too (nothing drawn, nothing lost)', () => {
+        const losses = [];
+        const ctx = {
+            measurer, layout: LAYOUT, column: LAYOUT.column,
+            sizeFor: LAYOUT.sizeFor, leading: LAYOUT.leading, linebreak, losses,
+            index: null,
+            render: (node, childCtx) => renderCode.render(node, childCtx)
+        };
+        const laid = stack.layoutDocument({ kind: 'document', children: [codeNode('')] }, ctx);
+        expect(laid.blocks).toHaveLength(1);               // the block is there...
+        expect(laid.losses).toEqual([]);                    // ...nothing is lost...
+        expect(stack.unaccounted(laid.blocks, laid.pages, laid.losses)).toEqual([]);
     });
 });
 

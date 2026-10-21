@@ -1,0 +1,326 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "ooxml-validator",
+    "version": "OOXML-Validator@2.1.6",
+    "source": "https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981"
+  },
+  "oracle": {
+    "image": "awa-oracle-ooxml-validator:2.1.6",
+    "imageId": "sha256:bbe729911f1a680a2dc3980b7da1b31b69974aa356938d4cd434ac5a787ed27a",
+    "version": "OOXML-Validator 2.1.6 (DocumentFormat.OpenXml 3.2.0) Microsoft365"
+  },
+  "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 33 (21 written, 12 round trips)",
+  "documents": [
+    {
+      "file": "docx-text-table.docx",
+      "kind": "written",
+      "sha256": "474daf70c074a45bdad2a4f827716f2f31d41694e38bdfb733715d08c7dc01d2",
+      "errors": []
+    },
+    {
+      "file": "docx-numbering-header-footnote.docx",
+      "kind": "written",
+      "sha256": "2eead29225988a9df45619719ae2ba26fd904ec70bf9e09aaff982a3b3ddf970",
+      "errors": []
+    },
+    {
+      "file": "docx-bullet-list.docx",
+      "kind": "written",
+      "sha256": "da5432232aa7a3d072b2de718fdaa8383429b370bbe29bd4bb4b1486a14e7bb8",
+      "errors": []
+    },
+    {
+      "file": "docx-math.docx",
+      "kind": "written",
+      "sha256": "5c2bebf185dc7cb9ce1864ce51ff245c90a2fa63e12cb4b61dc67f1a341f18c3",
+      "errors": []
+    },
+    {
+      "file": "docx-repeating-section.docx",
+      "kind": "written",
+      "sha256": "e9e43255bc5e641c82b74b30580556af9709beb26cc09e4be3871279a1546770",
+      "errors": []
+    },
+    {
+      "file": "docx-custom-xml-binding.docx",
+      "kind": "written",
+      "sha256": "52cd36225c53add84153d6a497df9e61304b7dd9a13c4c5457147b439b7734c8",
+      "errors": []
+    },
+    {
+      "file": "docx-image.docx",
+      "kind": "written",
+      "sha256": "778a6b596fa0ec73094c82e5ad9c441675afac4a9e52f3fa5fb44ad6f0f0fa23",
+      "errors": []
+    },
+    {
+      "file": "docx-styles.docx",
+      "kind": "written",
+      "sha256": "413de37e15adb84884277f03a45d9d1dd9f44939d0e3b1c1160ebe689a641c54",
+      "errors": []
+    },
+    {
+      "file": "docx-chart-shape.docx",
+      "kind": "written",
+      "sha256": "9a4850d1b2fc4c1112094f719fb9b93b8988491e9fb487dad9fe520bc7b0668c",
+      "errors": []
+    },
+    {
+      "file": "docx-comments-endnotes-fields.docx",
+      "kind": "written",
+      "sha256": "8625cf9fadb18b2e3ea497133a6305901806955ef3fb26c3588ab8bf1731ad79",
+      "errors": []
+    },
+    {
+      "file": "xlsx-styles-table-names.xlsx",
+      "kind": "written",
+      "sha256": "a18ca39647bc7688608e9906fdb8d1a96fb14520675adfa07b414336f64d3db6",
+      "errors": []
+    },
+    {
+      "file": "xlsx-conditional-formatting.xlsx",
+      "kind": "written",
+      "sha256": "b9bed85fc914ac2565dce06c0cbbdc2eeece239464236882fc0e030cf094cc82",
+      "errors": []
+    },
+    {
+      "file": "xlsx-chart.xlsx",
+      "kind": "written",
+      "sha256": "45e1f7f0cc1f2b870d26103cbb202eeab66e91bf765451361362fd31aee3c816",
+      "errors": []
+    },
+    {
+      "file": "xlsx-threaded-comments.xlsx",
+      "kind": "written",
+      "sha256": "82fa83e8d9c417b898a53f6203934c5640fc461fa0202edd521f72ca66b45bc7",
+      "errors": []
+    },
+    {
+      "file": "xlsx-comments.xlsx",
+      "kind": "written",
+      "sha256": "39c03aa7115a03691154eb6e8bb0cbe6b1326c943453e530c9d5109d57eeeefb",
+      "errors": []
+    },
+    {
+      "file": "xlsx-formulas-merges.xlsx",
+      "kind": "written",
+      "sha256": "477b00a044617d0a48ca6eb8c5681403067cf12d9da5574e33921ec6d19900be",
+      "errors": []
+    },
+    {
+      "file": "xlsx-sheet-properties.xlsx",
+      "kind": "written",
+      "sha256": "6da0b212e5386259338faef9139166d8db31f9c51a8b3d4bf9c0447fb1348ff7",
+      "errors": []
+    },
+    {
+      "file": "pptx-title-body.pptx",
+      "kind": "written",
+      "sha256": "bf85972e0845cab8a98cc7f5559ad6bc3661fe5d1e5a0b4e5a6f44c410bd282c",
+      "errors": []
+    },
+    {
+      "file": "pptx-chart.pptx",
+      "kind": "written",
+      "sha256": "b3586be8bdda6dbb9ee85d9b8f96d6d2b8afe21aaa3d82924ece442aa5d04dd6",
+      "errors": []
+    },
+    {
+      "file": "pptx-shapes.pptx",
+      "kind": "written",
+      "sha256": "12cb7df7822ca50f15cf9836f4e89c17b8bdca1bfb8b0649dca59c6185efdd21",
+      "errors": []
+    },
+    {
+      "file": "pptx-picture-table.pptx",
+      "kind": "written",
+      "sha256": "1b498a7e3ea18a8ffe8507772caac167b9c4c5ca75d093b9ee88833797e81931",
+      "errors": []
+    },
+    {
+      "file": "round-trip--docx-bulk.docx",
+      "kind": "round-trip",
+      "sha256": "1306b26e1227aa4aec6d7d7f75c395509e79ea4ca2f67433bf23529359a9eaba",
+      "errors": []
+    },
+    {
+      "file": "round-trip--docx-bulk.source.docx",
+      "kind": "source",
+      "sha256": "7b4a9c3984be963e7a669ba57e5cd45599d4cdf2857197a6c145152f10abd39d",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:tr'. List of possible elements expected: <http://schemas.microsoft.com/office/word/2010/wordml:customXmlConflictDelRangeEnd>,<http://schemas.microsoft.com/office/word/2010/wordml:customXmlConflictDelRangeStart>,<http://schemas.microsoft.com/office/word/2010/wordml:customXmlConflictInsRangeEnd>,<http://schemas.microsoft.com/office/word/2010/wordml:customXmlConflictInsRangeStart>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:bookmarkEnd>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:bookmarkStart>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:commentRangeEnd>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:commentRangeStart>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:customXmlDelRangeEnd>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:customXmlDelRangeStart>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:customXmlInsRangeEnd>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:customXmlInsRangeStart>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:customXmlMoveFromRangeEnd>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:customXmlMoveFromRangeStart>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:customXmlMoveToRangeEnd>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:customXmlMoveToRangeStart>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:moveFromRangeEnd>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:moveFromRangeStart>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:moveToRangeEnd>,<http://schemas.openxmlformats.org/wordprocessingml/2006/main:moveToRangeStart>.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "round-trip--docx-fr-styles.docx",
+      "kind": "round-trip",
+      "sha256": "353cb3e14087cbaf96e334b6f3e7427422c96cd91a5d464a51640e3a7aafae6d",
+      "errors": []
+    },
+    {
+      "file": "round-trip--docx-fr-styles.source.docx",
+      "kind": "source",
+      "sha256": "074a5e237b273b63233d0e17ea9ae5969b71233de09e53aa01eb4530e80dea7a",
+      "errors": []
+    },
+    {
+      "file": "round-trip--docx-smoke.docx",
+      "kind": "round-trip",
+      "sha256": "06e72a5ffe74bc5cfa60798598ef32bf2e8ded332c8f7a265feca66263cb7d7a",
+      "errors": []
+    },
+    {
+      "file": "round-trip--docx-smoke.source.docx",
+      "kind": "source",
+      "sha256": "7be541047cdb2255188fdf68ed6ddc98c47ed22332093df494dcb3f5c7f60b7c",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-pictures.pptx",
+      "kind": "round-trip",
+      "sha256": "022be4a0eaa42ecbe838ec5f3a977f8af6ac1727b85735daf6ce68afab61e24f",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-pictures.source.pptx",
+      "kind": "source",
+      "sha256": "5d6aa3a226c6257592e3d97d4a4a4e4832c16411116d97e70676f38dc5a525c5",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-sampleshow.pptx",
+      "kind": "round-trip",
+      "sha256": "e156adea2248ba0f5e197863e107109e9d2427d36157edcbae8550ada9adcd82",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-sampleshow.source.pptx",
+      "kind": "source",
+      "sha256": "bfb4b2f07c9233afd2f32aa5781d849d0c7d225bf03721a10becf487b481d828",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-table.pptx",
+      "kind": "round-trip",
+      "sha256": "3c50ca8cfe1c664ce0c1de5bd4938c034df3c18e0c92653a3509744d72e275d1",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-table.source.pptx",
+      "kind": "source",
+      "sha256": "b9c3eb4b198ef3e53a4ff1a5ef4118a5ce6ba1760592c553abf665b37dcac5f8",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-numbering.docx",
+      "kind": "round-trip",
+      "sha256": "80c1eefc8d3a18f1cb28adc1ac9852399762304b2abda29d54cec0a9183ef230",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-numbering.source.docx",
+      "kind": "source",
+      "sha256": "776a59dcf0e290f1988602e6305e2d9cb2e31f631dc4aa751593c23cddbaad4d",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-table-alignment.docx",
+      "kind": "round-trip",
+      "sha256": "ce2038b1604a732c55ad82486c85526975cb55c844f943c5c1499946e1728307",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'end'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[6]/w:tblPr[1]/w:jc[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[3]/w:tblPr[1]/w:jc[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "round-trip--poi-table-alignment.source.docx",
+      "kind": "source",
+      "sha256": "ee36729e0d050e529fea0b444006a194bea72b35cf8958ae58c6624c26156b41",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'end'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[6]/w:tblPr[1]/w:jc[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[3]/w:tblPr[1]/w:jc[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "round-trip--poi-with-gif.docx",
+      "kind": "round-trip",
+      "sha256": "2f43cb79b961c3ef0586d6c4b730a4482b917a892945f86eb80e8d2cfb9c3d5f",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-with-gif.source.docx",
+      "kind": "source",
+      "sha256": "fb9f0bfa791921c43fe113005d3bb7d639ab2946c082e7d24d31e0bf73003036",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-formula-eval.xlsx",
+      "kind": "round-trip",
+      "sha256": "d39cb8dd3bc6ae9de9e63a3452be88b2e5c294ed704fe35ac897d74db5673eb1",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-formula-eval.source.xlsx",
+      "kind": "source",
+      "sha256": "b82ba9d02f362acd061b4e0018dedc8b59db4c616c8768d89383a0806014eaa8",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-simple-multicell.xlsx",
+      "kind": "round-trip",
+      "sha256": "2018a39058180b431754ca4c3784f88e1354fe73afb3d9907ce5e1b5efae80cf",
+      "errors": []
+    },
+    {
+      "file": "round-trip--poi-simple-multicell.source.xlsx",
+      "kind": "source",
+      "sha256": "119b6e70c5bbca6ca3e46f981e0719c154d87203adb4b5b61210d726deab9f7a",
+      "errors": []
+    },
+    {
+      "file": "round-trip--word-repeating-section.docx",
+      "kind": "round-trip",
+      "sha256": "f65604c03cb068c2b239347072354897b306edaa6b0edeb6167391b9fb865c16",
+      "errors": []
+    },
+    {
+      "file": "round-trip--word-repeating-section.source.docx",
+      "kind": "source",
+      "sha256": "1533d704384011939dc138f590e8ac2ef568d86a2e6866526ded52db9a255045",
+      "errors": []
+    }
+  ],
+  "date": "2026-10-15",
+  "commit": "2671672698b60363c63608a8931173ca72b45dcd"
+}

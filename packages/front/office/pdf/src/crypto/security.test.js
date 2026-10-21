@@ -384,13 +384,37 @@ describe('selectHandler — V=4 crypt filter resolution', () => {
     const v4 = (over) => typeEncryptDict({ V: 4, R: 4, ...over });
     const CF = { StdCF: { type: 'dict', entries: { CFM: { type: 'name', value: 'AESV2' } } } };
 
-    test('/StmF=Identity falls back to the /StrF filter for streams', () => {
+    // Re-pinned for BL-2189: this leg used to pin the defect (streams fell
+    // back to the /StrF filter). ISO 32000-2 Table 20: /StmF names the
+    // filter for ALL streams; Table 26: Identity passes data through.
+    test('/StmF=Identity leaves streams unencrypted even with a named /StrF', () => {
         const sel = selectHandler(
             v4({ CF, StmF: { type: 'name', value: 'Identity' },
                  StrF: { type: 'name', value: 'StdCF' } }),
             { v4: _v4Handler });
-        expect(sel.method).toBe('AESV2');
+        expect(sel.method).toBe('Identity');
         expect(sel.strMethod).toBe('AESV2');
+        expect(sel.effMethod).toBe('Identity');
+    });
+
+    test('/StmF=Identity: a stream is dispatched through unchanged', () => {
+        const sel = selectHandler(
+            v4({ CF, StmF: { type: 'name', value: 'Identity' },
+                 StrF: { type: 'name', value: 'StdCF' } }),
+            { v4: _v4Handler });
+        const clear = new TextEncoder().encode('BT /F1 12 Tf (clear) Tj ET');
+        const stream = { type: 'stream', dict: { type: 'dict', entries: {} }, raw: clear };
+        const out = dispatchDecryptStream(sel, stream, new Uint8Array(16), 5, 0, clear);
+        expect(Array.from(out)).toEqual(Array.from(clear));
+    });
+
+    test('/StmF named, /StrF=Identity: streams use /StmF, strings stay clear', () => {
+        const sel = selectHandler(
+            v4({ CF, StmF: { type: 'name', value: 'StdCF' },
+                 StrF: { type: 'name', value: 'Identity' } }),
+            { v4: _v4Handler });
+        expect(sel.method).toBe('AESV2');
+        expect(sel.strMethod).toBe('Identity');
     });
 
     test('both filters Identity leaves streams unencrypted', () => {

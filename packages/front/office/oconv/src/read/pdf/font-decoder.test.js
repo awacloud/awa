@@ -99,6 +99,23 @@ describe('oconvPdfFontDecoder — encoding-table + AGL path', () => {
         expect(r.decoded).toBe(2);
         expect(r.undecodable).toBe(1);
     });
+
+    test('an indirect /Encoding, and indirect /Differences inside it, resolve through the resolver', () => {
+        // pdfLaTeX writes `/Encoding 52 0 R` on every Type 1 font: the font
+        // used to be dropped (every code undecodable, the font unresolved).
+        const differences = obj.array([obj.int(65), obj.name('uni0041'), obj.name('B')]);
+        const encoding = obj.dict({ Type: obj.name('Encoding'), Differences: obj.ref(31, 0) });
+        const objects = new Map([['30 0', encoding], ['31 0', differences]]);
+        const resolve = (r) => (r && r.type === 'ref' ? objects.get(`${r.num} ${r.gen}`) : r);
+        const fontDict = obj.dict({
+            Type: obj.name('Font'), Subtype: obj.name('Type1'),
+            BaseFont: obj.name('CMR10'),
+            Encoding: obj.ref(30, 0)
+        });
+        const dec = buildDecoder(fontDict, resolve);
+        const r = decodeShow(dec, new Uint8Array([65, 66]));
+        expect(r).toEqual({ text: 'AB', decoded: 2, undecodable: 0 });
+    });
 });
 
 describe('oconvPdfFontDecoder — undecodable', () => {

@@ -35,10 +35,12 @@
  * | `maxParts`        | `1024`        | max number of entries in the archive   |
  * | `maxUncompressed` | `256 * 1MiB`  | max total uncompressed bytes           |
  * | `maxRatio`        | `200`         | max uncompressed/compressed ratio      |
+ * | `maxDepth`        | `1000`        | max element depth of an XML part       |
  *
- * Exceeding any limit raises `ParseError('opc/zip-bomb', ...)` with
- * `context.limit` set to the breached bound. Pass `0` to disable a
- * given check.
+ * Exceeding one of the first three raises `ParseError('opc/zip-bomb', ...)`
+ * with `context.limit` set to the breached bound; exceeding `maxDepth`
+ * raises `ParseError('opc/xml-too-deep', ...)` with `context.partName`.
+ * Pass `0` to disable a given check.
  *
  * @module ooxml/opc/package
  */
@@ -60,8 +62,61 @@ export const opcPackage = {
         const DEFAULT_LIMITS = Object.freeze({
             maxParts: 1024,
             maxUncompressed: 256 * 1024 * 1024,
-            maxRatio: 200
+            maxRatio: 200,
+            maxDepth: 1000
         });
+
+        // The XML parts the depth limit applies to.
+        const XML_PART_RE = /\.(xml|rels|vml)$/i;
+
+        /**
+         * Whether the XML text `s` nests elements deeper than `limit`,
+         * found by a linear scan, without parsing: `<` opens an element
+         * unless it starts a close tag (`</`, one level up), a processing
+         * instruction (`<?`), a comment, a CDATA section or a declaration
+         * (`<!`); a start tag ending in `/>` opens nothing. Quoted attribute
+         * values are skipped. Stops at the first level past `limit`.
+         */
+        function deeperThan(s, limit) {
+            const n = s.length;
+            let depth = 0;
+            let i = s.indexOf('<');
+            while (i !== -1 && i < n) {
+                const c = s.charCodeAt(i + 1);
+                let end;
+                if (c === 0x2F) {                       // '</'
+                    depth--;
+                    end = s.indexOf('>', i + 2);
+                } else if (c === 0x3F) {                // '<?'
+                    end = s.indexOf('?>', i + 2);
+                    if (end !== -1) end += 1;
+                } else if (c === 0x21) {                // '<!'
+                    if (s.startsWith('<!--', i)) {
+                        end = s.indexOf('-->', i + 4);
+                        if (end !== -1) end += 2;
+                    } else if (s.startsWith('<![CDATA[', i)) {
+                        end = s.indexOf(']]>', i + 9);
+                        if (end !== -1) end += 2;
+                    } else {
+                        end = s.indexOf('>', i + 2);
+                    }
+                } else {                                // a start tag
+                    let j = i + 1;
+                    let quote = 0;
+                    for (; j < n; j++) {
+                        const b = s.charCodeAt(j);
+                        if (quote) { if (b === quote) quote = 0; }
+                        else if (b === 0x22 || b === 0x27) quote = b;
+                        else if (b === 0x3E) break;
+                    }
+                    end = j < n ? j : -1;
+                    if (end !== -1 && s.charCodeAt(end - 1) !== 0x2F && ++depth > limit) return true;
+                }
+                if (end === -1) return false;           // malformed: the parser reports it
+                i = s.indexOf('<', end + 1);
+            }
+            return false;
+        }
 
         // Factory-scoped RegExps — hoisted from hot paths so V8
         // caches the compiled pattern once per factory instantiation instead
@@ -83,6 +138,8 @@ export const opcPackage = {
          *        uncompressed bytes (256 MiB); `0` disables.
          * @param {number} [opts.maxRatio=200] max uncompressed/compressed
          *        ratio per entry; `0` disables.
+         * @param {number} [opts.maxDepth=1000] max element depth of any
+         *        XML part (`.xml`, `.rels`, `.vml`); `0` disables.
          * @returns {{contentTypes, parts, rels}}
          */
         function read(bytes, opts) {
@@ -97,6 +154,8 @@ export const opcPackage = {
                 ? opts.maxUncompressed : DEFAULT_LIMITS.maxUncompressed;
             const maxRatio = opts && opts.maxRatio !== undefined
                 ? opts.maxRatio : DEFAULT_LIMITS.maxRatio;
+            const maxDepth = opts && opts.maxDepth !== undefined
+                ? opts.maxDepth : DEFAULT_LIMITS.maxDepth;
 
             // Pre-scan with a filter callback : we tally counts and aborts
             // via thrown ParseError; the filter is called once per entry,
@@ -154,6 +213,20 @@ export const opcPackage = {
                 throw new ParseError('opc/invalid-zip',
                     'OPC: failed to unzip archive: ' + (e && e.message),
                     { cause: e });
+            }
+
+            // Element depth of every XML part, before any of them is
+            // parsed: the readers and their consumers walk the trees
+            // recursively, so a part nested past the limit is refused here.
+            if (maxDepth) {
+                for (const path of Object.keys(files)) {
+                    if (!XML_PART_RE.test(path)) continue;
+                    if (deeperThan(bytesToString(files[path]), maxDepth)) {
+                        throw new ParseError('opc/xml-too-deep',
+                            `OPC: part ${path} nests elements deeper than ${maxDepth}`,
+                            { context: { limit: 'maxDepth', max: maxDepth, partName: path } });
+                    }
+                }
             }
 
             const ctRaw = files['[Content_Types].xml'];

@@ -30,7 +30,7 @@ export const mdBlockTypes = {
     dependencies: ['mdAstTypes', 'mdBlockLinkRef', 'mdCommon'],
     deps: [mdAstTypes, mdBlockLinkRef, mdCommon],
     factory(astTypes, blockLinkRef, common) {
-        const { T_ITEM } = astTypes;
+        const { T_ITEM, T_CODE_BLOCK, T_HTML_BLOCK } = astTypes;
         const { removeLinkReferenceDefinitions } = blockLinkRef;
         const { unescapeString } = common;
 
@@ -57,7 +57,26 @@ export const mdBlockTypes = {
                 acceptsLines: false
             },
             list: {
-                continue() { return 0; },
+                continue(parser, container) {
+                    // From the second blank line in a row (no indentation),
+                    // nothing below the list can change: the first one closed
+                    // what a blank line closes. Stop the line here, so blank
+                    // lines after a deep list cost no walk (as cmark), and
+                    // give the line to an open code or HTML block as the
+                    // walk would have.
+                    const seen = parser.listsAfterBlank || (parser.listsAfterBlank = new Set());
+                    if (!parser.blank) {
+                        seen.delete(container);
+                    } else if (!seen.has(container)) {
+                        seen.add(container);
+                    } else if (parser.indent === 0) {
+                        const tip = parser.tip;
+                        if (tip.type === T_CODE_BLOCK || tip.type === T_HTML_BLOCK) parser.addLine();
+                        parser.lastLineLength = parser.currentLine.length;
+                        return 2;
+                    }
+                    return 0;
+                },
                 finalize(parser, block) {
                     let item = block.firstChild;
                     while (item) {

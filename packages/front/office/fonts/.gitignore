@@ -4,3 +4,13 @@
 # Re-include them here.
 !dist/
 !dist/**
+
+# The root .gitignore ignores every `coverage` directory (bun's run output).
+# The committed coverage scorecard (tools/office-scorecard) lives in it:
+# re-include that one file only.
+!coverage/
+coverage/*
+!coverage/scorecard.json
+# The axis-C evidence records (every file an external validator judged,
+# with its messages) live beside it.
+!coverage/evidence/

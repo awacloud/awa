@@ -1,0 +1,5287 @@
+{
+  "suite": {
+    "id": "qpdf-qtest",
+    "version": "qpdf@v12.4.2",
+    "source": "https://github.com/qpdf/qpdf/tree/4eba95899886e851cc41d76886483b347612f2a8"
+  },
+  "criterion": "per file, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child",
+  "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+  "host": "container",
+  "image": "awa-robustness-bun:1.3.13",
+  "imageId": "sha256:1a93710c3b0b8ee72a6876fc61e8975217fef39faee9a7c4b224560e6829de84",
+  "bun": "1.3.13",
+  "memoryMax": "1342177280",
+  "counts": {
+    "returned": 490,
+    "refused": 149,
+    "untyped": 0,
+    "hang": 0,
+    "memory": 0,
+    "crash": 0
+  },
+  "cases": [
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/11-pages-with-labels.pdf",
+      "bytes": 4215,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/11-pages.pdf",
+      "bytes": 4128,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/20-pages.pdf",
+      "bytes": 7343,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/V4-aes-clearmeta.pdf",
+      "bytes": 16910,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/V4-aes.pdf",
+      "bytes": 16474,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/V4-clearmeta.pdf",
+      "bytes": 15240,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/V4.pdf",
+      "bytes": 14781,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/add-attachments-1.pdf",
+      "bytes": 2602,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/add-attachments-2.pdf",
+      "bytes": 2577,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/add-contents.pdf",
+      "bytes": 1003,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotation-no-resources-out.pdf",
+      "bytes": 4016,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotation-no-resources.pdf",
+      "bytes": 4523,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotations-foreign-file.out.pdf",
+      "bytes": 19587,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotations-no-acroform-with-p.out.pdf",
+      "bytes": 16662,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotations-no-acroform-with-p.pdf",
+      "bytes": 9571,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotations-no-acroform.pdf",
+      "bytes": 9559,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotations-rotated-180.pdf",
+      "bytes": 10537,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotations-rotated-270.pdf",
+      "bytes": 10490,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotations-rotated-90.pdf",
+      "bytes": 10494,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/annotations-same-file.out.pdf",
+      "bytes": 16640,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-1-rotated.pdf",
+      "bytes": 48127,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-1.pdf",
+      "bytes": 69324,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-11.pdf",
+      "bytes": 69335,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-12.pdf",
+      "bytes": 69334,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-2.pdf",
+      "bytes": 69324,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-a-more.pdf",
+      "bytes": 62660,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-a-more2.pdf",
+      "bytes": 62658,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-a-more3.pdf",
+      "bytes": 63009,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-a.pdf",
+      "bytes": 63066,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-b.pdf",
+      "bytes": 69352,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/appearances-quack.pdf",
+      "bytes": 69330,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/append-page-content-damaged.pdf",
+      "bytes": 17369,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-startxref"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/append-page-content.pdf",
+      "bytes": 17370,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/append-xref-loop-fixed.pdf",
+      "bytes": 10282,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/append-xref-loop.pdf",
+      "bytes": 17370,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/missing-xref"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/attachment-fields.pdf",
+      "bytes": 2242,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-content.pdf",
+      "bytes": 135172,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-data-out.pdf",
+      "bytes": 797,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-data.pdf",
+      "bytes": 799,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-direct-root.pdf",
+      "bytes": 284,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-encryption-length.pdf",
+      "bytes": 1041,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-jpeg-out.pdf",
+      "bytes": 4681,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-jpeg.pdf",
+      "bytes": 4681,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-token-startxref.pdf",
+      "bytes": 774,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-xref-entry.pdf",
+      "bytes": 1113,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad-xref.pdf",
+      "bytes": 819,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad1.pdf",
+      "bytes": 5,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/short"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad10.pdf",
+      "bytes": 765,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad11.pdf",
+      "bytes": 970,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/missing-xref"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad12.pdf",
+      "bytes": 1190,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-missing-endobj"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad13.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/empty-keyword"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad14.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/empty-keyword"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad15.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/unbalanced"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad16.pdf",
+      "bytes": 779,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/unbalanced"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad17.pdf",
+      "bytes": 790,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/unbalanced"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad18.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/empty-keyword"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad19.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/unexpected-rangle"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad2.pdf",
+      "bytes": 747,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/no-startxref"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad20.pdf",
+      "bytes": 783,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/bad-hex"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad21.pdf",
+      "bytes": 779,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/bad-name-escape"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad22.pdf",
+      "bytes": 778,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad23.pdf",
+      "bytes": 778,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad24.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/stream/expected-endstream"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad25.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad26.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-gen"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad27.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-missing-obj"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad28.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-missing-endobj"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad29.pdf",
+      "bytes": 781,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad3.pdf",
+      "bytes": 751,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad30.pdf",
+      "bytes": 1013,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad31.pdf",
+      "bytes": 1025,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad32.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/xref-mismatch"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad33.pdf",
+      "bytes": 1014,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad34.pdf",
+      "bytes": 793,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/xref-mismatch"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad35.pdf",
+      "bytes": 807,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/objstm/wrong-type"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad36.pdf",
+      "bytes": 800,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/dict-key-not-name"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad37.pdf",
+      "bytes": 781,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad38.pdf",
+      "bytes": 786,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad39.pdf",
+      "bytes": 778,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/stream/expected-endstream"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad4.pdf",
+      "bytes": 750,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/no-trailer"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad40.pdf",
+      "bytes": 788,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad5.pdf",
+      "bytes": 749,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad6.pdf",
+      "bytes": 1190,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-missing-endobj"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad7.pdf",
+      "bytes": 751,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/trailer-not-dict"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad8.pdf",
+      "bytes": 968,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/bad9.pdf",
+      "bytes": 763,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/badlin1.pdf",
+      "bytes": 13103,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/big-ostream.pdf",
+      "bytes": 49639,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/boxes-flattened.pdf",
+      "bytes": 8891,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/boxes.pdf",
+      "bytes": 6955,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/boxes2.pdf",
+      "bytes": 5203,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/broken-decode-parms-no-filter.pdf",
+      "bytes": 1138,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/broken-lzw.pdf",
+      "bytes": 1119,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/button-set-broken-out.pdf",
+      "bytes": 71730,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/button-set-broken.pdf",
+      "bytes": 66904,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/button-set-out.pdf",
+      "bytes": 71732,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/button-set.pdf",
+      "bytes": 66904,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-check-clear-in.pdf",
+      "bytes": 763,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-check-warn-in.pdf",
+      "bytes": 764,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-decrypt-R5-with-user.pdf",
+      "bytes": 9731,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-decrypt-R6-with-owner.pdf",
+      "bytes": 9731,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-decrypt-with-owner.pdf",
+      "bytes": 9668,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-decrypt-with-user.pdf",
+      "bytes": 9668,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-empty.pdf",
+      "bytes": 315,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-foreign.pdf",
+      "bytes": 6091,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-ignore-xref-streams.pdf",
+      "bytes": 9976,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-indirect-objects-out.pdf",
+      "bytes": 975,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-info-out.pdf",
+      "bytes": 878,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-info2-in.pdf",
+      "bytes": 926,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-linearized.pdf",
+      "bytes": 11325,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-new-stream.pdf",
+      "bytes": 1116,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-no-options.pdf",
+      "bytes": 9668,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-no-original-object-ids.pdf",
+      "bytes": 15280,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-normalized-content.pdf",
+      "bytes": 8917,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-object-handle-creation-out.pdf",
+      "bytes": 1186,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-object-handles-out.pdf",
+      "bytes": 921,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-object-streams.pdf",
+      "bytes": 5195,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-pages.pdf",
+      "bytes": 6377,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-qdf.pdf",
+      "bytes": 17383,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-r2.pdf",
+      "bytes": 9893,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-r3.pdf",
+      "bytes": 9897,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-r4.pdf",
+      "bytes": 10892,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-r5-in.pdf",
+      "bytes": 11206,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-r6-in.pdf",
+      "bytes": 11206,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/c-uncompressed-streams.pdf",
+      "bytes": 10527,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/catalgg.pdf",
+      "bytes": 763,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/catalog/bad-type"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/coalesce-out.pdf",
+      "bytes": 2951,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/coalesce.pdf",
+      "bytes": 3769,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/unterminated-array"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/collate-even.pdf",
+      "bytes": 7763,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/collate-odd.pdf",
+      "bytes": 7764,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/comment-annotation-direct-out.pdf",
+      "bytes": 3183,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/comment-annotation-direct.pdf",
+      "bytes": 2803,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/comment-annotation-out.pdf",
+      "bytes": 3224,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/comment-annotation.pdf",
+      "bytes": 2842,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/compress-objstm-xref-qdf.pdf",
+      "bytes": 1249,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/compress-objstm-xref.pdf",
+      "bytes": 743,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/compressed-metadata-out-normal.pdf",
+      "bytes": 14895,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/compressed-metadata.pdf",
+      "bytes": 14459,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/content-stream-errors.pdf",
+      "bytes": 2889,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/unterminated-array"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/copied-positive-P.pdf",
+      "bytes": 1480,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/copy-attachments-2.pdf",
+      "bytes": 4133,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/copy-foreign-objects-in.pdf",
+      "bytes": 4410,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/copy-foreign-objects-out1.pdf",
+      "bytes": 1480,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/copy-foreign-objects-out2.pdf",
+      "bytes": 1938,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/copy-foreign-objects-out3.pdf",
+      "bytes": 2586,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/custom-pipeline.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/damaged-inline-image-out.pdf",
+      "bytes": 5558,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/damaged-inline-image.pdf",
+      "bytes": 5558,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/damaged-stream.pdf",
+      "bytes": 77635,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/dangling-bad-xref-dangling-out.pdf",
+      "bytes": 977,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/dangling-bad-xref.pdf",
+      "bytes": 1097,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/dangling-refs-dangling-out.pdf",
+      "bytes": 931,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/dangling-refs.pdf",
+      "bytes": 1067,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/decrypted-crypt-filter.pdf",
+      "bytes": 14383,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/decrypted-positive-P.pdf",
+      "bytes": 865,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/deep-duplicate-pages.pdf",
+      "bytes": 1287,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/deep-pages.pdf",
+      "bytes": 10399,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820,
+      "code": "pdf/pages/max-depth"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/default-da-q-out.pdf",
+      "bytes": 19840,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/default-da-q.pdf",
+      "bytes": 9664,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/delete-and-reuse.pdf",
+      "bytes": 17153,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/deterministic-id-in.pdf",
+      "bytes": 177835,
+      "class": "returned",
+      "ok": true,
+      "ms": 59,
+      "maxRssKiB": 124020
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/digitally-signed.pdf",
+      "bytes": 68846,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/direct-dr-out.pdf",
+      "bytes": 9687,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/direct-dr.pdf",
+      "bytes": 9978,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/direct-outlines.pdf",
+      "bytes": 15994,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/direct-pages-fixed.pdf",
+      "bytes": 968,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/direct-pages.pdf",
+      "bytes": 1343,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/pages/non-ref-kid"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/dr-with-indirect-item-out.pdf",
+      "bytes": 809,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/dr-with-indirect-item.pdf",
+      "bytes": 795,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/duplicate-page-inherited-1-fixed.pdf",
+      "bytes": 1530,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/duplicate-page-inherited-2-fixed.pdf",
+      "bytes": 1651,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/duplicate-page-inherited.pdf",
+      "bytes": 795,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/duplicate-pages.pdf",
+      "bytes": 3778,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/empty-decode-parms-out.pdf",
+      "bytes": 2770,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/empty-decode-parms.pdf",
+      "bytes": 2787,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/empty-object.pdf",
+      "bytes": 810,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/empty-stream-compressed.pdf",
+      "bytes": 986,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/flate/inflate-failed"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/empty-stream-uncompressed.pdf",
+      "bytes": 965,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/empty.pdf",
+      "bytes": 315,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-R2,V1,O=master.pdf",
+      "bytes": 17146,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-R2,V1,U=view,O=master.pdf",
+      "bytes": 17134,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-R2,V1,U=view,O=view.pdf",
+      "bytes": 17137,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-R2,V1.pdf",
+      "bytes": 17143,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-R3,V2,O=master.pdf",
+      "bytes": 17144,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-R3,V2,U=view,O=master.pdf",
+      "bytes": 17139,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-R3,V2,U=view,O=view.pdf",
+      "bytes": 17142,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-R3,V2.pdf",
+      "bytes": 17140,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-XI-R6,V5,O=master.pdf",
+      "bytes": 10933,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-XI-R6,V5,U=attachment,encrypted-attachments.pdf",
+      "bytes": 17868,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-XI-R6,V5,U=view,O=master.pdf",
+      "bytes": 15670,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-XI-R6,V5,U=view,attachments,cleartext-metadata.pdf",
+      "bytes": 22400,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-XI-R6,V5,U=wwwww,O=wwwww.pdf",
+      "bytes": 13642,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-XI-attachments-base.pdf",
+      "bytes": 20751,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-XI-base.pdf",
+      "bytes": 14041,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-XI-long-password.pdf",
+      "bytes": 10915,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-base.pdf",
+      "bytes": 16937,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/enc-long-password.pdf",
+      "bytes": 17144,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/encrypted-40-bit-R3.pdf",
+      "bytes": 1041,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/encrypted-positive-P.pdf",
+      "bytes": 1488,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/encrypted-with-images.pdf",
+      "bytes": 50219,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/endobj-at-eol-fixed.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/endobj-at-eol.pdf",
+      "bytes": 798,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/eof-in-inline-image.pdf",
+      "bytes": 870,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/content/inline-image/no-EI"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/eof-reading-token.pdf",
+      "bytes": 1632,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/eof-terminates-literal.pdf",
+      "bytes": 1632,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/erase-nntree-out.pdf",
+      "bytes": 2377,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/erase-nntree.pdf",
+      "bytes": 2429,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extensions-adbe-force-1.8.5.pdf",
+      "bytes": 865,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extensions-adbe-other-force-1.8.5.pdf",
+      "bytes": 923,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extensions-adbe-other.pdf",
+      "bytes": 1129,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extensions-adbe.pdf",
+      "bytes": 1139,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extensions-none-force-1.8.5.pdf",
+      "bytes": 865,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extensions-other-force-1.8.5.pdf",
+      "bytes": 923,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extensions-other.pdf",
+      "bytes": 1035,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extra-header-lin-newline.pdf",
+      "bytes": 1312,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extra-header-lin-no-newline.pdf",
+      "bytes": 1312,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extra-header-newline.pdf",
+      "bytes": 823,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extra-header-no-newline.pdf",
+      "bytes": 823,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/extract-duplicate-page.pdf",
+      "bytes": 1370,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fax-decode-parms.pdf",
+      "bytes": 1565966,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/field-parse-errors-out.pdf",
+      "bytes": 3647,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/field-parse-errors.pdf",
+      "bytes": 3190,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/field-resource-conflict.pdf",
+      "bytes": 3348,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/field-types.pdf",
+      "bytes": 66773,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fields-pages-out.pdf",
+      "bytes": 43173,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fields-split-1.pdf",
+      "bytes": 7221,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fields-split-2.pdf",
+      "bytes": 36507,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fields-two-pages.pdf",
+      "bytes": 42592,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/filter-abbreviation.pdf",
+      "bytes": 743,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/filter-on-write-out.pdf",
+      "bytes": 732,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/filter-on-write.pdf",
+      "bytes": 698,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-bad-fields-array.pdf",
+      "bytes": 54870,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-document-defaults.pdf",
+      "bytes": 54998,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-empty-from-odt.pdf",
+      "bytes": 54848,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-errors.pdf",
+      "bytes": 54962,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-fields-and-annotations-shared.pdf",
+      "bytes": 11607,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-fields-and-annotations.pdf",
+      "bytes": 9648,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-filled-by-acrobat-out.pdf",
+      "bytes": 245545,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-filled-by-acrobat.pdf",
+      "bytes": 61841,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-filled-with-atril.pdf",
+      "bytes": 56705,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-mod1.pdf",
+      "bytes": 54994,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-no-need-appearances-filled.pdf",
+      "bytes": 12630,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-no-need-appearances.pdf",
+      "bytes": 12572,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-xobjects-no-resources-out.pdf",
+      "bytes": 2664,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-xobjects-no-resources.pdf",
+      "bytes": 4782,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-xobjects-out.pdf",
+      "bytes": 24276,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-xobjects-some-resources1-out.pdf",
+      "bytes": 2775,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-xobjects-some-resources1.pdf",
+      "bytes": 4862,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-xobjects-some-resources2-out.pdf",
+      "bytes": 2819,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/form-xobjects-some-resources2.pdf",
+      "bytes": 4924,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/from-scratch-0.pdf",
+      "bytes": 772,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fuzz-16214.pdf",
+      "bytes": 12142,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fx-overlay-56.pdf",
+      "bytes": 23995,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fx-overlay-57.pdf",
+      "bytes": 24839,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fx-overlay-58.pdf",
+      "bytes": 24197,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fx-overlay-59.pdf",
+      "bytes": 24893,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fx-overlay-64.pdf",
+      "bytes": 4156,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fx-overlay-65.pdf",
+      "bytes": 4154,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fx-overlay-66.pdf",
+      "bytes": 4152,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fx-overlay-67.pdf",
+      "bytes": 4150,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fxo-bigsmall.pdf",
+      "bytes": 1956,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fxo-blue.pdf",
+      "bytes": 8823,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fxo-green.pdf",
+      "bytes": 4543,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fxo-red-rotate.pdf",
+      "bytes": 8815,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fxo-red.pdf",
+      "bytes": 8815,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/fxo-smallbig.pdf",
+      "bytes": 1960,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/gen1-no-dangling.pdf",
+      "bytes": 1758,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/gen1.pdf",
+      "bytes": 1758,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/global.pdf",
+      "bytes": 828,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/global_damaged.pdf",
+      "bytes": 827,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good1.pdf",
+      "bytes": 813,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good10.pdf",
+      "bytes": 802,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good11.pdf",
+      "bytes": 806,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good12.pdf",
+      "bytes": 1012,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good13.pdf",
+      "bytes": 1348,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good14.pdf",
+      "bytes": 2075,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good15.pdf",
+      "bytes": 779,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good16.pdf",
+      "bytes": 792,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good17-not-qdf.pdf",
+      "bytes": 9893,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good17-not-recompressed.pdf",
+      "bytes": 10621,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good17.pdf",
+      "bytes": 17031,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good18.pdf",
+      "bytes": 16642,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good19.pdf",
+      "bytes": 1032,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good2.pdf",
+      "bytes": 777,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good20.pdf",
+      "bytes": 10276,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good21.pdf",
+      "bytes": 1097,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good3.pdf",
+      "bytes": 778,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good4.pdf",
+      "bytes": 819,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good5.pdf",
+      "bytes": 819,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good6.pdf",
+      "bytes": 778,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good7.pdf",
+      "bytes": 779,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good8.pdf",
+      "bytes": 937,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/good9.pdf",
+      "bytes": 828,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/hybrid-xref.pdf",
+      "bytes": 16902,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/i3.pdf",
+      "bytes": 6731,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/image-streams-small.pdf",
+      "bytes": 21748,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/image-streams.pdf",
+      "bytes": 2970696,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/incremental-1.pdf",
+      "bytes": 1423,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/incremental-2.pdf",
+      "bytes": 1279,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/incremental-3.pdf",
+      "bytes": 944,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/indirect-decode-parms-out.pdf",
+      "bytes": 1067,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/indirect-decode-parms.pdf",
+      "bytes": 1292,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/indirect-filter-out-0.pdf",
+      "bytes": 2948,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/indirect-filter-out-1.pdf",
+      "bytes": 2948,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/indirect-filter.pdf",
+      "bytes": 5404,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/indirect-r-arg.pdf",
+      "bytes": 1128,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/dict-key-not-name"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/inherited-flattened.pdf",
+      "bytes": 1054,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/inherited-rotate.pdf",
+      "bytes": 978,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/inline-image-colorspace-lookup-out.pdf",
+      "bytes": 1348,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/inline-image-colorspace-lookup.pdf",
+      "bytes": 1176,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/inline-images-ii-all.pdf",
+      "bytes": 8832900,
+      "class": "returned",
+      "ok": true,
+      "ms": 33,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/inline-images-ii-some.pdf",
+      "bytes": 7966862,
+      "class": "returned",
+      "ok": true,
+      "ms": 40,
+      "maxRssKiB": 114928
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/inline-images.pdf",
+      "bytes": 300684,
+      "class": "returned",
+      "ok": true,
+      "ms": 50,
+      "maxRssKiB": 117692
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/inspect.pdf",
+      "bytes": 1012,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/invalid-id-xref.pdf",
+      "bytes": 969,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-100.pdf",
+      "bytes": 1145,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-gen"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-101.pdf",
+      "bytes": 4613,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-missing-obj"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-106.pdf",
+      "bytes": 3800,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-xref-section"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-117.pdf",
+      "bytes": 2817,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-119.pdf",
+      "bytes": 912,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-120.pdf",
+      "bytes": 785,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/objstm-mismatch"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-141a.pdf",
+      "bytes": 82,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-141b.pdf",
+      "bytes": 92,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xrefstm/bad-W-zero"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-143.pdf",
+      "bytes": 710,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-146.pdf",
+      "bytes": 20732,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/no-startxref"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-147.pdf",
+      "bytes": 91,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-148.pdf",
+      "bytes": 87,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-149.pdf",
+      "bytes": 1685,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-150.pdf",
+      "bytes": 137,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-1503.pdf",
+      "bytes": 4088,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-1688a.pdf",
+      "bytes": 531,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-1688b.pdf",
+      "bytes": 531,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/flate/png-row-mismatch"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-202.pdf",
+      "bytes": 328700,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/dict-key-not-name"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-263.pdf",
+      "bytes": 277,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-335a.pdf",
+      "bytes": 24974,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-335b.pdf",
+      "bytes": 23,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-449.pdf",
+      "bytes": 1202,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-99.pdf",
+      "bytes": 4798,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/unexpected-rangle"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/issue-99b.pdf",
+      "bytes": 763,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/xref-mismatch"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-add-attachments.pdf",
+      "bytes": 1715,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-choice-match.pdf",
+      "bytes": 743,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-copy-attachments.pdf",
+      "bytes": 2527,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-empty-input.pdf",
+      "bytes": 2546,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-encrypt-128.pdf",
+      "bytes": 7439,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-encrypt-40.pdf",
+      "bytes": 1040,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-input-file-password.pdf",
+      "bytes": 6530,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-misc-options.pdf",
+      "bytes": 1288,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-replace-input.pdf",
+      "bytes": 743,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-underlay-overlay-password.pdf",
+      "bytes": 1939,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/job-json-underlay-overlay.pdf",
+      "bytes": 16314,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/jpeg-qstream.pdf",
+      "bytes": 1156,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/json-changed-form-fields-and-annotations.pdf",
+      "bytes": 10679,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/json-changed-good13.pdf",
+      "bytes": 1840,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/json-changed-need-appearances.pdf",
+      "bytes": 73092,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/kept-no-fields.pdf",
+      "bytes": 1269,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/kept-some-fields.pdf",
+      "bytes": 7787,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/labels-split-01-06.pdf",
+      "bytes": 3714,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/labels-split-07-11.pdf",
+      "bytes": 3209,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/large-inline-image-ii-all.pdf",
+      "bytes": 2442597,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/large-inline-image-ii-some.pdf",
+      "bytes": 2442329,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/large-inline-image.pdf",
+      "bytes": 1744913,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/leading-junk.pdf",
+      "bytes": 13670,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin-delete-and-reuse.pdf",
+      "bytes": 13382,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin-special.pdf",
+      "bytes": 4490,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin0.pdf",
+      "bytes": 763,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin1.pdf",
+      "bytes": 13103,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin2.pdf",
+      "bytes": 13103,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin3.pdf",
+      "bytes": 16937,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin4.pdf",
+      "bytes": 13055,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin5.pdf",
+      "bytes": 27464,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin6.pdf",
+      "bytes": 24824,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin7.pdf",
+      "bytes": 27408,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin8.pdf",
+      "bytes": 24875,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/lin9.pdf",
+      "bytes": 3316,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/linearization-bounds-1.pdf",
+      "bytes": 12302,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/linearization-bounds-2.pdf",
+      "bytes": 12302,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/linearization-large-vector-alloc.pdf",
+      "bytes": 12302,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/linearize-duplicate-page.pdf",
+      "bytes": 1843,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/linearized-and-warnings.pdf",
+      "bytes": 1310,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/link-annots.pdf",
+      "bytes": 7237,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/long-id-linearized.pdf",
+      "bytes": 1316,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/long-id.pdf",
+      "bytes": 869,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/manual-appearances-out.pdf",
+      "bytes": 23437,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/manual-appearances-print-out.pdf",
+      "bytes": 22967,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/manual-appearances-screen-out.pdf",
+      "bytes": 23019,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/manual-appearances.pdf",
+      "bytes": 30522,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/manual-qpdf-json.pdf",
+      "bytes": 2060,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/many-nulls.pdf",
+      "bytes": 3579,
+      "class": "returned",
+      "ok": true,
+      "ms": 131,
+      "maxRssKiB": 142380
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/merge-dict.pdf",
+      "bytes": 1615,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/merge-dot-implicit-ranges.pdf",
+      "bytes": 968,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/merge-implicit-ranges.pdf",
+      "bytes": 17418,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/merge-multiple-labels.pdf",
+      "bytes": 3452,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/merge-three-files-1.pdf",
+      "bytes": 8699,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/merge-three-files-2.pdf",
+      "bytes": 6196,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/metadata-crypt-filter.pdf",
+      "bytes": 15229,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-1.pdf",
+      "bytes": 750,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-9.pdf",
+      "bytes": 743,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-dangling-out.pdf",
+      "bytes": 853,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-linearize-pass1.pdf",
+      "bytes": 1249,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/bad-xref-section"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-linearized.pdf",
+      "bytes": 1288,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-nulls.pdf",
+      "bytes": 3526,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-out.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-rotated.pdf",
+      "bytes": 811,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-signed-restricted.pdf",
+      "bytes": 135790,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal-signed-restrictions-removed.pdf",
+      "bytes": 233729,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/minimal.pdf",
+      "bytes": 763,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/more-choices.pdf",
+      "bytes": 68826,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/name-pound-images.pdf",
+      "bytes": 82024,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/bad-name-escape"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/name-tree.pdf",
+      "bytes": 4059,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/need-appearances-more-out.pdf",
+      "bytes": 68648,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/need-appearances-more.pdf",
+      "bytes": 68641,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/need-appearances-more2.pdf",
+      "bytes": 68654,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/need-appearances-more3.pdf",
+      "bytes": 68633,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/need-appearances-out.pdf",
+      "bytes": 69139,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/need-appearances-utf8.pdf",
+      "bytes": 68690,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/need-appearances.pdf",
+      "bytes": 68690,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/need-appearances2.pdf",
+      "bytes": 68690,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/nested-form-xobjects-inline-images-ii-all.pdf",
+      "bytes": 5639,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/nested-form-xobjects-inline-images-ii-some.pdf",
+      "bytes": 4232,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/nested-form-xobjects-inline-images.pdf",
+      "bytes": 2841,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/nested-form-xobjects.pdf",
+      "bytes": 5487,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/nested-images.pdf",
+      "bytes": 5744,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/new-streams.pdf",
+      "bytes": 984,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/newline-before-endstream-nl-objstm.pdf",
+      "bytes": 1730,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/newline-before-endstream-nl-qdf.pdf",
+      "bytes": 2853,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/newline-before-endstream-nl.pdf",
+      "bytes": 1930,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/newline-before-endstream-qdf.pdf",
+      "bytes": 2831,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/no-contents-coalesce-contents.pdf",
+      "bytes": 431,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/no-contents-none.pdf",
+      "bytes": 431,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/no-contents-qdf.pdf",
+      "bytes": 585,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/no-contents.pdf",
+      "bytes": 431,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/no-pages-types-fixed.pdf",
+      "bytes": 811,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/no-pages-types.pdf",
+      "bytes": 763,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/no-space-compressed-object.pdf",
+      "bytes": 1391,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/no-space-in-xref.pdf",
+      "bytes": 759,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/nontrivial-crypt-filter-decrypted.pdf",
+      "bytes": 9234,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/nontrivial-crypt-filter.pdf",
+      "bytes": 8985,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/number-tree.pdf",
+      "bytes": 3237,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/numeric-and-string-1.pdf",
+      "bytes": 18204,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/numeric-and-string-2.pdf",
+      "bytes": 16022,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/numeric-and-string-3.pdf",
+      "bytes": 1499,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/obj0.pdf",
+      "bytes": 859,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/indirect-bad-gen"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/object-stream-self-ref.out.pdf",
+      "bytes": 1249,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/object-stream-self-ref.pdf",
+      "bytes": 792,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/object-stream.pdf",
+      "bytes": 792,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/object-types-os.pdf",
+      "bytes": 865,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/object-types.pdf",
+      "bytes": 1127,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/other-file-first.pdf",
+      "bytes": 82147,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/outlines-split-01-10.pdf",
+      "bytes": 8784,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/outlines-split-11-20.pdf",
+      "bytes": 8803,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/outlines-split-21-30.pdf",
+      "bytes": 8792,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/outlines-with-actions.pdf",
+      "bytes": 16218,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/outlines-with-loop.pdf",
+      "bytes": 16217,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/outlines-with-old-root-dests-dict.pdf",
+      "bytes": 16175,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/outlines-with-old-root-dests.pdf",
+      "bytes": 16158,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/overlay-copy-annotations-p1.pdf",
+      "bytes": 10995,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/overlay-copy-annotations-p2.pdf",
+      "bytes": 11687,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/overlay-copy-annotations-p5.pdf",
+      "bytes": 12143,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/overlay-copy-annotations-p6.pdf",
+      "bytes": 12004,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/overlay-copy-annotations.pdf",
+      "bytes": 140474,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/overlay-no-resources.pdf",
+      "bytes": 1196,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/override-compressed-object.pdf",
+      "bytes": 1817,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/p1-a-p2-a.pdf",
+      "bytes": 1358,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/p1-a-p2-b.pdf",
+      "bytes": 1358,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/p1-a.pdf",
+      "bytes": 946,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/p1-b.pdf",
+      "bytes": 946,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-inherit-mediabox-out.pdf",
+      "bytes": 1449,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-inherit-mediabox.pdf",
+      "bytes": 2026,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-labels-and-outlines.pdf",
+      "bytes": 15986,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-labels-no-zero.pdf",
+      "bytes": 13683,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-labels-num-tree-damaged.pdf",
+      "bytes": 14092,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-labels-num-tree.pdf",
+      "bytes": 14092,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-missing-mediabox-out.pdf",
+      "bytes": 1406,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-no-content.pdf",
+      "bytes": 1362,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-outlines.pdf",
+      "bytes": 16010,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page-with-no-resources.pdf",
+      "bytes": 418,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page_api_1-out.pdf",
+      "bytes": 4399,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page_api_1-out2.pdf",
+      "bytes": 3825,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page_api_1-out3.pdf",
+      "bytes": 3530,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page_api_1.pdf",
+      "bytes": 5068,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/page_api_2.pdf",
+      "bytes": 1490,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/pages-copy-encryption.pdf",
+      "bytes": 1319,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/pages-is-page-out.pdf",
+      "bytes": 1288,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/pages-is-page.pdf",
+      "bytes": 763,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/pages-loop.pdf",
+      "bytes": 1123,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/pclm-in.pdf",
+      "bytes": 825620,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/pclm-out.pdf",
+      "bytes": 860952,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/png-filters-1-column.pdf",
+      "bytes": 16827,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/png-filters-decoded.pdf",
+      "bytes": 33789,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/png-filters-no-columns-decoded.pdf",
+      "bytes": 26498,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/png-filters-no-columns.pdf",
+      "bytes": 16827,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/png-filters.pdf",
+      "bytes": 16827,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/pound-in-name.pdf",
+      "bytes": 944,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/bad-name-escape"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/qpdf-ctest-42-43.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/qpdf-ctest-44-45.pdf",
+      "bytes": 798,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/qpdfjob-ctest-wide.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/qpdfjob-ctest1.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/qpdfjob-ctest2.pdf",
+      "bytes": 3379,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/qpdfjob-ctest3.pdf",
+      "bytes": 16504,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/qpdfjob-ctest4.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/qstream.pdf",
+      "bytes": 881,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/really-shared-images-pages-out.pdf",
+      "bytes": 10915,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/recover-xref-stream-recovered.pdf",
+      "bytes": 968,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/recover-xref-stream.pdf",
+      "bytes": 3817,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-acroform-out.pdf",
+      "bytes": 55799,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-info-no-moddate.pdf",
+      "bytes": 13365,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-info.pdf",
+      "bytes": 13455,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-labels.pdf",
+      "bytes": 3349,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-metadata-no-moddate.pdf",
+      "bytes": 13495,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-metadata.pdf",
+      "bytes": 13495,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-multiple-attachments.pdf",
+      "bytes": 1341,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-structure.out.pdf",
+      "bytes": 1113,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/remove-structure.pdf",
+      "bytes": 1336,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/replace-input.pdf",
+      "bytes": 743,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/replace-with-stream-updated.pdf",
+      "bytes": 1940,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/replaced-stream-data-flate.pdf",
+      "bytes": 1422,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/replaced-stream-data.pdf",
+      "bytes": 878,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/reserved-objects.pdf",
+      "bytes": 894,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/dict-key-not-name"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/resolved-appearance-conflicts-generate.pdf",
+      "bytes": 6900,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/resolved-appearance-conflicts.pdf",
+      "bytes": 8336,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/resolved-field-conflicts.pdf",
+      "bytes": 35422,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/resource-from-dr-out.pdf",
+      "bytes": 69498,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/resource-from-dr.pdf",
+      "bytes": 68902,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/reuse-xref-stream.pdf",
+      "bytes": 1447,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/rotated-shared-annotations-1.pdf",
+      "bytes": 18816,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/rotated-shared-annotations-2.pdf",
+      "bytes": 26657,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/rotated.pdf",
+      "bytes": 7319,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/sample-form-out.pdf",
+      "bytes": 58121,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/sample-form.pdf",
+      "bytes": 64743,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shallow_array-out.pdf",
+      "bytes": 823,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shallow_array.pdf",
+      "bytes": 788,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-font-xobject-split-1.pdf",
+      "bytes": 3777,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-font-xobject-split-2.pdf",
+      "bytes": 3777,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-font-xobject-split-3.pdf",
+      "bytes": 3777,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-font-xobject-split-4.pdf",
+      "bytes": 3777,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-font-xobject.pdf",
+      "bytes": 13381,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-images-merged.pdf",
+      "bytes": 22650,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-images-xobject.pdf",
+      "bytes": 10043,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-images.pdf",
+      "bytes": 25623,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-split-1.pdf",
+      "bytes": 4840,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-split-2.pdf",
+      "bytes": 5060,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-split-3.pdf",
+      "bytes": 4669,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-split-4.pdf",
+      "bytes": 4483,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-split-5.pdf",
+      "bytes": 4633,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-split-6.pdf",
+      "bytes": 4438,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-xobject-split-1.pdf",
+      "bytes": 4840,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-form-xobject-split-2.pdf",
+      "bytes": 5060,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-images-errors-1-3-out.pdf",
+      "bytes": 29609,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-images-errors-1-out.pdf",
+      "bytes": 3970,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-images-errors-2-out.pdf",
+      "bytes": 29190,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/flate/inflate-failed"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-images-errors.pdf",
+      "bytes": 32044,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/flate/inflate-failed"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-images-pages-out.pdf",
+      "bytes": 14196,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-images.pdf",
+      "bytes": 32021,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-split-01-04.pdf",
+      "bytes": 13930,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-split-05-08.pdf",
+      "bytes": 13930,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-split-09-10.pdf",
+      "bytes": 7289,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/shared-unnamed-field.pdf",
+      "bytes": 2496,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/short-O-U.pdf",
+      "bytes": 1133,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/short-id-linearized.pdf",
+      "bytes": 1272,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/short-id.pdf",
+      "bytes": 825,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/small-images.pdf",
+      "bytes": 41882,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-content-stream-errors.pdf",
+      "bytes": 1146,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-content-stream.pdf",
+      "bytes": 907,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/unterminated-string"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-01.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-02.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-03.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-04.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-05.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-06.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-07.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-08.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-09.Pdf",
+      "bytes": 755,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-1.pdf",
+      "bytes": 899,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-10.Pdf",
+      "bytes": 756,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-11.Pdf",
+      "bytes": 756,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-group-01-05.pdf",
+      "bytes": 2050,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-group-06-10.pdf",
+      "bytes": 2051,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-exp-group-11-11.pdf",
+      "bytes": 756,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-nntree-out.pdf",
+      "bytes": 4119,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-nntree.pdf",
+      "bytes": 2203,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-tokens-split-1-2.pdf",
+      "bytes": 2809,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/unterminated-string"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/split-tokens.pdf",
+      "bytes": 2452,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/unterminated-string"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/stream-data.pdf",
+      "bytes": 1125,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/stream-line-enders.pdf",
+      "bytes": 1096,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/stream/expected-endstream"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/streams-with-newlines.pdf",
+      "bytes": 1928,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/terminate-parsing.pdf",
+      "bytes": 1539,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/parser/dict-key-not-name"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test102.pdf",
+      "bytes": 1113,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test14-in.pdf",
+      "bytes": 2553,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test14-out.pdf",
+      "bytes": 1949,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test4-1.pdf",
+      "bytes": 1278,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test4-2.pdf",
+      "bytes": 1030,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test4-3.pdf",
+      "bytes": 1091,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test4-4.pdf",
+      "bytes": 1201,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test4-5.pdf",
+      "bytes": 1462,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test76.pdf",
+      "bytes": 2822,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test77.pdf",
+      "bytes": 2331,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test78.pdf",
+      "bytes": 1492,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test79.pdf",
+      "bytes": 2370,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test80a1.pdf",
+      "bytes": 93459,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test80a2.pdf",
+      "bytes": 97185,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test80b1.pdf",
+      "bytes": 75787,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test80b2.pdf",
+      "bytes": 75622,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/test84.pdf",
+      "bytes": 1113,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/three-files-2,3,4-collate-out.pdf",
+      "bytes": 11232,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/three-files-2-collate-out.pdf",
+      "bytes": 11124,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/three-files-collate-out.pdf",
+      "bytes": 11178,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/tiff-predictor.pdf",
+      "bytes": 1331,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/to-rotate.pdf",
+      "bytes": 9763,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/token-filters-out.pdf",
+      "bytes": 3505,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/tokenize-content-streams.pdf",
+      "bytes": 1575,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/tokens.pdf",
+      "bytes": 9558,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/tokenizer/unterminated-string"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unfilterable-with-crypt.pdf",
+      "bytes": 17868,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unfilterable.pdf",
+      "bytes": 799,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unique-resources.pdf",
+      "bytes": 2371,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unreferenced-dropped.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unreferenced-indirect-scalar.pdf",
+      "bytes": 1216,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unreferenced-objects.pdf",
+      "bytes": 1043,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unreferenced-preserved.pdf",
+      "bytes": 927,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unrotated.pdf",
+      "bytes": 9947,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/unsupported-optimization.pdf",
+      "bytes": 1621,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/uo-1.pdf",
+      "bytes": 26679,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/uo-2.pdf",
+      "bytes": 24189,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/uo-3.pdf",
+      "bytes": 24189,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/uo-4.pdf",
+      "bytes": 15285,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/uo-5.pdf",
+      "bytes": 12810,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/uo-6.pdf",
+      "bytes": 3523,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/uo-7.pdf",
+      "bytes": 20600,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/uo-8.pdf",
+      "bytes": 12273,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/update-stream-data-updated.pdf",
+      "bytes": 1843,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/update-stream-dict-only-updated.pdf",
+      "bytes": 1862,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/utf16le.pdf",
+      "bytes": 3805,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/various-updates-updated.pdf",
+      "bytes": 1425,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/warn-replace.pdf",
+      "bytes": 16504,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/weird-tokens.pdf",
+      "bytes": 9429,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/xref-compressed-in-compressed.pdf",
+      "bytes": 11325,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/xref-errors.pdf",
+      "bytes": 764,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/xref-range.pdf",
+      "bytes": 722,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 113820,
+      "code": "pdf/filter/bad-type"
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/xref-with-short-size.pdf",
+      "bytes": 16527,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    },
+    {
+      "case": "qpdf/qpdf/qtest/qpdf/zero-offset.pdf",
+      "bytes": 828,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 113820
+    }
+  ],
+  "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
+  "date": "2026-10-16"
+}

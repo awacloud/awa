@@ -112,7 +112,8 @@
  *    `oconvIrToOdt.irToOdt(ir, {})` / `oconvIrToPdf.irToPdf(ir, opts.pdf,
  *    { defaultFaces })` depending on the resolved target — no `assets` is
  *    ever passed (image bytes come from the reader's own escapes, e.g.
- *    `escapes.docx.bytes` for a docx source; a `convert`
+ *    `escapes.docx.bytes` for a docx source, `escapes.odt.bytes` for an odt
+ *    one; a `convert`
  *    caller has no markdown image destinations to key an asset manifest by).
  * 5. Losses are merged reader-then-writer, document order — the same
  *    contract as `fromMd`.
@@ -196,8 +197,8 @@
  *   `oconv: pdf options need target pdf` rather than being ignored.
  * @property {Object<string, Uint8Array>} [assets] Image bytes keyed by the
  *   markdown image destination EXACTLY as written (`![alt](diagram.png)` ->
- *   key `diagram.png`). No normalisation, no fetching. Caller-supplied bytes
- *   take precedence over reader-carried bytes (`escapes.docx.bytes`).
+ *   key `diagram.png`, `![alt](<my diagram.png>)` -> key `my diagram.png`). No normalisation, no fetching. Caller-supplied bytes
+ *   take precedence over reader-carried bytes (`escapes.docx.bytes` / `escapes.odt.bytes`).
  * @property {{regular?: Uint8Array, bold?: Uint8Array, italic?: Uint8Array,
  *             boldItalic?: Uint8Array, mono?: Uint8Array}} [defaultFaces] A
  *   posted default-face map, forwarded to the pdf writer's
@@ -243,7 +244,8 @@
  *   entry with a fixed 1980-01-01 00:00 timestamp). The `odt` target is
  *   not: the ODF package writer stamps the current time, so the document
  *   MODEL is deterministic but the bytes may differ. The `pdf` target is
- *   byte-reproducible: no zip container, no date, no `/ID` (see
+ *   byte-reproducible: no zip container, no date, an `/ID` derived from
+ *   the written bytes (see
  *   `write/ir-to-pdf.js`'s determinism note).
  * @property {string} target `'docx'` | `'odt'` | `'pdf'` — the resolved
  *   target.
@@ -351,7 +353,7 @@ export const oconv = {
          * test (`oconv.test.js`) pins the two together so the two never
          * silently drift (same pattern as `ir.js`'s `IR_VERSION` mirror).
          */
-        const CONVERTER_VERSION = '1.0.0';
+        const CONVERTER_VERSION = '1.1.0';
 
         /**
          * `.docx`/`.odt`/`.xlsx`/`.ods`/`.pptx`/`.odp`/`.pdf` (case-
@@ -401,7 +403,7 @@ export const oconv = {
                 case 'docx':
                     return oconvDocxToIrApi.docxToIr(docxApi.read(bytes));
                 case 'odt':
-                    return oconvOdtToIrApi.odtToIr(odtApi.read(bytes));
+                    return oconvOdtToIrApi.odtToIr(odtApi.read(bytes, { framesInRuns: true }));
                 case 'xlsx':
                     return oconvXlsxToIrApi.xlsxToIr(xlsxApi.read(bytes));
                 case 'ods':

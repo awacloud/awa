@@ -1,0 +1,198 @@
+{
+  "suite": {
+    "id": "pypdf-benchmarks-read",
+    "version": "py-pdf/benchmarks@778e6c95a",
+    "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+  },
+  "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the plain text of oconv toMd (no OCR; Markdown parsed with @awacloud/md, its text kept), 0–1",
+  "value": 0.9287,
+  "fidelity": "the port reproduces 97 of 98 published scores within 1e-9, all within 0.0001 (worst 4.55e-5, pymupdf GeoTopo-book)",
+  "comparators": [
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pypdfium2 5.13.0 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9522,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pypdf 6.19.0 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9486,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "PyMuPDF 1.28.2 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9423,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "Tika 3.3.2 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9306,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdftotext 0.86.1 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9019,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdfminer.six 20260107 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.8793,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdfplumber 0.11.10 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.7393,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    }
+  ],
+  "details": [
+    {
+      "id": "2201.00214",
+      "score": 0.9280114305860959,
+      "chars": 51235
+    },
+    {
+      "id": "2201.00021",
+      "score": 0.9227419997751454,
+      "chars": 47255
+    },
+    {
+      "id": "2201.00069",
+      "score": 0.9656534041798215,
+      "chars": 54616
+    },
+    {
+      "id": "2201.00022",
+      "score": 0.7612724650865699,
+      "chars": 58473
+    },
+    {
+      "id": "2201.00029",
+      "score": 0.8913019267178973,
+      "chars": 16233
+    },
+    {
+      "id": "1601.03642",
+      "score": 0.9753400192334112,
+      "chars": 28961
+    },
+    {
+      "id": "1602.06541",
+      "score": 0.9645200141693234,
+      "chars": 70407
+    },
+    {
+      "id": "2201.00037",
+      "score": 0.9396056575214763,
+      "chars": 100586
+    },
+    {
+      "id": "2201.00151",
+      "score": 0.9152466686287842,
+      "chars": 51506
+    },
+    {
+      "id": "1707.09725",
+      "score": 0.9631478266268954,
+      "chars": 207558
+    },
+    {
+      "id": "2201.00178",
+      "score": 0.9463636556899594,
+      "chars": 45880
+    },
+    {
+      "id": "2201.00201",
+      "score": 0.9647367908922837,
+      "chars": 51605
+    },
+    {
+      "id": "2201.00200",
+      "score": 0.9563196776359973,
+      "chars": 37347
+    },
+    {
+      "id": "GeoTopo-book",
+      "score": 0.9080137423524096,
+      "chars": 136362
+    }
+  ],
+  "commit": "5a84a2cfca83ef4cc5ec8a2054459c67ab2bdc01",
+  "date": "2026-10-16"
+}

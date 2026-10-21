@@ -83,7 +83,7 @@ export const odp = {
         const walker = walkerMod.createWalker();
 
         // unused-dep guards (referenced for runtime registration only)
-        void presentationMod; void masterPageMod; void frameMod; void paraMod;
+        void presentationMod; void frameMod; void paraMod;
 
         /**
          * Read a `.odp` byte stream into a typed document model.
@@ -150,7 +150,9 @@ export const odp = {
          * Write a typed presentation tree to `.odp` bytes.
          *
          * @param {object} doc
-         * @param {object} [opts]
+         * @param {object} [opts] — `{ meta, settings, styles }`, each overriding the `doc.*` sidecar,
+         *        and `mtime` (`number|Date`), the ZIP entry date passed to `pkgPackage.write`
+         *        (default 1980-01-01 00:00:00: the output is byte-reproducible)
          * @returns {Uint8Array}
          */
         function write(doc, opts) {
@@ -173,6 +175,7 @@ export const odp = {
                 if (dehydrated.settings !== undefined) opts = { ...opts, settings: dehydrated.settings };
                 if (dehydrated.styles !== undefined) opts = { ...opts, styles: dehydrated.styles };
             }
+            ({ doc, opts } = withDefaultMaster(doc, opts));
             const p = pkg.empty(CT_ODP);
 
             const contentXml = renderContent(doc);
@@ -183,7 +186,45 @@ export const odp = {
 
             carryParts(p, doc.package, { pkg, manifestMod });
 
-            return pkg.write(p);
+            return pkg.write(p, { mtime: opts.mtime });
+        }
+
+        const DEFAULT_MASTER = 'Default';
+        const isEl = (n, tag) => n && n.type === 'element' && n.name === tag;
+
+        /**
+         * Every `draw:page` needs a `draw:master-page-name` naming a
+         * `style:master-page` of `styles.xml`, and a master page needs a
+         * page layout. A slide without `masterPageName` is written with
+         * `Default`; when the styles written (`opts.styles`, else
+         * `doc.styles`, else empty — the sidecar precedence) hold no
+         * master page of that name, one is added with a 28 × 15.75 cm
+         * landscape page layout under the first free `PM<n>` name. Returns
+         * new `doc` / `opts` objects; the caller's models are not modified.
+         */
+        function withDefaultMaster(doc, opts) {
+            const slides = doc.slides || [];
+            if (!slides.some(s => s && !s.masterPageName)) return { doc, opts };
+            doc = { ...doc, slides: slides.map(s => (s && !s.masterPageName ? { ...s, masterPageName: DEFAULT_MASTER } : s)) };
+            const styles = opts.styles || doc.styles || stylesMod.empty();
+            const masters = styles.masterStyles || [];
+            if (masters.some(m => isEl(m, 'style:master-page') && m.attrs && m.attrs['style:name'] === DEFAULT_MASTER)) {
+                return { doc, opts };
+            }
+            const autos = styles.automaticStyles || [];
+            const used = new Set(autos.filter(a => a && a.type === 'element' && a.attrs).map(a => a.attrs['style:name']));
+            let n = 1;
+            while (used.has(`PM${n}`)) n++;
+            const layout = xml.el('style:page-layout', { 'style:name': `PM${n}` }, [
+                xml.el('style:page-layout-properties', {
+                    'fo:page-width': '28cm', 'fo:page-height': '15.75cm', 'style:print-orientation': 'landscape'
+                }, [])
+            ]);
+            const master = masterPageMod.renderMasterPage({ name: DEFAULT_MASTER, pageLayoutName: `PM${n}` });
+            return {
+                doc,
+                opts: { ...opts, styles: { ...styles, automaticStyles: [...autos, layout], masterStyles: [...masters, master] } }
+            };
         }
 
         function renderContent(doc) {

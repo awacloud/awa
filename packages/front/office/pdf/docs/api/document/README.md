@@ -9,7 +9,7 @@ Typed document layer — Catalog, page tree, Page, read orchestrator, writers.
 | [`pdfPage`](./page.md) | `{ typePage }` | `pdfErrors`, `pdfParser` | §7.7.3.3 — typed Page. |
 | [`pdfDocument`](./document.md) | `{ readDocument, readHeader }` | `pdfErrors`, `pdfTokenizer`, `pdfParser`, `pdfXref`, `pdfTrailer`, `pdfCatalog`, `pdfPage`, `pdfPages`, `pdfCrossRefStream`, `pdfObjStream`, `pdfFilterDispatch` | Top-level read orchestrator (classic tables, cross-reference streams, object streams, hybrid files). |
 | [`pdfResources`](./resources.md) | `{ typeResources, resolvePageResources, lookupResource }` | `pdfErrors`, `pdfParser` | §7.8.3 — inheritable `/Resources`. |
-| [`pdfWriter`](./writer.md) | `{ writeDocument, assembleIndirects }` | `pdfErrors`, `pdfSerializer` | Model → bytes §7.5.2–7.5.5. |
+| [`pdfWriter`](./writer.md) | `{ writeDocument, assembleIndirects }` | `pdfErrors`, `pdfSerializer`, `sha256`, `bitArray` | Model → bytes §7.5.2–7.5.5. |
 | [`pdfBuilder`](./builder.md) | `{ builder }` | `pdfErrors`, `pdfParserObj`, `pdfWriter` | Chainable constructive DSL over `pdfWriter`. |
 | [`pdfIncrementalWriter`](./incrementalWriter.md) | `{ appendIncremental, appendIncrementalWithOffsets, readBaseTrailer }` | `pdfErrors`, `pdfSerializer`, `pdfTokenizer`, `pdfParser`, `pdfXref`, `pdfTrailer` | §7.5.6 — append-only incremental update. |
 | [`pdfEncryptedWriter`](./encryptedWriter.md) | `{ writeEncryptedDocument }` | `pdfErrors`, `pdfWriter`, `pdfStandardV5`, `pdfStandardV6`, `pdfStandardV4`, `pdfAesGcm` | Wraps `pdfWriter` with the Standard Security Handlers. |

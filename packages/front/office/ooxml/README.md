@@ -1,6 +1,6 @@
 # @awacloud/ooxml
 
-Pure-JavaScript reader and writer for Office Open XML documents (ECMA-376: `.docx`, `.xlsx`, `.pptx`) in the browser. ZIP, XML parsing and serialization, OPC packaging, DrawingML and Office Math are either implemented in the package or consumed from [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.0.0/packages/front/fw); there is no other runtime dependency, and no Node API is used (binaries are `Uint8Array`).
+Pure-JavaScript reader and writer for Office Open XML documents (ECMA-376: `.docx`, `.xlsx`, `.pptx`) in the browser. ZIP, XML parsing and serialization, OPC packaging, DrawingML and Office Math are either implemented in the package or consumed from [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.1.0/packages/front/fw); there is no other runtime dependency, and no Node API is used (binaries are `Uint8Array`).
 
 The core types the structures most documents use and keeps every other element of the parts it models verbatim in `_extras`, so an untouched element inside a modelled part is re-emitted on write. Whole parts outside the model (a theme, document properties, pivot tables, speaker notes, …) are not: `write()` produces the parts its model carries; a part `read()` did not model is not written back — `read()` lists it in `unmodelledParts`. Opt-in `extra/*` modules type the long tail of the schema and are grouped into ergonomic `*-large` and `*-full` bundles. The `*-misc` extras reach the rarest elements as catalogued passthroughs (flagged `_passthrough`, preserved on round trip, not modelled): "full" coverage means every element is either typed or preserved, not that every element has a semantic model. See the [coverage guide](./docs/guide/coverage.md).
 
@@ -53,6 +53,17 @@ console.log(word.toText(document));                              // First paragr
 - `pptx.read(bytes, opts?)` → `{ presentation, package, unmodelledParts }`
 
 `package` is the plain OPC package (`{ contentTypes, parts, rels }`). `unmodelledParts` is always present: `[{ partName, contentType }]`, sorted by `partName`, listing every part the read did not consume (`contentType` is `null` when `[Content_Types].xml` declares none; `[Content_Types].xml` and the relationship parts are never listed). `write()` takes the model, not the envelope: `word.write(document, { styles, numbering, … })`, `xlsx.write(workbook)`, `pptx.write(presentation)`; the parts listed in `unmodelledParts` are not written back.
+
+### Read options
+
+Besides the archive limits (`maxParts`, `maxUncompressed`, `maxRatio`, `maxDepth`; see [Security](#security)), the readers take these opt-in options. Each one is off by default, and the default model is the one `1.0.0` read:
+
+| Option | Readers | Effect when `true` |
+|--------|---------|--------------------|
+| `typedRunColors` | `pptx.read`, `xlsx.read` | A text-run fill that a bare `'RRGGBB'` cannot express (a theme colour, or any colour with transforms) is typed as `rPr.color = { rgb \| schemeColor, mods? }` instead of staying verbatim in `rPr._extras`. See [drawingml](./docs/api/drawingml/drawingml.md#text-body-model). |
+| `slideExtrasByPart` | `pptx.read` | The leftovers of each slide, layout and master's `<p:cSld>` are kept in a new `cSldExtras` array and `_extras` holds the root's only; by default both go to `_extras` and the root's replace those of `<p:cSld>`. See [pptx-slide](./docs/api/pptx/slide.md#model). |
+
+Model fields that a read now fills without an option (a model that lacks them is written as before): `fonts` on docx run properties (every `<w:rFonts>` attribute, beside `font`), `mods` on DrawingML shape fills (`lumMod`, `tint`, `alpha`, …), `srcRect` on docx drawings and pptx pictures (the picture crop), and `sheet.rowProps` on xlsx sheets (row heights and hidden rows).
 
 ### With a coverage bundle (auto-wired extras)
 
@@ -160,12 +171,14 @@ XML parsing is not part of the tree: it comes from `@awacloud/fw/io/codec/xml.js
 The package follows a "**no DTD / no external entity**" policy:
 
 - The XML parser (`@awacloud/fw/io/codec/xml.js`) **skips** every `<!...>` declaration (DOCTYPE, internal ENTITY, NOTATION). No entity is expanded and no external resource is resolved, so classic XXE and billion-laughs payloads are neutralized by construction. This is pinned by regression tests.
-- `opc.read(bytes, opts?)` enforces three default limits against *zip-bomb* inputs:
+- `opc.read(bytes, opts?)` enforces three default archive limits against *zip-bomb* inputs (`defaultLimits` also carries the fourth, `maxDepth`, below):
   - `maxParts = 1024`
   - `maxUncompressed = 256 MiB`
   - `maxRatio = 200` (ratio per entry)
 
-  Exceeding a limit throws `ParseError('opc/zip-bomb', ...)` with `context.limit`. Passing `0` disables an individual check. `docx.read`, `xlsx.read` and `pptx.read` forward these three limits from their read options (`opts.maxParts`, `opts.maxUncompressed`, `opts.maxRatio`); an absent key keeps the default.
+  Exceeding a limit throws `ParseError('opc/zip-bomb', ...)` with `context.limit`. Passing `0` disables an individual check.
+- `opc.read` also refuses an XML part (`.xml`, `.rels`, `.vml`) whose elements nest deeper than `maxDepth = 1000` (`defaultLimits.maxDepth`), found by a linear scan before any part is parsed: the readers and their consumers walk the trees recursively, and a part nested thousands deep would overflow the call stack. It throws `ParseError('opc/xml-too-deep', ...)` with `context.limit` (`'maxDepth'`), `context.max` and `context.partName`; `0` disables the check. A document nested deeper than that, which `1.0.0` read up to the stack limit, is refused by default: pass `maxDepth` to read it.
+- `docx.read`, `xlsx.read` and `pptx.read` forward these four limits from their read options (`opts.maxParts`, `opts.maxUncompressed`, `opts.maxRatio`, `opts.maxDepth`); an absent key keeps the default.
 - `xlsx.read(bytes, opts?)` limits `maxSheets`, `maxRowsPerSheet` and `maxCellsPerSheet`; exceeding one throws `ParseError('xlsx/limit-exceeded', ...)`.
 
 See [`docs/api/errors.md`](./docs/api/errors.md) for the catalogue of emitted error codes.
@@ -232,6 +245,6 @@ See [`docs/api/bundles/README.md`](./docs/api/bundles/README.md) for the details
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.0.0/packages/front/office/ooxml)
+- Source: [`packages/front/office/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.1.0/packages/front/office/ooxml)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/SECURITY.md)
+- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/SECURITY.md)

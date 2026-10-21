@@ -77,7 +77,9 @@ d.write(doc, { numbering });
 ```
 
 `write()` never derives `word/numbering.xml` on its own — writing `numPr` without
-`opts.numbering` throws `docx/numbering-missing`. See [docx `write` Notes](./docx.md#notes).
+`opts.numbering` throws `docx/numbering-missing`, and a `numId` that
+`opts.numbering.nums` does not declare throws `docx/numbering-unknown-num`. See
+[docx `write` Notes](./docx.md#notes).
 
 ### Custom hierarchical list
 

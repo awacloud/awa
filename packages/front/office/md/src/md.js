@@ -60,6 +60,10 @@ export const mdMod = {
 
             function enforceLimits(document) {
                 let nodeCount = 0;
+                // Depth of each node, from its parent's (the walk enters a
+                // parent before its children): one step per node, not a
+                // climb to the root.
+                const depthOf = new Map();
                 const w = document.walker();
                 let ev;
                 while ((ev = w.next()) !== null) {
@@ -71,8 +75,8 @@ export const mdMod = {
                             { context: { kind: 'maxNodes', limit: maxNodes } });
                     }
                     const node = ev.node;
-                    let d = 0;
-                    for (let p = node.parent; p; p = p.parent) d++;
+                    const d = node.parent ? depthOf.get(node.parent) + 1 : 0;
+                    depthOf.set(node, d);
                     if (d > maxDepth) {
                         throw new ContractError('md/limit-exceeded',
                             'md.parse: nesting depth exceeded limit (' + maxDepth + ')',
@@ -92,7 +96,14 @@ export const mdMod = {
                         'md.parse: expected a string, got ' + typeof text,
                         { context: { gotType: typeof text } });
                 }
-                const { document, refmap } = bp.parse(text, { inlineParser: ip.parse });
+                // An installed extension that declares `inlineSyntax: ['math']`
+                // (mdMath) has the inline parser claim `$…$` spans.
+                const flags = {
+                    math: extensions.some(e => Array.isArray(e.inlineSyntax) && e.inlineSyntax.includes('math'))
+                };
+                const { document, refmap } = bp.parse(text, {
+                    inlineParser: (block, map) => ip.parse(block, map, flags)
+                });
                 document.data = { refmap };
                 if (maxDepth !== Infinity || maxNodes !== Infinity || maxUrlLength !== Infinity) {
                     enforceLimits(document);
@@ -109,7 +120,17 @@ export const mdMod = {
                 return html;
             }
 
-            function renderHtmlFn(text, renderOpts) { return render(parse(text), renderOpts); }
+            // Text goes through `api.parse` and `api.render`, the late-bound
+            // facade members every extension wraps (one rule with
+            // `renderMarkdown`); a non-string throws before any wrapper runs.
+            function renderHtmlFn(text, renderOpts) {
+                if (typeof text !== 'string') {
+                    throw new ContractError('md/parse-not-string',
+                        'md.parse: expected a string, got ' + typeof text,
+                        { context: { gotType: typeof text } });
+                }
+                return api.render(api.parse(text), renderOpts);
+            }
 
             // A string argument is parsed with `md.parse` (extension passes
             // included): `api.parse` is the late-bound facade member that

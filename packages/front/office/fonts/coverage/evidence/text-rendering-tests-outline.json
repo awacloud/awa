@@ -1,0 +1,557 @@
+{
+  "suite": {
+    "id": "text-rendering-tests-outline",
+    "version": "text-rendering-tests@26cfb96d0",
+    "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+  },
+  "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; rendered from the fonts package's read APIs, no shaping",
+  "value": 0.4127,
+  "fidelity": "the ported comparison gives the report's verdict on 504 of 504 cases of 8 reports; 26 of 63 cases pass",
+  "comparators": [
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-outline",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "Allsorts 0.15.0 (derived: its report of June 30, 2025, 49 of the 63 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.7778,
+        "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/Allsorts.html",
+      "date": "2026-10-17"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-outline",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "macOS 14.0.0 and CoreText 0xd0000 (derived: its report of November 23, 2023, 46 of the 63 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.7302,
+        "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/CoreText.html",
+      "date": "2026-10-17"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-outline",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "HarfBuzz 2.8.2, FreeType 2.11.0, FriBidi 1.0.1 and Raqm 0.10.1 (derived: its report of November 23, 2023, 41 of the 63 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.6508,
+        "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/FreeStack.html",
+      "date": "2026-10-17"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-outline",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "OpenType.js 1.3.4, NPM 10.2.0 and Node 21.1.0 (derived: its report of November 23, 2023, 16 of the 63 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.254,
+        "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/OpenType.js.html",
+      "date": "2026-10-17"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-outline",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "Swash 0.2.1 (derived: its report of March 16, 2025, 31 of the 63 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.4921,
+        "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/Swash.html",
+      "date": "2026-10-17"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-outline",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "FreeType 2.11.0, SheenBidi 2.0 and SheenFigure 1.5 (derived: its report of November 23, 2023, 37 of the 63 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.5873,
+        "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/TehreerStack.html",
+      "date": "2026-10-17"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-outline",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "daegun 1.1.6 (derived: its report of August 22, 2026, 63 of the 63 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 1,
+        "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/daegun.html",
+      "date": "2026-10-17"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-outline",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "fontkit 2.0.2, NPM 10.2.0 and Node 21.1.0 (derived: its report of November 23, 2023, 59 of the 63 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.9365,
+        "metric": "share of the 63 static outline cases (CFF-1..3, CMAP-1..4, GLYF-1, SFNT-1..2) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/fontkit.html",
+      "date": "2026-10-17"
+    }
+  ],
+  "details": {
+    "pass": 26,
+    "total": 63,
+    "cases": [
+      {
+        "id": "CFF-1/0041",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/211D",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/24EA",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/2460",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/2461",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/4EFF",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/FF21",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/10133",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/1D4D0",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/1F33A",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/1F33B",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/1F4A7",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-1/1F95D",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF-2/0041",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/0041 gid 66: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/211D",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/211D gid 8478: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/24EA",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/24EA gid 9451: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/2460",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/2460 gid 9313: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/2461",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/2461 gid 9314: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/4EFF",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/4EFF gid 20224: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/FF21",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/FF21 gid 65314: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/10133",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/10133 gid 308: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/1D4D0",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/1D4D0 gid 54481: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/1F33A",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/1F33A gid 62267: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/1F33B",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/1F33B gid 62268: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/1F4A7",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/1F4A7 gid 62632: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-2/1F95D",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": [
+          "CFF-2/1F95D gid 63838: CFF charstring references missing subr 0"
+        ]
+      },
+      {
+        "id": "CFF-3/1",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": []
+      },
+      {
+        "id": "CFF-3/2",
+        "pass": false,
+        "difference": "2 vs 0 elements",
+        "errors": []
+      },
+      {
+        "id": "CMAP-1/1",
+        "pass": false,
+        "difference": "symbol CMAP-1/1.uni82A6_uE0100 vs CMAP-1/1.gid1",
+        "errors": []
+      },
+      {
+        "id": "CMAP-1/2",
+        "pass": false,
+        "difference": "symbol CMAP-1/2.uni82A6_uE0100 vs CMAP-1/2.gid1",
+        "errors": []
+      },
+      {
+        "id": "CMAP-1/3",
+        "pass": false,
+        "difference": "symbol CMAP-1/3.uni82A6_uE0101 vs CMAP-1/3.gid1",
+        "errors": []
+      },
+      {
+        "id": "CMAP-1/4",
+        "pass": false,
+        "difference": "symbol CMAP-1/4.uni82A6_uE0100 vs CMAP-1/4.gid1",
+        "errors": []
+      },
+      {
+        "id": "CMAP-2/1",
+        "pass": false,
+        "difference": "symbol CMAP-2/1.uni2269 vs CMAP-2/1.gid4",
+        "errors": []
+      },
+      {
+        "id": "CMAP-2/2",
+        "pass": false,
+        "difference": "symbol CMAP-2/2.uni2269FE00 vs CMAP-2/2.gid4",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/1",
+        "pass": false,
+        "difference": "viewBox 0 -292 518 1360 vs 0 -292 600 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/2",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/3",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/4",
+        "pass": false,
+        "difference": "viewBox 0 -292 708 1360 vs 0 -292 583 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/5",
+        "pass": false,
+        "difference": "viewBox 0 -292 810 1360 vs 0 -292 600 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/6",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/7",
+        "pass": false,
+        "difference": "viewBox 0 -292 426 1360 vs 0 -292 600 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/8",
+        "pass": false,
+        "difference": "viewBox 0 -292 820 1360 vs 0 -292 559 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/9",
+        "pass": false,
+        "difference": "viewBox 0 -292 605 1360 vs 0 -292 600 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/10",
+        "pass": false,
+        "difference": "viewBox 0 -292 769 1360 vs 0 -292 426 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/11",
+        "pass": false,
+        "difference": "viewBox 0 -292 518 1360 vs 0 -292 600 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/12",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/13",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/14",
+        "pass": false,
+        "difference": "viewBox 0 -292 553 1360 vs 0 -292 788 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/15",
+        "pass": false,
+        "difference": "viewBox 0 -292 576 1360 vs 0 -292 600 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/16",
+        "pass": false,
+        "difference": "viewBox 0 -292 376 1360 vs 0 -292 600 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/17",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/18",
+        "pass": false,
+        "difference": "viewBox 0 -292 640 1360 vs 0 -292 479 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/19",
+        "pass": false,
+        "difference": "viewBox 0 -292 502 1360 vs 0 -292 600 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-3/20",
+        "pass": false,
+        "difference": "viewBox 0 -292 691 1360 vs 0 -292 333 1360",
+        "errors": []
+      },
+      {
+        "id": "CMAP-4/1",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-4/2",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-4/3",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CMAP-4/4",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GLYF-1/1",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "SFNT-1/1",
+        "pass": false,
+        "difference": "symbol SFNT-1/1.A vs SFNT-1/1.gid2",
+        "errors": []
+      },
+      {
+        "id": "SFNT-1/2",
+        "pass": false,
+        "difference": "symbol SFNT-1/2.B vs SFNT-1/2.gid3",
+        "errors": []
+      },
+      {
+        "id": "SFNT-2/1",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "SFNT-2/2",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      }
+    ],
+    "portCheck": {
+      "verdicts": 504,
+      "agree": 504,
+      "disagree": []
+    }
+  },
+  "commit": "687b9b1ee960e3eae2a01d211ff07928224aec2d",
+  "date": "2026-10-17"
+}

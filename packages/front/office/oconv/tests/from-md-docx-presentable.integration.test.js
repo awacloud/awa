@@ -118,4 +118,41 @@ describe('fromMd docx — presentable output (BL-1766)', () => {
             expect(markdown).toContain(cell);
         }
     });
+
+    test('code block, quote and rule: styled, loss-free, and kept by md -> docx -> md', async () => {
+        const source = [
+            'Intro.',
+            '',
+            '```js',
+            'const a = 1;',
+            '',
+            '  call(a);',
+            '```',
+            '',
+            '> Quoted *line*.',
+            '>',
+            '> Second quoted paragraph.',
+            '',
+            '---',
+            '',
+            'Outro.',
+            ''
+        ].join('\n');
+        const { bytes, losses } = await oconv.fromMd({ markdown: source, target: 'docx' });
+        expect(losses).toEqual([]);
+
+        const docXml = new TextDecoder().decode(zipApi.unzipSync(bytes)['word/document.xml']);
+        const refs = [...docXml.matchAll(/<w:pStyle w:val="([^"]*)"/g)].map(m => m[1]);
+        expect(refs).toEqual(['SourceCode', 'BlockText', 'BlockText', 'HorizontalRule']);
+        const ids = new Set(docxApi.read(bytes).styles.styles.map(s => s.styleId));
+        for (const ref of refs) expect(ids.has(ref)).toBe(true);
+
+        const { markdown } = await oconv.toMd({
+            name: 'blocks.docx', bytes, convertedAt: '2026-10-12T00:00:00Z'
+        });
+        expect(markdown).toContain('```\nconst a = 1;\n\n  call(a);\n```');
+        expect(markdown).toContain('> Quoted *line*.\n>\n> Second quoted paragraph.');
+        expect(markdown).toMatch(/\n(\*\*\*|---|___)\n/);
+        expect(markdown).toContain('Outro.');
+    });
 });

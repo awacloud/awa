@@ -71,9 +71,13 @@ export const mdBlockLinkRef = {
             }
         }
 
-        /** Parse a `[label]` prefix; returns chars consumed (or 0). */
+        /**
+         * Parse a `[label]` prefix; returns chars consumed (or 0). `/s`: a
+         * backslash may stand just before a line end (as in the inline
+         * parser's `reLinkLabel`).
+         */
         function parseLinkLabel(cur) {
-            const m = cur.match(/^\[(?:[^\\[\]]|\\.){0,1000}\]/);
+            const m = cur.match(/^\[(?:[^\\[\]]|\\.){0,1000}\]/s);
             if (m === null || m.length > 1001) return 0;
             return m.length;
         }
@@ -95,6 +99,8 @@ export const mdBlockLinkRef = {
                 } else if (c === 40 /* ( */) {
                     cur.pos += 1;
                     openparens += 1;
+                    // Same nesting cap as the inline parser (32, as cmark).
+                    if (openparens > 32) return null;
                 } else if (c === 41 /* ) */) {
                     if (openparens < 1) break;
                     cur.pos += 1;
@@ -147,21 +153,23 @@ export const mdBlockLinkRef = {
 
             const beforetitle = cur.pos;
             cur.spnl();
+            // `null` = no title found; an empty title (`""`) is a found one.
             let title = null;
             if (cur.pos !== beforetitle) {
                 title = parseLinkTitle(cur);
             }
             if (title === null) {
-                title = '';
                 cur.pos = beforetitle;
             }
 
             let atLineEnd = true;
             if (cur.match(reSpaceAtEndOfLine) === null) {
-                if (title === '') {
+                if (title === null) {
                     atLineEnd = false;
                 } else {
-                    title = '';
+                    // A title followed by text is not part of the
+                    // definition; the destination alone may still end it.
+                    title = null;
                     cur.pos = beforetitle;
                     atLineEnd = cur.match(reSpaceAtEndOfLine) !== null;
                 }
@@ -177,7 +185,7 @@ export const mdBlockLinkRef = {
                 cur.pos = startpos;
                 return 0;
             }
-            addLinkRef(refmap, normlabel, dest, title);
+            addLinkRef(refmap, normlabel, dest, title === null ? '' : title);
             return cur.pos - startpos;
         }
 

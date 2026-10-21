@@ -43,9 +43,21 @@ export const docxStyles = {
 
     factory(errors, xml, props, shared) {
         const { ParseError } = errors;
-        const { NS, REL_TYPE, CT, encodeText, decodeText } = shared;
+        const { REL_TYPE, CT, encodeText, decodeText, wordRootAttrs } = shared;
+        // Schema order (ECMA-376 Part 1); a hand-wired ooxmlShared without
+        // the ordering helper writes children in the old order.
+        const orderSeq = shared.sequence ? shared.sequence : () => null;
+        const ordered = (children, seq) => (seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children);
+        const STYLE_SEQ = orderSeq([
+            'w:name', 'w:aliases', 'w:basedOn', 'w:next', 'w:link', 'w:autoRedefine', 'w:hidden',
+            'w:uiPriority', 'w:semiHidden', 'w:unhideWhenUsed', 'w:qFormat', 'w:locked',
+            'w:personal', 'w:personalCompose', 'w:personalReply', 'w:rsid', 'w:pPr', 'w:rPr',
+            'w:tblPr', 'w:trPr', 'w:tcPr', 'w:tblStylePr'
+        ]);
+        const STYLES_SEQ = orderSeq([
+            'w:docDefaults', 'w:latentStyles', 'w:style'
+        ]);
 
-        const W_NS = NS.W;
         const REL_TYPE_STYLES = REL_TYPE.STYLES;
         const CT_STYLES = CT.STYLES_W;
 
@@ -104,7 +116,7 @@ export const docxStyles = {
             const tblPrEl = props.renderTableProperties(s.tblPr);
             if (tblPrEl) children.push(tblPrEl);
             if (s._extras) for (const ex of s._extras) children.push(ex);
-            return xml.el('w:style', attrs, children);
+            return xml.el('w:style', attrs, ordered(children, STYLE_SEQ));
         }
 
         function parseDocDefaults(ddEl) {
@@ -180,8 +192,9 @@ export const docxStyles = {
             if (dd) children.push(dd);
             for (const s of stylesObj.styles || []) children.push(renderStyle(s));
             if (stylesObj._extras) for (const ex of stylesObj._extras) children.push(ex);
+            const kids = ordered(children, STYLES_SEQ);
             return xml.serialize(xml.el('w:styles',
-                { 'xmlns:w': W_NS }, children));
+                wordRootAttrs(kids, { r: false }), kids));
         }
 
         /** Build a styles object with a couple of common defaults. */

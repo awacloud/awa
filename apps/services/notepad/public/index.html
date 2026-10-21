@@ -1,0 +1,104 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AWA Notepad</title>
+    <meta name="description" content="Write and edit plain-text files in your browser, online or offline. Your files stay on your device.">
+    <meta name="theme-color" content="#00263D">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <!-- Link previews and search (the public address: one subdomain per app;
+         the canonical link is added by tools/build-csp.js: app-dist refuses external links here). -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="AwaCloud">
+    <meta property="og:title" content="AWA Notepad — edit your text files on your device">
+    <meta property="og:description" content="Write and edit plain-text files in your browser, online or offline. Your files stay on your device.">
+    <meta property="og:url" content="https://notepad.awacloud.com/">
+    <meta property="og:image" content="https://notepad.awacloud.com/screenshots/share.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="AWA Notepad, open in a browser window">
+    <meta name="twitter:card" content="summary_large_image">
+    <script type="application/ld+json">
+    {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "AWA Notepad", "description": "Write and edit plain-text files in your browser, online or offline. Your files stay on your device.",
+      "url": "https://notepad.awacloud.com/", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Any (web browser)",
+      "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
+      "publisher": {"@type": "Organization", "name": "AwaCloud SAS", "url": "https://awacloud.com/"}}
+    </script>
+    <script type="importmap">
+    { "imports": {
+        "@awacloud/fw":      "/packages/front/fw/src/main.js",
+        "@awacloud/fw/":     "/packages/front/fw/src/"
+    }}
+    </script>
+    <link rel="stylesheet" href="../src/styles/tokens.css">
+    <link rel="stylesheet" href="../src/styles/notepad.css">
+    <link rel="stylesheet" href="../src/styles/app.css">
+</head>
+<body>
+    <noscript><p class="app-noscript">AWA Notepad needs JavaScript. It runs on your device and sends nothing.</p><p class="app-noscript" lang="fr">AWA Notepad a besoin de JavaScript. Il fonctionne sur votre appareil et n’envoie rien.</p></noscript>
+    <header class="app-header">
+        <div class="app-brand">
+            <img class="app-logo" src="icons/icon.svg" alt="" width="28" height="28">
+            <h1 class="app-wordmark" data-i18n="app.title">AWA Notepad</h1>
+        </div>
+        <p class="app-tagline" data-i18n="app.tagline">Write and edit text files on your device.</p>
+        <div class="app-actions">
+            <label class="app-lang">
+                <span data-i18n="app.language">Language</span>
+                <select id="app-lang" class="app-select">
+                    <option value="en" lang="en">English</option>
+                    <option value="fr" lang="fr">Français</option>
+                </select>
+            </label>
+            <button type="button" id="app-about-open" class="app-later" aria-haspopup="dialog" aria-controls="app-about" data-i18n="about.open">About</button>
+            <button type="button" id="app-install" class="app-install" hidden data-i18n="pwa.install">Install the notepad</button>
+        </div>
+        <div id="app-more" class="app-update" role="status" hidden>
+            <p id="app-more-text"></p>
+            <button type="button" id="app-more-open" class="app-install"></button>
+            <button type="button" id="app-more-dismiss" class="app-later"></button>
+        </div>
+        <div id="app-update" class="app-update" role="status" hidden>
+            <p data-i18n="pwa.updateReady">A new version of the notepad is ready. Updating reloads it; unsaved text comes back as a draft.</p>
+            <button type="button" id="app-update-apply" class="app-install" data-i18n="pwa.update">Update now</button>
+            <button type="button" id="app-update-later" class="app-later" data-i18n="pwa.later">Later</button>
+        </div>
+    </header>
+    <main id="notepad" class="app-main"></main>
+    <dialog id="app-about" class="app-about" aria-labelledby="app-about-title">
+        <h2 id="app-about-title" class="app-about-title" data-i18n="about.title">About AWA Notepad</h2>
+        <p class="app-about-version"><span>@awacloud/notepad 0.1.0</span> <span id="app-about-build" class="app-about-build"></span></p>
+        <p class="app-about-legal">Copyright (c) 2026 AwaCloud SAS · Author: Matthieu Bouilloux</p>
+        <p data-i18n="about.licence">Free software under the GNU Affero General Public License, version 3 only (AGPL-3.0-only), also available under a commercial licence. It comes with no warranty. You may share and modify it under the terms of that licence.</p>
+        <ul id="app-about-files" class="app-about-files">
+            <li><a href="../LICENSE" data-i18n="about.licenceText">Licence text (AGPL-3.0)</a></li>
+            <li><a href="../NOTICE" data-i18n="about.notice">Notices and additional terms</a></li>
+        </ul>
+        <div class="app-about-update">
+            <button type="button" id="app-about-check" class="app-button" data-i18n="about.check">Check for updates</button>
+            <p id="app-about-status" class="app-about-status" role="status"></p>
+        </div>
+        <p id="app-offline" class="app-offline" hidden data-i18n="pwa.offline">Works offline once visited.</p>
+        <p class="app-about-promo"><span data-i18n="about.promo">Made by AwaCloud — privacy-first software that runs on your device.</span> <a href="https://awacloud.com/" target="_blank" rel="noopener noreferrer" data-i18n="about.promoLink">Discover awacloud.com</a></p>
+        <div class="app-about-close"><button type="button" id="app-about-close" class="app-button" data-i18n="about.close">Close</button></div>
+    </dialog>
+    <dialog id="app-help" class="app-help" aria-labelledby="app-help-title">
+        <div class="app-help-head">
+            <h2 id="app-help-title" class="app-help-title" data-i18n="help.title">AWA Notepad — Help</h2>
+            <button type="button" id="app-help-close" class="app-help-close" aria-label="Close (Escape)" title="Close (Escape)">&times;</button>
+        </div>
+        <div id="app-help-body" class="app-help-body"></div>
+    </dialog>
+    <script type="module" src="../src/main.js"></script>
+</body>
+</html>

@@ -37,14 +37,24 @@ export const tableCffDict = {
          * Decode a CFF DICT byte stream into a `Map<operator, operand[]>`.
          * Operators are encoded as either `op` (single-byte) or `0x0c00 | op`
          * (two-byte) — we use the same packed integer in the map key.
+         *
+         * With `opts.cff2`, the CFF2 operators 22 (`vsindex`), 23 (`blend`)
+         * and 24 (`vstore`) are read as operators too; a CFF1 DICT keeps
+         * rejecting those bytes. `blend` is recorded like any operator (its
+         * operands are not evaluated against the variation store).
+         *
+         * @param {Uint8Array} bytes
+         * @param {{ cff2?: boolean }} [opts]
+         * @returns {Map<number, number[]>}
          */
-        function parseDict(bytes) {
+        function parseDict(bytes, opts) {
+            const lastOp = opts && opts.cff2 ? 24 : 21;
             const out = new Map();
             let operands = [];
             let i = 0;
             while (i < bytes.length) {
                 const b0 = bytes[i];
-                if (b0 <= 21) {
+                if (b0 <= lastOp) {
                     // Operator
                     let op;
                     if (b0 === 12) { op = 0x0C00 | bytes[i + 1]; i += 2; }

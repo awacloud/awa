@@ -1,0 +1,8142 @@
+{
+  "suite": {
+    "id": "safedocs-0000",
+    "version": "cc-main-2021-31-pdf-untruncated@0000",
+    "source": "https://digitalcorpora.org/corpora/file-corpora/cc-main-2021-31-pdf-untruncated/"
+  },
+  "criterion": "per PDF of the ZIP, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child",
+  "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+  "host": "container",
+  "image": "awa-robustness-bun:1.3.13",
+  "imageId": "sha256:1a93710c3b0b8ee72a6876fc61e8975217fef39faee9a7c4b224560e6829de84",
+  "bun": "1.3.13",
+  "memoryMax": "1342177280",
+  "counts": {
+    "returned": 884,
+    "refused": 116,
+    "untyped": 0,
+    "hang": 0,
+    "memory": 0,
+    "crash": 0
+  },
+  "cases": [
+    {
+      "case": "0000000.pdf",
+      "bytes": 29690,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 86000
+    },
+    {
+      "case": "0000001.pdf",
+      "bytes": 673459,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74032
+    },
+    {
+      "case": "0000002.pdf",
+      "bytes": 37244,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 82572
+    },
+    {
+      "case": "0000003.pdf",
+      "bytes": 3939,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72320
+    },
+    {
+      "case": "0000004.pdf",
+      "bytes": 578834,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 84888
+    },
+    {
+      "case": "0000005.pdf",
+      "bytes": 209680,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78796
+    },
+    {
+      "case": "0000006.pdf",
+      "bytes": 2104691,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 99744
+    },
+    {
+      "case": "0000007.pdf",
+      "bytes": 830727,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81876,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000008.pdf",
+      "bytes": 847071,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74244
+    },
+    {
+      "case": "0000009.pdf",
+      "bytes": 1416925,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 75676
+    },
+    {
+      "case": "0000010.pdf",
+      "bytes": 1447785,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 75488
+    },
+    {
+      "case": "0000011.pdf",
+      "bytes": 194767,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79500
+    },
+    {
+      "case": "0000012.pdf",
+      "bytes": 932422,
+      "class": "returned",
+      "ok": true,
+      "ms": 37,
+      "maxRssKiB": 115620
+    },
+    {
+      "case": "0000013.pdf",
+      "bytes": 209118,
+      "class": "returned",
+      "ok": true,
+      "ms": 48,
+      "maxRssKiB": 118640
+    },
+    {
+      "case": "0000014.pdf",
+      "bytes": 1295391,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 102608
+    },
+    {
+      "case": "0000015.pdf",
+      "bytes": 243606,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 72256,
+      "code": "pdf/parser/indirect-bad-gen"
+    },
+    {
+      "case": "0000016.pdf",
+      "bytes": 249659,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81416
+    },
+    {
+      "case": "0000017.pdf",
+      "bytes": 310303,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74576
+    },
+    {
+      "case": "0000018.pdf",
+      "bytes": 8621111,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101840,
+      "code": "pdf/parser/unterminated-array"
+    },
+    {
+      "case": "0000019.pdf",
+      "bytes": 92242,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83932
+    },
+    {
+      "case": "0000020.pdf",
+      "bytes": 200900,
+      "class": "returned",
+      "ok": true,
+      "ms": 55,
+      "maxRssKiB": 119688
+    },
+    {
+      "case": "0000021.pdf",
+      "bytes": 22364,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72892
+    },
+    {
+      "case": "0000022.pdf",
+      "bytes": 116532,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 72424,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000023.pdf",
+      "bytes": 3203235,
+      "class": "refused",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 97404,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000024.pdf",
+      "bytes": 49058,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81252
+    },
+    {
+      "case": "0000025.pdf",
+      "bytes": 203319,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 88332
+    },
+    {
+      "case": "0000026.pdf",
+      "bytes": 127080,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72992
+    },
+    {
+      "case": "0000027.pdf",
+      "bytes": 359089,
+      "class": "returned",
+      "ok": true,
+      "ms": 98,
+      "maxRssKiB": 116176
+    },
+    {
+      "case": "0000028.pdf",
+      "bytes": 501727,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 107644
+    },
+    {
+      "case": "0000029.pdf",
+      "bytes": 426955,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78856,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000030.pdf",
+      "bytes": 5708232,
+      "class": "returned",
+      "ok": true,
+      "ms": 117,
+      "maxRssKiB": 138320
+    },
+    {
+      "case": "0000031.pdf",
+      "bytes": 582138,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 82428
+    },
+    {
+      "case": "0000032.pdf",
+      "bytes": 432846,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72616
+    },
+    {
+      "case": "0000033.pdf",
+      "bytes": 41898,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71572
+    },
+    {
+      "case": "0000034.pdf",
+      "bytes": 219253,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 100036
+    },
+    {
+      "case": "0000035.pdf",
+      "bytes": 281018,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 100848
+    },
+    {
+      "case": "0000036.pdf",
+      "bytes": 1085163,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77980,
+      "code": "pdf/parser/unterminated-dict"
+    },
+    {
+      "case": "0000037.pdf",
+      "bytes": 342133,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 108240
+    },
+    {
+      "case": "0000038.pdf",
+      "bytes": 268635,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 96560
+    },
+    {
+      "case": "0000039.pdf",
+      "bytes": 983324,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 102044
+    },
+    {
+      "case": "0000040.pdf",
+      "bytes": 263126,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80796
+    },
+    {
+      "case": "0000041.pdf",
+      "bytes": 1651322,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 99428
+    },
+    {
+      "case": "0000042.pdf",
+      "bytes": 20781,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80972
+    },
+    {
+      "case": "0000043.pdf",
+      "bytes": 129436,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83620
+    },
+    {
+      "case": "0000044.pdf",
+      "bytes": 177648,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 84368
+    },
+    {
+      "case": "0000045.pdf",
+      "bytes": 2801891,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 105496
+    },
+    {
+      "case": "0000046.pdf",
+      "bytes": 46791,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76132
+    },
+    {
+      "case": "0000047.pdf",
+      "bytes": 61468,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72912
+    },
+    {
+      "case": "0000048.pdf",
+      "bytes": 47153,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83364
+    },
+    {
+      "case": "0000049.pdf",
+      "bytes": 295081,
+      "class": "returned",
+      "ok": true,
+      "ms": 40,
+      "maxRssKiB": 115428
+    },
+    {
+      "case": "0000050.pdf",
+      "bytes": 1343803,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 91180
+    },
+    {
+      "case": "0000051.pdf",
+      "bytes": 230518,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 100588
+    },
+    {
+      "case": "0000052.pdf",
+      "bytes": 127527,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 92772
+    },
+    {
+      "case": "0000053.pdf",
+      "bytes": 37781,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71148
+    },
+    {
+      "case": "0000054.pdf",
+      "bytes": 1320082,
+      "class": "returned",
+      "ok": true,
+      "ms": 201,
+      "maxRssKiB": 132796
+    },
+    {
+      "case": "0000055.pdf",
+      "bytes": 675096,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73612,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000056.pdf",
+      "bytes": 93298,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78044
+    },
+    {
+      "case": "0000057.pdf",
+      "bytes": 430074,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 85844
+    },
+    {
+      "case": "0000058.pdf",
+      "bytes": 972269,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74836
+    },
+    {
+      "case": "0000059.pdf",
+      "bytes": 321600,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 73060,
+      "code": "pdf/document/no-startxref"
+    },
+    {
+      "case": "0000060.pdf",
+      "bytes": 472000,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 96596
+    },
+    {
+      "case": "0000061.pdf",
+      "bytes": 4038654,
+      "class": "returned",
+      "ok": true,
+      "ms": 38,
+      "maxRssKiB": 115720
+    },
+    {
+      "case": "0000062.pdf",
+      "bytes": 13222470,
+      "class": "returned",
+      "ok": true,
+      "ms": 332,
+      "maxRssKiB": 154212
+    },
+    {
+      "case": "0000063.pdf",
+      "bytes": 46950,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 92292
+    },
+    {
+      "case": "0000064.pdf",
+      "bytes": 204853,
+      "class": "returned",
+      "ok": true,
+      "ms": 36,
+      "maxRssKiB": 112784
+    },
+    {
+      "case": "0000065.pdf",
+      "bytes": 731808,
+      "class": "returned",
+      "ok": true,
+      "ms": 63,
+      "maxRssKiB": 115940
+    },
+    {
+      "case": "0000066.pdf",
+      "bytes": 1021364,
+      "class": "returned",
+      "ok": true,
+      "ms": 86,
+      "maxRssKiB": 126160
+    },
+    {
+      "case": "0000067.pdf",
+      "bytes": 259293,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 93496
+    },
+    {
+      "case": "0000068.pdf",
+      "bytes": 721604,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81920,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000069.pdf",
+      "bytes": 806880,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81148,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000070.pdf",
+      "bytes": 3779178,
+      "class": "returned",
+      "ok": true,
+      "ms": 119,
+      "maxRssKiB": 143640
+    },
+    {
+      "case": "0000071.pdf",
+      "bytes": 110820,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77528
+    },
+    {
+      "case": "0000072.pdf",
+      "bytes": 14541,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79640
+    },
+    {
+      "case": "0000073.pdf",
+      "bytes": 89093,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 101004
+    },
+    {
+      "case": "0000074.pdf",
+      "bytes": 43561,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77052
+    },
+    {
+      "case": "0000075.pdf",
+      "bytes": 56131,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 70928,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000076.pdf",
+      "bytes": 109088,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81376
+    },
+    {
+      "case": "0000077.pdf",
+      "bytes": 109665,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81120
+    },
+    {
+      "case": "0000078.pdf",
+      "bytes": 4497923,
+      "class": "refused",
+      "ok": true,
+      "ms": 210,
+      "maxRssKiB": 139396,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000079.pdf",
+      "bytes": 590775,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79800
+    },
+    {
+      "case": "0000080.pdf",
+      "bytes": 7143,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77788
+    },
+    {
+      "case": "0000081.pdf",
+      "bytes": 206141,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72552,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000082.pdf",
+      "bytes": 788084,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 84628
+    },
+    {
+      "case": "0000083.pdf",
+      "bytes": 429241,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73404
+    },
+    {
+      "case": "0000084.pdf",
+      "bytes": 5225916,
+      "class": "returned",
+      "ok": true,
+      "ms": 201,
+      "maxRssKiB": 138260
+    },
+    {
+      "case": "0000085.pdf",
+      "bytes": 182863,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 75980
+    },
+    {
+      "case": "0000086.pdf",
+      "bytes": 10603,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74948
+    },
+    {
+      "case": "0000087.pdf",
+      "bytes": 39982,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79736
+    },
+    {
+      "case": "0000088.pdf",
+      "bytes": 167716,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 71196,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000089.pdf",
+      "bytes": 221732,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72072
+    },
+    {
+      "case": "0000090.pdf",
+      "bytes": 20757,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81976
+    },
+    {
+      "case": "0000091.pdf",
+      "bytes": 366264,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 100308
+    },
+    {
+      "case": "0000092.pdf",
+      "bytes": 658578,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 79736,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000093.pdf",
+      "bytes": 246677,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76516
+    },
+    {
+      "case": "0000094.pdf",
+      "bytes": 12783,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78588
+    },
+    {
+      "case": "0000095.pdf",
+      "bytes": 553800,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74936
+    },
+    {
+      "case": "0000096.pdf",
+      "bytes": 109357,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76704
+    },
+    {
+      "case": "0000097.pdf",
+      "bytes": 128973,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 84572
+    },
+    {
+      "case": "0000098.pdf",
+      "bytes": 2570029,
+      "class": "returned",
+      "ok": true,
+      "ms": 91,
+      "maxRssKiB": 142840
+    },
+    {
+      "case": "0000099.pdf",
+      "bytes": 848506,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 80328
+    },
+    {
+      "case": "0000100.pdf",
+      "bytes": 1047039,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 75404
+    },
+    {
+      "case": "0000101.pdf",
+      "bytes": 1341348,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 76008
+    },
+    {
+      "case": "0000102.pdf",
+      "bytes": 64796,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76908
+    },
+    {
+      "case": "0000103.pdf",
+      "bytes": 827364,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 80632
+    },
+    {
+      "case": "0000104.pdf",
+      "bytes": 317620,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90884
+    },
+    {
+      "case": "0000105.pdf",
+      "bytes": 1693522,
+      "class": "returned",
+      "ok": true,
+      "ms": 49,
+      "maxRssKiB": 113372
+    },
+    {
+      "case": "0000106.pdf",
+      "bytes": 196121,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79740
+    },
+    {
+      "case": "0000107.pdf",
+      "bytes": 6145651,
+      "class": "refused",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 114132,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000108.pdf",
+      "bytes": 727120,
+      "class": "returned",
+      "ok": true,
+      "ms": 34,
+      "maxRssKiB": 113912
+    },
+    {
+      "case": "0000109.pdf",
+      "bytes": 157774,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90008
+    },
+    {
+      "case": "0000110.pdf",
+      "bytes": 183500,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 92940
+    },
+    {
+      "case": "0000111.pdf",
+      "bytes": 77849,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75820
+    },
+    {
+      "case": "0000112.pdf",
+      "bytes": 127244,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81060
+    },
+    {
+      "case": "0000113.pdf",
+      "bytes": 369303,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81852
+    },
+    {
+      "case": "0000114.pdf",
+      "bytes": 503157,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 92772
+    },
+    {
+      "case": "0000115.pdf",
+      "bytes": 383546,
+      "class": "returned",
+      "ok": true,
+      "ms": 34,
+      "maxRssKiB": 112028
+    },
+    {
+      "case": "0000116.pdf",
+      "bytes": 209331,
+      "class": "returned",
+      "ok": true,
+      "ms": 108,
+      "maxRssKiB": 123544
+    },
+    {
+      "case": "0000117.pdf",
+      "bytes": 251025,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79864
+    },
+    {
+      "case": "0000118.pdf",
+      "bytes": 97754,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77548
+    },
+    {
+      "case": "0000119.pdf",
+      "bytes": 170367,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80008
+    },
+    {
+      "case": "0000120.pdf",
+      "bytes": 616857,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74680,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000121.pdf",
+      "bytes": 197585,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79168
+    },
+    {
+      "case": "0000122.pdf",
+      "bytes": 97389,
+      "class": "returned",
+      "ok": true,
+      "ms": 33,
+      "maxRssKiB": 109140
+    },
+    {
+      "case": "0000123.pdf",
+      "bytes": 594918,
+      "class": "returned",
+      "ok": true,
+      "ms": 320,
+      "maxRssKiB": 133936
+    },
+    {
+      "case": "0000124.pdf",
+      "bytes": 63494,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 98220
+    },
+    {
+      "case": "0000125.pdf",
+      "bytes": 131623,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81124
+    },
+    {
+      "case": "0000126.pdf",
+      "bytes": 221140,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73512
+    },
+    {
+      "case": "0000127.pdf",
+      "bytes": 414877,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85136
+    },
+    {
+      "case": "0000128.pdf",
+      "bytes": 414459,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77920
+    },
+    {
+      "case": "0000129.pdf",
+      "bytes": 315100,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 72080,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000130.pdf",
+      "bytes": 3120009,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92612
+    },
+    {
+      "case": "0000131.pdf",
+      "bytes": 96940,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79272
+    },
+    {
+      "case": "0000132.pdf",
+      "bytes": 89753,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81136
+    },
+    {
+      "case": "0000133.pdf",
+      "bytes": 159051,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 99656
+    },
+    {
+      "case": "0000134.pdf",
+      "bytes": 588417,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79344
+    },
+    {
+      "case": "0000135.pdf",
+      "bytes": 101331,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 93900
+    },
+    {
+      "case": "0000136.pdf",
+      "bytes": 183600,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 100256
+    },
+    {
+      "case": "0000137.pdf",
+      "bytes": 606144,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73136
+    },
+    {
+      "case": "0000138.pdf",
+      "bytes": 44472,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78720
+    },
+    {
+      "case": "0000139.pdf",
+      "bytes": 90750,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81916
+    },
+    {
+      "case": "0000140.pdf",
+      "bytes": 164366,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83844
+    },
+    {
+      "case": "0000141.pdf",
+      "bytes": 129435,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 74200
+    },
+    {
+      "case": "0000142.pdf",
+      "bytes": 854051,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81908
+    },
+    {
+      "case": "0000143.pdf",
+      "bytes": 241106,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 75208
+    },
+    {
+      "case": "0000144.pdf",
+      "bytes": 302189,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72188
+    },
+    {
+      "case": "0000145.pdf",
+      "bytes": 511166,
+      "class": "returned",
+      "ok": true,
+      "ms": 33,
+      "maxRssKiB": 111036
+    },
+    {
+      "case": "0000146.pdf",
+      "bytes": 548632,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81876
+    },
+    {
+      "case": "0000147.pdf",
+      "bytes": 1504759,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 92244
+    },
+    {
+      "case": "0000148.pdf",
+      "bytes": 139611,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84988
+    },
+    {
+      "case": "0000149.pdf",
+      "bytes": 95880,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71620
+    },
+    {
+      "case": "0000150.pdf",
+      "bytes": 174002,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82000
+    },
+    {
+      "case": "0000151.pdf",
+      "bytes": 445354,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84108
+    },
+    {
+      "case": "0000152.pdf",
+      "bytes": 87164,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77384
+    },
+    {
+      "case": "0000153.pdf",
+      "bytes": 204794,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78668
+    },
+    {
+      "case": "0000154.pdf",
+      "bytes": 115610,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 85012
+    },
+    {
+      "case": "0000155.pdf",
+      "bytes": 6234641,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 94400
+    },
+    {
+      "case": "0000156.pdf",
+      "bytes": 819206,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 74908,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000157.pdf",
+      "bytes": 2661935,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 79612,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000158.pdf",
+      "bytes": 268005,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82132
+    },
+    {
+      "case": "0000159.pdf",
+      "bytes": 381331,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74212
+    },
+    {
+      "case": "0000160.pdf",
+      "bytes": 222788,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 104068
+    },
+    {
+      "case": "0000161.pdf",
+      "bytes": 14371,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79084
+    },
+    {
+      "case": "0000162.pdf",
+      "bytes": 799980,
+      "class": "returned",
+      "ok": true,
+      "ms": 147,
+      "maxRssKiB": 126980
+    },
+    {
+      "case": "0000163.pdf",
+      "bytes": 156334,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 89972
+    },
+    {
+      "case": "0000164.pdf",
+      "bytes": 2073281,
+      "class": "returned",
+      "ok": true,
+      "ms": 124,
+      "maxRssKiB": 138592
+    },
+    {
+      "case": "0000165.pdf",
+      "bytes": 143548,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83260
+    },
+    {
+      "case": "0000166.pdf",
+      "bytes": 49240,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 74632
+    },
+    {
+      "case": "0000167.pdf",
+      "bytes": 7792336,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 118328
+    },
+    {
+      "case": "0000168.pdf",
+      "bytes": 88385,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78124
+    },
+    {
+      "case": "0000169.pdf",
+      "bytes": 339568,
+      "class": "returned",
+      "ok": true,
+      "ms": 69,
+      "maxRssKiB": 118752
+    },
+    {
+      "case": "0000170.pdf",
+      "bytes": 541821,
+      "class": "returned",
+      "ok": true,
+      "ms": 71,
+      "maxRssKiB": 118416
+    },
+    {
+      "case": "0000171.pdf",
+      "bytes": 76882,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 96252
+    },
+    {
+      "case": "0000172.pdf",
+      "bytes": 343974,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 110380
+    },
+    {
+      "case": "0000173.pdf",
+      "bytes": 410831,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74400,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000174.pdf",
+      "bytes": 1606333,
+      "class": "returned",
+      "ok": true,
+      "ms": 467,
+      "maxRssKiB": 150676
+    },
+    {
+      "case": "0000175.pdf",
+      "bytes": 180540,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71744,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000176.pdf",
+      "bytes": 693033,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 82064,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000177.pdf",
+      "bytes": 181799,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 107004
+    },
+    {
+      "case": "0000178.pdf",
+      "bytes": 72940,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74648,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000179.pdf",
+      "bytes": 1283912,
+      "class": "returned",
+      "ok": true,
+      "ms": 147,
+      "maxRssKiB": 126468
+    },
+    {
+      "case": "0000180.pdf",
+      "bytes": 107854,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 85556
+    },
+    {
+      "case": "0000181.pdf",
+      "bytes": 138950,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 83168
+    },
+    {
+      "case": "0000182.pdf",
+      "bytes": 634538,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 86300
+    },
+    {
+      "case": "0000183.pdf",
+      "bytes": 242724,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 80276
+    },
+    {
+      "case": "0000184.pdf",
+      "bytes": 721920,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 82720
+    },
+    {
+      "case": "0000185.pdf",
+      "bytes": 44326,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81664
+    },
+    {
+      "case": "0000186.pdf",
+      "bytes": 770194,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 75052
+    },
+    {
+      "case": "0000187.pdf",
+      "bytes": 96323,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 91760
+    },
+    {
+      "case": "0000188.pdf",
+      "bytes": 2274566,
+      "class": "returned",
+      "ok": true,
+      "ms": 299,
+      "maxRssKiB": 155960
+    },
+    {
+      "case": "0000189.pdf",
+      "bytes": 261904,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73728
+    },
+    {
+      "case": "0000190.pdf",
+      "bytes": 2235733,
+      "class": "refused",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 110064,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000191.pdf",
+      "bytes": 183838,
+      "class": "returned",
+      "ok": true,
+      "ms": 33,
+      "maxRssKiB": 109004
+    },
+    {
+      "case": "0000192.pdf",
+      "bytes": 3409654,
+      "class": "returned",
+      "ok": true,
+      "ms": 66,
+      "maxRssKiB": 128588
+    },
+    {
+      "case": "0000193.pdf",
+      "bytes": 1120804,
+      "class": "returned",
+      "ok": true,
+      "ms": 259,
+      "maxRssKiB": 132740
+    },
+    {
+      "case": "0000194.pdf",
+      "bytes": 13515,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79624
+    },
+    {
+      "case": "0000195.pdf",
+      "bytes": 882980,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 88488
+    },
+    {
+      "case": "0000196.pdf",
+      "bytes": 1528140,
+      "class": "returned",
+      "ok": true,
+      "ms": 85,
+      "maxRssKiB": 123352
+    },
+    {
+      "case": "0000197.pdf",
+      "bytes": 55351,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 82172
+    },
+    {
+      "case": "0000198.pdf",
+      "bytes": 132365,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 85124
+    },
+    {
+      "case": "0000199.pdf",
+      "bytes": 211566,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78780
+    },
+    {
+      "case": "0000200.pdf",
+      "bytes": 4226163,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 85172
+    },
+    {
+      "case": "0000201.pdf",
+      "bytes": 68379,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80304
+    },
+    {
+      "case": "0000202.pdf",
+      "bytes": 448506,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 73156,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000203.pdf",
+      "bytes": 130850,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 79864
+    },
+    {
+      "case": "0000204.pdf",
+      "bytes": 6023,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77676
+    },
+    {
+      "case": "0000205.pdf",
+      "bytes": 805500,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78804
+    },
+    {
+      "case": "0000206.pdf",
+      "bytes": 4963297,
+      "class": "returned",
+      "ok": true,
+      "ms": 147,
+      "maxRssKiB": 155336
+    },
+    {
+      "case": "0000207.pdf",
+      "bytes": 191040,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71944,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000208.pdf",
+      "bytes": 97243,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 97580
+    },
+    {
+      "case": "0000209.pdf",
+      "bytes": 3656886,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 99352
+    },
+    {
+      "case": "0000210.pdf",
+      "bytes": 148150,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73284
+    },
+    {
+      "case": "0000211.pdf",
+      "bytes": 388939,
+      "class": "returned",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 108144
+    },
+    {
+      "case": "0000212.pdf",
+      "bytes": 70563,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 100216
+    },
+    {
+      "case": "0000213.pdf",
+      "bytes": 207123,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80992
+    },
+    {
+      "case": "0000214.pdf",
+      "bytes": 552518,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 91540
+    },
+    {
+      "case": "0000215.pdf",
+      "bytes": 878665,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 105384
+    },
+    {
+      "case": "0000216.pdf",
+      "bytes": 394421,
+      "class": "returned",
+      "ok": true,
+      "ms": 39,
+      "maxRssKiB": 113764
+    },
+    {
+      "case": "0000217.pdf",
+      "bytes": 257418,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78552
+    },
+    {
+      "case": "0000218.pdf",
+      "bytes": 808322,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 108308
+    },
+    {
+      "case": "0000219.pdf",
+      "bytes": 3680128,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 83084
+    },
+    {
+      "case": "0000220.pdf",
+      "bytes": 407247,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 99800
+    },
+    {
+      "case": "0000221.pdf",
+      "bytes": 517327,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73100,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000222.pdf",
+      "bytes": 100038,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76820
+    },
+    {
+      "case": "0000223.pdf",
+      "bytes": 253379,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78892
+    },
+    {
+      "case": "0000224.pdf",
+      "bytes": 1412408,
+      "class": "returned",
+      "ok": true,
+      "ms": 193,
+      "maxRssKiB": 155976
+    },
+    {
+      "case": "0000225.pdf",
+      "bytes": 1701446,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90312
+    },
+    {
+      "case": "0000226.pdf",
+      "bytes": 12200,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77508
+    },
+    {
+      "case": "0000227.pdf",
+      "bytes": 269670,
+      "class": "returned",
+      "ok": true,
+      "ms": 87,
+      "maxRssKiB": 118224
+    },
+    {
+      "case": "0000228.pdf",
+      "bytes": 182455,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 86832
+    },
+    {
+      "case": "0000229.pdf",
+      "bytes": 419351,
+      "class": "returned",
+      "ok": true,
+      "ms": 43,
+      "maxRssKiB": 114780
+    },
+    {
+      "case": "0000230.pdf",
+      "bytes": 422183,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81132
+    },
+    {
+      "case": "0000231.pdf",
+      "bytes": 4546776,
+      "class": "returned",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 115868
+    },
+    {
+      "case": "0000232.pdf",
+      "bytes": 11890,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82468
+    },
+    {
+      "case": "0000233.pdf",
+      "bytes": 37491,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72420
+    },
+    {
+      "case": "0000234.pdf",
+      "bytes": 766972,
+      "class": "returned",
+      "ok": true,
+      "ms": 48,
+      "maxRssKiB": 114808
+    },
+    {
+      "case": "0000235.pdf",
+      "bytes": 1799945,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 88688
+    },
+    {
+      "case": "0000236.pdf",
+      "bytes": 484640,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78736
+    },
+    {
+      "case": "0000237.pdf",
+      "bytes": 39840,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 75136
+    },
+    {
+      "case": "0000238.pdf",
+      "bytes": 163783,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 70088,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000239.pdf",
+      "bytes": 129568,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78924
+    },
+    {
+      "case": "0000240.pdf",
+      "bytes": 103514,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 86336
+    },
+    {
+      "case": "0000241.pdf",
+      "bytes": 385649,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90384
+    },
+    {
+      "case": "0000242.pdf",
+      "bytes": 209855,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78052
+    },
+    {
+      "case": "0000243.pdf",
+      "bytes": 1040972,
+      "class": "returned",
+      "ok": true,
+      "ms": 62,
+      "maxRssKiB": 116408
+    },
+    {
+      "case": "0000244.pdf",
+      "bytes": 84079,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 76288
+    },
+    {
+      "case": "0000245.pdf",
+      "bytes": 256802,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 96116
+    },
+    {
+      "case": "0000246.pdf",
+      "bytes": 60973,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 84284
+    },
+    {
+      "case": "0000247.pdf",
+      "bytes": 4547351,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 95164
+    },
+    {
+      "case": "0000248.pdf",
+      "bytes": 110555,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79572
+    },
+    {
+      "case": "0000249.pdf",
+      "bytes": 3021235,
+      "class": "returned",
+      "ok": true,
+      "ms": 98,
+      "maxRssKiB": 131852
+    },
+    {
+      "case": "0000250.pdf",
+      "bytes": 82535,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72588
+    },
+    {
+      "case": "0000251.pdf",
+      "bytes": 1029925,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 101368
+    },
+    {
+      "case": "0000252.pdf",
+      "bytes": 2349727,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 92544
+    },
+    {
+      "case": "0000253.pdf",
+      "bytes": 141274,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 89112
+    },
+    {
+      "case": "0000254.pdf",
+      "bytes": 1074201,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74588
+    },
+    {
+      "case": "0000255.pdf",
+      "bytes": 43744,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74736
+    },
+    {
+      "case": "0000256.pdf",
+      "bytes": 2303630,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 107456
+    },
+    {
+      "case": "0000257.pdf",
+      "bytes": 2919437,
+      "class": "returned",
+      "ok": true,
+      "ms": 193,
+      "maxRssKiB": 163112
+    },
+    {
+      "case": "0000258.pdf",
+      "bytes": 1252791,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 80932
+    },
+    {
+      "case": "0000259.pdf",
+      "bytes": 3174086,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 81108,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000260.pdf",
+      "bytes": 494885,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 96960
+    },
+    {
+      "case": "0000261.pdf",
+      "bytes": 80930,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83280
+    },
+    {
+      "case": "0000262.pdf",
+      "bytes": 305687,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72736
+    },
+    {
+      "case": "0000263.pdf",
+      "bytes": 1263535,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 76196
+    },
+    {
+      "case": "0000264.pdf",
+      "bytes": 198196,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 95952
+    },
+    {
+      "case": "0000265.pdf",
+      "bytes": 375801,
+      "class": "returned",
+      "ok": true,
+      "ms": 51,
+      "maxRssKiB": 117732
+    },
+    {
+      "case": "0000266.pdf",
+      "bytes": 1601323,
+      "class": "returned",
+      "ok": true,
+      "ms": 158,
+      "maxRssKiB": 137800
+    },
+    {
+      "case": "0000267.pdf",
+      "bytes": 515714,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79480
+    },
+    {
+      "case": "0000268.pdf",
+      "bytes": 287908,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74440
+    },
+    {
+      "case": "0000269.pdf",
+      "bytes": 69558,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78164
+    },
+    {
+      "case": "0000270.pdf",
+      "bytes": 431404,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71340
+    },
+    {
+      "case": "0000271.pdf",
+      "bytes": 281687,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79028
+    },
+    {
+      "case": "0000272.pdf",
+      "bytes": 1223174,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74308
+    },
+    {
+      "case": "0000273.pdf",
+      "bytes": 870729,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79980
+    },
+    {
+      "case": "0000274.pdf",
+      "bytes": 32581,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73624
+    },
+    {
+      "case": "0000275.pdf",
+      "bytes": 124066,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 100148
+    },
+    {
+      "case": "0000276.pdf",
+      "bytes": 739018,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80368,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000277.pdf",
+      "bytes": 6708429,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 116016
+    },
+    {
+      "case": "0000278.pdf",
+      "bytes": 114312,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80928
+    },
+    {
+      "case": "0000279.pdf",
+      "bytes": 1249587,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 89236
+    },
+    {
+      "case": "0000280.pdf",
+      "bytes": 10153642,
+      "class": "returned",
+      "ok": true,
+      "ms": 143,
+      "maxRssKiB": 140352
+    },
+    {
+      "case": "0000281.pdf",
+      "bytes": 157898,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71624,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000282.pdf",
+      "bytes": 477349,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78684
+    },
+    {
+      "case": "0000283.pdf",
+      "bytes": 792637,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 89540
+    },
+    {
+      "case": "0000284.pdf",
+      "bytes": 346649,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72208
+    },
+    {
+      "case": "0000285.pdf",
+      "bytes": 207923,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 80020
+    },
+    {
+      "case": "0000286.pdf",
+      "bytes": 1472136,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 75504,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000287.pdf",
+      "bytes": 6132686,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 89484,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000288.pdf",
+      "bytes": 35066,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76476
+    },
+    {
+      "case": "0000289.pdf",
+      "bytes": 1348625,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 93732
+    },
+    {
+      "case": "0000290.pdf",
+      "bytes": 432014,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73736
+    },
+    {
+      "case": "0000291.pdf",
+      "bytes": 2494921,
+      "class": "returned",
+      "ok": true,
+      "ms": 42,
+      "maxRssKiB": 110408
+    },
+    {
+      "case": "0000292.pdf",
+      "bytes": 171688,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 86184
+    },
+    {
+      "case": "0000293.pdf",
+      "bytes": 569495,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77932,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000294.pdf",
+      "bytes": 319239,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72588
+    },
+    {
+      "case": "0000295.pdf",
+      "bytes": 188936,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75820,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000296.pdf",
+      "bytes": 1077219,
+      "class": "returned",
+      "ok": true,
+      "ms": 42,
+      "maxRssKiB": 112224
+    },
+    {
+      "case": "0000297.pdf",
+      "bytes": 107869,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 79304
+    },
+    {
+      "case": "0000298.pdf",
+      "bytes": 556459,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 87060
+    },
+    {
+      "case": "0000299.pdf",
+      "bytes": 151795,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 83636
+    },
+    {
+      "case": "0000300.pdf",
+      "bytes": 525114,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75528,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000301.pdf",
+      "bytes": 402822,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 104924
+    },
+    {
+      "case": "0000302.pdf",
+      "bytes": 1945980,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 85112,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000303.pdf",
+      "bytes": 4713073,
+      "class": "returned",
+      "ok": true,
+      "ms": 196,
+      "maxRssKiB": 134344
+    },
+    {
+      "case": "0000304.pdf",
+      "bytes": 184534,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 82596
+    },
+    {
+      "case": "0000305.pdf",
+      "bytes": 2650470,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 102672
+    },
+    {
+      "case": "0000306.pdf",
+      "bytes": 97890,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79940
+    },
+    {
+      "case": "0000307.pdf",
+      "bytes": 110302,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77660
+    },
+    {
+      "case": "0000308.pdf",
+      "bytes": 817376,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74384
+    },
+    {
+      "case": "0000309.pdf",
+      "bytes": 2896214,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 98800
+    },
+    {
+      "case": "0000310.pdf",
+      "bytes": 441325,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 91984
+    },
+    {
+      "case": "0000311.pdf",
+      "bytes": 1725114,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 76656,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000312.pdf",
+      "bytes": 109113,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77128
+    },
+    {
+      "case": "0000313.pdf",
+      "bytes": 761438,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90304
+    },
+    {
+      "case": "0000314.pdf",
+      "bytes": 83627,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78596
+    },
+    {
+      "case": "0000315.pdf",
+      "bytes": 39918435,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 204888
+    },
+    {
+      "case": "0000316.pdf",
+      "bytes": 21050,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78924
+    },
+    {
+      "case": "0000317.pdf",
+      "bytes": 420478,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 96344
+    },
+    {
+      "case": "0000318.pdf",
+      "bytes": 264272,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72628
+    },
+    {
+      "case": "0000319.pdf",
+      "bytes": 3287160,
+      "class": "returned",
+      "ok": true,
+      "ms": 386,
+      "maxRssKiB": 156960
+    },
+    {
+      "case": "0000320.pdf",
+      "bytes": 659534,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90928
+    },
+    {
+      "case": "0000321.pdf",
+      "bytes": 882479,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 92076
+    },
+    {
+      "case": "0000322.pdf",
+      "bytes": 3032,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73012
+    },
+    {
+      "case": "0000323.pdf",
+      "bytes": 89389,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 77968
+    },
+    {
+      "case": "0000324.pdf",
+      "bytes": 742672,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 100488
+    },
+    {
+      "case": "0000325.pdf",
+      "bytes": 356672,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73400,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000326.pdf",
+      "bytes": 193478,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74628
+    },
+    {
+      "case": "0000327.pdf",
+      "bytes": 35333,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 70656,
+      "code": "pdf/document/no-startxref"
+    },
+    {
+      "case": "0000328.pdf",
+      "bytes": 3941430,
+      "class": "returned",
+      "ok": true,
+      "ms": 419,
+      "maxRssKiB": 137936
+    },
+    {
+      "case": "0000329.pdf",
+      "bytes": 138120,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81536
+    },
+    {
+      "case": "0000330.pdf",
+      "bytes": 542296,
+      "class": "returned",
+      "ok": true,
+      "ms": 41,
+      "maxRssKiB": 115532
+    },
+    {
+      "case": "0000331.pdf",
+      "bytes": 70365,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 99516
+    },
+    {
+      "case": "0000332.pdf",
+      "bytes": 192410,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 97204
+    },
+    {
+      "case": "0000333.pdf",
+      "bytes": 130650770,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 461528
+    },
+    {
+      "case": "0000334.pdf",
+      "bytes": 40424,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 75256
+    },
+    {
+      "case": "0000335.pdf",
+      "bytes": 3747181,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 81916,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000336.pdf",
+      "bytes": 341781,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77260
+    },
+    {
+      "case": "0000337.pdf",
+      "bytes": 2504060,
+      "class": "returned",
+      "ok": true,
+      "ms": 38,
+      "maxRssKiB": 110164
+    },
+    {
+      "case": "0000338.pdf",
+      "bytes": 1276920,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 96384
+    },
+    {
+      "case": "0000339.pdf",
+      "bytes": 5493513,
+      "class": "refused",
+      "ok": true,
+      "ms": 99,
+      "maxRssKiB": 136840,
+      "code": "pdf/filter/bad-decodeparms"
+    },
+    {
+      "case": "0000340.pdf",
+      "bytes": 124962,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81028
+    },
+    {
+      "case": "0000341.pdf",
+      "bytes": 332273,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73024
+    },
+    {
+      "case": "0000342.pdf",
+      "bytes": 1387158,
+      "class": "returned",
+      "ok": true,
+      "ms": 117,
+      "maxRssKiB": 133552
+    },
+    {
+      "case": "0000343.pdf",
+      "bytes": 702299,
+      "class": "returned",
+      "ok": true,
+      "ms": 124,
+      "maxRssKiB": 122744
+    },
+    {
+      "case": "0000344.pdf",
+      "bytes": 209483,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 82816
+    },
+    {
+      "case": "0000345.pdf",
+      "bytes": 7064225,
+      "class": "returned",
+      "ok": true,
+      "ms": 35,
+      "maxRssKiB": 130092
+    },
+    {
+      "case": "0000346.pdf",
+      "bytes": 46331,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 71324,
+      "code": "pdf/parser/indirect-missing-obj"
+    },
+    {
+      "case": "0000347.pdf",
+      "bytes": 1221276,
+      "class": "returned",
+      "ok": true,
+      "ms": 386,
+      "maxRssKiB": 184808
+    },
+    {
+      "case": "0000348.pdf",
+      "bytes": 208280,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 96348
+    },
+    {
+      "case": "0000349.pdf",
+      "bytes": 253038,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81940
+    },
+    {
+      "case": "0000350.pdf",
+      "bytes": 165140,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71668,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000351.pdf",
+      "bytes": 356665,
+      "class": "returned",
+      "ok": true,
+      "ms": 50,
+      "maxRssKiB": 117260
+    },
+    {
+      "case": "0000352.pdf",
+      "bytes": 548800,
+      "class": "returned",
+      "ok": true,
+      "ms": 49,
+      "maxRssKiB": 115460
+    },
+    {
+      "case": "0000353.pdf",
+      "bytes": 762960,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78956
+    },
+    {
+      "case": "0000354.pdf",
+      "bytes": 3254393,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 85876,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000355.pdf",
+      "bytes": 13726319,
+      "class": "returned",
+      "ok": true,
+      "ms": 75,
+      "maxRssKiB": 146460
+    },
+    {
+      "case": "0000356.pdf",
+      "bytes": 1461564,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 80776
+    },
+    {
+      "case": "0000357.pdf",
+      "bytes": 490618,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 94676
+    },
+    {
+      "case": "0000358.pdf",
+      "bytes": 171678,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81876
+    },
+    {
+      "case": "0000359.pdf",
+      "bytes": 118662,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78284,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000360.pdf",
+      "bytes": 1771569,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 102752
+    },
+    {
+      "case": "0000361.pdf",
+      "bytes": 107573,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 74568,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000362.pdf",
+      "bytes": 552568,
+      "class": "returned",
+      "ok": true,
+      "ms": 71,
+      "maxRssKiB": 121748
+    },
+    {
+      "case": "0000363.pdf",
+      "bytes": 74176,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79140
+    },
+    {
+      "case": "0000364.pdf",
+      "bytes": 10315241,
+      "class": "returned",
+      "ok": true,
+      "ms": 834,
+      "maxRssKiB": 159712
+    },
+    {
+      "case": "0000365.pdf",
+      "bytes": 52665,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83096
+    },
+    {
+      "case": "0000366.pdf",
+      "bytes": 74073,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82228
+    },
+    {
+      "case": "0000367.pdf",
+      "bytes": 6696914,
+      "class": "returned",
+      "ok": true,
+      "ms": 167,
+      "maxRssKiB": 146172
+    },
+    {
+      "case": "0000368.pdf",
+      "bytes": 105714,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80356
+    },
+    {
+      "case": "0000369.pdf",
+      "bytes": 124013,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71328
+    },
+    {
+      "case": "0000370.pdf",
+      "bytes": 3956063,
+      "class": "returned",
+      "ok": true,
+      "ms": 105,
+      "maxRssKiB": 137976
+    },
+    {
+      "case": "0000371.pdf",
+      "bytes": 2047,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74252
+    },
+    {
+      "case": "0000372.pdf",
+      "bytes": 3487620,
+      "class": "returned",
+      "ok": true,
+      "ms": 134,
+      "maxRssKiB": 142444
+    },
+    {
+      "case": "0000373.pdf",
+      "bytes": 25733166,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 171548
+    },
+    {
+      "case": "0000374.pdf",
+      "bytes": 515196,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78000
+    },
+    {
+      "case": "0000375.pdf",
+      "bytes": 1802952,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 93748
+    },
+    {
+      "case": "0000376.pdf",
+      "bytes": 25086082,
+      "class": "returned",
+      "ok": true,
+      "ms": 859,
+      "maxRssKiB": 208160
+    },
+    {
+      "case": "0000377.pdf",
+      "bytes": 363287,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 86044
+    },
+    {
+      "case": "0000378.pdf",
+      "bytes": 177699,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75268
+    },
+    {
+      "case": "0000379.pdf",
+      "bytes": 1274443,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 102092
+    },
+    {
+      "case": "0000380.pdf",
+      "bytes": 54966,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 71736
+    },
+    {
+      "case": "0000381.pdf",
+      "bytes": 324541,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 81564
+    },
+    {
+      "case": "0000382.pdf",
+      "bytes": 277005,
+      "class": "returned",
+      "ok": true,
+      "ms": 40,
+      "maxRssKiB": 116396
+    },
+    {
+      "case": "0000383.pdf",
+      "bytes": 377728,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77976,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000384.pdf",
+      "bytes": 1441137,
+      "class": "returned",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 111120
+    },
+    {
+      "case": "0000385.pdf",
+      "bytes": 109128,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82384
+    },
+    {
+      "case": "0000386.pdf",
+      "bytes": 2068357,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 106288
+    },
+    {
+      "case": "0000387.pdf",
+      "bytes": 2097627,
+      "class": "returned",
+      "ok": true,
+      "ms": 569,
+      "maxRssKiB": 189276
+    },
+    {
+      "case": "0000388.pdf",
+      "bytes": 2506886,
+      "class": "returned",
+      "ok": true,
+      "ms": 236,
+      "maxRssKiB": 176732
+    },
+    {
+      "case": "0000389.pdf",
+      "bytes": 388227,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 93628
+    },
+    {
+      "case": "0000390.pdf",
+      "bytes": 1020447,
+      "class": "returned",
+      "ok": true,
+      "ms": 86,
+      "maxRssKiB": 125752
+    },
+    {
+      "case": "0000391.pdf",
+      "bytes": 624813,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81768
+    },
+    {
+      "case": "0000392.pdf",
+      "bytes": 41763,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78080
+    },
+    {
+      "case": "0000393.pdf",
+      "bytes": 16248,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80120
+    },
+    {
+      "case": "0000394.pdf",
+      "bytes": 13519,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 71680
+    },
+    {
+      "case": "0000395.pdf",
+      "bytes": 534528,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78780
+    },
+    {
+      "case": "0000396.pdf",
+      "bytes": 289125,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78108
+    },
+    {
+      "case": "0000397.pdf",
+      "bytes": 559033,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76140,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000398.pdf",
+      "bytes": 81988,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73624
+    },
+    {
+      "case": "0000399.pdf",
+      "bytes": 1048576,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 78244,
+      "code": "pdf/document/no-startxref"
+    },
+    {
+      "case": "0000400.pdf",
+      "bytes": 26957,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 71820
+    },
+    {
+      "case": "0000401.pdf",
+      "bytes": 100788,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 87036
+    },
+    {
+      "case": "0000402.pdf",
+      "bytes": 813389,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74484
+    },
+    {
+      "case": "0000403.pdf",
+      "bytes": 136581,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 97312
+    },
+    {
+      "case": "0000404.pdf",
+      "bytes": 396632,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 73136,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000405.pdf",
+      "bytes": 899039,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 85820
+    },
+    {
+      "case": "0000406.pdf",
+      "bytes": 2421366,
+      "class": "returned",
+      "ok": true,
+      "ms": 200,
+      "maxRssKiB": 143392
+    },
+    {
+      "case": "0000407.pdf",
+      "bytes": 205718,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 100244
+    },
+    {
+      "case": "0000408.pdf",
+      "bytes": 337797,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 71248,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "0000409.pdf",
+      "bytes": 974461,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 75084,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000410.pdf",
+      "bytes": 114121,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74344
+    },
+    {
+      "case": "0000411.pdf",
+      "bytes": 493962,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73324
+    },
+    {
+      "case": "0000412.pdf",
+      "bytes": 340711,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 87088
+    },
+    {
+      "case": "0000413.pdf",
+      "bytes": 97603,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73664
+    },
+    {
+      "case": "0000414.pdf",
+      "bytes": 592807,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90056
+    },
+    {
+      "case": "0000415.pdf",
+      "bytes": 106640,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 74984
+    },
+    {
+      "case": "0000416.pdf",
+      "bytes": 2251958,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 87532
+    },
+    {
+      "case": "0000417.pdf",
+      "bytes": 244393,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76336
+    },
+    {
+      "case": "0000418.pdf",
+      "bytes": 410888,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 84636
+    },
+    {
+      "case": "0000419.pdf",
+      "bytes": 581444,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 92484
+    },
+    {
+      "case": "0000420.pdf",
+      "bytes": 160857,
+      "class": "returned",
+      "ok": true,
+      "ms": 38,
+      "maxRssKiB": 113004
+    },
+    {
+      "case": "0000421.pdf",
+      "bytes": 129984,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 71520,
+      "code": "pdf/parser/indirect-missing-obj"
+    },
+    {
+      "case": "0000422.pdf",
+      "bytes": 225702,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 87924
+    },
+    {
+      "case": "0000423.pdf",
+      "bytes": 621707,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 73284,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000424.pdf",
+      "bytes": 284510,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81956
+    },
+    {
+      "case": "0000425.pdf",
+      "bytes": 5170606,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 91620,
+      "code": "pdf/document/missing-xref"
+    },
+    {
+      "case": "0000426.pdf",
+      "bytes": 658567,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74164
+    },
+    {
+      "case": "0000427.pdf",
+      "bytes": 495165,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 104684
+    },
+    {
+      "case": "0000428.pdf",
+      "bytes": 1580974,
+      "class": "refused",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90360,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000429.pdf",
+      "bytes": 8527,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76652
+    },
+    {
+      "case": "0000430.pdf",
+      "bytes": 568034,
+      "class": "returned",
+      "ok": true,
+      "ms": 34,
+      "maxRssKiB": 110328
+    },
+    {
+      "case": "0000431.pdf",
+      "bytes": 59563,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80692
+    },
+    {
+      "case": "0000432.pdf",
+      "bytes": 93361,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80616
+    },
+    {
+      "case": "0000433.pdf",
+      "bytes": 596637,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 84248
+    },
+    {
+      "case": "0000434.pdf",
+      "bytes": 124884,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77488
+    },
+    {
+      "case": "0000435.pdf",
+      "bytes": 116406,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76524
+    },
+    {
+      "case": "0000436.pdf",
+      "bytes": 35111,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71036
+    },
+    {
+      "case": "0000437.pdf",
+      "bytes": 139068,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 89212
+    },
+    {
+      "case": "0000438.pdf",
+      "bytes": 3241515,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 81524
+    },
+    {
+      "case": "0000439.pdf",
+      "bytes": 1015128,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90340
+    },
+    {
+      "case": "0000440.pdf",
+      "bytes": 3644782,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 104372
+    },
+    {
+      "case": "0000441.pdf",
+      "bytes": 91983,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 88952
+    },
+    {
+      "case": "0000442.pdf",
+      "bytes": 252984,
+      "class": "returned",
+      "ok": true,
+      "ms": 34,
+      "maxRssKiB": 110900
+    },
+    {
+      "case": "0000443.pdf",
+      "bytes": 253941,
+      "class": "returned",
+      "ok": true,
+      "ms": 89,
+      "maxRssKiB": 122428
+    },
+    {
+      "case": "0000444.pdf",
+      "bytes": 95316,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81444
+    },
+    {
+      "case": "0000445.pdf",
+      "bytes": 134778,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80636
+    },
+    {
+      "case": "0000446.pdf",
+      "bytes": 1829227,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77616
+    },
+    {
+      "case": "0000447.pdf",
+      "bytes": 172988,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79664
+    },
+    {
+      "case": "0000448.pdf",
+      "bytes": 87027,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76432
+    },
+    {
+      "case": "0000449.pdf",
+      "bytes": 512466,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77092
+    },
+    {
+      "case": "0000450.pdf",
+      "bytes": 695485,
+      "class": "returned",
+      "ok": true,
+      "ms": 79,
+      "maxRssKiB": 118660
+    },
+    {
+      "case": "0000451.pdf",
+      "bytes": 128425,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84112
+    },
+    {
+      "case": "0000452.pdf",
+      "bytes": 126175,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80788
+    },
+    {
+      "case": "0000453.pdf",
+      "bytes": 1005292,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 75128
+    },
+    {
+      "case": "0000454.pdf",
+      "bytes": 105204,
+      "class": "returned",
+      "ok": true,
+      "ms": 22,
+      "maxRssKiB": 93504
+    },
+    {
+      "case": "0000455.pdf",
+      "bytes": 248780,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 84076
+    },
+    {
+      "case": "0000456.pdf",
+      "bytes": 782560,
+      "class": "returned",
+      "ok": true,
+      "ms": 227,
+      "maxRssKiB": 126400
+    },
+    {
+      "case": "0000457.pdf",
+      "bytes": 52224,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 81908
+    },
+    {
+      "case": "0000458.pdf",
+      "bytes": 101315,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80548
+    },
+    {
+      "case": "0000459.pdf",
+      "bytes": 220963,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 91856
+    },
+    {
+      "case": "0000460.pdf",
+      "bytes": 186425,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 73244,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000461.pdf",
+      "bytes": 613678,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74236,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000462.pdf",
+      "bytes": 26517925,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 154084
+    },
+    {
+      "case": "0000463.pdf",
+      "bytes": 96921,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74900
+    },
+    {
+      "case": "0000464.pdf",
+      "bytes": 78092,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77060
+    },
+    {
+      "case": "0000465.pdf",
+      "bytes": 708777,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80252,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000466.pdf",
+      "bytes": 576377,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72148
+    },
+    {
+      "case": "0000467.pdf",
+      "bytes": 53837,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82092
+    },
+    {
+      "case": "0000468.pdf",
+      "bytes": 1341103,
+      "class": "refused",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 100952,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000469.pdf",
+      "bytes": 1995837,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 95132
+    },
+    {
+      "case": "0000470.pdf",
+      "bytes": 74691,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 86220
+    },
+    {
+      "case": "0000471.pdf",
+      "bytes": 5176026,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 87472
+    },
+    {
+      "case": "0000472.pdf",
+      "bytes": 819417,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74520
+    },
+    {
+      "case": "0000473.pdf",
+      "bytes": 33871,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 87124
+    },
+    {
+      "case": "0000474.pdf",
+      "bytes": 87482,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77708
+    },
+    {
+      "case": "0000475.pdf",
+      "bytes": 493638,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74784
+    },
+    {
+      "case": "0000476.pdf",
+      "bytes": 315921,
+      "class": "returned",
+      "ok": true,
+      "ms": 22,
+      "maxRssKiB": 96688
+    },
+    {
+      "case": "0000477.pdf",
+      "bytes": 43114,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90164
+    },
+    {
+      "case": "0000478.pdf",
+      "bytes": 686514,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81352
+    },
+    {
+      "case": "0000479.pdf",
+      "bytes": 81315,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84028
+    },
+    {
+      "case": "0000480.pdf",
+      "bytes": 245610,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85564
+    },
+    {
+      "case": "0000481.pdf",
+      "bytes": 6303634,
+      "class": "returned",
+      "ok": true,
+      "ms": 99,
+      "maxRssKiB": 134540
+    },
+    {
+      "case": "0000482.pdf",
+      "bytes": 78157,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 84468
+    },
+    {
+      "case": "0000483.pdf",
+      "bytes": 563503,
+      "class": "returned",
+      "ok": true,
+      "ms": 100,
+      "maxRssKiB": 117368
+    },
+    {
+      "case": "0000484.pdf",
+      "bytes": 70997,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79672
+    },
+    {
+      "case": "0000485.pdf",
+      "bytes": 1212115,
+      "class": "returned",
+      "ok": true,
+      "ms": 192,
+      "maxRssKiB": 160528
+    },
+    {
+      "case": "0000486.pdf",
+      "bytes": 5234237,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 106608
+    },
+    {
+      "case": "0000487.pdf",
+      "bytes": 443522,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 74032,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000488.pdf",
+      "bytes": 4928554,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 97332
+    },
+    {
+      "case": "0000489.pdf",
+      "bytes": 83984,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80116
+    },
+    {
+      "case": "0000490.pdf",
+      "bytes": 1329580,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 96624
+    },
+    {
+      "case": "0000491.pdf",
+      "bytes": 78690,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 79440
+    },
+    {
+      "case": "0000492.pdf",
+      "bytes": 101245,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79484
+    },
+    {
+      "case": "0000493.pdf",
+      "bytes": 106139,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79108
+    },
+    {
+      "case": "0000494.pdf",
+      "bytes": 218656,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 89024
+    },
+    {
+      "case": "0000495.pdf",
+      "bytes": 70050,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73060
+    },
+    {
+      "case": "0000496.pdf",
+      "bytes": 92899,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79680
+    },
+    {
+      "case": "0000497.pdf",
+      "bytes": 115302,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79880
+    },
+    {
+      "case": "0000498.pdf",
+      "bytes": 129096,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 79716
+    },
+    {
+      "case": "0000499.pdf",
+      "bytes": 141699,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 93976
+    },
+    {
+      "case": "0000500.pdf",
+      "bytes": 306232,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 87092
+    },
+    {
+      "case": "0000501.pdf",
+      "bytes": 793217,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74632,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000502.pdf",
+      "bytes": 2529327,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 87180,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000503.pdf",
+      "bytes": 513261,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90256
+    },
+    {
+      "case": "0000504.pdf",
+      "bytes": 936273,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85920
+    },
+    {
+      "case": "0000505.pdf",
+      "bytes": 85865,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 72396,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000506.pdf",
+      "bytes": 18516,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75944
+    },
+    {
+      "case": "0000507.pdf",
+      "bytes": 625212,
+      "class": "returned",
+      "ok": true,
+      "ms": 35,
+      "maxRssKiB": 113976
+    },
+    {
+      "case": "0000508.pdf",
+      "bytes": 4988515,
+      "class": "returned",
+      "ok": true,
+      "ms": 249,
+      "maxRssKiB": 144824
+    },
+    {
+      "case": "0000509.pdf",
+      "bytes": 796940,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 85004
+    },
+    {
+      "case": "0000510.pdf",
+      "bytes": 6658353,
+      "class": "returned",
+      "ok": true,
+      "ms": 854,
+      "maxRssKiB": 365164
+    },
+    {
+      "case": "0000511.pdf",
+      "bytes": 37454,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 81360
+    },
+    {
+      "case": "0000512.pdf",
+      "bytes": 333920,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 88584
+    },
+    {
+      "case": "0000513.pdf",
+      "bytes": 139264,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80244
+    },
+    {
+      "case": "0000514.pdf",
+      "bytes": 508591,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79980
+    },
+    {
+      "case": "0000515.pdf",
+      "bytes": 1547501,
+      "class": "returned",
+      "ok": true,
+      "ms": 243,
+      "maxRssKiB": 140320
+    },
+    {
+      "case": "0000516.pdf",
+      "bytes": 251041,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 92468
+    },
+    {
+      "case": "0000517.pdf",
+      "bytes": 1298805,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 92856
+    },
+    {
+      "case": "0000518.pdf",
+      "bytes": 2826036,
+      "class": "returned",
+      "ok": true,
+      "ms": 252,
+      "maxRssKiB": 167308
+    },
+    {
+      "case": "0000519.pdf",
+      "bytes": 109572,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78108
+    },
+    {
+      "case": "0000520.pdf",
+      "bytes": 3368713,
+      "class": "returned",
+      "ok": true,
+      "ms": 72,
+      "maxRssKiB": 131152
+    },
+    {
+      "case": "0000521.pdf",
+      "bytes": 21865133,
+      "class": "refused",
+      "ok": true,
+      "ms": 38,
+      "maxRssKiB": 156208,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000522.pdf",
+      "bytes": 19166316,
+      "class": "returned",
+      "ok": true,
+      "ms": 1290,
+      "maxRssKiB": 183772
+    },
+    {
+      "case": "0000523.pdf",
+      "bytes": 667200,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 104928
+    },
+    {
+      "case": "0000524.pdf",
+      "bytes": 900119,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 73556,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "0000525.pdf",
+      "bytes": 1626990,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 87664
+    },
+    {
+      "case": "0000526.pdf",
+      "bytes": 415035,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81232
+    },
+    {
+      "case": "0000527.pdf",
+      "bytes": 340185,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85740
+    },
+    {
+      "case": "0000528.pdf",
+      "bytes": 95108,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 91884
+    },
+    {
+      "case": "0000529.pdf",
+      "bytes": 51169,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73028
+    },
+    {
+      "case": "0000530.pdf",
+      "bytes": 243693,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85920
+    },
+    {
+      "case": "0000531.pdf",
+      "bytes": 80861,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 70632,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000532.pdf",
+      "bytes": 291470,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 110100
+    },
+    {
+      "case": "0000533.pdf",
+      "bytes": 40088,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73048
+    },
+    {
+      "case": "0000534.pdf",
+      "bytes": 222276,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 88852
+    },
+    {
+      "case": "0000535.pdf",
+      "bytes": 2486550,
+      "class": "returned",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 105900
+    },
+    {
+      "case": "0000536.pdf",
+      "bytes": 711407,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79740
+    },
+    {
+      "case": "0000537.pdf",
+      "bytes": 48823,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80048
+    },
+    {
+      "case": "0000538.pdf",
+      "bytes": 66242,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76596
+    },
+    {
+      "case": "0000539.pdf",
+      "bytes": 102240,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77120
+    },
+    {
+      "case": "0000540.pdf",
+      "bytes": 7840012,
+      "class": "returned",
+      "ok": true,
+      "ms": 74,
+      "maxRssKiB": 145260
+    },
+    {
+      "case": "0000541.pdf",
+      "bytes": 310019,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71600
+    },
+    {
+      "case": "0000542.pdf",
+      "bytes": 447639,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77716
+    },
+    {
+      "case": "0000543.pdf",
+      "bytes": 469108,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74004
+    },
+    {
+      "case": "0000544.pdf",
+      "bytes": 16778425,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 121912
+    },
+    {
+      "case": "0000545.pdf",
+      "bytes": 751877,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 82524
+    },
+    {
+      "case": "0000546.pdf",
+      "bytes": 81501,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72096
+    },
+    {
+      "case": "0000547.pdf",
+      "bytes": 235077,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 85932
+    },
+    {
+      "case": "0000548.pdf",
+      "bytes": 714397,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 79740
+    },
+    {
+      "case": "0000549.pdf",
+      "bytes": 341669,
+      "class": "returned",
+      "ok": true,
+      "ms": 92,
+      "maxRssKiB": 123568
+    },
+    {
+      "case": "0000550.pdf",
+      "bytes": 128133,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 87216
+    },
+    {
+      "case": "0000551.pdf",
+      "bytes": 947815,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76452,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000552.pdf",
+      "bytes": 389157,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77976,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000553.pdf",
+      "bytes": 251752,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78436
+    },
+    {
+      "case": "0000554.pdf",
+      "bytes": 298183,
+      "class": "returned",
+      "ok": true,
+      "ms": 34,
+      "maxRssKiB": 106504
+    },
+    {
+      "case": "0000555.pdf",
+      "bytes": 243826,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 104024
+    },
+    {
+      "case": "0000556.pdf",
+      "bytes": 76050,
+      "class": "returned",
+      "ok": true,
+      "ms": 36,
+      "maxRssKiB": 112660
+    },
+    {
+      "case": "0000557.pdf",
+      "bytes": 161488,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 82964
+    },
+    {
+      "case": "0000558.pdf",
+      "bytes": 849387,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 105288
+    },
+    {
+      "case": "0000559.pdf",
+      "bytes": 159751,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 82576
+    },
+    {
+      "case": "0000560.pdf",
+      "bytes": 3233667,
+      "class": "refused",
+      "ok": true,
+      "ms": 127,
+      "maxRssKiB": 144740,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000561.pdf",
+      "bytes": 69530,
+      "class": "returned",
+      "ok": true,
+      "ms": 36,
+      "maxRssKiB": 107212
+    },
+    {
+      "case": "0000562.pdf",
+      "bytes": 546236,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 91020
+    },
+    {
+      "case": "0000563.pdf",
+      "bytes": 17130699,
+      "class": "returned",
+      "ok": true,
+      "ms": 1587,
+      "maxRssKiB": 167600
+    },
+    {
+      "case": "0000564.pdf",
+      "bytes": 116591,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 79860
+    },
+    {
+      "case": "0000565.pdf",
+      "bytes": 220452,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80956
+    },
+    {
+      "case": "0000566.pdf",
+      "bytes": 269557,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 99432
+    },
+    {
+      "case": "0000567.pdf",
+      "bytes": 817351,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 106164
+    },
+    {
+      "case": "0000568.pdf",
+      "bytes": 8367561,
+      "class": "returned",
+      "ok": true,
+      "ms": 299,
+      "maxRssKiB": 193476
+    },
+    {
+      "case": "0000569.pdf",
+      "bytes": 723788,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85808
+    },
+    {
+      "case": "0000570.pdf",
+      "bytes": 407326,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73068
+    },
+    {
+      "case": "0000571.pdf",
+      "bytes": 85336,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79196
+    },
+    {
+      "case": "0000572.pdf",
+      "bytes": 186892,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 71064,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000573.pdf",
+      "bytes": 516204,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80576
+    },
+    {
+      "case": "0000574.pdf",
+      "bytes": 112448,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 74188
+    },
+    {
+      "case": "0000575.pdf",
+      "bytes": 667451,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90076
+    },
+    {
+      "case": "0000576.pdf",
+      "bytes": 359794,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 91280
+    },
+    {
+      "case": "0000577.pdf",
+      "bytes": 511716,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 76028
+    },
+    {
+      "case": "0000578.pdf",
+      "bytes": 739346,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82348,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000579.pdf",
+      "bytes": 1750363,
+      "class": "returned",
+      "ok": true,
+      "ms": 123,
+      "maxRssKiB": 125576
+    },
+    {
+      "case": "0000580.pdf",
+      "bytes": 72341,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76896
+    },
+    {
+      "case": "0000581.pdf",
+      "bytes": 202529,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 88796
+    },
+    {
+      "case": "0000582.pdf",
+      "bytes": 29406,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 75828,
+      "code": "pdf/parser/unterminated-dict"
+    },
+    {
+      "case": "0000583.pdf",
+      "bytes": 1817628,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 77728
+    },
+    {
+      "case": "0000584.pdf",
+      "bytes": 241150,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 75084
+    },
+    {
+      "case": "0000585.pdf",
+      "bytes": 385068,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 73528,
+      "code": "pdf/parser/unterminated-array"
+    },
+    {
+      "case": "0000586.pdf",
+      "bytes": 26591,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83836
+    },
+    {
+      "case": "0000587.pdf",
+      "bytes": 177786,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80388
+    },
+    {
+      "case": "0000588.pdf",
+      "bytes": 157452,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78388
+    },
+    {
+      "case": "0000589.pdf",
+      "bytes": 191704,
+      "class": "returned",
+      "ok": true,
+      "ms": 36,
+      "maxRssKiB": 112664
+    },
+    {
+      "case": "0000590.pdf",
+      "bytes": 201453,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 87668
+    },
+    {
+      "case": "0000591.pdf",
+      "bytes": 3250716,
+      "class": "returned",
+      "ok": true,
+      "ms": 38,
+      "maxRssKiB": 108348
+    },
+    {
+      "case": "0000592.pdf",
+      "bytes": 89307,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77996
+    },
+    {
+      "case": "0000593.pdf",
+      "bytes": 3000238,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 89724
+    },
+    {
+      "case": "0000594.pdf",
+      "bytes": 44702,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 89092
+    },
+    {
+      "case": "0000595.pdf",
+      "bytes": 208105,
+      "class": "returned",
+      "ok": true,
+      "ms": 42,
+      "maxRssKiB": 108208
+    },
+    {
+      "case": "0000596.pdf",
+      "bytes": 32475,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79064
+    },
+    {
+      "case": "0000597.pdf",
+      "bytes": 10606316,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 109060
+    },
+    {
+      "case": "0000598.pdf",
+      "bytes": 300504,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74516
+    },
+    {
+      "case": "0000599.pdf",
+      "bytes": 30757,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75896
+    },
+    {
+      "case": "0000600.pdf",
+      "bytes": 68849,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72944
+    },
+    {
+      "case": "0000601.pdf",
+      "bytes": 3183688,
+      "class": "returned",
+      "ok": true,
+      "ms": 40,
+      "maxRssKiB": 113548
+    },
+    {
+      "case": "0000602.pdf",
+      "bytes": 154044,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79776
+    },
+    {
+      "case": "0000603.pdf",
+      "bytes": 3542847,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 82364
+    },
+    {
+      "case": "0000604.pdf",
+      "bytes": 15690,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76048
+    },
+    {
+      "case": "0000605.pdf",
+      "bytes": 1397553,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 82448
+    },
+    {
+      "case": "0000606.pdf",
+      "bytes": 20705,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78216
+    },
+    {
+      "case": "0000607.pdf",
+      "bytes": 217580,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 88360
+    },
+    {
+      "case": "0000608.pdf",
+      "bytes": 2237077,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 88340
+    },
+    {
+      "case": "0000609.pdf",
+      "bytes": 264979,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 94232
+    },
+    {
+      "case": "0000610.pdf",
+      "bytes": 284108,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78488
+    },
+    {
+      "case": "0000611.pdf",
+      "bytes": 502540,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 91512
+    },
+    {
+      "case": "0000612.pdf",
+      "bytes": 4739047,
+      "class": "returned",
+      "ok": true,
+      "ms": 246,
+      "maxRssKiB": 154380
+    },
+    {
+      "case": "0000613.pdf",
+      "bytes": 1075884,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 82172
+    },
+    {
+      "case": "0000614.pdf",
+      "bytes": 327319,
+      "class": "returned",
+      "ok": true,
+      "ms": 42,
+      "maxRssKiB": 114388
+    },
+    {
+      "case": "0000615.pdf",
+      "bytes": 234327,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77952
+    },
+    {
+      "case": "0000616.pdf",
+      "bytes": 69192,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78872
+    },
+    {
+      "case": "0000617.pdf",
+      "bytes": 133477,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 84780
+    },
+    {
+      "case": "0000618.pdf",
+      "bytes": 284918,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 107696
+    },
+    {
+      "case": "0000619.pdf",
+      "bytes": 225024,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 87184
+    },
+    {
+      "case": "0000620.pdf",
+      "bytes": 104528,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81092
+    },
+    {
+      "case": "0000621.pdf",
+      "bytes": 67805,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73364
+    },
+    {
+      "case": "0000622.pdf",
+      "bytes": 1752567,
+      "class": "returned",
+      "ok": true,
+      "ms": 117,
+      "maxRssKiB": 127860
+    },
+    {
+      "case": "0000623.pdf",
+      "bytes": 200396,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72492
+    },
+    {
+      "case": "0000624.pdf",
+      "bytes": 539052,
+      "class": "returned",
+      "ok": true,
+      "ms": 72,
+      "maxRssKiB": 121660
+    },
+    {
+      "case": "0000625.pdf",
+      "bytes": 470540,
+      "class": "returned",
+      "ok": true,
+      "ms": 118,
+      "maxRssKiB": 119812
+    },
+    {
+      "case": "0000626.pdf",
+      "bytes": 212996,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 92324
+    },
+    {
+      "case": "0000627.pdf",
+      "bytes": 6147635,
+      "class": "returned",
+      "ok": true,
+      "ms": 50,
+      "maxRssKiB": 134176
+    },
+    {
+      "case": "0000628.pdf",
+      "bytes": 2381066,
+      "class": "returned",
+      "ok": true,
+      "ms": 487,
+      "maxRssKiB": 170856
+    },
+    {
+      "case": "0000629.pdf",
+      "bytes": 262808,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74652
+    },
+    {
+      "case": "0000630.pdf",
+      "bytes": 23827,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73664
+    },
+    {
+      "case": "0000631.pdf",
+      "bytes": 220951,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74932
+    },
+    {
+      "case": "0000632.pdf",
+      "bytes": 574980,
+      "class": "returned",
+      "ok": true,
+      "ms": 55,
+      "maxRssKiB": 115080
+    },
+    {
+      "case": "0000633.pdf",
+      "bytes": 463074,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76548
+    },
+    {
+      "case": "0000634.pdf",
+      "bytes": 165593,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 82016
+    },
+    {
+      "case": "0000635.pdf",
+      "bytes": 268868,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 86700
+    },
+    {
+      "case": "0000636.pdf",
+      "bytes": 180769,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 94668
+    },
+    {
+      "case": "0000637.pdf",
+      "bytes": 253842,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85312
+    },
+    {
+      "case": "0000638.pdf",
+      "bytes": 251674,
+      "class": "returned",
+      "ok": true,
+      "ms": 131,
+      "maxRssKiB": 125948
+    },
+    {
+      "case": "0000639.pdf",
+      "bytes": 63281,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80412
+    },
+    {
+      "case": "0000640.pdf",
+      "bytes": 407122,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 95920
+    },
+    {
+      "case": "0000641.pdf",
+      "bytes": 216108,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 86484
+    },
+    {
+      "case": "0000642.pdf",
+      "bytes": 196147,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73472
+    },
+    {
+      "case": "0000643.pdf",
+      "bytes": 316145,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 87036
+    },
+    {
+      "case": "0000644.pdf",
+      "bytes": 190638,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75396,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000645.pdf",
+      "bytes": 210957,
+      "class": "returned",
+      "ok": true,
+      "ms": 103,
+      "maxRssKiB": 123148
+    },
+    {
+      "case": "0000646.pdf",
+      "bytes": 22799023,
+      "class": "refused",
+      "ok": true,
+      "ms": 142,
+      "maxRssKiB": 187380,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000647.pdf",
+      "bytes": 7965,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74872
+    },
+    {
+      "case": "0000648.pdf",
+      "bytes": 293419,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83324
+    },
+    {
+      "case": "0000649.pdf",
+      "bytes": 468610,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73124
+    },
+    {
+      "case": "0000650.pdf",
+      "bytes": 2971179,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 107360
+    },
+    {
+      "case": "0000651.pdf",
+      "bytes": 2029465,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 102572
+    },
+    {
+      "case": "0000652.pdf",
+      "bytes": 41607,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71072,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000653.pdf",
+      "bytes": 36875,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72628
+    },
+    {
+      "case": "0000654.pdf",
+      "bytes": 221919,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 89660
+    },
+    {
+      "case": "0000655.pdf",
+      "bytes": 383930,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 72796,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000656.pdf",
+      "bytes": 249494,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73868
+    },
+    {
+      "case": "0000657.pdf",
+      "bytes": 720027,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 104916
+    },
+    {
+      "case": "0000658.pdf",
+      "bytes": 136167,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 87552
+    },
+    {
+      "case": "0000659.pdf",
+      "bytes": 117038,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79420
+    },
+    {
+      "case": "0000660.pdf",
+      "bytes": 474039,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85500
+    },
+    {
+      "case": "0000661.pdf",
+      "bytes": 160587,
+      "class": "returned",
+      "ok": true,
+      "ms": 37,
+      "maxRssKiB": 112392
+    },
+    {
+      "case": "0000662.pdf",
+      "bytes": 2383926,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 77160,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000663.pdf",
+      "bytes": 103340,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 84216
+    },
+    {
+      "case": "0000664.pdf",
+      "bytes": 159428,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77440
+    },
+    {
+      "case": "0000665.pdf",
+      "bytes": 53051,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77784
+    },
+    {
+      "case": "0000666.pdf",
+      "bytes": 114119,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80280
+    },
+    {
+      "case": "0000667.pdf",
+      "bytes": 384599,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75420
+    },
+    {
+      "case": "0000668.pdf",
+      "bytes": 3046368,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 107864
+    },
+    {
+      "case": "0000669.pdf",
+      "bytes": 591783,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83540
+    },
+    {
+      "case": "0000670.pdf",
+      "bytes": 500035,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71620,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000671.pdf",
+      "bytes": 79130,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76268
+    },
+    {
+      "case": "0000672.pdf",
+      "bytes": 602979,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78856,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000673.pdf",
+      "bytes": 137642,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80272
+    },
+    {
+      "case": "0000674.pdf",
+      "bytes": 118069,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 99964
+    },
+    {
+      "case": "0000675.pdf",
+      "bytes": 173017,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80984
+    },
+    {
+      "case": "0000676.pdf",
+      "bytes": 50834,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78732
+    },
+    {
+      "case": "0000677.pdf",
+      "bytes": 77532,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90252
+    },
+    {
+      "case": "0000678.pdf",
+      "bytes": 375359,
+      "class": "returned",
+      "ok": true,
+      "ms": 62,
+      "maxRssKiB": 116944
+    },
+    {
+      "case": "0000679.pdf",
+      "bytes": 69775,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76956
+    },
+    {
+      "case": "0000680.pdf",
+      "bytes": 252412,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 72896,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "0000681.pdf",
+      "bytes": 410237,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 82472
+    },
+    {
+      "case": "0000682.pdf",
+      "bytes": 281483,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 94980
+    },
+    {
+      "case": "0000683.pdf",
+      "bytes": 7872889,
+      "class": "returned",
+      "ok": true,
+      "ms": 629,
+      "maxRssKiB": 191132
+    },
+    {
+      "case": "0000684.pdf",
+      "bytes": 300308,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83264
+    },
+    {
+      "case": "0000685.pdf",
+      "bytes": 430704,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84216
+    },
+    {
+      "case": "0000686.pdf",
+      "bytes": 256059,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 93952
+    },
+    {
+      "case": "0000687.pdf",
+      "bytes": 67896,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85660
+    },
+    {
+      "case": "0000688.pdf",
+      "bytes": 91652,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 99820
+    },
+    {
+      "case": "0000689.pdf",
+      "bytes": 83602,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78536
+    },
+    {
+      "case": "0000690.pdf",
+      "bytes": 185413,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 95784
+    },
+    {
+      "case": "0000691.pdf",
+      "bytes": 18552,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79064
+    },
+    {
+      "case": "0000692.pdf",
+      "bytes": 147495,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 75740
+    },
+    {
+      "case": "0000693.pdf",
+      "bytes": 1244289,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 75700,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000694.pdf",
+      "bytes": 96970,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 70864,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000695.pdf",
+      "bytes": 1400,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72208
+    },
+    {
+      "case": "0000696.pdf",
+      "bytes": 170555,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78116
+    },
+    {
+      "case": "0000697.pdf",
+      "bytes": 1389974,
+      "class": "refused",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 92308,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000698.pdf",
+      "bytes": 1740329,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 108088
+    },
+    {
+      "case": "0000699.pdf",
+      "bytes": 983221,
+      "class": "returned",
+      "ok": true,
+      "ms": 205,
+      "maxRssKiB": 166400
+    },
+    {
+      "case": "0000700.pdf",
+      "bytes": 3417058,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 97336
+    },
+    {
+      "case": "0000701.pdf",
+      "bytes": 198287,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82424
+    },
+    {
+      "case": "0000702.pdf",
+      "bytes": 143591,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73616
+    },
+    {
+      "case": "0000703.pdf",
+      "bytes": 29904,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80244
+    },
+    {
+      "case": "0000704.pdf",
+      "bytes": 399179,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 92676
+    },
+    {
+      "case": "0000705.pdf",
+      "bytes": 298201,
+      "class": "returned",
+      "ok": true,
+      "ms": 42,
+      "maxRssKiB": 116432
+    },
+    {
+      "case": "0000706.pdf",
+      "bytes": 326997,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 84840
+    },
+    {
+      "case": "0000707.pdf",
+      "bytes": 13013713,
+      "class": "refused",
+      "ok": true,
+      "ms": 59,
+      "maxRssKiB": 143520,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000708.pdf",
+      "bytes": 149617,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 83928
+    },
+    {
+      "case": "0000709.pdf",
+      "bytes": 76513,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84184
+    },
+    {
+      "case": "0000710.pdf",
+      "bytes": 392374,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73860
+    },
+    {
+      "case": "0000711.pdf",
+      "bytes": 28777651,
+      "class": "refused",
+      "ok": true,
+      "ms": 40,
+      "maxRssKiB": 188020,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000712.pdf",
+      "bytes": 59229,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73152,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000713.pdf",
+      "bytes": 259807,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 91128
+    },
+    {
+      "case": "0000714.pdf",
+      "bytes": 119033,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83280
+    },
+    {
+      "case": "0000715.pdf",
+      "bytes": 268525,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 91492
+    },
+    {
+      "case": "0000716.pdf",
+      "bytes": 323562,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72248,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000717.pdf",
+      "bytes": 145978,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 84168
+    },
+    {
+      "case": "0000718.pdf",
+      "bytes": 92598,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79104
+    },
+    {
+      "case": "0000719.pdf",
+      "bytes": 10415442,
+      "class": "returned",
+      "ok": true,
+      "ms": 248,
+      "maxRssKiB": 146952
+    },
+    {
+      "case": "0000720.pdf",
+      "bytes": 22563,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83804
+    },
+    {
+      "case": "0000721.pdf",
+      "bytes": 4753685,
+      "class": "returned",
+      "ok": true,
+      "ms": 108,
+      "maxRssKiB": 147296
+    },
+    {
+      "case": "0000722.pdf",
+      "bytes": 877583,
+      "class": "returned",
+      "ok": true,
+      "ms": 99,
+      "maxRssKiB": 128648
+    },
+    {
+      "case": "0000723.pdf",
+      "bytes": 9670,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 74644
+    },
+    {
+      "case": "0000724.pdf",
+      "bytes": 91036,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80488
+    },
+    {
+      "case": "0000725.pdf",
+      "bytes": 609819,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73308
+    },
+    {
+      "case": "0000726.pdf",
+      "bytes": 900687,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83984
+    },
+    {
+      "case": "0000727.pdf",
+      "bytes": 8919,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 75008
+    },
+    {
+      "case": "0000728.pdf",
+      "bytes": 926194,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 99240
+    },
+    {
+      "case": "0000729.pdf",
+      "bytes": 1747361,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 86008
+    },
+    {
+      "case": "0000730.pdf",
+      "bytes": 808429,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75588
+    },
+    {
+      "case": "0000731.pdf",
+      "bytes": 2899879,
+      "class": "returned",
+      "ok": true,
+      "ms": 206,
+      "maxRssKiB": 133220
+    },
+    {
+      "case": "0000732.pdf",
+      "bytes": 13462,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72884
+    },
+    {
+      "case": "0000733.pdf",
+      "bytes": 120624,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80180
+    },
+    {
+      "case": "0000734.pdf",
+      "bytes": 523366,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73340,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000735.pdf",
+      "bytes": 16023,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79460
+    },
+    {
+      "case": "0000736.pdf",
+      "bytes": 356626,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71248,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000737.pdf",
+      "bytes": 551697,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81724
+    },
+    {
+      "case": "0000738.pdf",
+      "bytes": 2558605,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 103428
+    },
+    {
+      "case": "0000739.pdf",
+      "bytes": 80263,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80404
+    },
+    {
+      "case": "0000740.pdf",
+      "bytes": 212499,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83576
+    },
+    {
+      "case": "0000741.pdf",
+      "bytes": 4437976,
+      "class": "returned",
+      "ok": true,
+      "ms": 35,
+      "maxRssKiB": 113612
+    },
+    {
+      "case": "0000742.pdf",
+      "bytes": 300283,
+      "class": "returned",
+      "ok": true,
+      "ms": 57,
+      "maxRssKiB": 118308
+    },
+    {
+      "case": "0000743.pdf",
+      "bytes": 65332,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78524
+    },
+    {
+      "case": "0000744.pdf",
+      "bytes": 560069,
+      "class": "returned",
+      "ok": true,
+      "ms": 53,
+      "maxRssKiB": 121624
+    },
+    {
+      "case": "0000745.pdf",
+      "bytes": 6702678,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 91916
+    },
+    {
+      "case": "0000746.pdf",
+      "bytes": 366270,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80568
+    },
+    {
+      "case": "0000747.pdf",
+      "bytes": 681655,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 96988
+    },
+    {
+      "case": "0000748.pdf",
+      "bytes": 172349,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81068
+    },
+    {
+      "case": "0000749.pdf",
+      "bytes": 15284,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76928
+    },
+    {
+      "case": "0000750.pdf",
+      "bytes": 20927,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 79292
+    },
+    {
+      "case": "0000751.pdf",
+      "bytes": 26753,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 84672
+    },
+    {
+      "case": "0000752.pdf",
+      "bytes": 61246,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 95992
+    },
+    {
+      "case": "0000753.pdf",
+      "bytes": 58523,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79248
+    },
+    {
+      "case": "0000754.pdf",
+      "bytes": 210941,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79572,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000755.pdf",
+      "bytes": 55864,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83540
+    },
+    {
+      "case": "0000756.pdf",
+      "bytes": 827518,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74844
+    },
+    {
+      "case": "0000757.pdf",
+      "bytes": 108432,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76308
+    },
+    {
+      "case": "0000758.pdf",
+      "bytes": 57273,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81616
+    },
+    {
+      "case": "0000759.pdf",
+      "bytes": 132139,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 92288
+    },
+    {
+      "case": "0000760.pdf",
+      "bytes": 80907,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84172
+    },
+    {
+      "case": "0000761.pdf",
+      "bytes": 1357808,
+      "class": "returned",
+      "ok": true,
+      "ms": 57,
+      "maxRssKiB": 117460
+    },
+    {
+      "case": "0000762.pdf",
+      "bytes": 398733,
+      "class": "returned",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 107368
+    },
+    {
+      "case": "0000763.pdf",
+      "bytes": 15589,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80512
+    },
+    {
+      "case": "0000764.pdf",
+      "bytes": 396008,
+      "class": "returned",
+      "ok": true,
+      "ms": 75,
+      "maxRssKiB": 118564
+    },
+    {
+      "case": "0000765.pdf",
+      "bytes": 384842,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81160
+    },
+    {
+      "case": "0000766.pdf",
+      "bytes": 547921,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 82748
+    },
+    {
+      "case": "0000767.pdf",
+      "bytes": 123321,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80372
+    },
+    {
+      "case": "0000768.pdf",
+      "bytes": 1546553,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 82884
+    },
+    {
+      "case": "0000769.pdf",
+      "bytes": 10706692,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 111024,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000770.pdf",
+      "bytes": 234500,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78204
+    },
+    {
+      "case": "0000771.pdf",
+      "bytes": 1835342,
+      "class": "returned",
+      "ok": true,
+      "ms": 290,
+      "maxRssKiB": 164332
+    },
+    {
+      "case": "0000772.pdf",
+      "bytes": 121402,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 75248
+    },
+    {
+      "case": "0000773.pdf",
+      "bytes": 991566,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 75024
+    },
+    {
+      "case": "0000774.pdf",
+      "bytes": 1161774,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 88912
+    },
+    {
+      "case": "0000775.pdf",
+      "bytes": 812099,
+      "class": "returned",
+      "ok": true,
+      "ms": 119,
+      "maxRssKiB": 125196
+    },
+    {
+      "case": "0000776.pdf",
+      "bytes": 108487,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77388
+    },
+    {
+      "case": "0000777.pdf",
+      "bytes": 181340,
+      "class": "returned",
+      "ok": true,
+      "ms": 102,
+      "maxRssKiB": 118396
+    },
+    {
+      "case": "0000778.pdf",
+      "bytes": 494727,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78448
+    },
+    {
+      "case": "0000779.pdf",
+      "bytes": 273843,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80668
+    },
+    {
+      "case": "0000780.pdf",
+      "bytes": 127980,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 71852,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000781.pdf",
+      "bytes": 59152,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 76260
+    },
+    {
+      "case": "0000782.pdf",
+      "bytes": 141307,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79048
+    },
+    {
+      "case": "0000783.pdf",
+      "bytes": 281050,
+      "class": "returned",
+      "ok": true,
+      "ms": 51,
+      "maxRssKiB": 119676
+    },
+    {
+      "case": "0000784.pdf",
+      "bytes": 211462,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 80632
+    },
+    {
+      "case": "0000785.pdf",
+      "bytes": 94548,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 79792
+    },
+    {
+      "case": "0000786.pdf",
+      "bytes": 4106656,
+      "class": "returned",
+      "ok": true,
+      "ms": 418,
+      "maxRssKiB": 137648
+    },
+    {
+      "case": "0000787.pdf",
+      "bytes": 679386,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80132
+    },
+    {
+      "case": "0000788.pdf",
+      "bytes": 1129868,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 75636
+    },
+    {
+      "case": "0000789.pdf",
+      "bytes": 33588,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72648
+    },
+    {
+      "case": "0000790.pdf",
+      "bytes": 52755,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 87352
+    },
+    {
+      "case": "0000791.pdf",
+      "bytes": 353514,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81984
+    },
+    {
+      "case": "0000792.pdf",
+      "bytes": 174933,
+      "class": "returned",
+      "ok": true,
+      "ms": 42,
+      "maxRssKiB": 111572
+    },
+    {
+      "case": "0000793.pdf",
+      "bytes": 716671,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76360
+    },
+    {
+      "case": "0000794.pdf",
+      "bytes": 395768,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 79616
+    },
+    {
+      "case": "0000795.pdf",
+      "bytes": 3548672,
+      "class": "returned",
+      "ok": true,
+      "ms": 157,
+      "maxRssKiB": 157156
+    },
+    {
+      "case": "0000796.pdf",
+      "bytes": 288400,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 94500
+    },
+    {
+      "case": "0000797.pdf",
+      "bytes": 7535217,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 96516
+    },
+    {
+      "case": "0000798.pdf",
+      "bytes": 21087,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73572
+    },
+    {
+      "case": "0000799.pdf",
+      "bytes": 84314,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73152
+    },
+    {
+      "case": "0000800.pdf",
+      "bytes": 360526,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 107760
+    },
+    {
+      "case": "0000801.pdf",
+      "bytes": 1052864,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 87148
+    },
+    {
+      "case": "0000802.pdf",
+      "bytes": 984921,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 104980
+    },
+    {
+      "case": "0000803.pdf",
+      "bytes": 30798,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72916
+    },
+    {
+      "case": "0000804.pdf",
+      "bytes": 235941,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78904
+    },
+    {
+      "case": "0000805.pdf",
+      "bytes": 2400888,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 102976
+    },
+    {
+      "case": "0000806.pdf",
+      "bytes": 224348,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 98720
+    },
+    {
+      "case": "0000807.pdf",
+      "bytes": 215826,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84436
+    },
+    {
+      "case": "0000808.pdf",
+      "bytes": 2134122,
+      "class": "returned",
+      "ok": true,
+      "ms": 147,
+      "maxRssKiB": 128476
+    },
+    {
+      "case": "0000809.pdf",
+      "bytes": 658390,
+      "class": "returned",
+      "ok": true,
+      "ms": 74,
+      "maxRssKiB": 120468
+    },
+    {
+      "case": "0000810.pdf",
+      "bytes": 159658,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78884,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000811.pdf",
+      "bytes": 166705,
+      "class": "returned",
+      "ok": true,
+      "ms": 34,
+      "maxRssKiB": 109316
+    },
+    {
+      "case": "0000812.pdf",
+      "bytes": 328198,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72812
+    },
+    {
+      "case": "0000813.pdf",
+      "bytes": 122403,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77020
+    },
+    {
+      "case": "0000814.pdf",
+      "bytes": 298264,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 82852
+    },
+    {
+      "case": "0000815.pdf",
+      "bytes": 844667,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74224
+    },
+    {
+      "case": "0000816.pdf",
+      "bytes": 920408,
+      "class": "returned",
+      "ok": true,
+      "ms": 144,
+      "maxRssKiB": 136400
+    },
+    {
+      "case": "0000817.pdf",
+      "bytes": 1911,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 71880
+    },
+    {
+      "case": "0000818.pdf",
+      "bytes": 294831,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 85372
+    },
+    {
+      "case": "0000819.pdf",
+      "bytes": 58291,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 70596,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "0000820.pdf",
+      "bytes": 123356,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 88300
+    },
+    {
+      "case": "0000821.pdf",
+      "bytes": 52543,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 97308
+    },
+    {
+      "case": "0000822.pdf",
+      "bytes": 118261,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 82296
+    },
+    {
+      "case": "0000823.pdf",
+      "bytes": 993226,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 84240
+    },
+    {
+      "case": "0000824.pdf",
+      "bytes": 266276,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 83108
+    },
+    {
+      "case": "0000825.pdf",
+      "bytes": 398535,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84716
+    },
+    {
+      "case": "0000826.pdf",
+      "bytes": 35010793,
+      "class": "returned",
+      "ok": true,
+      "ms": 342,
+      "maxRssKiB": 237532
+    },
+    {
+      "case": "0000827.pdf",
+      "bytes": 348553,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 105816
+    },
+    {
+      "case": "0000828.pdf",
+      "bytes": 4318937,
+      "class": "returned",
+      "ok": true,
+      "ms": 220,
+      "maxRssKiB": 137952
+    },
+    {
+      "case": "0000829.pdf",
+      "bytes": 4479777,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 85244
+    },
+    {
+      "case": "0000830.pdf",
+      "bytes": 422682,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78532
+    },
+    {
+      "case": "0000831.pdf",
+      "bytes": 119871,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 82788
+    },
+    {
+      "case": "0000832.pdf",
+      "bytes": 148563,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 102328
+    },
+    {
+      "case": "0000833.pdf",
+      "bytes": 1362156,
+      "class": "returned",
+      "ok": true,
+      "ms": 54,
+      "maxRssKiB": 115012
+    },
+    {
+      "case": "0000834.pdf",
+      "bytes": 201754,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81752
+    },
+    {
+      "case": "0000835.pdf",
+      "bytes": 71152,
+      "class": "returned",
+      "ok": true,
+      "ms": 90,
+      "maxRssKiB": 120272
+    },
+    {
+      "case": "0000836.pdf",
+      "bytes": 223924,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 74860,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000837.pdf",
+      "bytes": 518282,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80744
+    },
+    {
+      "case": "0000838.pdf",
+      "bytes": 1887677,
+      "class": "returned",
+      "ok": true,
+      "ms": 289,
+      "maxRssKiB": 135648
+    },
+    {
+      "case": "0000839.pdf",
+      "bytes": 122479,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 93924
+    },
+    {
+      "case": "0000840.pdf",
+      "bytes": 366579,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71920
+    },
+    {
+      "case": "0000841.pdf",
+      "bytes": 2153657,
+      "class": "returned",
+      "ok": true,
+      "ms": 197,
+      "maxRssKiB": 151168
+    },
+    {
+      "case": "0000842.pdf",
+      "bytes": 2056111,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 87232
+    },
+    {
+      "case": "0000843.pdf",
+      "bytes": 569224,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73304
+    },
+    {
+      "case": "0000844.pdf",
+      "bytes": 2604392,
+      "class": "returned",
+      "ok": true,
+      "ms": 36,
+      "maxRssKiB": 111624
+    },
+    {
+      "case": "0000845.pdf",
+      "bytes": 1193191,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 82036,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000846.pdf",
+      "bytes": 117917,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 81176
+    },
+    {
+      "case": "0000847.pdf",
+      "bytes": 82066,
+      "class": "returned",
+      "ok": true,
+      "ms": 49,
+      "maxRssKiB": 114544
+    },
+    {
+      "case": "0000848.pdf",
+      "bytes": 704010,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77900
+    },
+    {
+      "case": "0000849.pdf",
+      "bytes": 62090949,
+      "class": "refused",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 266564,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000850.pdf",
+      "bytes": 1895452,
+      "class": "returned",
+      "ok": true,
+      "ms": 81,
+      "maxRssKiB": 110736
+    },
+    {
+      "case": "0000851.pdf",
+      "bytes": 1864895,
+      "class": "returned",
+      "ok": true,
+      "ms": 41,
+      "maxRssKiB": 112812
+    },
+    {
+      "case": "0000852.pdf",
+      "bytes": 10356,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 77324
+    },
+    {
+      "case": "0000853.pdf",
+      "bytes": 57913,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80044
+    },
+    {
+      "case": "0000854.pdf",
+      "bytes": 1959003,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78000
+    },
+    {
+      "case": "0000855.pdf",
+      "bytes": 194393,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 72400,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000856.pdf",
+      "bytes": 109465,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 88288
+    },
+    {
+      "case": "0000857.pdf",
+      "bytes": 352968,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 88920
+    },
+    {
+      "case": "0000858.pdf",
+      "bytes": 20093,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74424
+    },
+    {
+      "case": "0000859.pdf",
+      "bytes": 195678,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85916
+    },
+    {
+      "case": "0000860.pdf",
+      "bytes": 22962,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 75616
+    },
+    {
+      "case": "0000861.pdf",
+      "bytes": 4706729,
+      "class": "returned",
+      "ok": true,
+      "ms": 583,
+      "maxRssKiB": 142548
+    },
+    {
+      "case": "0000862.pdf",
+      "bytes": 412090,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76552
+    },
+    {
+      "case": "0000863.pdf",
+      "bytes": 82941,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 88764
+    },
+    {
+      "case": "0000864.pdf",
+      "bytes": 85484,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 76936
+    },
+    {
+      "case": "0000865.pdf",
+      "bytes": 3036884,
+      "class": "returned",
+      "ok": true,
+      "ms": 58,
+      "maxRssKiB": 109756
+    },
+    {
+      "case": "0000866.pdf",
+      "bytes": 445403,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 86888
+    },
+    {
+      "case": "0000867.pdf",
+      "bytes": 116293,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 71688,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000868.pdf",
+      "bytes": 58373,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 70684
+    },
+    {
+      "case": "0000869.pdf",
+      "bytes": 97764,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 77896
+    },
+    {
+      "case": "0000870.pdf",
+      "bytes": 585594,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 81996
+    },
+    {
+      "case": "0000871.pdf",
+      "bytes": 1045848,
+      "class": "returned",
+      "ok": true,
+      "ms": 36,
+      "maxRssKiB": 110852
+    },
+    {
+      "case": "0000872.pdf",
+      "bytes": 541041,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 85188
+    },
+    {
+      "case": "0000873.pdf",
+      "bytes": 133439,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73152
+    },
+    {
+      "case": "0000874.pdf",
+      "bytes": 530104,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 84492
+    },
+    {
+      "case": "0000875.pdf",
+      "bytes": 21512,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72720
+    },
+    {
+      "case": "0000876.pdf",
+      "bytes": 291954,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 105268
+    },
+    {
+      "case": "0000877.pdf",
+      "bytes": 31761,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 84188
+    },
+    {
+      "case": "0000878.pdf",
+      "bytes": 46931,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73280
+    },
+    {
+      "case": "0000879.pdf",
+      "bytes": 227259,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74884
+    },
+    {
+      "case": "0000880.pdf",
+      "bytes": 126673,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 78872
+    },
+    {
+      "case": "0000881.pdf",
+      "bytes": 218090,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 89236
+    },
+    {
+      "case": "0000882.pdf",
+      "bytes": 578312,
+      "class": "returned",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 106028
+    },
+    {
+      "case": "0000883.pdf",
+      "bytes": 1340084,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 76164
+    },
+    {
+      "case": "0000884.pdf",
+      "bytes": 101402,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 80324
+    },
+    {
+      "case": "0000885.pdf",
+      "bytes": 144571,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 91852
+    },
+    {
+      "case": "0000886.pdf",
+      "bytes": 702907,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 98528
+    },
+    {
+      "case": "0000887.pdf",
+      "bytes": 170951,
+      "class": "returned",
+      "ok": true,
+      "ms": 43,
+      "maxRssKiB": 119104
+    },
+    {
+      "case": "0000888.pdf",
+      "bytes": 3855338,
+      "class": "returned",
+      "ok": true,
+      "ms": 1687,
+      "maxRssKiB": 146324
+    },
+    {
+      "case": "0000889.pdf",
+      "bytes": 93118,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81932
+    },
+    {
+      "case": "0000890.pdf",
+      "bytes": 5006103,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 87024,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000891.pdf",
+      "bytes": 361601,
+      "class": "returned",
+      "ok": true,
+      "ms": 128,
+      "maxRssKiB": 121828
+    },
+    {
+      "case": "0000892.pdf",
+      "bytes": 111441,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78508
+    },
+    {
+      "case": "0000893.pdf",
+      "bytes": 45507,
+      "class": "returned",
+      "ok": true,
+      "ms": 47,
+      "maxRssKiB": 117704
+    },
+    {
+      "case": "0000894.pdf",
+      "bytes": 242315,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79648
+    },
+    {
+      "case": "0000895.pdf",
+      "bytes": 451382,
+      "class": "returned",
+      "ok": true,
+      "ms": 39,
+      "maxRssKiB": 115864
+    },
+    {
+      "case": "0000896.pdf",
+      "bytes": 76341,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72356
+    },
+    {
+      "case": "0000897.pdf",
+      "bytes": 861770,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83612
+    },
+    {
+      "case": "0000898.pdf",
+      "bytes": 639904,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 105512
+    },
+    {
+      "case": "0000899.pdf",
+      "bytes": 92345,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72276
+    },
+    {
+      "case": "0000900.pdf",
+      "bytes": 622894,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 74020,
+      "code": "pdf/document/xref-mismatch"
+    },
+    {
+      "case": "0000901.pdf",
+      "bytes": 408490,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79600
+    },
+    {
+      "case": "0000902.pdf",
+      "bytes": 1849098,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 77300
+    },
+    {
+      "case": "0000903.pdf",
+      "bytes": 674844,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73708
+    },
+    {
+      "case": "0000904.pdf",
+      "bytes": 116847,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 100608
+    },
+    {
+      "case": "0000905.pdf",
+      "bytes": 505953,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74284
+    },
+    {
+      "case": "0000906.pdf",
+      "bytes": 560976,
+      "class": "refused",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 88480,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000907.pdf",
+      "bytes": 41066,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79708
+    },
+    {
+      "case": "0000908.pdf",
+      "bytes": 33232,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 84004
+    },
+    {
+      "case": "0000909.pdf",
+      "bytes": 197705,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80536
+    },
+    {
+      "case": "0000910.pdf",
+      "bytes": 55122,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 96292
+    },
+    {
+      "case": "0000911.pdf",
+      "bytes": 294118,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 95044
+    },
+    {
+      "case": "0000912.pdf",
+      "bytes": 1831588,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 79112
+    },
+    {
+      "case": "0000913.pdf",
+      "bytes": 43331,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 77920
+    },
+    {
+      "case": "0000914.pdf",
+      "bytes": 106172,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 89644
+    },
+    {
+      "case": "0000915.pdf",
+      "bytes": 161412,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 84144
+    },
+    {
+      "case": "0000916.pdf",
+      "bytes": 7080893,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 92488,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "0000917.pdf",
+      "bytes": 352459,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78540
+    },
+    {
+      "case": "0000918.pdf",
+      "bytes": 163376,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 84196
+    },
+    {
+      "case": "0000919.pdf",
+      "bytes": 49573,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 73744
+    },
+    {
+      "case": "0000920.pdf",
+      "bytes": 1305,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 71768,
+      "code": "pdf/document/bad-header"
+    },
+    {
+      "case": "0000921.pdf",
+      "bytes": 595618,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78344
+    },
+    {
+      "case": "0000922.pdf",
+      "bytes": 142606,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 100156
+    },
+    {
+      "case": "0000923.pdf",
+      "bytes": 1956149,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 99132
+    },
+    {
+      "case": "0000924.pdf",
+      "bytes": 102474,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 83668
+    },
+    {
+      "case": "0000925.pdf",
+      "bytes": 651258,
+      "class": "returned",
+      "ok": true,
+      "ms": 99,
+      "maxRssKiB": 122312
+    },
+    {
+      "case": "0000926.pdf",
+      "bytes": 1493009,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 76624
+    },
+    {
+      "case": "0000927.pdf",
+      "bytes": 133624,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72964
+    },
+    {
+      "case": "0000928.pdf",
+      "bytes": 450193,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 90736
+    },
+    {
+      "case": "0000929.pdf",
+      "bytes": 200326,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 76340
+    },
+    {
+      "case": "0000930.pdf",
+      "bytes": 2989759,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 82232
+    },
+    {
+      "case": "0000931.pdf",
+      "bytes": 106414,
+      "class": "returned",
+      "ok": true,
+      "ms": 68,
+      "maxRssKiB": 117996
+    },
+    {
+      "case": "0000932.pdf",
+      "bytes": 157828,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 71544
+    },
+    {
+      "case": "0000933.pdf",
+      "bytes": 33233,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 78600
+    },
+    {
+      "case": "0000934.pdf",
+      "bytes": 2641569,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 105400
+    },
+    {
+      "case": "0000935.pdf",
+      "bytes": 1728672,
+      "class": "returned",
+      "ok": true,
+      "ms": 126,
+      "maxRssKiB": 127080
+    },
+    {
+      "case": "0000936.pdf",
+      "bytes": 502433,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 86144
+    },
+    {
+      "case": "0000937.pdf",
+      "bytes": 33630,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72680
+    },
+    {
+      "case": "0000938.pdf",
+      "bytes": 472747,
+      "class": "returned",
+      "ok": true,
+      "ms": 91,
+      "maxRssKiB": 115228
+    },
+    {
+      "case": "0000939.pdf",
+      "bytes": 1141262,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 78936,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000940.pdf",
+      "bytes": 114366,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 96164
+    },
+    {
+      "case": "0000941.pdf",
+      "bytes": 152713,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72240,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000942.pdf",
+      "bytes": 407578,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 82544
+    },
+    {
+      "case": "0000943.pdf",
+      "bytes": 19892630,
+      "class": "refused",
+      "ok": true,
+      "ms": 771,
+      "maxRssKiB": 323428,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000944.pdf",
+      "bytes": 212059,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 80772
+    },
+    {
+      "case": "0000945.pdf",
+      "bytes": 191579,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 86628
+    },
+    {
+      "case": "0000946.pdf",
+      "bytes": 120375,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90244
+    },
+    {
+      "case": "0000947.pdf",
+      "bytes": 622969,
+      "class": "returned",
+      "ok": true,
+      "ms": 40,
+      "maxRssKiB": 110528
+    },
+    {
+      "case": "0000948.pdf",
+      "bytes": 265499,
+      "class": "returned",
+      "ok": true,
+      "ms": 43,
+      "maxRssKiB": 115368
+    },
+    {
+      "case": "0000949.pdf",
+      "bytes": 313807,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 92876
+    },
+    {
+      "case": "0000950.pdf",
+      "bytes": 162506,
+      "class": "returned",
+      "ok": true,
+      "ms": 38,
+      "maxRssKiB": 114560
+    },
+    {
+      "case": "0000951.pdf",
+      "bytes": 2490528,
+      "class": "returned",
+      "ok": true,
+      "ms": 26,
+      "maxRssKiB": 105404
+    },
+    {
+      "case": "0000952.pdf",
+      "bytes": 471873,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 96252
+    },
+    {
+      "case": "0000953.pdf",
+      "bytes": 15269877,
+      "class": "refused",
+      "ok": true,
+      "ms": 84,
+      "maxRssKiB": 159300,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000954.pdf",
+      "bytes": 70458,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 76824
+    },
+    {
+      "case": "0000955.pdf",
+      "bytes": 52860,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 77136
+    },
+    {
+      "case": "0000956.pdf",
+      "bytes": 199371,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 87660
+    },
+    {
+      "case": "0000957.pdf",
+      "bytes": 495525,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72240
+    },
+    {
+      "case": "0000958.pdf",
+      "bytes": 77812,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 79848
+    },
+    {
+      "case": "0000959.pdf",
+      "bytes": 114036,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 79516
+    },
+    {
+      "case": "0000960.pdf",
+      "bytes": 159158,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 80112
+    },
+    {
+      "case": "0000961.pdf",
+      "bytes": 6169,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73100
+    },
+    {
+      "case": "0000962.pdf",
+      "bytes": 2522117,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 96004
+    },
+    {
+      "case": "0000963.pdf",
+      "bytes": 212418,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84028
+    },
+    {
+      "case": "0000964.pdf",
+      "bytes": 1300612,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 79824
+    },
+    {
+      "case": "0000965.pdf",
+      "bytes": 638196,
+      "class": "refused",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 84664,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "0000966.pdf",
+      "bytes": 448096,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 81980
+    },
+    {
+      "case": "0000967.pdf",
+      "bytes": 1371122,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 102688
+    },
+    {
+      "case": "0000968.pdf",
+      "bytes": 118323,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 80756
+    },
+    {
+      "case": "0000969.pdf",
+      "bytes": 249434,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77104
+    },
+    {
+      "case": "0000970.pdf",
+      "bytes": 3422560,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 82024
+    },
+    {
+      "case": "0000971.pdf",
+      "bytes": 108590,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 77376
+    },
+    {
+      "case": "0000972.pdf",
+      "bytes": 1683024,
+      "class": "returned",
+      "ok": true,
+      "ms": 324,
+      "maxRssKiB": 182816
+    },
+    {
+      "case": "0000973.pdf",
+      "bytes": 209337,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 92208
+    },
+    {
+      "case": "0000974.pdf",
+      "bytes": 979250,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78044,
+      "code": "pdf/parser/eof"
+    },
+    {
+      "case": "0000975.pdf",
+      "bytes": 1169145,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 76024
+    },
+    {
+      "case": "0000976.pdf",
+      "bytes": 33670,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73764
+    },
+    {
+      "case": "0000977.pdf",
+      "bytes": 1701919,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 81048
+    },
+    {
+      "case": "0000978.pdf",
+      "bytes": 155837,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 88916
+    },
+    {
+      "case": "0000979.pdf",
+      "bytes": 47965,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 79588
+    },
+    {
+      "case": "0000980.pdf",
+      "bytes": 274367,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 92368
+    },
+    {
+      "case": "0000981.pdf",
+      "bytes": 621725,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73380
+    },
+    {
+      "case": "0000982.pdf",
+      "bytes": 471394,
+      "class": "returned",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 105512
+    },
+    {
+      "case": "0000983.pdf",
+      "bytes": 65831,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72688
+    },
+    {
+      "case": "0000984.pdf",
+      "bytes": 241987,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74260
+    },
+    {
+      "case": "0000985.pdf",
+      "bytes": 451205,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 83500
+    },
+    {
+      "case": "0000986.pdf",
+      "bytes": 188779,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 82268
+    },
+    {
+      "case": "0000987.pdf",
+      "bytes": 67695,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 94012
+    },
+    {
+      "case": "0000988.pdf",
+      "bytes": 44930,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 92676
+    },
+    {
+      "case": "0000989.pdf",
+      "bytes": 503952,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 88964
+    },
+    {
+      "case": "0000990.pdf",
+      "bytes": 595842,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78292
+    },
+    {
+      "case": "0000991.pdf",
+      "bytes": 4616805,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 101560
+    },
+    {
+      "case": "0000992.pdf",
+      "bytes": 10300628,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 122228
+    },
+    {
+      "case": "0000993.pdf",
+      "bytes": 57210,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 75096
+    },
+    {
+      "case": "0000994.pdf",
+      "bytes": 491631,
+      "class": "returned",
+      "ok": true,
+      "ms": 78,
+      "maxRssKiB": 116564
+    },
+    {
+      "case": "0000995.pdf",
+      "bytes": 58143,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72604,
+      "code": "pdf/document/encrypted"
+    },
+    {
+      "case": "0000996.pdf",
+      "bytes": 1360113,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 81220
+    },
+    {
+      "case": "0000997.pdf",
+      "bytes": 911847,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 85340
+    },
+    {
+      "case": "0000998.pdf",
+      "bytes": 666949,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 86848
+    },
+    {
+      "case": "0000999.pdf",
+      "bytes": 538893,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 78212
+    }
+  ],
+  "commit": "8f2489052efce3ee0d45190cb4963ca7f6123b6d",
+  "date": "2026-10-16"
+}

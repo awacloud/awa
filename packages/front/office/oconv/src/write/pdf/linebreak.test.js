@@ -224,6 +224,38 @@ describe('breakInlines — losses', () => {
         const { lines } = linebreak.breakInlines([run('mono text', { bold: true })], s14, REFERENCE_SIZE, 500, 'code');
         expect(lines[0].tokens.every((t) => t.style === 'code')).toBe(true);
     });
+
+    test('a `styleOverride` FUNCTION maps each run to its own class', () => {
+        const toHeader = (r) => (r.code ? 'code' : (r.italic ? 'boldItalic' : 'bold'));
+        const inlines = [run('plain '), run('slanted ', { italic: true }), run('mono', { code: true })];
+        const words = linebreak.tokenize(inlines, s14, REFERENCE_SIZE, toHeader).filter((t) => t.kind === 'word');
+        expect(words.map((t) => [t.text, t.style]))
+            .toEqual([['plain', 'bold'], ['slanted', 'boldItalic'], ['mono', 'code']]);
+        const { lines } = linebreak.breakInlines(inlines, s14, REFERENCE_SIZE, 500, toHeader);
+        expect(lines[0].tokens.filter((t) => t.kind === 'word').map((t) => t.style))
+            .toEqual(['bold', 'boldItalic', 'code']);
+    });
+
+    // Widths that sum past the column by float noise only: 0.1 + 0.2 is
+    // 0.30000000000000004 in binary floating point.
+    const noisy = { widthOf: (text) => ({ aa: 0.1, ' ': 0.2, bb: 0, cc: 0.1 + 0.2 }[text] ?? 0.7) };
+
+    test('a float-noise tie neither wraps nor records layout/line-overflow', () => {
+        expect(0.1 + 0.2 > 0.3).toBe(true);               // the noise is real
+        const { lines, losses } = linebreak.breakInlines([run('aa bb')], noisy, REFERENCE_SIZE, 0.3);
+        expect(lines).toHaveLength(1);                     // the tie fits: no wrap
+        expect(lines[0].overflow).toBe(false);
+        // One token measured equal to the column to within noise (the
+        // measured md-degrade.md table case) records nothing either.
+        const single = linebreak.breakInlines([run('cc')], noisy, REFERENCE_SIZE, 0.3);
+        expect(single.losses).toEqual([]);
+        expect(losses).toEqual([]);
+    });
+
+    test('a token wider than the column by more than the tolerance still overflows', () => {
+        const { losses } = linebreak.breakInlines([run('dd')], noisy, REFERENCE_SIZE, 0.69);
+        expect(losses.map((l) => l.code)).toEqual(['layout/line-overflow']);
+    });
 });
 
 describe('breakInlines — recorded inline drops', () => {

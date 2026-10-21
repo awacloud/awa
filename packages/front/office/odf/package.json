@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/odf",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Matthieu Bouilloux",
@@ -32,7 +32,6 @@
   "main": "src/main.js",
   "files": [
     "src/**/*.js",
-    "src/**/*.md",
     "!src/**/*.test.js",
     "!src/**/*.test.html",
     "dist/**",
@@ -81,7 +80,7 @@
     "@awacloud/tool-fw-codegen": "workspace:*",
     "@awacloud/tool-prebuild-generator": "workspace:*"
   },
-  "awa": { "maturity": "L4", "coverageFloor": 0.92, "coverageBasis": ["src/**"] },
+  "awa": { "maturity": "L4", "coverageFloor": 0.9278, "coverageBasis": ["src/**"] },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/awacloud/awa.git",

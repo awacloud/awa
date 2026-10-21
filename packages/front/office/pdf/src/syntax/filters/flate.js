@@ -227,20 +227,63 @@ export const pdfFlate = {
             return !!e && e.code === 0;
         }
 
-        // Inflate `bytes` through the streaming decoder WITHOUT signalling the
-        // end of input, and return everything it emitted (possibly empty).
-        function inflatePrefix(bytes) {
+        // Output ceiling per decoded stream (decompression bomb guard), the
+        // same 256 MiB as the ooxml/odf `maxUncompressed` default.
+        const limits = Object.freeze({ maxOutput: 256 * 1024 * 1024 });
+        // DEFLATE expands at most 1032:1 (a 258-byte match in 2 bits); an
+        // input at most max / 2048 bytes long cannot reach the ceiling.
+        const SAFE_RATIO = 2048;
+        // Compressed bytes fed per streaming push: one push overshoots the
+        // ceiling by at most CHUNK * 1032 bytes before the check fires.
+        const CHUNK = 16384;
+
+        function outputLimit(max, length) {
+            return new ParseError('pdf/flate/output-limit',
+                'inflated stream exceeds maxOutput',
+                { context: { limit: 'maxOutput', max, length } });
+        }
+
+        // Inflate `bytes` CHUNK by CHUNK through the streaming decoder, failing
+        // as soon as the output passes `max`. With `final` false the end of
+        // input is never signalled, which returns the prefix of a stream that
+        // stops before its final block (possibly empty).
+        function inflateChunked(bytes, max, final) {
             const chunks = [];
             let total = 0;
             const stream = new fwZlib.UnzlibStream((chunk) => {
-                chunks.push(chunk);
                 total += chunk.length;
+                if (max && total > max) throw outputLimit(max, bytes.length);
+                chunks.push(chunk);
             });
-            stream.push(bytes, false);
+            if (bytes.length === 0) stream.push(bytes, final);
+            for (let off = 0; off < bytes.length; off += CHUNK) {
+                const end = Math.min(off + CHUNK, bytes.length);
+                stream.push(bytes.subarray(off, end), final && end === bytes.length);
+            }
             const out = new Uint8Array(total);
             let off = 0;
             for (const chunk of chunks) { out.set(chunk, off); off += chunk.length; }
             return out;
+        }
+
+        // A zlib header the streaming decoder accepts on its first push; any
+        // other header is left to `unzlibSync`, which fails on it at once.
+        function plainZlibHeader(b) {
+            return b.length >= 2 && (b[0] & 0x0F) === 8 && (b[0] >> 4) <= 7
+                && ((b[0] << 8) | b[1]) % 31 === 0 && !(b[1] & 0x20);
+        }
+
+        function inflate(bytes, max) {
+            if (!max || bytes.length <= max / SAFE_RATIO
+                    || typeof fwZlib.UnzlibStream !== 'function'
+                    || !plainZlibHeader(bytes)) {
+                return fwZlib.unzlibSync(bytes);
+            }
+            return inflateChunked(bytes, max, true);
+        }
+
+        function isOutputLimit(e) {
+            return e instanceof ParseError && e.code === 'pdf/flate/output-limit';
         }
 
         function markTruncated(out) {
@@ -248,16 +291,28 @@ export const pdfFlate = {
             return out;
         }
 
-        function decode(bytes, params) {
+        /**
+         * @param {Uint8Array} bytes zlib-framed FlateDecode payload
+         * @param {object} [params] plain /DecodeParms values (Predictor…)
+         * @param {object} [opts]
+         * @param {number} [opts.maxOutput=268435456] inflated-size ceiling in
+         *   bytes; past it the decode throws `pdf/flate/output-limit`. `0`
+         *   disables it.
+         * @returns {Uint8Array}
+         */
+        function decode(bytes, params, opts) {
             if (!(bytes instanceof Uint8Array)) {
                 throw new ParseError('pdf/flate/bad-input',
                     'FlateDecode expects Uint8Array');
             }
+            const max = opts && opts.maxOutput !== undefined
+                ? opts.maxOutput : limits.maxOutput;
             let raw;
             let truncated = false;
             try {
-                raw = fwZlib.unzlibSync(bytes);
+                raw = inflate(bytes, max);
             } catch (e) {
+                if (isOutputLimit(e)) throw e;
                 const inflateFailed = () => new ParseError('pdf/flate/inflate-failed',
                     'inflate failed: ' + (e && e.message),
                     { context: { length: bytes.length }, cause: e });
@@ -268,7 +323,12 @@ export const pdfFlate = {
                 // A stream that ends before its final deflate block yields the
                 // bytes decoded so far, flagged `truncated` (viewers do the same).
                 let prefix;
-                try { prefix = inflatePrefix(bytes); } catch { throw inflateFailed(); }
+                try {
+                    prefix = inflateChunked(bytes, max, false);
+                } catch (e2) {
+                    if (isOutputLimit(e2)) throw e2;
+                    throw inflateFailed();
+                }
                 if (prefix.length === 0) throw inflateFailed();
                 raw = prefix;
                 truncated = true;
@@ -311,6 +371,6 @@ export const pdfFlate = {
                     { context: { length: payload.length }, cause: e });
             }
         }
-        return { decode, encode };
+        return { decode, encode, limits };
     }
 };

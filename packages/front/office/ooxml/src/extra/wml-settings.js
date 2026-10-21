@@ -226,6 +226,13 @@ export const wmlSettings = {
 
         // ---- hydrate / dehydrate against an _extras list ----
         function hydrate(root) {
+            // The core types <w:trackRevisions> as its boolean
+            // `trackChanges`; this extension's own field for it is the
+            // `trackRevisions` toggle.
+            if (!Array.isArray(root) && typeof root.trackChanges === 'boolean') {
+                root.trackRevisions = root.trackChanges;
+                delete root.trackChanges;
+            }
             const extras = root._extras || (Array.isArray(root) ? root : []);
             const remaining = [];
             for (const c of extras) {
@@ -291,7 +298,8 @@ export const wmlSettings = {
             if (out.shapeDefaults)      { extras.push(renderShapeDefaults('w:shapeDefaults', out.shapeDefaults));       delete out.shapeDefaults; }
             if (out.themeFontLang)      { extras.push(renderThemeFontLang(out.themeFontLang)); delete out.themeFontLang; }
             if (out.mailMerge)          { extras.push(renderMailMerge(out.mailMerge));         delete out.mailMerge; }
-            if (out.trackChanges)       { extras.push(renderTrackChanges(out.trackChanges));   delete out.trackChanges; }
+            // The object form only: the core's boolean is written by the core.
+            if (out.trackChanges && typeof out.trackChanges === 'object') { extras.push(renderTrackChanges(out.trackChanges)); delete out.trackChanges; }
             if (out.proofState)         { extras.push(renderProofState(out.proofState));       delete out.proofState; }
             if (out.view !== undefined) { extras.push(renderView(out.view));                   delete out.view; }
             if (out.zoom !== undefined) { extras.push(renderZoom(out.zoom));                   delete out.zoom; }

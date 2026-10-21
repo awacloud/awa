@@ -1,0 +1,61 @@
+{
+  "rule": "one OFL-1.1 face per font technology the package claims: static TrueType (reused from oconv-fonts), static CFF and variable CFF2 (Source Sans 3, adobe-fonts/source-sans tag 3.052R), COLR v1 colour with variable TrueType outlines (Kalnia Glaze, google/fonts commit 66928797f); each vendored file byte for byte with the upstream licence beside it, each pinned by an OFFICE-CORPUS http entry",
+  "faces": [
+    {
+      "id": "liberation-sans-regular",
+      "technology": "static TrueType (hinted)",
+      "path": "../../../../oconv-fonts/vendor/liberation/LiberationSans-Regular.ttf",
+      "bytes": 410712,
+      "sha256": "76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8",
+      "licence": "OFL-1.1",
+      "source": "reused, not re-vendored: packages/front/office/oconv-fonts/vendor/liberation (Liberation Fonts 2.1.5; its PROVENANCE.json)",
+      "corpusEntry": null
+    },
+    {
+      "id": "source-sans-3-regular",
+      "technology": "static CFF",
+      "path": "vendor/source-sans/SourceSans3-Regular.otf",
+      "bytes": 334924,
+      "sha256": "08df266400933d3178d081a45f94a08814c3e55b4b7dd2e0ff69cb1329f13ab6",
+      "licence": "OFL-1.1",
+      "source": "https://raw.githubusercontent.com/adobe-fonts/source-sans/3.052R/OTF/SourceSans3-Regular.otf",
+      "corpusEntry": "office-ofl-source-sans-3-regular"
+    },
+    {
+      "id": "source-sans-3-vf-upright",
+      "technology": "variable CFF2",
+      "path": "vendor/source-sans/SourceSans3VF-Upright.otf",
+      "bytes": 538164,
+      "sha256": "3d0dfd6a3a644ab3d462a737923ffac41fb0ae007ce9ba83c24e6bfa76aa56c7",
+      "licence": "OFL-1.1",
+      "source": "https://raw.githubusercontent.com/adobe-fonts/source-sans/3.052R/VF/SourceSans3VF-Upright.otf",
+      "corpusEntry": "office-ofl-source-sans-3-vf-upright"
+    },
+    {
+      "id": "kalnia-glaze",
+      "technology": "COLR v1 colour, variable TrueType",
+      "path": "vendor/kalnia-glaze/KalniaGlaze[wdth,wght].ttf",
+      "bytes": 392184,
+      "sha256": "526a3f364fff570bf01dfeb71b2de2f52bac0376b51004804e703df698b964ac",
+      "licence": "OFL-1.1",
+      "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/kalniaglaze/KalniaGlaze%5Bwdth,wght%5D.ttf",
+      "corpusEntry": "office-ofl-kalnia-glaze"
+    }
+  ],
+  "licences": [
+    {
+      "path": "vendor/source-sans/LICENSE.md",
+      "bytes": 4579,
+      "sha256": "89ad2c4f66dd29127527493e729c31e731f111cf10faf5774c3db9275ed0c22c",
+      "source": "https://raw.githubusercontent.com/adobe-fonts/source-sans/3.052R/LICENSE.md",
+      "corpusEntry": "office-ofl-source-sans-license"
+    },
+    {
+      "path": "vendor/kalnia-glaze/OFL.txt",
+      "bytes": 4399,
+      "sha256": "fa401a7ad8fc4975a1690c6a629a83cf487de3796b52e4399c170accd943c916",
+      "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/kalniaglaze/OFL.txt",
+      "corpusEntry": "office-ofl-kalnia-glaze-license"
+    }
+  ]
+}

@@ -18,7 +18,7 @@
 The bun-default `package.json` scripts (`types:registry`, `integrations:catalog`,
 `prebuild*`, `build:standalone`) run the declared devDependencies' bins
 (`fw-codegen`/`fw-bundler`, put on `PATH` by `bun run`) directly — the
-awa monorepo's own task router is also available there, and is what
+AWA monorepo's own task router is also available there, and is what
 those bins execute under the hood.
 
 ## Build under Node — how it works

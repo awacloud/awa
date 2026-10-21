@@ -307,7 +307,7 @@ export const xlsxDrawings = {
 
         // --- Shape (xdr:sp) ---
 
-        function parseSp(spEl) {
+        function parseSp(spEl, opts) {
             const out = { type: 'shape' };
             const nvSpPr = xml.findChild(spEl, 'xdr:nvSpPr');
             if (nvSpPr) {
@@ -327,7 +327,7 @@ export const xlsxDrawings = {
                 if (typed) out.shapeProps = typed;
             }
             const txBody = xml.findChild(spEl, 'xdr:txBody');
-            if (txBody) out.txBody = dml.parseTextBody(txBody);
+            if (txBody) out.txBody = dml.parseTextBody(txBody, opts);
             return out;
         }
 
@@ -356,7 +356,7 @@ export const xlsxDrawings = {
 
         // --- Top-level parse / serialize ---
 
-        function parseEntry(anchorEl) {
+        function parseEntry(anchorEl, opts) {
             const anchor = parseAnchor(anchorEl);
             // Find the wrapped graphical element.
             for (const c of anchorEl.children) {
@@ -368,7 +368,7 @@ export const xlsxDrawings = {
                     return Object.assign(parsePic(c), { anchor });
                 }
                 if (c.name === 'xdr:sp') {
-                    return Object.assign(parseSp(c), { anchor });
+                    return Object.assign(parseSp(c, opts), { anchor });
                 }
                 if (c.name === 'xdr:cxnSp' || c.name === 'xdr:grpSp') {
                     return { type: 'shape', anchor, _node: c };
@@ -393,7 +393,8 @@ export const xlsxDrawings = {
             return renderAnchor(entry.anchor || { kind: 'twoCell' }, content);
         }
 
-        function parse(input) {
+        // `opts.typedRunColors`: see `drawingml.parseTextBody`.
+        function parse(input, opts) {
             const text = typeof input === 'string' ? input : decodeText(input);
             const root = xml.parse(text);
             if (root.name !== 'xdr:wsDr') {
@@ -406,7 +407,7 @@ export const xlsxDrawings = {
                 if (c.name === 'xdr:twoCellAnchor'
                  || c.name === 'xdr:oneCellAnchor'
                  || c.name === 'xdr:absoluteAnchor') {
-                    entries.push(parseEntry(c));
+                    entries.push(parseEntry(c, opts));
                 } else {
                     extras.push(c);
                 }

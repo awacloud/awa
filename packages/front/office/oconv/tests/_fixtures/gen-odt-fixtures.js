@@ -85,7 +85,8 @@ function hyperlinkParagraph(href, text) {
         {
             type: 'element',
             name: 'text:a',
-            attrs: { 'xlink:href': href },
+            // `xlink:type="simple"` is required by the schema on `text:a`.
+            attrs: { 'xlink:type': 'simple', 'xlink:href': href },
             children: [textRun(text)]
         }
     ]);

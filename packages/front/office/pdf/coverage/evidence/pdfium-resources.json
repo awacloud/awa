@@ -1,0 +1,1993 @@
+{
+  "suite": {
+    "id": "pdfium-resources",
+    "version": "pdfium@7c55203ed66b",
+    "source": "https://pdfium.googlesource.com/pdfium/+/7c55203ed66b0461378323e3fcf2efaf76755241/testing/resources/"
+  },
+  "criterion": "per file, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child",
+  "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+  "host": "container",
+  "image": "awa-robustness-bun:1.3.13",
+  "imageId": "sha256:1a93710c3b0b8ee72a6876fc61e8975217fef39faee9a7c4b224560e6829de84",
+  "bun": "1.3.13",
+  "memoryMax": "1342177280",
+  "counts": {
+    "returned": 184,
+    "refused": 55,
+    "untyped": 0,
+    "hang": 0,
+    "memory": 0,
+    "crash": 0
+  },
+  "cases": [
+    {
+      "case": "344775293.pdf",
+      "bytes": 1429,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72612
+    },
+    {
+      "case": "363015187.pdf",
+      "bytes": 1266,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71976
+    },
+    {
+      "case": "actual_text_rtl.pdf",
+      "bytes": 7880,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73488
+    },
+    {
+      "case": "annot_javascript.pdf",
+      "bytes": 671,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73580
+    },
+    {
+      "case": "annotation_highlight_rollover_ap.pdf",
+      "bytes": 1180,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74664
+    },
+    {
+      "case": "annotation_markup_multiline_no_ap.pdf",
+      "bytes": 2068,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73520
+    },
+    {
+      "case": "annotiter.pdf",
+      "bytes": 2131,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71088
+    },
+    {
+      "case": "annots.pdf",
+      "bytes": 5745,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72440
+    },
+    {
+      "case": "annots_action_handling.pdf",
+      "bytes": 1938,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73828
+    },
+    {
+      "case": "arabic.pdf",
+      "bytes": 1504,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72684
+    },
+    {
+      "case": "bad_annots_entry.pdf",
+      "bytes": 826,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73628
+    },
+    {
+      "case": "bad_dict_keys.pdf",
+      "bytes": 367,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73460
+    },
+    {
+      "case": "bad_page_type.pdf",
+      "bytes": 740,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74008,
+      "code": "pdf/pages/missing-kids"
+    },
+    {
+      "case": "bigtable_mini.pdf",
+      "bytes": 2233,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71476
+    },
+    {
+      "case": "bookmarks.pdf",
+      "bytes": 2239,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 69816
+    },
+    {
+      "case": "bookmarks_circular.pdf",
+      "bytes": 1647,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74564,
+      "code": "pdf/parser/stream/expected-endstream"
+    },
+    {
+      "case": "bookmarks_color.pdf",
+      "bytes": 2369,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73868
+    },
+    {
+      "case": "bookmarks_style.pdf",
+      "bytes": 1887,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 70984
+    },
+    {
+      "case": "brotli_decodeparms.pdf",
+      "bytes": 877,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74076
+    },
+    {
+      "case": "bug_1055869.pdf",
+      "bytes": 6622,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73952
+    },
+    {
+      "case": "bug_1058653.pdf",
+      "bytes": 7033,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 70688
+    },
+    {
+      "case": "bug_113.pdf",
+      "bytes": 469,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72916,
+      "code": "pdf/xref/bad-digit"
+    },
+    {
+      "case": "bug_1139.pdf",
+      "bytes": 796,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72312,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "bug_1206.pdf",
+      "bytes": 988,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73000
+    },
+    {
+      "case": "bug_1229106.pdf",
+      "bytes": 967,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71672,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "bug_1265.pdf",
+      "bytes": 726,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73272,
+      "code": "pdf/xref/no-trailer"
+    },
+    {
+      "case": "bug_1296920.pdf",
+      "bytes": 1629,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 68728
+    },
+    {
+      "case": "bug_1301.pdf",
+      "bytes": 5795,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 72856,
+      "code": "pdf/document/no-startxref"
+    },
+    {
+      "case": "bug_1302355.pdf",
+      "bytes": 883,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74160
+    },
+    {
+      "case": "bug_1302455.pdf",
+      "bytes": 1102,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72964
+    },
+    {
+      "case": "bug_1324189.pdf",
+      "bytes": 271,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72604,
+      "code": "pdf/tokenizer/bad-hex"
+    },
+    {
+      "case": "bug_1324503.pdf",
+      "bytes": 272,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73312,
+      "code": "pdf/tokenizer/bad-hex"
+    },
+    {
+      "case": "bug_1328389.pdf",
+      "bytes": 394,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73408
+    },
+    {
+      "case": "bug_1333298.pdf",
+      "bytes": 5449,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73364
+    },
+    {
+      "case": "bug_1396264.pdf",
+      "bytes": 2291,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73368
+    },
+    {
+      "case": "bug_1477093.pdf",
+      "bytes": 1123,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73552
+    },
+    {
+      "case": "bug_1506.pdf",
+      "bytes": 814,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 74656,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "bug_1549.pdf",
+      "bytes": 886,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74280
+    },
+    {
+      "case": "bug_1558.pdf",
+      "bytes": 711,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71756
+    },
+    {
+      "case": "bug_1574.pdf",
+      "bytes": 724,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 71560
+    },
+    {
+      "case": "bug_1591.pdf",
+      "bytes": 1378,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74276
+    },
+    {
+      "case": "bug_1658.pdf",
+      "bytes": 937,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72640
+    },
+    {
+      "case": "bug_1768.pdf",
+      "bytes": 4984,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72040
+    },
+    {
+      "case": "bug_1769.pdf",
+      "bytes": 938,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72508
+    },
+    {
+      "case": "bug_1893.pdf",
+      "bytes": 760,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73944
+    },
+    {
+      "case": "bug_2034.pdf",
+      "bytes": 26547,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 70568
+    },
+    {
+      "case": "bug_2132.pdf",
+      "bytes": 844,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72452
+    },
+    {
+      "case": "bug_216.pdf",
+      "bytes": 536,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 70460,
+      "code": "pdf/document/no-startxref"
+    },
+    {
+      "case": "bug_298.pdf",
+      "bytes": 209,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73008,
+      "code": "pdf/parser/unexpected-keyword"
+    },
+    {
+      "case": "bug_306123.pdf",
+      "bytes": 47568,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74044
+    },
+    {
+      "case": "bug_343075986.pdf",
+      "bytes": 1016,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73256
+    },
+    {
+      "case": "bug_378120423.pdf",
+      "bytes": 475,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73284
+    },
+    {
+      "case": "bug_384770169.pdf",
+      "bytes": 783,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72328
+    },
+    {
+      "case": "bug_399689604.pdf",
+      "bytes": 693,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72348
+    },
+    {
+      "case": "bug_40162073.pdf",
+      "bytes": 967,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72308
+    },
+    {
+      "case": "bug_402562387.pdf",
+      "bytes": 19002,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73972
+    },
+    {
+      "case": "bug_410996566.pdf",
+      "bytes": 843,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72468
+    },
+    {
+      "case": "bug_420508260.pdf",
+      "bytes": 801,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71416
+    },
+    {
+      "case": "bug_42270471.pdf",
+      "bytes": 1330,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71936,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "bug_42271133.pdf",
+      "bytes": 694,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73372
+    },
+    {
+      "case": "bug_425244539.pdf",
+      "bytes": 703,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73116
+    },
+    {
+      "case": "bug_431824298.pdf",
+      "bytes": 1791,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74700
+    },
+    {
+      "case": "bug_451265.pdf",
+      "bytes": 1230,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74056
+    },
+    {
+      "case": "bug_452455.pdf",
+      "bytes": 1082,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73668,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "bug_454695.pdf",
+      "bytes": 188,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71772,
+      "code": "pdf/catalog/not-dict"
+    },
+    {
+      "case": "bug_459580.pdf",
+      "bytes": 685,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71692,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "bug_461845674.pdf",
+      "bytes": 479,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71164
+    },
+    {
+      "case": "bug_481363.pdf",
+      "bytes": 821,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73956,
+      "code": "pdf/parser/dict-key-not-name"
+    },
+    {
+      "case": "bug_487928.pdf",
+      "bytes": 2696,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73044,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "bug_488948351.pdf",
+      "bytes": 2411,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72688
+    },
+    {
+      "case": "bug_491161396.pdf",
+      "bytes": 753,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73212
+    },
+    {
+      "case": "bug_491516663.pdf",
+      "bytes": 2857,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72864
+    },
+    {
+      "case": "bug_498010830_shared_annots.pdf",
+      "bytes": 721,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 74268
+    },
+    {
+      "case": "bug_498010830_shared_widget.pdf",
+      "bytes": 666,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71340
+    },
+    {
+      "case": "bug_504416752.pdf",
+      "bytes": 6987,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71612
+    },
+    {
+      "case": "bug_507316.pdf",
+      "bytes": 1924,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71312
+    },
+    {
+      "case": "bug_509964646.pdf",
+      "bytes": 1167,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71920
+    },
+    {
+      "case": "bug_517126568.pdf",
+      "bytes": 577,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 70400
+    },
+    {
+      "case": "bug_544880.pdf",
+      "bytes": 258,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74388,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "bug_547706.pdf",
+      "bytes": 678,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73196
+    },
+    {
+      "case": "bug_551248.pdf",
+      "bytes": 2134,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 74352,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "bug_552046.pdf",
+      "bytes": 746,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72492,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "bug_554790604.pdf",
+      "bytes": 1175,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73896
+    },
+    {
+      "case": "bug_555784.pdf",
+      "bytes": 36626,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73740
+    },
+    {
+      "case": "bug_57.pdf",
+      "bytes": 693,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72612,
+      "code": "pdf/parser/indirect-missing-endobj"
+    },
+    {
+      "case": "bug_572871.pdf",
+      "bytes": 1482,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73064
+    },
+    {
+      "case": "bug_620428.pdf",
+      "bytes": 2734,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 70668,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "bug_634394.pdf",
+      "bytes": 2222,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71380,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "bug_634716.pdf",
+      "bytes": 3115,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71336,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "bug_642.pdf",
+      "bytes": 3270,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 70748
+    },
+    {
+      "case": "bug_644.pdf",
+      "bytes": 1119,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71400,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "bug_664284.pdf",
+      "bytes": 20874,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72564,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "bug_674771.pdf",
+      "bytes": 995,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74308
+    },
+    {
+      "case": "bug_679649.pdf",
+      "bytes": 2052,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 73692,
+      "code": "pdf/parser/indirect-bad-num"
+    },
+    {
+      "case": "bug_680376.pdf",
+      "bytes": 2236,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72748,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "bug_709793.pdf",
+      "bytes": 429,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73572,
+      "code": "pdf/trailer/missing-size"
+    },
+    {
+      "case": "bug_713197.pdf",
+      "bytes": 387,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72752
+    },
+    {
+      "case": "bug_750568.pdf",
+      "bytes": 1019,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74604
+    },
+    {
+      "case": "bug_765384.pdf",
+      "bytes": 2321,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71484
+    },
+    {
+      "case": "bug_779.pdf",
+      "bytes": 685,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74720
+    },
+    {
+      "case": "bug_821454.pdf",
+      "bytes": 1074,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72860
+    },
+    {
+      "case": "bug_861842.pdf",
+      "bytes": 1114,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72508
+    },
+    {
+      "case": "bug_889099.pdf",
+      "bytes": 928,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72640
+    },
+    {
+      "case": "bug_890322.pdf",
+      "bytes": 855,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73264
+    },
+    {
+      "case": "bug_896366.pdf",
+      "bytes": 874,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73648
+    },
+    {
+      "case": "bug_900552.pdf",
+      "bytes": 1131,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71768,
+      "code": "pdf/parser/indirect-missing-endobj"
+    },
+    {
+      "case": "bug_901654.pdf",
+      "bytes": 1128,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71612,
+      "code": "pdf/parser/indirect-missing-endobj"
+    },
+    {
+      "case": "bug_901654_2.pdf",
+      "bytes": 1150,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72176,
+      "code": "pdf/parser/indirect-missing-endobj"
+    },
+    {
+      "case": "bug_905142.pdf",
+      "bytes": 475,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72240,
+      "code": "pdf/flate/inflate-failed"
+    },
+    {
+      "case": "bug_921.pdf",
+      "bytes": 3638,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72952
+    },
+    {
+      "case": "bug_925981.pdf",
+      "bytes": 875,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 71316
+    },
+    {
+      "case": "bug_972518.pdf",
+      "bytes": 1261,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72804
+    },
+    {
+      "case": "calculate.pdf",
+      "bytes": 2020,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73068
+    },
+    {
+      "case": "circular_viewer_ref.pdf",
+      "bytes": 513,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72024,
+      "code": "pdf/catalog/missing-pages"
+    },
+    {
+      "case": "click_form.pdf",
+      "bytes": 16250,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73788
+    },
+    {
+      "case": "clip_path.pdf",
+      "bytes": 514,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72968
+    },
+    {
+      "case": "combobox_form.pdf",
+      "bytes": 1738,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73192
+    },
+    {
+      "case": "control_characters.pdf",
+      "bytes": 784,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74284
+    },
+    {
+      "case": "cropped_no_overlap.pdf",
+      "bytes": 503,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73260
+    },
+    {
+      "case": "cropped_text.pdf",
+      "bytes": 1855,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73768
+    },
+    {
+      "case": "dashed_lines.pdf",
+      "bytes": 539,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73388
+    },
+    {
+      "case": "docmdp.pdf",
+      "bytes": 1262,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72296
+    },
+    {
+      "case": "document_aactions.pdf",
+      "bytes": 2018,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73276
+    },
+    {
+      "case": "embedded_attachments_invalid_data.pdf",
+      "bytes": 638,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72988
+    },
+    {
+      "case": "embedded_attachments_invalid_types.pdf",
+      "bytes": 1172,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73088
+    },
+    {
+      "case": "embedded_attachments_with_af.pdf",
+      "bytes": 1143,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71380
+    },
+    {
+      "case": "embedded_attachments_with_desc.pdf",
+      "bytes": 1417,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71248
+    },
+    {
+      "case": "find_text_consecutive.pdf",
+      "bytes": 654,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74096
+    },
+    {
+      "case": "font_matrix.pdf",
+      "bytes": 790,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74320
+    },
+    {
+      "case": "font_weight.pdf",
+      "bytes": 1418,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74540
+    },
+    {
+      "case": "form_object.pdf",
+      "bytes": 930,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73948,
+      "code": "pdf/parser/stream/expected-endstream"
+    },
+    {
+      "case": "form_object_with_image.pdf",
+      "bytes": 1039,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74280
+    },
+    {
+      "case": "form_object_with_path.pdf",
+      "bytes": 859,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72680
+    },
+    {
+      "case": "form_object_with_text.pdf",
+      "bytes": 1034,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72812
+    },
+    {
+      "case": "get_page_aaction.pdf",
+      "bytes": 842,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73884
+    },
+    {
+      "case": "goto_action.pdf",
+      "bytes": 696,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71876
+    },
+    {
+      "case": "gotoe_action.pdf",
+      "bytes": 720,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 70676
+    },
+    {
+      "case": "hebrew_mirrored.pdf",
+      "bytes": 5931,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73388
+    },
+    {
+      "case": "hello_world.pdf",
+      "bytes": 840,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73288
+    },
+    {
+      "case": "hello_world_2_pages.pdf",
+      "bytes": 962,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73452
+    },
+    {
+      "case": "hello_world_2_pages_custom_object.pdf",
+      "bytes": 983,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74468
+    },
+    {
+      "case": "hello_world_2_pages_shared_resources_dict.pdf",
+      "bytes": 939,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73256
+    },
+    {
+      "case": "hello_world_2_pages_split_streams.pdf",
+      "bytes": 1082,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71284,
+      "code": "pdf/parser/indirect-missing-endobj"
+    },
+    {
+      "case": "hello_world_brotli.pdf",
+      "bytes": 846,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73936,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "hello_world_brotli_with_length1.pdf",
+      "bytes": 860,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72740,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "hello_world_pieceinfo.pdf",
+      "bytes": 1414,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72716
+    },
+    {
+      "case": "hello_world_split_streams.pdf",
+      "bytes": 922,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71664
+    },
+    {
+      "case": "hello_world_with_invisible_spaces.pdf",
+      "bytes": 825,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73792
+    },
+    {
+      "case": "image_clipped.pdf",
+      "bytes": 849,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73284
+    },
+    {
+      "case": "ink_annot.pdf",
+      "bytes": 780,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 70000
+    },
+    {
+      "case": "jpeg_reduced_size.pdf",
+      "bytes": 24236,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71556
+    },
+    {
+      "case": "jpeg_reduced_size_with_smask.pdf",
+      "bytes": 40091,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72084
+    },
+    {
+      "case": "jpeg_unaligned_no_reduce.pdf",
+      "bytes": 18423,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73356
+    },
+    {
+      "case": "jpx_lzw.pdf",
+      "bytes": 1152,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73500
+    },
+    {
+      "case": "js.pdf",
+      "bytes": 1145,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73892,
+      "code": "pdf/parser/indirect-missing-obj"
+    },
+    {
+      "case": "launch_action.pdf",
+      "bytes": 799,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72668
+    },
+    {
+      "case": "line_annot.pdf",
+      "bytes": 789,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73044
+    },
+    {
+      "case": "links_highlights_annots.pdf",
+      "bytes": 2060,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73148
+    },
+    {
+      "case": "listbox_form.pdf",
+      "bytes": 3012,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 70820
+    },
+    {
+      "case": "many_rectangles.pdf",
+      "bytes": 45529,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 78736
+    },
+    {
+      "case": "many_rectangles_brotli.pdf",
+      "bytes": 3283,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74100,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "marked_content_id.pdf",
+      "bytes": 5625,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72992
+    },
+    {
+      "case": "matte.pdf",
+      "bytes": 3195,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73508
+    },
+    {
+      "case": "multiple_form_types.pdf",
+      "bytes": 2138,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 71956
+    },
+    {
+      "case": "multiple_graphics_states.pdf",
+      "bytes": 830,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72420
+    },
+    {
+      "case": "named_action.pdf",
+      "bytes": 678,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73220
+    },
+    {
+      "case": "named_dests.pdf",
+      "bytes": 2010,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72440,
+      "code": "pdf/parser/stream/expected-endstream"
+    },
+    {
+      "case": "named_dests_old_style.pdf",
+      "bytes": 968,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74228
+    },
+    {
+      "case": "named_dests_old_style_indirect.pdf",
+      "bytes": 1097,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73964
+    },
+    {
+      "case": "no_page_count.pdf",
+      "bytes": 723,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71648,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "non_hex_file_id.pdf",
+      "bytes": 406,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 73384
+    },
+    {
+      "case": "nonesuch_action.pdf",
+      "bytes": 687,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73728
+    },
+    {
+      "case": "page_tree_empty_node.pdf",
+      "bytes": 620,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73388
+    },
+    {
+      "case": "pattern_fill.pdf",
+      "bytes": 754,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72812
+    },
+    {
+      "case": "pattern_fill_uncolored.pdf",
+      "bytes": 802,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72844
+    },
+    {
+      "case": "pattern_stroke.pdf",
+      "bytes": 780,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72812
+    },
+    {
+      "case": "pattern_stroke_uncolored.pdf",
+      "bytes": 828,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72012
+    },
+    {
+      "case": "polygon_annot.pdf",
+      "bytes": 794,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73380
+    },
+    {
+      "case": "raw_type_text.pdf",
+      "bytes": 2199,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73692
+    },
+    {
+      "case": "rectangles.pdf",
+      "bytes": 633,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72748
+    },
+    {
+      "case": "rectangles_brotli.pdf",
+      "bytes": 594,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72864,
+      "code": "pdf/filter/unsupported"
+    },
+    {
+      "case": "rectangles_double_flipped.pdf",
+      "bytes": 661,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74108
+    },
+    {
+      "case": "rectangles_multi_pages.pdf",
+      "bytes": 1382,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72240
+    },
+    {
+      "case": "rectangles_object_zero.pdf",
+      "bytes": 688,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73552
+    },
+    {
+      "case": "rectangles_with_leaky_ctm.pdf",
+      "bytes": 727,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74496
+    },
+    {
+      "case": "redact_annot.pdf",
+      "bytes": 683,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72740
+    },
+    {
+      "case": "redirect.pdf",
+      "bytes": 471,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72540
+    },
+    {
+      "case": "repeat_viewer_ref.pdf",
+      "bytes": 539,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 70316,
+      "code": "pdf/parser/dict-key-not-name"
+    },
+    {
+      "case": "rotated_image.pdf",
+      "bytes": 831,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72956
+    },
+    {
+      "case": "rotated_text.pdf",
+      "bytes": 1010,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71336
+    },
+    {
+      "case": "rotated_text_90.pdf",
+      "bytes": 810,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72264
+    },
+    {
+      "case": "shared_form_xobject_matrix.pdf",
+      "bytes": 1250,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72652
+    },
+    {
+      "case": "signature_no_sub_filter.pdf",
+      "bytes": 1701,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 74644
+    },
+    {
+      "case": "signature_reason.pdf",
+      "bytes": 1764,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73960
+    },
+    {
+      "case": "simple_thumbnail.pdf",
+      "bytes": 4514,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71628
+    },
+    {
+      "case": "simple_xfa.pdf",
+      "bytes": 5801,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 75160
+    },
+    {
+      "case": "split_streams.pdf",
+      "bytes": 3502,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72808
+    },
+    {
+      "case": "tagged_actual_text.pdf",
+      "bytes": 2440,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74208,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "tagged_alt_text.pdf",
+      "bytes": 2433,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72744,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "tagged_expansion.pdf",
+      "bytes": 1248,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73104
+    },
+    {
+      "case": "tagged_marked_content.pdf",
+      "bytes": 1933,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74312
+    },
+    {
+      "case": "tagged_mcr_multipage.pdf",
+      "bytes": 1635,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73312
+    },
+    {
+      "case": "tagged_mcr_objr.pdf",
+      "bytes": 2192,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72508
+    },
+    {
+      "case": "tagged_nested.pdf",
+      "bytes": 4830,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 71460
+    },
+    {
+      "case": "tagged_table.pdf",
+      "bytes": 3205,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 74608,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "tagged_table_bad_elem.pdf",
+      "bytes": 2203,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 70552,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "tagged_table_bad_parent.pdf",
+      "bytes": 3173,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73452,
+      "code": "pdf/content/unknown-op"
+    },
+    {
+      "case": "text_color.pdf",
+      "bytes": 659,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 73872
+    },
+    {
+      "case": "text_form.pdf",
+      "bytes": 927,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73824
+    },
+    {
+      "case": "text_form_color.pdf",
+      "bytes": 765,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73804
+    },
+    {
+      "case": "text_form_multiline.pdf",
+      "bytes": 955,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73608
+    },
+    {
+      "case": "text_form_multiple.pdf",
+      "bytes": 1483,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 74252
+    },
+    {
+      "case": "text_form_negative_fontsize.pdf",
+      "bytes": 1013,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73680
+    },
+    {
+      "case": "text_in_page_marked.pdf",
+      "bytes": 3630,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72704
+    },
+    {
+      "case": "text_in_page_marked_indirect.pdf",
+      "bytes": 3747,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72744
+    },
+    {
+      "case": "text_large_ascent_descent.pdf",
+      "bytes": 1419,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71472
+    },
+    {
+      "case": "thumbnail_with_empty_stream.pdf",
+      "bytes": 545,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73848
+    },
+    {
+      "case": "thumbnail_with_no_filters.pdf",
+      "bytes": 907,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73744
+    },
+    {
+      "case": "trailer_as_hexstring.pdf",
+      "bytes": 466,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 72720,
+      "code": "pdf/xref/trailer-not-dict"
+    },
+    {
+      "case": "trailer_end_trailing_space.pdf",
+      "bytes": 1193,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 72532
+    },
+    {
+      "case": "trailer_unterminated.pdf",
+      "bytes": 472,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 70108,
+      "code": "pdf/parser/dict-key-not-name"
+    },
+    {
+      "case": "two_signatures.pdf",
+      "bytes": 2781,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 73764
+    },
+    {
+      "case": "unsupported_feature.pdf",
+      "bytes": 452,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71296
+    },
+    {
+      "case": "uri_action.pdf",
+      "bytes": 721,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71376
+    },
+    {
+      "case": "uri_action_nonascii.pdf",
+      "bytes": 680,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72820
+    },
+    {
+      "case": "use_outlines.pdf",
+      "bytes": 805,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73152
+    },
+    {
+      "case": "utf-8.pdf",
+      "bytes": 747,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72856
+    },
+    {
+      "case": "version_in_catalog.pdf",
+      "bytes": 380,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 73456
+    },
+    {
+      "case": "vertical_text.pdf",
+      "bytes": 3518,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 71996
+    },
+    {
+      "case": "viewer_pref_types.pdf",
+      "bytes": 598,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72596
+    },
+    {
+      "case": "viewer_ref.pdf",
+      "bytes": 1200,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 73092,
+      "code": "pdf/pages/cycle"
+    },
+    {
+      "case": "weblinks.pdf",
+      "bytes": 1172,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72780
+    },
+    {
+      "case": "weblinks_across_lines.pdf",
+      "bytes": 1130,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 72516
+    },
+    {
+      "case": "xfa/xfa_break_before_after.pdf",
+      "bytes": 6449,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 74404,
+      "code": "pdf/document/no-startxref"
+    },
+    {
+      "case": "xfa/xfa_combobox.pdf",
+      "bytes": 5976,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74780
+    },
+    {
+      "case": "xfa/xfa_date_time_edit.pdf",
+      "bytes": 5827,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 72196
+    },
+    {
+      "case": "xfa/xfa_image_edit.pdf",
+      "bytes": 14267,
+      "class": "returned",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71512
+    },
+    {
+      "case": "xfa/xfa_multiline_textfield.pdf",
+      "bytes": 5911,
+      "class": "returned",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 74524
+    },
+    {
+      "case": "zero_length_stream.pdf",
+      "bytes": 874,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 71436,
+      "code": "pdf/parser/indirect-missing-endobj"
+    }
+  ],
+  "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
+  "date": "2026-10-16"
+}

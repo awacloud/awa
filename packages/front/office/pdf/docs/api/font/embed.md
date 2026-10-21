@@ -96,6 +96,8 @@ mutates the result, and allocates its indirects per document.
 
 The subset is renumbered, so **CID === new gid** and `/CIDToGIDMap` is `/Identity`. `/DW` is `1000`; `/W` is the compact `[c [w …] …]` form over the subset's gids.
 
+The descendant's `/CIDSystemInfo` holds `/Registry` and `/Ordering` as **ASCII strings** (for example `(Adobe)` and `(Identity)`, or `(Japan1)` for a Shift-JIS font), as ISO 32000-2 Table 114 requires, and `/Supplement` as an integer. They are not names: a plain-text value is written as a string, and a value already given as a typed PDF object is kept. The opt-in [`pdfFontCidTyped.typeCIDSystemInfo`](../extra/font-cid-typed.md) reads the written dictionary back. Every composite embedding written through [`pdfBuilder`](../document/builder.md) therefore carries these two entries as strings where earlier releases wrote names.
+
 ## Examples
 
 ### Simple embed (`/TrueType` + `/WinAnsiEncoding`)

@@ -33,7 +33,9 @@ bun packages/front/office/oconv/tests/_fixtures/gen-ods-fixtures.js
 
 | File | Bytes | SHA-256 | Content |
 |---|---|---|---|
-| `ods/ods-structured.ods` | 2015 | `77b4b766f52fd9a37152ef46b7a6b8fafffc8702dff051ad4381f22401783a18` | 2 sheets: `Data` (1 header row + 2 data rows mixing string/number/boolean/date typed cells, one genuine `table:formula` cell with its cached value, a trailing all-empty row and an all-empty trailing column) and `Empty` (zero rows) |
+| `ods/ods-structured.ods` | 2047 | `e8facde67507e6baa01a0bb8714d474ddfb6e7352ebd18f1319d8745795045fe` | 2 sheets: `Data` (1 header row + 2 data rows mixing string/number/boolean/date typed cells, one genuine `table:formula` cell with its cached value, a trailing all-empty row and an all-empty trailing column) and `Empty` (zero rows) |
+
+Regenerated 2026-10-15 with the same generators after the odf writer fixes for schema validity (no empty `office:settings`, a table column when the model has none, a master page for every slide, the custom-shape and tracked-change fixes); the odp speaker notes are now a `presentation:class="notes"` text-box frame, as the schema wants inside `<presentation:notes>`. The readings recorded below are unchanged (the oconv suite passes on the new bytes).
 
 Generated + committed 2026-07-22.
 

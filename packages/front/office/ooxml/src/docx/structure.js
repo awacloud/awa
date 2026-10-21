@@ -62,6 +62,16 @@ export const docxStructure = {
     deps: [xml, docxProperties, docxDrawing, ooxmlMath],
 
     factory(xml, props, drawingMod, mathMod) {
+        // Schema order (ECMA-376 Part 1); a hand-wired docxProperties without
+        // the ordering helper writes children in the old order.
+        const orderSeq = props.sequence ? props.sequence : () => null;
+        const ordered = (children, seq) => (seq && props.orderBySequence ? props.orderBySequence(children, seq) : children);
+        const SECT_SEQ = orderSeq([
+            ['w:headerReference', 'w:footerReference'], 'w:footnotePr', 'w:endnotePr', 'w:type',
+            'w:pgSz', 'w:pgMar', 'w:paperSrc', 'w:pgBorders', 'w:lnNumType', 'w:pgNumType',
+            'w:cols', 'w:formProt', 'w:vAlign', 'w:noEndnote', 'w:titlePg', 'w:textDirection',
+            'w:bidi', 'w:rtlGutter', 'w:docGrid', 'w:printerSettings', 'w:sectPrChange'
+        ]);
         // --- Run children: text, break, tab, references, deletion text ---
 
         function parseRunChildren(rEl) {
@@ -633,10 +643,14 @@ export const docxStructure = {
             return out;
         }
 
+        // CT_Row: tblPrEx and trPr precede the cells; every other preserved
+        // element (bookmarks, custom XML, ...) follows them.
         function renderRow(row) {
-            const children = [];
+            const extras = row._extras || [];
+            const head = name => extras.filter(ex => ex && ex.name === name);
+            const children = [...head('w:tblPrEx'), ...head('w:trPr')];
             for (const c of row.cells || []) children.push(renderCell(c));
-            if (row._extras) for (const ex of row._extras) children.push(ex);
+            for (const ex of extras) if (!(ex && (ex.name === 'w:tblPrEx' || ex.name === 'w:trPr'))) children.push(ex);
             return xml.el('w:tr', {}, children);
         }
 
@@ -658,12 +672,43 @@ export const docxStructure = {
             return out;
         }
 
+        /**
+         * The `w:tblGrid` of a table that carries none (CT_Tbl requires
+         * it): one `w:gridCol` per grid column — the widest row, a cell
+         * counting its `tcPr.gridSpan`. Each column gets `w:w` only when
+         * the first span-free row as wide as the grid gives every cell a
+         * `dxa` width; the attribute is optional otherwise.
+         */
+        function renderGrid(rows) {
+            const span = c => Math.max(1, Number(c && c.tcPr && c.tcPr.gridSpan) || 1);
+            let n = 0;
+            for (const r of rows) n = Math.max(n, (r.cells || []).reduce((sum, c) => sum + span(c), 0));
+            const dxa = c => {
+                const w = c && c.tcPr && c.tcPr.width;
+                const v = w ? Number(w.w) : NaN;
+                return w && (w.type || 'dxa') === 'dxa' && Number.isFinite(v) && v >= 0 ? String(v) : null;
+            };
+            const sized = rows.map(r => r.cells || []).find(cs => cs.length === n
+                && cs.every(c => span(c) === 1 && dxa(c) !== null));
+            const cols = [];
+            for (let i = 0; i < n; i++) {
+                cols.push(xml.el('w:gridCol', sized ? { 'w:w': dxa(sized[i]) } : {}));
+            }
+            return xml.el('w:tblGrid', {}, cols);
+        }
+
         function renderTable(t) {
-            const children = [];
-            // Typed tblPr first, then any preserved tblGrid (both precede the rows).
+            // CT_Tbl opens with w:tblPr then w:tblGrid, both required: the
+            // typed tblPr (else a preserved childless one, else an empty
+            // one), then the preserved grid (else one derived from the
+            // rows), then the other preserved elements, then the rows.
+            const extras = t._extras || [];
+            const keptPr = extras.find(ex => ex && ex.name === 'w:tblPr');
+            const keptGrid = extras.find(ex => ex && ex.name === 'w:tblGrid');
             const tblPrEl = props.renderTableProperties(t.tblPr);
-            if (tblPrEl) children.push(tblPrEl);
-            if (t._extras) for (const ex of t._extras) children.push(ex);
+            const pr = tblPrEl || keptPr || xml.el('w:tblPr', {}, []);
+            const children = [pr, keptGrid || renderGrid(t.rows || [])];
+            for (const ex of extras) if (ex !== pr && ex !== keptGrid) children.push(ex);
             for (const r of t.rows || []) children.push(renderRow(r));
             return xml.el('w:tbl', {}, children);
         }
@@ -762,10 +807,23 @@ export const docxStructure = {
             }
             if (sect._extras) for (const ex of sect._extras) children.push(ex);
             if (!children.length) return null;
-            return xml.el('w:sectPr', {}, children);
+            return xml.el('w:sectPr', {}, ordered(children, SECT_SEQ));
         }
 
         // --- Body dispatch ---
+
+        // Block math: the schema puts m:oMathPara inside a w:p (EG_PContent),
+        // as Word writes a display equation. A w:p with no w:pPr whose only
+        // element child is one m:oMathPara is the body-level oMathPara node.
+        function blockMathOf(pEl) {
+            let math = null;
+            for (const c of pEl.children) {
+                if (c.type !== 'element') continue;
+                if (c.name !== 'm:oMathPara' || math) return null;
+                math = c;
+            }
+            return math;
+        }
 
         function parseBody(bodyEl) {
             const body = [];
@@ -774,7 +832,11 @@ export const docxStructure = {
             for (const c of bodyEl.children) {
                 if (c.type !== 'element') continue;
                 switch (c.name) {
-                    case 'w:p':         body.push(parseParagraph(c)); break;
+                    case 'w:p': {
+                        const math = blockMathOf(c);
+                        body.push(math ? mathMod.parseOMathPara(math) : parseParagraph(c));
+                        break;
+                    }
                     case 'w:tbl':       body.push(parseTable(c)); break;
                     case 'w:sdt':       body.push(parseSdt(c, true)); break;
                     case 'm:oMathPara': body.push(mathMod.parseOMathPara(c)); break;
@@ -791,7 +853,7 @@ export const docxStructure = {
                 if (node.type === 'paragraph')      children.push(renderParagraph(node));
                 else if (node.type === 'table')     children.push(renderTable(node));
                 else if (node.type === 'blockSdt')  children.push(renderSdt(node));
-                else if (node.type === 'oMathPara') children.push(mathMod.renderOMathPara(node));
+                else if (node.type === 'oMathPara') children.push(xml.el('w:p', {}, [mathMod.renderOMathPara(node)]));
             }
             if (doc._extras) for (const ex of doc._extras) children.push(ex);
             const sect = renderSection(doc.sectPr);

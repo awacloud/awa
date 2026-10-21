@@ -102,6 +102,54 @@ describe('Loss shape', () => {
     });
 });
 
+describe('lossSummary', () => {
+    test('fromMd: one counted entry per code + detail, order of first occurrence; losses unchanged', async () => {
+        const markdown = [
+            '<div>a</div>', '', 'Text <span>x</span>.', '', '<div>b</div>', '',
+            '[l](https://example.test/ "t")', '', '<div>c</div>', '', 'More <span>y</span>.', '',
+        ].join('\n');
+        const result = await fromMd({ markdown, target: 'docx' });
+        if (isCoreError(result)) throw new Error(result.error);
+        // Measured: each inline tag (opening and closing) is one loss.
+        expect(result.losses).toHaveLength(8);
+        expect(result.lossSummary).toEqual([
+            { code: 'block/dropped', detail: 'html_block', count: 3 },
+            { code: 'inline/dropped', detail: 'html_inline', count: 4 },
+            { code: 'inline/dropped', detail: 'link-title', count: 1 },
+        ]);
+    });
+
+    test('fromMd pdf: index and kind are left out, object details stay distinct', async () => {
+        const result = await fromMd({ markdown: '- [x] a\n- [x] b\n\n![one](p.png)\n\n![two](q.png)\n', target: 'pdf' });
+        if (isCoreError(result)) throw new Error(result.error);
+        expect(result.losses).toHaveLength(4);
+        expect(result.lossSummary.map((e) => [e.code, e.count])).toEqual([
+            ['list/task-marker-dropped', 2],
+            ['layout/image-dropped', 1],
+            ['layout/image-dropped', 1],
+        ]);
+        expect(result.lossSummary[0]?.detail).toBe('[x]');
+        for (const entry of result.lossSummary) expect(Object.keys(entry).sort()).toEqual(['code', 'count', 'detail']);
+    });
+
+    test('toMd and convert carry it too; a lossless result has an empty summary', async () => {
+        const md = await toMd({ name: 'sample.docx', bytes: new Uint8Array(SAMPLE_DOCX), convertedAt: CONVERTED_AT });
+        if (isCoreError(md)) throw new Error(md.error);
+        expect(Array.isArray(md.lossSummary)).toBe(true);
+        expect(md.lossSummary.reduce((n, e) => n + e.count, 0)).toBe(md.losses.length);
+
+        const pdf = await convert({ name: 'sample.docx', bytes: new Uint8Array(SAMPLE_DOCX), target: 'pdf' });
+        if (isCoreError(pdf)) throw new Error(pdf.error);
+        expect(Array.isArray(pdf.lossSummary)).toBe(true);
+        expect(pdf.lossSummary.reduce((n, e) => n + e.count, 0)).toBe(pdf.losses.length);
+
+        const clean = await fromMd({ markdown: '# T\n\nplain\n', target: 'docx' });
+        if (isCoreError(clean)) throw new Error(clean.error);
+        expect(clean.losses).toEqual([]);
+        expect(clean.lossSummary).toEqual([]);
+    });
+});
+
 describe('convert', () => {
     test('docx to odt — happy path', async () => {
         const result = await convert({

@@ -13,7 +13,7 @@
 
 import { test, expect, describe } from 'bun:test';
 import {
-    md, renderMarkdown, makeNode,
+    md, createMd, renderMarkdown, makeNode,
     T_SUBSCRIPT, T_SUPERSCRIPT, T_HIGHLIGHT, T_MATH_INLINE, T_MATH_BLOCK,
     T_FOOTNOTE_REF, T_FOOTNOTE_DEF, T_ADMONITION
 } from '../../tests/_helpers/build.js';
@@ -73,6 +73,23 @@ describe('markdown renderer roundtrip', () => {
     for (const [name, input] of cases) {
         test(name, () => {
             const { sig1, sig2 } = roundtrip(input);
+            expect(sig2).toEqual(sig1);
+        });
+    }
+});
+
+describe('markdown renderer — block quotes end without a bare `>` line', () => {
+    for (const [name, input, expected] of [
+        ['a quote then a paragraph', '> a\n\nb\n', '> a\n\nb\n'],
+        ['a quote alone', '> a\n', '> a\n'],
+        ['two paragraphs in a quote keep the inner `>` line', '> a\n>\n> b\n', '> a\n>\n> b\n'],
+        ['a nested quote', '> > a\n\nb\n', '> > a\n\nb\n'],
+        ['a quote in a list item', '- > a\n- b\n', '- > a\n- b\n'],
+        ['an empty quote', '>\n', '>\n']
+    ]) {
+        test(name, () => {
+            const { rendered, sig1, sig2 } = roundtrip(input);
+            expect(rendered).toBe(expected);
             expect(sig2).toEqual(sig1);
         });
     }
@@ -430,4 +447,20 @@ describe('markdown renderer — strikethrough tildes follow delimiterCount (BL-2
     test('a node with delimiterCount 1 serialises with one tilde', () => {
         expect(renderPara(node('strikethrough', { delimiterCount: 1 }, text('x')))).toBe('~x~\n');
     });
+});
+
+describe('markdown renderer — deep trees render without recursion', () => {
+    // Limits lifted: the default `maxDepth` refuses these documents first.
+    const lifted = createMd({ maxDepth: Infinity, maxNodes: Infinity });
+    const SHAPES = [
+        ['nested emphasis, 100,000 levels', '*'.repeat(100000) + 'a' + '*'.repeat(100000)],
+        ['alternating emphasis and strong, 40,000 levels each', '*a **a '.repeat(40000) + 'b' + ' a** a*'.repeat(40000)],
+        ['nested block quotes, 50,000 levels', '> '.repeat(50000) + 'a'],
+        ['nested lists, 40,000 levels', '- '.repeat(40000) + 'a'],
+    ];
+    for (const [name, source] of SHAPES) {
+        test(name + ': the source comes back with its final newline', () => {
+            expect(lifted.renderMarkdown(lifted.parse(source))).toBe(source + '\n');
+        });
+    }
 });

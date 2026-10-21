@@ -56,7 +56,7 @@ const { FontError, ParseError, RenderError, ContractError, isFontError } = fw.ru
 | `opts.context` | `object` | Extra context attached to `err.context`. |
 | `opts.cause` | `Error` | Cause attached to `err.cause`. |
 
-The instance exposes `name` (subclass name), `code`, `message`, `context?`, `cause?`.
+The instance exposes `name` (subclass name), `code`, `message`, `context?`, `cause?`. `name` is an own property (writable, enumerable, configurable) defined with `Object.defineProperty`, so constructing an error still works after the fw sanity layer has frozen `Error.prototype`.
 
 ## Examples
 
@@ -123,18 +123,19 @@ The `fonts/` prefix is common to every code; it is omitted in the nomenclature b
 
 - `*-short` — buffer too short for this table's header.
 - `*-version` — unsupported major version.
+- `*-bad-offset` — an offset points outside its table or file (`sfnt-bad-offset`, `cmap-bad-offset`, `avar-bad-offset`, …).
 - `missing-*` — required table absent from the SFNT.
 - `reader-*` — `ContractError` delegations from the fw reader.
 - `writer-*` — writer errors (out-of-bound patch, etc.).
 - `cff-cs-*` — CFF CharString interpreter.
 - `tt-hinting-*` — TrueType hinting VM.
 - `gsub-*` / `gpos-*` — GSUB/GPOS layout table (per lookup type).
-- `woff1-*` / `woff2-*` — WOFF decoding.
+- `woff1-*` / `woff2-*` — WOFF decoding; a body the injected decoder cannot decompress throws `woff1-bad-inflate` / `woff2-bad-brotli`, and a WOFF2 body that needs the Brotli static dictionary before it is loaded throws the `ContractError` `woff2-no-dictionary`.
 - `morx-*` / `kerx-*` / `ankr-*` / `lcar-*` / `prop-*` — Apple AAT (the `morx` / `kerx` state-machine bodies are kept as raw bytes).
 
 ### `cause:` convention
 
-A re-throw of a native JS error inside a table parser attaches the original as `cause`: `script-feature-list.js` (`parseLookupList` downgrades a non-`ParseError` to `{ parsed: false, error, cause }`) and `cff/charstring.js` (`fonts/cff-cs-decode`) do. The fw-to-fonts error translation inside `primitives/reader.js` is the exception: it rebuilds the fw `ContractError` as a `ParseError` copying `message` and `context`, but does not attach the original error as `cause`.
+A re-throw of a native JS error inside a table parser attaches the original as `cause`: `script-feature-list.js` (`parseLookupList` downgrades a non-`ParseError` to `{ parsed: false, error, cause }`) and `cff/charstring.js` (`fonts/cff-cs-decode`) do, and so do the WOFF decoders for an error of the injected `zlib` / `brotli` module (`fonts/woff1-bad-inflate`, `fonts/woff2-bad-brotli`, `fonts/woff2-no-dictionary`). The fw-to-fonts error translation inside `primitives/reader.js` is the exception: it rebuilds the fw `ContractError` as a `ParseError` copying `message` and `context`, but does not attach the original error as `cause`.
 
 ## See also
 

@@ -161,30 +161,17 @@ describe('crossformat → pdf — leg 1: exact ledger + page count per fixture',
         expect(pdfApi.read(r.bytes).pages.length).toBe(1);
     });
 
-    // Reader losses lead (`list/numbering-unresolved` ×2 — GAP-OOXML-2 on this
-    // fixture, which carries `w:numPr` with no `word/numbering.xml`), then the
-    // writer's, each carrying `index`/`kind`. The two `layout/line-overflow`
-    // entries are the F9 typesetter meeting a 3-column table whose unbreakable
-    // header tokens land, by floating-point epsilon, just over the column
-    // width — the same shape `fidelity.integration.test.js` already pins for
-    // `md-degrade.md`'s "Center" cell.
-    test('docx-structured.docx → pdf: 1 page, 2 reader + 2 writer losses', async () => {
+    // Reader losses only (`list/numbering-unresolved` ×2 — GAP-OOXML-2 on
+    // this fixture, which carries `w:numPr` with no `word/numbering.xml`).
+    // The 3-column table's header tokens ("Format", "Direction") measure
+    // EQUAL to their column to within floating-point noise (34.837 vs
+    // 34.83699999999999): the typesetter's fit tolerance places them without
+    // the two spurious `layout/line-overflow` entries this ledger used to pin.
+    test('docx-structured.docx → pdf: 1 page, 2 reader losses, no writer loss', async () => {
         const r = await toPdf(FIXTURES[1]);
         expect(r.losses).toEqual([
             { code: 'list/numbering-unresolved', detail: 'numId 1' },
-            { code: 'list/numbering-unresolved', detail: 'numId 2' },
-            {
-                index: '6.0', kind: 'paragraph', code: 'layout/line-overflow',
-                detail: {
-                    tokens: 1, width: 34.837, column: 34.83699999999999, text: 'Format'
-                }
-            },
-            {
-                index: '6.0', kind: 'paragraph', code: 'layout/line-overflow',
-                detail: {
-                    tokens: 1, width: 43.395, column: 43.39499999999998, text: 'Direction'
-                }
-            }
+            { code: 'list/numbering-unresolved', detail: 'numId 2' }
         ]);
         expect(pdfApi.read(r.bytes).pages.length).toBe(1);
     });
@@ -192,16 +179,13 @@ describe('crossformat → pdf — leg 1: exact ledger + page count per fixture',
     // MEASURED CORRECTION to the plan's hypothesis: the bulk fixture's 61×3
     // table records `layout/block-clipped`, NOT `layout/table-scaled` — the F9
     // stack clips an over-tall block at the page bottom, it never scales one.
-    test('docx-bulk.docx → pdf: MULTI-PAGE (24), one overflow + one block-clipped', async () => {
+    // The "Key" header token measures equal to its column within float
+    // noise (18.953 vs 18.952999999999975): no `layout/line-overflow` since
+    // the typesetter's fit tolerance.
+    test('docx-bulk.docx → pdf: MULTI-PAGE (24), one block-clipped', async () => {
         const r = await toPdf(FIXTURES[2]);
         expect(pdfApi.read(r.bytes).pages.length).toBe(24);
         expect(r.losses).toEqual([
-            {
-                index: '441.0', kind: 'paragraph', code: 'layout/line-overflow',
-                detail: {
-                    tokens: 1, width: 18.953, column: 18.952999999999975, text: 'Key'
-                }
-            },
             {
                 code: 'layout/block-clipped', index: '441', kind: 'table',
                 clippedLines: 108,
@@ -235,7 +219,8 @@ describe('crossformat → pdf — leg 1: exact ledger + page count per fixture',
                     name: 'Grafik 1',
                     alt: 'K:\\_projects\\OfficeEC\\contribute\\GIF-Support\\Sample.gif',
                     reason: 'unsupported-encoding',
-                    bytes: 6554
+                    bytes: 6554,
+                    format: 'gif'
                 }
             }
         ]);
@@ -315,16 +300,15 @@ describe('crossformat → pdf — leg 2: reader-carried image bytes (poi-with-gi
 
     // MEASURED BRANCH: the carried bytes are GIF, not JPEG — so the ledger
     // carries `layout/image-dropped` with `reason: 'unsupported-encoding'`,
-    // and the emitted page has NO `/XObject` resource at all. The `format`
-    // key is ABSENT because the writer's header reader only names PNG and
-    // JPEG (`write/pdf/render/image.js` `readImageHeader`) — it never reads
-    // the `escapes.docx.contentType` the reader already resolved.
-    test('the GIF branch fires: no /XObject on the page, no `Do` operator, `format` key ABSENT', async () => {
+    // and the emitted page has NO `/XObject` resource at all. The loss NAMES
+    // the format: the renderer recognises the GIF signature when its header
+    // reader (PNG, JPEG) cannot place the bytes.
+    test('the GIF branch fires: no /XObject on the page, no `Do` operator, `format` names gif', async () => {
         const r = await toPdf(FIXTURES[5]);
         const dropped = r.losses.find((l) => l.code === 'layout/image-dropped');
         expect(dropped.detail.reason).toBe('unsupported-encoding');
         expect(dropped.detail.bytes).toBe(6554);
-        expect(Object.prototype.hasOwnProperty.call(dropped.detail, 'format')).toBe(false);
+        expect(dropped.detail.format).toBe('gif');
 
         const doc = pdfApi.read(r.bytes);
         const deref = (o) => ((o && o.type === 'ref') ? doc._raw.resolve(o) : o);
@@ -528,7 +512,8 @@ describe('crossformat → pdf — leg 3: word-stream return leg (MEASURED, not a
         expect(raw).toContain('of section 1 \u0097 filler');
         // …and declares the encoding of the font that renders it.
         expect(raw).toContain('/Encoding /WinAnsiEncoding');
-        expect(raw).toContain('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+        // (followed by the Standard 14 metrics PDF 2.0 requires, A35)
+        expect(raw).toContain('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 255 /Widths [');
         expect(raw).not.toContain('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
         // …so the return leg reads the character back.
         const md = await oconv.toMd({ name: 'x.pdf', bytes: r.bytes, convertedAt: FIXED_AT });
@@ -554,6 +539,25 @@ describe('crossformat → pdf — leg 4: two runs are byte-identical', () => {
             expect(second.losses).toEqual(first.losses);
         });
     }
+
+    // PDF 2.0 requires the trailer /ID (ISO 32000-2 Table 15): never given
+    // by irToPdf, it is derived by @awacloud/pdf's writer from the bytes
+    // written before the trailer, so it keeps the output reproducible.
+    const derivedId = (bytes) => {
+        const end = latin1(bytes).lastIndexOf('trailer\n');
+        return createHash('sha256').update(bytes.subarray(0, end)).digest('hex').slice(0, 32);
+    };
+    const hexOf = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+
+    test(`${FIXTURES[0].name} → pdf and fromMd → pdf carry the derived /ID`, async () => {
+        const converted = (await toPdf(FIXTURES[0])).bytes;
+        const written = (await oconv.fromMd({ markdown: '# Report\n\nSome **bold** text.\n', target: 'pdf' })).bytes;
+        for (const bytes of [converted, written]) {
+            const id = pdfApi.read(bytes).trailer.id;
+            expect(id).toBeTruthy();
+            expect([hexOf(id[0]), hexOf(id[1])]).toEqual([derivedId(bytes), derivedId(bytes)]);
+        }
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -738,9 +742,8 @@ describe('crossformat → pdf — leg 7: OWNER ACCEPTANCE of the pdfBuilder.addI
         const asDocx = await oconv.fromMd({
             markdown: ACCEPTANCE_MD, target: 'docx', assets: { 'pixel.jpg': ASSET_JPEG }
         });
-        expect(asDocx.losses).toEqual([
-            { code: 'image/size-defaulted', detail: 'pixel.jpg' }
-        ]);
+        // Sized from the JPEG header (1 x 1 px at 96 dpi): no loss.
+        expect(asDocx.losses).toEqual([]);
         const readBack = docxApi.read(asDocx.bytes);
         expect(Object.keys(readBack.images)).toEqual(['rImg1']);
         expect([...readBack.images.rImg1.data]).toEqual([...ASSET_JPEG]);
@@ -761,6 +764,33 @@ describe('crossformat → pdf — leg 7: OWNER ACCEPTANCE of the pdfBuilder.addI
 
         const again = await oconv.convert({ bytes: asDocx.bytes, format: 'docx', target: 'pdf' });
         expect(sha256(again.bytes)).toBe(sha256(asPdf.bytes));
+    });
+
+    test('route C — fromMd(odt) then convert(odt → pdf / docx): an odt SOURCE image is carried, zero read loss', async () => {
+        const asOdt = await oconv.fromMd({
+            markdown: ACCEPTANCE_MD, target: 'odt', assets: { 'pixel.jpg': ASSET_JPEG }
+        });
+        expect(asOdt.losses).toEqual([]);
+        // The odt reader types the frame into an IR image with the part's bytes.
+        const { ir, losses } = odtToIrApi.odtToIr(odtApi.read(asOdt.bytes, { framesInRuns: true }));
+        expect(losses).toEqual([]);
+        const images = [];
+        const walk = (n) => { if (n.kind === 'image') images.push(n); for (const c of n.children || []) walk(c); };
+        walk(ir);
+        expect(images).toHaveLength(1);
+        expect([...images[0].escapes.odt.bytes]).toEqual([...ASSET_JPEG]);
+
+        const asPdf = await oconv.convert({ bytes: asOdt.bytes, format: 'odt', target: 'pdf' });
+        expect(asPdf.losses).toEqual([]);
+        const image = soleImageXObject(asPdf.bytes);
+        expect(image.dict.Filter).toBe('DCTDecode');
+        expect([...image.raw]).toEqual([...ASSET_JPEG]);
+        expect(latin1(asPdf.bytes)).toContain('/Im0 Do Q');
+
+        const asDocx = await oconv.convert({ bytes: asOdt.bytes, format: 'odt', target: 'docx' });
+        expect(asDocx.losses).toEqual([]);
+        const readBack = docxApi.read(asDocx.bytes);
+        expect(Object.values(readBack.images).map((i) => [...i.data])).toEqual([[...ASSET_JPEG]]);
     });
 });
 

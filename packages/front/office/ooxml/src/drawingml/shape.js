@@ -31,8 +31,8 @@
  *     flipV?: boolean,
  *     fill?:
  *       | 'none'
- *       | { color: 'RRGGBB' }
- *       | { schemeColor: string },
+ *       | { rgb: 'RRGGBB', mods?: [{ name, val? }] }
+ *       | { schemeColor: string, mods?: [{ name, val? }] },
  *     line?: {
  *         width?: number,         // EMU
  *         color?: 'RRGGBB',
@@ -61,29 +61,27 @@ export const drawingmlShape = {
 
         // --- Color helpers (subset of xlsxStyles.parseColor) ---
 
+        const typedColor = shared.createTypedColorCodec(xml);
+
         function parseColorChild(parent) {
-            // <…><a:srgbClr val="..."/></…> or <a:schemeClr val=".."/>
+            // <…><a:srgbClr val="..."/></…> or <a:schemeClr val=".."/>, with
+            // their colour transforms as `mods` when they fit the typed shape.
             for (const c of parent.children) {
                 if (c.type !== 'element') continue;
-                if (c.name === 'a:srgbClr')   return { rgb: c.attrs.val };
-                if (c.name === 'a:schemeClr') return { schemeColor: c.attrs.val };
+                if (c.name === 'a:srgbClr' || c.name === 'a:schemeClr') {
+                    return typedColor.parse(c) || (c.name === 'a:srgbClr'
+                        ? { rgb: c.attrs.val } : { schemeColor: c.attrs.val });
+                }
             }
             return null;
         }
 
+        function renderColorChild(color) {
+            return typedColor.render(color);
+        }
+
         function renderSrgbClr(rgb) {
             return xml.el('a:srgbClr', { val: String(rgb).replace(/^#/, '') });
-        }
-
-        function renderSchemeClr(name) {
-            return xml.el('a:schemeClr', { val: name });
-        }
-
-        function renderColorChild(color) {
-            if (!color) return null;
-            if (color.rgb)         return renderSrgbClr(color.rgb);
-            if (color.schemeColor) return renderSchemeClr(color.schemeColor);
-            return null;
         }
 
         // --- prstGeom + avLst ---
@@ -289,6 +287,12 @@ export const drawingmlShape = {
          * Build typed shape properties from intuitive options. Sizes
          * accept numbers (EMU) or strings (`'2in'`, `'5cm'`, `'200px'`).
          */
+        // `color` plus a copy of `from.mods` when it has any.
+        function withMods(color, from) {
+            if (Array.isArray(from.mods) && from.mods.length) color.mods = from.mods.map(m => ({ ...m }));
+            return color;
+        }
+
         function shapeProps(opts = {}) {
             const out = {};
             if (opts.geom)      out.geom = opts.geom;
@@ -302,8 +306,8 @@ export const drawingmlShape = {
             if (opts.fill !== undefined) {
                 if (opts.fill === 'none' || opts.fill === null) out.fill = 'none';
                 else if (typeof opts.fill === 'string') out.fill = { rgb: opts.fill };
-                else if (opts.fill && opts.fill.rgb) out.fill = { rgb: opts.fill.rgb };
-                else if (opts.fill && opts.fill.schemeColor) out.fill = { schemeColor: opts.fill.schemeColor };
+                else if (opts.fill && opts.fill.rgb) out.fill = withMods({ rgb: opts.fill.rgb }, opts.fill);
+                else if (opts.fill && opts.fill.schemeColor) out.fill = withMods({ schemeColor: opts.fill.schemeColor }, opts.fill);
             }
             if (opts.line !== undefined) {
                 if (opts.line === 'none' || opts.line === null) out.line = 'none';

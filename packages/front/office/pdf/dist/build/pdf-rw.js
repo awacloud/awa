@@ -63,7 +63,12 @@ export const pdfRwPackage = {
     class PdfError extends Error {
       constructor(code, message, opts) {
         super(message);
-        this.name = new.target.name;
+        Object.defineProperty(this, "name", {
+          value: new.target.name,
+          writable: !0,
+          enumerable: !0,
+          configurable: !0
+        });
         this.code = code;
         if (opts && opts.context)
           this.context = opts.context;
@@ -1712,13 +1717,25 @@ endstream`);
     function endedBeforeFinalBlock(e) {
       return !!e && e.code === 0;
     }
-    function inflatePrefix(bytes) {
+    const limits = Object.freeze({ maxOutput: 268435456 }), SAFE_RATIO = 2048, CHUNK = 16384;
+    function outputLimit(max, length) {
+      return new ParseError("pdf/flate/output-limit", "inflated stream exceeds maxOutput", { context: { limit: "maxOutput", max, length } });
+    }
+    function inflateChunked(bytes, max, final) {
       const chunks = [];
       let total = 0;
-      new fwZlib.UnzlibStream((chunk) => {
-        chunks.push(chunk);
+      const stream = new fwZlib.UnzlibStream((chunk) => {
         total += chunk.length;
-      }).push(bytes, !1);
+        if (max && total > max)
+          throw outputLimit(max, bytes.length);
+        chunks.push(chunk);
+      });
+      if (bytes.length === 0)
+        stream.push(bytes, final);
+      for (let off = 0;off < bytes.length; off += CHUNK) {
+        const end = Math.min(off + CHUNK, bytes.length);
+        stream.push(bytes.subarray(off, end), final && end === bytes.length);
+      }
       const out = new Uint8Array(total);
       let off = 0;
       for (const chunk of chunks) {
@@ -1727,24 +1744,40 @@ endstream`);
       }
       return out;
     }
+    function plainZlibHeader(b) {
+      return b.length >= 2 && (b[0] & 15) === 8 && b[0] >> 4 <= 7 && (b[0] << 8 | b[1]) % 31 === 0 && !(b[1] & 32);
+    }
+    function inflate(bytes, max) {
+      if (!max || bytes.length <= max / SAFE_RATIO || typeof fwZlib.UnzlibStream !== "function" || !plainZlibHeader(bytes))
+        return fwZlib.unzlibSync(bytes);
+      return inflateChunked(bytes, max, !0);
+    }
+    function isOutputLimit(e) {
+      return e instanceof ParseError && e.code === "pdf/flate/output-limit";
+    }
     function markTruncated(out) {
       Object.defineProperty(out, "truncated", { value: !0, enumerable: !1 });
       return out;
     }
-    function decode(bytes, params) {
+    function decode(bytes, params, opts) {
       if (!(bytes instanceof Uint8Array))
         throw new ParseError("pdf/flate/bad-input", "FlateDecode expects Uint8Array");
+      const max = opts && opts.maxOutput !== void 0 ? opts.maxOutput : limits.maxOutput;
       let raw, truncated = !1;
       try {
-        raw = fwZlib.unzlibSync(bytes);
+        raw = inflate(bytes, max);
       } catch (e) {
+        if (isOutputLimit(e))
+          throw e;
         const inflateFailed = () => new ParseError("pdf/flate/inflate-failed", "inflate failed: " + (e && e.message), { context: { length: bytes.length }, cause: e });
         if (!endedBeforeFinalBlock(e) || typeof fwZlib.UnzlibStream !== "function")
           throw inflateFailed();
         let prefix;
         try {
-          prefix = inflatePrefix(bytes);
-        } catch {
+          prefix = inflateChunked(bytes, max, !1);
+        } catch (e2) {
+          if (isOutputLimit(e2))
+            throw e2;
           throw inflateFailed();
         }
         if (prefix.length === 0)
@@ -1786,7 +1819,7 @@ endstream`);
         throw new ParseError("pdf/flate/deflate-failed", "deflate failed: " + (e && e.message), { context: { length: payload.length }, cause: e });
       }
     }
-    return { decode, encode };
+    return { decode, encode, limits };
   } });
     __register({ name: "pdfAsciiHex", dependencies: ["pdfErrors"], factory: function(errors) {
     const { ParseError } = errors, HEX_LO = [
@@ -2483,8 +2516,13 @@ endstream`);
     }
     return { readDocument, readHeader };
   } });
-    __register({ name: "pdfWriter", dependencies: ["pdfErrors","pdfSerializer"], factory: function(errors, serializerMod) {
-    const { RenderError } = errors, serializeIndirect = serializerMod.serializeIndirect, te = new TextEncoder;
+    __register({ name: "pdfWriter", dependencies: ["pdfErrors","pdfSerializer","sha256","bitArray"], factory: function(errors, serializerMod, sha256Mod, bitArrayMod) {
+    const { RenderError } = errors, serializeIndirect = serializerMod.serializeIndirect, canDerive = !!(sha256Mod && typeof sha256Mod.hash === "function" && bitArrayMod && typeof bitArrayMod.ui8_to_ba === "function");
+    function derivedId(body) {
+      const half = bitArrayMod.ba_to_ui8(sha256Mod.hash(bitArrayMod.ui8_to_ba(body))).slice(0, 16);
+      return [half, half.slice()];
+    }
+    const te = new TextEncoder;
     function pad10(n) {
       return String(n).padStart(10, "0");
     }
@@ -2578,12 +2616,12 @@ ${opts.xrefOffset}
       }
       const xrefOffset = cursor;
       push(buildXref(maxNum, offsets));
-      const size = maxNum + 1;
+      const size = maxNum + 1, id = opts.id || (version === "2.0" && canDerive ? derivedId(concat(parts)) : void 0);
       push(buildTrailer({
         size,
         root: opts.root,
         info: opts.info,
-        id: opts.id,
+        id,
         xrefOffset
       }));
       return concat(parts);
@@ -2778,6 +2816,53 @@ ${opts.xrefOffset}
       function badFont(context) {
         return new RenderError("pdf/builder/bad-font", "addFont requires { name, baseFont, subtype? } or { name, embedded }", { context });
       }
+      const SYMBOLIC14 = Object.freeze(["Symbol", "ZapfDingbats"]), stdDescNums = new Map;
+      function standard14Entries(spec, subtype) {
+        const lookup = spec.standard14, baseFont = String(spec.baseFont), isApi = !!(lookup && typeof lookup.isStandard14 === "function" && typeof lookup.lookupStandard14 === "function");
+        if (!isApi || subtype !== "Type1" || !lookup.isStandard14(baseFont))
+          throw badFont({ name: spec.name, baseFont, subtype, standard14: isApi ? "not a Standard 14 Type1 face" : "not a standard14Lookup API" });
+        const symbolic = SYMBOLIC14.includes(baseFont);
+        if (symbolic ? spec.encoding !== void 0 : spec.encoding !== "WinAnsiEncoding")
+          throw badFont({
+            name: spec.name,
+            baseFont,
+            encoding: spec.encoding,
+            standard14: symbolic ? "no /Encoding (built-in)" : "WinAnsiEncoding only"
+          });
+        const rec = lookup.lookupStandard14(baseFont);
+        let descNum = stdDescNums.get(baseFont);
+        if (descNum === void 0) {
+          const d = {
+            Type: obj.name("FontDescriptor"),
+            FontName: obj.name(baseFont),
+            Flags: obj.int(rec.flags),
+            FontBBox: obj.array(rec.fontBBox.map(numObj)),
+            ItalicAngle: numObj(rec.italicAngle),
+            Ascent: numObj(rec.ascent),
+            Descent: numObj(rec.descent)
+          };
+          for (const [key, field] of [
+            ["CapHeight", "capHeight"],
+            ["XHeight", "xHeight"],
+            ["StemV", "stemV"],
+            ["StemH", "stemH"]
+          ])
+            if (Number.isFinite(rec[field]))
+              d[key] = numObj(rec[field]);
+          descNum = alloc();
+          pushIndirect(descNum, obj.dict(d));
+          stdDescNums.set(baseFont, descNum);
+        }
+        const widths = [];
+        for (let code = 32;code <= 255; code++)
+          widths.push(numObj(rec.widths[code] || 0));
+        return {
+          FirstChar: obj.int(32),
+          LastChar: obj.int(255),
+          Widths: obj.array(widths),
+          FontDescriptor: obj.ref(descNum, 0)
+        };
+      }
       function allocEmbedded(embedded) {
         const cached = embedNums.get(embedded);
         if (cached)
@@ -2838,9 +2923,11 @@ ${opts.xrefOffset}
           };
           if (spec.encoding !== void 0)
             fontEntries.Encoding = obj.name(spec.encoding);
-          const key = String(spec.baseFont) + "\x00" + subtype + "\x00" + (spec.encoding ?? "");
+          const metrics = spec.standard14 !== void 0 ? standard14Entries(spec, subtype) : null, key = String(spec.baseFont) + "\x00" + subtype + "\x00" + (spec.encoding ?? "") + (metrics ? "\x00standard14" : "");
           num = stdFontNums.get(key);
           if (num === void 0) {
+            if (metrics)
+              Object.assign(fontEntries, metrics);
             num = alloc();
             pushIndirect(num, obj.dict(fontEntries));
             stdFontNums.set(key, num);
@@ -5500,16 +5587,7 @@ ${xrefOffset}
       return;
     }
     function resolveV4Method(typedEncrypt) {
-      const stmFName = nameValue(typedEncrypt.StmF) || "Identity", strFName = nameValue(typedEncrypt.StrF) || "Identity", effName = nameValue(typedEncrypt.EFF) || stmFName;
-      let streamMethod;
-      if (stmFName === "Identity")
-        if (strFName === "Identity")
-          streamMethod = "Identity";
-        else
-          streamMethod = resolveCfmFor(typedEncrypt, strFName);
-      else
-        streamMethod = resolveCfmFor(typedEncrypt, stmFName);
-      const stringMethod = strFName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, strFName), embeddedFileMethod = effName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, effName);
+      const stmFName = nameValue(typedEncrypt.StmF) || "Identity", strFName = nameValue(typedEncrypt.StrF) || "Identity", effName = nameValue(typedEncrypt.EFF) || stmFName, streamMethod = stmFName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, stmFName), stringMethod = strFName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, strFName), embeddedFileMethod = effName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, effName);
       return {
         method: streamMethod,
         strMethod: stringMethod,

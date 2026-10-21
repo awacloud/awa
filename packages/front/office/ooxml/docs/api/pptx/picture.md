@@ -49,6 +49,7 @@ const pic = runtime.resolve('pptxPicture');
     prstGeom?: 'rect',               // or 'roundRect', 'ellipse' (clipping)
     embedRef?: string,               // r:embed
     linkRef?: string,                // r:link — external image (rare)
+    srcRect?: { l?, t?, r?, b? },    // crop, 1/1000 of a percent (a:srcRect)
     image?: { data?: Uint8Array, contentType?: string },
     title?: string,
     _extras?
@@ -84,6 +85,7 @@ const xmlOut = pic.renderPicture(node);
 - `embedRef` is auto-assigned by `pptx.write` (a unique rId on the slide's relationships); `image(bytes, { rId })` sets it explicitly.
 - When only `image.data` is supplied (no `embedRef`), a new `r:id` and media part are created on write.
 - `linkRef` maps to `r:link` for externally-referenced images — those carry no `image.data`.
+- `srcRect` is the crop of `a:blipFill/a:srcRect`: each side in 1/1000 of a percent of the image (`l: 50000` keeps the right half); `{}` for an empty `<a:srcRect/>`. It is written between `a:blip` and `a:stretch`, and only when present.
 
 ## See also
 

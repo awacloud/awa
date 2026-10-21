@@ -84,7 +84,7 @@ obj.styles.find(s => s.styleId === 'Normal');
 
 - `defaults()` returns `docDefaults` with `{ rPr: { font: 'Calibri', size: 22 } }` (= 11pt) and a single default `Normal` paragraph style.
 - `isDefault: true` emits `w:default="1"` — only one style per `type` should carry it (not enforced).
-- A table style's `<w:tblPr>` is typed as `tblPr` (`style`, `width`, `borders` — see [docx-properties](./properties.md)). A style renders its children in the CT_Style order `name`, `basedOn`, `next`, `pPr`, `rPr`, `tblPr`, then `_extras`.
+- A table style's `<w:tblPr>` is typed as `tblPr` (`style`, `width`, `borders` — see [docx-properties](./properties.md)). A style renders its typed children and its `_extras` together in `CT_Style` order (`name`, `aliases`, `basedOn`, `next`, `link`, …, `uiPriority`, …, `qFormat`, …, `pPr`, `rPr`, `tblPr`, `trPr`, `tcPr`, `tblStylePr`); the part renders `docDefaults`, `latentStyles`, then the styles.
 - `<w:trPr>`, `<w:tcPr>` and the conditional `<w:tblStylePr>` parts inside table styles are not typed here and land in `_extras`. `defaults()` is unchanged: it carries no `tblPr`.
 - Pass the object to `docx.write(doc, { styles: obj })`; the relationship and content type are wired automatically.
 - A root other than `<w:styles>` raises `ParseError('docx/styles-bad-root')`.

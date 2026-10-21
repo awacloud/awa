@@ -40,7 +40,9 @@ directly is for measuring text or probing font routes in isolation.
 
 `Measurer` members: `route` (`'standard14'` \| `'embedded'` \| `'mixed'`),
 `face(style)` (frozen face record), `widthOf(text, style, sizePt)`
-(advance sum, points), `fallbacks` (style classes that fell back to
+(advance sum, points), `covers(text, style)` (`true` when the style's
+face draws every character of `text`: a non-zero glyph on an embedded
+face, a WinAnsi byte on a Standard 14 one), `fallbacks` (style classes that fell back to
 Standard 14 — empty on the pure Standard 14 route), `s14VariantApprox`
 (defensive flag, see Notes).
 
@@ -55,6 +57,8 @@ oconvPdfMetrics.styleOfRun({ bold: true, italic: true });  // 'boldItalic'
 oconvPdfMetrics.winAnsiByte(0x20AC);         // 128 (€)
 oconvPdfMetrics.winAnsiByte(0x4E2D);         // null (中, not WinAnsi-representable)
 measurer.widthOf('Hi', 'regular', 12);       // 11.328 (points, Helvetica 12pt)
+measurer.covers('Hi €', 'regular');          // true (every character is WinAnsi)
+measurer.covers('☐', 'regular');             // false (no ballot box in WinAnsi)
 measurer.route;                              // 'standard14'
 measurer.fallbacks;                          // []
 measurer.s14VariantApprox;                   // false

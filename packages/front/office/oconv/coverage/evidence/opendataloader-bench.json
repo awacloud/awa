@@ -1,0 +1,2641 @@
+{
+  "suite": {
+    "id": "opendataloader-bench",
+    "version": "opendataloader-bench@7af1d8f4d",
+    "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+  },
+  "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the benchmark's own scorers ported, on the Markdown body of oconv toMd (no OCR; the profile-v1 front matter removed)",
+  "value": 0.5753,
+  "fidelity": "the port reproduces 9874 of 9878 stored scores of 11 engines within 1e-9; 2 MHS higher where Python apted's distance is not the minimum (opendataloader-hybrid-hydrogen 01030000000181 (MHS 0.6190 vs 0.5795), unstructured 01030000000183 (MHS 0.0778 vs 0.0712))",
+  "comparators": [
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "opendataloader-hybrid 2.2.1 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.9066,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/opendataloader-hybrid/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "nutrient 1.0.1 (the benchmark's run of 2026-04-30)",
+      "result": {
+        "kind": "score",
+        "value": 0.8851,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/nutrient/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "docling 2.84.0 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.8817,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/docling/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "marker 1.10.1 (the benchmark's run of 2026-01-06; scored against the ground truth as it stood before its 2026-01-16 and 2026-02-02 revisions)",
+      "result": {
+        "kind": "score",
+        "value": 0.8608,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/marker/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "unstructured-hires 0.17.2 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.8414,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/unstructured-hires/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "edgeparse 0.3.0 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.837,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/edgeparse/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "opendataloader 2.2.1 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.8312,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/opendataloader/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "mineru 2.7.0 (the benchmark's run of 2026-01-06; scored against the ground truth as it stood before its 2026-01-16 and 2026-02-02 revisions)",
+      "result": {
+        "kind": "score",
+        "value": 0.8311,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/mineru/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "pymupdf4llm 0.2.0 (the benchmark's run of 2025-11-27; scored against the first ground truth, before its 2025-12-20, 2026-01-16 and 2026-02-02 revisions)",
+      "result": {
+        "kind": "score",
+        "value": 0.7316,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/pymupdf4llm/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "unstructured 0.17.2 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.6858,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/unstructured/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "markitdown 0.1.5 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.5885,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/markitdown/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "liteparse 1.2.1 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.5756,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/liteparse/evaluation.json",
+      "date": "2026-10-16"
+    }
+  ],
+  "details": {
+    "means": {
+      "nid": 0.8645334461476882,
+      "nid_s": 0.8411020783367184,
+      "teds": 0,
+      "teds_s": 0,
+      "mhs": 0,
+      "mhs_s": 0,
+      "overall": 0.5753052141573821
+    },
+    "documents": [
+      {
+        "id": "01030000000001",
+        "scores": {
+          "overall": 0.49511577424023157,
+          "nid": 0.9902315484804631,
+          "nid_s": 0.9902315484804631,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000002",
+        "scores": {
+          "overall": 0.49311041704942127,
+          "nid": 0.9862208340988425,
+          "nid_s": 0.9862208340988425,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000003",
+        "scores": {
+          "overall": 0.48716496791241976,
+          "nid": 0.9743299358248395,
+          "nid_s": 0.9743299358248395,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000004",
+        "scores": {
+          "overall": 0.49303452453058755,
+          "nid": 0.9860690490611751,
+          "nid_s": 0.9860690490611751,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000005",
+        "scores": {
+          "overall": 0.890625,
+          "nid": 0.890625,
+          "nid_s": 0.890625,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000006",
+        "scores": {
+          "overall": 0.9281767955801105,
+          "nid": 0.9281767955801105,
+          "nid_s": 0.9281767955801105,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000007",
+        "scores": {
+          "overall": 0.48858560794044664,
+          "nid": 0.9771712158808933,
+          "nid_s": 0.9771712158808933,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000008",
+        "scores": {
+          "overall": 0.7982877156570243,
+          "nid": 0.7982877156570243,
+          "nid_s": 0.7982877156570243,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000009",
+        "scores": {
+          "overall": 0.7347740667976425,
+          "nid": 0.7347740667976425,
+          "nid_s": 0.7347740667976425,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000010",
+        "scores": {
+          "overall": 0.8679045092838197,
+          "nid": 0.8679045092838197,
+          "nid_s": 0.8679045092838197,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000011",
+        "scores": {
+          "overall": 0.9018124507486209,
+          "nid": 0.9018124507486209,
+          "nid_s": 0.9018124507486209,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000012",
+        "scores": {
+          "overall": 0.9152027759705054,
+          "nid": 0.9152027759705054,
+          "nid_s": 0.9152027759705054,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000013",
+        "scores": {
+          "overall": 0.4666814749000444,
+          "nid": 0.9333629498000888,
+          "nid_s": 0.9333629498000888,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000014",
+        "scores": {
+          "overall": 0.9252182118424157,
+          "nid": 0.9252182118424157,
+          "nid_s": 0.9252182118424157,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000015",
+        "scores": {
+          "overall": 0.6270491803278688,
+          "nid": 0.6270491803278688,
+          "nid_s": 0.6270491803278688,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000016",
+        "scores": {
+          "overall": 0.4995014955134596,
+          "nid": 0.9990029910269193,
+          "nid_s": 0.9990029910269193,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000017",
+        "scores": {
+          "overall": 0.6319526627218935,
+          "nid": 0.6319526627218935,
+          "nid_s": 0.6319526627218935,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000018",
+        "scores": {
+          "overall": 0.4851908396946565,
+          "nid": 0.970381679389313,
+          "nid_s": 0.970381679389313,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000019",
+        "scores": {
+          "overall": 0.4983792544570502,
+          "nid": 0.9967585089141004,
+          "nid_s": 0.9967585089141004,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000020",
+        "scores": {
+          "overall": 0.9947800149142431,
+          "nid": 0.9947800149142431,
+          "nid_s": 0.9947800149142431,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000021",
+        "scores": {
+          "overall": 0.49795560747663553,
+          "nid": 0.9959112149532711,
+          "nid_s": 0.9959112149532711,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000022",
+        "scores": {
+          "overall": 0.9954881050041017,
+          "nid": 0.9954881050041017,
+          "nid_s": 0.9954881050041017,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000023",
+        "scores": {
+          "overall": 0.9978401727861771,
+          "nid": 0.9978401727861771,
+          "nid_s": 0.9978401727861771,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000024",
+        "scores": {
+          "overall": 0.9983640081799591,
+          "nid": 0.9983640081799591,
+          "nid_s": 0.9983640081799591,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000025",
+        "scores": {
+          "overall": 0.9974683544303797,
+          "nid": 0.9974683544303797,
+          "nid_s": 0.9974683544303797,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000026",
+        "scores": {
+          "overall": 0.9967472118959108,
+          "nid": 0.9967472118959108,
+          "nid_s": 0.9967472118959108,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000027",
+        "scores": {
+          "overall": 0.22797650827549387,
+          "nid": 0.22797650827549387,
+          "nid_s": 0.22797650827549387,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000028",
+        "scores": {
+          "overall": 0.31737683803799505,
+          "nid": 0.6347536760759901,
+          "nid_s": 0.6347536760759901,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000029",
+        "scores": {
+          "overall": 0.3321186881832379,
+          "nid": 0.6642373763664758,
+          "nid_s": 0.6642373763664758,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000030",
+        "scores": {
+          "overall": 0.7063987063987064,
+          "nid": 0.7063987063987064,
+          "nid_s": 0.7063987063987064,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000031",
+        "scores": {
+          "overall": 0.30036117907491555,
+          "nid": 0.6007223581498311,
+          "nid_s": 0.6007223581498311,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000032",
+        "scores": {
+          "overall": 0.48716619134042,
+          "nid": 0.97433238268084,
+          "nid_s": 0.97433238268084,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000033",
+        "scores": {
+          "overall": 0.48038490007401924,
+          "nid": 0.9607698001480385,
+          "nid_s": 0.9607698001480385,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000034",
+        "scores": {
+          "overall": 0.9312450225643748,
+          "nid": 0.9312450225643748,
+          "nid_s": 0.9312450225643748,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000035",
+        "scores": {
+          "overall": 0.46434494195688225,
+          "nid": 0.9286898839137645,
+          "nid_s": 0.9286898839137645,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000036",
+        "scores": {
+          "overall": 0.47165341005246236,
+          "nid": 0.9433068201049247,
+          "nid_s": 0.9433068201049247,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000037",
+        "scores": {
+          "overall": 0.4367421642644704,
+          "nid": 0.8734843285289408,
+          "nid_s": 0.8734843285289408,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000038",
+        "scores": {
+          "overall": 0.3800114547537228,
+          "nid": 0.7600229095074456,
+          "nid_s": 0.7600229095074456,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000039",
+        "scores": {
+          "overall": 0.4547854785478548,
+          "nid": 0.9095709570957096,
+          "nid_s": 0.9095709570957096,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000040",
+        "scores": {
+          "overall": 0.9577297082754515,
+          "nid": 0.9577297082754515,
+          "nid_s": 0.9577297082754515,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000041",
+        "scores": {
+          "overall": 0.8781268761256754,
+          "nid": 0.8781268761256754,
+          "nid_s": 0.8781268761256754,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000042",
+        "scores": {
+          "overall": 0.7377078490970856,
+          "nid": 0.7377078490970856,
+          "nid_s": 0.7377078490970856,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000043",
+        "scores": {
+          "overall": 0.6603023070803501,
+          "nid": 0.6603023070803501,
+          "nid_s": 0.6603023070803501,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000044",
+        "scores": {
+          "overall": 0.4650793650793651,
+          "nid": 0.9301587301587302,
+          "nid_s": 0.9301587301587302,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000045",
+        "scores": {
+          "overall": 0.3804100227790433,
+          "nid": 0.7608200455580866,
+          "nid_s": 0.6024844720496895,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000046",
+        "scores": {
+          "overall": 0.32621173469387754,
+          "nid": 0.6524234693877551,
+          "nid_s": 0.44894894894894893,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000047",
+        "scores": {
+          "overall": 0.29566003616636527,
+          "nid": 0.5913200723327305,
+          "nid_s": 0.13655761024182078,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000048",
+        "scores": {
+          "overall": 0.49767540152155537,
+          "nid": 0.9953508030431107,
+          "nid_s": 0.9953508030431107,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000049",
+        "scores": {
+          "overall": 0.9904071626518866,
+          "nid": 0.9904071626518866,
+          "nid_s": 0.9904071626518866,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000050",
+        "scores": {
+          "overall": 0.9844464775846294,
+          "nid": 0.9844464775846294,
+          "nid_s": 0.9844464775846294,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000051",
+        "scores": {
+          "overall": 0.2776365946632783,
+          "nid": 0.8329097839898348,
+          "nid_s": 0.841506129597198,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000052",
+        "scores": {
+          "overall": 0.40991692627206644,
+          "nid": 0.8198338525441329,
+          "nid_s": 0.8772423496306718,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000053",
+        "scores": {
+          "overall": 0.2813953488372093,
+          "nid": 0.8441860465116279,
+          "nid_s": 0.908284023668639,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000054",
+        "scores": {
+          "overall": 0.4984745364937808,
+          "nid": 0.9969490729875616,
+          "nid_s": 0.9969490729875616,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000055",
+        "scores": {
+          "overall": 0.9543859649122807,
+          "nid": 0.9543859649122807,
+          "nid_s": 0.9543859649122807,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000056",
+        "scores": {
+          "overall": 0.901002004008016,
+          "nid": 0.901002004008016,
+          "nid_s": 0.901002004008016,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000057",
+        "scores": {
+          "overall": 0.928679817905918,
+          "nid": 0.928679817905918,
+          "nid_s": 0.928679817905918,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000058",
+        "scores": {
+          "overall": 0.4618705035971223,
+          "nid": 0.9237410071942446,
+          "nid_s": 0.9237410071942446,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000059",
+        "scores": {
+          "overall": 0.7525622254758418,
+          "nid": 0.7525622254758418,
+          "nid_s": 0.7525622254758418,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000060",
+        "scores": {
+          "overall": 0.8734762505254309,
+          "nid": 0.8734762505254309,
+          "nid_s": 0.8734762505254309,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000061",
+        "scores": {
+          "overall": 0.9270516717325228,
+          "nid": 0.9270516717325228,
+          "nid_s": 0.9270516717325228,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000062",
+        "scores": {
+          "overall": 0.47255080376099484,
+          "nid": 0.9451016075219897,
+          "nid_s": 0.9451016075219897,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000063",
+        "scores": {
+          "overall": 0.9816031537450722,
+          "nid": 0.9816031537450722,
+          "nid_s": 0.9816031537450722,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000064",
+        "scores": {
+          "overall": 0.43872371283538797,
+          "nid": 0.8774474256707759,
+          "nid_s": 0.9388111888111889,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000065",
+        "scores": {
+          "overall": 0.49831523773867464,
+          "nid": 0.9966304754773493,
+          "nid_s": 0.9966304754773493,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000066",
+        "scores": {
+          "overall": 0.7389519439748853,
+          "nid": 0.7389519439748853,
+          "nid_s": 0.7389519439748853,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000067",
+        "scores": {
+          "overall": 0.4392549346677787,
+          "nid": 0.8785098693355574,
+          "nid_s": 0.8785098693355574,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000068",
+        "scores": {
+          "overall": 0.9634815515610218,
+          "nid": 0.9634815515610218,
+          "nid_s": 0.9634815515610218,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000069",
+        "scores": {
+          "overall": 0.48242377160613714,
+          "nid": 0.9648475432122743,
+          "nid_s": 0.9648475432122743,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000070",
+        "scores": {
+          "overall": 0.5671462829736211,
+          "nid": 0.5671462829736211,
+          "nid_s": 0.5671462829736211,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000071",
+        "scores": {
+          "overall": 0.46497764530551416,
+          "nid": 0.9299552906110283,
+          "nid_s": 0.9299552906110283,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000072",
+        "scores": {
+          "overall": 0.6363636363636364,
+          "nid": 0.6363636363636364,
+          "nid_s": 0.6363636363636364,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000073",
+        "scores": {
+          "overall": 0.7865470852017937,
+          "nid": 0.7865470852017937,
+          "nid_s": 0.7865470852017937,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000074",
+        "scores": {
+          "overall": 0.9439117929050815,
+          "nid": 0.9439117929050815,
+          "nid_s": 0.9439117929050815,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000075",
+        "scores": {
+          "overall": 0.9795180722891567,
+          "nid": 0.9795180722891567,
+          "nid_s": 0.9795180722891567,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000076",
+        "scores": {
+          "overall": 0.8874528809908454,
+          "nid": 0.8874528809908454,
+          "nid_s": 0.8874528809908454,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000077",
+        "scores": {
+          "overall": 0.48494983277591974,
+          "nid": 0.9698996655518395,
+          "nid_s": 0.9698996655518395,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000078",
+        "scores": {
+          "overall": 0.3672936259143156,
+          "nid": 0.7345872518286312,
+          "nid_s": 0.7560192616372392,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000079",
+        "scores": {
+          "overall": 0.4886018237082067,
+          "nid": 0.9772036474164134,
+          "nid_s": 0.9772036474164134,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000080",
+        "scores": {
+          "overall": 0.4841467759173495,
+          "nid": 0.968293551834699,
+          "nid_s": 0.968293551834699,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000081",
+        "scores": {
+          "overall": 0.392130857648099,
+          "nid": 0.784261715296198,
+          "nid_s": 0.6376811594202898,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000082",
+        "scores": {
+          "overall": 0.33579817311874727,
+          "nid": 0.6715963462374945,
+          "nid_s": 0.4789833822091887,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000083",
+        "scores": {
+          "overall": 0.3196591984853266,
+          "nid": 0.6393183969706532,
+          "nid_s": 0.47540983606557374,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000084",
+        "scores": {
+          "overall": 0.3225806451612903,
+          "nid": 0.6451612903225806,
+          "nid_s": 0.521505376344086,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000085",
+        "scores": {
+          "overall": 0.26294820717131473,
+          "nid": 0.5258964143426295,
+          "nid_s": 0.5258964143426295,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000086",
+        "scores": {
+          "overall": 0,
+          "nid": 0,
+          "nid_s": 0,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000087",
+        "scores": {
+          "overall": 0.9840450492726419,
+          "nid": 0.9840450492726419,
+          "nid_s": 0.9840450492726419,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000088",
+        "scores": {
+          "overall": 0.4325318246110325,
+          "nid": 0.865063649222065,
+          "nid_s": 0.14582098399525786,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000089",
+        "scores": {
+          "overall": 0.4311734846222753,
+          "nid": 0.8623469692445506,
+          "nid_s": 0.12755102040816327,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000090",
+        "scores": {
+          "overall": 0.4215484250809538,
+          "nid": 0.8430968501619076,
+          "nid_s": 0.12828736369467608,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000091",
+        "scores": {
+          "overall": 0.4954627949183303,
+          "nid": 0.9909255898366606,
+          "nid_s": 0.9909255898366606,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000092",
+        "scores": {
+          "overall": 0.49872309376140095,
+          "nid": 0.9974461875228019,
+          "nid_s": 0.9974461875228019,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000093",
+        "scores": {
+          "overall": 0.9973905479849232,
+          "nid": 0.9973905479849232,
+          "nid_s": 0.9973905479849232,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000094",
+        "scores": {
+          "overall": 0.973293768545994,
+          "nid": 0.973293768545994,
+          "nid_s": 0.973293768545994,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000095",
+        "scores": {
+          "overall": 0.9665935137771275,
+          "nid": 0.9665935137771275,
+          "nid_s": 0.9665935137771275,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000096",
+        "scores": {
+          "overall": 0.9596683000376932,
+          "nid": 0.9596683000376932,
+          "nid_s": 0.9596683000376932,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000097",
+        "scores": {
+          "overall": 0.47607301430685744,
+          "nid": 0.9521460286137149,
+          "nid_s": 0.9521460286137149,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000098",
+        "scores": {
+          "overall": 0.8534577387486278,
+          "nid": 0.8534577387486278,
+          "nid_s": 0.8534577387486278,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000099",
+        "scores": {
+          "overall": 0.4682352941176471,
+          "nid": 0.9364705882352942,
+          "nid_s": 0.9364705882352942,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000100",
+        "scores": {
+          "overall": 0.8714568226763348,
+          "nid": 0.8714568226763348,
+          "nid_s": 0.8714568226763348,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000101",
+        "scores": {
+          "overall": 0.4971916971916972,
+          "nid": 0.9943833943833944,
+          "nid_s": 0.9943833943833944,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000102",
+        "scores": {
+          "overall": 0.9421945309795777,
+          "nid": 0.9421945309795777,
+          "nid_s": 0.9421945309795777,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000103",
+        "scores": {
+          "overall": 0.288879235447437,
+          "nid": 0.577758470894874,
+          "nid_s": 0.577758470894874,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000104",
+        "scores": {
+          "overall": 0.48459958932238195,
+          "nid": 0.9691991786447639,
+          "nid_s": 0.9691991786447639,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000105",
+        "scores": {
+          "overall": 0.45726915520628686,
+          "nid": 0.9145383104125737,
+          "nid_s": 0.9145383104125737,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000106",
+        "scores": {
+          "overall": 0.8285198555956679,
+          "nid": 0.8285198555956679,
+          "nid_s": 0.8285198555956679,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000107",
+        "scores": {
+          "overall": 0.21906693711967545,
+          "nid": 0.4381338742393509,
+          "nid_s": 0.4381338742393509,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000108",
+        "scores": {
+          "overall": 0.4990825688073395,
+          "nid": 0.998165137614679,
+          "nid_s": 0.998165137614679,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000109",
+        "scores": {
+          "overall": 0.454679802955665,
+          "nid": 0.90935960591133,
+          "nid_s": 0.90935960591133,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000110",
+        "scores": {
+          "overall": 0.2606256742179072,
+          "nid": 0.5212513484358144,
+          "nid_s": 0.9885433715220949,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000111",
+        "scores": {
+          "overall": 0.4505649717514124,
+          "nid": 0.9011299435028248,
+          "nid_s": 0.9011299435028248,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000112",
+        "scores": {
+          "overall": 0.9889682024659312,
+          "nid": 0.9889682024659312,
+          "nid_s": 0.9889682024659312,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000113",
+        "scores": {
+          "overall": 0,
+          "nid": 0,
+          "nid_s": 0,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000114",
+        "scores": {
+          "overall": 0.9963735267452403,
+          "nid": 0.9963735267452403,
+          "nid_s": 0.9963735267452403,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000115",
+        "scores": {
+          "overall": 0.49607374530556503,
+          "nid": 0.9921474906111301,
+          "nid_s": 0.9921474906111301,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000116",
+        "scores": {
+          "overall": 0.37995824634655534,
+          "nid": 0.7599164926931107,
+          "nid_s": 0.8046692607003891,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000117",
+        "scores": {
+          "overall": 0.2817544688558154,
+          "nid": 0.8452634065674463,
+          "nid_s": 0.8637651300540818,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000118",
+        "scores": {
+          "overall": 0.4785772029102668,
+          "nid": 0.9571544058205336,
+          "nid_s": 0.9571544058205336,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000119",
+        "scores": {
+          "overall": 0.4421768707482993,
+          "nid": 0.8843537414965986,
+          "nid_s": 0.9131364997860505,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000120",
+        "scores": {
+          "overall": 0.43987975951903807,
+          "nid": 0.8797595190380761,
+          "nid_s": 0.7820922795797167,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000121",
+        "scores": {
+          "overall": 0.32305716120745026,
+          "nid": 0.9691714836223507,
+          "nid_s": 0.8790637191157347,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000122",
+        "scores": {
+          "overall": 0.27006722024515617,
+          "nid": 0.8102016607354685,
+          "nid_s": 0.9714896650035638,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000123",
+        "scores": {
+          "overall": 0.3979031452820769,
+          "nid": 0.7958062905641538,
+          "nid_s": 0.7958062905641538,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000124",
+        "scores": {
+          "overall": 0.4678733031674208,
+          "nid": 0.9357466063348416,
+          "nid_s": 0.9357466063348416,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000125",
+        "scores": {
+          "overall": 0.9986522911051213,
+          "nid": 0.9986522911051213,
+          "nid_s": 0.9986522911051213,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000126",
+        "scores": {
+          "overall": 0.4540901502504174,
+          "nid": 0.9081803005008348,
+          "nid_s": 0.9081803005008348,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000127",
+        "scores": {
+          "overall": 0.38392171910974676,
+          "nid": 0.7678434382194935,
+          "nid_s": 0.826455955516535,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000128",
+        "scores": {
+          "overall": 0.2701789935832489,
+          "nid": 0.5403579871664979,
+          "nid_s": 0.6850335070737156,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000129",
+        "scores": {
+          "overall": 0.9253301320528211,
+          "nid": 0.9253301320528211,
+          "nid_s": 0.9253301320528211,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000130",
+        "scores": {
+          "overall": 0.4046932894195142,
+          "nid": 0.8093865788390284,
+          "nid_s": 0.8156822810590632,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000131",
+        "scores": {
+          "overall": 0.8616684266103485,
+          "nid": 0.8616684266103485,
+          "nid_s": 0.8616684266103485,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000132",
+        "scores": {
+          "overall": 0.441659272404614,
+          "nid": 0.883318544809228,
+          "nid_s": 0.8674698795180723,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000133",
+        "scores": {
+          "overall": 0.4786633197364292,
+          "nid": 0.9573266394728585,
+          "nid_s": 0.9573266394728585,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000134",
+        "scores": {
+          "overall": 0.8246249353336782,
+          "nid": 0.8246249353336782,
+          "nid_s": 0.8246249353336782,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000135",
+        "scores": {
+          "overall": 0.9960474308300395,
+          "nid": 0.9960474308300395,
+          "nid_s": 0.9960474308300395,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000136",
+        "scores": {
+          "overall": 0.8422339991846718,
+          "nid": 0.8422339991846718,
+          "nid_s": 0.8422339991846718,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000137",
+        "scores": {
+          "overall": 0.9760403530895334,
+          "nid": 0.9760403530895334,
+          "nid_s": 0.9760403530895334,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000138",
+        "scores": {
+          "overall": 0.9992841803865425,
+          "nid": 0.9992841803865425,
+          "nid_s": 0.9992841803865425,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000139",
+        "scores": {
+          "overall": 0.9579701723803989,
+          "nid": 0.9579701723803989,
+          "nid_s": 0.9579701723803989,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000140",
+        "scores": {
+          "overall": 0.8551908015330778,
+          "nid": 0.8551908015330778,
+          "nid_s": 0.8551908015330778,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000141",
+        "scores": {
+          "overall": 0.0034071550255536627,
+          "nid": 0.0068143100511073255,
+          "nid_s": 0.0068143100511073255,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000142",
+        "scores": {
+          "overall": 0.4847502578458818,
+          "nid": 0.9695005156917637,
+          "nid_s": 0.9695005156917637,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000143",
+        "scores": {
+          "overall": 0.48643373023618974,
+          "nid": 0.9728674604723795,
+          "nid_s": 0.9728674604723795,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000144",
+        "scores": {
+          "overall": 0.4441979143554471,
+          "nid": 0.8883958287108942,
+          "nid_s": 0.8883958287108942,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000145",
+        "scores": {
+          "overall": 0.44903498190591074,
+          "nid": 0.8980699638118215,
+          "nid_s": 0.8980699638118215,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000146",
+        "scores": {
+          "overall": 0.2772470267108598,
+          "nid": 0.8317410801325794,
+          "nid_s": 0.8541804544451798,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000147",
+        "scores": {
+          "overall": 0.2756117040586655,
+          "nid": 0.8268351121759965,
+          "nid_s": 0.33912079793128924,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000148",
+        "scores": {
+          "overall": 0.3295838020247469,
+          "nid": 0.6591676040494938,
+          "nid_s": 0.6591676040494938,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000149",
+        "scores": {
+          "overall": 0.2756563245823389,
+          "nid": 0.5513126491646778,
+          "nid_s": 0.49104859335038364,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000150",
+        "scores": {
+          "overall": 0.2289029535864979,
+          "nid": 0.6867088607594937,
+          "nid_s": 0.38348868175765644,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000151",
+        "scores": {
+          "overall": 0.4968017057569296,
+          "nid": 0.9936034115138592,
+          "nid_s": 0.9936034115138592,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000152",
+        "scores": {
+          "overall": 0.9092878418629841,
+          "nid": 0.9092878418629841,
+          "nid_s": 0.9092878418629841,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000153",
+        "scores": {
+          "overall": 0.4981476907878489,
+          "nid": 0.9962953815756977,
+          "nid_s": 0.9962953815756977,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000154",
+        "scores": {
+          "overall": 0.46983311938382544,
+          "nid": 0.9396662387676509,
+          "nid_s": 0.9396662387676509,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000155",
+        "scores": {
+          "overall": 0.49087893864013266,
+          "nid": 0.9817578772802653,
+          "nid_s": 0.9817578772802653,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000156",
+        "scores": {
+          "overall": 0.4920574886535552,
+          "nid": 0.9841149773071104,
+          "nid_s": 0.9841149773071104,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000157",
+        "scores": {
+          "overall": 0.37229275578790144,
+          "nid": 0.7445855115758029,
+          "nid_s": 0.7445855115758029,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000158",
+        "scores": {
+          "overall": 0.49635036496350365,
+          "nid": 0.9927007299270073,
+          "nid_s": 0.9927007299270073,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000159",
+        "scores": {
+          "overall": 0.4962962962962963,
+          "nid": 0.9925925925925926,
+          "nid_s": 0.9925925925925926,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000160",
+        "scores": {
+          "overall": 0.9918851435705368,
+          "nid": 0.9918851435705368,
+          "nid_s": 0.9918851435705368,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000161",
+        "scores": {
+          "overall": 0.995492594977463,
+          "nid": 0.995492594977463,
+          "nid_s": 0.995492594977463,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000162",
+        "scores": {
+          "overall": 0.9939350695683197,
+          "nid": 0.9939350695683197,
+          "nid_s": 0.9939350695683197,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000163",
+        "scores": {
+          "overall": 0.4232268121590023,
+          "nid": 0.8464536243180046,
+          "nid_s": 0.8464536243180046,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000164",
+        "scores": {
+          "overall": 0.9984578100903283,
+          "nid": 0.9984578100903283,
+          "nid_s": 0.9984578100903283,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000165",
+        "scores": {
+          "overall": 0.277504105090312,
+          "nid": 0.8325123152709359,
+          "nid_s": 0.8566870513161393,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000166",
+        "scores": {
+          "overall": 0.289237668161435,
+          "nid": 0.8677130044843049,
+          "nid_s": 0.8886798369394795,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000167",
+        "scores": {
+          "overall": 0.49136,
+          "nid": 0.98272,
+          "nid_s": 0.98272,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000168",
+        "scores": {
+          "overall": 0.4644691780821918,
+          "nid": 0.9289383561643836,
+          "nid_s": 0.9289383561643836,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000169",
+        "scores": {
+          "overall": 0.4777155655095185,
+          "nid": 0.955431131019037,
+          "nid_s": 0.955431131019037,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000170",
+        "scores": {
+          "overall": 0.36610711430855314,
+          "nid": 0.7322142286171063,
+          "nid_s": 0.7660256410256411,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000171",
+        "scores": {
+          "overall": 0.499597747385358,
+          "nid": 0.999195494770716,
+          "nid_s": 0.999195494770716,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000172",
+        "scores": {
+          "overall": 0.998110661268556,
+          "nid": 0.998110661268556,
+          "nid_s": 0.998110661268556,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000173",
+        "scores": {
+          "overall": 0.4957310565635005,
+          "nid": 0.991462113127001,
+          "nid_s": 0.991462113127001,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000174",
+        "scores": {
+          "overall": 0.49079143852663015,
+          "nid": 0.9815828770532603,
+          "nid_s": 0.9815828770532603,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000175",
+        "scores": {
+          "overall": 0.4963087248322148,
+          "nid": 0.9926174496644296,
+          "nid_s": 0.9926174496644296,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000176",
+        "scores": {
+          "overall": 0.4926924326079896,
+          "nid": 0.9853848652159792,
+          "nid_s": 0.9853848652159792,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000177",
+        "scores": {
+          "overall": 0.45737187272285645,
+          "nid": 0.9147437454457129,
+          "nid_s": 0.9147437454457129,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000178",
+        "scores": {
+          "overall": 0.31218974076116934,
+          "nid": 0.936569222283508,
+          "nid_s": 0.8752466564349923,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000179",
+        "scores": {
+          "overall": 0.4980268350434096,
+          "nid": 0.9960536700868192,
+          "nid_s": 0.9960536700868192,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000180",
+        "scores": {
+          "overall": 0.30554317134789716,
+          "nid": 0.9166295140436915,
+          "nid_s": 0.8898441698011822,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000181",
+        "scores": {
+          "overall": 0.32045929018789143,
+          "nid": 0.6409185803757829,
+          "nid_s": 0.6409185803757829,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000182",
+        "scores": {
+          "overall": 0.18981627296587925,
+          "nid": 0.5694488188976378,
+          "nid_s": 0.15914786967418545,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000183",
+        "scores": {
+          "overall": 0.25375375375375375,
+          "nid": 0.5075075075075075,
+          "nid_s": 0.5075075075075075,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000184",
+        "scores": {
+          "overall": 0.33856893542757416,
+          "nid": 0.6771378708551483,
+          "nid_s": 0.6771378708551483,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000185",
+        "scores": {
+          "overall": 0.48457943925233643,
+          "nid": 0.9691588785046729,
+          "nid_s": 0.9691588785046729,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000186",
+        "scores": {
+          "overall": 0.47978694345807155,
+          "nid": 0.9595738869161431,
+          "nid_s": 0.9595738869161431,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000187",
+        "scores": {
+          "overall": 0.31504983150498317,
+          "nid": 0.9451494945149495,
+          "nid_s": 0.9635002339728591,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000188",
+        "scores": {
+          "overall": 0.27773286625348065,
+          "nid": 0.8331985987604419,
+          "nid_s": 0.8597706641184902,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000189",
+        "scores": {
+          "overall": 0.2766727523141475,
+          "nid": 0.8300182569424426,
+          "nid_s": 0.879777271576816,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000190",
+        "scores": {
+          "overall": 0.2982710926694329,
+          "nid": 0.8948132780082988,
+          "nid_s": 0.9227041434456021,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000191",
+        "scores": {
+          "overall": 0.49890566863646313,
+          "nid": 0.9978113372729263,
+          "nid_s": 0.9978113372729263,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000192",
+        "scores": {
+          "overall": 0.9991917559102849,
+          "nid": 0.9991917559102849,
+          "nid_s": 0.9991917559102849,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000193",
+        "scores": {
+          "overall": 0.997659985756435,
+          "nid": 0.997659985756435,
+          "nid_s": 0.997659985756435,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000194",
+        "scores": {
+          "overall": 0.9985931344963421,
+          "nid": 0.9985931344963421,
+          "nid_s": 0.9985931344963421,
+          "teds": null,
+          "teds_s": null,
+          "mhs": null,
+          "mhs_s": null
+        }
+      },
+      {
+        "id": "01030000000195",
+        "scores": {
+          "overall": 0.49852974440171904,
+          "nid": 0.9970594888034381,
+          "nid_s": 0.9970594888034381,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000196",
+        "scores": {
+          "overall": 0.49934782608695655,
+          "nid": 0.9986956521739131,
+          "nid_s": 0.9986956521739131,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000197",
+        "scores": {
+          "overall": 0.3080129207043868,
+          "nid": 0.9240387621131604,
+          "nid_s": 0.8764044943820225,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000198",
+        "scores": {
+          "overall": 0.473015873015873,
+          "nid": 0.946031746031746,
+          "nid_s": 0.946031746031746,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000199",
+        "scores": {
+          "overall": 0.3401253918495298,
+          "nid": 0.6802507836990596,
+          "nid_s": 0.6802507836990596,
+          "teds": null,
+          "teds_s": null,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      },
+      {
+        "id": "01030000000200",
+        "scores": {
+          "overall": 0.29868543224356153,
+          "nid": 0.8960562967306847,
+          "nid_s": 0.055762081784386616,
+          "teds": 0,
+          "teds_s": 0,
+          "mhs": 0,
+          "mhs_s": 0
+        }
+      }
+    ],
+    "portCheck": {
+      "engines": [
+        "docling",
+        "edgeparse",
+        "liteparse",
+        "markitdown",
+        "nutrient",
+        "opendataloader",
+        "opendataloader-hybrid",
+        "opendataloader-hybrid-helium",
+        "opendataloader-hybrid-hydrogen",
+        "unstructured",
+        "unstructured-hires"
+      ],
+      "pairs": 9878,
+      "exact": 9874,
+      "aptedSuboptimal": [
+        "opendataloader-hybrid-hydrogen 01030000000181 (MHS 0.6190 vs 0.5795)",
+        "unstructured 01030000000183 (MHS 0.0778 vs 0.0712)"
+      ],
+      "off": []
+    }
+  },
+  "commit": "cff19c43719318beabb87c1c79d14eda971b953f",
+  "date": "2026-10-16"
+}

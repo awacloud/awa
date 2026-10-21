@@ -5,7 +5,7 @@
 
 /**
  * Gate G-OF1 — the `oconvDefaultFaces` descriptor surface
- * (`ai/plans/oconv/spikes/w0-fonts/FINDINGS.md` § 7, frozen by
+ * (`ai/archives/plans/oconv/spikes/w0-fonts/FINDINGS.md` § 7, frozen by
  * office/BATCH_37 task 03). Every assertion here pins a FROZEN property:
  * W2 (`oconv` default-route wiring) binds to it immutably.
  */

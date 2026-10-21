@@ -42,7 +42,7 @@ const pkg = runtime.resolve('pkgPackage');
 | Method | Description |
 |--------|-------------|
 | `read(bytes, opts?)` | `{ mimetype, manifest, parts }`. `opts` overrides the ZIP bomb caps: `maxParts` (default `4096`), `maxUncompressed` (default `268435456`, 256 MiB), `maxRatio` (default `200`); `0` disables a cap. A breached cap throws `ParseError('odf/parse-error/zip-bomb')` with `context.limit` naming it; an option that is not a finite number >= 0 throws `ContractError('odf/contract-error/pkg')`. Throws `ParseError('odf/parse-error/pkg')` if mimetype/manifest are missing or the ZIP is invalid. |
-| `write(pkg)` | `Uint8Array`; mimetype emitted first (STORED). Throws `ContractError` if `pkg.mimetype` is missing. |
+| `write(pkg, opts?)` | `Uint8Array`; mimetype emitted first (STORED). `opts.mtime` (`number \| Date`) stamps every ZIP entry; default 1980-01-01 00:00:00 local time (the MS-DOS epoch), so two writes of the same package are byte-identical. Throws `ContractError('odf/contract-error/pkg')` if `pkg.mimetype` is missing, `RenderError('odf/render-error/pkg')` (ZIP error as `cause`) when the ZIP writer refuses the package — an `mtime` outside 1980-2099, say. |
 | `empty(mimetype)` | Skeleton `{ mimetype, manifest, parts: {} }`. |
 | `setPart(pkg, path, bytes, mediaType?)` | Adds the part **and** a manifest entry. |
 | `getPart(pkg, path)` / `getPartText(pkg, path)` | Read helpers. |
@@ -56,7 +56,9 @@ const pkg = runtime.resolve('pkgPackage');
 const mt = runtime.resolve('pkgMimetype');
 const p = pkg.empty(mt.CT_ODT);
 pkg.setPart(p, 'content.xml', new TextEncoder().encode('<x/>'), 'text/xml');
-const bytes = pkg.write(p);
+const bytes = pkg.write(p);                                 // entries dated 1980-01-01 00:00:00
+const dated = pkg.write(p, { mtime: new Date(2026, 9, 20, 12, 0, 0) });
+console.log(pkg.write(p).every((b, i) => b === bytes[i])); // → true
 ```
 
 ## Security — ZIP bomb guards
@@ -100,6 +102,7 @@ console.log(back.parts['Pictures/pad.bin'].length); // → 1048576
 ## Notes
 
 - The `mimetype` file is forced into first position via insertion ordering of the `files` object passed to `zip.zipSync`, and always written as `[bytes, { level: 0 }]` for STORED.
+- **Reproducible output**: without `opts.mtime` every entry carries 1980-01-01 00:00:00, built at call time with the local-time constructor because the ZIP writer encodes with local-time getters (a UTC epoch number would fall before 1980 west of Greenwich). Same contract as the OPC writer of `@awacloud/ooxml` (`opc/package.js` `write`). Pass `{ mtime: new Date() }` to stamp the write time instead.
 - If reading fails at the ZIP layer (non-ZIP bytes), a `ParseError` `odf/parse-error/pkg` is thrown with a chained `cause`. A ZIP bomb error is never re-wrapped this way: it keeps its `odf/parse-error/zip-bomb` code.
 - The ZIP layer's unsafe-path (zip-slip) refusal surfaces as `odf/parse-error/pkg` too.
 

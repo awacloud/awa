@@ -95,7 +95,12 @@ export const textTrackedChanges = {
             if (sub.info) kids.push(renderChangeInfo(sub.info));
             for (const b of sub.body || []) kids.push(b);
             const attrs = {};
-            if (reg.id) attrs['text:id'] = reg.id;
+            // `xml:id` is the region's required ID since ODF 1.2;
+            // `text:id` repeats it.
+            if (reg.id) {
+                attrs['xml:id'] = reg.id;
+                attrs['text:id'] = reg.id;
+            }
             return xml.el('text:changed-region', attrs, [
                 xml.el(tag, { ...(sub.attrs || {}) }, kids)
             ]);

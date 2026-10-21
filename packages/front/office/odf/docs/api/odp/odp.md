@@ -25,7 +25,7 @@ const odp = runtime.resolve('odp');
 | Method | Description |
 |---------|-------------|
 | `read(bytes, opts?)` | Parses a `.odp` into `{ mimetype, slides, … }`. `opts` (optional) is forwarded to [`pkgPackage.read`](../pkg/package.md): `{ maxParts?, maxUncompressed?, maxRatio? }` — the ZIP-bomb caps (defaults 4096 entries, 256 MiB total, ratio 200 per entry; `0` disables one); a breach throws `ParseError('odf/parse-error/zip-bomb')`. |
-| `write(doc, opts?)` | Writes a typed document. `opts: { meta, settings, styles }`. Re-emits the `doc.package` parts the writer does not regenerate (everything but `content.xml`, `meta.xml`, `settings.xml`, `styles.xml`) byte-for-byte with their source manifest media types, plus the source manifest's directory entries, and writes `doc.styles` / `doc.settings` / `doc.meta` unless `opts.*` overrides. `meta:generator` is rewritten to `@awacloud/odf` unless `opts.meta.generator` is given. Precedence: regenerated part, then writer-supplied part, then the carried copy; delete from `doc.package.parts` (or delete `doc.package`) to drop carried material. |
+| `write(doc, opts?)` | Writes a typed document. `opts: { meta, settings, styles, mtime }`. `opts.mtime` (`number \| Date`) is the ZIP entry date handed to [`pkgPackage.write`](../pkg/package.md) — default 1980-01-01 00:00:00, so the same document writes the same bytes. Re-emits the `doc.package` parts the writer does not regenerate (everything but `content.xml`, `meta.xml`, `settings.xml`, `styles.xml`) byte-for-byte with their source manifest media types, plus the source manifest's directory entries, and writes `doc.styles` / `doc.settings` / `doc.meta` unless `opts.*` overrides. `meta:generator` is rewritten to `@awacloud/odf` unless `opts.meta.generator` is given. Precedence: regenerated part, then writer-supplied part, then the carried copy; delete from `doc.package.parts` (or delete `doc.package`) to drop carried material. |
 | `empty()` | Document with one empty slide. |
 | `slide(name, opts?)` | Helper — builds `{ type: 'slide', name, frames }`. |
 | `fromSlides([…])` | Multi-slide document. |
@@ -63,6 +63,17 @@ odp.toText(again, { notes: true });  // 'Welcome\n\nSpeaker note.'
 - mimetype: `application/vnd.oasis.opendocument.presentation`.
 - Rendering places `<office:automatic-styles>` (optional) before
   `<office:body>` in `content.xml`.
+- Every `<draw:page>` needs a `draw:master-page-name`. `write` gives a
+  slide without `masterPageName` the master page `Default`; when the
+  styles it writes (`opts.styles`, else `doc.styles`, else empty) have no
+  `style:master-page` of that name, it adds one, with a 28 × 15.75 cm
+  landscape `style:page-layout` named `PM1` (or the first free `PM<n>`).
+  Reading such a file back shows `masterPageName: 'Default'` and those two
+  styles. The models passed to `write` are not modified.
+- `notes.body` is written as given. The schema wants shapes inside
+  `<presentation:notes>` (a text-box `draw:frame`, as LibreOffice writes);
+  bare paragraphs, as in the example above, read back the same but are
+  refused by a validator.
 
 ## See also
 

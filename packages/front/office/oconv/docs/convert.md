@@ -80,7 +80,7 @@ in exactly one place (`oconvPdfBox.resolveLayout`) — see
 error names.
 
 No `assets` input on `convert`: image bytes come from the reader's own
-escapes only (e.g. `escapes.docx.bytes` for a `docx` source, the rule all
+escapes only (`escapes.docx.bytes` for a `docx` source, `escapes.odt.bytes` for an `odt` one, the rule all
 three writers share) — a `convert` caller has no markdown image destinations to key an
 asset manifest by, unlike `fromMd`.
 
@@ -132,10 +132,12 @@ records that as `list/nesting-flattened`
 "odt-structured.odt -> docx — MEASURED DIFFERENT: the two bullet lists stay
 distinct; only the nested item flattens (exact difference pinned)"). The
 `→ docx` target inherits the same writer's fixed built-in
-`word/styles.xml` (`Normal`, `Heading1`–`Heading6`, `Table Grid`) and
-bordered tables, and the `→ odt` target the odt writer's fixed
+`word/styles.xml` (`Normal`, `Heading1`–`Heading6`, `Table Grid`, and
+`SourceCode`, `BlockText`, `HorizontalRule` for code blocks, quotes and
+rules) and bordered tables, and the `→ odt` target the odt writer's fixed
 built-in `styles.xml` (`Standard`, `Text_20_body`, `Heading`,
-`Heading_20_1`–`Heading_20_6`) and bordered, margins-aligned tables
+`Heading_20_1`–`Heading_20_6`, and `Preformatted_20_Text`, `Quotations`,
+`Horizontal_20_Line`) and bordered, margins-aligned tables
 — a presentation fact of each writer, not the source document's
 styles carried over. `docx →
 odt`/`odt → docx` reach tier 2 (both writers do); `→ pdf`
@@ -201,21 +203,22 @@ absent (same as `fromMd` — see the package [README](../README.md)):
 `meta:generator: '@awacloud/odf'` in `meta.xml` (`@awacloud/odf`'s
 `writeSidecars` fallback is never nothing); `pdf` always carries
 `/Producer` and `/Creator`, both literally `'@awacloud/oconv'`
-(`src/write/ir-to-pdf.js`'s `addMetadata` call). For the `docx`/`odt`
-targets, reproducibility differs. The `docx` target is **byte-reproducible**:
-`@awacloud/ooxml` stamps every zip entry with a fixed 1980-01-01 00:00
-timestamp, so the `odt → docx` pair gives identical bytes across calls
-(`tests/crossformat-ooxml-odf.integration.test.js` "odt -> docx: two convert
-runs are BYTE-identical"; `src/oconv.test.js` "convert odt -> docx is
-byte-reproducible across two calls"). The `odt` target is **not**: the ODF
-package writer stamps the current time, so two identical `docx → odt` calls
-give equal document models (model-equal for every fixture measured — 6
-`docx→odt` + 2 `odt→docx` fixtures in the `crossformat-ooxml-odf` harness) but
-may give different bytes. The `pdf` target **is** byte-reproducible: no zip
-container, no date, no `/ID` (see [`docs/pdf-writer.md`](./pdf-writer.md)'s
-determinism note), so both `→ pdf` pairs reproduce. **No round-trip stability
-claim** is made for any pair — converting `docx → odt` and back is not asserted to reproduce the
-original bytes or even the original IR.
+(`src/write/ir-to-pdf.js`'s `addMetadata` call). Every pair is
+**byte-reproducible**: two identical calls give identical bytes. The `docx`
+target: `@awacloud/ooxml` stamps every zip entry with a fixed
+1980-01-01 00:00 timestamp, so the `odt → docx` pair gives identical bytes
+across calls (`tests/crossformat-ooxml-odf.integration.test.js` "odt -> docx:
+two convert runs are BYTE-identical"; `src/oconv.test.js` "convert odt ->
+docx is byte-reproducible across two calls"). The `odt` target: `@awacloud/odf`
+stamps the same fixed timestamp, so two identical `docx → odt` calls give
+byte-identical bytes too (and equal document models, for every fixture
+measured — 6 `docx→odt` + 2 `odt→docx` fixtures in the
+`crossformat-ooxml-odf` harness). The `pdf` target: no zip container, no
+date, an `/ID` derived from the content (see
+[`docs/pdf-writer.md`](./pdf-writer.md)'s determinism note), so both `→ pdf`
+pairs reproduce. **No round-trip stability claim** is made for any pair —
+converting `docx → odt` and back is not asserted to reproduce the original
+bytes or even the original IR.
 
 ## See also
 

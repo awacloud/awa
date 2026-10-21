@@ -13,7 +13,7 @@ status: complete
 
 **Module** `mdMath` | **Source** `packages/front/office/md/src/extra/math.js` | **Deps** `mdNode`, `mdAstWalker`, `mdAstTypes`, `mdShared` | **Worker-safe** yes
 
-Post-parse AST pass: splits text nodes on `$$…$$` / `$…$` boundaries and emits `math_inline` / `math_block` carrying the LaTeX source in `literal`. Fenced code blocks with the `math` info string are also converted to `math_block`. At render time, wraps in `<span class="math inline">` / `<div class="math display">`.
+The extension declares `inlineSyntax: ['math']`: on an instance it is installed on (`md.use(mdMath)`), the inline parser claims every `$…$` / `$$…$$` span before any other inline construct — like a code span — and emits `math_inline` / `math_block` carrying the LaTeX source verbatim in `literal`, so `$H~2~O$` is no strikethrough and `$a*b*c$` no emphasis, whatever the install order of the other extras. A code span opened before the `$` still wins. Fenced code blocks with the `math` info string are converted to `math_block` by a post-parse pass. At render time, wraps in `<span class="math inline">` / `<div class="math display">`.
 
 ## Resolve
 
@@ -34,9 +34,10 @@ const m = md.createMd().use(mdMath);
 | Export | Signature | Description |
 |--------|-----------|--------------|
 | `name` | `string` | `'mdMath'`, the key `.use()` deduplicates on |
+| `inlineSyntax` | `['math']` | Read by `md.parse`: the inline parser claims the math spans |
 | `install` | `(md) => void` | Patches `md.parse`, `md.render` and `md.renderHtml` |
 | `splitMath` | `(lit: string) => Array<{kind, value}> \| null` | Standalone splitter; `null` when the text holds no `$` |
-| `expandMathInAst` | `(root: Node) => Node` | Standalone AST pass; returns `root` |
+| `expandMathInAst` | `(root: Node, opts?) => Node` | Standalone AST pass (fenced math blocks, and `$` spans split out of text nodes — for an AST parsed without the claim); `opts.textSpans: false` skips the text split. Returns `root` |
 | `lowerMathToHtml` | `(root: Node) => Node` | Render-time rewrite of the math nodes into `<span class="math inline">` / `<div class="math display">` HTML |
 
 ## Examples
@@ -61,10 +62,9 @@ m.renderHtml('```math\n\\sum_{i=1}^n i\n```');
 ## Notes
 
 - Pairs client-side with KaTeX or MathJax to render the spans.
-- The inline `$…$` regex is non-greedy and excludes newlines — no support for multiline inline LaTeX.
-- `$$…$$` accepts multiline content.
-- Escape literal `$` with `\$` in the source.
-- Install `mdMath` before `mdSubsuper` and `mdHighlight`; installed after them, `$x^{2}y^{3}$` / `$a==b==c$` are split before math claims them.
+- A `$…$` span closes at the next `$` not escaped by a backslash, with at least one character between; a `$$…$$` span at the next `$$`. Neither crosses a line break — no multiline LaTeX outside a fenced ` ```math ` block.
+- Escape a literal `$` with `\$` in the source; inside a span the LaTeX is kept verbatim (`$a\$b$` → `a\$b`).
+- The install order does not matter: `$x^{2}y^{3}$` / `$a==b==c$` stay math with `mdSubsuper` / `mdHighlight` installed before or after.
 
 ## See also
 

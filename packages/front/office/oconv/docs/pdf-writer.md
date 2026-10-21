@@ -36,11 +36,11 @@ the same single `oconvPdfBox.resolveLayout` call, and inherits every
 refusal and every loss code below unchanged — no hyphenation, no
 justification, no widow/orphan control, no floats, no multi-column
 layout, no table page-splitting, no table of contents, no running
-header/footer beyond the page number, `keepTogether` inert for delegated
-blocks, and `run.strike` unrendered — recorded as `inline/strike-dropped`,
+header/footer beyond the page number, keep-with-next for headings only,
+and `run.strike` unrendered — recorded as `inline/strike-dropped`,
 never drawn. The only
 difference from `md → pdf` is the source of the IR: a `convert` call
-resolves an image only through the reader-carried `escapes.docx.bytes`
+resolves an image only through the reader-carried `escapes.docx.bytes` / `escapes.odt.bytes`
 (no `assets` manifest — see [`docs/convert.md`](./convert.md)). See
 [`docs/loss-matrix.md`](./loss-matrix.md) § "Cross-format pairs" for
 the measured `docx → pdf` / `odt → pdf` rows this inheritance produces.
@@ -94,7 +94,7 @@ supplies at call time.
 
 | Route | How | Encoding | When |
 |---|---|---|---|
-| **Standard 14** (default) | `oconvPdfMetrics` looks up `Helvetica` / `Helvetica-Bold` / `Helvetica-Oblique` / `Helvetica-BoldOblique` / `Courier` via `@awacloud/fonts/standard14`; `@awacloud/pdf`'s `pdfBuilder.addFont({ name, baseFont, subtype: 'Type1', encoding: 'WinAnsiEncoding' })` references the viewer's own resident font, nothing embedded | WinAnsi (CP1252) literal strings, and the font dict names `/Encoding /WinAnsiEncoding`, so bytes 0x80–0xFF (accented letters, the em dash, the bullet markers) decode back to the characters drawn | No `opts.pdf.fonts` entry for a style class in use |
+| **Standard 14** (default) | `oconvPdfMetrics` looks up `Helvetica` / `Helvetica-Bold` / `Helvetica-Oblique` / `Helvetica-BoldOblique` / `Courier` via `@awacloud/fonts/standard14`; `@awacloud/pdf`'s `pdfBuilder.addFont({ name, baseFont, subtype: 'Type1', encoding: 'WinAnsiEncoding', standard14 })` references the viewer's own resident font, nothing embedded; the dictionary carries the face's Core 14 `Widths` and a `FontDescriptor`, which PDF 2.0 requires | WinAnsi (CP1252) literal strings, and the font dict names `/Encoding /WinAnsiEncoding`, so bytes 0x80–0xFF (accented letters, the em dash, the bullet markers) decode back to the characters drawn | No `opts.pdf.fonts` entry for a style class in use |
 | **Embedded** (caller bytes) | `opts.pdf.fonts.<style>` (a whole sfnt program) → `pdfFontEmbed.embedSimple`/`embedCid` → `pdfBuilder.addFont({ name, embedded })`, subset to the exact code points the document uses | `WinAnsiEncoding` hex strings when every code point the style uses is WinAnsi-representable, `Identity-H` (CID) hex strings otherwise | An `opts.pdf.fonts` entry is supplied for that style class |
 
 Mixing is allowed: a document can supply `regular`/`bold`/`italic`/
@@ -276,23 +276,24 @@ plus the ones inherited unchanged from `md-to-ir.js` (the same reader
 | `layout/line-overflow` | `linebreak.js`, `render/code.js` | `{tokens, width, column, text}` | one unbreakable token (a run with no space) wider than the text column |
 | `layout/block-clipped` | `stack.js` | `{clippedLines}` + a prose `detail` string | a block (e.g. an oversized code block) is taller than one page; the excess is clipped at the page bottom, not carried onto a new page (no block ever splits across a page except by this clipping) |
 | `layout/list-empty` | `render/list.js` | `{index}` | a `list` node with no drawable item |
+| `list/task-marker-dropped` | `render/list.js` | `'[x]'` or `'[ ]'` | a GFM task item (`listItem.escapes.md.task`) whose checkbox the regular face cannot draw (`measurer.covers('☐' or '☒', 'regular')` is `false` — always on the Standard 14 and Liberation routes), or whose first block is not a paragraph: the item is drawn without it. ONE record per item; when the face covers the glyph, a leading `☐ ` / `☒ ` run is drawn and nothing is recorded |
 | `layout/table-empty` | `render/table.js` | `{index, rows}` | a `table` node with zero rows, or zero columns after building the grid |
 | `layout/table-scaled` | `render/table.js` | `{index, from, to, column}` | a table's natural column widths exceed the text column; columns are scaled down proportionally to fit |
 | `layout/table-clipped` | `render/table.js` | `{index, columns, clippedCells, cells}` | one or more cells are too narrow even at their minimum width (`subMinimal`) or a cell's own content was clipped inside its box; `cells` lists each `{row, column}` affected |
 | `inline/strike-dropped` | `linebreak.js` (`breakInlines`) | `{runs, text}` | a text block carries at least one struck run (`run.strike`): no strikethrough rule is drawn and the text is drawn plain. ONE record per block; `runs` counts the struck runs, `text` is the first one's text truncated to 40 characters; the stack prefixes the block's `index` and `kind`. The drawn bytes are exactly those of the unstruck run — recorded, not rendered. See [What `run.strike` does](#what-runstrike-and-code-run-emphasis-do-on-this-writer-recorded-not-rendered) |
 | `inline/code-emphasis-dropped` | `linebreak.js` (`breakInlines`) | `{runs, text}` | a text block carries at least one `code` run that is also bold or italic: the monospace class wins and the emphasis is not drawn. Same one-record-per-block shape and the same unchanged bytes as `inline/strike-dropped` |
-| `layout/image-dropped` | `render/image.js` | `{index, name, alt, reason, bytes, format?}` | an image the writer could NOT place: `reason: 'no-bytes'` (nothing in `assets`, nothing carried by the reader) or `reason: 'unsupported-encoding'` (bytes present, encoding not directly embeddable — `format` names the container when the header reader recognised it). A PLACED image records nothing. See [Images](#images) |
+| `layout/image-dropped` | `render/image.js` | `{index, name, alt, reason, bytes, format?}` | an image the writer could NOT place: `reason: 'no-bytes'` (nothing in `assets`, nothing carried by the reader) or `reason: 'unsupported-encoding'` (bytes present, encoding not placeable — `format` names the container when it can be named: `png`, `jpeg`, a GIF / WebP / BMP / TIFF signature, else the content type a reader carried). A PLACED image records nothing. See [Images](#images) |
 
 **Inherited from `md-to-ir.js` (the shared reader)** — identical codes and
 triggers to `md → docx`/`md → odt`, see
 [`docs/loss-matrix.md`](./loss-matrix.md)'s `md → docx` row for the full
 list: `frontmatter/stripped`, `list/start-dropped`,
-`list/task-marker-dropped`, `table/align-dropped`,
+`table/align-dropped`,
 `inline/linebreak-degraded`, `inline/dropped` (`link-title` /
 `html_inline`), `block/dropped` (`html_block`). A thematic break is **not**
 dropped on this pair: `md-to-ir.js` maps it to an IR `hr` with no loss and
-`stack.js` draws it as a rule (`block/dropped` detail `hr` is a docx/odt
-WRITER code, not a reader one).
+`stack.js` draws it as a rule (the docx and odt writers write it as a
+styled empty paragraph; no writer records `block/dropped` detail `hr`).
 
 **Retired stub codes** — `layout/list-unrendered`, `layout/code-unrendered`,
 `layout/table-unrendered`, `layout/image-unrendered` were placeholder
@@ -328,9 +329,9 @@ duplicated at the facade.
 
 ## Images
 
-`md → pdf` **places 1- and 3-component JPEG images** and records an honest,
-machine-readable loss for every other case — a CMYK (4-component) JPEG
-included (`src/write/pdf/render/image.test.js` § "a CMYK JPEG is refused,
+`md → pdf` **places 1- and 3-component JPEG images and non-interlaced PNG
+images** and records an honest, machine-readable loss for every other case —
+a CMYK (4-component) JPEG and an interlaced or malformed PNG included (`src/write/pdf/render/image.test.js` § "a CMYK JPEG is refused,
 not guessed at"). Placement goes through `@awacloud/pdf`'s
 `pdfBuilder.addImage` seam (see "The `addImage` seam this consumes" below).
 
@@ -347,7 +348,8 @@ const { bytes, losses } = await oconv.fromMd({
 ```
 
 The key is the CommonMark image destination **exactly as written** —
-`![Diagram](sub/dir/diagram.jpg)` needs the key `sub/dir/diagram.jpg`.
+`![Diagram](sub/dir/diagram.jpg)` needs the key `sub/dir/diagram.jpg`,
+`![Diagram](<my diagram.jpg>)` the key `my diagram.jpg`.
 There is no normalisation, no path resolution and no fetching: this
 package never touches the network or the filesystem. A key no image
 references is ignored (no loss, no error). `assets` must be a non-null,
@@ -355,7 +357,7 @@ non-array object whose every value is a `Uint8Array`, else `fromMd` throws
 `oconv: bad assets` before the reader even runs.
 
 The resolution rule is the same in all three writers: **caller `assets`
-first, then the bytes a `docx → IR` read carried in `escapes.docx.bytes`,
+first, then the bytes a reader carried in `escapes.docx.bytes` / `escapes.odt.bytes`,
 else nothing.** The three copies of that rule are pinned byte-identical by
 `src/write/asset-bytes-drift.test.js`.
 
@@ -374,8 +376,12 @@ about block-level kinds changed.
 | Input | Result |
 |---|---|
 | JPEG (baseline / extended / progressive; 1 or 3 components) | **PLACED**. `/Filter /DCTDecode`, bytes embedded verbatim, drawn with `q w 0 0 h x y cm /Im<n> Do Q`. NO loss |
-| PNG (colour type 0 or 2) | `layout/image-dropped`, `reason: 'unsupported-encoding'`, `format: 'png'` |
-| PNG (palette / alpha), CMYK JPEG, any other format, malformed bytes | `layout/image-dropped`, `reason: 'unsupported-encoding'` (no `format`) |
+| PNG, colour type 0 or 2 without `tRNS`, non-interlaced, any bit depth | **PLACED**. Its concatenated `IDAT` embedded verbatim, `/Filter /FlateDecode` with `/DecodeParms << /Predictor 15 /Colors 1\|3 /BitsPerComponent d /Columns w >>`. NO loss |
+| PNG palette (1 / 2 / 4 / 8 bits), grey or RGB + alpha (8 / 16 bits), or a `tRNS` colour key, non-interlaced | **PLACED**. Inflated (bounded by its `IHDR` size), unfiltered, colour samples (a palette as 8-bit RGB) and a DeviceGray `/SMask` (none when every pixel is opaque), both `/FlateDecode`. NO loss |
+| PNG interlaced, malformed, or above 64 MiB of filtered data | `layout/image-dropped`, `reason: 'unsupported-encoding'`, `format: 'png'` |
+| CMYK JPEG | `layout/image-dropped`, `reason: 'unsupported-encoding'`, `format: 'jpeg'` |
+| GIF, WebP, BMP, TIFF | `layout/image-dropped`, `reason: 'unsupported-encoding'`, `format` from the signature (`gif`, `webp`, `bmp`, `tiff`) |
+| any other bytes | `layout/image-dropped`, `reason: 'unsupported-encoding'`, `format` from the content type a reader carried (`image/x` → `x`), else no `format` |
 | no bytes resolved | `layout/image-dropped`, `reason: 'no-bytes'`, `bytes: 0` |
 
 On every refusal the italic `[image: <alt>]` placeholder is still drawn, so
@@ -384,17 +390,21 @@ reason is on the ledger. (This writer's one silent drop is a link's
 target; a struck run and bold/italic inside a code run are recorded, not
 drawn — see [`docs/loss-matrix.md`](./loss-matrix.md)'s `md → pdf` row.)
 
-**Why PNG does not place, stated plainly.** `pdfBuilder.addImage` decodes
+**How PNG places, stated plainly.** `pdfBuilder.addImage` decodes
 nothing — the bytes go into the XObject stream verbatim behind the
-`/Filter` the caller names. JPEG entropy-coded data *is* a PDF image
-stream. A PNG's `IDAT` is a zlib stream of *filtered scanlines*, which is
-not: embedding the file bytes behind `/FlateDecode` would render garbage.
-Doing it properly needs a zlib-to-Flate re-wrap, plus an `/SMask` for the
-alpha colour types and an `/Indexed` palette for colour type 3. None of
-that is implemented, so PNG is REFUSED rather than guessed at — the same
-"a pair whose fidelity cannot be honestly stated is not shipped" rule,
-applied at the format level. PNG placement is routed as its own backlog
-item.
+`/Filter` and typed `/DecodeParms` the caller names. A PNG's `IDAT` is a
+zlib stream of *filtered scanlines*, which is exactly what `/FlateDecode`
+reads behind a PNG `/Predictor 15`, so the simple colour types embed with
+no decoding at all. The palette, alpha and colour-key types are decoded —
+the inflate is bounded by the size the `IHDR` declares (a larger stream
+fails) and by a 64 MiB cap — because a PDF image carries its alpha as a
+separate `/SMask` image and `addImage` takes a named colour space (no
+`/Indexed`), so the palette is expanded to RGB. The decoding uses fw
+`zlib`, an optional dependency of the facade (`standard14Lookup`, also
+optional, comes after it); a hand-wired facade without it refuses those PNGs
+rather than guessing. The written streams are pinned
+by decoding them back with `@awacloud/pdf`'s own filters
+(`src/write/pdf/render/image.test.js` § "oracle").
 
 The header reader (`src/write/image-header.js`) is deliberately minimal:
 it reads a PNG `IHDR` or a JPEG `SOF0`/`SOF1`/`SOF2` and returns
@@ -453,19 +463,20 @@ typesetter feature this writer does not have, so the drop is recorded and
 not rendered. The one drop that remains without a record on this writer is a
 link's target (the refusal below).
 
-## `keepTogether` is currently inert for delegated blocks
+## `keepTogether` on a delegated block is informational, by design
 
-`render/table.js`'s renderer return carries `keepTogether: true` — but
-`stack.js`'s block builder (`list`/`codeBlock`/`table`/`image` —
-`stack.js`'s `delegate()`)
-never copies `rendered.keepTogether` onto the `FlowBlock` it constructs,
-unlike the heading path a few lines above it, which does set
-`block.keepTogether` from its own spec. Pinned by
+`render/table.js`'s renderer return carries `keepTogether: true` — "a
+table never splits" — and `stack.js`'s block builder (`list`/`codeBlock`/
+`table`/`image` — `stack.js`'s `delegate()`) does not copy it onto the
+`FlowBlock`, unlike the heading path, which sets `block.keepTogether` from
+its own spec. The stacker's `keepTogether` means keep-with-next, a heading
+rule; copying the table's flag would make every table keep-with-next,
+which is not what the renderer states. Pinned by
 `src/write/pdf/stack.test.js` § "a delegated renderer returning
 `keepTogether: true` has it dropped — the flag never reaches the flow
-block". Measured, not fixed.
+block (by design)".
 
-This does **not** let a table split across pages, and the intro's "never
+A table does **not** split across pages, and the intro's "never
 splits a table across a page break" holds. The stacker's hard page-break
 rule works on whole blocks: a block that does not fit the remaining space
 starts a new page, and a block taller than one page is clipped at the page
@@ -473,10 +484,15 @@ bottom with `layout/block-clipped` — never carried onto a following page
 (`src/write/pdf/stack.test.js` § "a block is never split across pages —
 every item of a block shares one page"; on a real table,
 `tests/crossformat-to-pdf.integration.test.js` § "docx-bulk.docx → pdf:
-MULTI-PAGE (24), one overflow + one block-clipped" clips 108 units of one
-table). The stacker reads `keepTogether` only as keep-with-next — a flagged
-block also needs the first line of the NEXT block to fit — so the dropped
-flag loses exactly that check for a table, nothing more.
+MULTI-PAGE (24), one block-clipped" clips 108 units of one table). The
+stacker reads `keepTogether` only as keep-with-next — a flagged block also
+needs the first line of the NEXT block to fit — a heading rule.
+
+A delegated renderer that returns no items and an explicit `height: 0`
+declares its block empty (an empty fenced code block): the block is
+ink-free, so the accounting invariant (`stack.unaccounted`) holds for it;
+a renderer that returns no items WITHOUT stating `height: 0` still counts
+as drawable, the safety net for a silent drop.
 
 ## Geometry defaults
 
@@ -490,8 +506,9 @@ code + inline code) 9.5 pt. Page numbers on by default, centred at
 
 Two `fromMd(..., 'pdf')` calls on the same markdown and the same
 `opts.pdf` produce **byte-identical** output: `irToPdf` calls
-`pdfBuilder.addMetadata({ Producer, Creator })` only, never `setId`, and
-`@awacloud/pdf`'s plain write path (`document/builder.js`,
+`pdfBuilder.addMetadata({ Producer, Creator })` only, never `setId` — so
+`@awacloud/pdf`'s writer derives the `/ID` PDF 2.0 requires from the bytes
+it wrote before the trailer (a SHA-256) — and `@awacloud/pdf`'s plain write path (`document/builder.js`,
 `document/writer.js`, `syntax/serializer.js`) reads no clock and no
 randomness. This holds on the plain write path only —
 `document/encryptedWriter.js` uses `Math.random()` for its file key, and

@@ -21,7 +21,7 @@ Decodes the WOFF1 envelope (`wOFF` signature + table directory) into a standalon
 |--------|------|-------------|
 | `WOFF_MAGIC` | const | `0x774F4646` (`'wOFF'`). |
 | `parseWoff1Header` | function | `(bytes) => { signature, flavor, length, numTables, totalSfntSize, … }`. |
-| `decodeWoff1` | function | `(bytes, deps?) => Uint8Array` (reassembled SFNT). `deps.zlib` overrides the DI-injected `zlib` module. |
+| `decodeWoff1` | function | `(bytes, deps?) => Uint8Array` (reassembled SFNT). `deps.zlib` overrides the DI-injected `zlib` module. A table body that does not inflate, or inflates to another length than `origLength`, throws the `ParseError` `fonts/woff1-bad-inflate` (`context.tag`; the decoder's error as `cause` when it threw); a `FontError` thrown by an injected decoder passes through. |
 | `parseHeader` / `decode` | function | One-argument aliases of `parseWoff1Header` and of `decodeWoff1` bound to the DI-injected `zlib`. |
 | `fontWoff` | factory | Factory `{ name, dependencies, factory }`. |
 

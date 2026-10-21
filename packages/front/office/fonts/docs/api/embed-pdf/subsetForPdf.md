@@ -17,7 +17,7 @@ Computes the composite-glyph closure covering a set of code points, renumbers gi
 
 Rewritten tables (vs. a verbatim copy of the source font's bytes):
 
-- `glyf`, `loca`, `hmtx`, `cmap`, `head`, `hhea`, `maxp` — recomputed for the renumbered/reduced glyph set (see Algorithm above).
+- `glyf`, `loca`, `hmtx`, `cmap`, `head`, `hhea`, `maxp` — recomputed for the renumbered/reduced glyph set (see Algorithm above). The `cmap` is one Windows BMP (3, 1) format 4 subtable whose `searchRange`, `entrySelector` and `rangeShift` are derived from its segment count, as the OpenType spec defines them.
 - `post` — the 32-byte header is preserved bit-for-bit for the fields shared across versions (italicAngle, underline, isFixedPitch, memory hints); the version tag itself is forced to `3.0` (no glyph names) unless the source is already `3.0`, in which case the whole table is copied verbatim. A source `post` shorter than 32 bytes, or absent, yields no `post` table in the subset.
 - `name`, `OS/2` — copied verbatim from the source font (unmodified).
 

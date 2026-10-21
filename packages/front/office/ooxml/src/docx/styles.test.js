@@ -54,7 +54,9 @@ describe('docxStyles — standalone parse/serialize', () => {
         const xmlText = styles.serialize(obj);
         expect(xmlText).toContain('w:styles');
         const back = styles.parse(xmlText);
-        expect(back).toEqual(obj);
+        // The read also carries every w:rFonts attribute in `fonts`.
+        const fonts = { ascii: 'Calibri', hAnsi: 'Calibri', cs: 'Calibri' };
+        expect(back).toEqual({ ...obj, docDefaults: { ...obj.docDefaults, rPr: { ...obj.docDefaults.rPr, fonts } } });
     });
 
     test('defaults() builds parseable shell', () => {

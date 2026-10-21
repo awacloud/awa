@@ -4,6 +4,8 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 import { describe, test, expect } from 'bun:test';
+import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
+import * as fontsPkg from '@awacloud/fonts';
 import { pdfBuilder } from './builder.js';
 import { pdfWriter } from './writer.js';
 import { pdfDocument } from './document.js';
@@ -1278,5 +1280,84 @@ describe('pdfBuilder — addFont encoding (Standard-14 /Encoding)', () => {
         expect(at).toBeGreaterThan(0);
         expect(tail[at - 1]).toBe(0x61);
         expect(tail[at + 1]).toBe(0x62);
+    });
+});
+
+describe('pdfBuilder — addFont standard14: the metrics PDF 2.0 requires (ISO 32000-2 Table 109)', () => {
+    const fontsRt = new ModuleRuntime();
+    for (const m of [...fontsPkg.fw_require, ...fontsPkg.modules]) fontsRt.register(m);
+    const standard14 = fontsRt.resolve('standard14Lookup');
+    const fontDictOf = (bytes, name = 'F1') => {
+        const doc = readDocument(bytes);
+        const res = deref(doc, doc.pages[0].resources);
+        return { doc, font: deref(doc, res.entries.Font.entries[name]) };
+    };
+    const nums = (a) => a.items.map((x) => x.value);
+
+    test('a Latin face in WinAnsiEncoding gains FirstChar, LastChar, Widths and a FontDescriptor', () => {
+        const { doc, font } = fontDictOf(builder().addPage()
+            .addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14 })
+            .build());
+        const rec = standard14.lookupStandard14('Helvetica');
+        const e = font.entries;
+        expect(Object.keys(e)).toEqual(['Type', 'Subtype', 'BaseFont', 'Encoding', 'FirstChar', 'LastChar', 'Widths', 'FontDescriptor']);
+        expect([e.FirstChar.value, e.LastChar.value]).toEqual([32, 255]);
+        expect(nums(e.Widths)).toEqual(Array.from(rec.widths).slice(32, 256));
+        expect(e.FontDescriptor.type).toBe('ref');
+        const d = deref(doc, e.FontDescriptor).entries;
+        expect(Object.keys(d)).toEqual(['Type', 'FontName', 'Flags', 'FontBBox', 'ItalicAngle', 'Ascent', 'Descent',
+            'CapHeight', 'XHeight', 'StemV', 'StemH']);
+        expect([d.Type.value, d.FontName.value, d.Flags.value]).toEqual(['FontDescriptor', 'Helvetica', rec.flags]);
+        expect(nums(d.FontBBox)).toEqual(rec.fontBBox);
+        expect([d.ItalicAngle.value, d.Ascent.value, d.Descent.value, d.CapHeight.value, d.XHeight.value, d.StemV.value, d.StemH.value])
+            .toEqual([rec.italicAngle, rec.ascent, rec.descent, rec.capHeight, rec.xHeight, rec.stemV, rec.stemH]);
+    });
+
+    test('Symbol and ZapfDingbats take their built-in encoding (no /Encoding)', () => {
+        for (const baseFont of ['Symbol', 'ZapfDingbats']) {
+            const { font } = fontDictOf(builder().addPage().addFont({ name: 'F1', baseFont, standard14 }).build());
+            expect(font.entries.Encoding).toBeUndefined();
+            expect(nums(font.entries.Widths)).toEqual(Array.from(standard14.lookupStandard14(baseFont).widths).slice(32, 256));
+        }
+    });
+
+    test('one dictionary and one descriptor per face, apart from the dictionary without metrics', () => {
+        const bytes = builder()
+            .addPage().addFont({ name: 'F1', baseFont: 'Times-Bold', encoding: 'WinAnsiEncoding', standard14 })
+            .addPage().addFont({ name: 'F9', baseFont: 'Times-Bold', encoding: 'WinAnsiEncoding', standard14 })
+            .addFont({ name: 'F2', baseFont: 'Times-Bold', encoding: 'WinAnsiEncoding' })
+            .build();
+        const doc = readDocument(bytes);
+        const fontsOf = (i) => deref(doc, doc.pages[i].resources).entries.Font.entries;
+        expect(fontsOf(0).F1.num).toBe(fontsOf(1).F9.num);
+        expect(fontsOf(1).F2.num).not.toBe(fontsOf(1).F9.num);
+        expect(deref(doc, fontsOf(1).F2).entries.Widths).toBeUndefined();
+        expect(td.decode(bytes).split('/Type /FontDescriptor').length - 1).toBe(1);
+    });
+
+    test('refused: another encoding, a face outside the 14, another subtype, no lookup API', () => {
+        const refuse = (spec) => {
+            let err = null;
+            try { builder().addPage().addFont({ name: 'F1', standard14, ...spec }); } catch (e) { err = e; }
+            expect([spec, err && err.code]).toEqual([spec, 'pdf/builder/bad-font']);
+        };
+        refuse({ baseFont: 'Helvetica' });
+        refuse({ baseFont: 'Helvetica', encoding: 'MacRomanEncoding' });
+        refuse({ baseFont: 'Helvetica', encoding: 'StandardEncoding' });
+        refuse({ baseFont: 'Symbol', encoding: 'WinAnsiEncoding' });
+        refuse({ baseFont: 'Arial', encoding: 'WinAnsiEncoding' });
+        refuse({ baseFont: 'Helvetica', subtype: 'TrueType', encoding: 'WinAnsiEncoding' });
+        refuse({ baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14: {} });
+        refuse({ baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14: null });
+        // checked on every registration, not only the first of a face
+        const b = builder().addPage().addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14 });
+        expect(() => b.addFont({ name: 'F2', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14: {} })).toThrow(RenderError);
+    });
+
+    test('without the option the legacy dictionary is unchanged', () => {
+        const plain = builder().addPage().addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding' }).build();
+        expect(Object.keys(fontDictOf(plain).font.entries)).toEqual(['Type', 'Subtype', 'BaseFont', 'Encoding']);
+        const undef = builder().addPage().addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14: undefined }).build();
+        expect(Array.from(undef)).toEqual(Array.from(plain));
     });
 });

@@ -29,13 +29,19 @@
 
 import { xml } from '@awacloud/fw/io/codec/xml.js';
 import { drawImage } from './image.js';
+import { odfErrors } from '../errors.js';
 
 export const drawFrame = {
     name: 'drawFrame',
-    dependencies: ['xml', 'drawImage'],
-    deps: [xml, drawImage],
+    dependencies: ['xml', 'drawImage', 'odfErrors'],
+    deps: [xml, drawImage, odfErrors],
 
-    factory(xml, imageMod) {
+    // `errors` may be absent when the factory is wired by hand with the
+    // 1.0.0 two-argument call `factory(xml, imageMod)`: an unknown child
+    // kind then keeps the 1.0.0 result (a `null` child) instead of the
+    // typed throw.
+    factory(xml, imageMod, errors) {
+        const ContractError = errors && errors.ContractError;
 
         /**
          * Parse a `<draw:frame>` element.
@@ -143,7 +149,10 @@ export const drawFrame = {
                 if (child.href && !a['xlink:href']) a['xlink:href'] = child.href;
                 return xml.el(tag, a, []);
             }
-            return null;
+            if (!ContractError) return null;
+            throw new ContractError('odf/contract-error/frame',
+                `drawFrame: unknown frame child kind "${child.kind}" (expected image, text-box or object)`,
+                { context: { kind: child.kind } });
         }
 
         return { parseFrame, renderFrame };

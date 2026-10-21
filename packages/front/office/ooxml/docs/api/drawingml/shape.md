@@ -54,7 +54,8 @@ shapeProps := {
     cx?, cy?, offsetX?, offsetY?,   // EMU
     rotation?: number,              // 60000ths of a degree
     flipH?: boolean, flipV?: boolean,
-    fill?: 'none' | { color: 'RRGGBB' } | { schemeColor: string },
+    fill?: 'none' | { rgb: 'RRGGBB', mods?: [{ name, val? }] }
+                  | { schemeColor: string, mods?: [{ name, val? }] },
     line?: 'none' | {
         width?: number,             // EMU
         color?: 'RRGGBB',
@@ -76,7 +77,7 @@ const props = sh.shapeProps({
     geom: sh.PRESETS.roundRect,
     cx: sh.toEmu('3in'),
     cy: sh.toEmu('1in'),
-    fill: { color: '4472C4' },
+    fill: { rgb: '4472C4' },
     line: { width: 12700, color: '2E5597' }   // 1pt
 });
 sh.renderShapeProperties(props);
@@ -98,6 +99,7 @@ sh.shapeProps({
 - Line `width` is in EMU (12700 = 1pt). There is no unit inference — compute it with `toEmu`.
 - `PRESETS` is a convenience catalogue of 38 entries, not the full ECMA list; any string passed as `geom` is accepted.
 - `fill: 'none'` emits `<a:noFill/>`; omitting `fill` emits no element at all (inheritance from the parent).
+- A solid fill is `{ rgb }` (`a:srgbClr`) or `{ schemeColor }` (`a:schemeClr`); `shapeProps` also accepts the `'RRGGBB'` string. Its colour transforms (`lumMod`, `lumOff`, `tint`, `shade`, `alpha`, `satMod`, `comp`, …, ECMA-376 §20.1.2.3) are kept in document order as `mods: [{ name, val? }]` (`val` a number) and written back; a transform that does not fit that shape leaves the fill without `mods`.
 - `<a:gradFill>`, `<a:effectLst>` and similar are not modelled here — see the DrawingML extras (`dmlFillsAdvanced`, `dmlEffects`, `dmlShapesAdvanced`).
 
 ## See also

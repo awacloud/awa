@@ -53,6 +53,36 @@ Measured examples (`fromMd`):
 The first two come from a `docx` target. The third comes from a `pdf`
 target given `![alt](pic.png)` with no image bytes.
 
+## `LossSummaryEntry`
+
+One entry of a result's `lossSummary`: a distinct `code` + `detail` of
+`losses`, and how many times it occurs.
+
+```ts
+interface LossSummaryEntry {
+    code: string;
+    detail: string | Record<string, unknown>;
+    count: number;
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `code` | As in [`Loss`](#loss). |
+| `detail` | As in [`Loss`](#loss): the first occurrence's own value. A string is compared as is, an object by its JSON form. |
+| `count` | How many entries of `losses` have this `code` and `detail` (at least 1). |
+
+Entries keep the order in which each first occurs. A PDF loss's `index`
+and `kind` are not part of the key and are not copied: the summary says
+what was lost and how often, `losses` says where. A lossless result has
+`lossSummary: []`. Measured (`fromMd`, `docx` target, two raw HTML
+blocks and one inline `<br>`):
+
+```json
+[{ "code": "block/dropped", "detail": "html_block", "count": 2 },
+ { "code": "inline/dropped", "detail": "html_inline", "count": 1 }]
+```
+
 ## `CoreError`
 
 Returned in place of an output when an operation fails. See
@@ -91,6 +121,7 @@ interface ToMdOutput {
     error: null;
     markdown: string;
     losses: Loss[];
+    lossSummary: LossSummaryEntry[];
     lossy: boolean;
 }
 ```
@@ -121,6 +152,7 @@ interface FromMdOutput {
     bytes: Uint8Array;
     target: string;
     losses: Loss[];
+    lossSummary: LossSummaryEntry[];
     lossy: boolean;
 }
 ```
@@ -153,6 +185,7 @@ interface ConvertOutput {
     format: string;
     target: string;
     losses: Loss[];
+    lossSummary: LossSummaryEntry[];
     lossy: boolean;
 }
 ```

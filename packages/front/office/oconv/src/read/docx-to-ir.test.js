@@ -16,6 +16,7 @@ import { fw_require as oconvFwRequire, modules as oconvModules } from '../main.j
 // rather than going through a package composition root (task 05's concern).
 let docxApi;
 let docxNumberingMod;
+let opcApi;
 let docxToIr;
 let validate;
 
@@ -28,6 +29,7 @@ beforeAll(() => {
 
     docxApi = runtime.resolve('docx');
     docxNumberingMod = runtime.resolve('docxNumbering');
+    opcApi = runtime.resolve('opcPackage');
     ({ docxToIr } = runtime.resolve('oconvDocxToIr'));
     ({ validate } = runtime.resolve('oconvIr'));
 });
@@ -83,8 +85,15 @@ describe('oconvDocxToIr — composite fixture (tier 2)', () => {
             docxApi.tableFromRows(TABLE_ROWS)
         ];
 
-        const bytes = docxApi.write({ body }, { numbering });
+        // `docx.write` refuses a numId its `nums` do not declare
+        // (`docx/numbering-unknown-num`), so num 2 is declared for the
+        // write and dropped from the read result: the reader then meets a
+        // source whose numbering part lacks num 2, as some real files do.
+        const writeNumbering = { ...numbering,
+            nums: [...numbering.nums, { numId: 2, abstractNumId: numbering.nums[0].abstractNumId }] };
+        const bytes = docxApi.write({ body }, { numbering: writeNumbering });
         const readResult = docxApi.read(bytes);
+        readResult.numbering.nums = readResult.numbering.nums.filter((n) => n.numId !== 2);
         ({ ir, losses } = docxToIr(readResult));
     });
 
@@ -236,6 +245,22 @@ describe('oconvDocxToIr — image with unresolved bytes (C37)', () => {
         expect(img.name).toBe('figure.png');
         expect(img.alt).toBe('Missing image');
         expect(img.escapes).toBeUndefined();
+    });
+});
+
+describe('oconvDocxToIr — block math as Word writes it', () => {
+    test('a paragraph holding only m:oMathPara records block/dropped instead of vanishing', () => {
+        const pkg = opcApi.read(docxApi.write({ body: [docxApi.paragraph('MATH'), docxApi.paragraph('After')] }));
+        const math = '<m:oMathPara><m:oMath><m:r><m:t>x=1</m:t></m:r></m:oMath></m:oMathPara>';
+        const xmlText = new TextDecoder().decode(pkg.parts['/word/document.xml'])
+            .replace(/<w:r><w:t xml:space="preserve">MATH<\/w:t><\/w:r>/, math);
+        expect(xmlText).toContain(`<w:p>${math}</w:p>`);
+        pkg.parts['/word/document.xml'] = new TextEncoder().encode(xmlText);
+        const { ir, losses } = docxToIr(docxApi.read(opcApi.write(pkg)));
+
+        expect(validate(ir).ok).toBe(true);
+        expect(losses).toEqual([{ code: 'block/dropped', detail: 'oMathPara' }]);
+        expect(ir.children.map(n => n.kind)).toEqual(['paragraph']);
     });
 });
 
@@ -417,6 +442,116 @@ describe('oconvDocxToIr — heading levels by built-in style name', () => {
             { kind: 'heading', level: 2, text: 'Numbered heading' }
         ]);
         expect(losses).toEqual([]);
+    });
+});
+
+// Code blocks, quotes and rules by paragraph style: pandoc writes `SourceCode`
+// ("Source Code") and `BlockText` ("Block Text"); Word's built-in quote
+// styles are named `Quote` / `Intense Quote` and localized by ID (French
+// `Citation`, `Citationintense`).
+const BLOCK_STYLES = {
+    styles: [
+        { type: 'paragraph', styleId: 'Normal', name: 'Normal', isDefault: true },
+        { type: 'paragraph', styleId: 'Code', name: 'Source Code' },
+        { type: 'paragraph', styleId: 'Citation', name: 'Quote' },
+        { type: 'paragraph', styleId: 'Citationintense', name: 'Intense Quote' },
+        { type: 'paragraph', styleId: 'Filet', name: 'Horizontal Rule' }
+    ]
+};
+
+describe('oconvDocxToIr — code blocks, quotes and rules by paragraph style', () => {
+    /** A paragraph of one run holding `children` (text / break / tab nodes). */
+    const styled = (pStyle, children) => ({
+        type: 'paragraph', pPr: { pStyle }, children: [{ type: 'run', children }]
+    });
+    const text = value => ({ type: 'text', value });
+
+    test('a Source Code paragraph → codeBlock; breaks → newlines, tabs → tabs', () => {
+        const body = [
+            styled('Code', [text('if (a) {'), { type: 'break' }, { type: 'tab' },
+                text('b();'), { type: 'break' }, { type: 'break' }, text('}')]),
+            docxApi.paragraph('After.')
+        ];
+        const bytes = docxApi.write({ body }, { styles: BLOCK_STYLES });
+        const { ir, losses } = docxToIr(docxApi.read(bytes));
+
+        expect(validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        expect(ir.children[0]).toEqual(
+            { kind: 'codeBlock', info: '', text: 'if (a) {\n\tb();\n\n}' });
+        expect(ir.children[1].kind).toBe('paragraph');
+    });
+
+    test('the SourceCode ID is recognised without a styles part (pandoc / this writer)', () => {
+        const bytes = docxApi.write({ body: [styled('SourceCode', [text('x = 1')])] });
+        const readResult = docxApi.read(bytes);
+        expect(readResult.styles).toBeUndefined();
+
+        expect(docxToIr(readResult).ir.children)
+            .toEqual([{ kind: 'codeBlock', info: '', text: 'x = 1' }]);
+    });
+
+    test('two code paragraphs stay two code blocks (no merge)', () => {
+        const body = [styled('Code', [text('one')]), styled('Code', [text('two')])];
+        const bytes = docxApi.write({ body }, { styles: BLOCK_STYLES });
+
+        expect(docxToIr(docxApi.read(bytes)).ir.children.map(b => b.text))
+            .toEqual(['one', 'two']);
+    });
+
+    test('consecutive quote paragraphs (Quote, Intense Quote, BlockText) → ONE blockquote', () => {
+        const body = [
+            docxApi.paragraph('Q1', { pPr: { pStyle: 'Citation' } }),
+            docxApi.paragraph('Q2', { pPr: { pStyle: 'Citationintense' }, rPr: { bold: true } }),
+            docxApi.paragraph('Q3', { pPr: { pStyle: 'BlockText' } }),
+            docxApi.paragraph('Between.'),
+            docxApi.paragraph('Q4', { pPr: { pStyle: 'Citation' } })
+        ];
+        const bytes = docxApi.write({ body }, { styles: BLOCK_STYLES });
+        const { ir, losses } = docxToIr(docxApi.read(bytes));
+
+        expect(validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        expect(ir.children.map(b => b.kind)).toEqual(['blockquote', 'paragraph', 'blockquote']);
+        const first = ir.children[0];
+        expect(first.children.map(p => p.kind)).toEqual(['paragraph', 'paragraph', 'paragraph']);
+        expect(first.children.map(p => p.children[0].text)).toEqual(['Q1', 'Q2', 'Q3']);
+        expect(first.children[1].children[0].bold).toBe(true);
+    });
+
+    test('an empty quote paragraph is skipped and does not split the quote', () => {
+        const body = [
+            docxApi.paragraph('Q1', { pPr: { pStyle: 'Citation' } }),
+            { type: 'paragraph', pPr: { pStyle: 'Citation' }, children: [] },
+            docxApi.paragraph('Q2', { pPr: { pStyle: 'Citation' } })
+        ];
+        const bytes = docxApi.write({ body }, { styles: BLOCK_STYLES });
+        const { ir } = docxToIr(docxApi.read(bytes));
+
+        expect(ir.children).toHaveLength(1);
+        expect(ir.children[0].children.map(p => p.children[0].text)).toEqual(['Q1', 'Q2']);
+    });
+
+    test('an EMPTY Horizontal Rule paragraph → hr; one with text stays a paragraph', () => {
+        const body = [
+            { type: 'paragraph', pPr: { pStyle: 'Filet' }, children: [] },
+            { type: 'paragraph', pPr: { pStyle: 'HorizontalRule' }, children: [] },
+            docxApi.paragraph('Not a rule', { pPr: { pStyle: 'Filet' } })
+        ];
+        const bytes = docxApi.write({ body }, { styles: BLOCK_STYLES });
+        const { ir, losses } = docxToIr(docxApi.read(bytes));
+
+        expect(validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        expect(ir.children.map(b => b.kind)).toEqual(['hr', 'hr', 'paragraph']);
+    });
+
+    test('an unrelated empty paragraph is still skipped (spacer rule unchanged)', () => {
+        const body = [{ type: 'paragraph', children: [] }, docxApi.paragraph('Only.')];
+        const bytes = docxApi.write({ body }, { styles: BLOCK_STYLES });
+
+        expect(blockView(docxToIr(docxApi.read(bytes)).ir))
+            .toEqual([{ kind: 'paragraph', level: undefined, text: 'Only.' }]);
     });
 });
 

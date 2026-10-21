@@ -1,0 +1,4603 @@
+{
+  "suite": {
+    "id": "poi-ooxml",
+    "version": "poi@REL_5_5_1",
+    "source": "https://github.com/apache/poi/tree/094968cfc3d48224db08f0b7f0a6fc341b035114/test-data"
+  },
+  "criterion": "per file, the ooxml reader of the file kind (docx, xlsx including xlsm, pptx) reads it; ok when it returns or throws an error of the package's own hierarchy (OoxmlError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child",
+  "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+  "host": "container",
+  "image": "awa-robustness-bun:1.3.13",
+  "imageId": "sha256:1a93710c3b0b8ee72a6876fc61e8975217fef39faee9a7c4b224560e6829de84",
+  "bun": "1.3.13",
+  "memoryMax": "1342177280",
+  "counts": {
+    "returned": 517,
+    "refused": 49,
+    "untyped": 0,
+    "hang": 0,
+    "memory": 0,
+    "crash": 0
+  },
+  "cases": [
+    {
+      "case": "poi/test-data/document/51921-Word-Crash067.docx",
+      "bytes": 20006,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/52288.docx",
+      "bytes": 12788,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/52449.docx",
+      "bytes": 18854,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/55733.docx",
+      "bytes": 3045,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/55966.docx",
+      "bytes": 20757,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/56392.docx",
+      "bytes": 11211,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/57312.docx",
+      "bytes": 21702,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/58067.docx",
+      "bytes": 28709,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/58618.docx",
+      "bytes": 10045,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/59030.docx",
+      "bytes": 11712,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/59378.docx",
+      "bytes": 26063,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 91516
+    },
+    {
+      "case": "poi/test-data/document/60293.docx",
+      "bytes": 15634,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/60316.docx",
+      "bytes": 48142,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/60329.docx",
+      "bytes": 31124,
+      "class": "returned",
+      "ok": true,
+      "ms": 35,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/61470.docx",
+      "bytes": 12523,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/61745.docx",
+      "bytes": 37030,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/61787.docx",
+      "bytes": 7047,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/61991.docx",
+      "bytes": 17931,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/65099.docx",
+      "bytes": 17126,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug51170.docx",
+      "bytes": 239621,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug54771a.docx",
+      "bytes": 44431,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug54771b.docx",
+      "bytes": 39666,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug54849.docx",
+      "bytes": 27566,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug55142.docx",
+      "bytes": 22586,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug60337.docx",
+      "bytes": 13463,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug60341.docx",
+      "bytes": 2297,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug62859.docx",
+      "bytes": 17326,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug64561.docx",
+      "bytes": 17630,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Bug66988.docx",
+      "bytes": 4875,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/ComplexNumberedLists.docx",
+      "bytes": 14458,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/DiffFirstPageHeadFoot.docx",
+      "bytes": 14204,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/EmbeddedDocument.docx",
+      "bytes": 13268,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/EmptyDocumentWithHeaderFooter.docx",
+      "bytes": 14549,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/EnforcedWith.docx",
+      "bytes": 11321,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/ExternalEntityInText.docx",
+      "bytes": 12756,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/FancyFoot.docx",
+      "bytes": 12876,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/FieldCodes.docx",
+      "bytes": 17034,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/FldSimple.docx",
+      "bytes": 12837,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/HeaderFooterUnicode.docx",
+      "bytes": 15079,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Headers.docx",
+      "bytes": 13076,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/IllustrativeCases.docx",
+      "bytes": 22858,
+      "class": "returned",
+      "ok": true,
+      "ms": 31,
+      "maxRssKiB": 91312
+    },
+    {
+      "case": "poi/test-data/document/MultipleBodyBug.docx",
+      "bytes": 102103,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/NoHeadFoot.docx",
+      "bytes": 10380,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Numbering.docx",
+      "bytes": 13808,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/NumberingWOverrides.docx",
+      "bytes": 15190,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/NumberingWithOutOfOrderId.docx",
+      "bytes": 12978,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/PageSpecificHeadFoot.docx",
+      "bytes": 22994,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/SampleDoc.docx",
+      "bytes": 11611,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/SimpleHeadThreeColFoot.docx",
+      "bytes": 13112,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Styles.docx",
+      "bytes": 10905,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/TestDocument.docx",
+      "bytes": 10861,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/TestPoiXMLDocumentCorePropertiesGetKeywords.docx",
+      "bytes": 13380,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/TestTableCellAlign.docx",
+      "bytes": 11712,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/TestTableColumns.docx",
+      "bytes": 12672,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/ThreeColFoot.docx",
+      "bytes": 13061,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/ThreeColHead.docx",
+      "bytes": 12508,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/ThreeColHeadFoot.docx",
+      "bytes": 13123,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/Tika-792.docx",
+      "bytes": 17913,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/VariousPictures.docx",
+      "bytes": 103677,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/WithGIF.docx",
+      "bytes": 20875,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/WithTabs.docx",
+      "bytes": 14190,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/WordWithAttachments.docx",
+      "bytes": 144959,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/bib-chernigovka.netdo.ru_download_docs_17459.docx",
+      "bytes": 47023,
+      "class": "returned",
+      "ok": true,
+      "ms": 66,
+      "maxRssKiB": 123296
+    },
+    {
+      "case": "poi/test-data/document/bookmarks.docx",
+      "bytes": 10405,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/bug-paragraph-alignment.docx",
+      "bytes": 11916,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/bug53475-password-is-pass.docx",
+      "bytes": 29696,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/document/bug53475-password-is-solrcell.docx",
+      "bytes": 33792,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/document/bug56075-changeTracking_off.docx",
+      "bytes": 12617,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/bug56075-changeTracking_on.docx",
+      "bytes": 12606,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/bug56076.docx",
+      "bytes": 11033,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/bug57031.docx",
+      "bytes": 55889,
+      "class": "returned",
+      "ok": true,
+      "ms": 118,
+      "maxRssKiB": 127776
+    },
+    {
+      "case": "poi/test-data/document/bug59058.docx",
+      "bytes": 210256,
+      "class": "returned",
+      "ok": true,
+      "ms": 157,
+      "maxRssKiB": 142644
+    },
+    {
+      "case": "poi/test-data/document/bug65649.docx",
+      "bytes": 474844,
+      "class": "returned",
+      "ok": true,
+      "ms": 985,
+      "maxRssKiB": 440044
+    },
+    {
+      "case": "poi/test-data/document/bug65738.docx",
+      "bytes": 13436,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/bug66312.docx",
+      "bytes": 4500,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/bug69628.docx",
+      "bytes": 7510,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/capitalized.docx",
+      "bytes": 12104,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/checkboxes.docx",
+      "bytes": 20800,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIFuzzer-6709287337197568.docx",
+      "bytes": 12632,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-4791943399604224.docx",
+      "bytes": 15932,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-4959857092198400.docx",
+      "bytes": 50918,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-5166796835258368.docx",
+      "bytes": 12890,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-5313273089884160.docx",
+      "bytes": 4764,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-5564805011079168.docx",
+      "bytes": 34995,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-5569740188549120.docx",
+      "bytes": 6043,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-6061520554164224.docx",
+      "bytes": 7789,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-6120975439364096.docx",
+      "bytes": 43758,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-6442791109263360.docx",
+      "bytes": 4941,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/zip-bomb"
+    },
+    {
+      "case": "poi/test-data/document/clusterfuzz-testcase-minimized-POIXWPFFuzzer-6733884933668864.docx",
+      "bytes": 20757,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/comment.docx",
+      "bytes": 4926,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/crash-517626e815e0afa9decd0ebb6d1dee63fb9907dd.docx",
+      "bytes": 7789,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/document/deep-table-cell.docx",
+      "bytes": 17198,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424,
+      "code": "opc/xml-too-deep"
+    },
+    {
+      "case": "poi/test-data/document/delins.docx",
+      "bytes": 17720,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/documentProperties.docx",
+      "bytes": 23503,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/documentProtection_comments_no_password.docx",
+      "bytes": 9868,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/documentProtection_forms_no_password.docx",
+      "bytes": 9924,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/documentProtection_no_protection.docx",
+      "bytes": 9884,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/documentProtection_no_protection_tag_existing.docx",
+      "bytes": 9923,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/documentProtection_readonly_no_password.docx",
+      "bytes": 9856,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/documentProtection_trackedChanges_no_password.docx",
+      "bytes": 9940,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/drawing.docx",
+      "bytes": 95247,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 93288
+    },
+    {
+      "case": "poi/test-data/document/emptyPPr.docx",
+      "bytes": 13349,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/endnotes.docx",
+      "bytes": 13553,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/footnotes.docx",
+      "bytes": 12823,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/form_footnotes.docx",
+      "bytes": 27824,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/headerFooter.docx",
+      "bytes": 28423,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/headerPic.docx",
+      "bytes": 16206,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/heading123.docx",
+      "bytes": 74810,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/issue_51265_1.docx",
+      "bytes": 423363,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/issue_51265_2.docx",
+      "bytes": 421828,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/issue_51265_3.docx",
+      "bytes": 529742,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/protected_sample.docx",
+      "bytes": 10082,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/sample.docx",
+      "bytes": 14860,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/smarttag-snippet.docx",
+      "bytes": 11862,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/table-alignment.docx",
+      "bytes": 15519,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/table-indent.docx",
+      "bytes": 7639,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/table_footnotes.docx",
+      "bytes": 13177,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/testComment.docx",
+      "bytes": 65298,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/tika-3388.docx",
+      "bytes": 16665,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/tika-3816.docx",
+      "bytes": 22374,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/truncated62886.docx",
+      "bytes": 19785,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/document/unicode-path.docx",
+      "bytes": 5720,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/document/zero-length.docx",
+      "bytes": 10469,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/2411-Performance_Up.pptx",
+      "bytes": 648274,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 105748
+    },
+    {
+      "case": "poi/test-data/slideshow/45541_Footer.pptx",
+      "bytes": 307913,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/45541_Header.pptx",
+      "bytes": 308041,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/45545_Comment.pptx",
+      "bytes": 308394,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/49386-null_dates.pptx",
+      "bytes": 17124,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/51187.pptx",
+      "bytes": 45681,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/54542_cropped_bitmap.pptx",
+      "bytes": 100030,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/56812.pptx",
+      "bytes": 58308,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/60042.pptx",
+      "bytes": 31458,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/60810.pptx",
+      "bytes": 874522,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 96992
+    },
+    {
+      "case": "poi/test-data/slideshow/61515.pptx",
+      "bytes": 29270,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/63200.pptx",
+      "bytes": 36778,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/ArtisticEffectSample.pptx",
+      "bytes": 972788,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/Divino_Revelado.pptx",
+      "bytes": 523999,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/slideshow/EmbeddedAudio.pptx",
+      "bytes": 90047,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/EmbeddedVideo.pptx",
+      "bytes": 201418,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/KEY02.pptx",
+      "bytes": 2282394,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/OverlappingRelations.pptx",
+      "bytes": 38135,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/SampleShow.pptx",
+      "bytes": 39083,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/SmartArt.pptx",
+      "bytes": 41382,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/WithMaster.pptx",
+      "bytes": 47505,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/aascu.org_hbcu_leadershipsummit_cooper_.pptx",
+      "bytes": 612132,
+      "class": "returned",
+      "ok": true,
+      "ms": 82,
+      "maxRssKiB": 119736
+    },
+    {
+      "case": "poi/test-data/slideshow/aascu.org_workarea_downloadasset.aspx_id=5864.pptx",
+      "bytes": 403643,
+      "class": "returned",
+      "ok": true,
+      "ms": 107,
+      "maxRssKiB": 122392
+    },
+    {
+      "case": "poi/test-data/slideshow/ae.ac.uaeu.faculty_nafaachbili_GeomLec1.pptx",
+      "bytes": 830765,
+      "class": "returned",
+      "ok": true,
+      "ms": 22,
+      "maxRssKiB": 91252
+    },
+    {
+      "case": "poi/test-data/slideshow/alterman_security.pptx",
+      "bytes": 955496,
+      "class": "returned",
+      "ok": true,
+      "ms": 37,
+      "maxRssKiB": 95776
+    },
+    {
+      "case": "poi/test-data/slideshow/aptia.pptx",
+      "bytes": 398175,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/at.ecodesign.www_downloads_Vertiefungsvortrag_elektronik.pptx",
+      "bytes": 1949517,
+      "class": "returned",
+      "ok": true,
+      "ms": 30,
+      "maxRssKiB": 103500
+    },
+    {
+      "case": "poi/test-data/slideshow/au.asn.aes.www_conferences_2011_presentations_Fri_20Room4Level4_20930_20Maloney.pptx",
+      "bytes": 536086,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 96524
+    },
+    {
+      "case": "poi/test-data/slideshow/backgrounds.pptx",
+      "bytes": 63442,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bar-chart.pptx",
+      "bytes": 44410,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug54570.pptx",
+      "bytes": 50589,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug58144-headers-footers-2007.pptx",
+      "bytes": 42035,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug60499.pptx",
+      "bytes": 40792,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug60715.pptx",
+      "bytes": 74295,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug60993.pptx",
+      "bytes": 21942,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug62513.pptx",
+      "bytes": 384775,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 92180
+    },
+    {
+      "case": "poi/test-data/slideshow/bug62736.pptx",
+      "bytes": 50926,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug63290.pptx",
+      "bytes": 31877,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug64693.pptx",
+      "bytes": 881432,
+      "class": "returned",
+      "ok": true,
+      "ms": 22,
+      "maxRssKiB": 91352
+    },
+    {
+      "case": "poi/test-data/slideshow/bug65228.pptx",
+      "bytes": 333114,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug65523.pptx",
+      "bytes": 50285,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug65551.pptx",
+      "bytes": 34383,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug65673.pptx",
+      "bytes": 35014,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/bug68703.pptx",
+      "bytes": 60711,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/ca.ubc.cs.people_~emhill_presentations_HowWeRefactor.pptx",
+      "bytes": 2059644,
+      "class": "returned",
+      "ok": true,
+      "ms": 432,
+      "maxRssKiB": 261900
+    },
+    {
+      "case": "poi/test-data/slideshow/chart-picture-bg.pptx",
+      "bytes": 651648,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/chart-slide-bg.pptx",
+      "bytes": 57330,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/chart-texture-bg.pptx",
+      "bytes": 55730,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/clusterfuzz-testcase-minimized-POIFuzzer-5205835528404992.pptx",
+      "bytes": 36689,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/zip-bomb"
+    },
+    {
+      "case": "poi/test-data/slideshow/clusterfuzz-testcase-minimized-POIXSLFFuzzer-4838644450394112.pptx",
+      "bytes": 23331,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/slideshow/clusterfuzz-testcase-minimized-POIXSLFFuzzer-4986044400861184.pptx",
+      "bytes": 68600,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/slideshow/clusterfuzz-testcase-minimized-POIXSLFFuzzer-5463285576892416.pptx",
+      "bytes": 39076,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/slideshow/clusterfuzz-testcase-minimized-POIXSLFFuzzer-5471515212382208.pptx",
+      "bytes": 38777,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/slideshow/clusterfuzz-testcase-minimized-POIXSLFFuzzer-5611274456596480.pptx",
+      "bytes": 26693,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/slideshow/clusterfuzz-testcase-minimized-POIXSLFFuzzer-6254434927378432.pptx",
+      "bytes": 7296,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/slideshow/copy-slide-demo.pptx",
+      "bytes": 31301,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/customGeo.pptx",
+      "bytes": 1046067,
+      "class": "returned",
+      "ok": true,
+      "ms": 127,
+      "maxRssKiB": 116900
+    },
+    {
+      "case": "poi/test-data/slideshow/ececapstonespring2012.pptx",
+      "bytes": 178541,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/highlight-test-case.pptx",
+      "bytes": 36284,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/keyframes.pptx",
+      "bytes": 389330,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 98420
+    },
+    {
+      "case": "poi/test-data/slideshow/layouts.pptx",
+      "bytes": 62901,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/line-chart.pptx",
+      "bytes": 44700,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/minimal-gradient-fill-issue.pptx",
+      "bytes": 36775,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/missing-blip-fill.pptx",
+      "bytes": 40732,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/pie-chart.pptx",
+      "bytes": 55297,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/pptx2svg.pptx",
+      "bytes": 149172,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/prProps.pptx",
+      "bytes": 30976,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/present1.pptx",
+      "bytes": 34047,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/radar-chart.pptx",
+      "bytes": 43689,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/rain.pptx",
+      "bytes": 32694,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/sample.pptx",
+      "bytes": 47215,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/sample_pptx_grouping_issues.pptx",
+      "bytes": 39436,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/scatter-chart.pptx",
+      "bytes": 44269,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/shapes.pptx",
+      "bytes": 68822,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/smartart-rotated-text.pptx",
+      "bytes": 43459,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/smartart-simple.pptx",
+      "bytes": 71102,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/table-with-no-theme.pptx",
+      "bytes": 34362,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/table-with-theme.pptx",
+      "bytes": 35189,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/table_test.pptx",
+      "bytes": 28935,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/table_test2.pptx",
+      "bytes": 33414,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/templatePPTWithOnlyOneText.pptx",
+      "bytes": 33671,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/testPPT.pptx",
+      "bytes": 36518,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/themes.pptx",
+      "bytes": 322325,
+      "class": "returned",
+      "ok": true,
+      "ms": 33,
+      "maxRssKiB": 103764
+    },
+    {
+      "case": "poi/test-data/slideshow/tika-2605.pptx",
+      "bytes": 625680,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/slideshow/with_japanese.pptx",
+      "bytes": 48011,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/0-www-crossref-org.lib.rivier.edu_education-files_suffix-generator.xlsm",
+      "bytes": 28479,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/123233_charts.xlsx",
+      "bytes": 12957,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/1_NoIden.xlsx",
+      "bytes": 8038,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/45430.xlsx",
+      "bytes": 7929,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/45431.xlsm",
+      "bytes": 13817,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/45540_classic_Footer.xlsx",
+      "bytes": 40199,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/45540_classic_Header.xlsx",
+      "bytes": 40213,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/45540_form_Footer.xlsx",
+      "bytes": 57465,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/45540_form_Header.xlsx",
+      "bytes": 57471,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/45544.xlsx",
+      "bytes": 43042,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/46535.xlsx",
+      "bytes": 313321,
+      "class": "returned",
+      "ok": true,
+      "ms": 55,
+      "maxRssKiB": 115052
+    },
+    {
+      "case": "poi/test-data/spreadsheet/46536.xlsx",
+      "bytes": 8737,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47026.xlsm",
+      "bytes": 8203,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47089.xlsm",
+      "bytes": 17007,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47090.xlsx",
+      "bytes": 7596,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47504.xlsx",
+      "bytes": 30048,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47668.xlsx",
+      "bytes": 118687,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47737.xlsx",
+      "bytes": 11369,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47804.xlsx",
+      "bytes": 29533,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47813.xlsx",
+      "bytes": 54880,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 91064
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47862.xlsx",
+      "bytes": 8412,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/47889.xlsx",
+      "bytes": 3555,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/48495.xlsx",
+      "bytes": 8869,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/48539.xlsx",
+      "bytes": 13122,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/48703.xlsx",
+      "bytes": 9349,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/48779.xlsx",
+      "bytes": 7912,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/48923.xlsx",
+      "bytes": 10126,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/48962.xlsx",
+      "bytes": 50260,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/49156.xlsx",
+      "bytes": 25064,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/49273.xlsx",
+      "bytes": 11057,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/49325.xlsx",
+      "bytes": 7429,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/49609.xlsx",
+      "bytes": 105424,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/49783.xlsx",
+      "bytes": 8947,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/49872.xlsx",
+      "bytes": 8302,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/49928.xlsx",
+      "bytes": 7984,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/49966.xlsx",
+      "bytes": 8238,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/50096.xlsx",
+      "bytes": 12391,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/50299.xlsx",
+      "bytes": 35237,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/50755_workday_formula_example.xlsx",
+      "bytes": 7928,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/50784-font_theme_colours.xlsx",
+      "bytes": 12342,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/50786-indexed_colours.xlsx",
+      "bytes": 7537,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/50795.xlsx",
+      "bytes": 11594,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/50846-border_colours.xlsx",
+      "bytes": 12381,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/50867_with_table.xlsx",
+      "bytes": 9458,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51222.xlsx",
+      "bytes": 8543,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51470.xlsx",
+      "bytes": 65473,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51519.xlsx",
+      "bytes": 10210,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51585.xlsx",
+      "bytes": 262225,
+      "class": "returned",
+      "ok": true,
+      "ms": 155,
+      "maxRssKiB": 160336
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51626.xlsx",
+      "bytes": 11328,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51626_contact.xlsx",
+      "bytes": 10546,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51710.xlsx",
+      "bytes": 85202,
+      "class": "returned",
+      "ok": true,
+      "ms": 93,
+      "maxRssKiB": 121960
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51850.xlsx",
+      "bytes": 11776,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51963.xlsx",
+      "bytes": 7138,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/51998.xlsx",
+      "bytes": 11302,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/52348.xlsx",
+      "bytes": 5292,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/52425.xlsx",
+      "bytes": 9439,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/52575_main.xlsx",
+      "bytes": 5377,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/52716.xlsx",
+      "bytes": 14009,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/53101.xlsx",
+      "bytes": 9448,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/53105.xlsx",
+      "bytes": 50118,
+      "class": "returned",
+      "ok": true,
+      "ms": 82,
+      "maxRssKiB": 116620
+    },
+    {
+      "case": "poi/test-data/spreadsheet/53282.xlsx",
+      "bytes": 11032,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/53282b.xlsx",
+      "bytes": 9319,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/53568.xlsx",
+      "bytes": 125896,
+      "class": "returned",
+      "ok": true,
+      "ms": 42,
+      "maxRssKiB": 103784
+    },
+    {
+      "case": "poi/test-data/spreadsheet/53734.xlsx",
+      "bytes": 9409,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/53798.xlsx",
+      "bytes": 9383,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/53798_shiftNegative_TMPL.xlsx",
+      "bytes": 9383,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54034.xlsx",
+      "bytes": 8840,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54071.xlsx",
+      "bytes": 9150,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54084 - Greek - beyond BMP.xlsx",
+      "bytes": 8356,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54206.xlsx",
+      "bytes": 16423,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54288-ref.xlsx",
+      "bytes": 42893,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 93572
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54288.xlsx",
+      "bytes": 28988,
+      "class": "returned",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 93352
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54399.xlsx",
+      "bytes": 17761,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54436.xlsx",
+      "bytes": 12180,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54524.xlsx",
+      "bytes": 13777,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54607.xlsx",
+      "bytes": 8532,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54764-2.xlsx",
+      "bytes": 8115,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/54764.xlsx",
+      "bytes": 8016,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55406_Conditional_formatting_sample.xlsx",
+      "bytes": 12646,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55640.xlsx",
+      "bytes": 6184,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55745.xlsx",
+      "bytes": 14227,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55814.xlsx",
+      "bytes": 9286,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55850.xlsx",
+      "bytes": 12464,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55864.xlsx",
+      "bytes": 10630,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55906-MultiSheetRefs.xlsx",
+      "bytes": 9507,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55923.xlsx",
+      "bytes": 10322,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55924.xlsx",
+      "bytes": 9741,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55926.xlsx",
+      "bytes": 12650,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/55927.xlsx",
+      "bytes": 10126,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56011.xlsx",
+      "bytes": 26911,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56017.xlsx",
+      "bytes": 9924,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56169.xlsx",
+      "bytes": 10345,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56170.xlsx",
+      "bytes": 8577,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56274.xlsx",
+      "bytes": 12782,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56278.xlsx",
+      "bytes": 7774,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56295.xlsx",
+      "bytes": 4773,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56315.xlsx",
+      "bytes": 7815,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56420.xlsx",
+      "bytes": 9201,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56502.xlsx",
+      "bytes": 11902,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56511.xlsx",
+      "bytes": 9688,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56514.xlsx",
+      "bytes": 10525,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56557.xlsx",
+      "bytes": 10483,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56574.xlsx",
+      "bytes": 9915,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56644.xlsx",
+      "bytes": 34412,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56688_1.xlsx",
+      "bytes": 8846,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56688_2.xlsx",
+      "bytes": 9181,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56688_3.xlsx",
+      "bytes": 9188,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56688_4.xlsx",
+      "bytes": 8926,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56702.xlsx",
+      "bytes": 25108,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 94148
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56730.xlsx",
+      "bytes": 9808,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56737.xlsx",
+      "bytes": 8936,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56822-Countifs.xlsx",
+      "bytes": 6686,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/56957.xlsx",
+      "bytes": 7183,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57171_57163_57165.xlsx",
+      "bytes": 32353,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57176.xlsx",
+      "bytes": 8157,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57181.xlsm",
+      "bytes": 334727,
+      "class": "returned",
+      "ok": true,
+      "ms": 165,
+      "maxRssKiB": 159040
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57196.xlsx",
+      "bytes": 9359,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57236.xlsx",
+      "bytes": 8870,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57362.xlsx",
+      "bytes": 13283,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57423.xlsx",
+      "bytes": 9429,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57482-OnlyNumeric.xlsx",
+      "bytes": 10474,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57523.xlsx",
+      "bytes": 50590,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 95652
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57535.xlsx",
+      "bytes": 10175,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57798.xlsx",
+      "bytes": 10420,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57826.xlsx",
+      "bytes": 9090,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57828.xlsx",
+      "bytes": 9708,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57838.xlsx",
+      "bytes": 9675,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57890.xlsx",
+      "bytes": 10641,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57893-many-merges.xlsx",
+      "bytes": 848912,
+      "class": "returned",
+      "ok": true,
+      "ms": 577,
+      "maxRssKiB": 293276
+    },
+    {
+      "case": "poi/test-data/spreadsheet/57914.xlsx",
+      "bytes": 9564,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58106.xlsx",
+      "bytes": 9111,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58315.xlsx",
+      "bytes": 8963,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58325_db.xlsx",
+      "bytes": 2698159,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 97928
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58325_lt.xlsx",
+      "bytes": 934572,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58616.xlsx",
+      "bytes": 125952,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58648.xlsx",
+      "bytes": 9195,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58731.xlsx",
+      "bytes": 9023,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58747.xlsx",
+      "bytes": 8552,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58760.xlsx",
+      "bytes": 7408,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 90424,
+      "code": "opc/content-types-bad-root"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/58896.xlsx",
+      "bytes": 76752,
+      "class": "returned",
+      "ok": true,
+      "ms": 77,
+      "maxRssKiB": 117072
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59021.xlsx",
+      "bytes": 1933,
+      "class": "returned",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59026.xlsx",
+      "bytes": 10400,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59106.xlsx",
+      "bytes": 10650,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59132.xlsx",
+      "bytes": 9064,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59264.xlsx",
+      "bytes": 9548,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59388.xlsx",
+      "bytes": 14534,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59687.xlsx",
+      "bytes": 9580,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59736.xlsx",
+      "bytes": 8752,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59746_NoRowNums.xlsx",
+      "bytes": 5927,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424,
+      "code": "xlsx/styles-bad-root"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/59775.xlsx",
+      "bytes": 5977,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/60255_extra_drawingparts.xlsx",
+      "bytes": 11420,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/60289.xlsx",
+      "bytes": 8570,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/60384.xlsx",
+      "bytes": 6611,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/60509.xlsx",
+      "bytes": 12057,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/60512.xlsm",
+      "bytes": 66151,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/60709.xlsx",
+      "bytes": 28096,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/60825.xlsx",
+      "bytes": 6524,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/61034.xlsx",
+      "bytes": 32774,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/61060-conditional-number-formatting.xlsx",
+      "bytes": 8224,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/61063.xlsx",
+      "bytes": 9151,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/61281.xlsx",
+      "bytes": 9913,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/61495-test.xlsm",
+      "bytes": 20344,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/61605.xlsx",
+      "bytes": 11032,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/61652.xlsx",
+      "bytes": 17614,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/61869.xlsx",
+      "bytes": 8820,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/62272.xlsx",
+      "bytes": 4966,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/62629_target.xlsm",
+      "bytes": 33015,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/62629_toMerge.xlsx",
+      "bytes": 21827,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/62834.xlsx",
+      "bytes": 9629,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/63934.xlsx",
+      "bytes": 13740,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/64420.xlsm",
+      "bytes": 10062,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/64450.xlsx",
+      "bytes": 9881,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/64508.xlsx",
+      "bytes": 4304,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/64667.xlsx",
+      "bytes": 8235,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/64750.xlsx",
+      "bytes": 12921,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/64759.xlsx",
+      "bytes": 11679,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/65016.xlsx",
+      "bytes": 307821,
+      "class": "returned",
+      "ok": true,
+      "ms": 28,
+      "maxRssKiB": 91476
+    },
+    {
+      "case": "poi/test-data/spreadsheet/66365.xlsx",
+      "bytes": 4753,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/AmpersandHeader.xlsx",
+      "bytes": 9480,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/AverageTaxRates.xlsx",
+      "bytes": 23107,
+      "class": "returned",
+      "ok": true,
+      "ms": 21,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/Booleans.xlsx",
+      "bytes": 8612,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/BrNotClosed.xlsx",
+      "bytes": 9625,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/CVLKRA-KYC_Download_File_Structure_V3.1.xlsx",
+      "bytes": 204480,
+      "class": "returned",
+      "ok": true,
+      "ms": 115,
+      "maxRssKiB": 144608
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ConditionalFormattingSamples.xlsx",
+      "bytes": 654688,
+      "class": "returned",
+      "ok": true,
+      "ms": 42,
+      "maxRssKiB": 107756
+    },
+    {
+      "case": "poi/test-data/spreadsheet/CustomXMLMapping-singleattributenamespace.xlsx",
+      "bytes": 43087,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/CustomXMLMappings-complex-type.xlsx",
+      "bytes": 14979,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/CustomXMLMappings.xlsx",
+      "bytes": 9906,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/CustomXmlMappings-inverse-order.xlsx",
+      "bytes": 9915,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/DataTableCities.xlsx",
+      "bytes": 23936,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/DataValidationEvaluations.xlsx",
+      "bytes": 13679,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/DataValidationListTooLong.xlsx",
+      "bytes": 3286,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/DataValidations-49244.xlsx",
+      "bytes": 10705,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/DateFormatNumberTests.xlsx",
+      "bytes": 10981,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/DateFormatTests.xlsx",
+      "bytes": 12394,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ElapsedFormatTests.xlsx",
+      "bytes": 36062,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ExcelPivotTableSample.xlsx",
+      "bytes": 19460,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ExcelTables.xlsx",
+      "bytes": 9457,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ExcelWithAttachments.xlsm",
+      "bytes": 62646,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/Excel_file_with_trash_item.xlsx",
+      "bytes": 47318,
+      "class": "returned",
+      "ok": true,
+      "ms": 27,
+      "maxRssKiB": 95008
+    },
+    {
+      "case": "poi/test-data/spreadsheet/FillWithoutColor.xlsx",
+      "bytes": 18806,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ForShifting.xlsx",
+      "bytes": 9642,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/FormatChoiceTests.xlsx",
+      "bytes": 46589,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/FormatConditionTests.xlsx",
+      "bytes": 14577,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/FormatKM.xlsx",
+      "bytes": 11590,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/Formatting.xlsx",
+      "bytes": 8847,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/FormulaEvalTestData_Copy.xlsx",
+      "bytes": 65011,
+      "class": "returned",
+      "ok": true,
+      "ms": 33,
+      "maxRssKiB": 98812
+    },
+    {
+      "case": "poi/test-data/spreadsheet/FormulaSheetRange.xlsx",
+      "bytes": 12949,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/GeneralFormatTests.xlsx",
+      "bytes": 36134,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/GroupTest.xlsx",
+      "bytes": 8149,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/HeaderFooterComplexFormats.xlsx",
+      "bytes": 9543,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/HsGetVal.xlsx",
+      "bytes": 16441,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/InlineString.xlsx",
+      "bytes": 8401,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/InlineStrings.xlsx",
+      "bytes": 7843,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/Intersection-52111-xssf.xlsx",
+      "bytes": 9861,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/MalformedSSTCount.xlsx",
+      "bytes": 6266,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/MatrixFormulaEvalTestData.xlsx",
+      "bytes": 14875,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/NewStyleConditionalFormattings.xlsx",
+      "bytes": 13378,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/NewlineInFormulas.xlsx",
+      "bytes": 8935,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/NumberFormatApproxTests.xlsx",
+      "bytes": 58079,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/NumberFormatTests.xlsx",
+      "bytes": 21470,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/RepeatingRowsCols.xlsx",
+      "bytes": 20758,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SampleSS.strict.xlsx",
+      "bytes": 10006,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SampleSS.xlsx",
+      "bytes": 9112,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SheetTabColors.xlsx",
+      "bytes": 7008,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ShrinkToFit.xlsx",
+      "bytes": 6145,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SimpleMacro.xlsm",
+      "bytes": 13796,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SimpleMultiCell.xlsx",
+      "bytes": 8123,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SimpleNormal.xlsx",
+      "bytes": 8871,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SimpleScatterChart.xlsx",
+      "bytes": 18278,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SimpleStrict.xlsx",
+      "bytes": 9225,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SimpleWithComments.xlsx",
+      "bytes": 10060,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/SingleCellTable.xlsx",
+      "bytes": 9486,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/StructuredReferences.xlsx",
+      "bytes": 10459,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/StructuredRefs-lots-with-lookups.xlsx",
+      "bytes": 325446,
+      "class": "returned",
+      "ok": true,
+      "ms": 298,
+      "maxRssKiB": 171208
+    },
+    {
+      "case": "poi/test-data/spreadsheet/Tables.xlsx",
+      "bytes": 54387,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 93432
+    },
+    {
+      "case": "poi/test-data/spreadsheet/TablesWithDifferentHeaders.xlsx",
+      "bytes": 11359,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/TestShiftRowSharedFormula.xlsx",
+      "bytes": 8527,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/TextFormatTests.xlsx",
+      "bytes": 47360,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/Themes.xlsx",
+      "bytes": 9506,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/Themes2.xlsx",
+      "bytes": 9719,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/TwoSheetsNoneHidden.xlsx",
+      "bytes": 7938,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/TwoSheetsOneHidden.xlsx",
+      "bytes": 7962,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/VLookupFullColumn.xlsx",
+      "bytes": 13504,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ValueFunctionOfBlank.xlsx",
+      "bytes": 8980,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WidthsAndHeights.xlsx",
+      "bytes": 8597,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithChart.xlsx",
+      "bytes": 10138,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithChartSheet.xlsx",
+      "bytes": 30333,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithConditionalFormatting.xlsx",
+      "bytes": 10219,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithDrawing.xlsx",
+      "bytes": 101696,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithEmbeded.xlsx",
+      "bytes": 23668,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithMoreVariousData.xlsx",
+      "bytes": 11409,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithTable.xlsx",
+      "bytes": 9400,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithTextBox.xlsx",
+      "bytes": 9661,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithTextBox2.xlsx",
+      "bytes": 10129,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithThreeCharts.xlsx",
+      "bytes": 13841,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithTwoCharts.xlsx",
+      "bytes": 12810,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/WithVariousData.xlsx",
+      "bytes": 10603,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/XSSFSheet.copyRows.xlsx",
+      "bytes": 9883,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/atp.xlsx",
+      "bytes": 38593,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug54803.xlsx",
+      "bytes": 6342,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug60858.xlsx",
+      "bytes": 5213,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug62181.xlsx",
+      "bytes": 874738,
+      "class": "returned",
+      "ok": true,
+      "ms": 580,
+      "maxRssKiB": 343300
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug63189.xlsx",
+      "bytes": 11027,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug64512_embed.xlsx",
+      "bytes": 49746,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug65306.xlsx",
+      "bytes": 9515,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug65464.xlsx",
+      "bytes": 13664,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug66215.xlsx",
+      "bytes": 10935,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug66675.xlsx",
+      "bytes": 44438,
+      "class": "returned",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 103152
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug66827.xlsx",
+      "bytes": 9814,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug67784.xlsx",
+      "bytes": 6211,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug69769.xlsx",
+      "bytes": 13976,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/bug69812.xlsx",
+      "bytes": 8625,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/chartTitle_noTitle.xlsx",
+      "bytes": 12623,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/chartTitle_withTitle.xlsx",
+      "bytes": 12743,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/chartTitle_withTitleFormula.xlsx",
+      "bytes": 13515,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/chart_sheet.xlsx",
+      "bytes": 10795,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clone_sheet.xlsx",
+      "bytes": 12465,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIFuzzer-5040805309710336.xlsx",
+      "bytes": 5145,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/zip-bomb"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIXSSFFuzzer-4828727001088000.xlsx",
+      "bytes": 10226,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/zip-bomb"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIXSSFFuzzer-5089447305609216.xlsx",
+      "bytes": 7958,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIXSSFFuzzer-5185049589579776.xlsx",
+      "bytes": 9053,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/zip-bomb"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIXSSFFuzzer-5265527465181184.xlsx",
+      "bytes": 10483,
+      "class": "refused",
+      "ok": true,
+      "ms": 6,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIXSSFFuzzer-5937385319563264.xlsx",
+      "bytes": 54387,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 91160
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIXSSFFuzzer-6123461607817216.xlsx",
+      "bytes": 5327,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIXSSFFuzzer-6419366255919104.xlsx",
+      "bytes": 8420,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-POIXSSFFuzzer-6448258963341312.xlsx",
+      "bytes": 6874,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-XLSX2CSVFuzzer-5025401116950528.xlsx",
+      "bytes": 5615,
+      "class": "refused",
+      "ok": true,
+      "ms": 3,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-XLSX2CSVFuzzer-5542865479270400.xlsx",
+      "bytes": 9344,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-XLSX2CSVFuzzer-5636439151607808.xlsx",
+      "bytes": 372,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-XLSX2CSVFuzzer-6504225896792064.xlsx",
+      "bytes": 10245,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/zip-bomb"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/clusterfuzz-testcase-minimized-XLSX2CSVFuzzer-6594557414080512.xlsx",
+      "bytes": 1523,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/commentTest.xlsx",
+      "bytes": 36701,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/comments.xlsx",
+      "bytes": 10046,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/conditional_formatting_cell_is.xlsx",
+      "bytes": 68571,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/conditional_formatting_multiple_ranges.xlsx",
+      "bytes": 9487,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/conditional_formatting_with_formula_on_second_sheet.xlsx",
+      "bytes": 69367,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/craftonhills.edu_programreview_report.aspx_goalpriorityreport_0011d159-1eeb-4b63-8833-867b0926e5f3.xlsx",
+      "bytes": 10189,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424,
+      "code": "xlsx/styles-bad-root"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/crash-274d6342e4842d61be0fb48eaadad6208ae767ae.xlsx",
+      "bytes": 6874,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/missing-content-types"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/crash-9bf3cd4bd6f50a8a9339d363c2c7af14b536865c.xlsx",
+      "bytes": 8548,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/customIndexedColors.xlsx",
+      "bytes": 19534,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/dataValidationTableRange.xlsx",
+      "bytes": 116554,
+      "class": "returned",
+      "ok": true,
+      "ms": 107,
+      "maxRssKiB": 118796
+    },
+    {
+      "case": "poi/test-data/spreadsheet/decimal-format.xlsx",
+      "bytes": 9677,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/deep-data.xlsx",
+      "bytes": 964835,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/duplicate-filename-case-insensitive.xlsx",
+      "bytes": 10721,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/duplicate-filename.xlsx",
+      "bytes": 10721,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/evaluate_formula_with_structured_table_references.xlsx",
+      "bytes": 9198,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/formula-eval.xlsx",
+      "bytes": 8369,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/github-321.xlsx",
+      "bytes": 8573,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/headerFooterTest.xlsx",
+      "bytes": 27484,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/link-external-workbook-a.xlsx",
+      "bytes": 3274,
+      "class": "returned",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/link-external-workbook-b.xlsx",
+      "bytes": 4080,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/mv-calculator-final-2-20-2013.xlsm",
+      "bytes": 603138,
+      "class": "returned",
+      "ok": true,
+      "ms": 212,
+      "maxRssKiB": 140928
+    },
+    {
+      "case": "poi/test-data/spreadsheet/noSharedStringTable.xlsx",
+      "bytes": 7820,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/no_drawing_patriarch.xlsx",
+      "bytes": 672414,
+      "class": "returned",
+      "ok": true,
+      "ms": 417,
+      "maxRssKiB": 246812
+    },
+    {
+      "case": "poi/test-data/spreadsheet/picture.xlsx",
+      "bytes": 428616,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/poc-shared-strings.xlsx",
+      "bytes": 109583,
+      "class": "returned",
+      "ok": true,
+      "ms": 92,
+      "maxRssKiB": 129572
+    },
+    {
+      "case": "poi/test-data/spreadsheet/poc-xmlbomb-empty.xlsx",
+      "bytes": 5193,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/zip-bomb"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/poc-xmlbomb.xlsx",
+      "bytes": 5240,
+      "class": "refused",
+      "ok": true,
+      "ms": 5,
+      "maxRssKiB": 90424,
+      "code": "opc/zip-bomb"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/protected_passtika.xlsx",
+      "bytes": 12800,
+      "class": "refused",
+      "ok": true,
+      "ms": 4,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-zip"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ref-56737.xlsx",
+      "bytes": 10427,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/ref2-56737.xlsx",
+      "bytes": 11474,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/reordered_sheets.xlsx",
+      "bytes": 8731,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/resize_compare.xlsx",
+      "bytes": 37768,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/right-to-left.xlsx",
+      "bytes": 14478,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/sample-beta.xlsx",
+      "bytes": 8836,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/sample.strict.xlsx",
+      "bytes": 11937,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/sample.xlsx",
+      "bytes": 12348,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/shared_formulas.xlsx",
+      "bytes": 10137,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/sharedhyperlink.xlsx",
+      "bytes": 9080,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/sheetProtection_allLocked.xlsx",
+      "bytes": 7871,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/sheetProtection_not_protected.xlsx",
+      "bytes": 28728,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/simple-monthly-budget.xlsx",
+      "bytes": 18700,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/simple-table-named-range.xlsx",
+      "bytes": 9785,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/style-alternate-content.xlsx",
+      "bytes": 10103,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424,
+      "code": "xlsx/styles-bad-root"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/styles.xlsx",
+      "bytes": 9309,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/table-sample.xlsx",
+      "bytes": 10595,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/tableStyle.xlsx",
+      "bytes": 10899,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/template.xlsx",
+      "bytes": 7835,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/testNames.xlsm",
+      "bytes": 13290,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/testSharedFormulasRangeSetBlankBug.xlsx",
+      "bytes": 12428,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/testSharedFormulasSetBlank.xlsx",
+      "bytes": 8889,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/test_conditional_formatting.xlsx",
+      "bytes": 10203,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/tile-range-test.xlsx",
+      "bytes": 6524,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/unicodeSheetName.xlsx",
+      "bytes": 8924,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/workbookProtection-sheet_password-2013.xlsx",
+      "bytes": 9196,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/workbookProtection-workbook_password-2013.xlsx",
+      "bytes": 8171,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/workbookProtection-workbook_password_user_range-2010.xlsx",
+      "bytes": 11207,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/workbookProtection_not_protected.xlsx",
+      "bytes": 28728,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/workbookProtection_workbook_revision_protected.xlsx",
+      "bytes": 12468,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/workbookProtection_workbook_structure_protected.xlsx",
+      "bytes": 28727,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/workbookProtection_workbook_windows_protected.xlsx",
+      "bytes": 28739,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/workbookProtection_worksheet_protected.xlsx",
+      "bytes": 28754,
+      "class": "returned",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/xlmmacro.xlsm",
+      "bytes": 8768,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/xlookup.xlsx",
+      "bytes": 12031,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/xlsx-corrupted.xlsx",
+      "bytes": 6842,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 90424,
+      "code": "opc/invalid-rels"
+    },
+    {
+      "case": "poi/test-data/spreadsheet/xlsx-jdbc.xlsx",
+      "bytes": 3072,
+      "class": "returned",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/xssf-enum.xltx.xlsx",
+      "bytes": 13876,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 90424
+    },
+    {
+      "case": "poi/test-data/spreadsheet/xxe_in_schema.xlsx",
+      "bytes": 9801,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 90424
+    }
+  ],
+  "commit": "5a94d770adebb7e63d069f419977d1af9e5f429c",
+  "date": "2026-10-16"
+}

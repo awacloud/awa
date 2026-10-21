@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, afterEach, setSystemTime } from 'bun:test';
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 import { deflate } from '@awacloud/fw/io/compress/deflate.js';
 import { bitstream } from '@awacloud/fw/io/compress/bitstream.js';
@@ -17,6 +17,7 @@ import { pkgManifest } from './manifest.js';
 import { pkgPackage } from './package.js';
 import { odfErrors } from '../errors.js';
 import { odfShared } from '../_shared/index.js';
+import { modules, fw_require } from '../main.js';
 
 const runtime = new ModuleRuntime();
 for (const m of [bitstream, huffman, lz77, deflate, crc32, zip,
@@ -261,5 +262,146 @@ describe('pkgPackage ZIP bomb guards', () => {
                 expect(e.code).toBe('odf/contract-error/pkg');
             });
         }
+    });
+});
+
+/**
+ * Read the DOS time/date of every entry, from the central directory and
+ * from the local header it points to.
+ * @returns {{ name: string, cdTime: number, cdDate: number, lhTime: number, lhDate: number }[]}
+ */
+function entryDates(bytes) {
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let eocd = bytes.length - 22;
+    while (eocd >= 0 && v.getUint32(eocd, true) !== 0x06054b50) eocd--;
+    if (eocd < 0) throw new Error('no end of central directory');
+    const count = v.getUint16(eocd + 10, true);
+    let at = v.getUint32(eocd + 16, true);
+    const out = [];
+    for (let i = 0; i < count; i++) {
+        if (v.getUint32(at, true) !== 0x02014b50) throw new Error('bad central directory entry');
+        const nameLen = v.getUint16(at + 28, true);
+        const extraLen = v.getUint16(at + 30, true);
+        const commentLen = v.getUint16(at + 32, true);
+        const lho = v.getUint32(at + 42, true);
+        out.push({
+            name: new TextDecoder().decode(bytes.subarray(at + 46, at + 46 + nameLen)),
+            cdTime: v.getUint16(at + 12, true),
+            cdDate: v.getUint16(at + 14, true),
+            lhTime: v.getUint16(lho + 10, true),
+            lhDate: v.getUint16(lho + 12, true)
+        });
+        at += 46 + nameLen + extraLen + commentLen;
+    }
+    return out;
+}
+
+/** DOS time and date words for a local-time `Date` (2-second resolution). */
+function dosWords(d) {
+    return {
+        time: (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1),
+        date: ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()
+    };
+}
+
+describe('pkgPackage write — reproducible ZIP entry dates (BL-2744)', () => {
+    const enc = new TextEncoder();
+    afterEach(() => { setSystemTime(); });
+
+    function sample() {
+        const p = pkg.empty(mimetype.CT_ODT);
+        pkg.setPart(p, 'content.xml', enc.encode('<x/>'), 'text/xml');
+        pkg.setPart(p, 'styles.xml', enc.encode('<y/>'), 'text/xml');
+        return p;
+    }
+
+    test('two default writes with the clock moved between them are byte-identical', () => {
+        setSystemTime(new Date(2026, 9, 20, 9, 15, 0));
+        const a = pkg.write(sample());
+        setSystemTime(new Date(2031, 2, 7, 18, 42, 10));
+        const b = pkg.write(sample());
+        expect(b).toEqual(a);
+    });
+
+    test('the default stamp is 1980-01-01 00:00:00 on every entry', () => {
+        setSystemTime(new Date(2026, 9, 20, 9, 15, 0));
+        const { time, date } = dosWords(new Date(1980, 0, 1, 0, 0, 0));
+        const dates = entryDates(pkg.write(sample()));
+        expect(dates.map(e => e.name)).toEqual(['mimetype', 'content.xml', 'styles.xml', 'META-INF/manifest.xml']);
+        for (const e of dates) {
+            expect([e.cdTime, e.cdDate, e.lhTime, e.lhDate]).toEqual([time, date, time, date]);
+        }
+    });
+
+    test('opts.mtime stamps every local header and central-directory entry', () => {
+        const at = new Date(2026, 9, 20, 12, 0, 0);
+        const { time, date } = dosWords(at);
+        const dates = entryDates(pkg.write(sample(), { mtime: at }));
+        expect(dates.length).toBe(4);
+        for (const e of dates) {
+            expect([e.cdTime, e.cdDate, e.lhTime, e.lhDate]).toEqual([time, date, time, date]);
+        }
+    });
+
+    test('opts.mtime accepts an epoch number', () => {
+        const at = new Date(2026, 9, 20, 12, 0, 0);
+        expect(pkg.write(sample(), { mtime: at.getTime() })).toEqual(pkg.write(sample(), { mtime: at }));
+    });
+
+    test('the mimetype entry stays first and STORED with an explicit mtime', () => {
+        const bytes = pkg.write(sample(), { mtime: new Date(2026, 9, 20, 12, 0, 0) });
+        expect(new TextDecoder().decode(bytes.subarray(30, 38))).toBe('mimetype');
+        expect(bytes[8]).toBe(0);
+        expect(bytes[9]).toBe(0);
+    });
+
+    test('an mtime outside 1980-2099 throws RenderError odf/render-error/pkg with the ZIP cause', () => {
+        const { RenderError } = runtime.resolve('odfErrors');
+        const e = thrown(() => pkg.write(sample(), { mtime: new Date(1975, 0, 1) }));
+        expect(e).toBeInstanceOf(RenderError);
+        expect(e.code).toBe('odf/render-error/pkg');
+        expect(e.context.module).toBe('pkg');
+        expect(e.cause).toBeDefined();
+    });
+});
+
+describe('odt / ods / odp write — reproducible bytes (BL-2744)', () => {
+    const full = new ModuleRuntime();
+    for (const m of [...fw_require, ...modules]) full.register(m);
+    afterEach(() => { setSystemTime(); });
+
+    /** Write twice with the clock moved between the two calls. */
+    function twice(writeOnce) {
+        setSystemTime(new Date(2026, 9, 20, 9, 15, 0));
+        const a = writeOnce();
+        setSystemTime(new Date(2031, 2, 7, 18, 42, 10));
+        const b = writeOnce();
+        return [a, b];
+    }
+
+    test('odt.write twice → identical bytes', () => {
+        const o = full.resolve('odt');
+        const [a, b] = twice(() => o.write({ body: [o.paragraph('Hello')] }));
+        expect(b).toEqual(a);
+    });
+
+    test('ods.write twice → identical bytes', () => {
+        const o = full.resolve('ods');
+        const [a, b] = twice(() => o.write(o.empty()));
+        expect(b).toEqual(a);
+    });
+
+    test('odp.write twice → identical bytes', () => {
+        const o = full.resolve('odp');
+        const [a, b] = twice(() => o.write(o.empty()));
+        expect(b).toEqual(a);
+    });
+
+    test('odt.write threads opts.mtime to the package writer', () => {
+        const o = full.resolve('odt');
+        const at = new Date(2026, 9, 20, 12, 0, 0);
+        const { time, date } = dosWords(at);
+        const dates = entryDates(o.write({ body: [o.paragraph('Hello')] }, { mtime: at }));
+        for (const e of dates) expect([e.lhTime, e.lhDate]).toEqual([time, date]);
     });
 });

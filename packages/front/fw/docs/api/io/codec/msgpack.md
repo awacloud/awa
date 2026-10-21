@@ -132,11 +132,11 @@ const worker = fw.createWorker(
 - Directly unsupported JS types: `Symbol`, `Function`, `Promise`.
 - Comparison:
   - [cbor](./cbor.md): richer (float16, typed tags, bignum, deterministic encoding for crypto), IETF standard.
-  - [buffer](./buffer.md): awa internal format, most compact for small integers, non-interop.
+  - [buffer](./buffer.md): AWA internal format, most compact for small integers, non-interop.
   - `msgpack`: most widely used in the Redis / MongoDB / ZeroMQ / Fluentd ecosystem.
 
 ## See also
 
 - [cbor](./cbor.md) — IETF standard alternative
-- [buffer](./buffer.md) — awa internal binary format
+- [buffer](./buffer.md) — AWA internal binary format
 - [utf8](./utf8.md) — dependency

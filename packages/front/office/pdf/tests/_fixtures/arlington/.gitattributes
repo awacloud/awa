@@ -1,0 +1,4 @@
+# Vendored third-party model files: git must never convert their line
+# ends, whatever its text detection decides. MANIFEST.json pins every
+# file's SHA-256.
+* -text

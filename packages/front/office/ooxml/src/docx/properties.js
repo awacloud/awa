@@ -22,6 +22,7 @@
  * | `color` | `<w:color w:val="RRGGBB"/>` | string (hex, no `#`) |
  * | `size` | `<w:sz w:val="24"/>` | number (half-points) |
  * | `font` | `<w:rFonts w:ascii=…/>` | string |
+ * | `fonts` | every `<w:rFonts>` attribute | `{ ascii?, hAnsi?, eastAsia?, cs?, hint?, …Theme? }` |
  * | `vertAlign` | `<w:vertAlign w:val=…/>` | `'superscript'|'subscript'|'baseline'` |
  * | `highlight` | `<w:highlight w:val=…/>` | string |
  * | `rStyle` | `<w:rStyle w:val=…/>` | string (style id) |
@@ -100,6 +101,73 @@ export const docxProperties = {
         function valOf(el) { return el ? el.attrs['w:val'] : undefined; }
         function elVal(name, val) { return xml.el(name, { 'w:val': String(val) }); }
 
+        // --- Schema order ---
+        // OOXML child lists are sequences: a preserved element must go back
+        // to its place among the typed ones. `sequence(names)` indexes a
+        // sequence (an entry may be an array of names sharing one place);
+        // `orderBySequence(children, seq)` sorts element children by that
+        // index, stably; an `mc:AlternateContent` takes the place of the
+        // element its Fallback (else its first Choice) holds; a name not
+        // listed goes before the sequence's trailing `...Change` entry when
+        // it has one, else last. Mirrored in ooxmlShared and docxProperties
+        // — keep byte-identical (order-by-sequence-drift.test.js).
+        function sequence(names) {
+            const rank = new Map();
+            let change = -1;
+            names.forEach((entry, i) => {
+                for (const n of Array.isArray(entry) ? entry : [entry]) {
+                    rank.set(n, i);
+                    if (change < 0 && /Change$/.test(n)) change = i;
+                }
+            });
+            return { rank, other: change >= 0 ? change - 0.5 : names.length };
+        }
+
+        function orderBySequence(children, seq) {
+            const firstElement = el => (el && el.children || []).find(k => k && k.type === 'element');
+            const nameOf = c => {
+                if (c.name !== 'mc:AlternateContent') return c.name;
+                const branches = (c.children || []).filter(k => k && k.type === 'element');
+                const branch = branches.find(k => k.name === 'mc:Fallback') || branches.find(k => k.name === 'mc:Choice');
+                const inner = firstElement(branch);
+                return inner ? inner.name : c.name;
+            };
+            return children
+                .map((c, i) => {
+                    const n = c && c.type === 'element' ? nameOf(c) : null;
+                    return { c, i, r: n !== null && seq.rank.has(n) ? seq.rank.get(n) : seq.other };
+                })
+                .sort((a, b) => a.r - b.r || a.i - b.i)
+                .map(x => x.c);
+        }
+
+        // ECMA-376 Part 1 sequences of the elements this module writes.
+        const RPR_SEQ = sequence([
+            'w:ins', 'w:del', 'w:moveFrom', 'w:moveTo', 'w:rStyle', 'w:rFonts', 'w:b', 'w:bCs',
+            'w:i', 'w:iCs', 'w:caps', 'w:smallCaps', 'w:strike', 'w:dstrike', 'w:outline',
+            'w:shadow', 'w:emboss', 'w:imprint', 'w:noProof', 'w:snapToGrid', 'w:vanish',
+            'w:webHidden', 'w:color', 'w:spacing', 'w:w', 'w:kern', 'w:position', 'w:sz', 'w:szCs',
+            'w:highlight', 'w:u', 'w:effect', 'w:bdr', 'w:shd', 'w:fitText', 'w:vertAlign',
+            'w:rtl', 'w:cs', 'w:em', 'w:lang', 'w:eastAsianLayout', 'w:specVanish', 'w:oMath',
+            'w:rPrChange'
+        ]);
+        const PPR_SEQ = sequence([
+            'w:pStyle', 'w:keepNext', 'w:keepLines', 'w:pageBreakBefore', 'w:framePr',
+            'w:widowControl', 'w:numPr', 'w:suppressLineNumbers', 'w:pBdr', 'w:shd', 'w:tabs',
+            'w:suppressAutoHyphens', 'w:kinsoku', 'w:wordWrap', 'w:overflowPunct',
+            'w:topLinePunct', 'w:autoSpaceDE', 'w:autoSpaceDN', 'w:bidi', 'w:adjustRightInd',
+            'w:snapToGrid', 'w:spacing', 'w:ind', 'w:contextualSpacing', 'w:mirrorIndents',
+            'w:suppressOverlap', 'w:jc', 'w:textDirection', 'w:textAlignment',
+            'w:textboxTightWrap', 'w:outlineLvl', 'w:divId', 'w:cnfStyle', 'w:rPr', 'w:sectPr',
+            'w:pPrChange'
+        ]);
+        const TBLPR_SEQ = sequence([
+            'w:tblStyle', 'w:tblpPr', 'w:tblOverlap', 'w:bidiVisual', 'w:tblStyleRowBandSize',
+            'w:tblStyleColBandSize', 'w:tblW', 'w:jc', 'w:tblCellSpacing', 'w:tblInd',
+            'w:tblBorders', 'w:shd', 'w:tblLayout', 'w:tblCellMar', 'w:tblLook', 'w:tblCaption',
+            'w:tblDescription', 'w:tblPrChange'
+        ]);
+
         // --- Run properties ---
         // Known children we explicitly map. Anything else lands in `_extras`.
         const RPR_KNOWN = new Set([
@@ -107,6 +175,42 @@ export const docxProperties = {
             'w:color', 'w:sz', 'w:rFonts',
             'w:vertAlign', 'w:highlight', 'w:rStyle'
         ]);
+
+        // <w:rFonts> (CT_Fonts): `font` is the 1.0.0 single name, `fonts`
+        // every attribute by its local name. `font` still rules the three
+        // explicit slots: equal to what `fonts` derives, `fonts` is written
+        // as read; changed, ascii / hAnsi / cs take it and their theme
+        // attributes go (a theme attribute wins over a name in Word);
+        // removed, those six go. eastAsia, its theme and hint always stay.
+        const FONT_SLOTS = ['ascii', 'hAnsi', 'cs', 'asciiTheme', 'hAnsiTheme', 'cstheme'];
+
+        function parseFonts(el) {
+            const out = {};
+            for (const [k, v] of Object.entries(el.attrs)) out[k.replace(/^w:/, '')] = v;
+            return out;
+        }
+
+        function renderFonts(rPr) {
+            const fonts = rPr.fonts && typeof rPr.fonts === 'object' ? rPr.fonts : null;
+            if (!fonts) {
+                return rPr.font != null
+                    ? xml.el('w:rFonts', { 'w:ascii': rPr.font, 'w:hAnsi': rPr.font, 'w:cs': rPr.font })
+                    : null;
+            }
+            const derived = fonts.ascii || fonts.hAnsi || fonts.cs;
+            const kept = { ...fonts };
+            if ((rPr.font ?? undefined) !== derived) {
+                for (const k of FONT_SLOTS) delete kept[k];
+                if (rPr.font != null) {
+                    kept.ascii = rPr.font;
+                    kept.hAnsi = rPr.font;
+                    kept.cs = rPr.font;
+                }
+            }
+            const attrs = {};
+            for (const [k, v] of Object.entries(kept)) if (v != null) attrs['w:' + k] = String(v);
+            return Object.keys(attrs).length ? xml.el('w:rFonts', attrs) : null;
+        }
 
         function parseRunProperties(rPrEl) {
             if (!rPrEl) return undefined;
@@ -123,7 +227,8 @@ export const docxProperties = {
                     case 'w:sz':        out.size = Number(valOf(c)); break;
                     case 'w:rFonts':    out.font = c.attrs['w:ascii']
                                                 || c.attrs['w:hAnsi']
-                                                || c.attrs['w:cs']; break;
+                                                || c.attrs['w:cs'];
+                                        out.fonts = parseFonts(c); break;
                     case 'w:vertAlign': out.vertAlign = valOf(c); break;
                     case 'w:highlight': out.highlight = valOf(c); break;
                     case 'w:rStyle':    out.rStyle = valOf(c); break;
@@ -144,11 +249,8 @@ export const docxProperties = {
             if (!rPr) return null;
             const children = [];
             if (rPr.rStyle != null)    children.push(elVal('w:rStyle', rPr.rStyle));
-            if (rPr.font != null)      children.push(xml.el('w:rFonts', {
-                                            'w:ascii': rPr.font,
-                                            'w:hAnsi': rPr.font,
-                                            'w:cs': rPr.font
-                                       }));
+            const rFonts = renderFonts(rPr);
+            if (rFonts)                children.push(rFonts);
             const bold = writeToggle('w:b', rPr.bold);
             if (bold) children.push(bold);
             const italic = writeToggle('w:i', rPr.italic);
@@ -162,7 +264,7 @@ export const docxProperties = {
             if (rPr.vertAlign != null) children.push(elVal('w:vertAlign', rPr.vertAlign));
             if (rPr._extras) for (const ex of rPr._extras) children.push(ex);
             if (!children.length) return null;
-            return xml.el('w:rPr', {}, children);
+            return xml.el('w:rPr', {}, orderBySequence(children, RPR_SEQ));
         }
 
         // --- Paragraph properties ---
@@ -250,7 +352,7 @@ export const docxProperties = {
             }
             if (pPr._extras) for (const ex of pPr._extras) children.push(ex);
             if (!children.length) return null;
-            return xml.el('w:pPr', {}, children);
+            return xml.el('w:pPr', {}, orderBySequence(children, PPR_SEQ));
         }
 
         // --- Table properties ---
@@ -364,12 +466,6 @@ export const docxProperties = {
             return xml.el('w:tblCellMar', {}, kids);
         }
 
-        // The CT_TblPr children that follow `w:tblCellMar` in the schema:
-        // verbatim `_extras` of these names render after the typed margins,
-        // every other extra before them, so a schema-ordered source keeps
-        // its order.
-        const AFTER_CELL_MARGINS = new Set(['w:tblLook', 'w:tblCaption', 'w:tblDescription', 'w:tblPrChange']);
-
         function parseTableProperties(tblPrEl) {
             if (!tblPrEl) return undefined;
             const out = {};
@@ -391,9 +487,7 @@ export const docxProperties = {
             return out;
         }
 
-        // Schema order inside <w:tblPr>: tblStyle, tblW, tblBorders, the
-        // verbatim extras that precede tblCellMar in the schema, tblCellMar,
-        // then the extras that follow it (tblLook, tblCaption, ...).
+        // The typed children and the verbatim extras in CT_TblPr order.
         function renderTableProperties(tblPr) {
             if (!tblPr) return null;
             const children = [];
@@ -401,21 +495,19 @@ export const docxProperties = {
             if (tblPr.width) children.push(renderWidth('w:tblW', tblPr.width));
             const bordersEl = renderTableBorders(tblPr.borders);
             if (bordersEl) children.push(bordersEl);
-            const extras = tblPr._extras || [];
-            const isAfter = ex => ex.type === 'element' && AFTER_CELL_MARGINS.has(ex.name);
-            for (const ex of extras) if (!isAfter(ex)) children.push(ex);
             const marginsEl = renderCellMargins(tblPr.cellMargins);
             if (marginsEl) children.push(marginsEl);
-            for (const ex of extras) if (isAfter(ex)) children.push(ex);
+            for (const ex of tblPr._extras || []) children.push(ex);
             if (!children.length) return null;
-            return xml.el('w:tblPr', {}, children);
+            return xml.el('w:tblPr', {}, orderBySequence(children, TBLPR_SEQ));
         }
 
         return {
             parseRunProperties, renderRunProperties,
             parseParagraphProperties, renderParagraphProperties,
             parseTableProperties, renderTableProperties,
-            readToggle, writeToggle, valOf, elVal
+            readToggle, writeToggle, valOf, elVal,
+            sequence, orderBySequence
         };
     }
 };

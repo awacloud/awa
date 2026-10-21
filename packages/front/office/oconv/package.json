@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/oconv",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "AGPL-3.0-only",
   "description": "Browser-safe document conversion through a versioned pivot IR — docx/odt/xlsx/ods/pptx/odp/pdf to structured Markdown, Markdown to docx/odt/pdf, and docx/odt cross-format pairs, each call returning a machine-readable loss ledger. Zero runtime dependency beyond @awacloud/fw and the @awacloud office packages.",
   "keywords": [
@@ -63,8 +63,8 @@
   "awa": {
     "maturity": "L3",
     "coverageBasis": ["src/**"],
-    "coverageFloor": 0.95,
-    "_coverageComment": "Basis = this package's own src/** rows. The canonical All-files aggregate is dominated by the sibling office packages and @awacloud/fw that src/main.js's modules array composes by design (W0 measured 502 of 535 rows foreign), so it tracks the siblings' tests, not this package's. src/worker.js has no lcov row (it evaluates inside a Worker thread; its guard is tests/worker.integration.test.js). src/write/pdf/_test-runtime.js stays inside the basis (the gate's glob matcher has no negation). 0.95 is the owner-ruled floor, confirmed against the gate's own post-declaration print."
+    "coverageFloor": 0.962,
+    "_coverageComment": "Basis = this package's own src/** rows. The canonical All-files aggregate is dominated by the sibling office packages and @awacloud/fw that src/main.js's modules array composes by design (W0 measured 502 of 535 rows foreign), so it tracks the siblings' tests, not this package's. src/worker.js has no lcov row (it evaluates inside a Worker thread; its guard is tests/worker.integration.test.js). src/write/pdf/_test-runtime.js stays inside the basis (the gate's glob matcher has no negation). The floor is the measured basis mean minus 2 points (98.20 % on 2026-10-12, owner-ratified): 0.962."
   },
   "repository": {
     "type": "git",

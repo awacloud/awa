@@ -4,6 +4,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-21
+
+### Added
+
+- `lossSummary` on every `toMd`, `fromMd` and `convert` result and in
+  the `to_md`, `from_md` and `convert` MCP payloads: the losses grouped
+  by `code` and `detail`, each with a `count`, in order of first
+  occurrence (new type `LossSummaryEntry`). `losses` is unchanged.
+- The MCP `lossView` argument on `to_md`, `from_md` and `convert`:
+  `"summary"` returns `lossSummary` without the per-occurrence `losses`;
+  `"full"`, the default, returns both. The tool descriptions recommend
+  `"summary"`.
+
 ## [1.0.0] - 2026-10-07
 
 ### Security

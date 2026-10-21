@@ -13,7 +13,10 @@ status: complete
 
 **Module** `tableRow` | **Source** `packages/front/office/odf/src/table/row.js` | **Worker-safe** yes
 
-Model: `{ type: 'row', styleName?, repeated?, cells: [...], _extras? }`.
+Model: `{ type: 'row', styleName?, repeated?, visibility?, cells: [...], _extras? }`.
+
+`visibility` is the row's `table:visibility` (`visible` | `collapse` | `filter`),
+kept as written; `renderRow` writes it back.
 
 ## API
 

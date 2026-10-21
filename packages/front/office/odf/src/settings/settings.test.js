@@ -63,9 +63,22 @@ describe('odfSettings module', () => {
             expect(back.itemSets[0].attrs['config:name']).toBe('ooo:view-settings');
         });
 
-        test('empty itemSets list', () => {
+        test('no item set: no office:settings element (the schema wants one item set or more inside it)', () => {
             const out = s.serialize(s.empty());
-            expect(out).toContain('<office:settings');
+            expect(out).not.toContain('office:settings');
+            const root = xml.parse(out);
+            expect(root.name).toBe('office:document-settings');
+            expect(root.children.filter((c) => c.type === 'element')).toEqual([]);
+            expect(s.parse(out)).toEqual({ itemSets: [] });
+            expect(s.serialize({})).toBe(out);
+            expect(s.serialize(undefined)).toBe(out);
+        });
+
+        test('one item set or one kept child: office:settings is written around them', () => {
+            const one = s.serialize({ itemSets: [s.parse(SETTINGS_XML).itemSets[0]] });
+            expect(one).toContain('<office:settings><config:config-item-set config:name="ooo:view-settings">');
+            const kept = s.serialize({ itemSets: [], _extras: { children: [xml.el('config:config-item-set', { 'config:name': 'x' }, [])] } });
+            expect(kept).toContain('<office:settings><config:config-item-set config:name="x"/></office:settings>');
         });
     });
 });

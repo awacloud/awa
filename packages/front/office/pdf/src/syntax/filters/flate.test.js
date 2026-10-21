@@ -438,6 +438,98 @@ describe('createFlate — truncated streams', () => {
     });
 });
 
+describe('createFlate — output cap (decompression bomb)', () => {
+    const MiB = 1024 * 1024;
+    const flate = createFlate(fw);
+    const attempt = (fn) => {
+        try { return { value: fn() }; } catch (e) { return { error: e }; }
+    };
+    // 4 MiB of zeros deflate to a few KiB (ratio ~1000:1).
+    const zeros = new Uint8Array(4 * MiB);
+    const bomb = fw.zlibSync(zeros);
+
+    test('the default ceiling is 256 MiB, the ooxml/odf maxUncompressed', () => {
+        expect(flate.limits.maxOutput).toBe(256 * MiB);
+        expect(Object.isFrozen(flate.limits)).toBe(true);
+    });
+
+    test('a stream inflating past maxOutput throws a typed limit error', () => {
+        expect(bomb.length).toBeLessThan(64 * 1024);
+        const { value, error } = attempt(() => flate.decode(bomb, null, { maxOutput: MiB }));
+        expect(value).toBeUndefined();
+        expect(error).toBeInstanceOf(ParseError);
+        expect(error.code).toBe('pdf/flate/output-limit');
+        expect(error.context.limit).toBe('maxOutput');
+        expect(error.context.max).toBe(MiB);
+        expect(error.cause).toBeUndefined();
+    });
+
+    test('a stream at exactly maxOutput decodes; one byte less throws', () => {
+        const out = flate.decode(bomb, null, { maxOutput: 4 * MiB });
+        expect(out.length).toBe(4 * MiB);
+        expect(out.every((b) => b === 0)).toBe(true);
+        const { error } = attempt(() => flate.decode(bomb, null, { maxOutput: 4 * MiB - 1 }));
+        expect(error && error.code).toBe('pdf/flate/output-limit');
+    });
+
+    test('a truncated bomb throws the limit error instead of returning a prefix', () => {
+        const cut = bomb.subarray(0, bomb.length - 8);
+        expect(attempt(() => fw.unzlibSync(cut)).error.code).toBe(0);
+        const { value, error } = attempt(() => flate.decode(cut, null, { maxOutput: 64 * 1024 }));
+        expect(value).toBeUndefined();
+        expect(error && error.code).toBe('pdf/flate/output-limit');
+    });
+
+    test('the cap aborts the inflate early instead of measuring the full output', () => {
+        // Varied content (~5:1): the capped decode must stop well before
+        // inflating the whole 2 MiB.
+        let seed = 7;
+        const text = new Uint8Array(2 * MiB);
+        for (let i = 0; i < text.length; i++) {
+            seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+            text[i] = 32 + (seed >>> 16) % 16;
+        }
+        const enc = fw.zlibSync(text);
+        expect(enc.length).toBeGreaterThan(text.length / 4);
+        let emitted = 0;
+        const spy = {
+            ...fw,
+            UnzlibStream: function SpyStream(ondata) {
+                const inner = new fw.UnzlibStream((chunk, fin) => {
+                    emitted += chunk.length;
+                    ondata(chunk, fin);
+                });
+                this.push = (chunk, final) => inner.push(chunk, final);
+            },
+        };
+        const { error } = attempt(() => createFlate(spy).decode(enc, null, { maxOutput: 64 * 1024 }));
+        expect(error && error.code).toBe('pdf/flate/output-limit');
+        expect(emitted).toBeGreaterThan(64 * 1024);
+        expect(emitted).toBeLessThan(text.length / 4);
+    });
+
+    test('maxOutput 0 disables the ceiling (ooxml/odf parity)', () => {
+        const out = flate.decode(bomb, null, { maxOutput: 0 });
+        expect(out.length).toBe(4 * MiB);
+    });
+
+    test('streams under the ceiling decode as before, predictor included', () => {
+        const rows = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+        const enc = flate.encode(rows, { Predictor: 12, Columns: 4 });
+        const params = { Predictor: 12, Columns: 4 };
+        expect(Array.from(flate.decode(enc, params, { maxOutput: 64 * 1024 })))
+            .toEqual(Array.from(rows));
+        expect(Array.from(flate.decode(enc, params))).toEqual(Array.from(rows));
+    });
+
+    test('a bad zlib header above the fast-path size still fails as inflate-failed', () => {
+        const bad = new Uint8Array(bomb);
+        bad[0] = 0x00;
+        const { error } = attempt(() => flate.decode(bad, null, { maxOutput: 64 * 1024 }));
+        expect(error && error.code).toBe('pdf/flate/inflate-failed');
+    });
+});
+
 describe('pdfFlate module', () => {
     test('module shape', () => {
         expect(pdfFlate.name).toBe('pdfFlate');

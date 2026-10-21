@@ -1,0 +1,486 @@
+{
+  "schema": "office-scorecard/v1",
+  "package": "@awacloud/oconv",
+  "entries": [
+    {
+      "axis": "A",
+      "suite": {
+        "id": "bun-coverage-src",
+        "version": "bun 1.3.13",
+        "source": null
+      },
+      "date": "2026-10-17",
+      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "command": "bun cli.ts office-scorecard axis-a --pkg oconv",
+      "result": {
+        "kind": "percent",
+        "lines": 98.24,
+        "functions": 99.15,
+        "rows": 34,
+        "model": "mean-of-rows",
+        "pooled": {
+          "lines": 97.57,
+          "functions": 98.61
+        },
+        "basis": [
+          "src/**"
+        ],
+        "tests": {
+          "pass": 1160,
+          "fail": 0,
+          "skip": 1
+        }
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "arlington-write-conformance-oconv",
+        "version": "arlington@c48b363e9",
+        "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
+      },
+      "date": "2026-10-14",
+      "commit": "31d88da4c4b554b5ce0bf975b11ff509504c3009",
+      "command": "bun cli.ts office-scorecard axis-b --suite arlington-write-conformance-oconv",
+      "result": {
+        "kind": "pass-total",
+        "pass": 324,
+        "total": 324,
+        "criterion": "per key instance of the documents oconv fromMd (target pdf) write (oconv-standard-14, oconv-faces, oconv-images; 58 dictionaries and streams reached from the trailer through the Arlington links): a key present passes when its object lists it, its SinceVersion holds for PDF 2.0, its value has one of the key's types valid in 2.0 and, when that type's possible values are literals, one of those valid in 2.0; every key required for 2.0 and absent (inherited keys looked up the /Parent chain) is a failing case; fn: predicates are evaluated only for versions, TRUE / FALSE, || and && (fn:Extension false) — the others are not evaluated: 19 passing instances carry one, and an absent key required by one is skipped; IndirectReference, SpecialCase, DefaultValue and deprecation are not checked; array positions and map entries are walked, not counted"
+      },
+      "skipped": [
+        {
+          "case": "oconv-standard-14 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "oconv-standard-14 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "oconv-standard-14 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "oconv-faces 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "oconv-faces 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "oconv-faces 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "oconv-images 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "oconv-images 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "oconv-images 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "oconv-images 10 0 R XObjectImage/StructParent",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:ImageIsStructContentItem()))"
+        },
+        {
+          "case": "oconv-images 11 0 R XObjectImage/StructParent",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:ImageIsStructContentItem()))"
+        }
+      ]
+    },
+    {
+      "axis": "C",
+      "suite": {
+        "id": "ooxml-validator-oconv",
+        "version": "OOXML-Validator@2.1.6",
+        "source": "https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981"
+      },
+      "date": "2026-10-15",
+      "commit": "31604fbdb8296b32912776b65d1ba8fe07a87af7",
+      "command": "bun cli.ts office-scorecard axis-c --suite ooxml-validator-oconv",
+      "result": {
+        "kind": "pass-total",
+        "pass": 25,
+        "total": 25,
+        "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 25 (25 written, 0 round trips)"
+      },
+      "skipped": [
+        {
+          "case": "via-md/pdf/facturx-minimum-sample.pdf.docx",
+          "reason": "a Factur-X sample: Factur-X is outside the scope of this measure"
+        }
+      ]
+    },
+    {
+      "axis": "C",
+      "suite": {
+        "id": "odfvalidator-oconv",
+        "version": "odfvalidator@0.13.0",
+        "source": "https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff"
+      },
+      "date": "2026-10-15",
+      "commit": "31604fbdb8296b32912776b65d1ba8fe07a87af7",
+      "command": "bun cli.ts office-scorecard axis-c --suite odfvalidator-oconv",
+      "result": {
+        "kind": "pass-total",
+        "pass": 30,
+        "total": 30,
+        "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 30 (30 written, 0 round trips)"
+      },
+      "skipped": [
+        {
+          "case": "via-md/pdf/facturx-minimum-sample.pdf.odt",
+          "reason": "a Factur-X sample: Factur-X is outside the scope of this measure"
+        }
+      ]
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "date": "2026-10-16",
+      "commit": "5a84a2cfca83ef4cc5ec8a2054459c67ab2bdc01",
+      "command": "bun cli.ts office-scorecard axis-e --suite pypdf-benchmarks-read",
+      "result": {
+        "kind": "score",
+        "value": 0.9287,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the plain text of oconv toMd (no OCR; Markdown parsed with @awacloud/md, its text kept), 0–1"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "date": "2026-10-16",
+      "commit": "cff19c43719318beabb87c1c79d14eda971b953f",
+      "command": "bun cli.ts office-scorecard axis-e --suite opendataloader-bench",
+      "result": {
+        "kind": "score",
+        "value": 0.5753,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the benchmark's own scorers ported, on the Markdown body of oconv toMd (no OCR; the profile-v1 front matter removed)"
+      },
+      "skipped": []
+    }
+  ],
+  "comparators": [
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pypdfium2 5.13.0 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9522,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pypdf 6.19.0 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9486,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "PyMuPDF 1.28.2 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9423,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "Tika 3.3.2 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9306,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdftotext 0.86.1 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9019,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdfminer.six 20260107 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.8793,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-read",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdfplumber 0.11.10 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.7393,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "opendataloader-hybrid 2.2.1 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.9066,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/opendataloader-hybrid/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "nutrient 1.0.1 (the benchmark's run of 2026-04-30)",
+      "result": {
+        "kind": "score",
+        "value": 0.8851,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/nutrient/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "docling 2.84.0 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.8817,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/docling/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "marker 1.10.1 (the benchmark's run of 2026-01-06; scored against the ground truth as it stood before its 2026-01-16 and 2026-02-02 revisions)",
+      "result": {
+        "kind": "score",
+        "value": 0.8608,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/marker/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "unstructured-hires 0.17.2 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.8414,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/unstructured-hires/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "edgeparse 0.3.0 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.837,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/edgeparse/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "opendataloader 2.2.1 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.8312,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/opendataloader/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "mineru 2.7.0 (the benchmark's run of 2026-01-06; scored against the ground truth as it stood before its 2026-01-16 and 2026-02-02 revisions)",
+      "result": {
+        "kind": "score",
+        "value": 0.8311,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/mineru/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "pymupdf4llm 0.2.0 (the benchmark's run of 2025-11-27; scored against the first ground truth, before its 2025-12-20, 2026-01-16 and 2026-02-02 revisions)",
+      "result": {
+        "kind": "score",
+        "value": 0.7316,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/pymupdf4llm/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "unstructured 0.17.2 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.6858,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/unstructured/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "markitdown 0.1.5 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.5885,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/markitdown/evaluation.json",
+      "date": "2026-10-16"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "tool": "liteparse 1.2.1 (the benchmark's run of 2026-04-06)",
+      "result": {
+        "kind": "score",
+        "value": 0.5756,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
+      },
+      "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/liteparse/evaluation.json",
+      "date": "2026-10-16"
+    }
+  ]
+}

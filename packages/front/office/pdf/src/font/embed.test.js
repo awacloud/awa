@@ -26,6 +26,8 @@ import { describe, test, expect } from 'bun:test';
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 import { pdfFontEmbed } from './embed.js';
 import { pdfErrors } from '../errors.js';
+import { pdfFontCidTyped } from '../extra/font-cid-typed.js';
+import { pdfParserObj } from '../syntax/parser-obj.js';
 import * as fontsPkg from '@awacloud/fonts';
 import { embedClosure } from '@awacloud/fonts/embed-pdf/subsetForPdf/closure';
 import { embedCmapBuilder } from '@awacloud/fonts/embed-pdf/subsetForPdf/cmap-builder';
@@ -285,13 +287,38 @@ describe('embedCid', () => {
         expect(r.type0Dict.entries.DescendantFonts.type).toBe('array');
         expect(r.type0Dict.entries.DescendantFonts.items[0]).toBe(r.cidFontDict);
         expect(r.cidFontDict.entries.Subtype.value).toBe('CIDFontType2');
-        expect(r.cidFontDict.entries.CIDSystemInfo.entries.Registry.value).toBe('Adobe');
+        expect(new TextDecoder().decode(r.cidFontDict.entries.CIDSystemInfo.entries.Registry.value)).toBe('Adobe');
         expect(r.cidFontDict.entries.DW.value).toBe(1000);
         expect(r.cidFontDict.entries.CIDToGIDMap.value).toBe('Identity');
         expect(r.cidFontDict.entries.FontDescriptor).toBe(r.descriptor);
         expect(r.descriptor.entries.FontFile2).toBeUndefined();
         expect(r.fontFileKey).toBe('FontFile2');
         expect(r.codePoints).toEqual([0x4E00, 0x4E01]);
+    });
+
+    test('CIDSystemInfo: /Registry and /Ordering are ASCII strings, /Supplement an integer (ISO 32000-2 Table 114)', () => {
+        const ascii = (v) => new TextDecoder().decode(v.value);
+        const info = createEmbed().embedCid(stubFont(), [0x4E00]).cidFontDict.entries.CIDSystemInfo.entries;
+        expect([info.Registry.type, ascii(info.Registry)]).toEqual(['string', 'Adobe']);
+        expect([info.Ordering.type, ascii(info.Ordering)]).toEqual(['string', 'Identity']);
+        expect(info.Supplement).toEqual({ type: 'int', value: 0 });
+        // an ordering the fonts package picks from the face's code pages
+        const gb1 = createEmbed({ cidSystemInfo: { buildCidSystemInfo: () => ({ Registry: 'Adobe', Ordering: 'GB1', Supplement: 5 }) } })
+            .embedCid(stubFont(), [0x4E00]).cidFontDict.entries.CIDSystemInfo.entries;
+        expect([gb1.Ordering.type, ascii(gb1.Ordering), gb1.Supplement.value]).toEqual(['string', 'GB1', 5]);
+        // a value that is already a typed PDF object passes through
+        const typed = { type: 'string', value: new TextEncoder().encode('Custom') };
+        const kept = createEmbed({ cidSystemInfo: { buildCidSystemInfo: () => ({ Registry: typed, Ordering: 'Identity', Supplement: 0 }) } })
+            .embedCid(stubFont(), [0x4E00]).cidFontDict.entries.CIDSystemInfo.entries;
+        expect(kept.Registry).toBe(typed);
+    });
+
+    test('the package\'s own CIDSystemInfo typer reads the written dictionary back', () => {
+        const typer = pdfFontCidTyped.factory(errors, pdfParserObj.factory());
+        const info = createEmbed().embedCid(stubFont(), [0x4E00]).cidFontDict.entries.CIDSystemInfo;
+        const read = typer.typeCIDSystemInfo(info);
+        expect([new TextDecoder().decode(read.registry), new TextDecoder().decode(read.ordering), read.supplement])
+            .toEqual(['Adobe', 'Identity', 0]);
     });
 
     test('W is the compact form and covers exactly the subset CIDs', () => {

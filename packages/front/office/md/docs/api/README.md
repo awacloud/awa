@@ -50,7 +50,7 @@ Md(s) → ONE self-contained, sanitised HTML page.
 ## Sanitize
 
 The HTML sanitizer is now consumed from
-[`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md)
+[`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md)
 (`sanitizeHtml`, `isSafeUrl`, `defaultAllowlist`, resolved as the `sanitize` module). Enable it via
 `md.render(ast, { sanitize: true, sanitizeOpts })`.
 

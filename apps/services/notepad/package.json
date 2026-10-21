@@ -1,0 +1,65 @@
+{
+  "name": "@awacloud/notepad",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "description": "Browser-only plain-text editor (a Windows Notepad replacement): an installable PWA that works offline. Files are opened and saved on the device; nothing is uploaded.",
+  "keywords": [
+    "notepad",
+    "text-editor",
+    "plain-text",
+    "pwa",
+    "offline",
+    "browser",
+    "file-system-access"
+  ],
+  "private": true,
+  "type": "module",
+  "main": "src/notepad.js",
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "src/styles/*.css",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": "./src/notepad.js",
+    "./notepad.css": "./src/styles/notepad.css",
+    "./tokens.css": "./src/styles/tokens.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "./src/main.js",
+    "./src/sanity.js"
+  ],
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.0"
+  },
+  "scripts": {
+    "test": "bun test .",
+    "build": "bun ../../../cli.ts site-kit app-dist --app . && bun ../../demo/_build/bundle-js.js --dist dist --label @awacloud/notepad && bun tools/build-csp.js && bun tools/build-sw.js",
+    "icons": "bun tools/build-icons.js",
+    "lint": "bunx eslint --no-warn-ignored ."
+  },
+  "dependencies": {
+    "@awacloud/fw": "workspace:*"
+  },
+  "awa": {
+    "maturity": "L1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "apps/services/notepad"
+  },
+  "homepage": "https://notepad.awacloud.com/",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

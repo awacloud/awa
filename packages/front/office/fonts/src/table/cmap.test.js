@@ -42,6 +42,15 @@ function buildCmapFormat4Single() {
 describe('tableCmap', () => {
     test('module metadata', () => { expect(tableCmap.name).toBe('tableCmap'); });
 
+    test('format 4 with an odd segCountX2 is a typed refusal, not a RangeError', () => {
+        const bytes = buildCmapFormat4Single();
+        // The subtable starts at 12; segCountX2 is its fourth uint16.
+        bytes[18] = 0; bytes[19] = 5;
+        let code;
+        try { parseCmap(bytes); } catch (e) { code = e instanceof ParseError ? e.code : `untyped ${e.name}`; }
+        expect(code).toBe('fonts/cmap-fmt4-odd-segcount');
+    });
+
     test('parses format 4', () => {
         const bytes = buildCmapFormat4Single();
         const cmap = parseCmap(bytes);

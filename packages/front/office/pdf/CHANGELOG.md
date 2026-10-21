@@ -7,6 +7,87 @@ ISO 32000-1:2008 (PDF 1.7).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-21
+
+### Added
+
+- **Standard 14 metrics on the legacy `addFont`.** PDF 2.0 requires
+  `FirstChar`, `LastChar`, `Widths` and `FontDescriptor` in every simple
+  font dictionary, the Standard 14 faces included (ISO 32000-2
+  Table 109). The new opt-in `standard14` option of the non-embedded
+  shape takes the `@awacloud/fonts` `standard14Lookup` API and writes
+  them from the Adobe Core 14 metrics (`WinAnsiEncoding` for the Latin
+  faces, the built-in encoding for `Symbol` and `ZapfDingbats`); without
+  it the legacy bytes are unchanged. A `standard14` value that is not that
+  API, a face outside the 14, a subtype other than `Type1`, or an encoding
+  the face does not take (`WinAnsiEncoding` for a Latin face, none for
+  `Symbol` and `ZapfDingbats`) throws `pdf/builder/bad-font`. Committed
+  `-rw` dist bundles regenerated.
+
+### Changed
+
+- **PDF 2.0 files written without an `/ID` now carry a derived one.**
+  ISO 32000-2 Table 15 requires the trailer `/ID` in PDF 2.0;
+  `pdfWriter.writeDocument` wrote one only when given, so `pdfBuilder`
+  without `setId` and `pdf.write` of a document that had none emitted
+  `%PDF-2.0` files without it, and the bytes of every such file change.
+  When no `/ID` is given and the version is `'2.0'`, both halves are now
+  the first 16 bytes of the SHA-256 of the bytes written before the
+  trailer (still reproducible). An explicit `/ID` and other versions are
+  unchanged, and `pdfXrefStreamWriter` still derives none. `pdfWriter`
+  gains `sha256` and `bitArray` as its last, optional dependencies (a
+  hand-wired `factory(errors, serializer)` keeps the old output).
+  Committed dist bundles regenerated.
+
+### Fixed
+
+- **CIDSystemInfo entries written as strings.** Every composite embedding
+  written through `pdfBuilder` changes by two entries:
+  `pdfFontEmbed.embedCid` wrote the descendant CIDFont's `/CIDSystemInfo`
+  `/Registry` and `/Ordering` as names (`/Adobe`, `/Identity`), and ISO
+  32000-2 Table 114 makes them ASCII strings; the opt-in
+  `pdfFontCidTyped.typeCIDSystemInfo` refused such a dictionary with
+  `pdf/extra/cid-system-info/incomplete`. They are now strings
+  (`(Adobe)`, `(Identity)`); a value already given as a typed PDF object
+  is kept.
+- **Portfolio schemas that carry `/Type` type.** The opt-in
+  `pdfEmbeddedFilesPortfolio.typeSchema` read every schema entry as a
+  field definition, so a schema carrying the optional
+  `/Type /CollectionSchema` (ISO 32000-2 Table 155) threw
+  `pdf/portfolio/bad-schema-field`, and `typePortfolio` threw on the whole
+  collection. A name-valued `/Type` is now skipped; the fields are typed
+  as before. Committed dist bundles carrying the module regenerated.
+- **V=4 crypt filters resolve per class.** A `/StmF /Identity` paired
+  with a named `/StrF` decrypted the streams with the `/StrF` filter;
+  ISO 32000-2 Table 20 names `/StmF` the filter of every stream and
+  Table 26 makes `Identity` a pass-through. Streams of such a file now
+  read unchanged (as on V=5; embedded files too when `/EFF` is absent),
+  and signing it writes the new streams in the clear. Committed `-rw`
+  dist bundles regenerated.
+- **Errors survive the fw sanity layer.** `PdfError` defined `name` by
+  assignment, which throws a `TypeError` once `applyBase()` has frozen
+  `Error.prototype`, so the typed error (code, context) was lost. `name` is
+  now an own property set with `Object.defineProperty` (same shape:
+  writable, enumerable, configurable). Committed dist bundles regenerated.
+
+### Security
+
+- **Stream scripts reach the sandbox linter.** A script held in a stream
+  is an indirect reference inside its action dictionary (ISO 32000-2
+  § 7.3.8), and the opt-in `pdfFormActionsExtended` accepted `/JS` only
+  as a string or a direct stream: a JavaScript action with such a script
+  threw `pdf/extra/action-ext/bad-js`, and a rendition action dropped it
+  (`js: null`, no `sandboxed` flag), so `pdfSandbox.lintActions` did not
+  report its script. Both keep the reference now (`js`, for the caller to
+  resolve) and are marked `sandboxed`; the linter reports them. Committed
+  dist bundles carrying the module regenerated.
+- **FlateDecode output ceiling (decompression bomb).** `pdfFlate.decode`
+  stops at 256 MiB of inflated output per stream (the ooxml/odf
+  `maxUncompressed` default) and throws `pdf/flate/output-limit`; a long
+  input is inflated 16 KiB at a time, so it is abandoned early instead of
+  being inflated whole. `decode(bytes, params, { maxOutput })` sets another
+  ceiling (`0` disables it); `pdfFlate.limits` exposes the default.
+
 ## [1.0.0] - 2026-10-07
 
 ### Added

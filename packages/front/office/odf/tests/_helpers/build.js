@@ -109,7 +109,7 @@ export function buildOdtStack(deps) {
     const content = textContent.factory(xml, paragraph, heading, list, section, table);
 
     const image = drawImage.factory(xml);
-    const frame = drawFrame.factory(xml, image);
+    const frame = drawFrame.factory(xml, image, errors);
     const shape = drawShape.factory(xml);
 
     const automaticStyles = styleAutomatic.factory(xml);
@@ -207,7 +207,7 @@ export function buildOdpStack(deps) {
     const content = textContent.factory(xml, paragraph, heading, list, section, table);
 
     const image = drawImage.factory(xml);
-    const frame = drawFrame.factory(xml, image);
+    const frame = drawFrame.factory(xml, image, errors);
 
     const automaticStyles = styleAutomatic.factory(xml);
     const masterPage = styleMasterPage.factory(xml);

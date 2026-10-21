@@ -1,0 +1,168 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "ooxml-validator-oconv",
+    "version": "OOXML-Validator@2.1.6",
+    "source": "https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981"
+  },
+  "oracle": {
+    "image": "awa-oracle-ooxml-validator:2.1.6",
+    "imageId": "sha256:bbe729911f1a680a2dc3980b7da1b31b69974aa356938d4cd434ac5a787ed27a",
+    "version": "OOXML-Validator 2.1.6 (DocumentFormat.OpenXml 3.2.0) Microsoft365"
+  },
+  "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 25 (25 written, 0 round trips)",
+  "documents": [
+    {
+      "file": "from-md--every-block.docx",
+      "kind": "written",
+      "sha256": "eafddfa1d569e1c79867a3496f9f6a904bd60ba4fd59a0616b26f218a5464b9b",
+      "errors": []
+    },
+    {
+      "file": "from-md--images.docx",
+      "kind": "written",
+      "sha256": "2070843a946def2905ea50fdafca4dbfdf6fff5cb1703c848f79ce693096c220",
+      "errors": []
+    },
+    {
+      "file": "from-md--md-degrade.docx",
+      "kind": "written",
+      "sha256": "ecda04644012e9358eb95b19fffbf39a9fb1df4ca655e87354274c64b7536773",
+      "errors": []
+    },
+    {
+      "file": "from-md--md-nested.docx",
+      "kind": "written",
+      "sha256": "3a5765957564e29ec4e1761e0b01a8fc4095ad5ad91d79741ef749497a5fb5d3",
+      "errors": []
+    },
+    {
+      "file": "from-md--md-structural.docx",
+      "kind": "written",
+      "sha256": "8881192a73486ae1bfdcb4a158d5d91837c10fdac544108803bf0c42d56b8f34",
+      "errors": []
+    },
+    {
+      "file": "via-md--docx--docx-bulk.docx.docx",
+      "kind": "written",
+      "sha256": "2ba8a67f3285745c5f55db4ce28b49efce8c024e15c916040614712852bfc1dc",
+      "errors": []
+    },
+    {
+      "file": "via-md--docx--docx-fr-styles.docx.docx",
+      "kind": "written",
+      "sha256": "eed6dc84f00d7305c11a9ebf7ddf08ae58f3f2f8dd37f3bc0ec6a19d2bd5f6a9",
+      "errors": []
+    },
+    {
+      "file": "via-md--docx--docx-smoke.docx.docx",
+      "kind": "written",
+      "sha256": "2575085b123d02d2f758bf6b4b9eed93ae169a9c96384ae4c148a9efda4816fa",
+      "errors": []
+    },
+    {
+      "file": "via-md--docx--docx-structured.docx.docx",
+      "kind": "written",
+      "sha256": "02a2b239924b242051400620d19c549e5647b482ec91054978208f2736de5bd8",
+      "errors": []
+    },
+    {
+      "file": "via-md--odp--odp-media.odp.docx",
+      "kind": "written",
+      "sha256": "ae5ed08bcf4192d9f19e6a7368db58975c58ca8723d12ee9acff3e6d0eedd01e",
+      "errors": []
+    },
+    {
+      "file": "via-md--odp--odp-structured.odp.docx",
+      "kind": "written",
+      "sha256": "263e825a3e3320ba09046487a22595c77633b74606f91cbb81a63aec46f10c00",
+      "errors": []
+    },
+    {
+      "file": "via-md--ods--ods-structured.ods.docx",
+      "kind": "written",
+      "sha256": "e7aa75902c5f476825065067638f07458441bdf453d915b59dbef646aa03c1e2",
+      "errors": []
+    },
+    {
+      "file": "convert--odt--odt-structured.odt.docx",
+      "kind": "written",
+      "sha256": "81d9637cfaf58c78c69bff9659f9e9377ec7c932da14d17fb0713092fb8697c2",
+      "errors": []
+    },
+    {
+      "file": "via-md--odt--odt-structured.odt.docx",
+      "kind": "written",
+      "sha256": "14b16d774d3a548471a8422eb16d2a6e80446b56e42e5ec9c05ccb24ade4dc21",
+      "errors": []
+    },
+    {
+      "file": "convert--odt--odt-table.odt.docx",
+      "kind": "written",
+      "sha256": "75e09a7ae9ccfd1eca6155981db915265a5945d8662921f603488ffd05a39549",
+      "errors": []
+    },
+    {
+      "file": "via-md--odt--odt-table.odt.docx",
+      "kind": "written",
+      "sha256": "75e09a7ae9ccfd1eca6155981db915265a5945d8662921f603488ffd05a39549",
+      "errors": []
+    },
+    {
+      "file": "via-md--pdf-tagged--tagged-structured.pdf.docx",
+      "kind": "written",
+      "sha256": "a89643e1ac491641ebd12ce2b8b2db479872ef257224909ab778858210427c1f",
+      "errors": []
+    },
+    {
+      "file": "via-md--pptx--poi-pictures.pptx.docx",
+      "kind": "written",
+      "sha256": "2f7e02c2d97fae29b916911e1d10725cfd92b2239856fff79a953a9ffa8fd3e9",
+      "errors": []
+    },
+    {
+      "file": "via-md--pptx--poi-sampleshow.pptx.docx",
+      "kind": "written",
+      "sha256": "4eaa907aae11941c61632928712aae859a5c8da0f8a86e9f89391e4b23588ac9",
+      "errors": []
+    },
+    {
+      "file": "via-md--pptx--poi-table.pptx.docx",
+      "kind": "written",
+      "sha256": "2f7e02c2d97fae29b916911e1d10725cfd92b2239856fff79a953a9ffa8fd3e9",
+      "errors": []
+    },
+    {
+      "file": "via-md--real--poi-numbering.docx.docx",
+      "kind": "written",
+      "sha256": "d227baeab52838b4d9d9d8fa5bd9015e9bb400bf4d855439c94b5821168c0026",
+      "errors": []
+    },
+    {
+      "file": "via-md--real--poi-table-alignment.docx.docx",
+      "kind": "written",
+      "sha256": "85ece7b0dd8666ebe986add13bd6ccbb59fb207f9657105cc46e1adc5a73b1df",
+      "errors": []
+    },
+    {
+      "file": "via-md--real--poi-with-gif.docx.docx",
+      "kind": "written",
+      "sha256": "24f75109d16eca61d49793764b47bd33f20439970c90ff1524bd0175c6dd3534",
+      "errors": []
+    },
+    {
+      "file": "via-md--xlsx--poi-formula-eval.xlsx.docx",
+      "kind": "written",
+      "sha256": "089a4930b09ba71749a4340180f1284c9ac69409a940cd7d60f105f4a4c95bf0",
+      "errors": []
+    },
+    {
+      "file": "via-md--xlsx--poi-simple-multicell.xlsx.docx",
+      "kind": "written",
+      "sha256": "b289ab1ef8cdc5467a027ce995493abfa8abd71215596653e1f1bbb9d9095162",
+      "errors": []
+    }
+  ],
+  "date": "2026-10-15",
+  "commit": "31604fbdb8296b32912776b65d1ba8fe07a87af7"
+}

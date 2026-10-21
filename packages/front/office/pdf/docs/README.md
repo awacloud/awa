@@ -49,5 +49,5 @@ Full index: [`api/README.md`](./api/README.md) — every sub-domain, its modules
 
 - [README package](../README.md)
 - [CHANGELOG](../CHANGELOG.md)
-- [`@awacloud/fw` doc format spec](https://github.com/awacloud/awa/blob/@awacloud/pdf@1.0.0/packages/front/fw/docs/guide/doc-format.md)
-- [`@awacloud/ooxml`](https://github.com/awacloud/awa/blob/@awacloud/pdf@1.0.0/packages/front/office/ooxml/docs/README.md) — sibling factory + bundles archetype
+- [`@awacloud/fw` doc format spec](https://github.com/awacloud/awa/blob/@awacloud/pdf@1.1.0/packages/front/fw/docs/guide/doc-format.md)
+- [`@awacloud/ooxml`](https://github.com/awacloud/awa/blob/@awacloud/pdf@1.1.0/packages/front/office/ooxml/docs/README.md) — sibling factory + bundles archetype

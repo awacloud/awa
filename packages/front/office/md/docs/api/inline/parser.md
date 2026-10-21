@@ -33,7 +33,30 @@ const ip = runtime.resolve('inlineParser');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `parse` | `(block: Node, refmap: Object) => void` | Mutates `block.children` |
+| `parse` | `(block: Node, refmap: Object, flags?) => void` | Mutates `block.children`. `flags.math` (set by `md.parse` when an installed extension declares `inlineSyntax: ['math']`) claims `$…$` / `$$…$$` spans as `math_inline` / `math_block` nodes before any other inline construct |
+
+### `mdInlineHelpers`
+
+The small helpers the inline sub-modules share, resolved by name (`runtime.resolve('mdInlineHelpers')`; dependencies `mdNode`, `mdAstTypes`). It has no page of its own; its members are:
+
+| Member | Signature | Returns |
+|--------|-----------|---------|
+| `makeText` | `(s: string) => Node` | A `text` node whose `literal` is `s` |
+| `makeMath` | `(s: string, display?: boolean) => Node` | A `math_inline` node (a `math_block` node when `display` is truthy) whose `literal` is the LaTeX source `s` |
+| `mathSpanEnd` | `(s: string, p: number) => number` | The index after the closing run of the math span that opens at `p` (the position of a `$`) in `s`, or `-1`. `$$` closes at the next `$$`; a single `$` at the next `$` not escaped by a backslash, with at least one character between. Neither crosses a line end |
+| `fromCodePoint` | `(cp: number) => string` | `String.fromCodePoint(cp)`; U+FFFD (the replacement character) for an invalid code point |
+| `normalizeReference` | `(label: string) => string` | A bracketed label (`'[Foo  Bar]'`) without its brackets, trimmed, whitespace-collapsed and case-folded (`'FOO BAR'`) |
+| `trim` | `(s: string) => string` | `s` without leading and trailing ASCII space, tab, LF and CR |
+| `isSpace` | `(c: number) => boolean` | Whether the code unit is ASCII space, tab, LF or CR |
+
+```js
+const h = runtime.resolve('mdInlineHelpers');
+h.mathSpanEnd('a $x$ b', 2);          // 5
+h.mathSpanEnd('$$x$$', 0);            // 5
+h.mathSpanEnd('$x', 0);               // -1
+h.makeMath('x^2', false).type;        // 'math_inline'
+h.makeMath('x^2', true).type;         // 'math_block'
+```
 
 ### Construction-time `options`
 
@@ -71,12 +94,14 @@ ip.parse(block, refmap);
 ## Notes
 
 - The extended GFM autolinks (`https://`, `www.`, `xxx@`) are applied as a post-pass on text nodes, not during the main tokenization.
-- The delimiter stack handles emphasis (`*`, `_`), strong (`**`, `__`), strikethrough (`~~`) — each character can be left/right flanking depending on the Unicode context (`P`/`S`/`Z` punctuation classes).
-- There is no `disallowedRawHtml` / `safe` construction option on this module — raw-HTML filtering and `javascript:` neutralization happen at render time (`renderHtml`'s `safe` option), not during inline parsing. For a complete sanitizer, see [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) consumed via `md.createMd({ sanitize: true })`.
+- The delimiter stack handles emphasis (`*`, `_`), strong (`**`, `__`), strikethrough (`~~`) — each character can be left/right flanking depending on the Unicode context (`P`/`S`/`Z` punctuation classes). Each delimiter character keeps its own search bounds, split by run length and by whether the closer can open: an unmatched `**` or a tilde run of another length inside `~~…~~` does not cancel the strikethrough (`~~x a**b y~~` and `~~a~b~~` both render `<del>`), and an unmatched `~~` does not cancel a strong emphasis around it. The bounds are positions in the stack, so they stay valid when a matched pair removes an opener.
+- A link destination written between `(` and `)` may nest parentheses at most 32 levels deep (the cap `cmark` uses); a deeper one is not read as a destination and the text stays text. Repeated unclosed link destinations, `![[]()` and unclosed `<!--`, `<?`, `<![CDATA[` or `<!X` openers parse in time linear in their length.
+- An extended email autolink may not end with `-` or `_`: `a.b-c_d@a.b-` and `a.b-c_d@a.b_` are no autolink at all (GFM allows only `.` at the end of an address, and a trailing `.` is excluded from the address and stays text).
+- There is no `disallowedRawHtml` / `safe` construction option on this module — raw-HTML filtering and `javascript:` neutralization happen at render time (`renderHtml`'s `safe` option), not during inline parsing. For a complete sanitizer, see [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) consumed via `md.createMd({ sanitize: true })`.
 
 ## See also
 
 - [`block/parser`](../block/parser.md) — produces the input containers
 - [`refs/link-refs`](../refs/link-refs.md) — refmap used for resolution
 - [`common`](../common.md) — char codes, ENTITY, ESCAPABLE
-- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — advanced XSS protection (consumed via `md.createMd({ sanitize: true })`)
+- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — advanced XSS protection (consumed via `md.createMd({ sanitize: true })`)

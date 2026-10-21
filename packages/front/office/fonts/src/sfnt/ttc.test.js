@@ -70,4 +70,23 @@ describe('fontTtc', () => {
     test('rejects bad magic', () => {
         expect(() => parseTtc(new Uint8Array(20))).toThrow(ParseError);
     });
+
+    test('extractFont refuses a table record that points outside the file (typed, not a RangeError)', () => {
+        const codeOf = (fn) => { try { fn(); } catch (e) { return e instanceof ParseError ? e.code : `untyped ${e.name}`; } return 'returned'; };
+        // The first table record of font 0: offset field at +8, length field at +12.
+        const patched = (field, value) => {
+            const ttc = buildTtc([tinyFont('A')]);
+            const rec = parseTtc(ttc).offsets[0] + 12;
+            new DataView(ttc.buffer, ttc.byteOffset).setUint32(rec + field, value);
+            return ttc;
+        };
+        expect(codeOf(() => extractFont(patched(8, 0xFFFFFF00), 0))).toBe('fonts/ttc-bad-offset');
+        expect(codeOf(() => extractFont(patched(12, 0x7FFFFFFF), 0))).toBe('fonts/ttc-bad-offset');
+        // A record that ends exactly at the end of the file is fine.
+        const ttc = buildTtc([tinyFont('A')]);
+        const rec = parseTtc(ttc).offsets[0] + 12;
+        const dv = new DataView(ttc.buffer, ttc.byteOffset);
+        dv.setUint32(rec + 12, ttc.length - dv.getUint32(rec + 8));
+        expect(codeOf(() => extractFont(ttc, 0))).toBe('returned');
+    });
 });

@@ -36,7 +36,8 @@ describe('docxProperties — rPr', () => {
         const el = props.renderRunProperties(rPr);
         expect(el.name).toBe('w:rPr');
         const parsed = props.parseRunProperties(el);
-        expect(parsed).toEqual(rPr);
+        // The read also carries every w:rFonts attribute in `fonts`.
+        expect(parsed).toEqual({ ...rPr, fonts: { ascii: 'Times', hAnsi: 'Times', cs: 'Times' } });
     });
 
     test('returns undefined for null input', () => {

@@ -183,5 +183,25 @@ describe('mdAstManipulation module', () => {
             c.sourcepos[0][0] = 99;
             expect(n.sourcepos[0][0]).toBe(1);
         });
+
+        describe('deep trees are cloned without recursion', () => {
+            // Limits lifted: the default `maxDepth` refuses these documents first.
+            const lifted = createMd({ maxDepth: Infinity, maxNodes: Infinity });
+            const SHAPES = [
+                ['nested emphasis, 100,000 levels', '*'.repeat(100000) + 'a' + '*'.repeat(100000)],
+                ['alternating emphasis and strong, 40,000 levels each', '*a **a '.repeat(40000) + 'b' + ' a** a*'.repeat(40000)],
+                ['nested block quotes, 40,000 levels', '> '.repeat(40000) + 'a'],
+                ['nested lists, 40,000 levels', '- '.repeat(40000) + 'a'],
+            ];
+            for (const [name, source] of SHAPES) {
+                test(name + ': same HTML, no shared node', () => {
+                    const ast = lifted.parse(source);
+                    const copy = cloneNode(ast, true);
+                    expect(lifted.render(copy)).toBe(lifted.render(ast));
+                    const originals = new Set(findAll(ast, () => true));
+                    expect(findAll(copy, n => originals.has(n))).toEqual([]);
+                });
+            }
+        });
     });
 });

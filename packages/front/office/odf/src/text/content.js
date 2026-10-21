@@ -334,19 +334,38 @@ export const textContent = {
             // Links — including links nested in a span's `runs` — are visited
             // for the boxes of their untyped children. A span's raw element
             // entries are not: their text is already inline through `textOf`.
-            const visitRuns = runs => {
+            // A frame run (`framesInRuns`) is visited like the raw frame it
+            // replaces: outside a span only.
+            const visitRuns = (runs, inSpan) => {
                 for (const r of runs || []) {
                     if (!r) continue;
                     if (r.type === 'span' && Array.isArray(r.runs)) {
-                        visitRuns(r.runs);
+                        visitRuns(r.runs, true);
                     } else if (r.type === 'link') {
                         const ex = r._extras && r._extras.children;
                         if (ex) for (const el of ex) boxes(el, lines);
-                        visitRuns(r.runs);
+                        visitRuns(r.runs, false);
+                    } else if (r.type === 'frame' && !inSpan) {
+                        frameBoxes(r, lines);
                     }
                 }
             };
-            visitRuns(n.runs);
+            visitRuns(n.runs, false);
+        }
+
+        /**
+         * `boxes` over a typed frame run: its text-box child, then its raw
+         * extras.
+         *
+         * @param {object} f frame run
+         * @param {Array<string>} lines output lines
+         */
+        function frameBoxes(f, lines) {
+            const c = f.child;
+            if (c && c.kind === 'text-box') {
+                boxes(xml.el('draw:text-box', { ...(c.attrs || {}) }, c.children || []), lines);
+            }
+            for (const el of (f._extras && f._extras.children) || []) boxes(el, lines);
         }
 
         function walk(nodes, lines) {

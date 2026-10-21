@@ -32,8 +32,8 @@ const o = runtime.resolve('odt');
 
 | Method | Description |
 |---------|-------------|
-| `read(bytes, opts?)` | `{ mimetype, body, meta?, settings?, styles?, autoStyles?, fontFaces?, package }`. `opts` (optional) is forwarded to [`pkgPackage.read`](../pkg/package.md): `{ maxParts?, maxUncompressed?, maxRatio? }` — the ZIP-bomb caps (defaults 4096 entries, 256 MiB total, ratio 200 per entry; `0` disables one); a breach throws `ParseError('odf/parse-error/zip-bomb')`. |
-| `write(doc, opts?)` | `Uint8Array`. `opts: { meta?, settings?, styles? }` — the three `opts.styles` buckets accept raw elements **or** typed named-style specs (see [`odfStyles`](../style/styles.md)). `doc` may carry `autoStyles` / `fontFaces`, and `pictures` (`{ [path]: Uint8Array }`) emitted as package parts with sniffed media types (see [Images](#images-typed-write)). Re-emits the `doc.package` parts the writer does not regenerate (everything but `content.xml`, `meta.xml`, `settings.xml`, `styles.xml`) byte-for-byte with their source manifest media types, plus the source manifest's directory entries, and writes `doc.styles` / `doc.settings` / `doc.meta` unless `opts.*` overrides. `meta:generator` is rewritten to `@awacloud/odf` unless `opts.meta.generator` is given. Precedence: regenerated part, then writer-supplied part (`doc.pictures`), then the carried copy; delete from `doc.package.parts` (or delete `doc.package`) to drop carried material. |
+| `read(bytes, opts?)` | `{ mimetype, body, meta?, settings?, styles?, autoStyles?, fontFaces?, package }`. `opts` (optional) is forwarded to [`pkgPackage.read`](../pkg/package.md): `{ maxParts?, maxUncompressed?, maxRatio? }` — the ZIP-bomb caps (defaults 4096 entries, 256 MiB total, ratio 200 per entry; `0` disables one); a breach throws `ParseError('odf/parse-error/zip-bomb')`. `opts.framesInRuns: true` types every `draw:frame` of a paragraph, heading, span or link body as a `{ type: 'frame', ...drawFrame model }` run at its place in the text (default `false`: the frame stays in `_extras.children`, or a raw entry of a span's `runs`); `write` renders a frame run in place and `toText` reads it as it reads the raw frame. See [paragraph — Frame runs](../text/paragraph.md#frame-runs-opt-in). |
+| `write(doc, opts?)` | `Uint8Array`. `opts: { meta?, settings?, styles?, mtime? }` — the three `opts.styles` buckets accept raw elements **or** typed named-style specs (see [`odfStyles`](../style/styles.md)). `opts.mtime` (`number \| Date`) is the ZIP entry date handed to [`pkgPackage.write`](../pkg/package.md) — default 1980-01-01 00:00:00, so the same document writes the same bytes. `doc` may carry `autoStyles` / `fontFaces`, and `pictures` (`{ [path]: Uint8Array }`) emitted as package parts with sniffed media types (see [Images](#images-typed-write)). Re-emits the `doc.package` parts the writer does not regenerate (everything but `content.xml`, `meta.xml`, `settings.xml`, `styles.xml`) byte-for-byte with their source manifest media types, plus the source manifest's directory entries, and writes `doc.styles` / `doc.settings` / `doc.meta` unless `opts.*` overrides. `meta:generator` is rewritten to `@awacloud/odf` unless `opts.meta.generator` is given. Precedence: regenerated part, then writer-supplied part (`doc.pictures`), then the carried copy; delete from `doc.package.parts` (or delete `doc.package`) to drop carried material. |
 | `empty()` | Document with one empty paragraph. |
 | `paragraph(text, { styleName? })` | Paragraph helper. |
 | `fromText(strings[])` | Document `body = strings.map(s => paragraph(s))`. |
@@ -142,7 +142,9 @@ A paragraph run of kind `image` writes an inline picture:
 **Read-side asymmetry.** The read side is unchanged: a `draw:frame` inside a
 `text:p` is not turned back into an `image` run. It is kept raw in the
 paragraph's `_extras.children` (and re-emitted after the runs on a re-write),
-while the picture bytes stay reachable through `package.parts`.
+while the picture bytes stay reachable through `package.parts`. Read with
+`{ framesInRuns: true }` (see [`read`](#api)), the frame becomes a `frame` run
+at its place in the text instead.
 
 ```js
 const png = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0]);

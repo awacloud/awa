@@ -34,6 +34,7 @@ const settings = runtime.resolve('odfSettings');
 
 - Item-sets are not typed by this module. The opt-in [`settingsExtended`](./extra/settings-extended.md) extra types the `config:*` vocabulary (`parseConfig` / `renderConfig`) when it is applied to a node.
 - Unrecognized direct children of `<office:settings>` go into `_extras.children`.
+- With no item set and no kept child, `serialize` writes `<office:document-settings>` with no `<office:settings>` child: the schema allows the element out, never empty.
 
 ## See also
 

@@ -11,6 +11,7 @@ coverage table and licence.
 
 | Guide | Topic |
 |---|---|
+| [`guide/coverage.md`](./guide/coverage.md) | What the package is measured against (code coverage). |
 | [`descriptor.md`](./descriptor.md) | The frozen `oconvDefaultFaces` contract — resolved API, frozen surface, the per-style-class precedence rule (`explicit opts.pdf.fonts[<class>] > default map[<class>] > Standard 14`, the default map being a posted `defaultFaces` map — which wins whole — else the registered `oconvDefaultFaces`) and worked examples. |
 
 ## API reference

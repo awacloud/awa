@@ -28,6 +28,8 @@
  * - `{ type: 'line-break' }`                             — text:line-break
  * - `{ type: 'link', href, runs: [<run>...], _extras? }` — text:a
  * - `{ type: 'image', href, mimeType?, width?, height?, name?, anchorType?, styleName? }` — draw:frame > draw:image (write side; see below)
+ * - `{ type: 'frame', ...drawFrame model }`              — draw:frame at its
+ *   place (read side only when the read ctx carries `parseFrame`; see below)
  * - `{ type: 'element', name, attrs, children }`         — a raw XML element
  *   kept at its position inside a span's `runs`
  *
@@ -44,6 +46,14 @@
  * registry. On read a `draw:frame` stays in the paragraph's
  * `_extras.children` (untyped) — or, inside a span, a raw element entry of
  * the span's `runs`; `textOf` gives an image run no text.
+ *
+ * **Frame runs** (opt-in, `odt.read(bytes, { framesInRuns: true })`): when
+ * the read ctx carries `parseFrame` (the `drawFrame` parser), every
+ * `draw:frame` of a paragraph, heading, span or link body becomes a
+ * `{ type: 'frame', ... }` run at its place instead. A frame run is rendered
+ * through `ctx.renderFrame(run)` at its position (no sink: it emits nothing).
+ * `textOf` reads it as it reads the raw frame: no text at paragraph or link
+ * level, its character data inside a span.
  *
  * **Emphasis flags** (`bold`/`italic`/`strike`/`monospace`) are booleans and
  * are meaningful on `span` runs only. Precedence on write: an explicit
@@ -208,6 +218,9 @@ export const textParagraph = {
                         runs.push({ type: 'line-break' });
                     } else if (c.name === 'text:a' && !insideLink) {
                         runs.push(parseLink(c, ctx));
+                    } else if (c.name === 'draw:frame' && ctx
+                        && typeof ctx.parseFrame === 'function') {
+                        runs.push(ctx.parseFrame(c));
                     } else if (positional) {
                         runs.push(c);
                     } else {
@@ -349,6 +362,7 @@ export const textParagraph = {
                     return xml.el('text:a', a, children);
                 }
                 case 'image': return (ctx && typeof ctx.renderImage === 'function') ? ctx.renderImage(r) : xml.text('');
+                case 'frame': return (ctx && typeof ctx.renderFrame === 'function') ? ctx.renderFrame(r) : xml.text('');
                 // A raw XML element kept at its position (span bodies).
                 case 'element':    return r;
                 default:            return xml.text('');
@@ -364,22 +378,33 @@ export const textParagraph = {
          * @param {Array<object>} runs
          * @returns {string}
          */
-        function textOfRuns(runs) {
+        function textOfRuns(runs, inSpan) {
             const out = [];
             for (const r of runs || []) {
                 switch (r.type) {
                     case 'text':       out.push(r.value || ''); break;
                     case 'span':
-                        out.push(Array.isArray(r.runs) ? textOfRuns(r.runs) : (r.value || ''));
+                        out.push(Array.isArray(r.runs) ? textOfRuns(r.runs, true) : (r.value || ''));
                         break;
                     case 'space':      out.push(' '.repeat(r.count || 1)); break;
                     case 'tab':        out.push('\t'); break;
                     case 'line-break': out.push('\n'); break;
                     case 'link':       out.push(textOfRuns(r.runs)); break;
                     case 'element':    out.push(xml.textContent(r)); break;
+                    // A frame run reads like the raw frame it replaces: its
+                    // character data inside a span (a raw entry there), none
+                    // at paragraph / link level (`_extras` there).
+                    case 'frame':      if (inSpan) out.push(frameText(r)); break;
                 }
             }
             return out.join('');
+        }
+
+        /** Character data of a frame run: its child's nodes, then its extras. */
+        function frameText(f) {
+            const nodes = [...((f.child && f.child.children) || []),
+                ...((f._extras && f._extras.children) || [])];
+            return nodes.map(n => xml.textContent(n)).join('');
         }
 
         /**

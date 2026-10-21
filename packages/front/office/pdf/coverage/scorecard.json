@@ -1,0 +1,2937 @@
+{
+  "schema": "office-scorecard/v1",
+  "package": "@awacloud/pdf",
+  "entries": [
+    {
+      "axis": "A",
+      "suite": {
+        "id": "bun-coverage-src",
+        "version": "bun 1.3.13",
+        "source": null
+      },
+      "date": "2026-10-17",
+      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "command": "bun cli.ts office-scorecard axis-a --pkg pdf",
+      "result": {
+        "kind": "percent",
+        "lines": 97.68,
+        "functions": 95.6,
+        "rows": 130,
+        "model": "mean-of-rows",
+        "pooled": {
+          "lines": 97.78,
+          "functions": 96.64
+        },
+        "basis": [
+          "src/**"
+        ],
+        "tests": {
+          "pass": 2844,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "verapdf-read",
+        "version": "v1.28.1",
+        "source": "https://github.com/veraPDF/veraPDF-corpus/tree/v1.28.1"
+      },
+      "date": "2026-10-12",
+      "commit": "b944888e1c6232efd43523f2fa70db244f22eb8b",
+      "command": "bun cli.ts office-scorecard axis-b --suite verapdf-read",
+      "result": {
+        "kind": "pass-total",
+        "pass": 905,
+        "total": 906,
+        "criterion": "read(bytes) of the base reader returns without throwing and the document has at least one page; every file counts, -pass- and -fail- alike (their names are PDF/A or PDF/UA verdicts the reader does not judge)"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "verapdf-roundtrip",
+        "version": "v1.28.1",
+        "source": "https://github.com/veraPDF/veraPDF-corpus/tree/v1.28.1"
+      },
+      "date": "2026-10-12",
+      "commit": "b944888e1c6232efd43523f2fa70db244f22eb8b",
+      "command": "bun cli.ts office-scorecard axis-b --suite verapdf-roundtrip",
+      "result": {
+        "kind": "pass-total",
+        "pass": 905,
+        "total": 906,
+        "criterion": "read, write, then read again succeeds and keeps the page count; every file counts"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "pdf-differences",
+        "version": "pdf-differences@907fe96e5",
+        "source": "https://github.com/pdf-association/pdf-differences/tree/907fe96e52b73e491489eee545c47b119bf9989b"
+      },
+      "date": "2026-10-13",
+      "commit": "4fd3a0a3c240a640c4e053efce24bad74a277413",
+      "command": "bun cli.ts office-scorecard axis-b --suite pdf-differences",
+      "result": {
+        "kind": "pass-total",
+        "pass": 11,
+        "total": 13,
+        "criterion": "per file, the base reader returns what the case expects: PDF-version — doc.version is the header 1.4 and doc.catalog.version the newest catalog 1.6 (the reader exposes both, computes no effective version); UnknownFilter-xrefstm — read throws pdf/filter/unsupported; six other UnknownFilter files — read returns the page and every in-use object resolves and decodes or throws a typed pdf/ error, at least one throwing; UnknownFilter-Linearized and -OutlineObjStm — read returns the page; InlineAbbreviations — 8 inline images, each decoding with the abbreviated keys first to the same 600 bytes. Painting cases (content streams are parsed, not rendered), page labels (carried raw) and the two real-world files (not PDF Association works, issue undisclosed) are skipped"
+      },
+      "skipped": [
+        {
+          "case": "Atomic-Fill+Stroke/FillStrokeOrdering.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Atomic-Fill+Stroke/SelfIntersecting-Opaque.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Atomic-Fill+Stroke/SelfIntersecting-Transparency.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "ColorBurn-ColorDodge/ColorBurn.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "ColorBurn-ColorDodge/ColorDodge.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Dashing-Degenerate/DegenerateDashing.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Dashing-EndBeforeBend/Dashing-EndBeforeBend.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Dashing-EndBeforeBend/Dashing-EndBeforeBend2.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "DefaultColorSpaces/DefaultRGBColourSpaces-inherit.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "DefaultColorSpaces/DefaultRGBColourSpaces.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "IndexedColor/IndexedCS_negative_and_high.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "LargeMitreLimit/LargeMitreLimit-Beziers.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "LargeMitreLimit/LargeMitreLimit.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "LineCap-Degenerate/LineCap-Degenerate.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Negative-DashPhase/CutHereExample.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Negative-DashPhase/Negative-DashPhase.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "NegativeFontSize/NegativeFontSize.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "OverlappingGlyphClipping/OverlappingGlyphClipping.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "PageLabels-UX/PageLabelsTest.pdf",
+          "reason": "page labels are carried raw (catalog.pageLabels), never computed"
+        },
+        {
+          "case": "TextClipModeChanges/TextClippingModeChanges.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Type3WordSpacing/Type3Test.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "VerticalText/VerticalText.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "UnknownFilter/382252277877c00a92f3bb54daef1413bafe5557e2f5f7c32c23e800cd9bdcd4.pdf",
+          "reason": "a real-world SafeDocs file, not a PDF Association work: the CC BY 4.0 statement does not cover it; its issue is left undisclosed upstream"
+        },
+        {
+          "case": "UnknownFilter/4387ba480c6f935b8e97749d40b3c001ad584b7bda66ca2c040be67337669497.pdf",
+          "reason": "a real-world SafeDocs file, not a PDF Association work: the CC BY 4.0 statement does not cover it; its issue is left undisclosed upstream"
+        }
+      ]
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "arlington-read-keys",
+        "version": "arlington@c48b363e9",
+        "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
+      },
+      "date": "2026-10-13",
+      "commit": "f3d44fc683a9d9b9b5610b1c0b8043fcb5461fd0",
+      "command": "bun cli.ts office-scorecard axis-b --suite arlington-read-keys",
+      "result": {
+        "kind": "pass-total",
+        "pass": 1445,
+        "total": 3357,
+        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled when a bound typer returns and leaves it out of the record's _extras, or, for a typer with no _extras channel, returns something else once the key is removed or nulled; 364 objects measured, 166 with a typer, 198 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
+      },
+      "skipped": [
+        {
+          "case": "AAPL_ST",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "AFEmbeddedFileStream/Mail_MediaTypeParameters",
+          "reason": "an extension (fn:Extension(EAPDF_1,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "AnnotLink/Path",
+          "reason": "an extension (fn:Extension(ISO_TS_24654,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "AnnotWidget/PMD",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "AppearancePrinterMarkSubDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "AppearanceSubDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "AppearanceTrapNetSubDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "ArrayOf3DCrossSection",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DMeasure",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DNode",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DTransMatrix",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DView",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DViewAddEntries",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3PDUNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf4Functions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAFFileSpecifications",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfActionHideAnnots",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfActions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAnnotStates",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAnnots",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysInkList",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysPaths",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysRBGroups",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysURLStrings",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysXPTSValues",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAttributeObjects",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAttributeRevisions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfBeads",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfBlendModes",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfBooleansGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIDGlyphMetricsW",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIDGlyphMetricsW2",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_AssemblingIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_AssemblyItem",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_BindIn",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_BindingIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_BlowIn",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ChannelUsage",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_Coatings",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ColorIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ComChannel",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ContactTypes",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_FinishedDimensions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_FoldingIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_HoleMakingIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_HolePattern",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_LABColorValue",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_LayoutIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_MediaIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_PrintProcess",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ProductionIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_Resource",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_StickOn",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfClassNamesRevisions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCompressionFilterNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDPartArrays",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDParts",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDashPatterns",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDecodeParams",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDescendantFonts",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDevExtensions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDifferences",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDigestMethod",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDuration",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFieldChoiceOpt",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFieldID",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFields",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFileSpecifications",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFilterNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFontAndSize",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFonts",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFunctions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfGSPDashPatterns",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfImageAlternates",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfIndirectFileSpecifications",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfIntegersGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfIntegersGreaterThanZero",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfMediaPlayerInfo",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesForEnforce",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesForPrintingOrder",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesForProcSet",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesInPtData",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamespace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNavigatorLayoutNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNonNegativeIntegersGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNumberFormats",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNumbersGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCConfig",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCG",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCGState",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCGindirect",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCUsage",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOPI13Color",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOPI2Inks",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOptContentGroups",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOptContentOrderElements",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOptContentOrders",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOutputIntents",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfPageTreeNodeKids",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfPages",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfPaths",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfQuadPoints",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRenditions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRequirements",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRequirementsHandlers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRichMediaConfiguration",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRichMediaCuePoints",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRichMediaInstances",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSignatureReferences",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSignatureSubFilterNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSoftwareIdentifiers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSoftwareVersions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSourceInformation",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStreamsGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStringsASCII",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStringsByte",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStringsText",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStringsTextOrNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStructElem",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStructElemKids",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStructElemParentTree",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSubjectDN",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfTags",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfThreads",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfTrapNetVersionObjects",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfTrapRegions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfURLStrings",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfURLs",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfUserProperty",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfViewParams",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfViewports",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfWebCaptureCommands",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfWebCaptureImages",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfWebCapturePages",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfXFA",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfXPTSValues",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfXRefIndexIntegers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfXRefWIntegers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2Booleans",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2DashNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2Integers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2LineEndingsNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2NonNegativeIntegers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2StringsByte",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2StringsText",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3CenterOfRotationNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3NonNegativeIntegers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3OrientationNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3RGBNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3or4CalloutLineNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4AnnotBorderCharacteristics",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4BorderColorArrays",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4BorderStyleNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4BorderThicknessNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4ColourSpaceEntries",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4Integers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4NumbersColorAnnotation",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_6Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_8Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_9Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_ArrayOfNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_RoleMapNS",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "AuthCode",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "BlackpointArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "CIP4_Address",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_AssemblingIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_AssemblyItem",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_BindIn",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_BindingIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_BlowIn",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_ColorIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_ComChannel",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Company",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Contact",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_FoldingIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_HoleMakingIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_HolePattern",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Intent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_IntentSummary",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_LayoutIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_MediaIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Metadata",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Person",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Production",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_ProductionIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Recipient",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Root",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_SaddleStitching",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_SideStitching",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_StickOn",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CalGrayColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "CalRGBColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "CharProcMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "ClassMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "Collection/Resources",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "CollectionItem/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "CollectionSchema/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "ColorSpaceMap/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "ColorantsDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "CryptFilterMap/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "CryptFilterPublicKeyMap/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "DPM",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "Data/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "Dest0Array",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest0StructArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest1Array",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest1StructArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest4Array",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest4StructArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DestXYZArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DestXYZStructArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DestsMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "DeviceCMYKColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DeviceGrayColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DeviceNColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DeviceRGBColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DictionaryOfDictionaries",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "DictionaryOfFunctions/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "DocInfo/AAPL:Keywords",
+          "reason": "an extension (fn:Extension(AAPL)), not ISO 32000-2"
+        },
+        {
+          "case": "DocInfo/GTS_PDFXVersion",
+          "reason": "an extension (fn:Extension(PDF_X)), not ISO 32000-2"
+        },
+        {
+          "case": "DocInfo/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "EmbeddedFileStream/Mail_MediaTypeParameters",
+          "reason": "an extension (fn:Extension(EAPDF_1,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "EncryptionPublicKey/KDFSalt",
+          "reason": "an extension (fn:Extension(ISO_TS_32004,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "EncryptionStandard/KDFSalt",
+          "reason": "an extension (fn:Extension(ISO_TS_32004,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "Extensions/GTSm",
+          "reason": "an extension (fn:Extension(ISO_21812,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Extensions/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "FDDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "FileTrailer/AuthCode",
+          "reason": "an extension (fn:Extension(ISO_TS_32004,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "FileTrailer/AdditionalStreams",
+          "reason": "an extension (fn:Extension(OpenOffice)), not ISO 32000-2"
+        },
+        {
+          "case": "FileTrailer/DocChecksum",
+          "reason": "an extension (fn:Extension(OpenOffice)), not ISO 32000-2"
+        },
+        {
+          "case": "FilterCCITTFaxDecode/Blackls1",
+          "reason": "an extension (fn:Extension(Malforms)), not ISO 32000-2"
+        },
+        {
+          "case": "FontMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "GTS_ProcStepsGroup",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "GTSm_DevExtensions",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "GammaArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "GraphicsStateParameter/AAPL:AA",
+          "reason": "an extension (fn:Extension(AAPL,1.2)), not ISO 32000-2"
+        },
+        {
+          "case": "GraphicsStateParameter/AAPL:ST",
+          "reason": "an extension (fn:Extension(AAPL,1.2)), not ISO 32000-2"
+        },
+        {
+          "case": "GraphicsStateParameterMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "HalftoneType5/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "ICCBasedColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "IndexedColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "LabColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "LabRangeArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Name/XFAResources",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/SWF",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Name",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Desc",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Category",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/ID",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Version",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/APIVersion",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/LoadType",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Icon",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Locale",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Strings",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/InitialFields",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Resources",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "OOAdditionalStmsArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "OptContentCreatorInfo/SubType",
+          "reason": "an extension (fn:Extension(Malforms,1.5)), not ISO 32000-2"
+        },
+        {
+          "case": "OptContentGroup/GTS_Metadata",
+          "reason": "an extension (fn:Extension(ISO_19593,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "PagePiece",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "PaperMetaData",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "PatternColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "PatternMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "RelatedFilesArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "RequirementsSTEP",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "RichMediaAnimation/AO",
+          "reason": "an extension (fn:Extension(ISO_TS_32007,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "RichMediaCommandArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "RichMediaCuePoint",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "RichMediaInstance/Params",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "RichMediaInstance/Scene",
+          "reason": "an extension (fn:Extension(ISO_TS_32007,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "RichMediaParams",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "RoleMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "RoleMapNS",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "SeparationColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ShadingMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "Solidities/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "SpectralData",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "StructureAttributesDict/Contents",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "StructureAttributesDict/NoteType",
+          "reason": "an extension (fn:Extension(WTPDF,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "SubjectDN",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "TrailerIDArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamAnnotsArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamDocumentArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamEFArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamFormArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamSignatureArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "VRIMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "VisibilityExpressionArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "WhitepointArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "XObjectFormType1/GTS_XID",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectFormType1/GTS_Scope",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectFormType1/GTS_Env",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectFormType1/GTS_Encapsulated",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectImage/GTS_XID",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectImage/GTS_Scope",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectImage/GTS_Env",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectImage/GTS_Encapsulated",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "XRefStream/AuthCode",
+          "reason": "an extension (fn:Extension(ISO_TS_32004,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "XRefStream/AdditionalStreams",
+          "reason": "an extension (fn:Extension(OpenOffice,1.5)), not ISO 32000-2"
+        },
+        {
+          "case": "XRefStream/DocChecksum",
+          "reason": "an extension (fn:Extension(OpenOffice,1.5)), not ISO 32000-2"
+        },
+        {
+          "case": "_UniversalArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "_UniversalDictionary",
+          "reason": "a map: entries under arbitrary names, no named key"
+        }
+      ]
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "arlington-read-keys-surfaced",
+        "version": "arlington@c48b363e9",
+        "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
+      },
+      "date": "2026-10-13",
+      "commit": "06eec33ccd19e47f899c067a21426211b213b89c",
+      "command": "bun cli.ts office-scorecard axis-b --suite arlington-read-keys-surfaced",
+      "result": {
+        "kind": "pass-total",
+        "pass": 1335,
+        "total": 3357,
+        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled only when it reaches the typed record: removing it, or nulling it, changes what a bound typer returns, the record compared without raw, the input copies and _extras (a key a typer lists as known but keeps only in raw does not count — the difference with arlington-read-keys); 364 objects measured, 166 with a typer, 198 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
+      },
+      "skipped": [
+        {
+          "case": "AAPL_ST",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "AFEmbeddedFileStream/Mail_MediaTypeParameters",
+          "reason": "an extension (fn:Extension(EAPDF_1,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "AnnotLink/Path",
+          "reason": "an extension (fn:Extension(ISO_TS_24654,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "AnnotWidget/PMD",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "AppearancePrinterMarkSubDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "AppearanceSubDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "AppearanceTrapNetSubDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "ArrayOf3DCrossSection",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DMeasure",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DNode",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DTransMatrix",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DView",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3DViewAddEntries",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf3PDUNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf4Functions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAFFileSpecifications",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfActionHideAnnots",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfActions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAnnotStates",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAnnots",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysInkList",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysPaths",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysRBGroups",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysURLStrings",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfArraysXPTSValues",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAttributeObjects",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfAttributeRevisions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfBeads",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfBlendModes",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfBooleansGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIDGlyphMetricsW",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIDGlyphMetricsW2",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_AssemblingIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_AssemblyItem",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_BindIn",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_BindingIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_BlowIn",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ChannelUsage",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_Coatings",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ColorIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ComChannel",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ContactTypes",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_FinishedDimensions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_FoldingIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_HoleMakingIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_HolePattern",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_LABColorValue",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_LayoutIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_MediaIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_PrintProcess",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_ProductionIntent",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_Resource",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCIP4_StickOn",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfClassNamesRevisions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfCompressionFilterNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDPartArrays",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDParts",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDashPatterns",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDecodeParams",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDescendantFonts",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDevExtensions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDifferences",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDigestMethod",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfDuration",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFieldChoiceOpt",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFieldID",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFields",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFileSpecifications",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFilterNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFontAndSize",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFonts",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfFunctions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfGSPDashPatterns",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfImageAlternates",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfIndirectFileSpecifications",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfIntegersGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfIntegersGreaterThanZero",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfMediaPlayerInfo",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesForEnforce",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesForPrintingOrder",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesForProcSet",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamesInPtData",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNamespace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNavigatorLayoutNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNonNegativeIntegersGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNumberFormats",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfNumbersGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCConfig",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCG",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCGState",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCGindirect",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOCUsage",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOPI13Color",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOPI2Inks",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOptContentGroups",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOptContentOrderElements",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOptContentOrders",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfOutputIntents",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfPageTreeNodeKids",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfPages",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfPaths",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfQuadPoints",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRenditions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRequirements",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRequirementsHandlers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRichMediaConfiguration",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRichMediaCuePoints",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfRichMediaInstances",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSignatureReferences",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSignatureSubFilterNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSoftwareIdentifiers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSoftwareVersions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSourceInformation",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStreamsGeneral",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStringsASCII",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStringsByte",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStringsText",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStringsTextOrNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStructElem",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStructElemKids",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfStructElemParentTree",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfSubjectDN",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfTags",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfThreads",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfTrapNetVersionObjects",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfTrapRegions",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfURLStrings",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfURLs",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfUserProperty",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfViewParams",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfViewports",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfWebCaptureCommands",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfWebCaptureImages",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfWebCapturePages",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfXFA",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfXPTSValues",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfXRefIndexIntegers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOfXRefWIntegers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2Booleans",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2DashNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2Integers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2LineEndingsNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2NonNegativeIntegers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2StringsByte",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_2StringsText",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3CenterOfRotationNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3NonNegativeIntegers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3OrientationNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3RGBNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_3or4CalloutLineNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4AnnotBorderCharacteristics",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4BorderColorArrays",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4BorderStyleNames",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4BorderThicknessNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4ColourSpaceEntries",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4Integers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_4NumbersColorAnnotation",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_6Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_8Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_9Numbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_ArrayOfNumbers",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ArrayOf_RoleMapNS",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "AuthCode",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "BlackpointArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "CIP4_Address",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_AssemblingIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_AssemblyItem",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_BindIn",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_BindingIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_BlowIn",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_ColorIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_ComChannel",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Company",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Contact",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_FoldingIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_HoleMakingIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_HolePattern",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Intent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_IntentSummary",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_LayoutIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_MediaIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Metadata",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Person",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Production",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_ProductionIntent",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Recipient",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_Root",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_SaddleStitching",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_SideStitching",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CIP4_StickOn",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "CalGrayColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "CalRGBColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "CharProcMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "ClassMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "Collection/Resources",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "CollectionItem/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "CollectionSchema/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "ColorSpaceMap/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "ColorantsDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "CryptFilterMap/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "CryptFilterPublicKeyMap/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "DPM",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "Data/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "Dest0Array",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest0StructArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest1Array",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest1StructArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest4Array",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Dest4StructArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DestXYZArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DestXYZStructArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DestsMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "DeviceCMYKColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DeviceGrayColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DeviceNColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DeviceRGBColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "DictionaryOfDictionaries",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "DictionaryOfFunctions/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "DocInfo/AAPL:Keywords",
+          "reason": "an extension (fn:Extension(AAPL)), not ISO 32000-2"
+        },
+        {
+          "case": "DocInfo/GTS_PDFXVersion",
+          "reason": "an extension (fn:Extension(PDF_X)), not ISO 32000-2"
+        },
+        {
+          "case": "DocInfo/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "EmbeddedFileStream/Mail_MediaTypeParameters",
+          "reason": "an extension (fn:Extension(EAPDF_1,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "EncryptionPublicKey/KDFSalt",
+          "reason": "an extension (fn:Extension(ISO_TS_32004,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "EncryptionStandard/KDFSalt",
+          "reason": "an extension (fn:Extension(ISO_TS_32004,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "Extensions/GTSm",
+          "reason": "an extension (fn:Extension(ISO_21812,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Extensions/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "FDDict",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "FileTrailer/AuthCode",
+          "reason": "an extension (fn:Extension(ISO_TS_32004,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "FileTrailer/AdditionalStreams",
+          "reason": "an extension (fn:Extension(OpenOffice)), not ISO 32000-2"
+        },
+        {
+          "case": "FileTrailer/DocChecksum",
+          "reason": "an extension (fn:Extension(OpenOffice)), not ISO 32000-2"
+        },
+        {
+          "case": "FilterCCITTFaxDecode/Blackls1",
+          "reason": "an extension (fn:Extension(Malforms)), not ISO 32000-2"
+        },
+        {
+          "case": "FontMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "GTS_ProcStepsGroup",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "GTSm_DevExtensions",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "GammaArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "GraphicsStateParameter/AAPL:AA",
+          "reason": "an extension (fn:Extension(AAPL,1.2)), not ISO 32000-2"
+        },
+        {
+          "case": "GraphicsStateParameter/AAPL:ST",
+          "reason": "an extension (fn:Extension(AAPL,1.2)), not ISO 32000-2"
+        },
+        {
+          "case": "GraphicsStateParameterMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "HalftoneType5/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "ICCBasedColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "IndexedColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "LabColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "LabRangeArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "Name/XFAResources",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/SWF",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Name",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Desc",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Category",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/ID",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Version",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/APIVersion",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/LoadType",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Icon",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Locale",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Strings",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/InitialFields",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "Navigator/Resources",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "OOAdditionalStmsArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "OptContentCreatorInfo/SubType",
+          "reason": "an extension (fn:Extension(Malforms,1.5)), not ISO 32000-2"
+        },
+        {
+          "case": "OptContentGroup/GTS_Metadata",
+          "reason": "an extension (fn:Extension(ISO_19593,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "PagePiece",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "PaperMetaData",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "PatternColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "PatternMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "RelatedFilesArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "RequirementsSTEP",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "RichMediaAnimation/AO",
+          "reason": "an extension (fn:Extension(ISO_TS_32007,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "RichMediaCommandArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "RichMediaCuePoint",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "RichMediaInstance/Params",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "RichMediaInstance/Scene",
+          "reason": "an extension (fn:Extension(ISO_TS_32007,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "RichMediaParams",
+          "reason": "no ISO 32000-2 named key (only extensions or wildcard entries)"
+        },
+        {
+          "case": "RoleMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "RoleMapNS",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "SeparationColorSpace",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "ShadingMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "Solidities/*",
+          "reason": "a wildcard or positional entry, not a named key"
+        },
+        {
+          "case": "SpectralData",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "StructureAttributesDict/Contents",
+          "reason": "an extension (fn:Extension(ADBE_Extn3,1.7)), not ISO 32000-2"
+        },
+        {
+          "case": "StructureAttributesDict/NoteType",
+          "reason": "an extension (fn:Extension(WTPDF,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "SubjectDN",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "TrailerIDArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamAnnotsArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamDocumentArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamEFArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamFormArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "URTransformParamSignatureArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "VRIMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "VisibilityExpressionArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "WhitepointArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "XObjectFormType1/GTS_XID",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectFormType1/GTS_Scope",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectFormType1/GTS_Env",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectFormType1/GTS_Encapsulated",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectImage/GTS_XID",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectImage/GTS_Scope",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectImage/GTS_Env",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectImage/GTS_Encapsulated",
+          "reason": "an extension (fn:Extension(PDF_VT2,1.6)), not ISO 32000-2"
+        },
+        {
+          "case": "XObjectMap",
+          "reason": "a map: entries under arbitrary names, no named key"
+        },
+        {
+          "case": "XRefStream/AuthCode",
+          "reason": "an extension (fn:Extension(ISO_TS_32004,2.0)), not ISO 32000-2"
+        },
+        {
+          "case": "XRefStream/AdditionalStreams",
+          "reason": "an extension (fn:Extension(OpenOffice,1.5)), not ISO 32000-2"
+        },
+        {
+          "case": "XRefStream/DocChecksum",
+          "reason": "an extension (fn:Extension(OpenOffice,1.5)), not ISO 32000-2"
+        },
+        {
+          "case": "_UniversalArray",
+          "reason": "an array object: its entries are positions, typed inside their owner"
+        },
+        {
+          "case": "_UniversalDictionary",
+          "reason": "a map: entries under arbitrary names, no named key"
+        }
+      ]
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "arlington-write-conformance",
+        "version": "arlington@c48b363e9",
+        "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
+      },
+      "date": "2026-10-14",
+      "commit": "31d88da4c4b554b5ce0bf975b11ff509504c3009",
+      "command": "bun cli.ts office-scorecard axis-b --suite arlington-write-conformance",
+      "result": {
+        "kind": "pass-total",
+        "pass": 327,
+        "total": 343,
+        "criterion": "per key instance of the documents pdfBuilder and pdf.write write (builder-blank, builder-standard-14, builder-standard-14-metrics, builder-embedded, builder-image, write-standard-14, write-embedded; 81 dictionaries and streams reached from the trailer through the Arlington links): a key present passes when its object lists it, its SinceVersion holds for PDF 2.0, its value has one of the key's types valid in 2.0 and, when that type's possible values are literals, one of those valid in 2.0; every key required for 2.0 and absent (inherited keys looked up the /Parent chain) is a failing case; fn: predicates are evaluated only for versions, TRUE / FALSE, || and && (fn:Extension false) — the others are not evaluated: 23 passing instances carry one, and an absent key required by one is skipped; IndirectReference, SpecialCase, DefaultValue and deprecation are not checked; array positions and map entries are walked, not counted"
+      },
+      "skipped": [
+        {
+          "case": "builder-blank trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-blank 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-blank 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-blank 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-standard-14 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-standard-14 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-standard-14 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-standard-14 5 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-standard-14 5 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-standard-14 5 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-standard-14-metrics trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-standard-14-metrics 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-standard-14-metrics 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-standard-14-metrics 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-embedded trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-embedded 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-embedded 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-embedded 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-image trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-image 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-image 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-image 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-image 3 0 R XObjectImage/StructParent",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:ImageIsStructContentItem()))"
+        },
+        {
+          "case": "write-standard-14 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "write-standard-14 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "write-standard-14 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "write-standard-14 5 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "write-standard-14 5 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "write-standard-14 5 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "write-embedded trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "write-embedded 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "write-embedded 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "write-embedded 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        }
+      ]
+    },
+    {
+      "axis": "D",
+      "suite": {
+        "id": "pdfium-resources",
+        "version": "pdfium@7c55203ed66b",
+        "source": "https://pdfium.googlesource.com/pdfium/+/7c55203ed66b0461378323e3fcf2efaf76755241/testing/resources/"
+      },
+      "date": "2026-10-16",
+      "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
+      "command": "bun cli.ts office-scorecard axis-d --suite pdfium-resources --container",
+      "result": {
+        "kind": "rate",
+        "ok": 239,
+        "total": 239,
+        "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+        "criterion": "per file, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "D",
+      "suite": {
+        "id": "qpdf-qtest",
+        "version": "qpdf@v12.4.2",
+        "source": "https://github.com/qpdf/qpdf/tree/4eba95899886e851cc41d76886483b347612f2a8"
+      },
+      "date": "2026-10-16",
+      "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
+      "command": "bun cli.ts office-scorecard axis-d --suite qpdf-qtest --container",
+      "result": {
+        "kind": "rate",
+        "ok": 639,
+        "total": 639,
+        "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+        "criterion": "per file, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "D",
+      "suite": {
+        "id": "qpdf-fuzz",
+        "version": "qpdf@v12.4.2",
+        "source": "https://github.com/qpdf/qpdf/tree/4eba95899886e851cc41d76886483b347612f2a8"
+      },
+      "date": "2026-10-16",
+      "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
+      "command": "bun cli.ts office-scorecard axis-d --suite qpdf-fuzz --container",
+      "result": {
+        "kind": "rate",
+        "ok": 78,
+        "total": 78,
+        "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+        "criterion": "per file, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "D",
+      "suite": {
+        "id": "safedocs-0000",
+        "version": "cc-main-2021-31-pdf-untruncated@0000",
+        "source": "https://digitalcorpora.org/corpora/file-corpora/cc-main-2021-31-pdf-untruncated/"
+      },
+      "date": "2026-10-16",
+      "commit": "8f2489052efce3ee0d45190cb4963ca7f6123b6d",
+      "command": "bun cli.ts office-scorecard axis-d --suite safedocs-0000 --container",
+      "result": {
+        "kind": "rate",
+        "ok": 1000,
+        "total": 1000,
+        "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+        "criterion": "per PDF of the ZIP, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "D",
+      "suite": {
+        "id": "stressful-batch5",
+        "version": "stressful-pdf-corpus@pdfs_202011/batch5",
+        "source": "https://labs.pdfa.org/stressful-corpus/pdfs_202011/batch5.tgz"
+      },
+      "date": "2026-10-16",
+      "commit": "0371b253f1aaa0b9f01eefa39d0117a3ccae220a",
+      "command": "bun cli.ts office-scorecard axis-d --suite stressful-batch5 --container",
+      "result": {
+        "kind": "rate",
+        "ok": 6118,
+        "total": 6119,
+        "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+        "criterion": "per PDF of the Stressful PDF Corpus batch5.tgz, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
+      },
+      "skipped": []
+    }
+  ],
+  "comparators": []
+}

@@ -32,6 +32,17 @@
  *   meant as a heading. A document without a `styles.xml` part gives no
  *   name to resolve, so only step (1) applies. `basedOn` chains, numbered
  *   heading styles, character styles and `w:aliases` are not consulted.
+ * - **Code blocks, quotes, rules** — a paragraph without `numPr` whose
+ *   style resolves, by its built-in name (else by its ID split at its case
+ *   changes, `SourceCode` → `source code`, so no styles part is needed),
+ *   to a FROZEN name: `Source Code` → `codeBlock{info:''}` (text of every
+ *   run, `break` → `\n`, `tab` → `\t`; one paragraph = one block, adjacent
+ *   code paragraphs are not merged; an empty one is a skipped spacer);
+ *   `Block Text`, `Quote` or `Intense Quote` → a quoted paragraph,
+ *   CONSECUTIVE quoted paragraphs forming ONE `blockquote` (an empty one
+ *   is skipped without closing it; quote nesting is not recoverable);
+ *   `Horizontal Rule` → `hr` when the paragraph is EMPTY (with text it
+ *   stays a paragraph). pandoc and `oconvIrToDocx` write these styles.
  * - **Runs** — `rPr.bold` / `.italic` / `.strike` → the matching `run`
  *   booleans. `run.code` is `true` when `rPr.font` names a monospace face
  *   from a FROZEN, name-based allowlist (`MONO_FONTS`, case/space
@@ -163,6 +174,41 @@ export const oconvDocxToIr = {
             return typeof font === 'string' && MONO_FONTS.has(font.trim().toLowerCase());
         }
 
+        /** Frozen paragraph-style names (lower-cased) read as blocks. */
+        const CODE_STYLES = new Set(['source code']);
+        const QUOTE_STYLES = new Set(['block text', 'quote', 'intense quote']);
+        const RULE_STYLES = new Set(['horizontal rule']);
+
+        /**
+         * `'code'` | `'quote'` | `'rule'` | `null` for a paragraph style:
+         * by the style's built-in name when `styles.xml` defines the ID,
+         * else by the ID split at its case changes (`SourceCode` →
+         * `source code`), so pandoc's and this package's IDs resolve
+         * without a styles part.
+         */
+        function blockStyleOf(pStyle, names) {
+            if (!pStyle) return null;
+            const id = String(pStyle);
+            const key = names.get(id) || id.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+            if (CODE_STYLES.has(key)) return 'code';
+            if (QUOTE_STYLES.has(key)) return 'quote';
+            if (RULE_STYLES.has(key)) return 'rule';
+            return null;
+        }
+
+        /** Text of a code paragraph: breaks → `\n`, tabs → `\t`, wrappers walked. */
+        function codeText(nodes) {
+            let text = '';
+            for (const c of nodes || []) {
+                if (c.type === 'text') text += c.value || '';
+                else if (c.type === 'break') text += '\n';
+                else if (c.type === 'tab') text += '\t';
+                else if (c.type === 'run' || c.type === 'hyperlink' || c.type === 'ins'
+                    || c.type === 'sdt' || c.type === 'fldSimple') text += codeText(c.children);
+            }
+            return text;
+        }
+
         /** Build an IR `run` leaf from a docx run's flattened text + rPr. */
         function makeRun(text, rPr) {
             return node('run', {
@@ -273,6 +319,7 @@ export const oconvDocxToIr = {
             function blocksFromNodes(nodes) {
                 const out = [];
                 let group = null; // { numId, ordered, items }
+                let quote = null; // IR paragraphs of the open blockquote
 
                 function flushGroup() {
                     if (group) {
@@ -281,9 +328,36 @@ export const oconvDocxToIr = {
                     }
                 }
 
+                function flushQuote() {
+                    if (quote) {
+                        out.push(node('blockquote', {}, quote));
+                        quote = null;
+                    }
+                }
+
                 for (const n of nodes || []) {
+                    const pPr = (n.type === 'paragraph' && n.pPr) || {};
+                    const block = pPr.numPr ? null : blockStyleOf(pPr.pStyle, names);
+                    // Any node but a quote paragraph closes the open quote.
+                    if (block !== 'quote') flushQuote();
+                    if (n.type === 'paragraph' && block) {
+                        flushGroup();
+                        if (block === 'code') {
+                            // An empty code paragraph is a spacer, like any other.
+                            const text = codeText(n.children);
+                            if (text) out.push(node('codeBlock', { info: '', text }));
+                            continue;
+                        }
+                        const inlines = paragraphInlines(n);
+                        if (block === 'quote') {
+                            if (inlines.length) (quote || (quote = [])).push(node('paragraph', {}, inlines));
+                            continue;
+                        }
+                        // A rule is an EMPTY paragraph; one with text stays prose.
+                        out.push(inlines.length ? node('paragraph', {}, inlines) : node('hr'));
+                        continue;
+                    }
                     if (n.type === 'paragraph') {
-                        const pPr = n.pPr || {};
                         const h = headingOf(pPr.pStyle, names);
                         const level = h && h.level ? h.level : 0;
                         if (h && h.subtitle) {
@@ -348,6 +422,7 @@ export const oconvDocxToIr = {
                     losses.push({ code: 'block/dropped', detail: n.type || 'unknown' });
                 }
                 flushGroup();
+                flushQuote();
                 return out;
             }
 

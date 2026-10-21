@@ -21,9 +21,10 @@ On success, a [`FromMdOutput`](./types.md#frommdoutput):
 | Field | Type | Meaning |
 |---|---|---|
 | `error` | `null` | Marks success. |
-| `bytes` | `Uint8Array` | The document. `pdf` output is byte-reproducible. `docx` and `odt` output is a zip whose entry timestamps change on every call. |
+| `bytes` | `Uint8Array` | The document. The output is byte-reproducible for every target: the same input gives the same bytes, and `docx` and `odt` zip entries carry a fixed date. |
 | `target` | `string` | The resolved target. |
 | `losses` | [`Loss[]`](./types.md#loss) | What the conversion could not carry across. |
+| `lossSummary` | [`LossSummaryEntry[]`](./types.md#losssummaryentry) | `losses` grouped by `code` + `detail`, with a count, in order of first occurrence. |
 | `lossy` | `boolean` | `losses.length > 0`. |
 
 On failure, a [`CoreError`](./types.md#coreerror). The function never
@@ -49,14 +50,16 @@ console.log(docx.target, docx.bytes.byteLength);
 
 const lossy = await fromMd({ markdown: '# T\n\n<div>raw html</div>\n', target: 'docx' });
 console.log(JSON.stringify(lossy.losses));
+console.log(JSON.stringify(lossy.lossSummary));
 ```
 
 Output:
 
 ```text
-null pdf 1032 %PDF-2.0 false
-docx 1016
+null pdf 1086 %PDF-2.0 false
+docx 2071
 [{"code":"block/dropped","detail":"html_block"}]
+[{"code":"block/dropped","detail":"html_block","count":1}]
 ```
 
 An unsupported target:

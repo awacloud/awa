@@ -1,0 +1,4720 @@
+{
+  "suite": {
+    "id": "harfbuzz-fuzz-fonts",
+    "version": "harfbuzz@14.6.0",
+    "source": "https://github.com/harfbuzz/harfbuzz/tree/c7a7457b7385f33178e8cf87615ca077a810bbe7/test/fuzzing/fonts"
+  },
+  "criterion": "per file, the container decoded (SFNT, TTC, WOFF, WOFF2), then every table the package parses, fonts.read, every glyph and every CharString of a name-keyed CFF table, all steps run even after a typed refusal of another; ok when it returns or throws an error of the package's own hierarchy (FontError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child",
+  "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+  "host": "container",
+  "image": "awa-robustness-bun:1.3.13",
+  "imageId": "sha256:1a93710c3b0b8ee72a6876fc61e8975217fef39faee9a7c4b224560e6829de84",
+  "bun": "1.3.13",
+  "memoryMax": "1342177280",
+  "counts": {
+    "returned": 22,
+    "refused": 502,
+    "untyped": 0,
+    "hang": 0,
+    "memory": 0,
+    "crash": 0
+  },
+  "cases": [
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/037322204d9bc87b6b0b0f2342c97caa9c5fd479",
+      "bytes": 12370,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/0509e80afb379d16560e9e47bdd7d888bebdebc6",
+      "bytes": 61,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/1365781b41cb64df3676cf79dd9f11f783facfe3",
+      "bytes": 552,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/1746cad6bc3fb2b355db50a5af37c9b58d9ad376",
+      "bytes": 23293,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/1a6f1687b7a221f9f2c834b0b360d3c8463b6daf",
+      "bytes": 64,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/205edd09bd3d141cc9580f650109556cc28b22cb",
+      "bytes": 1966,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/217a934cfe15c548b572c203dceb2befdf026462",
+      "bytes": 1384,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/3511ff5c1647150595846ac414c595cccac34f18",
+      "bytes": 1483,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/3653331f3f13ff5b1b271c5c5583ace4c757005c",
+      "bytes": 1788,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/375d6ae32a3cbe52fbf81a4e5777e3377675d5a3",
+      "bytes": 1024,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/43979b90b2dd929723cf4fe1715990bcb9c9a56b",
+      "bytes": 1804,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/49d296d4b92d7dbe2f354ac70fca3e32cbd4a936",
+      "bytes": 51063,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/510fb3fe4b29faab0daaeb9b2e5d0edb1745a8c8",
+      "bytes": 10270,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644,
+      "code": "fonts/fvar-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/558661aa659912f4d30ecd27bd09835171a8e2b0",
+      "bytes": 1358,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/5a5daf5eb5a4db77a2baa3ad9c7a6ed6e0655fa8",
+      "bytes": 61,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/641bd9db850193064d17575053ae2bf8ec149ddc",
+      "bytes": 305,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/7560aae267167d9490055208fa57e0c9396244e9",
+      "bytes": 4771,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/8240789f6d12d4cfc4b5e8e6f246c3701bcf861f",
+      "bytes": 633,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/9d443b16c88210b09001790d1f047f3bb017655d.susbset-seed",
+      "bytes": 4781,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/AdobeVFPrototype.ABC.otf",
+      "bytes": 4724,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/NotoColorEmoji.subset.index_format3.ttf",
+      "bytes": 10112,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/NotoColorEmoji.subset.multiple_size_tables.ttf",
+      "bytes": 19280,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/NotoColorEmoji.subset.ttf",
+      "bytes": 10124,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/Roboto-Variable.ABC.ttf",
+      "bytes": 13480,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/TwemojiMozilla.subset.ttf",
+      "bytes": 5712,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/a34a9191d9376bda419836effeef7e75c1386016",
+      "bytes": 1010,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/a69118c2c2ada48ff803d9149daa54c9ebdae30e",
+      "bytes": 820,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/b9e2aaa0d75fcef6971ec3a96d806ba4a6b31fe2",
+      "bytes": 1804,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/cbdt-png-indexed-trns-smask-dimension-oob.ttf",
+      "bytes": 876,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-5517117891805184",
+      "bytes": 178,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-6107935408390144",
+      "bytes": 16800,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-harfbuzz_fuzzer-4822416500195328",
+      "bytes": 16800,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-harfbuzz_fuzzer-5598263003840512",
+      "bytes": 16800,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-harfbuzz_fuzzer-6327734241591296",
+      "bytes": 30,
+      "class": "refused",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-fuzzer-4666056377368576",
+      "bytes": 1152,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-fuzzer-5662671558934528",
+      "bytes": 242272,
+      "class": "refused",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 92644,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-fuzzer-6243458541944832",
+      "bytes": 370187,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-fuzzer-6303297511096320",
+      "bytes": 4545,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-fuzzer-6696647723581440",
+      "bytes": 3266,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5072750494875648",
+      "bytes": 35,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5097734906839040",
+      "bytes": 164,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5446125635633152",
+      "bytes": 655,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5634395566768128",
+      "bytes": 106,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5638729035677696",
+      "bytes": 946,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5643643755429888",
+      "bytes": 1776,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5644258942386176",
+      "bytes": 61,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5657878543728640",
+      "bytes": 1828,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5680362806575104",
+      "bytes": 564,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5688420752424960",
+      "bytes": 163,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5689920685867008",
+      "bytes": 42,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5728971283496960",
+      "bytes": 101,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5746142327865344",
+      "bytes": 219,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-shape-fuzzer-5750379279548416",
+      "bytes": 317,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5508865908670464",
+      "bytes": 17004,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5641053680173056",
+      "bytes": 4229,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5643036478930944",
+      "bytes": 369,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5686186874503168",
+      "bytes": 962,
+      "class": "refused",
+      "ok": true,
+      "ms": 54,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5686749313892352",
+      "bytes": 2808,
+      "class": "refused",
+      "ok": true,
+      "ms": 50,
+      "maxRssKiB": 92644,
+      "code": "fonts/gpos-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5717414645334016",
+      "bytes": 310324,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5756332481708032",
+      "bytes": 6065,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644,
+      "code": "fonts/cff-index-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5762137968869376",
+      "bytes": 2037,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-hb-subset-fuzzer-5979721620652032",
+      "bytes": 80,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-4884742786777088",
+      "bytes": 393,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-5255344882188288",
+      "bytes": 65,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-5720051798769664",
+      "bytes": 1048576,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-5924299061854208",
+      "bytes": 2786,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-6460279560863744",
+      "bytes": 589,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-4601449528688640",
+      "bytes": 99,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-4684060812378112",
+      "bytes": 604,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-4710179695493120",
+      "bytes": 982,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-4850271066914816",
+      "bytes": 386,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-4977194146988032",
+      "bytes": 520,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5012913062150144",
+      "bytes": 283,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5017946948370432",
+      "bytes": 1321,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5093685255077888",
+      "bytes": 1160,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5103148350963712",
+      "bytes": 112,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5126525414014976",
+      "bytes": 1141,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5151890782027776",
+      "bytes": 318,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5157039562162176",
+      "bytes": 363,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5163560220753920",
+      "bytes": 520,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5166320261529600",
+      "bytes": 393,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5170405903695872",
+      "bytes": 1271,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5180622648770560",
+      "bytes": 110,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5221177988743168",
+      "bytes": 936,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5334300410773504",
+      "bytes": 99,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5644474732249088",
+      "bytes": 568,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5659690013556736",
+      "bytes": 2732,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5662548265009152",
+      "bytes": 28,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5677289226108928",
+      "bytes": 47,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5702671124791296",
+      "bytes": 94,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5719356528656384",
+      "bytes": 330,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5740518101090304",
+      "bytes": 439,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5748102301614080",
+      "bytes": 213,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5754958982021120",
+      "bytes": 319,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5952939792531456",
+      "bytes": 0,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-5973566991106048",
+      "bytes": 4047,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6107935408390144",
+      "bytes": 16800,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6120104833843200",
+      "bytes": 81,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6128803416637440",
+      "bytes": 4041,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6142466903506944",
+      "bytes": 926,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6198448785981440",
+      "bytes": 2357,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6223034666713088",
+      "bytes": 1260,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6252118652092416",
+      "bytes": 126,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6462232674959360",
+      "bytes": 2738,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6600932143136768",
+      "bytes": 988,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6603291950841856",
+      "bytes": 1384,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer-6712347260092416",
+      "bytes": 196336,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-harfbuzz_fuzzer.exe-5470269447340032",
+      "bytes": 341,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-4856957815619584",
+      "bytes": 486280,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5088336521986048",
+      "bytes": 1413,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5103082208493568",
+      "bytes": 1069,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5641612227772416",
+      "bytes": 1069,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5667125715927040",
+      "bytes": 472,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5668491560747008",
+      "bytes": 8771,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5681465586352128",
+      "bytes": 4448,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5686960406659072",
+      "bytes": 4004,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5692635449524224",
+      "bytes": 185,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5703524300357632",
+      "bytes": 1515,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5712313459146752",
+      "bytes": 146696,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5714890590584832",
+      "bytes": 2081,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-5750654771658752",
+      "bytes": 4004,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-draw-fuzzer-6231698648596480",
+      "bytes": 2707,
+      "class": "refused",
+      "ok": true,
+      "ms": 32,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4523479581851648",
+      "bytes": 322,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4535496598355968",
+      "bytes": 2786,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4548492505645056",
+      "bytes": 122,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4595692015190016",
+      "bytes": 225,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4687441845813248",
+      "bytes": 162,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4706238090706944",
+      "bytes": 350,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4769173588672512",
+      "bytes": 37,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4827735151083520",
+      "bytes": 1384,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4841745322868736",
+      "bytes": 660,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-4884742786777088",
+      "bytes": 393,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5216838347653120",
+      "bytes": 157600,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5255344882188288",
+      "bytes": 65,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5294584596791296",
+      "bytes": 1602,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5303930168803328",
+      "bytes": 7321,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5331901587914752",
+      "bytes": 3301,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5388906574905344",
+      "bytes": 9937,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5517117891805184",
+      "bytes": 178,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5617496443846656",
+      "bytes": 195,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5672141338968064",
+      "bytes": 176,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5700697074958336",
+      "bytes": 878,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5713868010553344",
+      "bytes": 370,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5720051798769664",
+      "bytes": 1048576,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-5924299061854208",
+      "bytes": 2786,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6023178755244032",
+      "bytes": 2261,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6111685556305920",
+      "bytes": 586,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6160439919509504",
+      "bytes": 204,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6210176798425088",
+      "bytes": 1420,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6260579246276608",
+      "bytes": 700,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6264625609834496",
+      "bytes": 1731,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6278851874258944",
+      "bytes": 598,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6424351550210048",
+      "bytes": 73,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6460279560863744",
+      "bytes": 589,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6576177596596224",
+      "bytes": 385,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6595199411159040",
+      "bytes": 1862,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6624904746106880",
+      "bytes": 42,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-fuzzer-6723367514144768",
+      "bytes": 1074,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-4655044879515648",
+      "bytes": 779,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-4820484278255616",
+      "bytes": 104960,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-5336988644081664",
+      "bytes": 4264,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-5419605043773440",
+      "bytes": 157,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-5918954634936320",
+      "bytes": 4884,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-6336503637934080",
+      "bytes": 24384,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644,
+      "code": "fonts/fvar-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-6490288851058688",
+      "bytes": 3246,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-6573156621156352",
+      "bytes": 3892,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-gpu-fuzzer-7148eb19cc1a927d3bb5773630d4d9829fae5fbc",
+      "bytes": 14347,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-4604877465255936",
+      "bytes": 82451,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-4621471331450880",
+      "bytes": 374,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-4635834988167168",
+      "bytes": 4279,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-4743569679384576",
+      "bytes": 691,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-4797078076456960",
+      "bytes": 172,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-4826864710647808",
+      "bytes": 4884,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-4872362293264384",
+      "bytes": 26674,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-4912367159541760",
+      "bytes": 322074,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-5078588000108544",
+      "bytes": 162,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-5216672087867392",
+      "bytes": 3912,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-5267980968329216",
+      "bytes": 1369,
+      "class": "refused",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-5513551012495360",
+      "bytes": 51063,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-5627961964560384",
+      "bytes": 4728,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-5773854015029248",
+      "bytes": 4884,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-5983746921922560",
+      "bytes": 1894,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-6111992183324672",
+      "bytes": 52264,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-6252581608554496",
+      "bytes": 316,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-6328536122851328",
+      "bytes": 76184,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-6344015149858816",
+      "bytes": 26560,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-6454028543524864",
+      "bytes": 546,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-6538157574389760",
+      "bytes": 4577,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-raster-fuzzer-6597066439852032",
+      "bytes": 4268,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-repacker-fuzzer-4579249263345664",
+      "bytes": 173466,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-repacker-fuzzer-4877513265119232",
+      "bytes": 10,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-repacker-fuzzer-5009721206833152",
+      "bytes": 357812,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-repacker-fuzzer-6490945267564544",
+      "bytes": 358352,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-repacker-fuzzer-6697168080338944",
+      "bytes": 68766,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-set-fuzzer-6255224052514816",
+      "bytes": 7,
+      "class": "refused",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-4523349576908800",
+      "bytes": 140,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-4787105656864768",
+      "bytes": 44,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5061207689134080",
+      "bytes": 3344,
+      "class": "refused",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5114131137822720",
+      "bytes": 5119,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5138182937772032",
+      "bytes": 68,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5154718402215936",
+      "bytes": 226,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5158673602314240",
+      "bytes": 881650,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5175735354916864",
+      "bytes": 354461,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5196560812474368",
+      "bytes": 1816,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5349416110784512",
+      "bytes": 1603,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5461871294742528",
+      "bytes": 33998,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5629524117553152",
+      "bytes": 93,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5630246225707008",
+      "bytes": 109,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5631444412530688",
+      "bytes": 336,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5632586529898496",
+      "bytes": 695,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5633985665826816",
+      "bytes": 73,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5634443633491968",
+      "bytes": 41814,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5634620935110656",
+      "bytes": 41,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5635082459545600",
+      "bytes": 52,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5642666339991552",
+      "bytes": 32,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5642899625082880",
+      "bytes": 759578,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5647267827023872",
+      "bytes": 655,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5648999235715072",
+      "bytes": 297,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5649959857160192",
+      "bytes": 3608,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5650286710882304",
+      "bytes": 76,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5652019562414080",
+      "bytes": 49,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5652700541222912",
+      "bytes": 232,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5656511058018304",
+      "bytes": 28,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5658272078495744",
+      "bytes": 2252,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5659641787187200",
+      "bytes": 3498,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5664873493561344",
+      "bytes": 400,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5666162551029760",
+      "bytes": 202319,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5667182741028864",
+      "bytes": 407,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5668791174823936",
+      "bytes": 3608,
+      "class": "refused",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 92644,
+      "code": "fonts/name-bad-string-range"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5672261407735808",
+      "bytes": 192,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5674361600606208",
+      "bytes": 518,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5677421274071040",
+      "bytes": 3608,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5679244475105280",
+      "bytes": 256,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5685596677210112",
+      "bytes": 58,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5686369209286656",
+      "bytes": 2880,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5688420752424960",
+      "bytes": 69,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5691469793329152",
+      "bytes": 69,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5695615258853376",
+      "bytes": 194,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5696686572175360",
+      "bytes": 256,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5700264032468992",
+      "bytes": 648,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5706010589659136",
+      "bytes": 52,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5711096049041408",
+      "bytes": 93,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5711472756260864",
+      "bytes": 154432,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5712050577211392",
+      "bytes": 647751,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5716208469409792",
+      "bytes": 243,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5718464350650368",
+      "bytes": 41,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5718889451749376",
+      "bytes": 1680,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5719982789361664",
+      "bytes": 3608,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5722888989048832",
+      "bytes": 3608,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5725129603022848",
+      "bytes": 3608,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5725855502827520",
+      "bytes": 655,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5726089628876800",
+      "bytes": 76,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5729361857085440",
+      "bytes": 2250,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5733166795456512",
+      "bytes": 78,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5734736291430400",
+      "bytes": 66,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5735679418433536",
+      "bytes": 36,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5736657639178240",
+      "bytes": 459,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5738888765636608",
+      "bytes": 267731,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5740171484463104",
+      "bytes": 186,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5742079188140032",
+      "bytes": 16731,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5749627240841216",
+      "bytes": 99,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5750379279548416",
+      "bytes": 219,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5754863779053568",
+      "bytes": 100,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5762490181353472",
+      "bytes": 101,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5762953198960640",
+      "bytes": 62,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5764636557705216",
+      "bytes": 2184,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5768046065483776",
+      "bytes": 342,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5768601332613120",
+      "bytes": 108,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5769590820044800",
+      "bytes": 87807,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5965759719538688",
+      "bytes": 1154,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-6306977171374080",
+      "bytes": 713443,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-6377756666757120",
+      "bytes": 607,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-6399443634290688",
+      "bytes": 607,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-6635625931735040",
+      "bytes": 175945,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4526271781732352",
+      "bytes": 4769,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4549472192692224",
+      "bytes": 1634,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4549523149553664",
+      "bytes": 66032,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4552226966994944",
+      "bytes": 1524,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4575222591520768",
+      "bytes": 91107,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4681956043390976",
+      "bytes": 56,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4688270404157440",
+      "bytes": 2240,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4801020053291008",
+      "bytes": 311,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4846730722738176",
+      "bytes": 4781,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4875306193518592.fuzz",
+      "bytes": 1044,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4877336988483584",
+      "bytes": 738,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4880059756969984",
+      "bytes": 45902,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4901143794810880",
+      "bytes": 565,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4916785942757376",
+      "bytes": 331,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4961171477233664",
+      "bytes": 39793,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-4979711393005568",
+      "bytes": 349,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5001604901240832",
+      "bytes": 165568,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5029952234586112",
+      "bytes": 837,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5041767803125760",
+      "bytes": 29,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5067936541179904",
+      "bytes": 172,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5072358514753536",
+      "bytes": 55875,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5077547978588160",
+      "bytes": 339602,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-too-many-tables"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5120246288875520",
+      "bytes": 2501,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5121706490593280",
+      "bytes": 161328,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5127321313476608",
+      "bytes": 60417,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5137462782066688",
+      "bytes": 76354,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5141317848530944.fuzz",
+      "bytes": 8,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5145429829877760",
+      "bytes": 123110,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5148388450631680",
+      "bytes": 2685,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5160311461511168",
+      "bytes": 68,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5167653459329024",
+      "bytes": 46,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5169035432165376",
+      "bytes": 108,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5179935334465536",
+      "bytes": 50501,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5181909018345472",
+      "bytes": 2559,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5191907895279616",
+      "bytes": 2025,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5192684970311680",
+      "bytes": 67697,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5205038086094848",
+      "bytes": 129192,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5206191479455744",
+      "bytes": 3558,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5229304507138048",
+      "bytes": 56552,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5234369031176192",
+      "bytes": 83705,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5241922561114112",
+      "bytes": 638237,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5250795600740352",
+      "bytes": 409,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5269686781607936",
+      "bytes": 48,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5291661985120256",
+      "bytes": 3237,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5291844211900416",
+      "bytes": 133426,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5345734743031808",
+      "bytes": 1240,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5359635656605696",
+      "bytes": 393270,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5362189182566400",
+      "bytes": 85171,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5363902507515904",
+      "bytes": 1683,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5388270411579392",
+      "bytes": 4844,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5416421032067072",
+      "bytes": 114,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5417800474165248",
+      "bytes": 3161,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5417934246772736",
+      "bytes": 104,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5419002026131456",
+      "bytes": 1718,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5422577634377728",
+      "bytes": 1700,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5443213648330752",
+      "bytes": 567,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5458896606855168",
+      "bytes": 2410,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5521982557782016",
+      "bytes": 1228,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-too-many-tables"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5522792714993664",
+      "bytes": 74,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5542653037903872",
+      "bytes": 160249,
+      "class": "refused",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5549945449480192",
+      "bytes": 562733,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5568200165687296",
+      "bytes": 220551,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5609112151916544",
+      "bytes": 80225,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5609911946838016",
+      "bytes": 313,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5616763250278400",
+      "bytes": 97363,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5617065093365760",
+      "bytes": 160,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5629878397829120",
+      "bytes": 3746,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5634197349203968",
+      "bytes": 5791,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5640452927127552",
+      "bytes": 32376,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5640889218629632",
+      "bytes": 1490,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5641053680173056",
+      "bytes": 2863,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5641370503217152",
+      "bytes": 3099,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5641892164009984",
+      "bytes": 124518,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5642531954229248",
+      "bytes": 46,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5643107869917184",
+      "bytes": 3232,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5650879734874112",
+      "bytes": 3278,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5651059347816448",
+      "bytes": 2648,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5659903036751872",
+      "bytes": 781,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5660711141769216",
+      "bytes": 383,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5661567174311936",
+      "bytes": 473,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5662792105590784",
+      "bytes": 1047599,
+      "class": "refused",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5667673584697344",
+      "bytes": 178,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5669437462544384",
+      "bytes": 284427,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5670861909524480",
+      "bytes": 1298,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5672006905757696",
+      "bytes": 73,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5672913680728064",
+      "bytes": 861,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5674228796358656",
+      "bytes": 913,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5675720390475776",
+      "bytes": 131084,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-too-many-tables"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5676773460672512",
+      "bytes": 2172,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-too-many-tables"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5677906231033856",
+      "bytes": 938,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5678476148867072",
+      "bytes": 113915,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5680398559870976",
+      "bytes": 145,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5684014636859392",
+      "bytes": 7148,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5684542900535296",
+      "bytes": 70,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5685097303375872",
+      "bytes": 134,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5689082504806400",
+      "bytes": 84172,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5690658895953920",
+      "bytes": 2735,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5693568490012672",
+      "bytes": 1543,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5695279609675776",
+      "bytes": 135,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5695865298092032",
+      "bytes": 139054,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5695925913911296",
+      "bytes": 385,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5696607199166464",
+      "bytes": 28,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5696825891225600",
+      "bytes": 69,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5697351339999232",
+      "bytes": 391689,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5704307501694976",
+      "bytes": 1062,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5707809174585344",
+      "bytes": 107592,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5708063625969664",
+      "bytes": 155466,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5708623339323392",
+      "bytes": 151,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5708764082864128",
+      "bytes": 6452,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5710107829075968",
+      "bytes": 3660,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5711849555755008",
+      "bytes": 1896,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5711951464759296",
+      "bytes": 284521,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5713850117914624",
+      "bytes": 1048576,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5715299773186048",
+      "bytes": 6717,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5715464591376384",
+      "bytes": 2116,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5716947896893440",
+      "bytes": 65833,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5718215406125056",
+      "bytes": 107,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5719588814979072",
+      "bytes": 1048576,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5721073428987904",
+      "bytes": 349561,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5725847365877760",
+      "bytes": 880,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5728664968232960",
+      "bytes": 28,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5733203291144192",
+      "bytes": 34,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5735719311507456",
+      "bytes": 879,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5738978499624960",
+      "bytes": 28,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5739000398086144",
+      "bytes": 620,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5741735372914688",
+      "bytes": 560294,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5743250149736448",
+      "bytes": 103,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5745268385906688",
+      "bytes": 291536,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5747028458209280",
+      "bytes": 100109,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5747265633779712",
+      "bytes": 177090,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5747280156295168",
+      "bytes": 98811,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5750092395970560",
+      "bytes": 72435,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5750420593442816",
+      "bytes": 96091,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5753173985984512",
+      "bytes": 616,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5754526379802624",
+      "bytes": 288,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5756658848890880",
+      "bytes": 2734,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5758358618898432",
+      "bytes": 20112,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5758598970343424",
+      "bytes": 64,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5759725666041856",
+      "bytes": 114,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5759783999635456",
+      "bytes": 165952,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5760768497156096",
+      "bytes": 210,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5761434614497280",
+      "bytes": 532,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5763024094232576",
+      "bytes": 125681,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5764020596899840",
+      "bytes": 1766,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5764268627066880",
+      "bytes": 687,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5765071062958080",
+      "bytes": 329,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5768186323009536",
+      "bytes": 337,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5793182905663488",
+      "bytes": 803,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5842152921628672",
+      "bytes": 2501,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5844352760152064",
+      "bytes": 1214,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5845846876356608",
+      "bytes": 427854,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5855710991482880.fuzz",
+      "bytes": 1048,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5858518134554624",
+      "bytes": 802,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5887968763052032",
+      "bytes": 3889,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5920156651159552",
+      "bytes": 1975,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5923632099885056",
+      "bytes": 25847,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5927551890096128",
+      "bytes": 73364,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5965777994907648",
+      "bytes": 159,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-5991762219892736",
+      "bytes": 80599,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6005602106277888",
+      "bytes": 169270,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6032126569742336",
+      "bytes": 1970,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6083012753424384",
+      "bytes": 133426,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6119821501857792",
+      "bytes": 4769,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6151390002806784",
+      "bytes": 2534,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6159925345583104",
+      "bytes": 46421,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6164014466203648",
+      "bytes": 191,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/ttc-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6169920089227264",
+      "bytes": 1214,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6173520787800064",
+      "bytes": 1731,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6187272924692480",
+      "bytes": 609,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6231212713312256",
+      "bytes": 76,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6241118484955136",
+      "bytes": 7345,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6246465148813312",
+      "bytes": 24246,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6254792024915968",
+      "bytes": 20851,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6276691949518848",
+      "bytes": 184722,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6292420615340032",
+      "bytes": 2116,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6315334756335616",
+      "bytes": 20377,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6316256152780800",
+      "bytes": 1335,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6334512849289216",
+      "bytes": 133427,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6362213417353216",
+      "bytes": 131411,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6365271012540416",
+      "bytes": 161424,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6372147008241664",
+      "bytes": 775,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6382598554255360",
+      "bytes": 766,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6406793692774400",
+      "bytes": 98954,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6421315436281856",
+      "bytes": 59,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6442117271257088",
+      "bytes": 4043,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6521393809588224",
+      "bytes": 15886,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6525813890875392",
+      "bytes": 73882,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644,
+      "code": "fonts/gpos-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6543700493598720",
+      "bytes": 138425,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6608005089853440",
+      "bytes": 999,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6616166961905664",
+      "bytes": 919,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6651660668502016",
+      "bytes": 15229,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6681253479579648",
+      "bytes": 3472,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6696597055406080",
+      "bytes": 1054,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-fuzzer-6742230974201856",
+      "bytes": 1214,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-get-codepoints-fuzzer-5203067375976448",
+      "bytes": 16310,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-get-codepoints-fuzzer-5630904853069824",
+      "bytes": 580,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-get-codepoints-fuzzer-5687638085337088",
+      "bytes": 1206,
+      "class": "refused",
+      "ok": true,
+      "ms": 25,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-get-codepoints-fuzzer-5736539338833920",
+      "bytes": 512,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-unknown-version"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-get-codepoints-fuzzer-5930139383758848",
+      "bytes": 9410,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-get-codepoints-fuzzer-5973295416475648",
+      "bytes": 109,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-get-codepoints-fuzzer-6136125075750912",
+      "bytes": 65816,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-subset-get-codepoints-fuzzer-6394290358976512",
+      "bytes": 1868,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-4521131913838592",
+      "bytes": 162,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-4700345193005056",
+      "bytes": 227258,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-4886959609413632",
+      "bytes": 124071,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-5448347908636672",
+      "bytes": 2636,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-5620949889384448",
+      "bytes": 3492,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-5622008821121024",
+      "bytes": 156,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-5714817420427264",
+      "bytes": 213342,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-5728341490728960",
+      "bytes": 2193,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-5985308075425792",
+      "bytes": 26589,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-6120408016551936",
+      "bytes": 225457,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-6490910482038784",
+      "bytes": 323509,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-vector-fuzzer-6727871677923328",
+      "bytes": 2931,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb_shape_fuzzer-5633785895911424",
+      "bytes": 582,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/crash-06c15853f99560aafddeda9f0879327b38475e07",
+      "bytes": 103,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/crash-4b60576767ee4d9fe1cc10959d89baf73d4e8249",
+      "bytes": 3140,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/crash-b577db318b30f2851828a4c9ef97cb30678b1b54",
+      "bytes": 22473,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/crash-ccc61c92d589f895174cdef6ff2e3b20e9999a1a",
+      "bytes": 63302,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/crash-d223bc42a8226c4d655c417d63d9a76760d05985",
+      "bytes": 316,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/crash-e4e0bb1458a91b692eba492c907ae1f94e635480",
+      "bytes": 63302,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/e88c339237f52d21e01c55f01b9c1b4cc14a0467",
+      "bytes": 515,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fab39d60d758cb586db5a504f218442cd1395725",
+      "bytes": 1894,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-0-harfbuzz_fuzzer",
+      "bytes": 982,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-0-harfbuzz_hb-fuzzer",
+      "bytes": 3266,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-1-harfbuzz_fuzzer",
+      "bytes": 10424,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-1-harfbuzz_fuzzer(1)",
+      "bytes": 16144,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-2-harfbuzz_fuzzer",
+      "bytes": 1010,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-2-harfbuzz_fuzzer(1)",
+      "bytes": 1010,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-3-harfbuzz_fuzzer",
+      "bytes": 6791,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-3-harfbuzz_fuzzer(1)",
+      "bytes": 2625,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-3-harfbuzz_fuzzer(2)",
+      "bytes": 2813,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-3-harfbuzz_fuzzer(3)",
+      "bytes": 2813,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-3-harfbuzz_fuzzer(4)",
+      "bytes": 646,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/fuzz-3-harfbuzz_fuzzer(5)",
+      "bytes": 6791,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/kanit.ttf",
+      "bytes": 160304,
+      "class": "returned",
+      "ok": true,
+      "ms": 23,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/leak-34f1798a142fd0dfdd71a96fb6aa7de19a62865e",
+      "bytes": 134,
+      "class": "refused",
+      "ok": true,
+      "ms": 38,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/noto_handwriting-cff2_colr_1.otf",
+      "bytes": 4193,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/noto_handwriting-cff_colr_1.otf",
+      "bytes": 4609,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/noto_handwriting-glyf_colr_1.ttf",
+      "bytes": 5093,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/noto_handwriting-picosvg.ttf",
+      "bytes": 20921,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/noto_handwriting-picosvgz.ttf",
+      "bytes": 6317,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/noto_handwriting-sbix.ttf",
+      "bytes": 17277,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/noto_handwriting-untouchedsvg.ttf",
+      "bytes": 44877,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/noto_handwriting-untouchedsvgz.ttf",
+      "bytes": 18689,
+      "class": "returned",
+      "ok": true,
+      "ms": 24,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/oom-6ef8c96d3710262511bcc730dce9c00e722cb653",
+      "bytes": 24233,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-too-many-tables"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/oom-ccc61c92d589f895174cdef6ff2e3b20e9999a1a",
+      "bytes": 63302,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/sbix-extents.ttf",
+      "bytes": 582,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 92644,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/sbix-png-plte-chunklen-oob.ttf",
+      "bytes": 14908,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 92644
+    },
+    {
+      "case": "harfbuzz/test/fuzzing/fonts/sbix.ttf",
+      "bytes": 196080,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 92644
+    }
+  ],
+  "commit": "8f2489052efce3ee0d45190cb4963ca7f6123b6d",
+  "date": "2026-10-16"
+}

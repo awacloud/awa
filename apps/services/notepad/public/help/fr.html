@@ -1,0 +1,94 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aide — AWA Notepad</title>
+    <link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+    <link rel="stylesheet" href="help.css">
+</head>
+<body>
+    <header class="help-header">
+        <img src="../icons/icon.svg" alt="" width="28" height="28">
+        <h1>AWA Notepad — Aide</h1>
+        <a href="en.html" hreflang="en" lang="en">English</a>
+    </header>
+    <main>
+        <p>AWA Notepad écrit et modifie des fichiers texte sur votre appareil, en ligne ou hors ligne. Rien n’est envoyé&#8239;: vos fichiers sont ouverts et enregistrés par votre navigateur, sur votre ordinateur.</p>
+        <nav aria-label="Sommaire">
+            <ul>
+                <li><a href="#fichiers">Ouvrir, enregistrer, renommer</a></li>
+                <li><a href="#modifier">Modifier, rechercher, annuler</a></li>
+                <li><a href="#format">Encodages et fins de ligne</a></li>
+                <li><a href="#clavier">Raccourcis clavier</a></li>
+                <li><a href="#recuperer">Le texte non enregistré revient</a></li>
+                <li><a href="#installer">Installer l’application</a></li>
+                <li><a href="#mises-a-jour">Mises à jour</a></li>
+                <li><a href="#hors-ligne">Hors ligne et confidentialité</a></li>
+            </ul>
+        </nav>
+
+        <h2 id="fichiers">Ouvrir, enregistrer, renommer</h2>
+        <ul>
+            <li><strong>Ouvrir</strong> (<kbd>Ctrl</kbd>+<kbd>O</kbd>), ou déposez un fichier sur la page. Plusieurs fichiers à la fois&#8239;: le premier s’ouvre&#8239;; les autres attendent sur une ligne sous l’en-tête, et chaque <strong>Ouvrir … dans une nouvelle fenêtre</strong> ouvre le suivant.</li>
+            <li>Dans Chrome et Edge, <strong>Enregistrer</strong> (<kbd>Ctrl</kbd>+<kbd>S</kbd>) écrit dans le fichier ouvert&#8239;; <strong>Enregistrer sous</strong> (<kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>S</kbd>) demande où.</li>
+            <li>Firefox et Safari ne peuvent pas écrire dans un fichier&#8239;: le bouton indique <strong>Télécharger une copie</strong>, et chaque enregistrement dépose une nouvelle copie dans vos téléchargements.</li>
+            <li>Le nom du document est dans la barre d’outils&#8239;: cliquez dessus pour le renommer. Dans Chrome et Edge, le fichier lui-même est renommé quand le navigateur le permet&#8239;; sinon, le nom sert au prochain enregistrement.</li>
+            <li>Les fichiers binaires et ceux de plus de 16&#8239;Mo sont refusés, jamais abîmés. Les gros fichiers sont lus avec une progression et un bouton <strong>Annuler</strong>&#8239;; au-delà de quelques Mo, la saisie ralentit (une limite de la zone de texte du navigateur).</li>
+        </ul>
+
+        <h2 id="modifier">Modifier, rechercher, annuler</h2>
+        <ul>
+            <li><strong>Rechercher</strong> (<kbd>Ctrl</kbd>+<kbd>F</kbd>) surligne toutes les occurrences pendant la saisie et encadre la courante&#8239;; <kbd>Entrée</kbd> ou <kbd>F3</kbd> passe à la suivante, <kbd>Maj</kbd>+<kbd>F3</kbd> à la précédente.</li>
+            <li><strong>Remplacer</strong> (<kbd>Ctrl</kbd>+<kbd>H</kbd>)&#8239;: une à une, ou toutes. <strong>Aller à la ligne</strong> (<kbd>Ctrl</kbd>+<kbd>G</kbd>).</li>
+            <li><strong>Annuler</strong> (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) et <strong>Rétablir</strong> (<kbd>Ctrl</kbd>+<kbd>Y</kbd>)&#8239;: la saisie s’annule par groupes de mots, et Remplacer tout ou la date (<kbd>F5</kbd>) en une étape.</li>
+            <li>Le retour à la ligne et la taille du texte (<kbd>Ctrl</kbd>+molette aussi) sont mémorisés.</li>
+        </ul>
+
+        <h2 id="format">Encodages et fins de ligne</h2>
+        <p>La barre d’état indique comment le fichier est écrit&#8239;: fins de ligne (Windows CRLF, Unix LF, ancien Mac CR) et encodage (UTF-8, UTF-8 avec BOM, UTF-16, Windows-1252). Les deux sont détectés à l’ouverture et conservés à l’enregistrement&#8239;; changez-les depuis la barre d’état. Enregistrer des caractères que Windows-1252 ne connaît pas demande d’abord.</p>
+
+        <h2 id="clavier">Raccourcis clavier</h2>
+        <table>
+            <thead><tr><th>Touches</th><th>Action</th></tr></thead>
+            <tbody>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd> / <kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Nouveau / Ouvrir</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>S</kbd></td><td>Enregistrer / Enregistrer sous</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd> / <kbd>Ctrl</kbd>+<kbd>H</kbd> / <kbd>Ctrl</kbd>+<kbd>G</kbd></td><td>Rechercher / Remplacer / Aller à la ligne</td></tr>
+                <tr><td><kbd>F3</kbd> / <kbd>Maj</kbd>+<kbd>F3</kbd></td><td>Occurrence suivante / précédente</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> (ou <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>Z</kbd>)</td><td>Annuler / Rétablir</td></tr>
+                <tr><td><kbd>F5</kbd></td><td>Insérer l’heure et la date</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+molette</td><td>Taille du texte</td></tr>
+                <tr><td><kbd>Échap</kbd></td><td>Fermer la barre de recherche ou d’accès à la ligne</td></tr>
+            </tbody>
+        </table>
+
+        <h2 id="recuperer">Le texte non enregistré revient</h2>
+        <p>Pendant la saisie, vos modifications sont conservées sur cet appareil. Si la fenêtre se ferme avant l’enregistrement (plantage, onglet fermé, mise à jour), la fenêtre suivante du bloc-notes ramène le texte, toujours non enregistré — et dans Chrome et Edge, toujours lié à son fichier. Une fenêtre ouverte garde son texte&#8239;: une deuxième fenêtre ne le lui prend jamais.</p>
+
+        <h2 id="installer">Installer l’application</h2>
+        <h3>Chrome, Edge</h3>
+        <p>Utilisez le bouton <strong>Installer</strong> de l’en-tête quand il apparaît, l’icône d’installation de la barre d’adresse, ou le menu du navigateur (<em>Installer AWA Notepad</em> ou <em>Applications → Installer ce site en tant qu’application</em>).</p>
+        <h3>Firefox (Windows)</h3>
+        <p>Utilisez le bouton <strong>Ajouter à la barre des tâches</strong> de la barre d’adresse.</p>
+        <h3>Safari</h3>
+        <p>Sur Mac&#8239;: <em>Fichier → Ajouter au Dock</em>. Sur iPhone ou iPad&#8239;: <em>Partager → Sur l’écran d’accueil</em>.</p>
+        <h3>Ouvrir vos fichiers avec l’application (Windows)</h3>
+        <p>Installé depuis Chrome ou Edge, le bloc-notes apparaît dans <em>Ouvrir avec</em> au clic droit sur un fichier texte (<code>.txt</code>, <code>.md</code>, <code>.json</code>, <code>.log</code>, fichiers source et de configuration…). Pour en faire l’application par défaut&#8239;: <em>Paramètres → Applications → Applications par défaut</em>. Chaque fichier s’ouvre dans sa propre fenêtre.</p>
+
+        <h2 id="mises-a-jour">Mises à jour</h2>
+        <p>Une nouvelle version s’installe en arrière-plan et ne vous interrompt jamais&#8239;: une ligne de l’en-tête annonce qu’elle est prête&#8239;; <strong>Mettre à jour</strong> recharge le bloc-notes et votre texte non enregistré revient (ou choisissez <strong>Plus tard</strong>). Pour vérifier vous-même&#8239;: <strong>À propos → Rechercher une mise à jour</strong>.</p>
+
+        <h2 id="hors-ligne">Hors ligne et confidentialité</h2>
+        <p>Après une première visite (ou une installation), le bloc-notes fonctionne sans connexion. Votre texte n’est jamais envoyé.</p>
+        <p class="note">Licences, mentions et version&#8239;: <strong>À propos</strong>, dans l’en-tête.</p>
+    </main>
+</body>
+</html>

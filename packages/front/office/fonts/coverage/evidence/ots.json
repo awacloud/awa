@@ -1,0 +1,822 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "ots",
+    "version": "ots@9.3.0",
+    "source": "https://github.com/khaledhosny/ots/tree/884861e0103b41d7e9845fdaf9fd1e3c12819103"
+  },
+  "oracle": {
+    "image": "awa-oracle-ots:9.3.0",
+    "imageId": "sha256:33f848fc437b3d712a9c61175624539812ea46adf576e9d6d06d9d644961239e",
+    "version": "ots 9.3.0"
+  },
+  "criterion": "OTS 9.3.0 (ots-sanitize, the default table actions) exits 0 and reports no ERROR message for the subset (WARNING messages are recorded, not failing); a subset counts only when OTS accepts its source face too — a face it refuses, or one subsetForPdf refuses with a typed error, is skipped with the reason; documents: 26 (0 written, 26 round trips)",
+  "documents": [
+    {
+      "file": "kalnia-glaze--text.ttf",
+      "kind": "round-trip",
+      "sha256": "488dc8cd571f5a93c4b3694064812b4f747f05e5917748c831e0cd308fbc9b55",
+      "errors": []
+    },
+    {
+      "file": "kalnia-glaze--text.source.ttf",
+      "kind": "source",
+      "sha256": "526a3f364fff570bf01dfeb71b2de2f52bac0376b51004804e703df698b964ac",
+      "errors": []
+    },
+    {
+      "file": "kalnia-glaze--full.ttf",
+      "kind": "round-trip",
+      "sha256": "9b4c5cab015e775da2a2b12207fbc61577332d42d3d870917cdc8a30ebcb90b1",
+      "errors": []
+    },
+    {
+      "file": "kalnia-glaze--full.source.ttf",
+      "kind": "source",
+      "sha256": "526a3f364fff570bf01dfeb71b2de2f52bac0376b51004804e703df698b964ac",
+      "errors": []
+    },
+    {
+      "file": "liberation-mono-bold--text.ttf",
+      "kind": "round-trip",
+      "sha256": "4d75c87ff4d65b4968ffce96ca452711dceab4c57f8f4c9f604519629fe41af9",
+      "errors": []
+    },
+    {
+      "file": "liberation-mono-bold--text.source.ttf",
+      "kind": "source",
+      "sha256": "bd62a0672d0b9b6710b01df434c80ad54fa5f0835207eb7b17b7a761463067bb",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2193)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2194)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2195)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2196)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2199)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2200)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-bold--full.ttf",
+      "kind": "round-trip",
+      "sha256": "f30844af163a8822e9ba79126870ee80d24efc58c808fa0f1ab36a66b7060be1",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2191)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2192)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2193)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2194)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2197)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2198)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-bold--full.source.ttf",
+      "kind": "source",
+      "sha256": "bd62a0672d0b9b6710b01df434c80ad54fa5f0835207eb7b17b7a761463067bb",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2193)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2194)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2195)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2196)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2199)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2200)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-bold-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "45326e05851ad8a63407d15b0edb41efadc997dd3491ab8cd203129f07cf9c19",
+      "errors": []
+    },
+    {
+      "file": "liberation-mono-bold-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "79451f3c09fe25116098853b7a2ca6e2436220ccc11af022979adbcf195be130",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-bold-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "14d74b4f1e183a82d6916f135e4c5a47e4820a3546682ac7af4f4e98c4038993",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-bold-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "79451f3c09fe25116098853b7a2ca6e2436220ccc11af022979adbcf195be130",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "b2a85da16d3b55f642ebfcc5aac11e2f33a268ad800b7af3f9b92e44c884a72a",
+      "errors": []
+    },
+    {
+      "file": "liberation-mono-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "605c01c711b44480a7508d349dfbf3264e81fa43d69e61cfa7d10b86e764c4d1",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2193)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2194)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2195)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2196)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2199)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2200)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "5ad6cdc27e6fca7a9788cd0f148e1cce670d2a3b2d6092917e4e012825ef0a41",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2191)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2192)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2193)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2194)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2197)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2198)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "605c01c711b44480a7508d349dfbf3264e81fa43d69e61cfa7d10b86e764c4d1",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2193)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2194)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2195)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2196)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2199)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2200)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-regular--text.ttf",
+      "kind": "round-trip",
+      "sha256": "1dce75125704a7ff24e0f636a8f4df40fd6804249476605b8779169dc3fb7ef9",
+      "errors": []
+    },
+    {
+      "file": "liberation-mono-regular--text.source.ttf",
+      "kind": "source",
+      "sha256": "f2b83c763e8afd21709333370bed4774337fae82267937e2b5aea7e2fbd922c1",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-regular--full.ttf",
+      "kind": "round-trip",
+      "sha256": "11eb4c332f65096a6849805676494cf526a65b2bf8062074215b2dacdc1e59f6",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        }
+      ]
+    },
+    {
+      "file": "liberation-mono-regular--full.source.ttf",
+      "kind": "source",
+      "sha256": "f2b83c763e8afd21709333370bed4774337fae82267937e2b5aea7e2fbd922c1",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-bold--text.ttf",
+      "kind": "round-trip",
+      "sha256": "2df5f4b07d07d1023564c426bdd5d2fb21a7314e988f66002fc64492bf8d7fcc",
+      "errors": []
+    },
+    {
+      "file": "liberation-sans-bold--text.source.ttf",
+      "kind": "source",
+      "sha256": "788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-bold--full.ttf",
+      "kind": "round-trip",
+      "sha256": "28dfe2065e30e8658e459aa99e7f6ddf00986f2d85240f1c1581646be52e8a35",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2004 used as component in glyph 2035"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-bold--full.source.ttf",
+      "kind": "source",
+      "sha256": "788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-bold-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "e2cca793c84ba5f0fb7eda8409318b06f627fb179bac3e84228f29ef7420fa1e",
+      "errors": []
+    },
+    {
+      "file": "liberation-sans-bold-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "698da70fc191cc5f33ad4d6d3fe830fe4624b898ea2e3169955928b7c491f1ee",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-bold-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "e31e2107ce1caeb51459f21617ee0410ab88684bb28064ddffc7b1ca27b8c794",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2004 used as component in glyph 2035"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-bold-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "698da70fc191cc5f33ad4d6d3fe830fe4624b898ea2e3169955928b7c491f1ee",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "35476d50a70bea77cee95e2ecff738f2fa70fdcc55d0c646444f4ccf0f39245d",
+      "errors": []
+    },
+    {
+      "file": "liberation-sans-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "e5bae5c4cde31f22142753855f4f8fb86da6ff39955ed3c0a11248b0d16948b0",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2212)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "0c257c275837eb55b0bd6edad47f826ae134d4b4a898e38b66beb1d4c09f8653",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2004 used as component in glyph 2035"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2210)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "e5bae5c4cde31f22142753855f4f8fb86da6ff39955ed3c0a11248b0d16948b0",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2212)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-regular--text.ttf",
+      "kind": "round-trip",
+      "sha256": "57b0004996aaddec2c6efd892dbc15dace7898cdac72424cc20979714c821793",
+      "errors": []
+    },
+    {
+      "file": "liberation-sans-regular--text.source.ttf",
+      "kind": "source",
+      "sha256": "76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2212)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-regular--full.ttf",
+      "kind": "round-trip",
+      "sha256": "9aad0e692b00a931979faa72cbe66725261e640146474399ec0e1e0a0c32f6e4",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2004 used as component in glyph 2035"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2210)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-sans-regular--full.source.ttf",
+      "kind": "source",
+      "sha256": "76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2212)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-bold--text.ttf",
+      "kind": "round-trip",
+      "sha256": "5ab958ff8829c47340e75ec87c50bfad9e4fb4dad6756ed45e6ff102c8e84ce2",
+      "errors": []
+    },
+    {
+      "file": "liberation-serif-bold--text.source.ttf",
+      "kind": "source",
+      "sha256": "d754ba427cfe0bca54ae052384baa8f842da5bd6550ad4da024ac441e7a7d5ce",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2207)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2208)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2209)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2210)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-bold--full.ttf",
+      "kind": "round-trip",
+      "sha256": "33ff088c6d086ca5ee7b4c28e000e95cabe5d05163a822b5c76e53a22fcebe33",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2004 used as component in glyph 2035"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2205)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2206)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2207)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2208)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-bold--full.source.ttf",
+      "kind": "source",
+      "sha256": "d754ba427cfe0bca54ae052384baa8f842da5bd6550ad4da024ac441e7a7d5ce",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2207)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2208)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2209)"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 2210)"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-bold-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "a39ccf1282796b51c94b6b614df94184a7f60e90c953a3a28b4b36a9800da751",
+      "errors": []
+    },
+    {
+      "file": "liberation-serif-bold-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "f17db8af71e24d2066b587546021d4f0b296be389512b658dec3c09affeb11a7",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-bold-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "d603eeb4ec0a47f799537e66fb8c0627f5a1f1bf7f4721ebeeb5dfda46eec1c6",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2004 used as component in glyph 2035"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-bold-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "f17db8af71e24d2066b587546021d4f0b296be389512b658dec3c09affeb11a7",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "b44ec36498ba5b8c49f9bf48b4b230e55b9338d9c31c61c3a6d138c6f1d10183",
+      "errors": []
+    },
+    {
+      "file": "liberation-serif-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "0e3dea9f8d613e006ccfa62201f33e265d19167bd0907725c3e145368b04fc2e",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "2fa95feb0c373401a5b7c55633e03f7f0c5b401c40fe950626ae272c92268e76",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2004 used as component in glyph 2035"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "0e3dea9f8d613e006ccfa62201f33e265d19167bd0907725c3e145368b04fc2e",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-regular--text.ttf",
+      "kind": "round-trip",
+      "sha256": "4cdf23bc740d99a656376471194fe5680a8a144abbc445272ea64cb107bfb83d",
+      "errors": []
+    },
+    {
+      "file": "liberation-serif-regular--text.source.ttf",
+      "kind": "source",
+      "sha256": "058ea80864aef09a23f45cbec2bb5400bc3dfbdea01c3f10538a21fcb497fb74",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-regular--full.ttf",
+      "kind": "round-trip",
+      "sha256": "215667a2b4779e24d49e5a5b9fd3272e82e675278432ee107d691431c7ba74e5",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 1 used as component in glyph 96"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2004 used as component in glyph 2035"
+        }
+      ]
+    },
+    {
+      "file": "liberation-serif-regular--full.source.ttf",
+      "kind": "source",
+      "sha256": "058ea80864aef09a23f45cbec2bb5400bc3dfbdea01c3f10538a21fcb497fb74",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 3 used as component in glyph 98"
+        },
+        {
+          "severity": "WARNING",
+          "text": "glyf: empty gid 2006 used as component in glyph 2037"
+        }
+      ]
+    }
+  ],
+  "date": "2026-10-15",
+  "commit": "f3b8d60e787d8d0f8cda0986fa011a44bf9a9509"
+}

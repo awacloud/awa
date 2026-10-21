@@ -4,7 +4,7 @@ Encoding and decoding between bytes (`Uint8Array`) and text or binary representa
 
 Four families:
 - **bytes ↔ string** — `hex`, `b64`, `base32`, `base58`, `utf8`: API `fromBytes` / `toBytes` (+ `test`).
-- **JS value ↔ bytes** (binary serialisation) — `buffer` (internal awa format), `cbor` (RFC 8949), `msgpack` (MessagePack spec): API `encode` / `decode`.
+- **JS value ↔ bytes** (binary serialisation) — `buffer` (internal AWA format), `cbor` (RFC 8949), `msgpack` (MessagePack spec): API `encode` / `decode`.
 - **JS value ↔ text** (tabular / querystring serialisation) — `csv` (RFC 4180), `url` (querystring + URL): API `parse` / `stringify`.
 - **HTTP web formats** — `mime` (multipart + headers): parse/format structured headers, encode/decode `multipart/*` bodies.
 

@@ -33,7 +33,7 @@ const sec = runtime.resolve('pdfSecurity');
 
 ### Identity crypt filter
 
-A class whose crypt filter is `Identity` — named explicitly, or absent, which is the ISO 32000-2 §7.6.6 Table 20 default for `/StmF` and `/StrF` — is not encrypted. `selectHandler` resolves each class on its own: `/StmF` gives `method`, `/StrF` gives `strMethod`, and `/EFF` gives `effMethod`, where an absent `/EFF` follows `/StmF`. A V=5 file with `/StmF /StdCF` and `/StrF /Identity` therefore has encrypted streams and clear strings. `dispatchDecryptStream` returns the bytes of an `Identity` class unchanged on every revision (V=4, V=5 R=5, V=5 R=6), and signing such a file writes its new strings in the clear. On V=4, a `/StmF /Identity` paired with a named `/StrF` keeps its existing behaviour: streams use the `/StrF` filter.
+A class whose crypt filter is `Identity` — named explicitly, or absent, which is the ISO 32000-2 §7.6.6 Table 20 default for `/StmF` and `/StrF` — is not encrypted. `selectHandler` resolves each class on its own: `/StmF` gives `method`, `/StrF` gives `strMethod`, and `/EFF` gives `effMethod`, where an absent `/EFF` follows `/StmF`. A V=5 file with `/StmF /StdCF` and `/StrF /Identity` therefore has encrypted streams and clear strings. `dispatchDecryptStream` returns the bytes of an `Identity` class unchanged on every revision (V=4, V=5 R=5, V=5 R=6), and signing such a file writes its new strings in the clear. The rule is the same on V=4: a `/StmF /Identity` paired with a named `/StrF` leaves the streams (and, with no `/EFF`, the embedded files) unencrypted — there is no fallback to the `/StrF` filter.
 
 ### Shape `Encrypt`
 

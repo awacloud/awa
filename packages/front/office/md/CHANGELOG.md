@@ -7,6 +7,126 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-21
+
+### Added
+
+- **`inlineSyntax: ['math']` on extensions.** An extension may now declare
+  an `inlineSyntax` array; when an installed extension lists `'math'`
+  (`mdMath` does), `md.parse` has the inline parser claim every `$…$` /
+  `$$…$$` span as a `math_inline` / `math_block` node before any other
+  inline construct, like a code span. A span never crosses a line end.
+- **`flags` argument on `inlineParser.parse`.** `parse(block, refmap, flags)`
+  takes an optional third argument; `flags.math` turns the math-span claim
+  on. Without it the parser behaves as before.
+- **`mdInlineHelpers.makeMath(literal, display)` and
+  `mdInlineHelpers.mathSpanEnd(text, pos)`.** `makeMath` builds a
+  `math_inline` node (a `math_block` node when `display` is true) holding
+  the LaTeX source; `mathSpanEnd` returns the index after the closing `$`
+  or `$$` of the span opening at `pos`, or `-1` when there is none.
+- **`opts.textSpans` on `mdMath.expandMathInAst`.** `expandMathInAst(root,
+  opts)` takes an optional second argument; `{ textSpans: false }` skips
+  the split of `$` spans out of text nodes, for an AST that was parsed with
+  the math claim already.
+- **Coverage guide.** `docs/guide/coverage.md` states what the CommonMark
+  and GFM suites cover, with their limits and the measured figures.
+
+### Fixed
+
+- **Inline math keeps its markup characters.** With `mdMath` installed,
+  `$H~2~O$` was split by strikethrough (and `$a*b*c$` by emphasis, `$x^{2}$`
+  by `mdSubsuper` installed first) before the math pass ran. The inline
+  parser now claims `$…$` / `$$…$$` spans first, like code spans, when an
+  installed extension declares `inlineSyntax: ['math']` (`mdMath` does):
+  the LaTeX is kept verbatim, whatever the install order, and an escaped
+  `\$` is no longer paired into a math span. Without `mdMath` nothing
+  changes.
+- **`renderHtml(text)` applies the extensions.** The core shortcut parsed
+  and rendered with the instance's original functions, so an extension that
+  patched only `md.parse` / `md.render` was skipped on the string path. It
+  now calls the current `md.parse` and `md.render`, like `renderMarkdown`.
+  A non-string still throws `md/parse-not-string`.
+- **`renderMarkdown` block quotes.** A block quote ended with a bare `>`
+  line (`> a` came back as `> a` + `>`); it now ends after its last line,
+  and the next block is separated by a blank line.
+- **Extended email autolinks ending in `-` or `_`.** GFM allows only `.` at
+  the end of an email address; `a.b-c_d@a.b-` and `a.b-c_d@a.b_` are no
+  autolink at all (GFM spec example 631). They were linked up to the last
+  letter, the `-` / `_` left as text; they now stay text. A trailing `.` is
+  still excluded from the address and kept as text.
+- **Link reference definitions.** A label holding a backslash just before
+  a line end (`[\` then `foo]: /uri`) was not read as a definition; it now
+  is, as in the inline parser. A definition followed by a line that starts
+  with an empty title and goes on with text (`[a]: /u` then `""text`) was
+  dropped whole; the title is now discarded and the definition kept, as the
+  CommonMark spec requires (a title followed by text is not part of the
+  definition). The text line stays a paragraph, and the link is defined.
+- **HTML blocks closed after a blank line.** A `<pre>`, `<script>`,
+  `<style>`, `<textarea>`, comment or other block that runs to its end
+  condition, but was closed earlier by its list item, block quote or the
+  end of the document after a blank line, lost the newline that ends it in
+  the HTML output (`<pre>x` then a blank line gave `<pre>x\n` instead of
+  `<pre>x\n\n`). `renderHtml` now writes it, as the CommonMark reference
+  renderers do. The parsed `literal` is unchanged.
+- **Code block class.** A fence whose info string already starts with
+  `language-` (` ```language-r `) was rendered with the prefix twice
+  (`class="language-language-r"`); the class is now `language-r`, as the
+  CommonMark reference renderers write it. Other info strings are
+  unchanged. With `mdMermaid`, a ` ```language-mermaid ` fence now renders
+  as a diagram, like ` ```mermaid `.
+- **U+0000 is replaced on every line.** The block parser replaced a NUL
+  character with U+FFFD (the replacement character), as the CommonMark
+  spec requires for this insecure character, only on lines that also held
+  a space: its check looked for a space instead of NUL, so a NUL on any
+  other line was kept in the syntax tree and every output. Every NUL is
+  now replaced; source positions are unchanged.
+- **Strikethrough and emphasis no longer disturb each other.** The
+  opener search of a `~` closer shared its lower bound with one kind of
+  `*` closer, and used one bound for every tilde run: an unmatched `**`
+  could cancel a strikethrough around it (`~~x a**b y~~` stayed literal),
+  an unmatched `~~` could cancel a strong emphasis around it, and a tilde
+  run of the other length inside a strikethrough cancelled it
+  (`~~a~b~~`). Tildes now keep their own bounds, split like those of `*`
+  and `_`; such text is rendered as GFM specifies.
+- **`renderMarkdown` renders deep trees.** The Markdown renderer recursed
+  once per nesting level and threw an untyped `RangeError` (call stack
+  exhausted) on documents nested some 20,000 levels deep, which only parse
+  with `maxDepth` / `maxNodes` set to `Infinity`. It now walks the tree
+  with an explicit stack, like `renderHtml`; the output is unchanged.
+- **`cloneNode(node, true)` copies deep trees.** The deep copy of
+  `mdAstManipulation` recursed once per level and threw the same untyped
+  `RangeError` on such documents. It now copies with an explicit stack;
+  the copy is unchanged.
+- **Errors survive the fw sanity layer.** `MdError` defined `name` by
+  assignment, which throws a `TypeError` once `applyBase()` has frozen
+  `Error.prototype`, so the typed error (code, context) was lost. `name` is
+  now an own property set with `Object.defineProperty` (same shape:
+  writable, enumerable, configurable).
+
+### Security
+
+- **Linear-time inline parsing on repeated unclosed constructs.** Text
+  that repeats an unclosed link destination (`[a](b` many times), the
+  pattern `![[]()`, or an unclosed `<!--`, `<?`, `<![CDATA[` or `<!X`
+  opener took time quadratic in its length: a few hundred kilobytes cost
+  minutes of CPU, before `maxNodes` / `maxDepth` could refuse the document.
+  Each now parses in linear time, with the same output. As in cmark, a
+  link destination now nests parentheses at most 32 levels deep (the
+  CommonMark spec allows such a cap): a deeper one is not read as a
+  destination and the text stays text.
+- **Linear-time parsing of deeply nested blocks.** A line opening many
+  nested lists (`- - - … x`), blank lines after a deep list, and the
+  `maxDepth` check itself each took time quadratic in the nesting depth,
+  and `maxDepth` refused such a document only after that cost. The
+  thematic-break check, the blank-line handling under a list and the
+  depth count are now linear, with the same output and source positions.
+- **Linear-time emphasis when matched pairs remove openers.** Text such
+  as `*a ` repeated, then `_a*_ ` repeated, made each closer search the
+  whole delimiter stack again: a few hundred kilobytes cost seconds of
+  CPU before `maxDepth` refused the document. The lower bound of each
+  search is now kept as a position, so it stays valid when the delimiter
+  it was taken from is removed; output unchanged.
+
 ## [1.0.0] - 2026-10-07
 
 ### Added
@@ -48,7 +168,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   maxUrlLength })` (defaults `1000` / `100000` / `8192`). Exceeding any
   throws `ContractError('md/limit-exceeded', …)` with structured
   `context`. Pass `Infinity` to opt out.
-- **Sanitization** consumed via [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.0.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
+- **Sanitization** consumed via [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
   `createMd({ sanitize: true })` pipes the rendered HTML through the fw
   sanitizer with strict defaults. Override with `sanitizeOpts`
   (`allowedTags`, `allowedAttributes`, `urlSchemes`, `dropDangerousContent`).

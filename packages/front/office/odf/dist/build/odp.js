@@ -44,7 +44,12 @@ export const odpPackage = {
     class OdfError extends Error {
       constructor(code, message, opts) {
         super(message);
-        this.name = new.target.name;
+        Object.defineProperty(this, "name", {
+          value: new.target.name,
+          writable: !0,
+          enumerable: !0,
+          configurable: !0
+        });
         this.code = code;
         if (opts && opts.context)
           this.context = opts.context;
@@ -486,7 +491,7 @@ export const odpPackage = {
     return { parse, serialize, empty, setEntry, MANIFEST_NS };
   } });
     __register({ name: "pkgPackage", dependencies: ["odfErrors","odfShared","zip","pkgMimetype","pkgManifest"], factory: function(errors, shared, zipMod, mimetypeMod, manifestMod) {
-    const { ParseError, ContractError } = errors, { encodeText, decodeText } = shared, DEFAULT_LIMITS = Object.freeze({
+    const { ParseError, RenderError, ContractError } = errors, { encodeText, decodeText } = shared, DEFAULT_LIMITS = Object.freeze({
       maxParts: 4096,
       maxUncompressed: 268435456,
       maxRatio: 200
@@ -541,7 +546,7 @@ export const odpPackage = {
       }
       return { mimetype, manifest, parts };
     }
-    function write(pkg) {
+    function write(pkg, opts) {
       if (!pkg || !pkg.mimetype)
         throw new ContractError("odf/contract-error/pkg", "pkg: package needs a mimetype", { context: { module: "pkg", argument: "pkg" } });
       const files = {};
@@ -554,7 +559,12 @@ export const odpPackage = {
         files[path] = pkg.parts[path];
       }
       files["META-INF/manifest.xml"] = encodeText(manifestMod.serialize(pkg.manifest));
-      return zipMod.zipSync(files);
+      const mtime = opts && opts.mtime !== void 0 ? opts.mtime : new Date(1980, 0, 1, 0, 0, 0);
+      try {
+        return zipMod.zipSync(files, { mtime });
+      } catch (e) {
+        throw new RenderError("odf/render-error/pkg", "pkg: failed to zip package", { cause: e, context: { module: "pkg" } });
+      }
     }
     function empty(mimetype) {
       return {
@@ -686,11 +696,11 @@ export const odpPackage = {
       if (s._extras && s._extras.children)
         for (const c of s._extras.children)
           children.push(c);
-      const settingsEl = xml.el("office:settings", {}, children), root = xml.el("office:document-settings", {
+      const root = xml.el("office:document-settings", {
         "xmlns:office": OFFICE_NS,
         "xmlns:config": CONFIG_NS,
         "office:version": ODF_VERSION
-      }, [settingsEl]);
+      }, children.length ? [xml.el("office:settings", {}, children)] : []);
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "settings.xml",
@@ -900,6 +910,8 @@ export const odpPackage = {
             runs.push({ type: "line-break" });
           else if (c.name === "text:a" && !insideLink)
             runs.push(parseLink(c, ctx));
+          else if (c.name === "draw:frame" && ctx && typeof ctx.parseFrame === "function")
+            runs.push(ctx.parseFrame(c));
           else if (positional)
             runs.push(c);
           else
@@ -1000,13 +1012,15 @@ export const odpPackage = {
         }
         case "image":
           return ctx && typeof ctx.renderImage === "function" ? ctx.renderImage(r) : xml.text("");
+        case "frame":
+          return ctx && typeof ctx.renderFrame === "function" ? ctx.renderFrame(r) : xml.text("");
         case "element":
           return r;
         default:
           return xml.text("");
       }
     }
-    function textOfRuns(runs) {
+    function textOfRuns(runs, inSpan) {
       const out = [];
       for (const r of runs || [])
         switch (r.type) {
@@ -1014,7 +1028,7 @@ export const odpPackage = {
             out.push(r.value || "");
             break;
           case "span":
-            out.push(Array.isArray(r.runs) ? textOfRuns(r.runs) : r.value || "");
+            out.push(Array.isArray(r.runs) ? textOfRuns(r.runs, !0) : r.value || "");
             break;
           case "space":
             out.push(" ".repeat(r.count || 1));
@@ -1032,8 +1046,18 @@ export const odpPackage = {
           case "element":
             out.push(xml.textContent(r));
             break;
+          case "frame":
+            if (inSpan)
+              out.push(frameText(r));
+            break;
         }
       return out.join("");
+    }
+    function frameText(f) {
+      return [
+        ...f.child && f.child.children || [],
+        ...f._extras && f._extras.children || []
+      ].map((n) => xml.textContent(n)).join("");
     }
     function textOf(p) {
       return textOfRuns(p.runs);
@@ -1368,6 +1392,8 @@ export const odpPackage = {
           throw new ParseError("odf/parse-error/limit", `row: number-rows-repeated ${r} exceeds max ${max}`, { context: { module: "tableRow", value: r, max } });
         out.repeated = r;
       }
+      if (attrs["table:visibility"])
+        out.visibility = attrs["table:visibility"];
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
@@ -1382,6 +1408,8 @@ export const odpPackage = {
         attrs["table:style-name"] = row.styleName;
       if (row.repeated && row.repeated > 1)
         attrs["table:number-rows-repeated"] = String(row.repeated);
+      if (row.visibility)
+        attrs["table:visibility"] = row.visibility;
       const children = (row.cells || []).map((c) => cellMod.renderCell(c));
       return xml.el("table:table-row", attrs, children);
     }
@@ -1397,6 +1425,8 @@ export const odpPackage = {
       const r = parseInt(a["table:number-columns-repeated"], 10);
       if (Number.isFinite(r) && r > 1)
         out.repeated = r;
+      if (a["table:visibility"])
+        out.visibility = a["table:visibility"];
       return out;
     }
     function renderColumn(col) {
@@ -1407,6 +1437,8 @@ export const odpPackage = {
         a["table:default-cell-style-name"] = col.defaultCellStyleName;
       if (col.repeated && col.repeated > 1)
         a["table:number-columns-repeated"] = String(col.repeated);
+      if (col.visibility)
+        a["table:visibility"] = col.visibility;
       return xml.el("table:table-column", a, []);
     }
     function parseTable(el) {
@@ -1444,16 +1476,27 @@ export const odpPackage = {
         out._extras = { children: extras };
       return out;
     }
+    function widthOf(rows) {
+      let width = 1;
+      for (const r of rows) {
+        let pos = 0;
+        for (const c of r && r.cells || []) {
+          const rep = c.repeated > 1 ? c.repeated : 1, span = c.colSpan > 1 ? c.colSpan : 1;
+          width = Math.max(width, pos + rep - 1 + span);
+          pos += rep;
+        }
+      }
+      return width;
+    }
     function renderTable(t) {
       const attrs = {};
       if (t.name)
         attrs["table:name"] = t.name;
       if (t.styleName)
         attrs["table:style-name"] = t.styleName;
-      const children = [];
-      for (const col of t.columns || [])
+      const children = [], headerN = t.headerRows || 0, rows = t.rows || [], columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
+      for (const col of columns)
         children.push(renderColumn(col));
-      const headerN = t.headerRows || 0, rows = t.rows || [];
       if (headerN > 0) {
         const headerKids = rows.slice(0, headerN).map((r) => rowMod.renderRow(r));
         children.push(xml.el("table:table-header-rows", {}, headerKids));
@@ -1634,22 +1677,30 @@ export const odpPackage = {
       if (extras)
         for (const el of extras)
           boxes(el, lines);
-      const visitRuns = (runs) => {
+      const visitRuns = (runs, inSpan) => {
         for (const r of runs || []) {
           if (!r)
             continue;
           if (r.type === "span" && Array.isArray(r.runs))
-            visitRuns(r.runs);
+            visitRuns(r.runs, !0);
           else if (r.type === "link") {
             const ex = r._extras && r._extras.children;
             if (ex)
               for (const el of ex)
                 boxes(el, lines);
-            visitRuns(r.runs);
-          }
+            visitRuns(r.runs, !1);
+          } else if (r.type === "frame" && !inSpan)
+            frameBoxes(r, lines);
         }
       };
-      visitRuns(n.runs);
+      visitRuns(n.runs, !1);
+    }
+    function frameBoxes(f, lines) {
+      const c = f.child;
+      if (c && c.kind === "text-box")
+        boxes(xml.el("draw:text-box", { ...c.attrs || {} }, c.children || []), lines);
+      for (const el of f._extras && f._extras.children || [])
+        boxes(el, lines);
     }
     function walk(nodes, lines) {
       for (const n of nodes || []) {
@@ -1749,7 +1800,8 @@ export const odpPackage = {
     }
     return { parseImage, renderImage, sniffImageType, extensionFor };
   } });
-    __register({ name: "drawFrame", dependencies: ["xml","drawImage"], factory: function(xml, imageMod) {
+    __register({ name: "drawFrame", dependencies: ["xml","drawImage","odfErrors"], factory: function(xml, imageMod, errors) {
+    const ContractError = errors && errors.ContractError;
     function parseFrame(el) {
       const out = { type: "frame" }, a = el.attrs || {};
       if (a["text:anchor-type"])
@@ -1866,7 +1918,9 @@ export const odpPackage = {
           a["xlink:href"] = child.href;
         return xml.el(tag, a, []);
       }
-      return null;
+      if (!ContractError)
+        return null;
+      throw new ContractError("odf/contract-error/frame", `drawFrame: unknown frame child kind "${child.kind}" (expected image, text-box or object)`, { context: { kind: child.kind } });
     }
     return { parseFrame, renderFrame };
   } });
@@ -2439,11 +2493,37 @@ export const odpPackage = {
         if (dehydrated.styles !== void 0)
           opts = { ...opts, styles: dehydrated.styles };
       }
+      ({ doc, opts } = withDefaultMaster(doc, opts));
       const p = pkg.empty(CT_ODP), contentXml = renderContent(doc);
       pkg.setPart(p, "content.xml", encodeText(contentXml), CT_XML);
       writeSidecars(p, doc, opts, { pkg, metaMod, settingsMod, stylesMod }, CT_XML);
       carryParts(p, doc.package, { pkg, manifestMod });
-      return pkg.write(p);
+      return pkg.write(p, { mtime: opts.mtime });
+    }
+    const DEFAULT_MASTER = "Default", isEl = (n, tag) => n && n.type === "element" && n.name === tag;
+    function withDefaultMaster(doc, opts) {
+      const slides = doc.slides || [];
+      if (!slides.some((s) => s && !s.masterPageName))
+        return { doc, opts };
+      doc = { ...doc, slides: slides.map((s) => s && !s.masterPageName ? { ...s, masterPageName: DEFAULT_MASTER } : s) };
+      const styles = opts.styles || doc.styles || stylesMod.empty(), masters = styles.masterStyles || [];
+      if (masters.some((m) => isEl(m, "style:master-page") && m.attrs && m.attrs["style:name"] === DEFAULT_MASTER))
+        return { doc, opts };
+      const autos = styles.automaticStyles || [], used = new Set(autos.filter((a) => a && a.type === "element" && a.attrs).map((a) => a.attrs["style:name"]));
+      let n = 1;
+      while (used.has(`PM${n}`))
+        n++;
+      const layout = xml.el("style:page-layout", { "style:name": `PM${n}` }, [
+        xml.el("style:page-layout-properties", {
+          "fo:page-width": "28cm",
+          "fo:page-height": "15.75cm",
+          "style:print-orientation": "landscape"
+        }, [])
+      ]), master = masterPageMod.renderMasterPage({ name: DEFAULT_MASTER, pageLayoutName: `PM${n}` });
+      return {
+        doc,
+        opts: { ...opts, styles: { ...styles, automaticStyles: [...autos, layout], masterStyles: [...masters, master] } }
+      };
     }
     function renderContent(doc) {
       const slideEls = (doc.slides || []).map((s) => slideMod.renderSlide(s)), presEl = xml.el("office:presentation", {}, slideEls), bodyEl = xml.el("office:body", {}, [presEl]), children = [];

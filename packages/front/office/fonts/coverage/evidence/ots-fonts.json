@@ -1,0 +1,2676 @@
+{
+  "suite": {
+    "id": "ots-fonts",
+    "version": "ots@v9.3.0",
+    "source": "https://github.com/khaledhosny/ots/tree/884861e0103b41d7e9845fdaf9fd1e3c12819103/tests/fonts"
+  },
+  "criterion": "per file, the container decoded (SFNT, TTC, WOFF, WOFF2), then every table the package parses, fonts.read, every glyph and every CharString of a name-keyed CFF table, all steps run even after a typed refusal of another; ok when it returns or throws an error of the package's own hierarchy (FontError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child",
+  "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
+  "host": "container",
+  "image": "awa-robustness-bun:1.3.13",
+  "imageId": "sha256:1a93710c3b0b8ee72a6876fc61e8975217fef39faee9a7c4b224560e6829de84",
+  "bun": "1.3.13",
+  "memoryMax": "1342177280",
+  "counts": {
+    "returned": 158,
+    "refused": 154,
+    "untyped": 0,
+    "hang": 0,
+    "memory": 0,
+    "crash": 0
+  },
+  "cases": [
+    {
+      "case": "ots/tests/fonts/bad/0014256514b220c525e98840b0d6ba736a85acbd.ttf",
+      "bytes": 57296,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 100628,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/003a9baf5665abc42fae0d7027718294601385b9.ttf",
+      "bytes": 50760,
+      "class": "refused",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-range"
+    },
+    {
+      "case": "ots/tests/fonts/bad/00ac7a910785ea3a30655fe386d4cb02b39719aa.otf",
+      "bytes": 408,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/013d9956e40d1ea194c4d7817fbf220d6be9c33b.ttf",
+      "bytes": 344,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/01592f6b2f515888a44dc6311c481a57edf79644.ttf",
+      "bytes": 57280,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/024ad17b23e4298f1d80246b63d63d8e54c76e3d.ttf",
+      "bytes": 60436,
+      "class": "refused",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/0349e0140ce7dc311f52413dea38b8d64df5cd0c.ttf",
+      "bytes": 57296,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/035341aa98a4342f18cf59d7332a77794c5a8923.ttf",
+      "bytes": 57280,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/03b667c2ab94eba7e078bc91cd7145e04f352cd5.ttf",
+      "bytes": 61596,
+      "class": "refused",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012,
+      "code": "fonts/cmap-range-bomb"
+    },
+    {
+      "case": "ots/tests/fonts/bad/07165649b488b700585197b1d1083f94ac61d525.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/078400f5718f84841fc43a04fd28d946ddad5e37.otf",
+      "bytes": 426,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/080a26ad508861558f5f69836881bb0b8e8842c2.ttf",
+      "bytes": 1679,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/08b3b69027fc071fa71910cc7857833b7e5f4534.ttf",
+      "bytes": 58868,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/092da87de7e293efee8be43f531b5bf0612693a5.ttf",
+      "bytes": 59216,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/0a228b7430d18283b6564822c06e8521dac93407.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/0a85ab417c6726d99235a6f9aaaf4879f711f01b.ttf",
+      "bytes": 57280,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/0c60702ee5003855555fee931a2da7daa917a1ef.ttf",
+      "bytes": 59216,
+      "class": "refused",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/0da956a1d4dad2962619a3f0a1d87daa677ffcf5.otf",
+      "bytes": 7940,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/0e4a70a10a82f7f4d63865006e81a445de26d3d1.ttf",
+      "bytes": 59167,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/0f4f4a8e4a247694370ff11ae8b129395eca85fd.ttf",
+      "bytes": 5312,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/0fce4352e04a156a1cb8d4bc344cd2be1dfe7177.otf",
+      "bytes": 408,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/103ad354e517994c447b9c5c6914a290517cb5ed.otf",
+      "bytes": 408,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/103b47d389cb700e76893677f51f7b74d09d08d5.ttf",
+      "bytes": 57276,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/13124b99e25a379efbdd1c3820b1484f842e1ad5.ttf",
+      "bytes": 59188,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/173c4c23291c983fead3d734afd8a4de504f508e.otf",
+      "bytes": 408,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/17cbd36aad32fe96dfb6dc49ceaaed54553c9189.ttf",
+      "bytes": 12,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-truncated"
+    },
+    {
+      "case": "ots/tests/fonts/bad/1ccbe1de6cfd3c183f067d4a2549f81405740a1d.ttf",
+      "bytes": 46644,
+      "class": "refused",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/1de19636832bb7ebb45680fb09b44227f19a96ce.ttf",
+      "bytes": 58868,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/1ef2c4e95428d382ed8653c6657bdb66eb0f415d.ttf",
+      "bytes": 3820,
+      "class": "refused",
+      "ok": true,
+      "ms": 39,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/bad/23b2a3316b3797bf9a61acdf36cf63d10ab3342e.woff",
+      "bytes": 1080,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 101012,
+      "code": "fonts/woff1-bad-inflate"
+    },
+    {
+      "case": "ots/tests/fonts/bad/251a4ffb5418b336217a9e7958941192b5a20137.otf",
+      "bytes": 877,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/257a9ccbda162eec44796987d8e20fca32288029.otf",
+      "bytes": 2196,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/28ce9a4dc67328856213bb1da09d55e4cf561c68.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/2d0bf4e52a64aa8bda2fdd9597e1bb4fbf33eb2b.woff2",
+      "bytes": 4096,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/2d80771036e065b9cd582b769d0388a0de90f84f.ttf",
+      "bytes": 116108,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/2edb1d50d2b8f4ccf8b7d56e7f354dd86be081f9.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/2f74c3cb404c60d9a46e883c88d6c10dc3562fad.otf",
+      "bytes": 1600,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/335e7e5a354010624679dfb52609652c4a7f6fc8.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/33df9c8b531928c90a3afebf6b15828dd0cad929.otf",
+      "bytes": 51649,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/33f430d6661b687d4449d0f0878da477a50f41c1.ttf",
+      "bytes": 682942,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/345cfba1a71738b238de912c04370623f153f72f.ttf",
+      "bytes": 146476,
+      "class": "refused",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/35159513f8d8422ff1a880a039ad68c857660cdd.ttf",
+      "bytes": 58868,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/3b7eaf30cc528463aa344305b5ab9528e1bc3c15.ttf",
+      "bytes": 80968,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/3b9bcfd57f7f18dd4c45ba51e77b23b3895faa9f.ttc",
+      "bytes": 3161,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/ttc-truncated"
+    },
+    {
+      "case": "ots/tests/fonts/bad/3ba5737414924ed17800ff60ff21a524a513e111.ttf",
+      "bytes": 1680,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/3bfa96a443c19de63f28554b748bf84e57ee51c3.otf",
+      "bytes": 408,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/410761bc1115173bad3f6b0d3d72103e1dc32f67.otf",
+      "bytes": 444,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/41542b89c620cc3159dc2f29bd335d48136478da.otf",
+      "bytes": 1608,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/42e947856c0ee90faf78051ffc41e527a8ee8be9.woff2",
+      "bytes": 52,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/woff2-bad-brotli"
+    },
+    {
+      "case": "ots/tests/fonts/bad/457227a3d4dbf6dd062d251b2ae0c8b31f14c9b8.otf",
+      "bytes": 1772,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/47b556f393b0988cf320b165512a97a5da128f05.ttf",
+      "bytes": 97364,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/494f40cf28ec4c2753aa907941fe48b7d15f6b04.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/4c8e7bcd6b657941c4e846f6e48bb714fb3faf92.otf",
+      "bytes": 847,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/4d29ba6a49fcba83c9a0cb91835b8e5e9fbe2e0b.ttf",
+      "bytes": 1680,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/cmap-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/4d9ba653319ad56fa13a724e6d2c357ff948c2ea.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/52053c2de32349ee09bbb6a4e755c2b3e85b9821.woff",
+      "bytes": 1348,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/55c321d6932942d22555ff9b985e905eb472d4d1.ttf",
+      "bytes": 1680,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/56d013275a9626c7b10b677fba1d5d4752eec51f.otf",
+      "bytes": 1392,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/5733cd9ca76aead50df6240b6b42d466e78240b2.woff",
+      "bytes": 1344,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/58b7bd1ebd3396d226c5a777098d115a2fc9f56f.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/58c575a08b375e51c9776275c5f877396ddf552b.otf",
+      "bytes": 408,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/5c67809a0d4b9a16d9eba881282f920153b761eb.otf",
+      "bytes": 633,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/65932a3c0a5ebcbc1ac55267e98506e9dedf41a5.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/66803a29a4e2dc941921d82abf376857583b49db.ttf",
+      "bytes": 57296,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/68bfc9f9233e34db2c5ecb5fb966bf205f92079a.otf",
+      "bytes": 421,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/692df3e4b35e0b83cc8991a19ae29e434e705124.ttf",
+      "bytes": 58868,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/698e25666a75ea6121065b5fced5ccee62b65ca4.otf",
+      "bytes": 2012,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/6d2cc2870fabdc4fa686b66accd404759349e4a8.ttf",
+      "bytes": 1680,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/7304e91492c3ba14030446c92f084f8fb031e8e8.ttf",
+      "bytes": 58819,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/7522970cb3bb80a698c206cfa61f8418767c1704.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/7c8eefff708b374fffbce135ba28a4565766e560.otf",
+      "bytes": 2272,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/7ee3cdda8571ff1e51aa081825f72cd0a545e052.ttf",
+      "bytes": 1028,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/81942d3ea419539b69990ba98f824a8a46dcb951.ttf",
+      "bytes": 46456,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/85d903c71a429ed98a012e742a700cbe2fef005c.ttf",
+      "bytes": 46592,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/8a97d860fcbd1294be09f2d0aebb764f2c12f69c.woff",
+      "bytes": 8144,
+      "class": "refused",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff-version"
+    },
+    {
+      "case": "ots/tests/fonts/bad/8edb1c6072ff63478456cc93601b77b0eb3432e7.otf",
+      "bytes": 989,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/90d60863109aab420257ee10577f2673cb91b3e7.ttf",
+      "bytes": 33696,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/92520e16995b11b01f56b3834f200416f656161d.ttf",
+      "bytes": 1666,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/927b4dc365aab682749294bc85bd195e4b74e034.otf",
+      "bytes": 2532,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/9682ce841ae16214afca9b5e584162611f88dfff.ttf",
+      "bytes": 59188,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/975a2ba94ea4f520406e1dae2e99bd366b0b66c1.otf",
+      "bytes": 6852,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/985de319c172b29bd9e651b093271a8939c35f13.ttf",
+      "bytes": 80,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-truncated"
+    },
+    {
+      "case": "ots/tests/fonts/bad/a53afc75de22a49c7eebf925b6f54e6dcf208900.ttf",
+      "bytes": 2336,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/inconsistent-tables"
+    },
+    {
+      "case": "ots/tests/fonts/bad/a80d45906af055b269d6e81eeae9e91d5c26ef27.ttf",
+      "bytes": 57296,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/a9a801b5149ecc0c9fe30db4beec2c511b0e3f71.ttf",
+      "bytes": 146476,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/aae49b8143752111464bfee4e06514a648b4365e.woff2",
+      "bytes": 3484,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/af434603052be497e74415f2f160df0d6989aded.ttf",
+      "bytes": 59216,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/af7109c13a67bf110892429dfe658a8f62670ce1.ttf",
+      "bytes": 46644,
+      "class": "refused",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/b49c3750db6a1538283586cbf1115e973383350c.ttf",
+      "bytes": 61596,
+      "class": "refused",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012,
+      "code": "fonts/cmap-range-bomb"
+    },
+    {
+      "case": "ots/tests/fonts/bad/b9a7339a1ff85286437d93e59df48cc35e5610d6.ttf",
+      "bytes": 80964,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/b9ea4b9b671307bc0f9745dd684e1e4f6e48191d.otf",
+      "bytes": 2012,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/bd5ee794425c2809f262b4bc6e3c0b33008fca73.otf",
+      "bytes": 2540,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/c22404e0f69eaca5bbfbecd13d2941df5748a8e3.ttf",
+      "bytes": 61596,
+      "class": "refused",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012,
+      "code": "fonts/cmap-range-bomb"
+    },
+    {
+      "case": "ots/tests/fonts/bad/c69c27b17d332fbf33dbc8f25baa0a0a461293a2.otf",
+      "bytes": 418,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/c6c0f06e6819b04a2eacca8e20dc0882a21bc312.otf",
+      "bytes": 1392,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/ca0e0bca764d78f46d533b11bb66466f5b489220.otf",
+      "bytes": 8176,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff2-version"
+    },
+    {
+      "case": "ots/tests/fonts/bad/ca5b8d77bb1f1a094cc0032e83487f3cde33a9d6.ttf",
+      "bytes": 46568,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/cb5656f950377ad5de2c7a6df0a659fbb7065ffe.ttf",
+      "bytes": 58868,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/loca-non-monotonic"
+    },
+    {
+      "case": "ots/tests/fonts/bad/cbc1d3e183f8138f94b788baa397413d7863eb07.ttf",
+      "bytes": 5288,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/cf6934b8e2d100b495e219d1b079fa2c34133d08.ttf",
+      "bytes": 5288,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/d052cc5e62def2facb5772d1b38112779539ef0a.otf",
+      "bytes": 1396,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/d262af9b0b7836f7395ae8b1a4a37e38fa0ae6c3.ttf",
+      "bytes": 80968,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/dbcd1243ae657ee8934a699d474be2d0ba79da94.ttf",
+      "bytes": 46592,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/dcc4f3316f90bc8a4c05e0086d2b49fddd3a059b.otf",
+      "bytes": 408,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/e071a5082117ad5a64dc3db1bfcd0a31d6db93ae.ttf",
+      "bytes": 1718,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/bad/ea8c4b1d5178ae184ffd0346f12fd426850729cc.otf",
+      "bytes": 479,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/eaeb6d903b14ee184f887aa8a0a81b917e252da9.otf",
+      "bytes": 408,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/eb44137aa49ccb9ea7aad127a8fdc6e155f20565.ttf",
+      "bytes": 59209,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/ed550c912a8c5febfdad9ca2500b3284ecfac0d7.ttf",
+      "bytes": 184293,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/edaf09c932e0582b1473384f66d5571da752a4d2.otf",
+      "bytes": 6564,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/bad/f1dba4340ce94f5359fa4434debc7efcfd1b521f.ttf",
+      "bytes": 1660,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/bad/f457d1f9504dbf206f50ea8ae7ab1bc4c51b95c0.ttc",
+      "bytes": 3820,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/bad/f80571b9ef07ca19dee1978b1796a98672a9e381.otf",
+      "bytes": 700,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/011facefb10ee4f813117eae60bb5940a280ae30.woff2",
+      "bytes": 668,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/0509e80afb379d16560e9e47bdd7d888bebdebc6.ttf",
+      "bytes": 61,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/051d92f8bc6ff724511b296c27623f824de256e9.ttf",
+      "bytes": 2028,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/05a7abc8e4c954ef105d056bd6249c6fda96d4a8.otf",
+      "bytes": 29198,
+      "class": "refused",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012,
+      "code": "fonts/coverage-format"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/07f054357ff8638bac3711b422a1e31180bba863.ttf",
+      "bytes": 848,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/10531f9105aa03bf6e0f9754ec8af33ed457ad5c.otf",
+      "bytes": 1420,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/gdef-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/11340844a1190f140c78a0a964d49b5985253ea0.woff2",
+      "bytes": 3916,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/15dfc433a135a658b9f4b1a861b5cdd9658ccbb9.ttf",
+      "bytes": 4936,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1679504907c14c2f27119135bd5da57f8713dd05.woff",
+      "bytes": 2292,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/16a8e02ff1373539ca818da4f70e9b8573563f29.woff",
+      "bytes": 1312,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/17ebbcdaf31a8f80c5efa07f4dc11ee40de7ee7f.woff",
+      "bytes": 2228,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/17f60353ae7621b585e8d98a546bbf8479649535.woff2",
+      "bytes": 1380,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/18052b7fc1ca5c188b54864f163bebf80f488811.otf",
+      "bytes": 2532,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/181a03beec3e4aa1814fb24a3b8ca5f930629955.woff",
+      "bytes": 2228,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/191826b9643e3f124d865d617ae609db6a2ce203.ttf",
+      "bytes": 2140,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1a6f1687b7a221f9f2c834b0b360d3c8463b6daf.ttf",
+      "bytes": 64,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1acb1be6d45ca77a1b734e3892b823a34634d38e.woff2",
+      "bytes": 764,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1c04a16f32a39c26c851b7fc014d2e8d298ba2b8.ttf",
+      "bytes": 820,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1c2c3fc37b2d4c3cb2ef726c6cdaaabd4b7f3eb9.ttf",
+      "bytes": 316,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 101012,
+      "code": "fonts/missing-name"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1c2fb74c1b2aa173262734c1f616148f1648cfd6.ttf",
+      "bytes": 4064,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1d5090bfad0eeb11c88882085d4a195f73926327.woff2",
+      "bytes": 676,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1e665cdc2796a76d8fd46232566795aa890991b1.woff2",
+      "bytes": 628,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/1e77a0231fe3d0af9875d314c4c5da04e65b3680.ttf",
+      "bytes": 424652,
+      "class": "returned",
+      "ok": true,
+      "ms": 37,
+      "maxRssKiB": 116116
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/2028193bd133228575af7000c60fa6f3e46a4bf0.woff2",
+      "bytes": 1328,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/205edd09bd3d141cc9580f650109556cc28b22cb.otf",
+      "bytes": 1966,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/205edd09bd3d141cc9580f650109556cc28b22cb.ttf",
+      "bytes": 1966,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/2069628b7b2ff2f8367f46c366f010c4f5a6295e.woff",
+      "bytes": 1664,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/217a934cfe15c548b572c203dceb2befdf026462.ttf",
+      "bytes": 1384,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/226bc2deab3846f1a682085f70c67d0421014144.ttf",
+      "bytes": 2828,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/2393b84159bd84138529dd136ba6bf45a7addd79.woff",
+      "bytes": 2204,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/270b89df543a7e48e206a2d830c0e10e5265c630.ttf",
+      "bytes": 3428,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/27539eee6487a75cc1ddf8c80b8e3f863ee540c3.woff",
+      "bytes": 2512,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/294c88607d6ebf0bd78f2c8e234e03e2d9b186d5.woff2",
+      "bytes": 1384,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/298c9e1d955f10f6f72c6915c3c6ff9bf9695cec.ttf",
+      "bytes": 2520,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/29ca0fe494750bb483ed291cffa89d55279d3ac9.woff2",
+      "bytes": 1596,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/2a124fa3e39a294280d406c4790398726bdc66ca.woff",
+      "bytes": 1200,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/2a12de12323bfd99b9c4bb33ed20b66b8ff0915f.otf",
+      "bytes": 2532,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff2-index-offsize"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/2abab3950432f64f17882a6517a9b7d2fb2dafe7.woff",
+      "bytes": 1512,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/315da578ec2c7e391a93ed484786b5cc93dc2739.ttf",
+      "bytes": 4408,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/vorg-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/3493e92eaded2661cadde752a39f9d58b11f0326.ttf",
+      "bytes": 1400,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/3511ff5c1647150595846ac414c595cccac34f18.ttf",
+      "bytes": 1483,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/361ce9ae6e20175595cac0cb82addcb184e20953.woff2",
+      "bytes": 1872,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/3684bc52f9aa06e9e6de67d80b626d44ca2bccf5.woff",
+      "bytes": 1160,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/37033cc5cf37bb223d7355153016b6ccece93b28.ttf",
+      "bytes": 2780,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/375d6ae32a3cbe52fbf81a4e5777e3377675d5a3.ttf",
+      "bytes": 1024,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/3857535d8c0d2bfeab7ee2cd6ba5e39bcb4abd90.ttf",
+      "bytes": 1002,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/39e15202b9fa9700438dbae6343ad8b21b359a68.woff",
+      "bytes": 1420,
+      "class": "refused",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff-cs-bad-subr"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/3b1f374416818644fa5cdb1d592659e502506888.woff2",
+      "bytes": 696,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/3e66a8cf6c20ccb36bce728f5d818f18145499c7.woff",
+      "bytes": 3796,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/3fef5bc4d1567fea803c815a0d53d6d7bfa9bdf7.woff",
+      "bytes": 828,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/41c14459f0f134a81fc5f4051b861bae8503c87b.woff",
+      "bytes": 10672,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/43979b90b2dd929723cf4fe1715990bcb9c9a56b.otf",
+      "bytes": 1804,
+      "class": "refused",
+      "ok": true,
+      "ms": 9,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/43979b90b2dd929723cf4fe1715990bcb9c9a56b.ttf",
+      "bytes": 1804,
+      "class": "refused",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/43ef465752be9af900745f72fe29cb853a1401a5.ttf",
+      "bytes": 4272,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/442a5b09fc1d847eb353b9e219e26067df8b9fb8.woff2",
+      "bytes": 1276,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/44a458acc6abfe78166e99c5ec9ec0fcf46182af.woff",
+      "bytes": 1312,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/4502415a27007e8f37af2d6663ccf909a45abba4.woff2",
+      "bytes": 968,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/45855bc8d46332b39c4ab9e2ee1a26b1f896da6b.ttf",
+      "bytes": 1088,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/4765a8901e377d1e767f67e1cc768ae3c9207bd1.ttc",
+      "bytes": 234559,
+      "class": "refused",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/49c9f7485c1392fa09a1b801bc2ffea79275f22e.ttf",
+      "bytes": 1496,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/4a7b3505f054f426efc6057fd0adc27f6c16c41b.ttf",
+      "bytes": 4408,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/4af3c3b1bf2882e84f25b30bc4aedae2a0b5f98a.woff2",
+      "bytes": 624,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/4cce528e99f600ed9c25a2b69e32eb94a03b4ae8.ttf",
+      "bytes": 1320,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/4d707d06afca5573a717fa3a9e825863c35ca786.ttf",
+      "bytes": 1000000,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/cmap-fmt0-len"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/4fcaec74137a83b5304d7d5f830b81c9abed73e5.woff2",
+      "bytes": 936,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/5028afb650b1bb718ed2131e872fbcce57828fff.ttf",
+      "bytes": 4720,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/52a846621453e288b657f84ef423ff3f832b6c0c.woff",
+      "bytes": 1080,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/52b6e52e7382c7c7e5ce839cc5df0cd3ae133add.ttf",
+      "bytes": 9854,
+      "class": "refused",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012,
+      "code": "fonts/coverage-format"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/558661aa659912f4d30ecd27bd09835171a8e2b0.ttf",
+      "bytes": 1358,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/5614290438dcf671fcc1f2858ac9127e45f500bb.woff2",
+      "bytes": 600,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/56bf9590c3f7587a632539b74a7aa0a04dbaadd3.woff",
+      "bytes": 2380,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/56cfd0e18d07f41c38e9598545a6d369127fc6f9.ttf",
+      "bytes": 1412,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/57a9d9f83020155cbb1d2be1f43d82388cbecc88.ttf",
+      "bytes": 2272,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/5a5daf5eb5a4db77a2baa3ad9c7a6ed6e0655fa8.ttf",
+      "bytes": 61,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/5ac36fb372dd26e0e1142c82c95b0e3807ae8136.woff",
+      "bytes": 800,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/5dfad7735c6a67085f1b90d4d497e32907db4c78.ttf",
+      "bytes": 21160,
+      "class": "returned",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/5dfcc2260fa1a08c72655c18885e50260703c863.woff",
+      "bytes": 2584,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/60adec4d200651dbf91e7c373789bbc2a2c4b46b.woff",
+      "bytes": 2500,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/641bd9db850193064d17575053ae2bf8ec149ddc.ttf",
+      "bytes": 305,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/6466d38c62e73a39202435a4f73bf5d6acbb73c0.ttf",
+      "bytes": 824,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/6830389bba9787db7da796f364aa47b951e658ae.woff2",
+      "bytes": 1544,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/6991b13ce889466be6de3f66e891de2bc0f117ee.ttf",
+      "bytes": 5596,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff-cs-bad-subr"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/6c1506d68d00e95a065d97e30964857e0d91c5a1.woff",
+      "bytes": 1004,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/6e43399b43162dedd7054e00ae97e7b0a71bf72d.woff2",
+      "bytes": 892,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/6eb6ce1f3930892d42a24d9fe955585c40a59cc0.woff2",
+      "bytes": 956,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/6ff0fbead4462d9f229167b4e6839eceb8465058.ttf",
+      "bytes": 1148,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/7042436c3b20a4426fc9a2dba76f68b2b27423af.woff2",
+      "bytes": 668,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/7043d3c69c50da8eba1a0ad627b9f6de70e832e5.ttf",
+      "bytes": 4408,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/vorg-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/706c5d7b625f207bc0d874c67237aad6f1e9cd6f.ttf",
+      "bytes": 3868,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/71eca05729f14607e81e9476dce804fe3bafc086.woff",
+      "bytes": 1052,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/72106114384cb564d4691bd3ea38960b0148f00b.woff",
+      "bytes": 1248,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/72566065770241b8c31bd35201ad62102962a5aa.woff",
+      "bytes": 800,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/73bf759cd86e12788cd3571daffedeb391fad078.woff2",
+      "bytes": 1528,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/757ebd573617a24aa9dfbf0b885c54875c6fe06b.otf",
+      "bytes": 1804,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff-cs-bad-subr"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/757ebd573617a24aa9dfbf0b885c54875c6fe06b.ttf",
+      "bytes": 1804,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff-cs-bad-subr"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/79e3983181b2bef104af453fdc98f4a335d48bd5.woff2",
+      "bytes": 1632,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/7a37dc4d5bf018456aea291cee06daf004c0221c.ttf",
+      "bytes": 1080,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/7bd0df7f6f234108e1f87f45bcde74931dc16efc.ttf",
+      "bytes": 4408,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/7e14e7883ed152baa158b80e207b66114c823a8b.otf",
+      "bytes": 1644,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff-cs-bad-subr"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/7e14e7883ed152baa158b80e207b66114c823a8b.ttf",
+      "bytes": 1644,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff-cs-bad-subr"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/7ef276fc886ea502a03b9b0e5c8b547d5dc2b61c.ttf",
+      "bytes": 784,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8099955657a54e9ee38a6ba1d6f950ce58e3cc25.ttf",
+      "bytes": 1024,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/813c2f8e5512187fd982417a7fb4286728e6f4a8.ttf",
+      "bytes": 3428,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/814e2e2e76682ab9a518493b475b23565993a4df.woff2",
+      "bytes": 1744,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/81e64d72d3dd87b1d36744927d3842492f1c1001.woff2",
+      "bytes": 452,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8240789f6d12d4cfc4b5e8e6f246c3701bcf861f.otf",
+      "bytes": 633,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8240789f6d12d4cfc4b5e8e6f246c3701bcf861f.ttf",
+      "bytes": 633,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/82fae690a786b2d96af7d4845206b528381fa109.woff2",
+      "bytes": 1940,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8330c9816493e1adccc0500b414455b85088d7d1.ttf",
+      "bytes": 6088,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/83670edbe0a52e2e84b4454b1a828c44b6692c63.ttf",
+      "bytes": 4408,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8454d22037f892e76614e1645d066689a0200e61.ttf",
+      "bytes": 6068,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/85414f2552b654585b7a8d13dcc3e8fd9f7970a3.ttf",
+      "bytes": 66936,
+      "class": "returned",
+      "ok": true,
+      "ms": 18,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8668cff491460e4c5cd03142b87e9710fd4b5588.otf",
+      "bytes": 6992,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/fvar-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/884801ab66022b60168010261438a4ed983ea9a7.woff",
+      "bytes": 3388,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8a8dc0703e7a9d14427ceadcea275dfda6a7f844.woff2",
+      "bytes": 756,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8a9fea2a7384f2116e5b84a9b31f83be7850ce21.ttf",
+      "bytes": 3428,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/8faaf7e0d92db057ff26cf5af44a44e873c054cb.woff2",
+      "bytes": 6832,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/908810fd6350c87a62c2dc4bb623e54ddd8aa042.woff",
+      "bytes": 2604,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/9192ffc3ddba8dc44a21ccac20bf743593642241.woff2",
+      "bytes": 508,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/93ef7dcd6968068b41515a381aa1b04535312b01.woff",
+      "bytes": 1128,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/94895e7495f726fa316ca3f2a03c98b86dc20560.ttc",
+      "bytes": 18748872,
+      "class": "refused",
+      "ok": true,
+      "ms": 503,
+      "maxRssKiB": 277208,
+      "code": "fonts/cff-cs-bad-subr"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/94bdbcb520c5301750167dc433803ac7933da028.otf",
+      "bytes": 2288,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-eof"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/96813142f8614d945222afa529815dd1213e2b3d.ttf",
+      "bytes": 4408,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/9883c9ae58c5dd598ab2fdc142e2dacbc0ad1cb3.woff2",
+      "bytes": 1800,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/995ca3cf99525e11fcdfeb5ba9f45a6cc602fcfb.woff",
+      "bytes": 1880,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/99e0f8817ca25d074ff4456de4296c4397e23563.woff",
+      "bytes": 1472,
+      "class": "returned",
+      "ok": true,
+      "ms": 38,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/99e872a7478a9f7f7f2a183d623f2a5ebaff72ad.woff",
+      "bytes": 1272,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/9a6305f950f8e3960618b78fca6ba7d7abf3b231.ttf",
+      "bytes": 3055,
+      "class": "refused",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012,
+      "code": "fonts/coverage-format"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/9c3c16ff5fb0e0adef3344f011b5bbb1469f2fd4.woff",
+      "bytes": 2488,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/9cb9bb35205cb4a7588a5a2b8e35fc4be856fc95.woff",
+      "bytes": 8144,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/9f553001b12ed154a54de011828fd78138c66113.woff2",
+      "bytes": 404,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/a0ca212e069702964aba80ab9c28bcb8aabae782.woff2",
+      "bytes": 624,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/a34a7b00f22ffb5fd7eef6933b81c7e71bc2cdfb.ttf",
+      "bytes": 3700,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/a34a9191d9376bda419836effeef7e75c1386016.ttf",
+      "bytes": 1010,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/a37166581403c1fda5e5689d4e027a085e3186e8.ttf",
+      "bytes": 4028,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/a5ea7e8e3e00a6f147a8a77b56e6e88c5e4fe30f.woff",
+      "bytes": 2000,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/a69118c2c2ada48ff803d9149daa54c9ebdae30e.ttf",
+      "bytes": 820,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/a919b33197965846f21074b24e30250d67277bce.ttf",
+      "bytes": 12560,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/a98e908e2ed21b22228ea59ebcc0f05034c86f2e.ttf",
+      "bytes": 1016,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/aca5f8ef7bc0754b0b6fd7a1abd4c69ca7801780.ttf",
+      "bytes": 2270,
+      "class": "refused",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012,
+      "code": "fonts/reader-range"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/ad24c3e446b9be316db8387adb0c7e2667388d3c.woff",
+      "bytes": 4628,
+      "class": "returned",
+      "ok": true,
+      "ms": 29,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/adb242cbc61b3ca428903e397a2c9dcf97fe3042.ttf",
+      "bytes": 879,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/aef6783789cb40fd037e26f2b299b9088adce089.ttf",
+      "bytes": 4408,
+      "class": "refused",
+      "ok": true,
+      "ms": 20,
+      "maxRssKiB": 101012,
+      "code": "fonts/vorg-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/b2093e804590557247aa7bc2070757c26344c565.woff",
+      "bytes": 1044,
+      "class": "returned",
+      "ok": true,
+      "ms": 39,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/b3fe94051b5612817c31fd406172d6d98b823cc8.ttf",
+      "bytes": 50492,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/b48e5042d1f1f6cec531b73abf15c8ee4f2afc63.ttf",
+      "bytes": 9298,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/b6acef662e0beb8d5fcf5b61c6b0ca69537b7402.ttf",
+      "bytes": 3301,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/b927e6af295696a2307641eb9679d0832dd7c22d.ttf",
+      "bytes": 6088,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/b9e2aaa0d75fcef6971ec3a96d806ba4a6b31fe2.otf",
+      "bytes": 1804,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/b9e2aaa0d75fcef6971ec3a96d806ba4a6b31fe2.ttf",
+      "bytes": 1804,
+      "class": "refused",
+      "ok": true,
+      "ms": 8,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/bac8d8c1ad2b8a50bf10853c9aeca4fca6c3bf3e.woff2",
+      "bytes": 1784,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/bad5283f2b80a5669e03313446c962c50897adb0.ttf",
+      "bytes": 4408,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/vorg-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/bb0c53752e85c3d28973ebc913287b8987d3dfe8.ttf",
+      "bytes": 976,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/bb29ce50df2bdba2d10726427c6b7609bf460e04.ttf",
+      "bytes": 74856,
+      "class": "returned",
+      "ok": true,
+      "ms": 19,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/bb9473d2403488714043bcfb946c9f78b86ad627.ttf",
+      "bytes": 3440,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/bdb9d23d51966a2544da5a66fd8727f1e0654a73.ttf",
+      "bytes": 3824,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/bfec49121cbe81f898476c5bcc6d188b489f1d7e.woff",
+      "bytes": 1916,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/c077be3830a3fe49277220e2515791cc9a2e5060.woff",
+      "bytes": 1952,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/c455eacf5e313dd37ad87d279f6eba6c3114310f.woff2",
+      "bytes": 1628,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/c4e48b0886ef460f532fb49f00047ec92c432ec0.ttf",
+      "bytes": 2512,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/c64aff5250ea7360a18154e58678ab14a8e6fee9.woff",
+      "bytes": 3120,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/c8fda8de3123a35984f9f0811c4481fe3a8d3641.woff2",
+      "bytes": 1364,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/cc5f3d2d717fb6bd4dfae1c16d48a2cb8e12233b.ttf",
+      "bytes": 1448,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/ccfc10b31bad1fb3ae508a332c7914c6db037188.woff2",
+      "bytes": 964,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/cff4306f450b3b433adca6872ff1c928a6ede2c6.woff",
+      "bytes": 860,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d32823ca92b0443465c07625325bb64a7d78f47d.woff2",
+      "bytes": 2640,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d343af630ddff2ed15ae72d9bb4949bb384a8e03.woff2",
+      "bytes": 1040,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d3ee8b9422e66a4dc827a15a65667bd5eab9ce5f.woff",
+      "bytes": 1488,
+      "class": "refused",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012,
+      "code": "fonts/cff-cs-bad-subr"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d4acbc69d72d4ed528367718f022708070ec9635.woff2",
+      "bytes": 404,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d4e4a9508c6b9e73c514b8af27b56918f45c3f9e.ttf",
+      "bytes": 2909,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/gsub-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d4eaf020145c14e2cd76c49353da1fdff8e4f62f.woff",
+      "bytes": 1084,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d629e7fedc0b350222d7987345fe61613fa3929a.ttf",
+      "bytes": 1768,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d69ecb7001e46df61c33e2ec74fdcdd32e018db3.ttc",
+      "bytes": 307736,
+      "class": "returned",
+      "ok": true,
+      "ms": 73,
+      "maxRssKiB": 127488
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d77f5dd2f02db900f5d568349dc6ed58683a00a9.woff",
+      "bytes": 864,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d7aec40dfc478e1adb022406decaadfd46e61f89.ttf",
+      "bytes": 17632,
+      "class": "refused",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/d8df0f95c805bf3986671a5f39d4e1ce1ef278ce.woff2",
+      "bytes": 1588,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/dc2b2ffc9fc5318fea924276dc8298f2b06f26ab.woff2",
+      "bytes": 8896,
+      "class": "returned",
+      "ok": true,
+      "ms": 17,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/dcacf960143aecbc692471b2a658c8dc42c9613e.woff2",
+      "bytes": 588,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/df768b9c257e0c9c35786c47cae15c46571d56be.ttf",
+      "bytes": 6332,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/dfba97547bf1cc337702d52311dee7029bc51db8.woff",
+      "bytes": 1996,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/e207635780b42f898d58654b65098763e340f5c7.ttf",
+      "bytes": 3000,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/e31aa13e4a7b565c68e4822d2ef7d16069f8ffab.woff2",
+      "bytes": 2276,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/e88c339237f52d21e01c55f01b9c1b4cc14a0467.ttf",
+      "bytes": 515,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/e9e765985a2beed45d8c4c4666d94a2acede9d48.woff2",
+      "bytes": 764,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/ee39587d13b2afa5499cc79e45780aa79293bbd4.ttf",
+      "bytes": 3724,
+      "class": "returned",
+      "ok": true,
+      "ms": 10,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/ef86fe710cfea877bbe0dbb6946a1f88d0661031.ttf",
+      "bytes": 2748,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/f22416c692720a7d46fadf4af99f4c9e094f00b9.ttf",
+      "bytes": 16736,
+      "class": "returned",
+      "ok": true,
+      "ms": 16,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/f293a7cc0c9fad957df4904e8ce5e366e7cab93c.woff",
+      "bytes": 1448,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/f37d5b05405c0861da62bdad2b00fcaa7d2923f9.woff2",
+      "bytes": 2856,
+      "class": "returned",
+      "ok": true,
+      "ms": 15,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/f499fbc23865022234775c43503bba2e63978fe1.ttf",
+      "bytes": 3564,
+      "class": "returned",
+      "ok": true,
+      "ms": 13,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/f4bcb76e745d6390bdf0447f2128db19686c432d.woff",
+      "bytes": 360,
+      "class": "refused",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012,
+      "code": "fonts/missing-name"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/f518eb6f6b5eec2946c9fbbbde44e45d46f5e2ac.ttf",
+      "bytes": 1356,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/f5ff6aaa96256b0e2c1abfdebf592c0987a1637a.ttf",
+      "bytes": 6088,
+      "class": "refused",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012,
+      "code": "fonts/maxp-version"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/f9b1dd4dcb515e757789a22cb4241107746fd3d0.ttf",
+      "bytes": 1004,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/fab39d60d758cb586db5a504f218442cd1395725.ttf",
+      "bytes": 1894,
+      "class": "refused",
+      "ok": true,
+      "ms": 7,
+      "maxRssKiB": 101012,
+      "code": "fonts/sfnt-bad-offset"
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/fbb6c84c9e1fe0c39e152fbe845e51fd81f6748e.ttf",
+      "bytes": 2616,
+      "class": "returned",
+      "ok": true,
+      "ms": 12,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/fc4263389f1a48dd3d1c793dff6b1e0cf8bccd33.woff",
+      "bytes": 2224,
+      "class": "returned",
+      "ok": true,
+      "ms": 14,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/fcdcffbdf1c4c97c05308d7600e4c283eb47dbca.ttf",
+      "bytes": 1344,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    },
+    {
+      "case": "ots/tests/fonts/fuzzing/ffa0f5d2d9025486d8469d8b1fdd983e7632499b.ttf",
+      "bytes": 1448,
+      "class": "returned",
+      "ok": true,
+      "ms": 11,
+      "maxRssKiB": 101012
+    }
+  ],
+  "commit": "8f2489052efce3ee0d45190cb4963ca7f6123b6d",
+  "date": "2026-10-16"
+}

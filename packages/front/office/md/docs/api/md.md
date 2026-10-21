@@ -32,9 +32,9 @@ const md = runtime.resolve('md');
 |--------|-----------|---------|
 | `parse` | `(text: string) => Node` | AST root (document) with `data.refmap` |
 | `render` | `(ast: Node, opts?) => string` | HTML of an AST (the only HTML method that takes an AST) |
-| `renderHtml` | `(text: string, opts?) => string` | HTML: parses the text, then calls `render`. Passing an AST throws `md/parse-not-string` |
+| `renderHtml` | `(text: string, opts?) => string` | HTML: `md.render(md.parse(text))` — the late-bound members, extension passes included. Passing an AST throws `md/parse-not-string` |
 | `renderMarkdown` | `(textOrAst, opts?) => string` | Markdown; a string is parsed with `md.parse` (extension passes included). Round-trip covers CommonMark + GFM plus subscript, superscript and highlight — see [render/markdown](./render/markdown.md) Notes |
-| `use` | `(ext: {name, install(md)}) => api` | Chainable, idempotent |
+| `use` | `(ext: {name, install(md), inlineSyntax?}) => api` | Chainable, idempotent. An extension with `inlineSyntax: ['math']` makes `md.parse` claim `$…$` / `$$…$$` spans — see [Extending](../guide/extending.md) |
 | `extensions` | `Array` | List of installed extensions |
 | `createMd` | `(opts?) => MdInstance` | Produces a fresh isolated instance |
 | `ContractError` | `class` | Attached error class for `instanceof` checks |
@@ -105,7 +105,7 @@ const m = md.createMd().use(mdFrontmatter);
 
 - `md.parse` throws `ContractError` if the input is not a string.
 - `.use(ext)` is idempotent — installing the same `name` twice is a no-op.
-- The core `renderHtml(text)` shortcut closes over the instance's original `parse`; an extra that patches `md.parse` must also re-wire `md.renderHtml` (see [extending](../guide/extending.md)). Every extra of the package does, and its re-wired `renderHtml` accepts text or an AST, so on an instance with an extra installed `renderHtml(ast)` works too.
+- The core `renderHtml(text)` goes through the instance's current `md.parse` and `md.render`, so an extra that only patches those two is applied to it (the same rule as `renderMarkdown(text)`). Every extra of the package also re-wires `md.renderHtml` to accept text or an AST, so on an instance with an extra installed `renderHtml(ast)` works too (see [extending](../guide/extending.md)).
 - The returned AST is `structuredClone`-serializable and JSON-friendly (unprefixed public slots).
 - `@awacloud/md`'s package root (`src/main.js`) is strict factory-only — there is no top-level `md`/`createMd` export to import directly; always resolve through a runtime as shown above.
 

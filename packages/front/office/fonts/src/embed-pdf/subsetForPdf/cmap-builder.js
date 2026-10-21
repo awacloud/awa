@@ -47,12 +47,15 @@ export const embedCmapBuilder = {
             // Add the mandatory terminator segment [FFFF..FFFF] -> 0 (delta 1)
             segments.push({ start: 0xFFFF, end: 0xFFFF, firstGid: 1 - 0xFFFF });
             const segCount = segments.length;
+            // The binary-search fields the spec derives from segCount.
+            const entrySelector = Math.floor(Math.log2(segCount));
+            const searchRange = 2 * 2 ** entrySelector;
             const sub = new BinaryWriter();
             sub.writeUint16(4);
             sub.writeUint16(0);              // length placeholder
             sub.writeUint16(0);              // language
             sub.writeUint16(segCount * 2);
-            sub.writeUint16(0).writeUint16(0).writeUint16(0);  // search/entry/range (loose)
+            sub.writeUint16(searchRange).writeUint16(entrySelector).writeUint16(2 * segCount - searchRange);
             for (const s of segments) sub.writeUint16(s.end);
             sub.writeUint16(0);
             for (const s of segments) sub.writeUint16(s.start);

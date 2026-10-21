@@ -14,7 +14,11 @@
  * 3. Emit a classical xref table (`xref` keyword + subsection
  *    `0 N` + 20-byte entries — object 0 is the head of the free list
  *    with `0000000000 65535 f `).
- * 4. Emit the trailer dict + `startxref` pointer + `%%EOF`.
+ * 4. Emit the trailer dict + `startxref` pointer + `%%EOF`. A PDF 2.0
+ *    file requires `/ID` (ISO 32000-2 Table 15): when the caller gives
+ *    none, both halves are the first 16 bytes of the SHA-256 of every byte
+ *    written before the trailer, so the same input still gives the same
+ *    bytes.
  *
  * @module pdf/document/writer
  */
@@ -22,16 +26,30 @@
 /**
  * Module factory — worker-safe, self-contained.
  */
+import { sha256 } from '@awacloud/fw/crypto/hash/sha256.js';
+import { bitArray } from '@awacloud/fw/crypto/utils/bitArray.js';
 import { pdfErrors } from '../errors.js';
 import { pdfSerializer } from '../syntax/serializer.js';
 
 export const pdfWriter = {
     name: 'pdfWriter',
-    dependencies: ['pdfErrors', 'pdfSerializer'],
-    deps: [pdfErrors, pdfSerializer],
-    factory(errors, serializerMod) {
+    // `sha256` and `bitArray` are the LAST dependencies and optional: a
+    // hand-wired `factory(errors, serializer)` writes no derived `/ID`,
+    // as before they were added.
+    dependencies: ['pdfErrors', 'pdfSerializer', 'sha256', 'bitArray'],
+    deps: [pdfErrors, pdfSerializer, sha256, bitArray],
+    factory(errors, serializerMod, sha256Mod, bitArrayMod) {
         const { RenderError } = errors;
         const serializeIndirect = serializerMod.serializeIndirect;
+        const canDerive = !!(sha256Mod && typeof sha256Mod.hash === 'function'
+            && bitArrayMod && typeof bitArrayMod.ui8_to_ba === 'function');
+
+        /** The `/ID` pair derived from the bytes written before the trailer. */
+        function derivedId(body) {
+            const digest = bitArrayMod.ba_to_ui8(sha256Mod.hash(bitArrayMod.ui8_to_ba(body)));
+            const half = digest.slice(0, 16);
+            return [half, half.slice()];
+        }
 
         const te = new TextEncoder();
 
@@ -140,11 +158,12 @@ export const pdfWriter = {
             push(buildXref(maxNum, offsets));
 
             const size = maxNum + 1;
+            const id = opts.id || (version === '2.0' && canDerive ? derivedId(concat(parts)) : undefined);
             push(buildTrailer({
                 size,
                 root: opts.root,
                 info: opts.info,
-                id:   opts.id,
+                id,
                 xrefOffset
             }));
 

@@ -743,4 +743,36 @@ describe('pptx — slide size', () => {
         expect(back.presentation.sldSize.cy).toBe(6858000);
         expect(back.presentation.sldSize.type).toBe('screen16x9');
     });
+
+    /** A fresh OPC instance, to look inside or rewrite a written package. */
+    function opc() {
+        const xmlInst = ooxmlXml.factory();
+        const bs = bitstream.factory();
+        return opcPackage.factory(_errors,
+            zip.factory(deflate.factory(bs, huffman.factory(bs), lz77.factory()), crc32.factory()),
+            opcContentTypes.factory(_errors, xmlInst), opcRelationships.factory(_errors, xmlInst), _shared);
+    }
+    const presentationXml = (bytes) => new TextDecoder().decode(opc().read(bytes).parts['/ppt/presentation.xml']);
+
+    test('the slide size is written as p:sldSz (CT_SlideSize), before p:notesSz', () => {
+        const p = build();
+        const x = presentationXml(p.write({ slides: [{ title: 't' }], sldSize: { cx: 12192000, cy: 6858000, type: 'screen16x9' } }));
+        expect(x).toContain('<p:sldSz cx="12192000" cy="6858000" type="screen16x9"/><p:notesSz cx="6858000" cy="9144000"/>');
+        expect(x).not.toContain('p:sldSize');
+    });
+
+    test('a file carrying p:sldSz (every real file) reads its size; one written with p:sldSize still does', () => {
+        const p = build();
+        const o = opc();
+        const pkg = o.read(p.write({ slides: [{ title: 't' }] }));
+        const rewrite = (from, to) => {
+            const x = new TextDecoder().decode(pkg.parts['/ppt/presentation.xml']).replace(from, to);
+            o.setPart(pkg, '/ppt/presentation.xml', new TextEncoder().encode(x));
+            return o.write(pkg);
+        };
+        const real = p.read(rewrite(/<p:sldS(?:z|ize) [^>]*\/>/, '<p:sldSz cx="12192000" cy="6858000"/>'));
+        expect(real.presentation.sldSize).toEqual({ cx: 12192000, cy: 6858000 });
+        const legacy = p.read(rewrite(/<p:sldSz [^>]*\/>/, '<p:sldSize cx="9144000" cy="6858000" type="screen4x3"/>'));
+        expect(legacy.presentation.sldSize).toEqual({ cx: 9144000, cy: 6858000, type: 'screen4x3' });
+    });
 });

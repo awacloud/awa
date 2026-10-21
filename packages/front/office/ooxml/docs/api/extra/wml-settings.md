@@ -59,6 +59,7 @@ r.settings.compat.useFELayout;   // true
 
 - The `compat` element is exposed as a flat object: each `<w:compatSetting>` and toggle child becomes a typed field.
 - `rsids` is round-tripped exactly to keep Word's revision tracking stable.
+- `<w:trackRevisions>` is the `trackRevisions` toggle: the core reads it into its boolean `trackChanges`, and `hydrate` moves a boolean `trackChanges` to `trackRevisions` (a file whose settings hold the `<w:trackChanges>` written by version 1.0.0 reads the same way). `dehydrate` writes only the object form of `trackChanges` (the attributes of a `<w:trackChanges>` element); a boolean `trackChanges` is left to the core, which writes `<w:trackRevisions/>`.
 
 ## See also
 

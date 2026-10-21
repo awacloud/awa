@@ -107,6 +107,7 @@ ch.pieChart({
 - The chart part is not self-sufficient: the host needs a `…/chart` relationship plus a `<c:chart r:id="…"/>` inside `<a:graphicData>`.
 - `embeddedWorkbookRid` can reference an embedded `.xlsx` (relationship `REL_TYPE_PACKAGE`, content type `CT_EMBEDDED_XLSX`); `pptx.read` resolves it into `shape.chart.embeddedWorkbook`.
 - `formatCode` values are Excel number-format codes (ECMA-376 §18.8.30).
+- Series data are written as literals: the name as `<c:tx><c:v>`, categories as `<c:cat><c:strLit>`, values as `<c:val><c:numLit>` (scatter: `<c:xVal>` / `<c:yVal>` `<c:numLit>`) — the model carries values, not the formulas a `<c:strRef>` / `<c:numRef>` would hold. On read, a reference yields its cached values (`<c:strCache>` / `<c:numCache>`, what Office writes); a literal directly under the data element, or inside a reference as earlier versions of this package wrote it, reads the same.
 - Elements that are not modelled (3D, trendlines, advanced data labels) land in `_extras` — see the DrawingML extras for full typing.
 - A root other than `<c:chartSpace>` raises `ParseError('drawingml/chart-bad-root')`; a `<c:chartSpace>` without a `<c:chart>` child raises `ParseError('drawingml/chart-missing')`.
 

@@ -31,7 +31,7 @@ sourceBytes: 1556
 sourceSha256: 7be541047cdb2255188fdf68ed6ddc98c47ed22332093df494dcb3f5c7f60b7c
 convertedAt: 2026-07-20T00:00:00Z
 converter: oconv
-converterVersion: 1.0.0
+converterVersion: 1.1.0
 engine: bun
 blocks: 6
 anchors:
@@ -92,19 +92,19 @@ Two properties matter for a sovereign/air-gap offer, and both are structural
    shifts. This is the property an audit trail needs: a re-run is a diff,
    not a fresh unknown.
 
-This determinism claim is scoped to the **to-md** direction, with two
-from-md exceptions: the `.docx` and `.pdf` targets. The `.docx` target of
-`fromMd` is byte-reproducible: `@awacloud/ooxml` stamps every zip entry with a
-fixed 1980-01-01 00:00 timestamp, so two identical `fromMd(..., 'docx')` calls
-on the same markdown produce byte-identical output —
-`tests/roundtrip.integration.test.js` § "reproducibility — md -> docx is
-byte-reproducible". The `.odt` target is not: the ODF package writer stamps
-the current time, so two identical calls give equal document models but may
-give different bytes; see [`docs/loss-matrix.md`](./loss-matrix.md)
-"From-md reproducibility" for the full statement. The `.pdf` target IS
-byte-reproducible: `irToPdf` never stamps a date or an `/ID`, so two
-identical `fromMd(..., 'pdf')` calls on the same markdown produce
-byte-identical output — `tests/roundtrip.integration.test.js` §
+This determinism claim is scoped to the **to-md** direction, with the
+from-md targets as its extension: all three are byte-reproducible too. The
+`.docx` target of `fromMd` is byte-reproducible: `@awacloud/ooxml` stamps
+every zip entry with a fixed 1980-01-01 00:00 timestamp, so two identical
+`fromMd(..., 'docx')` calls on the same markdown produce byte-identical
+output — `tests/roundtrip.integration.test.js` § "reproducibility — md ->
+docx is byte-reproducible". The `.odt` target is as well: `@awacloud/odf`
+stamps the same fixed timestamp, so two identical calls give byte-identical
+output; see [`docs/loss-matrix.md`](./loss-matrix.md) "From-md
+reproducibility" for the full statement. The `.pdf` target IS
+byte-reproducible: `irToPdf` stamps no date and derives its `/ID` from the
+written bytes, so two identical `fromMd(..., 'pdf')` calls on the same markdown
+produce byte-identical output — `tests/roundtrip.integration.test.js` §
 "reproducibility — md -> pdf is byte-reproducible".
 
 ## Chunking usage
@@ -190,9 +190,9 @@ shipped readers and the `md` writer:
 | `list/nesting-flattened` | (docx only) A nested list level (`ilvl > 0`) was flattened into its enclosing list — recorded once per document. |
 | `heading/level-clamped` | (odt only) An `outlineLevel` above 6 was clamped to 6. |
 | `heading/subtitle-degraded` | (docx only) A paragraph whose style is the built-in `Subtitle` (resolved by its `w:name` through `styles.xml`) was kept as a plain paragraph — no heading level is guessed for it; `detail` is the style ID, one record per subtitle paragraph. Pinned by `src/read/docx-to-ir.test.js`, including the committed French-styled fixture `docx-fr-styles.docx`. |
-| `image/unresolved` | (odt only) An inline image reference could not be resolved through this reader's frozen dependency list. |
-| `image/bytes-unavailable` | (docx only) A drawing's `r:embed` relationship never resolved to image bytes; `detail` names the drawing. Pinned by `src/read/docx-to-ir.test.js`. |
-| `inline/dropped` | (odt only, this reader's own sense) An unmapped inline XML element inside a run; `detail` names the element. Same code name as the `fromMd` reader's `inline/dropped` below — a different domain, the same "unmapped node, kept as loss" shape. |
+| `image/unresolved` | (odt only) A frame that is not an image — a text box, an embedded object — has no IR equivalent (inside a span, a frame holding text keeps that text). |
+| `image/bytes-unavailable` | (docx, odt) An image's bytes were not found: a docx drawing's `r:embed` relationship never resolved, or an odt image frame names a missing or external picture part; `detail` names the drawing or frame. The image reference is kept. Pinned by `src/read/docx-to-ir.test.js`. |
+| `inline/dropped` | (odt only, this reader's own sense) An unmapped inline XML element inside a run; `detail` names the element. Also the target of an image inside a link (`detail: 'link-target'` — an IR image has no link prop; the image is kept). Same code name as the `fromMd` reader's `inline/dropped` below — a different domain, the same "unmapped node, kept as loss" shape. |
 | `inline/flattened` | (odt only) An element inside a `<text:span>` (a field, a reference, a note) holds text: the text is kept as a plain run carrying the span's emphasis, the element's meaning is not; `detail` names the element. A frame holding text inside a span records `image/unresolved` instead, and an element holding no text records `inline/dropped` (or `image/unresolved` for a frame). |
 | `run/format-unresolved` | (odt only) A `<text:span>` run's bold/italic/strike/monospace styling could not be resolved — the style falls outside the resolution scope below. |
 
@@ -220,7 +220,7 @@ Remaining reader codes:
 | `text/undecodable` | (pdf) ≥1 character code in a text run resolved to no Unicode — counted, never silently kept. |
 | `text/font-unresolved` | (pdf) A show operator ran with no resolvable current font. |
 | `text/width-approximated` | (pdf) A font's glyph widths could not be read from the font, so a declared fallback width (500/1000 em) placed its text — once per font resource per page, `detail` = the resource name. The text is kept; only the inferred word spaces around it are approximate. |
-| `image/dropped` | (pdf, to-md) An image XObject draw or inline image, including one drawn inside a Form XObject — tier 1 keeps no images. Also emitted by the `fromMd` docx and odt writers (`detail` = the IR image's `name`), only when no bytes are reachable for the image (neither `opts.assets[name]` nor the docx reader's `escapes.docx.bytes`) — when bytes are reachable the writer embeds the image and records `image/size-defaulted` instead (odt: in a default 5.08cm × 3.81cm (2 in × 1.5 in) frame). |
+| `image/dropped` | (pdf, to-md) An image XObject draw or inline image, including one drawn inside a Form XObject — tier 1 keeps no images. Also emitted by the `fromMd` docx and odt writers (`detail` = the IR image's `name`), only when no bytes are reachable for the image (neither `opts.assets[name]` (or its percent-decoded form) nor the docx reader's `escapes.docx.bytes`) — when bytes are reachable the writer embeds the image at the size its header gives (PNG, JPEG or GIF) and records nothing; it records `image/size-defaulted` only for a header that gives no size (odt: a default 5.08cm × 3.81cm (2 in × 1.5 in) frame). |
 | `xobject/form-dropped` | (pdf) A Form XObject's stream could not be used (not a stream, undecodable, unparsable), so its text is not extracted; `detail` = `<name>: <reason>`. A usable form is executed in place and records nothing. |
 | `xobject/form-cycle` | (pdf) A Form XObject drawn from inside itself, directly or through other forms, was not re-entered; `detail` = the resource name. |
 | `xobject/form-depth` | (pdf) A Form XObject that would nest deeper than 12 forms was not executed; `detail` = the resource name. |
@@ -242,13 +242,13 @@ Codes emitted by the `fromMd` reader (`src/read/md-to-ir.js`) and the
 |---|---|
 | `frontmatter/stripped` | A leading `---`/`+++`/`;;;` front-matter fence was stripped before parsing — never parsed, never carried into the target container; `detail` names the fence language (`yaml`/`toml`/`json`). See "Profile v1 as INPUT" above. |
 | `list/start-dropped` | An ordered list started above 1; the IR `list` node has no start prop to carry it. |
-| `list/task-marker-dropped` | A GFM task-list checkbox (`[x]`/`[ ]`) was stripped from a list item. |
+| `list/task-marker-dropped` | A GFM task-list checkbox (`[x]`/`[ ]`) could not be drawn by the target writer: on md → pdf when the regular face has no ☐ / ☒ glyph (the Standard 14 and Liberation faces have none), on any writer when the task item's first block is not a paragraph. The md reader does not record it: the checkbox travels in `listItem.escapes.md`. |
 | `table/align-dropped` | A GFM table declared column alignment; the IR `row`/`cell` model carries none. |
-| `inline/linebreak-degraded` | A hard line break (trailing double space or backslash) degraded to a single space. |
+| `inline/linebreak-degraded` | A hard line break degraded to a single space: on read, a markdown hard break (trailing double space or backslash); on write, a hard break in a heading or a table cell, which markdown cannot hold. |
 | `inline/dropped` | An unmapped inline node kind (`detail` = its type, e.g. `html_inline`), or a non-empty link title (`detail: 'link-title'` — the link text/target are kept). Same code name as the odt reader's own `inline/dropped` above — a different domain, the same "unmapped node, kept as loss" shape. |
 | `list/depth-clamped` | (docx target) A list nested deeper than `ilvl` 8 was clamped to 8. |
-| `block/degraded` | (docx and odt targets) A code block (`detail: 'codeBlock'`), a blockquote (`detail: 'blockquote'`), or — docx only — a non-paragraph/non-list block inside a list item (`detail: 'listItem-child:<kind>'`) was written in a structurally simpler form. |
-| `image/size-defaulted` | (docx and odt targets) Image bytes WERE reachable and the image is PLACED at a default box — `@awacloud/ooxml`'s 2 in × 4:3 box for docx, a 5.08cm × 3.81cm (2 in × 1.5 in) frame for odt. Neither writer applies the image's intrinsic size; `detail` names the image. A degrade, never a drop. |
+| `block/degraded` | (docx and odt targets) A block was written in a structurally simpler form: a quote nested in a quote (`detail: 'blockquote:nested'`), a non-paragraph block inside a quote (`detail: 'blockquote-child:<kind>'`), or — docx only — a non-paragraph/non-list block inside a list item (`detail: 'listItem-child:<kind>'`). |
+| `image/size-defaulted` | (docx and odt targets) Image bytes WERE reachable and the image is PLACED, but no size could be read from its header (not a PNG, JPEG or GIF one, or a malformed one), so it sits in a default box — `@awacloud/ooxml`'s 2 in × 4:3 box for docx, a 5.08cm × 3.81cm (2 in × 1.5 in) frame for odt; `detail` names the image. A degrade, never a drop. An image whose header gives its size is placed at that size and records nothing. |
 
 The `.pdf` target's bounded typesetter (`src/write/ir-to-pdf.js` +
 `src/write/pdf/*`) emits its own vocabulary — 10 `layout/*` codes,
@@ -263,7 +263,7 @@ table states only the vocabulary:
 | `layout/s14-variant-metrics-approx` | DEFENSIVE FALLBACK — fires only if the fonts package regresses to a shared width table across the four Standard 14 variants; not reachable against the real `@awacloud/fonts`, whose Standard 14 tables give each variant its own widths (only a stubbed measurer reaches it, `src/write/ir-to-pdf.test.js`). |
 | `text/unencodable` | Route-conditional: a non-WinAnsi code point degrades to `?` on the Standard 14 route; a code point missing from the resolved face's own `cmap` draws `.notdef` on the explicit/default-face route — one collapsed record per document. |
 | `layout/line-overflow` | An unbreakable token (or an overlong code line) wider than the column overflowed it. |
-| `layout/image-dropped` | An image was not placed — a non-JPEG encoding or a CMYK/YCCK JPEG (`reason: 'unsupported-encoding'`), or no bytes at all (`reason: 'no-bytes'`); the `[image: <alt>]` placeholder still draws. |
+| `layout/image-dropped` | An image was not placed — an interlaced or malformed PNG, a CMYK/YCCK JPEG or any other encoding (`reason: 'unsupported-encoding'`, with a `format` when one can be named: `png`, `jpeg`, or a GIF / WebP / BMP / TIFF signature, else the content type a reader carried), or no bytes at all (`reason: 'no-bytes'`); the `[image: <alt>]` placeholder still draws. |
 | `layout/list-empty` | A `list` node had no `listItem` child. |
 | `layout/table-empty` | A `table` node had zero rows, or zero rows left after the header row. |
 | `layout/table-scaled` | A table (or a cell) wider than the column was scaled proportionally to fit. |

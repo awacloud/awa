@@ -19,6 +19,7 @@ import { describe, test, expect } from 'bun:test';
 import { fileURLToPath } from 'node:url';
 import { pdfWriterRuntime, corpusBytes } from '../_test-runtime.js';
 import { oconvPdfRenderImage } from './image.js';
+import { oconvIrToPdf as oconvIrToPdfDescriptor } from '../../ir-to-pdf.js';
 import { readImageHeader } from '../../image-header.js';
 
 const runtime = pdfWriterRuntime();
@@ -292,8 +293,9 @@ describe('render — the two refusals, each with its reason', () => {
         expect(ctx.addImageCalls).toEqual([]);
     });
 
-    test('a PNG → `reason: unsupported-encoding` NAMING the format, placeholder still drawn', () => {
-        const ctx = makeCtx({ assets: { 'diagram.png': PNG } });
+    test('a PNG it cannot place (interlaced) → `reason: unsupported-encoding` NAMING the format, placeholder still drawn', () => {
+        const interlaced = pngOf({ width: 1, height: 1, colorType: 2, rows: [[1, 2, 3]], interlace: 1 });
+        const ctx = makeCtx({ assets: { 'diagram.png': interlaced } });
         const { items, losses } = renderImage.render(
             { kind: 'image', name: 'diagram.png', alt: 'Diagram' }, ctx
         );
@@ -301,7 +303,7 @@ describe('render — the two refusals, each with its reason', () => {
             code: 'layout/image-dropped',
             detail: {
                 index: '0', name: 'diagram.png', alt: 'Diagram',
-                reason: 'unsupported-encoding', bytes: PNG.length, format: 'png'
+                reason: 'unsupported-encoding', bytes: interlaced.length, format: 'png'
             }
         }]);
         expect(items[0].tokens.map((t) => t.text).join('')).toBe('[image: Diagram]');
@@ -330,6 +332,240 @@ describe('render — the two refusals, each with its reason', () => {
         const ctx = makeCtx({ assets: { 'somethingelse.jpg': JPEG } });
         const { losses } = renderImage.render({ kind: 'image', name: 'a.png', alt: '' }, ctx);
         expect(losses[0].detail.reason).toBe('no-bytes');
+    });
+});
+
+/* ── PNG placement ─────────────────────────────────────────────────────── */
+
+const ZLIB = runtime.resolve('zlib');
+const be32 = (v) => [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
+
+/** One PNG chunk with a zero CRC (the renderer never checks CRCs). */
+function chunk(type, data) {
+    return [...be32(data.length), ...[...type].map((c) => c.charCodeAt(0)), ...data, 0, 0, 0, 0];
+}
+
+/** Filter one raw scanline with PNG filter `f` against the previous raw line. */
+function filterRow(f, raw, prev, bpp) {
+    const out = [f];
+    for (let i = 0; i < raw.length; i += 1) {
+        const a = i >= bpp ? raw[i - bpp] : 0;
+        const b = prev ? prev[i] : 0;
+        const c = i >= bpp && prev ? prev[i - bpp] : 0;
+        let pred = 0;
+        if (f === 1) pred = a;
+        else if (f === 2) pred = b;
+        else if (f === 3) pred = (a + b) >> 1;
+        else if (f === 4) {
+            const p = a + b - c;
+            const pa = Math.abs(p - a); const pb = Math.abs(p - b); const pc = Math.abs(p - c);
+            pred = pa <= pb && pa <= pc ? a : (pb <= pc ? b : c);
+        }
+        out.push((raw[i] - pred) & 255);
+    }
+    return out;
+}
+
+/**
+ * A real PNG: IHDR, optional PLTE / tRNS, the zlib of the filtered scanlines
+ * split over `idatSplit` IDAT chunks, IEND.
+ *
+ * @param {object} o `{ width, height, colorType, bitDepth = 8, rows (raw
+ *   bytes per scanline), filters?, plte?, trns?, interlace = 0, idatSplit = 1,
+ *   idat? (raw IDAT payload override) }`
+ * @returns {Uint8Array}
+ */
+function pngOf(o) {
+    const depth = o.bitDepth || 8;
+    const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[o.colorType];
+    const bpp = Math.max(1, (channels * depth) >> 3);
+    const filtered = [];
+    o.rows.forEach((raw, y) => {
+        filtered.push(...filterRow((o.filters || [])[y] || 0, raw, y ? o.rows[y - 1] : null, bpp));
+    });
+    const idat = o.idat || ZLIB.zlibSync(Uint8Array.from(filtered));
+    const parts = [];
+    const split = o.idatSplit || 1;
+    const step = Math.max(1, Math.ceil(idat.length / split));
+    for (let i = 0; i < idat.length; i += step) parts.push(...chunk('IDAT', [...idat.subarray(i, i + step)]));
+    return Uint8Array.from([
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        ...chunk('IHDR', [...be32(o.width), ...be32(o.height), depth, o.colorType, 0, 0, o.interlace || 0]),
+        ...(o.plte ? chunk('PLTE', o.plte) : []),
+        ...(o.trns ? chunk('tRNS', o.trns) : []),
+        ...parts,
+        ...chunk('IEND', [])
+    ]);
+}
+
+/** The concatenated IDAT payload of a PNG (what the predictor route embeds). */
+function idatOf(png) {
+    const out = [];
+    for (let at = 8; at + 8 <= png.length;) {
+        const len = (png[at] << 24 | png[at + 1] << 16 | png[at + 2] << 8 | png[at + 3]) >>> 0;
+        const type = String.fromCharCode(...png.subarray(at + 4, at + 8));
+        if (type === 'IDAT') out.push(...png.subarray(at + 8, at + 8 + len));
+        at += 12 + len;
+    }
+    return Uint8Array.from(out);
+}
+
+/** Inflate a placed stream back to its samples. */
+const inflate = (data) => [...ZLIB.unzlibSync(data)];
+
+describe('render — PNG placement', () => {
+    const place = (png, over = {}) => {
+        const ctx = makeCtx({ assets: { 'p.png': png }, zlib: ZLIB, ...over });
+        const out = renderImage.render({ kind: 'image', name: 'p.png', alt: 'P' }, ctx);
+        return { ...out, calls: ctx.addImageCalls };
+    };
+    const predictor = (colors, bits, columns) => ({
+        type: 'dict',
+        entries: {
+            Predictor: { type: 'int', value: 15 },
+            Colors: { type: 'int', value: colors },
+            BitsPerComponent: { type: 'int', value: bits },
+            Columns: { type: 'int', value: columns }
+        }
+    });
+
+    test('RGB 8-bit, no tRNS: the IDAT stream is embedded VERBATIM behind a PNG predictor, no inflate, no loss', () => {
+        const png = pngOf({ width: 2, height: 2, colorType: 2, idatSplit: 2,
+            rows: [[255, 0, 0, 0, 255, 0], [0, 0, 255, 9, 9, 9]], filters: [1, 2] });
+        const { losses, calls, items } = place(png, { zlib: undefined });
+
+        expect(losses).toEqual([]);
+        expect(calls).toHaveLength(1);
+        expect(calls[0]).toEqual({
+            name: 'Im0', width: 2, height: 2, colorSpace: 'DeviceRGB', bitsPerComponent: 8,
+            filter: 'FlateDecode', decodeParms: predictor(3, 8, 2), data: idatOf(png)
+        });
+        expect(items[0].xobject).toEqual({ name: 'Im0', w: 2, h: 2 });
+    });
+
+    test('the committed greyscale fixture places through the predictor route (Colors 1)', () => {
+        const { losses, calls } = place(PNG, { zlib: undefined });
+        expect(losses).toEqual([]);
+        expect(calls[0]).toMatchObject({
+            width: 1, height: 1, colorSpace: 'DeviceGray', bitsPerComponent: 8,
+            filter: 'FlateDecode', decodeParms: predictor(1, 8, 1)
+        });
+        expect(calls[0].sMask).toBeUndefined();
+    });
+
+    test('RGBA 8-bit: unfiltered (Sub, Paeth), colour and an /SMask, both re-deflated', () => {
+        const rows = [
+            [10, 20, 30, 255, 40, 50, 60, 0, 70, 80, 90, 128],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        ];
+        const { losses, calls } = place(pngOf({ width: 3, height: 2, colorType: 6, rows, filters: [1, 4] }));
+
+        expect(losses).toEqual([]);
+        const spec = calls[0];
+        expect(spec).toMatchObject({ width: 3, height: 2, colorSpace: 'DeviceRGB', bitsPerComponent: 8, filter: 'FlateDecode' });
+        expect(spec.decodeParms).toBeUndefined();
+        expect(inflate(spec.data)).toEqual([10, 20, 30, 40, 50, 60, 70, 80, 90, 1, 2, 3, 5, 6, 7, 9, 10, 11]);
+        expect(spec.sMask).toMatchObject({ width: 3, height: 2, colorSpace: 'DeviceGray', bitsPerComponent: 8, filter: 'FlateDecode' });
+        expect(inflate(spec.sMask.data)).toEqual([255, 0, 128, 4, 8, 12]);
+    });
+
+    test('RGBA whose every pixel is opaque: no /SMask', () => {
+        const { calls } = place(pngOf({ width: 1, height: 2, colorType: 6, rows: [[1, 2, 3, 255], [4, 5, 6, 255]] }));
+        expect(inflate(calls[0].data)).toEqual([1, 2, 3, 4, 5, 6]);
+        expect(calls[0].sMask).toBeUndefined();
+    });
+
+    test('grey + alpha at 16 bits (Up, Average): 16-bit grey samples and a 16-bit /SMask', () => {
+        const rows = [[0x12, 0x34, 0xFF, 0xFF], [0xAB, 0xCD, 0x00, 0x10]];
+        const { losses, calls } = place(pngOf({ width: 1, height: 2, colorType: 4, bitDepth: 16, rows, filters: [2, 3] }));
+        expect(losses).toEqual([]);
+        expect(calls[0]).toMatchObject({ colorSpace: 'DeviceGray', bitsPerComponent: 16 });
+        expect(inflate(calls[0].data)).toEqual([0x12, 0x34, 0xAB, 0xCD]);
+        expect(calls[0].sMask.bitsPerComponent).toBe(16);
+        expect(inflate(calls[0].sMask.data)).toEqual([0xFF, 0xFF, 0x00, 0x10]);
+    });
+
+    test('palette at 2 bits, an odd width: expanded to 8-bit RGB, tRNS gives the /SMask', () => {
+        // 5 pixels of 2 bits = 10 bits = 2 bytes per row: indices 0,1,2,3,1 then 3,3,0,0,2.
+        const rows = [[0b00011011, 0b01000000], [0b11110000, 0b10000000]];
+        const plte = [255, 0, 0, 0, 255, 0, 0, 0, 255, 9, 9, 9];
+        const { losses, calls } = place(pngOf({ width: 5, height: 2, colorType: 3, bitDepth: 2, rows, plte, trns: [255, 0] }));
+
+        expect(losses).toEqual([]);
+        expect(calls[0]).toMatchObject({ colorSpace: 'DeviceRGB', bitsPerComponent: 8 });
+        const rgb = (i) => plte.slice(i * 3, i * 3 + 3);
+        expect(inflate(calls[0].data)).toEqual([0, 1, 2, 3, 1, 3, 3, 0, 0, 2].flatMap(rgb));
+        expect(inflate(calls[0].sMask.data)).toEqual([255, 0, 255, 255, 0, 255, 255, 255, 255, 255]);
+    });
+
+    test('palette at 8 bits with no tRNS: no /SMask', () => {
+        const { calls } = place(pngOf({ width: 2, height: 1, colorType: 3, rows: [[1, 0]], plte: [1, 2, 3, 4, 5, 6] }));
+        expect(inflate(calls[0].data)).toEqual([4, 5, 6, 1, 2, 3]);
+        expect(calls[0].sMask).toBeUndefined();
+    });
+
+    test('RGB with a tRNS colour key: decoded, the key colour is transparent in the /SMask', () => {
+        const rows = [[1, 2, 3, 7, 7, 7]];
+        const { calls } = place(pngOf({ width: 2, height: 1, colorType: 2, rows, trns: [0, 7, 0, 7, 0, 7] }));
+        expect(calls[0].decodeParms).toBeUndefined();
+        expect(inflate(calls[0].data)).toEqual([1, 2, 3, 7, 7, 7]);
+        expect(inflate(calls[0].sMask.data)).toEqual([255, 0]);
+    });
+
+    const refused = (png, over) => {
+        const { losses, calls, items } = place(png, over);
+        expect(calls).toEqual([]);
+        expect(items[0].tokens.map((t) => t.text).join('')).toBe('[image: P]');
+        expect(losses).toEqual([{
+            code: 'layout/image-dropped',
+            detail: { index: '0', name: 'p.png', alt: 'P', reason: 'unsupported-encoding', bytes: png.length, format: 'png' }
+        }]);
+    };
+
+    test('without ctx.zlib (a hand-wired facade) an alpha or palette PNG is refused as before', () => {
+        refused(pngOf({ width: 1, height: 1, colorType: 6, rows: [[1, 2, 3, 4]] }), { zlib: undefined });
+        refused(pngOf({ width: 1, height: 1, colorType: 3, rows: [[0]], plte: [1, 2, 3] }), { zlib: undefined });
+    });
+
+    test('refused, naming png: interlaced, no IDAT, no PLTE for a palette, bad filter type, short data', () => {
+        refused(pngOf({ width: 1, height: 1, colorType: 2, rows: [[1, 2, 3]], interlace: 1 }));
+        refused(pngOf({ width: 1, height: 1, colorType: 2, rows: [[1, 2, 3]], idat: new Uint8Array(0) }));
+        refused(pngOf({ width: 1, height: 1, colorType: 3, rows: [[0]] }));
+        refused(pngOf({ width: 1, height: 1, colorType: 6, rows: [[1, 2, 3, 4]], filters: [5] }));
+        refused(pngOf({ width: 2, height: 2, colorType: 6, rows: [[1, 2, 3, 4, 5, 6, 7, 8]] }));
+    });
+
+    test('a stream that inflates past its IHDR size is refused (the output bound), and so is a 64 MiB+ image', () => {
+        const bomb = ZLIB.zlibSync(new Uint8Array(100000));
+        refused(pngOf({ width: 1, height: 1, colorType: 6, rows: [[0, 0, 0, 0]], idat: bomb }));
+        refused(pngOf({ width: 20000, height: 20000, colorType: 6, rows: [], idat: bomb }));
+    });
+});
+
+describe('render — a refused image names its format (signature, else the carried content type)', () => {
+    const detailOf = (bytes, contentType) => {
+        const ctx = makeCtx(contentType ? {} : { assets: { x: bytes } });
+        const node = { kind: 'image', name: 'x', alt: '' };
+        if (contentType) node.escapes = { docx: { bytes, contentType } };
+        return renderImage.render(node, ctx).losses[0].detail;
+    };
+
+    test('a JPEG the header reader refuses (CMYK) is named jpeg', () => {
+        expect(detailOf(jpegOf(4, 4, 4)).format).toBe('jpeg');
+    });
+
+    test('GIF, WebP, BMP and TIFF signatures', () => {
+        expect(detailOf(Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0])).format).toBe('gif');
+        expect(detailOf(Uint8Array.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50])).format).toBe('webp');
+        expect(detailOf(Uint8Array.from([0x42, 0x4D, 0, 0, 0, 0, 0, 0])).format).toBe('bmp');
+        expect(detailOf(Uint8Array.from([0x49, 0x49, 0x2A, 0, 8, 0, 0, 0])).format).toBe('tiff');
+        expect(detailOf(Uint8Array.from([0x4D, 0x4D, 0, 0x2A, 0, 0, 0, 8])).format).toBe('tiff');
+    });
+
+    test('no known signature: the reader-carried content type names it; neither → no format key', () => {
+        expect(detailOf(Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8]), 'image/x-icon').format).toBe('x-icon');
+        const none = detailOf(Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8]));
+        expect('format' in none).toBe(false);
     });
 });
 
@@ -515,5 +751,88 @@ describe('the delivered facade — end to end through `oconvIrToPdf`', () => {
         });
         expect(placed.losses.some((l) => l.code === 'layout/image-dropped')).toBe(false);
         expect(latin1(placed.bytes)).toContain('/Im0 Do Q');
+    });
+
+    test('an RGBA PNG through the facade: placed with its /SMask, no loss (the facade hands zlib to the renderer)', () => {
+        const png = pngOf({ width: 2, height: 1, colorType: 6, rows: [[1, 2, 3, 0, 4, 5, 6, 255]] });
+        const ir = { kind: 'document', children: [{ kind: 'image', name: 'a.png', alt: 'A' }] };
+        const written = irToPdf.irToPdf(ir, undefined, { assets: { 'a.png': png } });
+
+        expect(written.losses).toEqual([]);
+        const doc = pdfApi.read(written.bytes);
+        const deref = (o) => ((o && o.type === 'ref') ? doc._raw.resolve(o) : o);
+        const image = deref(xobjectsOf(doc, 0).entries.Im0);
+        expect(image.dict.entries.SMask).toBeDefined();
+        const mask = deref(image.dict.entries.SMask);
+        expect(mask.dict.entries.ColorSpace.value).toBe('DeviceGray');
+        expect(latin1(written.bytes)).toContain('/Im0 Do Q');
+    });
+});
+
+describe('PNG placement — oracle: @awacloud/pdf decodes the written streams back to the samples', () => {
+    const irToPdf = runtime.resolve('oconvIrToPdf');
+    const pdfApi = runtime.resolve('pdf');
+    const filters = runtime.resolve('pdfFilterDispatch');
+
+    /** Im0 (and its /SMask) of page 0 of a written PDF, decoded by pdf's own filters. */
+    function decodedIm0(bytes) {
+        const doc = pdfApi.read(bytes);
+        const deref = (o) => ((o && o.type === 'ref') ? doc._raw.resolve(o) : o);
+        const res = deref(doc.pages[0].resources);
+        const image = deref(deref(res.entries.XObject).entries.Im0);
+        const mask = image.dict.entries.SMask ? deref(image.dict.entries.SMask) : null;
+        return { samples: [...filters.decode(image)], mask: mask ? [...filters.decode(mask)] : null };
+    }
+
+    const write = (png) => irToPdf.irToPdf(
+        { kind: 'document', children: [{ kind: 'image', name: 'p.png', alt: '' }] },
+        undefined, { assets: { 'p.png': png } });
+
+    test('RGB, every filter type, predictor route: the decoded stream is the raw samples', () => {
+        const rows = [
+            [200, 10, 10, 10, 200, 10, 10, 10, 200],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9],
+            [9, 8, 7, 6, 5, 4, 3, 2, 1],
+            [50, 60, 70, 80, 90, 100, 110, 120, 130],
+            [0, 255, 0, 255, 0, 255, 0, 255, 0]
+        ];
+        const written = write(pngOf({ width: 3, height: 5, colorType: 2, rows, filters: [0, 1, 2, 3, 4] }));
+        expect(written.losses).toEqual([]);
+        const { samples, mask } = decodedIm0(written.bytes);
+        expect(samples).toEqual(rows.flat());
+        expect(mask).toBeNull();
+    });
+
+    test('RGBA, decoded route: the colour stream and the /SMask decode to the split samples', () => {
+        const rows = [[10, 20, 30, 40, 50, 60, 70, 80], [90, 100, 110, 120, 130, 140, 150, 0]];
+        const written = write(pngOf({ width: 2, height: 2, colorType: 6, rows, filters: [4, 3] }));
+        expect(written.losses).toEqual([]);
+        const { samples, mask } = decodedIm0(written.bytes);
+        expect(samples).toEqual([10, 20, 30, 50, 60, 70, 90, 100, 110, 130, 140, 150]);
+        expect(mask).toEqual([40, 80, 120, 0]);
+    });
+});
+
+describe('oconvIrToPdf — `zlib` is an OPTIONAL dependency, after the first 14', () => {
+    test('declared right after the 14 dependencies a hand-wired call already passes (then `standard14Lookup`, last)', () => {
+        const descriptor = oconvIrToPdfDescriptor;
+        expect(descriptor.dependencies[14]).toBe('zlib');
+        expect(descriptor.dependencies.at(-1)).toBe('standard14Lookup');
+        expect(descriptor.dependencies).toHaveLength(16);
+        expect(descriptor.deps).toHaveLength(16);
+    });
+
+    test('a hand-wired factory without it still writes, refusing an alpha PNG exactly as before', () => {
+        const args = oconvIrToPdfDescriptor.dependencies.slice(0, 14).map((name) => runtime.resolve(name));
+        const handWired = oconvIrToPdfDescriptor.factory(...args);
+        const png = pngOf({ width: 1, height: 1, colorType: 6, rows: [[1, 2, 3, 4]] });
+        const ir = { kind: 'document', children: [{ kind: 'image', name: 'a.png', alt: 'A' }] };
+
+        const without = handWired.irToPdf(ir, undefined, { assets: { 'a.png': png } });
+        expect(without.losses.map((l) => [l.code, l.detail.reason, l.detail.format]))
+            .toEqual([['layout/image-dropped', 'unsupported-encoding', 'png']]);
+
+        const withZlib = oconvIrToPdfDescriptor.factory(...args, runtime.resolve('zlib'));
+        expect(withZlib.irToPdf(ir, undefined, { assets: { 'a.png': png } }).losses).toEqual([]);
     });
 });

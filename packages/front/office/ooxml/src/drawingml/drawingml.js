@@ -8,8 +8,8 @@
  *   Typed contract for the `<w:drawing>` / `<xdr:twoCellAnchor>` payload
  *   exchanged between `docx`, `xlsx`, `pptx` orchestrators and the
  *   `drawingml` / `drawingmlChart` / `drawingmlShape` modules. The same shape
- *   is used at every container level so the walker (`walkAllDrawings`) can
- *   collect rIds uniformly.
+ *   is used at every container level so the docx walker (`walkDrawings`,
+ *   run once per part) can collect rIds uniformly.
  *
  *   @property {'inline'|'anchor'} [placement] — wrapping mode (WML)
  *   @property {string} [embedRef] — r:embed rId targeting an image part
@@ -21,7 +21,7 @@
  *   @property {object} [shape] — geometry preset from `drawingmlShape`
  *   @property {object} [txbxContent] — textbox content (paragraphs)
  *                                      nested in DrawingML shapes; walked
- *                                      by docx.walkAllDrawings
+ *                                      by docx.walkDrawings
  *   @property {object} [altContent] — MC fallback branch (verbatim)
  *   @property {{cx: number, cy: number}} [size] — EMU extents
  *   @property {Array} [_extras] — passthrough XML for unknown children
@@ -61,11 +61,21 @@
  *
  * RunProperties := {
  *   lang?, size?, bold?, italic?, underline?, strike?, baseline?,
- *   color?: string,        // 'RRGGBB' (hex, no #)
+ *   color?: string | TypedColor,  // 'RRGGBB' (hex, no #); the typed
+ *                          // { rgb | schemeColor, mods? } object only
+ *                          // with the `typedRunColors` read option
  *   font?: string,         // <a:latin typeface="..."/>
  *   _extras?: [xmlNode]
  * }
  * ```
+ *
+ * Read option (`opts` of every `parse*` function, threaded from
+ * `pptx.read` / `xlsx.read`): `typedRunColors` — `false` by default, the
+ * 1.0.0 model: a run fill holding an `a:srgbClr` reads as its `'RRGGBB'`
+ * (colour transforms dropped), any other fill stays verbatim in
+ * `rPr._extras`. With `true`, a fill a bare `'RRGGBB'` cannot express (a
+ * scheme colour, any colour with transforms) is typed as
+ * `{ rgb | schemeColor, mods? }` instead. The writer accepts both forms.
  *
  * @module ooxml/drawingml
  */
@@ -89,10 +99,46 @@ export const drawingml = {
         // DML color codec to maintain a single canonical builder
         // across factories.
         const srgbClr = shared.createDmlColorCodec(xml).srgbClr;
+        const typedColor = shared.createTypedColorCodec(xml);
+
+        // Schema order of the text properties (ECMA-376 Part 1 § 21.1.2:
+        // CT_TextParagraphProperties, CT_TextCharacterProperties). A
+        // hand-wired ooxmlShared without the ordering helper writes the
+        // typed children first, then the preserved ones (the old order).
+        const orderSeq = shared.sequence ? shared.sequence : () => null;
+        const ordered = (children, seq) => (seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children);
+        const PPR_SEQ = orderSeq([
+            'a:lnSpc', 'a:spcBef', 'a:spcAft', ['a:buClrTx', 'a:buClr'],
+            ['a:buSzTx', 'a:buSzPct', 'a:buSzPts'], ['a:buFontTx', 'a:buFont'],
+            ['a:buNone', 'a:buAutoNum', 'a:buChar', 'a:buBlip'], 'a:tabLst', 'a:defRPr', 'a:extLst'
+        ]);
+        const RPR_SEQ = orderSeq([
+            'a:ln', ['a:noFill', 'a:solidFill', 'a:gradFill', 'a:blipFill', 'a:pattFill', 'a:grpFill'],
+            ['a:effectLst', 'a:effectDag'], 'a:highlight', ['a:uLnTx', 'a:uLn'], ['a:uFillTx', 'a:uFill'],
+            'a:latin', 'a:ea', 'a:cs', 'a:sym', 'a:hlinkClick', 'a:hlinkMouseOver', 'a:rtl', 'a:extLst'
+        ]);
+
+        // A run fill's colour, or `undefined` (the fill is then kept
+        // verbatim in `_extras`). Default (1.0.0): the `val` of an
+        // `a:srgbClr`, transforms dropped. `typedRunColors`: the
+        // `'RRGGBB'` string for a bare `a:srgbClr`, else the typed
+        // `{ rgb | schemeColor, mods? }` object.
+        function runColor(solidFill, opts) {
+            if (!(opts && opts.typedRunColors)) {
+                const cl = solidFill.children.find(n => n.type === 'element' && n.name === 'a:srgbClr');
+                return cl ? cl.attrs.val : undefined;
+            }
+            const el = solidFill.children.find(n => n.type === 'element');
+            if (!el) return undefined;
+            if (el.name === 'a:srgbClr' && !el.children.some(n => n.type === 'element')) {
+                return el.attrs.val;
+            }
+            return typedColor.parse(el) || undefined;
+        }
 
         // --- RunProperties (<a:rPr>) ---
 
-        function parseRunProperties(rPrEl) {
+        function parseRunProperties(rPrEl, opts) {
             if (!rPrEl) return undefined;
             const a = rPrEl.attrs;
             const out = {};
@@ -107,8 +153,8 @@ export const drawingml = {
             for (const c of rPrEl.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'a:solidFill') {
-                    const cl = c.children.find(n => n.type === 'element' && n.name === 'a:srgbClr');
-                    if (cl) out.color = cl.attrs.val;
+                    const color = runColor(c, opts);
+                    if (color !== undefined) out.color = color;
                     else extras.push(c);
                 } else if (c.name === 'a:latin') {
                     out.font = c.attrs.typeface;
@@ -132,18 +178,20 @@ export const drawingml = {
             if (rPr.baseline != null) a.baseline = String(rPr.baseline);
             const children = [];
             if (rPr.color) {
-                children.push(xml.el('a:solidFill', {}, [srgbClr(rPr.color)]));
+                const el = typeof rPr.color === 'string'
+                    ? srgbClr(rPr.color) : typedColor.render(rPr.color);
+                if (el) children.push(xml.el('a:solidFill', {}, [el]));
             }
             if (rPr.font) {
                 children.push(xml.el('a:latin', { typeface: rPr.font }));
             }
             if (rPr._extras) for (const ex of rPr._extras) children.push(ex);
-            return xml.el('a:rPr', a, children);
+            return xml.el('a:rPr', a, ordered(children, RPR_SEQ));
         }
 
         // --- ParagraphProperties (<a:pPr>) ---
 
-        function parseParagraphProperties(pPrEl) {
+        function parseParagraphProperties(pPrEl, opts) {
             if (!pPrEl) return undefined;
             const a = pPrEl.attrs;
             const out = {};
@@ -157,7 +205,7 @@ export const drawingml = {
                 if (c.name === 'a:buNone')         out.bullet = 'none';
                 else if (c.name === 'a:buChar')    out.bullet = { char: c.attrs.char };
                 else if (c.name === 'a:buAutoNum') out.bullet = { autoNumType: c.attrs.type };
-                else if (c.name === 'a:defRPr')    out.defRPr = parseRunProperties(c);
+                else if (c.name === 'a:defRPr')    out.defRPr = parseRunProperties(c, opts);
                 else extras.push(c);
             }
             if (extras.length) out._extras = extras;
@@ -188,16 +236,16 @@ export const drawingml = {
             }
             if (pPr._extras) for (const ex of pPr._extras) children.push(ex);
             if (!Object.keys(a).length && !children.length) return null;
-            return xml.el('a:pPr', a, children);
+            return xml.el('a:pPr', a, ordered(children, PPR_SEQ));
         }
 
         // --- Run / Paragraph ---
 
-        function parseRun(rEl) {
+        function parseRun(rEl, opts) {
             const rPrEl = xml.findChild(rEl, 'a:rPr');
             const tEl = xml.findChild(rEl, 'a:t');
             const out = { type: 'text', value: tEl ? xml.textContent(tEl) : '' };
-            const rPr = parseRunProperties(rPrEl);
+            const rPr = parseRunProperties(rPrEl, opts);
             if (rPr) out.rPr = rPr;
             return out;
         }
@@ -210,7 +258,7 @@ export const drawingml = {
             return xml.el('a:r', {}, children);
         }
 
-        function parseField(fEl) {
+        function parseField(fEl, opts) {
             const out = {
                 type: 'field',
                 id: fEl.attrs.id
@@ -218,7 +266,7 @@ export const drawingml = {
             if (fEl.attrs.type) out.fieldType = fEl.attrs.type;
             const rPrEl = xml.findChild(fEl, 'a:rPr');
             const tEl = xml.findChild(fEl, 'a:t');
-            const rPr = parseRunProperties(rPrEl);
+            const rPr = parseRunProperties(rPrEl, opts);
             if (rPr) out.rPr = rPr;
             if (tEl) out.value = xml.textContent(tEl);
             return out;
@@ -234,10 +282,10 @@ export const drawingml = {
             return xml.el('a:fld', a, children);
         }
 
-        function parseBreak(brEl) {
+        function parseBreak(brEl, opts) {
             const out = { type: 'break' };
             const rPrEl = xml.findChild(brEl, 'a:rPr');
-            const rPr = parseRunProperties(rPrEl);
+            const rPr = parseRunProperties(rPrEl, opts);
             if (rPr) out.rPr = rPr;
             return out;
         }
@@ -247,17 +295,17 @@ export const drawingml = {
             return xml.el('a:br', {}, rPrEl ? [rPrEl] : []);
         }
 
-        function parseParagraph(pEl) {
+        function parseParagraph(pEl, opts) {
             const pPrEl = xml.findChild(pEl, 'a:pPr');
-            const pPr = parseParagraphProperties(pPrEl);
+            const pPr = parseParagraphProperties(pPrEl, opts);
             const runs = [];
             const extras = [];
             for (const c of pEl.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'a:pPr') continue;
-                if (c.name === 'a:r')        runs.push(parseRun(c));
-                else if (c.name === 'a:br')  runs.push(parseBreak(c));
-                else if (c.name === 'a:fld') runs.push(parseField(c));
+                if (c.name === 'a:r')        runs.push(parseRun(c, opts));
+                else if (c.name === 'a:br')  runs.push(parseBreak(c, opts));
+                else if (c.name === 'a:fld') runs.push(parseField(c, opts));
                 else if (c.name === 'm:oMath' && mathMod) {
                     runs.push(mathMod.parseOMath(c));
                 }
@@ -290,13 +338,17 @@ export const drawingml = {
 
         // --- Text body (<a:txBody> or <p:txBody>) ---
 
-        function parseTextBody(tbEl) {
+        /**
+         * Parse a text body. `opts.typedRunColors` (default `false`) types
+         * run fills a bare `'RRGGBB'` cannot express — see the module doc.
+         */
+        function parseTextBody(tbEl, opts) {
             const out = { paragraphs: [] };
             for (const c of tbEl.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'a:bodyPr')         out.bodyPr = c;
                 else if (c.name === 'a:lstStyle')  out.lstStyle = c;
-                else if (c.name === 'a:p')         out.paragraphs.push(parseParagraph(c));
+                else if (c.name === 'a:p')         out.paragraphs.push(parseParagraph(c, opts));
             }
             return out;
         }

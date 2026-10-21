@@ -1,0 +1,160 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "odfvalidator",
+    "version": "odfvalidator@0.13.0",
+    "source": "https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff"
+  },
+  "oracle": {
+    "image": "awa-oracle-odfvalidator:0.13.0",
+    "imageId": "sha256:5ff3e30dc5452962a772e9b5669844dfd2d0925ab5d518eec160ba7b4bbd2de0",
+    "version": "odfvalidator v0.13.0\nb926a6134a2fee782076500dfc02c47c2d651cff"
+  },
+  "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 16 (11 written, 5 round trips)",
+  "documents": [
+    {
+      "file": "odt-text-styles-meta.odt",
+      "kind": "written",
+      "sha256": "5158d16d045b873ead86fdb8a5b543d22d07428855968663a241fb8074e9778c",
+      "errors": []
+    },
+    {
+      "file": "odt-headings-lists-section.odt",
+      "kind": "written",
+      "sha256": "af17026e226b5b4660eaf48d84a8ae55d0d969a959263937333a4b547cf721f9",
+      "errors": []
+    },
+    {
+      "file": "odt-table.odt",
+      "kind": "written",
+      "sha256": "40d1b53c504dd514915ebb89ed4cd34c09e6888faa7562f7bbe0c8dcfe660439",
+      "errors": []
+    },
+    {
+      "file": "odt-fields-bookmarks.odt",
+      "kind": "written",
+      "sha256": "449897cac937bd7bfac02c3dae4f62044fdbafe240c2f22760f35b124c295733",
+      "errors": []
+    },
+    {
+      "file": "odt-tracked-changes.odt",
+      "kind": "written",
+      "sha256": "4284298abf21701ab928729fa97f4259296b4c253734ab35f316aa155dcfca55",
+      "errors": []
+    },
+    {
+      "file": "odt-image-frames-shapes.odt",
+      "kind": "written",
+      "sha256": "26bf812a3e2571007534bd1ba055245a1451f82c201195069c58ba56464c31df",
+      "errors": []
+    },
+    {
+      "file": "ods-from-arrays.ods",
+      "kind": "written",
+      "sha256": "7e717cc9b68442765ec840cf5a528af9280ad73a3e76fb93a23729efd8a0b592",
+      "errors": []
+    },
+    {
+      "file": "ods-value-types.ods",
+      "kind": "written",
+      "sha256": "49032340e1ea56747e06b622109c6be051f1019b14633bf2f7d13384966af030",
+      "errors": []
+    },
+    {
+      "file": "ods-formulas-merges-styles.ods",
+      "kind": "written",
+      "sha256": "1aee5bd8b66be6a059057398d191c44ef82e87a6dc1f3ef8c17fb07f98f40555",
+      "errors": []
+    },
+    {
+      "file": "odp-text-slides.odp",
+      "kind": "written",
+      "sha256": "5afe0cdda6300bec263344e8348f8c6d180c96b87c67b47de7ebd0b3c2d507be",
+      "errors": []
+    },
+    {
+      "file": "odp-shapes-picture-table.odp",
+      "kind": "written",
+      "sha256": "66b26b26779f79303950af3870edcab1650af7957c9f7a297ab675da7f0bd1fb",
+      "errors": []
+    },
+    {
+      "file": "round-trip--odp-media.odp",
+      "kind": "round-trip",
+      "sha256": "8d838edb6450981b33098825f9d9e785f385b70728a2012152772e629c51910b",
+      "errors": []
+    },
+    {
+      "file": "round-trip--odp-media.source.odp",
+      "kind": "source",
+      "sha256": "4133caf6eb761dc6ce3ecdd2dd20b116a4e54f404a2f4971164e0d33086f5ee2",
+      "errors": []
+    },
+    {
+      "file": "round-trip--odp-structured.odp",
+      "kind": "round-trip",
+      "sha256": "25ed94c567858652dbc2721d870f0922e746db1f0b4f0950386ad6d3fd07708a",
+      "errors": []
+    },
+    {
+      "file": "round-trip--odp-structured.source.odp",
+      "kind": "source",
+      "sha256": "e51edd1f4f17293719cddb8ce06af125b9e5662575dc315d35420961affa6f04",
+      "errors": []
+    },
+    {
+      "file": "round-trip--ods-structured.ods",
+      "kind": "round-trip",
+      "sha256": "96a188a697d25072d35fc586aeade6ad46b9d01cca9bbd632d5c7422e04ecf0b",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2632,
+          "text": "uncompleted content model. expecting: <soft-page-break>,<table-column-group>,<table-column>,<table-columns>,<table-header-columns>,<table-header-rows>,<table-row-group>,<table-row>,<table-rows>"
+        }
+      ]
+    },
+    {
+      "file": "round-trip--ods-structured.source.ods",
+      "kind": "source",
+      "sha256": "e8facde67507e6baa01a0bb8714d474ddfb6e7352ebd18f1319d8745795045fe",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2632,
+          "text": "uncompleted content model. expecting: <soft-page-break>,<table-column-group>,<table-column>,<table-columns>,<table-header-columns>,<table-header-rows>,<table-row-group>,<table-row>,<table-rows>"
+        }
+      ]
+    },
+    {
+      "file": "round-trip--odt-structured.odt",
+      "kind": "round-trip",
+      "sha256": "37203cc77ec201045e6efea3ec6b8291a5b6ffe456bea846abd45ca8cc0d1cbe",
+      "errors": []
+    },
+    {
+      "file": "round-trip--odt-structured.source.odt",
+      "kind": "source",
+      "sha256": "66d0b4568cbccdc31076303ffe585b63b483a39d795a5ae65f259a74a47b80af",
+      "errors": []
+    },
+    {
+      "file": "round-trip--odt-table.odt",
+      "kind": "round-trip",
+      "sha256": "dd8c874ff69cffed3a32e69b70f27784fbd0540712586e2e85f864da27e5a944",
+      "errors": []
+    },
+    {
+      "file": "round-trip--odt-table.source.odt",
+      "kind": "source",
+      "sha256": "f6717f9e71006e9746854dccd5f4b5dd42b0da5aa1d84eaf6a70465a09e8dffe",
+      "errors": []
+    }
+  ],
+  "date": "2026-10-15",
+  "commit": "31604fbdb8296b32912776b65d1ba8fe07a87af7"
+}

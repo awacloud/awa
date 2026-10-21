@@ -80,7 +80,7 @@ const { MdError, ParseError, RenderError, ContractError, isMdError } = mdErrors.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | `string` | Class name (`'ParseError'`, etc.) |
+| `name` | `string` | Class name (`'ParseError'`, etc.). An own, writable, enumerable and configurable property set with `Object.defineProperty`, so it is defined even once the `@awacloud/fw` sanity layer (`applyBase()`) has frozen `Error.prototype` |
 | `code` | `string` | Kebab-case identifier (`'md/parse-not-string'`) |
 | `message` | `string` | Human-readable message |
 | `context` | `object?` | Structured data (optional) |
@@ -134,4 +134,4 @@ try {
 
 - [`md`](./md.md) — the facade that throws `ContractError` on non-string input
 - [`render/html`](./render/html.md) — throws `RenderError`
-- [`@awacloud/fw` errors](https://github.com/awacloud/awa/tree/@awacloud/md@1.0.0/packages/front/fw/docs/api) — the framework's own error pattern
+- [`@awacloud/fw` errors](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/fw/docs/api) — the framework's own error pattern

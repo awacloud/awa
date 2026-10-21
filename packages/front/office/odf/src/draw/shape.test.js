@@ -63,6 +63,29 @@ describe('drawShape module', () => {
         expect(out).toContain('draw:type="rectangle"');
     });
 
+    test('draw:custom-shape: the text and other children first, draw:enhanced-geometry last (schema order)', () => {
+        const { xml, s } = build();
+        const src = '<draw:custom-shape svg:width="5cm" svg:height="5cm">' +
+            '<draw:glue-point draw:id="4" svg:x="0cm" svg:y="0cm"/>' +
+            '<draw:enhanced-geometry svg:viewBox="0 0 100 100" draw:type="rectangle"/>' +
+            '<text:p>One</text:p><text:list><text:list-item><text:p>Two</text:p></text:list-item></text:list>' +
+            '</draw:custom-shape>';
+        const m = s.parseShape(xml.parse(src));
+        const out = s.renderShape(m);
+        expect(out.children.map((c) => c.name)).toEqual(['draw:glue-point', 'text:p', 'text:list', 'draw:enhanced-geometry']);
+        expect(s.parseShape(xml.parse(xml.serialize(out)))).toEqual(m);
+        const kept = s.renderShape({ ...m, _extras: { children: [xml.el('loext:x', {}, [])] } });
+        expect(kept.children.map((c) => c.name)).toEqual(['draw:glue-point', 'text:p', 'text:list', 'loext:x', 'draw:enhanced-geometry']);
+    });
+
+    test('a custom shape without geometry and other kinds keep their children as read', () => {
+        const { xml, s } = build();
+        const bare = s.renderShape(s.parseShape(xml.parse('<draw:custom-shape><text:p>a</text:p><foo:bar/></draw:custom-shape>')));
+        expect(bare.children.map((c) => c.name)).toEqual(['text:p', 'foo:bar']);
+        const rect = s.renderShape({ type: 'shape', kind: 'draw:rect', attrs: {}, children: [xml.el('text:p', {}, [])], enhancedGeometry: { attrs: {} } });
+        expect(rect.children.map((c) => c.name)).toEqual(['text:p']);
+    });
+
     test('preserves unknown children', () => {
         const { xml, s } = build();
         const el = xml.parse('<draw:polygon svg:points="0,0 10,0 10,10"><foo:bar/></draw:polygon>');

@@ -78,24 +78,25 @@ Executed against the live package (2026-10-06): `items.length === 2`,
 ```js
 const emptyCode = node('codeBlock', { info: '', text: '' });
 const out = oconvPdfRenderCode.render(emptyCode, ctx);
-out;   // { items: [], losses: [] }
+out;   // { items: [], losses: [], height: 0 }
 ```
 
-Executed against the live package (2026-10-06): exactly `{ items: [],
-losses: [] }` — a deliberate exception to the general "a delegated kind is
-always drawable" rule (see Notes).
+Executed against the live package (2026-10-12): exactly `{ items: [],
+losses: [], height: 0 }` — the explicit `height: 0` declares the block
+empty (see Notes).
 
 ## Notes
 
-- **Deliberate exception to the accounting invariant's general rule.** An
-  EMPTY fence (`node.text` reduces to zero source lines after trimming the
-  fenced-code convention's trailing `\n`) renders NOTHING and records NO
-  loss — genuinely nothing to typeset and nothing lost. `stack.js`'s
-  `isDrawable` treats an empty `items` array from a delegated kind as
-  DRAWABLE by default (a renderer returning zero items with no loss is
-  exactly the silent drop the accounting invariant exists to catch), so a
-  document whose ONLY content is one empty fence would report it
-  unaccounted. The return shape is intentional.
+- **An empty fence is declared empty.** An EMPTY fence (`node.text`
+  reduces to zero source lines after trimming the fenced-code convention's
+  trailing `\n`) renders NOTHING and records NO loss — genuinely nothing
+  to typeset and nothing lost — and returns an explicit `height: 0`.
+  `stack.js` marks a delegated block with no items and an explicit
+  `height: 0` `empty`, and `isDrawable` counts it ink-free, so the
+  accounting invariant holds for a document whose ONLY content is one
+  empty fence. A delegated block with no items and NO stated height still
+  counts as drawable: that is the silent drop the invariant exists to
+  catch.
 - **This module's OWN leading ratio (1.2×) is deliberately NOT
   `layout.leading()`'s** (1.32× by default) — computed independently so a
   future change to body-text leading does not silently retarget code

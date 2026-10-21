@@ -1,0 +1,83 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aide — AWA Viewer</title>
+    <link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+    <link rel="stylesheet" href="help.css">
+</head>
+<body>
+    <header class="help-header">
+        <img src="../icons/icon.svg" alt="" width="28" height="28">
+        <h1>AWA Viewer — Aide</h1>
+        <a href="en.html" hreflang="en" lang="en">English</a>
+    </header>
+    <main>
+        <p>AWA Viewer ouvre vos documents et les affiche sur votre appareil. Rien n’est envoyé&#8239;: le fichier est lu par votre navigateur et reste sur votre ordinateur.</p>
+        <nav aria-label="Sommaire">
+            <ul>
+                <li><a href="#ouvrir">Ouvrir un document</a></li>
+                <li><a href="#lire">Lire et se déplacer</a></li>
+                <li><a href="#clavier">Raccourcis clavier</a></li>
+                <li><a href="#installer">Installer l’application</a></li>
+                <li><a href="#mises-a-jour">Mises à jour</a></li>
+                <li><a href="#hors-ligne">Hors ligne et confidentialité</a></li>
+            </ul>
+        </nav>
+
+        <h2 id="ouvrir">Ouvrir un document</h2>
+        <ul>
+            <li>Déposez un fichier sur la page, ou choisissez <strong>Ouvrir</strong> (<kbd>Ctrl</kbd>+<kbd>O</kbd>).</li>
+            <li>Formats&#8239;: PDF, Word (DOCX), Excel (XLSX), PowerPoint (PPTX), OpenDocument (ODT, ODS, ODP), Markdown et fichiers texte. Les anciens fichiers Office (DOC, XLS, PPT) sont reconnus mais pas encore ouverts.</li>
+            <li>Pas de document sous la main&#8239;? Sous la zone de dépôt, <strong>Essayez un exemple</strong> ouvre l’un de nos documents de démonstration.</li>
+            <li>Plusieurs fichiers à la fois&#8239;: le premier s’ouvre&#8239;; les autres attendent sur une ligne sous l’en-tête, et chaque <strong>Ouvrir … dans une nouvelle fenêtre</strong> ouvre le suivant.</li>
+        </ul>
+
+        <h2 id="lire">Lire et se déplacer</h2>
+        <ul>
+            <li>Pages PDF et diapositives&#8239;: <strong>Précédente</strong> et <strong>Suivante</strong>, ou tapez un numéro de page.</li>
+            <li>Zoom&#8239;: les boutons et le menu de zoom, ou <strong>Ajuster à la largeur</strong>. Un classeur a un onglet par feuille sous la grille.</li>
+            <li><strong>Plein écran</strong>, et <strong>Télécharger</strong> pour enregistrer le fichier d’origine.</li>
+            <li><strong>Détails</strong> (le bouton <em>i</em>) montre les informations du fichier et <em>ce que cet affichage laisse de côté</em>&#8239;: ce que la visionneuse n’a pas pu dessiner y est listé, jamais caché.</li>
+        </ul>
+
+        <h2 id="clavier">Raccourcis clavier</h2>
+        <table>
+            <thead><tr><th>Touches</th><th>Action</th></tr></thead>
+            <tbody>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Ouvrir un fichier</td></tr>
+                <tr><td><kbd>Page suiv.</kbd> / <kbd>Page préc.</kbd></td><td>Page ou diapositive suivante / précédente</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>Origine</kbd> / <kbd>Ctrl</kbd>+<kbd>Fin</kbd></td><td>Première / dernière page ou diapositive</td></tr>
+                <tr><td><kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd>, <kbd>Ctrl</kbd>+molette</td><td>Zoom avant / arrière / 100&#8239;%</td></tr>
+                <tr><td><kbd>←</kbd> <kbd>→</kbd> sur les onglets</td><td>Changer de feuille</td></tr>
+                <tr><td><kbd>Tab</kbd></td><td>Barre d’outils (un arrêt&#8239;; <kbd>←</kbd> <kbd>→</kbd> à l’intérieur), puis le document</td></tr>
+            </tbody>
+        </table>
+
+        <h2 id="installer">Installer l’application</h2>
+        <h3>Chrome, Edge</h3>
+        <p>Utilisez le bouton <strong>Installer</strong> de l’en-tête quand il apparaît, l’icône d’installation de la barre d’adresse, ou le menu du navigateur (<em>Installer AWA Viewer</em> ou <em>Applications → Installer ce site en tant qu’application</em>). L’application a alors sa propre fenêtre et son icône.</p>
+        <h3>Firefox (Windows)</h3>
+        <p>Utilisez le bouton <strong>Ajouter à la barre des tâches</strong> de la barre d’adresse.</p>
+        <h3>Safari</h3>
+        <p>Sur Mac&#8239;: <em>Fichier → Ajouter au Dock</em>. Sur iPhone ou iPad&#8239;: <em>Partager → Sur l’écran d’accueil</em>.</p>
+        <h3>Ouvrir vos fichiers avec l’application (Windows)</h3>
+        <p>Installée depuis Chrome ou Edge, la visionneuse apparaît dans <em>Ouvrir avec</em> au clic droit sur un document. Pour en faire l’application par défaut d’un type de fichier&#8239;: <em>Paramètres → Applications → Applications par défaut</em>. Chaque fichier s’ouvre dans sa propre fenêtre.</p>
+
+        <h2 id="mises-a-jour">Mises à jour</h2>
+        <p>Une nouvelle version s’installe en arrière-plan et ne vous interrompt jamais&#8239;: une ligne de l’en-tête indique <em>Une nouvelle version de la visionneuse est prête</em>&#8239;; choisissez <strong>Mettre à jour</strong> ou <strong>Plus tard</strong>. Pour vérifier vous-même&#8239;: <strong>À propos → Rechercher une mise à jour</strong>.</p>
+
+        <h2 id="hors-ligne">Hors ligne et confidentialité</h2>
+        <p>Après une première visite (ou une installation), la visionneuse fonctionne sans connexion. Vos documents ne sont jamais envoyés&#8239;; les seuls fichiers que la page charge sont les siens et, si vous en demandez un, un exemple.</p>
+        <p class="note">Licences, mentions et version&#8239;: <strong>À propos</strong>, dans l’en-tête.</p>
+    </main>
+</body>
+</html>

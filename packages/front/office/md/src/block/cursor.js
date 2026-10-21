@@ -140,7 +140,7 @@ export const mdBlockCursor = {
             this.partiallyConsumedTab  = false;
             this.lineNumber           += 1;
 
-            if (ln.indexOf(' ') !== -1) ln = ln.replace(/\0/g, '�');
+            if (ln.indexOf('\u0000') !== -1) ln = ln.replace(/\0/g, '�');
             this.currentLine = ln;
 
             let lastChild;

@@ -12,12 +12,20 @@
  * looks linear visually even if the deltas aren't).
  *
  * Layout :
- *  - version Fixed (= 1.0)
+ *  - majorVersion uint16 (1 or 2), minorVersion uint16
  *  - reserved uint16
  *  - axisCount uint16
  *  - segmentMaps[axisCount] :
  *      positionMapCount uint16
  *      axisValueMaps[positionMapCount] : fromCoord F2Dot14, toCoord F2Dot14
+ *  - version 2 only (OpenType 1.9.1) :
+ *      axisIndexMapOffset Offset32 (a DeltaSetIndexMap, 0 when absent)
+ *      varStoreOffset     Offset32 (an ItemVariationStore, 0 when absent)
+ *
+ * For version 2 the offsets are returned as read (from the start of the
+ * table); the second step of the version 2 normalisation — deltas from
+ * the variation store added to the segment-mapped coordinates — is not
+ * applied here nor by `normaliseAxesCoords`.
  *
  * @module fonts/table/avar
  */
@@ -40,7 +48,7 @@ export const tableAvar = {
             const r = new BinaryReader(bytes);
             const major = r.readUint16();
             const minor = r.readUint16();
-            if (major !== 1)
+            if (major !== 1 && major !== 2)
                 throw new ParseError('fonts/avar-version',
                     `unsupported avar major version ${major}`, { context: { major, minor } });
             r.readUint16();                   // reserved
@@ -54,7 +62,19 @@ export const tableAvar = {
                 }
                 segmentMaps[i] = map;
             }
-            return { majorVersion: major, minorVersion: minor, segmentMaps };
+            if (major === 1) return { majorVersion: major, minorVersion: minor, segmentMaps };
+            if (r.pos + 8 > bytes.length)
+                throw new ParseError('fonts/avar-short', 'avar version 2 offsets truncated',
+                    { context: { offset: r.pos, length: bytes.length } });
+            const axisIndexMapOffset = r.readUint32();
+            const varStoreOffset = r.readUint32();
+            for (const [field, offset] of [['axisIndexMapOffset', axisIndexMapOffset], ['varStoreOffset', varStoreOffset]]) {
+                if (offset !== 0 && offset >= bytes.length)
+                    throw new ParseError('fonts/avar-bad-offset',
+                        `avar ${field} ${offset} is past the table (${bytes.length} bytes)`,
+                        { context: { field, offset, length: bytes.length } });
+            }
+            return { majorVersion: major, minorVersion: minor, segmentMaps, axisIndexMapOffset, varStoreOffset };
         }
 
         /**

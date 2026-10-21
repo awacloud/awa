@@ -42,12 +42,12 @@ const doc = b.builder();
 |--------|-----------|-------|
 | `addPage` | `(opts?: { mediaBox?: number[4], cropBox?: number[4], rotate?: number, resources?: DictObj }) => Builder` | Starts a new page (default `mediaBox` is US Letter `[0,0,612,792]`); becomes the target of subsequent `addContent`/`addFont` calls. |
 | `addContent` | `(data: string \| Uint8Array) => Builder` | Appends one content stream to the **current** page. |
-| `addFont` | `(spec: { name: string, baseFont: string, subtype?: string, encoding?: 'WinAnsiEncoding' \| 'MacRomanEncoding' \| 'StandardEncoding' }) => Builder` | **Legacy shape** — registers a non-embedded font reference (`subtype` defaults to `Type1`) into the current page's `/Resources /Font`. The font dictionary is allocated once per distinct `(baseFont, subtype, encoding)` and shared by every page that registers it. Without `encoding` the emitted bytes are frozen. |
+| `addFont` | `(spec: { name: string, baseFont: string, subtype?: string, encoding?: 'WinAnsiEncoding' \| 'MacRomanEncoding' \| 'StandardEncoding', standard14?: Standard14Lookup }) => Builder` | **Legacy shape** — registers a non-embedded font reference (`subtype` defaults to `Type1`) into the current page's `/Resources /Font`. The font dictionary is allocated once per distinct `(baseFont, subtype, encoding)` and shared by every page that registers it. Without `encoding` the emitted bytes are frozen. |
 | `addFont` | `(spec: { name: string, embedded: SimpleEmbed \| CidEmbed }) => Builder` | **Embedded shape** — takes a [`pdfFontEmbed`](../font/embed.md) result and allocates every indirect it needs (see [Embedded fonts](#embedded-fonts)). Exactly one of `baseFont` / `embedded` must be given. |
 | `addImage` | `(spec: { name, width, height, colorSpace, bitsPerComponent, data, filter?, decodeParms?, sMask? }) => Builder` | Allocates an **image XObject** as an indirect stream and registers it into the current page's `/Resources /XObject` (see [Images](#images)). Decodes nothing; emits no content operator. |
 | `addMetadata` | `(meta: object) => Builder` | Merges Info-dict fields. `Title`/`Author`/`Subject`/`Keywords`/`Creator`/`Producer`/`CreationDate`/`ModDate` are always emitted as PDF strings; other keys are kept only if their value is already a string. |
 | `setVersion` | `(v: string) => Builder` | Overrides the PDF header version (default `'2.0'`); must match `/^\d\.\d$/`. |
-| `setId` | `(a: string \| Uint8Array, b?: string \| Uint8Array) => Builder` | Sets the `/ID` pair — hex string or raw bytes; `b` defaults to `a`. |
+| `setId` | `(a: string \| Uint8Array, b?: string \| Uint8Array) => Builder` | Sets the `/ID` pair — hex string or raw bytes; `b` defaults to `a`. Without it, a `'2.0'` document gets an `/ID` derived from its content ([`pdfWriter`](./writer.md#derived-id)). |
 | `build` | `() => Uint8Array` | Assembles Catalog + Pages tree + page objects + Info (if any), then calls `pdfWriter.writeDocument`. |
 
 Every chain method except `build` returns the same `Builder` instance.
@@ -60,6 +60,7 @@ Every chain method except `build` returns the same `Builder` instance.
 | `baseFont` | `string` | `/BaseFont` name (e.g. `Helvetica`). Exactly one of `baseFont` / `embedded`. |
 | `subtype` | `string` | `/Subtype`; defaults to `Type1`. |
 | `encoding` | `'WinAnsiEncoding' \| 'MacRomanEncoding' \| 'StandardEncoding'` | Optional. One of the three predefined simple-font encodings of ISO 32000-1 § 9.6.6 / Annex D, emitted as `/Encoding /<name>` after the existing keys: `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`. Absent (or `undefined`) emits no `/Encoding` key and the bytes are identical to a spec without the option — the default is unchanged. Any other value, or `encoding` combined with `embedded`, throws `pdf/builder/bad-font` with `{ name, encoding }` in its `context`. No `/Differences` or custom encoding dictionaries. |
+| `standard14` | `Standard14Lookup` | Optional opt-in: the `@awacloud/fonts` `standard14Lookup` API (`isStandard14`, `lookupStandard14`), as `pdfFont.typeFont` takes it. Given, the dictionary also carries the `FirstChar`, `LastChar`, `Widths` and `FontDescriptor` PDF 2.0 requires for every simple font (see [Standard 14 metrics](#standard-14-metrics)). Absent (or `undefined`), the bytes are the frozen legacy ones. |
 
 **Shared dictionary.** A non-embedded font dictionary is allocated once per
 distinct `(baseFont, subtype, encoding)` and shared by every page that
@@ -70,6 +71,46 @@ referenced object is shared. A 3-page document that registers the same four
 faces on every page therefore carries 4 font dictionaries, not 12. A document
 that never repeats a `(baseFont, subtype, encoding)` triple is byte-identical to
 one built without sharing.
+
+### Standard 14 metrics
+
+PDF 2.0 no longer exempts the Standard 14 faces: `FirstChar`, `LastChar`,
+`Widths` and `FontDescriptor` are required in every simple font dictionary
+(ISO 32000-2 Table 109). The legacy shape writes none of them unless the
+`standard14` option is given; with it, the dictionary gains
+`/FirstChar 32 /LastChar 255`, the 224 `Widths` of the face's Adobe
+Core 14 metrics (1000 units per em) and an indirect `FontDescriptor`
+(`FontName`, `Flags`, `FontBBox`, `ItalicAngle`, `Ascent`, `Descent`,
+`CapHeight`, `XHeight`, `StemV`, `StemH`), one per face. The metrics are
+injected rather than declared as a dependency, as `pdfFont.typeFont`
+takes them.
+
+The metrics' width tables are per WinAnsi code for the twelve Latin faces
+and per built-in code for `Symbol` and `ZapfDingbats`, so the option takes
+`encoding: 'WinAnsiEncoding'` for a Latin face and no `encoding` for the two
+symbolic ones. Any other encoding, a `baseFont` outside the 14, a `subtype`
+other than `Type1`, or a `standard14` value that is not such an API throws
+`pdf/builder/bad-font`. A registration with the option and one without it
+are two dictionaries.
+
+```js
+import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
+import { fw_require, pkg_require, modules } from '@awacloud/pdf';
+
+const runtime = new ModuleRuntime();
+for (const m of [...fw_require, ...pkg_require, ...modules]) runtime.register(m);
+const { builder } = runtime.resolve('pdfBuilder');
+const standard14 = runtime.resolve('standard14Lookup');   // from @awacloud/fonts
+
+const bytes = builder()
+    .addPage()
+    .addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14 })
+    .addFont({ name: 'F2', baseFont: 'Symbol', standard14 })
+    .addContent('BT /F1 12 Tf 72 700 Td (Hello) Tj ET')
+    .build();
+// F1: << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding
+//        /FirstChar 32 /LastChar 255 /Widths [278 278 355 …] /FontDescriptor n 0 R >>
+```
 
 ## Examples
 
@@ -102,6 +143,12 @@ const bytes = builder()
     .build();
 ```
 
+Without `setId`, a `'2.0'` document (the default) is still written with a
+trailer `/ID`, derived from its content: both halves are the first 16 bytes of
+the SHA-256 of the bytes before the trailer, so the same builder calls give the
+same bytes (see [Derived `/ID`](./writer.md#derived-id)). Another `setVersion`
+value without `setId` gets no `/ID`.
+
 ## Embedded fonts
 
 `addFont({ name, embedded })` accepts a [`pdfFontEmbed`](../font/embed.md)
@@ -113,6 +160,12 @@ consumer; the builder is that consumer.
 An `embedded` value must carry `fontFile` (`Uint8Array`), `descriptor`,
 `toUnicodeStream` and either `fontDict` **or** `type0Dict` + `cidFontDict` —
 never both — else `pdf/builder/bad-font`.
+
+A composite embedding's descendant `CIDFont` carries its `/CIDSystemInfo`
+`/Registry` and `/Ordering` as strings (`(Adobe)`, `(Identity)`), as
+[`pdfFontEmbed.embedCid`](../font/embed.md#shape-cidembed) writes them: every
+composite embedding built through `addFont` holds these two entries as strings
+where earlier releases wrote names.
 
 ### What gets allocated
 
@@ -262,7 +315,7 @@ the on-page size directly.
 |------|-------|------|
 | `pdf/builder/no-page` | `RenderError` | `addContent`, `addFont` or `addImage` called before any `addPage`. |
 | `pdf/builder/bad-bytes` | `RenderError` | `addContent` data is neither `string` nor `Uint8Array`. |
-| `pdf/builder/bad-font` | `RenderError` | `addFont` spec has no `name`; or neither / both of `baseFont` and `embedded`; or an `embedded` value that is not a well-formed `pdfFontEmbed` result; or an `encoding` that is not one of the three predefined names, or is combined with `embedded`. |
+| `pdf/builder/bad-font` | `RenderError` | `addFont` spec has no `name`; or neither / both of `baseFont` and `embedded`; or an `embedded` value that is not a well-formed `pdfFontEmbed` result; or an `encoding` that is not one of the three predefined names, or is combined with `embedded`; or a `standard14` option that is not a `standard14Lookup` API, names a `baseFont` outside the 14 or a `subtype` other than `Type1`, or pairs a Latin face with an `encoding` other than `WinAnsiEncoding` (or a `Symbol` / `ZapfDingbats` face with any `encoding`). |
 | `pdf/builder/bad-image` | `RenderError` | `addImage` spec is not an object, or one of `name` / `width` / `height` / `colorSpace` / `bitsPerComponent` / `data` / `filter` / `decodeParms` is missing or ill-typed, or an `sMask` carries a nested `sMask`. `err.context.keys` lists the offending keys; `err.context.sMask` is `true` when the failure is on the mask leg. |
 | `pdf/builder/bad-metadata` | `RenderError` | `addMetadata` argument is not an object. |
 | `pdf/builder/bad-version` | `RenderError` | `setVersion` value doesn't match `/^\d\.\d$/`. |

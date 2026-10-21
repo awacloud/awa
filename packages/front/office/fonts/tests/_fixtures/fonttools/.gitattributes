@@ -1,0 +1,4 @@
+# Vendored third-party test fonts and licence texts: git must never
+# convert their bytes, whatever its text detection decides. MANIFEST.json
+# pins every file's SHA-256.
+* -text

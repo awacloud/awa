@@ -55,7 +55,7 @@ export const pptxPicture = {
     deps: [xml, ooxmlShared],
 
     factory(xml, shared) {
-        const { NS, REL_TYPE } = shared;
+        const { NS, REL_TYPE, parseSrcRect, srcRectAttrs } = shared;
         const A_NS = NS.A;
         const REL_TYPE_IMAGE = REL_TYPE.IMAGE;
 
@@ -136,6 +136,8 @@ export const pptxPicture = {
                     if (blip.attrs['r:embed']) out.embedRef = blip.attrs['r:embed'];
                     if (blip.attrs['r:link'])  out.linkRef = blip.attrs['r:link'];
                 }
+                const srcRect = xml.findChild(blipFill, 'a:srcRect');
+                if (srcRect) out.srcRect = parseSrcRect(srcRect);
             }
             const spPr = xml.findChild(picEl, 'p:spPr');
             if (spPr) {
@@ -182,6 +184,8 @@ export const pptxPicture = {
                 ]),
                 xml.el('p:blipFill', {}, [
                     xml.el('a:blip', blipAttrs),
+                    // CT_BlipFillProperties order: blip, srcRect, stretch.
+                    ...(p.srcRect ? [xml.el('a:srcRect', srcRectAttrs(p.srcRect))] : []),
                     xml.el('a:stretch', {}, [xml.el('a:fillRect', {})])
                 ]),
                 xml.el('p:spPr', {}, [

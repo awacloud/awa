@@ -56,9 +56,34 @@ export const pptxSlide = {
         const A_NS = NS.A;
         const R_NS = NS.R;
 
+        // `_extras` of a slide object holds the leftovers of the root AND of
+        // <p:cSld>: each is written where the schema places it. Slide-level
+        // elements (CT_Slide, CT_SlideLayout, CT_SlideMaster) never go into
+        // <p:cSld>, <p:cSld>-only ones (CT_CommonSlideData) never go to the
+        // root; a name allowed in both (p:extLst) or unknown goes to both.
+        const ROOT_ONLY = new Set(['p:transition', 'p:timing', 'p:hf', 'p:clrMap',
+            'p:clrMapOvr', 'p:sldLayoutIdLst', 'p:txStyles']);
+        const CSLD_ONLY = new Set(['p:custDataLst', 'p:controls']);
+        // An mc:AlternateContent is placed as the element it holds.
+        function placedName(c) {
+            if (!c || c.type !== 'element') return null;
+            if (c.name !== 'mc:AlternateContent') return c.name;
+            const branches = (c.children || []).filter(k => k && k.type === 'element');
+            const branch = branches.find(k => k.name === 'mc:Fallback') || branches.find(k => k.name === 'mc:Choice');
+            const inner = branch && (branch.children || []).find(k => k && k.type === 'element');
+            return inner ? inner.name : c.name;
+        }
+        // Schema order; a hand-wired ooxmlShared without the ordering helper
+        // keeps the old order.
+        const orderSeq = shared.sequence ? shared.sequence : () => null;
+        const ordered = (children, seq) => (seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children);
+        const CSLD_SEQ = orderSeq(['p:bg', 'p:spTree', 'p:custDataLst', 'p:controls', 'p:extLst']);
+        const ROOT_SEQ = orderSeq(['p:cSld', ['p:clrMap', 'p:clrMapOvr'], 'p:sldLayoutIdLst',
+            'p:transition', 'p:timing', 'p:hf', 'p:txStyles', 'p:extLst']);
+
         // --- Shape ---
 
-        function parseShape(spEl) {
+        function parseShape(spEl, opts) {
             const out = { type: 'shape' };
             const nvSpPr = xml.findChild(spEl, 'p:nvSpPr');
             if (nvSpPr) {
@@ -93,7 +118,7 @@ export const pptxSlide = {
             const styleEl = xml.findChild(spEl, 'p:style');
             if (styleEl) out.style = styleEl;
             const txBody = xml.findChild(spEl, 'p:txBody');
-            if (txBody) out.txBody = dml.parseTextBody(txBody);
+            if (txBody) out.txBody = dml.parseTextBody(txBody, opts);
             return out;
         }
 
@@ -140,20 +165,20 @@ export const pptxSlide = {
 
         // --- spTree dispatch ---
 
-        function parseSpTree(treeEl) {
+        function parseSpTree(treeEl, opts) {
             const shapes = [];
             const extras = [];
             for (const c of treeEl.children) {
                 if (c.type !== 'element') continue;
                 switch (c.name) {
                     case 'p:sp':
-                        shapes.push(parseShape(c));
+                        shapes.push(parseShape(c, opts));
                         break;
                     case 'p:pic':
                         shapes.push(picMod.parsePicture(c));
                         break;
                     case 'p:graphicFrame': {
-                        const tbl = tblMod.parseGraphicFrame(c);
+                        const tbl = tblMod.parseGraphicFrame(c, opts);
                         if (tbl) { shapes.push(tbl); break; }
                         const chart = chartMod.parseGraphicFrame(c);
                         if (chart) { shapes.push(chart); break; }
@@ -204,7 +229,7 @@ export const pptxSlide = {
 
         // --- cSld (common slide data) ---
 
-        function parseCSld(cSldEl) {
+        function parseCSld(cSldEl, opts) {
             const out = {};
             const extras = [];
             if (cSldEl.attrs.name) out.name = cSldEl.attrs.name;
@@ -212,7 +237,7 @@ export const pptxSlide = {
                 if (c.type !== 'element') continue;
                 if (c.name === 'p:bg')          out.bg = c;
                 else if (c.name === 'p:spTree') {
-                    const tree = parseSpTree(c);
+                    const tree = parseSpTree(c, opts);
                     out.shapes = tree.shapes;
                     if (tree.extras.length) out.spTreeExtras = tree.extras;
                 } else extras.push(c);
@@ -231,14 +256,22 @@ export const pptxSlide = {
                 shapes: content.shapes || [],
                 extras: content.spTreeExtras
             }));
-            if (content._extras) for (const ex of content._extras) children.push(ex);
-            return xml.el('p:cSld', a, children);
+            // A model read with `slideExtrasByPart` holds this level's
+            // leftovers in `cSldExtras` (and the root's in `_extras`).
+            const own = Array.isArray(content.cSldExtras) ? content.cSldExtras : content._extras;
+            for (const ex of own || []) if (!ROOT_ONLY.has(placedName(ex))) children.push(ex);
+            return xml.el('p:cSld', a, ordered(children, CSLD_SEQ));
         }
 
         // --- Slide-level parse/serialize ---
 
         function buildParser(rootTag, defaults) {
-            return function parse(input) {
+            // `opts.typedRunColors`: see `drawingml.parseTextBody`.
+            // `opts.slideExtrasByPart`: the leftovers of <p:cSld> go to
+            // `cSldExtras` (always an array) and only the root's to
+            // `_extras`; without it both go to `_extras`, the root's
+            // replacing <p:cSld>'s (the 1.0.0 model).
+            return function parse(input, opts) {
                 let root;
                 if (input && input.type === 'element') {
                     // Pre-parsed root (e.g. after MC processing).
@@ -254,7 +287,11 @@ export const pptxSlide = {
                 }
                 const out = { type: defaults.type };
                 const cSld = xml.findChild(root, 'p:cSld');
-                if (cSld) Object.assign(out, parseCSld(cSld));
+                if (cSld) Object.assign(out, parseCSld(cSld, opts));
+                if (opts && opts.slideExtrasByPart) {
+                    out.cSldExtras = out._extras || [];
+                    delete out._extras;
+                }
                 const extras = [];
                 for (const c of root.children) {
                     if (c.type !== 'element' || c.name === 'p:cSld') continue;
@@ -283,8 +320,10 @@ export const pptxSlide = {
                 if (obj.clrMapOvr)     children.push(obj.clrMapOvr);
                 if (obj.layoutIds)     children.push(renderSldLayoutIdLst(obj.layoutIds));
                 if (obj.txStyles)      children.push(obj.txStyles);
-                if (obj._extras) for (const ex of obj._extras) children.push(ex);
-                return xml.serialize(xml.el(rootTag, ns, children));
+                if (obj._extras) {
+                    for (const ex of obj._extras) if (!CSLD_ONLY.has(placedName(ex))) children.push(ex);
+                }
+                return xml.serialize(xml.el(rootTag, ns, ordered(children, ROOT_SEQ)));
             };
         }
 

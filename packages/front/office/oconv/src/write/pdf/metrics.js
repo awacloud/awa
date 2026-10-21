@@ -81,6 +81,7 @@
  * | `route` | `'standard14'` \| `'embedded'` \| `'mixed'` |
  * | `face(style)` | frozen face record (see {@link createMeasurer}) |
  * | `widthOf(text, style, sizePt)` | advance sum, points |
+ * | `covers(text, style)` | `true` when the style's face draws every character of `text` (embedded: a non-zero glyph; Standard 14: a WinAnsi byte) |
  * | `fallbacks` | style classes that fell back to Standard 14 |
  * | `s14VariantApprox` | Standard 14 bold metrics are the regular table |
  *
@@ -360,10 +361,36 @@ export const oconvPdfMetrics = {
                 return units * sizePt / f.unitsPerEm;
             }
 
+            /**
+             * Whether `style`'s face draws every character of `text` — the
+             * same test the renderer applies at emission: on the embedded
+             * route a glyph other than `.notdef` (glyph 0), on the Standard
+             * 14 route a WinAnsi byte. Lets a renderer leave out a character
+             * it would otherwise draw as `.notdef` / `?`.
+             *
+             * @param {string} text
+             * @param {string} style One of {@link STYLE_CLASSES}.
+             * @returns {boolean}
+             */
+            function covers(text, style) {
+                const f = face(style);
+                for (const ch of String(text)) {
+                    const cp = ch.codePointAt(0);
+                    if (f.source === 'embedded') {
+                        const gid = f.font.glyphIndexForCodePoint(cp);
+                        if (gid === undefined || gid === null || gid === 0) return false;
+                    } else if (winAnsiByte(cp) === null) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
             return Object.freeze({
                 route,
                 face,
                 widthOf,
+                covers,
                 fallbacks: reportedFallbacks,
                 s14VariantApprox
             });

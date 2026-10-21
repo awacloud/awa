@@ -11,6 +11,7 @@ installation, Quick Start and worker usage.
 | Guide | Topic |
 |---|---|
 | [`guide/getting-started.md`](./guide/getting-started.md) | From an empty module to one `toMd`, one `fromMd` and one `convert` call; where to read losses. |
+| [`guide/coverage.md`](./guide/coverage.md) | What the converter is measured against: external validators on what it writes, published PDF → Markdown and text-extraction benchmarks. |
 
 ## Reference pages
 

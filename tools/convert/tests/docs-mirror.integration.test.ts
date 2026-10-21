@@ -65,7 +65,7 @@ describe('docs mirror — population (non-vacuity)', () => {
     test('the extractors see the whole surface', () => {
         expect(functionExports).toEqual(['convert', 'fromMd', 'isCoreError', 'toHtml', 'toMd']);
         expect(constantExports).toEqual(['CONVERT_PAIRS', 'FROM_MD_TARGETS', 'TO_MD_FORMATS']);
-        expect(typeExports.length).toBe(14);
+        expect(typeExports.length).toBe(15);
         expect(cliVerbs).toEqual(['to-md', 'from-md', 'convert', 'to-html']);
         expect(TOOLS.map((t) => t.name)).toEqual(['to_md', 'from_md', 'convert', 'to_html']);
     });

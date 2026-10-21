@@ -47,6 +47,28 @@ describe('compositeResolve', () => {
         expect(p.commands[0]).toEqual({ type: 'M', x: 15, y: 27 });
     });
 
+    test('a component whose point 0 is off-curve starts on its last on-curve point, transformed', () => {
+        const child = {
+            kind: 'simple',
+            endPtsOfContours: [2],
+            points: [
+                { x: 50,  y: 100, onCurve: false },
+                { x: 100, y: 0,   onCurve: true },
+                { x: 0,   y: 0,   onCurve: true },
+            ],
+        };
+        const composite = {
+            kind: 'composite',
+            components: [{ glyphIndex: 0, arg1: 10, arg2: 20, xy: true, transform: { a: 1, b: 0, c: 0, d: 1 } }],
+        };
+        const p = resolveGlyphPath([child, composite], 1);
+        expect(p.commands).toEqual([
+            { type: 'M', x: 10, y: 20 },
+            { type: 'Q', x1: 60, y1: 120, x: 110, y: 20 },
+            { type: 'Z' },
+        ]);
+    });
+
     test('detects cycles', () => {
         const a = { kind: 'composite', components: [{ glyphIndex: 1, xy: true, arg1: 0, arg2: 0 }] };
         const b = { kind: 'composite', components: [{ glyphIndex: 0, xy: true, arg1: 0, arg2: 0 }] };

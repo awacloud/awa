@@ -1,6 +1,6 @@
-# Verifying awa releases
+# Verifying AWA releases
 
-This page tells a third party how to check an awa release using the
+This page tells a third party how to check an AWA release using the
 published repository, the release's assets and standard tools. It says what
 each check proves and, just as important, what it does not prove.
 
@@ -143,7 +143,7 @@ For a release, the `SHA256:` fingerprint on that line must be
 > A file whose only change is the principal still verifies. **Compare the
 > fingerprint, never the principal alone.** These cases are pinned by the
 > key-tool tag-principal integration test,
-> `tools/key-tool/tests/tag-principal.integration.test.ts`, in the awa source
+> `tools/key-tool/tests/tag-principal.integration.test.ts`, in the AWA source
 > repository. `key-tool` carries no distribution entry, so that path is in
 > neither the published packages nor this repository.
 
@@ -328,7 +328,7 @@ Exit codes of both commands:
 > **Limitation — Lane 3 is not yet runnable from the published repository.**
 > `key-tool` is the reference verifier, and it is **not published**: it has
 > no distribution entry. The commands above run only from a checkout of the
-> awa source repository, with Bun (after `bun install`, from the checkout's
+> AWA source repository, with Bun (after `bun install`, from the checkout's
 > root). **There is currently no independently published verifier for the
 > composite signature.** A verifier who holds only the published repository
 > can perform Lanes 1 and 2, and **cannot yet perform Lane 3**.
@@ -434,7 +434,7 @@ signing key's `notAfter`, the old signature read `expired` and a signature of
 the same manifest by a newly issued key read `accepted`.
 
 The owner's command sequence for the re-sign is documented in the key-tool
-package README, `tools/key-tool/README.md`, in the awa source repository.
+package README, `tools/key-tool/README.md`, in the AWA source repository.
 `key-tool` carries no distribution entry, so that path is in neither the
 published packages nor this repository. This page does not reproduce owner commands, and the
 business calendar of the re-sign is out of its scope.

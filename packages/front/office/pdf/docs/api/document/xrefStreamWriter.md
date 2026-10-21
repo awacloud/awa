@@ -103,6 +103,10 @@ const bytes = writeXrefStreamDocument({
 });
 ```
 
+This writer derives no `/ID`: without `opts.id` the file carries none, even at
+version `'2.0'`. The derived `/ID` of [`pdfWriter`](./writer.md#derived-id)
+covers the classical-xref `writeDocument` path only.
+
 ## Errors
 
 | Code | Class | When |

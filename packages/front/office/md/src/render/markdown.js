@@ -86,13 +86,32 @@ export const renderMarkdownMod = {
         function escapeTableCell(s) {
             return s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
         }
+        // Containers are rendered with an explicit stack, never by
+        // recursion: a document nested tens of thousands of levels deep
+        // (the size limits lifted) must not exhaust the call stack.
+        const INLINE_CONTAINERS = new Set([
+            'emph', 'strong', 'strikethrough', 'link', 'image',
+            'subscript', 'superscript', 'highlight'
+        ]);
+        const BLOCK_CONTAINERS = new Set(['document', 'block_quote', 'list']);
+        /** The inline children of `node`, rendered and concatenated. */
         function renderInlines(node, inTable) {
-            let out = '';
-            let child = node.firstChild;
-            while (child) { out += renderInline(child, inTable); child = child.next; }
-            return out;
+            const stack = [{ node, out: '', child: node.firstChild }];
+            for (;;) {
+                const top = stack[stack.length - 1];
+                const child = top.child;
+                if (child) {
+                    top.child = child.next;
+                    if (INLINE_CONTAINERS.has(child.type)) stack.push({ node: child, out: '', child: child.firstChild });
+                    else top.out += renderInlineLeaf(child, inTable);
+                    continue;
+                }
+                stack.pop();
+                if (stack.length === 0) return top.out;
+                stack[stack.length - 1].out += wrapInline(top.node, top.out);
+            }
         }
-        function renderInline(node, inTable) {
+        function renderInlineLeaf(node, inTable) {
             switch (node.type) {
                 case 'text': {
                     return escapeText(node.literal || '');
@@ -108,49 +127,105 @@ export const renderMarkdownMod = {
                     const pad = (lit.startsWith('`') || lit.endsWith('`') || /^\s|\s$/.test(lit)) ? ' ' : '';
                     return fence + pad + lit + pad + fence;
                 }
-                case 'emph':          return '*' + renderInlines(node, inTable) + '*';
-                case 'strong':        return '**' + renderInlines(node, inTable) + '**';
+                case 'html_inline': return node.literal || '';
+                default: return '';
+            }
+        }
+        /** An inline container around its already rendered children. */
+        function wrapInline(node, inner) {
+            switch (node.type) {
+                case 'emph':          return '*' + inner + '*';
+                case 'strong':        return '**' + inner + '**';
                 case 'strikethrough': {
                     // Own `delimiterCount === 1` (parsed `~x~`) keeps one tilde; any other
                     // value, or none (hand-built nodes), emits the canonical `~~`.
                     const run = (Object.prototype.hasOwnProperty.call(node, 'delimiterCount') && node.delimiterCount === 1) ? '~' : '~~';
-                    return run + renderInlines(node, inTable) + run;
+                    return run + inner + run;
                 }
                 case 'link': {
-                    const inner = renderInlines(node, inTable);
                     const url = renderDestination(node.destination);
                     const title = node.title ? ' "' + (node.title || '').replace(/"/g, '\\"') + '"' : '';
                     return '[' + inner + '](' + url + title + ')';
                 }
                 case 'image': {
-                    const inner = renderInlines(node, inTable);
                     const url = renderDestination(node.destination);
                     const title = node.title ? ' "' + (node.title || '').replace(/"/g, '\\"') + '"' : '';
                     return '![' + inner + '](' + url + title + ')';
                 }
-                case 'subscript':   return '~'  + renderInlines(node, inTable) + '~';
-                case 'superscript': return '^'  + renderInlines(node, inTable) + '^';
-                case 'highlight':   return '==' + renderInlines(node, inTable) + '==';
-                case 'html_inline': return node.literal || '';
-                default: return '';
+                case 'subscript':   return '~'  + inner + '~';
+                case 'superscript': return '^'  + inner + '^';
+                default:            return '==' + inner + '==';   // highlight
             }
         }
         function indent(s, prefix) {
             if (!s) return '';
             return s.split('\n').map((l, i) => (i === 0 ? l : (l.length ? prefix + l : prefix.replace(/\s+$/, '')))).join('\n');
         }
-        function renderBlock(node, ctx) {
+        /**
+         * `node` and its descendants as Markdown. A `document`,
+         * `block_quote` or `list` frame collects its children's text in
+         * `parts`; every child of a list is an item frame, whatever its
+         * type, whose children are blocks again.
+         */
+        function renderBlock(node) {
+            if (!BLOCK_CONTAINERS.has(node.type)) return renderLeafBlock(node);
+            const stack = [{ node, item: false, tight: true, parts: [], child: node.firstChild }];
+            for (;;) {
+                const top = stack[stack.length - 1];
+                const child = top.child;
+                if (child) {
+                    top.child = child.next;
+                    if (!top.item && top.node.type === 'list') {
+                        stack.push({ node: child, item: true, tight: top.node.listTight !== false, parts: [], child: child.firstChild });
+                    } else if (BLOCK_CONTAINERS.has(child.type)) {
+                        stack.push({ node: child, item: false, tight: true, parts: [], child: child.firstChild });
+                    } else {
+                        top.parts.push(renderLeafBlock(child));
+                    }
+                    continue;
+                }
+                stack.pop();
+                const out = finishBlock(top);
+                if (stack.length === 0) return out;
+                stack[stack.length - 1].parts.push(out);
+            }
+        }
+        function finishBlock(frame) {
+            const node = frame.node;
+            if (frame.item) return frame.parts.join(frame.tight ? '' : '\n');
             switch (node.type) {
-                case 'document': {
+                case 'document': return frame.parts.join('\n');
+                case 'block_quote': {
+                    // Every inner block ends with a newline: drop that last
+                    // (empty) line rather than emit it as a bare `>`.
+                    return frame.parts.join('\n').replace(/\n$/, '').split('\n')
+                        .map(l => l.length ? '> ' + l : '>').join('\n') + '\n';
+                }
+                default: {   // list
+                    const tight = node.listTight !== false;
                     let out = '';
-                    let child = node.firstChild;
-                    while (child) {
-                        out += renderBlock(child, ctx);
-                        if (child.next) out += '\n';
-                        child = child.next;
+                    let item = node.firstChild;
+                    let idx = 0;
+                    while (item) {
+                        const marker = node.listType === 'ordered'
+                            ? ((node.listStart || 1) + idx) + (node.listDelimiter || '.') + ' '
+                            : (node.listBulletChar || '-') + ' ';
+                        const itemBody = frame.parts[idx];
+                        const prefix = ' '.repeat(marker.length);
+                        let taskPrefix = '';
+                        if (item.checked === true) taskPrefix = '[x] ';
+                        else if (item.checked === false) taskPrefix = '[ ] ';
+                        out += marker + taskPrefix + indent(itemBody, prefix).replace(/\n$/, '') + '\n';
+                        if (!tight && item.next) out += '\n';
+                        idx++;
+                        item = item.next;
                     }
                     return out;
                 }
+            }
+        }
+        function renderLeafBlock(node) {
+            switch (node.type) {
                 case 'heading':  return '#'.repeat(node.level) + ' ' + renderInlines(node, false) + '\n';
                 case 'paragraph':return escapeParagraphLines(renderInlines(node, false)) + '\n';
                 case 'thematic_break': return '---\n';
@@ -167,50 +242,9 @@ export const renderMarkdownMod = {
                     return fence + info + '\n' + literal + (literal ? '\n' : '') + fence + '\n';
                 }
                 case 'html_block': return (node.literal || '') + '\n';
-                case 'block_quote': {
-                    let inner = '';
-                    let child = node.firstChild;
-                    while (child) {
-                        inner += renderBlock(child, ctx);
-                        if (child.next) inner += '\n';
-                        child = child.next;
-                    }
-                    return inner.split('\n').map(l => l.length ? '> ' + l : '>').join('\n').replace(/>\n$/, '\n');
-                }
-                case 'list': {
-                    const tight = node.listTight !== false;
-                    let out = '';
-                    let item = node.firstChild;
-                    let idx = 0;
-                    while (item) {
-                        const marker = node.listType === 'ordered'
-                            ? ((node.listStart || 1) + idx) + (node.listDelimiter || '.') + ' '
-                            : (node.listBulletChar || '-') + ' ';
-                        const itemBody = renderItemContents(item, tight);
-                        const prefix = ' '.repeat(marker.length);
-                        let taskPrefix = '';
-                        if (item.checked === true) taskPrefix = '[x] ';
-                        else if (item.checked === false) taskPrefix = '[ ] ';
-                        out += marker + taskPrefix + indent(itemBody, prefix).replace(/\n$/, '') + '\n';
-                        if (!tight && item.next) out += '\n';
-                        idx++;
-                        item = item.next;
-                    }
-                    return out;
-                }
                 case 'table': return renderTable(node);
                 default: return '';
             }
-        }
-        function renderItemContents(item, tight) {
-            let out = '';
-            let child = item.firstChild;
-            while (child) {
-                out += renderBlock(child, {});
-                if (child.next) out += tight ? '' : '\n';
-                child = child.next;
-            }
-            return out;
         }
         function renderTable(table) {
             const aligns = table.align || [];
@@ -242,15 +276,15 @@ export const renderMarkdownMod = {
             }
             return out;
         }
-        function renderMarkdown(root, opts) {
+        // No render option is read today; the parameter keeps the signature.
+        function renderMarkdown(root, _opts) {
             if (!root || typeof root !== 'object' || !root.type) {
                 const gotType = root === null ? 'null' : (typeof root);
                 throw new RenderError('md/render-invalid-root',
                     'renderMarkdown: invalid AST root (expected document node, got ' + gotType + ')',
                     { context: { gotType } });
             }
-            const ctx = Object.assign({}, opts || {});
-            return renderBlock(root, ctx);
+            return renderBlock(root);
         }
         return { renderMarkdown };
     }

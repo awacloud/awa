@@ -24,7 +24,17 @@ export const tableGposType2 = {
         const { ParseError } = errors;
         const { BinaryReader } = reader;
         const { parseCoverage, parseClassDef } = classDefs;
-        const { readValueRecord } = valueRec;
+        const { readValueRecord, valueRecordSize } = valueRec;
+
+        /**
+         * Above this many cells, a format 2 grid whose records are 0 bytes
+         * long (no X/Y placement, advance or device bit in either value
+         * format) is built from one shared row of one shared cell: such a
+         * record carries no adjustment and reads no byte, so the class
+         * counts alone (up to 65535 × 65535) would otherwise drive billions
+         * of iterations over a few bytes of input.
+         */
+        const ZERO_RECORD_GRID_CELLS = 65536;
 
         function parsePairAdj(bytes) {
             const r = new BinaryReader(bytes);
@@ -66,14 +76,22 @@ export const tableGposType2 = {
                 const classDef2Offset = r.readUint16();
                 const class1Count = r.readUint16();
                 const class2Count = r.readUint16();
-                const grid = new Array(class1Count);
-                for (let i = 0; i < class1Count; i++) {
-                    grid[i] = new Array(class2Count);
-                    for (let j = 0; j < class2Count; j++) {
-                        grid[i][j] = {
-                            value1: readValueRecord(r, valueFormat1),
-                            value2: readValueRecord(r, valueFormat2)
-                        };
+                let grid;
+                if (valueRecordSize(valueFormat1) + valueRecordSize(valueFormat2) === 0
+                    && class1Count * class2Count > ZERO_RECORD_GRID_CELLS) {
+                    const cell = { value1: readValueRecord(r, valueFormat1), value2: readValueRecord(r, valueFormat2) };
+                    const row = new Array(class2Count).fill(cell);
+                    grid = new Array(class1Count).fill(row);
+                } else {
+                    grid = new Array(class1Count);
+                    for (let i = 0; i < class1Count; i++) {
+                        grid[i] = new Array(class2Count);
+                        for (let j = 0; j < class2Count; j++) {
+                            grid[i][j] = {
+                                value1: readValueRecord(r, valueFormat1),
+                                value2: readValueRecord(r, valueFormat2)
+                            };
+                        }
                     }
                 }
                 const cd1 = parseClassDef(new Uint8Array(bytes.buffer, bytes.byteOffset + classDef1Offset, bytes.length - classDef1Offset));

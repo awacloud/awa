@@ -37,14 +37,11 @@
  * `@awacloud/tool-prebuild-generator` flattens it internally (`flattenBundle`
  * below mirrors the generator's private `flatten`).
  *
- * One closure-capture hook, carried over verbatim from the retired
- * `tools/generate-prebuilds.mjs`:
- *
- *   - `fontErrors` (fonts-local): the factory closes over the four
- *     `FontError` / `ParseError` / `RenderError` / `ContractError` classes
- *     declared at module scope (cf. `src/errors.js`). The rewrite
- *     re-declares them inside the serialized factory so the descriptor is
- *     fully self-contained.
+ * No closure-capture hook: `closureCaptures` stays `{}`. The `fontErrors`
+ * rewrite carried over from the retired `tools/generate-prebuilds.mjs` was
+ * dropped (BL-2443): `src/errors.js` declares its classes inside the
+ * factory, so the serialized source is self-contained, and the hand-copied
+ * rewrite had kept a stale `this.name =` body in `dist/` after `src/` moved.
  *
  * Re-run via `bun run gen:bundles`. Output is deterministic: byte-identical
  * across runs — no timestamp (the `builtAt` stamp was dropped, BL-1578).
@@ -100,33 +97,6 @@ const DRIVER = 'packages/front/office/fonts/tools/generate-bundles.mjs';
 // named by DRIVER's package directory — never by PKG, which is a staging path
 // when `pkg-export build` runs this driver.
 const LICENCE_BANNER = officeLicenceBanner(dirname(dirname(DRIVER)));
-
-const fontErrorsRewrite = `function () {
-        class FontError extends Error {
-            constructor(code, message, opts) {
-                super(message);
-                this.name = new.target.name;
-                this.code = code;
-                if (opts && opts.context) this.context = opts.context;
-                if (opts && opts.cause)   this.cause = opts.cause;
-            }
-        }
-        class ParseError    extends FontError {}
-        class RenderError   extends FontError {}
-        class ContractError extends FontError {}
-        function isFontError(e) { return e instanceof FontError; }
-        return {
-            FontError, ParseError, RenderError, ContractError,
-            isFontError
-        };
-    }`;
-
-const closureCaptures = {
-    fontErrors: {
-        kind: 'rewrite',
-        factorySrc: fontErrorsRewrite
-    }
-};
 
 // ── Assembly roots ───────────────────────────────────────────────────────────
 //
@@ -195,7 +165,7 @@ for (const { generatorVariant, dir, metaVariant } of SURFACES) {
         outDir:       tmpDir,
         packageLabel: 'fonts',
         variants:     [generatorVariant],
-        closureCaptures,
+        closureCaptures: {},
         driver:       DRIVER
     });
 

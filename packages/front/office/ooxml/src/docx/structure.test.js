@@ -171,20 +171,23 @@ describe('docxStructure module', () => {
             }
         });
 
-        test('parseTable types w:tblPr; renderTable emits it before the rows', () => {
+        test('parseTable types w:tblPr; renderTable emits it, then the grid, before the rows', () => {
             const t = { type: 'table', tblPr: tblPr(), rows: [{ type: 'row', cells: [cellOf('a')] }] };
             const el = s.renderTable(t);
-            expect(el.children.map(c => c.name)).toEqual(['w:tblPr', 'w:tr']);
+            expect(el.children.map(c => c.name)).toEqual(['w:tblPr', 'w:tblGrid', 'w:tr']);
             const back = s.parseTable(el);
             expect(back.tblPr).toEqual(tblPr());
-            expect(back._extras).toBeUndefined();
+            expect(back._extras.map(e => e.name)).toEqual(['w:tblGrid']);
         });
 
-        test('a table without tblPr has no tblPr key and renders no w:tblPr', () => {
+        test('a table without tblPr has no tblPr key and renders an empty w:tblPr (CT_Tbl requires one)', () => {
             const t = { type: 'table', rows: [{ type: 'row', cells: [cellOf('a')] }] };
             const el = s.renderTable(t);
-            expect(el.children.map(c => c.name)).toEqual(['w:tr']);
-            expect('tblPr' in s.parseTable(el)).toBe(false);
+            expect(el.children.map(c => c.name)).toEqual(['w:tblPr', 'w:tblGrid', 'w:tr']);
+            expect(el.children[0].children).toEqual([]);
+            const back = s.parseTable(el);
+            expect('tblPr' in back).toBe(false);
+            expect(back._extras.map(e => e.name)).toEqual(['w:tblPr', 'w:tblGrid']);
         });
 
         test('tblGrid stays in _extras and renders tblPr, tblGrid, rows in that order', () => {
@@ -197,6 +200,56 @@ describe('docxStructure module', () => {
             expect(t._extras.map(e => e.name)).toEqual(['w:tblGrid']);
             expect(s.renderTable(t).children.map(c => c.name))
                 .toEqual(['w:tblPr', 'w:tblGrid', 'w:tr']);
+        });
+
+        test('a table with no preserved grid is written with one gridCol per grid column (CT_Tbl requires w:tblGrid)', () => {
+            const sized = (t, w) => ({ ...cellOf(t), tcPr: { width: { w, type: 'dxa' } } });
+            const spanned = { ...cellOf('ab'), tcPr: { gridSpan: 2 } };
+            const t = { type: 'table', rows: [
+                { type: 'row', cells: [spanned, cellOf('c')] },
+                { type: 'row', cells: [sized('a', 1000), sized('b', '2000'), sized('c', 3000)] },
+                { type: 'row', cells: [cellOf('x')] }
+            ] };
+            const grid = s.renderTable(t).children[1];
+            expect(grid.name).toBe('w:tblGrid');
+            expect(grid.children.map(c => [c.name, c.attrs['w:w']])).toEqual([
+                ['w:gridCol', '1000'], ['w:gridCol', '2000'], ['w:gridCol', '3000']
+            ]);
+        });
+
+        test('widths are left out unless a span-free row as wide as the grid gives every one in dxa', () => {
+            const pct = { ...cellOf('a'), tcPr: { width: { w: 2500, type: 'pct' } } };
+            const t = { type: 'table', rows: [
+                { type: 'row', cells: [pct, cellOf('b')] },
+                { type: 'row', cells: [{ ...cellOf('c'), tcPr: { width: { w: 900, type: 'dxa' } } }] }
+            ] };
+            const grid = s.renderTable(t).children[1];
+            expect(grid.children.map(c => [c.name, c.attrs['w:w']])).toEqual([['w:gridCol', undefined], ['w:gridCol', undefined]]);
+            const empty = s.renderTable({ type: 'table', rows: [] });
+            expect(empty.children.map(c => c.name)).toEqual(['w:tblPr', 'w:tblGrid']);
+            expect(empty.children[1].children).toEqual([]);
+        });
+
+        test('a preserved grid is written once; a nested table gets its own; write, read, write is stable', () => {
+            const el = xml.parse(
+                '<w:tbl xmlns:w="x"><w:tblGrid><w:gridCol w:w="100"/></w:tblGrid>'
+                + '<w:tr><w:tc><w:p/></w:tc><w:tc><w:p/></w:tc></w:tr></w:tbl>');
+            const kept = s.renderTable(s.parseTable(el));
+            expect(kept.children.map(c => c.name)).toEqual(['w:tblPr', 'w:tblGrid', 'w:tr']);
+            expect(kept.children[1].children.map(c => c.attrs['w:w'])).toEqual(['100']);
+
+            // A preserved childless tblPr still comes first, before a derived grid.
+            const bare = s.parseTable(xml.parse('<w:tbl xmlns:w="x"><w:tblPr/><w:tr><w:tc><w:p/></w:tc></w:tr></w:tbl>'));
+            expect(bare._extras.map(e => e.name)).toEqual(['w:tblPr']);
+            expect(s.renderTable(bare).children.map(c => c.name)).toEqual(['w:tblPr', 'w:tblGrid', 'w:tr']);
+
+            const inner = { type: 'table', rows: [{ type: 'row', cells: [cellOf('i'), cellOf('j')] }] };
+            const outer = { type: 'table', rows: [{ type: 'row', cells: [{ type: 'cell', children: [inner] }] }] };
+            const once = s.renderTable(outer);
+            const innerEl = once.children[2].children[0].children[0];
+            expect(innerEl.name).toBe('w:tbl');
+            expect(innerEl.children[1].children).toHaveLength(2);
+            expect(xml.serialize(s.renderTable(s.parseTable(once)))).toBe(xml.serialize(once));
         });
 
         test('tblPr children beyond style/width/borders survive in tblPr._extras', () => {
@@ -355,11 +408,11 @@ describe('docx facade - table tblPr round trip (BL-1766)', () => {
         expect(x).toContain('<w:tblStyle w:val="TableGrid"/>');
     });
 
-    test('a table WITHOUT tblPr writes no w:tblPr and reads back without the key', () => {
+    test('a table WITHOUT tblPr writes an empty w:tblPr and its grid, and reads back without the key', () => {
         const bytes = d.write({ type: 'document', body: [
             { type: 'table', rows: [{ type: 'row', cells: [cell('a')] }] }
         ] });
-        expect(documentXml(bytes)).not.toContain('w:tblPr');
+        expect(documentXml(bytes)).toContain('<w:tbl><w:tblPr/><w:tblGrid><w:gridCol/></w:tblGrid><w:tr>');
         expect('tblPr' in d.read(bytes).document.body[0]).toBe(false);
     });
 });

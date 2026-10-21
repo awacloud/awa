@@ -63,7 +63,7 @@ export const fontWoff2 = {
     dependencies: ['fontErrors', 'fontsShared', 'fontReader', 'fontTag', 'brotli'],
     deps: [fontErrors, fontsShared, fontReader, fontTag, brotli],
     factory(errors, shared, readerMod, tagMod, brotliMod) {
-        const { ParseError, ContractError } = errors;
+        const { FontError, ParseError, ContractError } = errors;
         const { WOFF2_MAGIC } = shared;
         const { BinaryReader } = readerMod;
         const { untag } = tagMod;
@@ -161,7 +161,22 @@ export const fontWoff2 = {
                     `compressed body extends past file (start=${compStart}, len=${hdr.totalCompressedSize}, total=${bytes.length})`,
                     { context: { compStart, compLength: hdr.totalCompressedSize, total: bytes.length } });
             const compressed = new Uint8Array(bytes.buffer, bytes.byteOffset + compStart, hdr.totalCompressedSize);
-            const body = b.brotliDecompressSync(compressed);
+            let body;
+            try {
+                body = b.brotliDecompressSync(compressed);
+            } catch (e) {
+                // An injected decoder may throw typed errors itself; the fw
+                // decoder throws plain Errors with a `code`.
+                if (e instanceof FontError) throw e;
+                if (e && e.code === 'ENEEDDICT')
+                    throw new ContractError('fonts/woff2-no-dictionary',
+                        'WOFF2 body uses the Brotli static dictionary, which is not loaded: ' +
+                        'call brotliDictWords.setBlob(bytes) or await brotliDictWords.load(url) first',
+                        { context: {}, cause: e });
+                throw new ParseError('fonts/woff2-bad-brotli',
+                    `WOFF2 body does not decompress: ${e && e.message}`,
+                    { context: { compStart, compLength: hdr.totalCompressedSize }, cause: e });
+            }
             let cursor = 0;
             const tables = {};
             for (const entry of hdr.directory) {

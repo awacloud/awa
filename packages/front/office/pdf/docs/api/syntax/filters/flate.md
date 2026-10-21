@@ -34,18 +34,47 @@ which produces and consumes exactly that format.
 
 ```js
 const flate = runtime.resolve('pdfFlate');
-// Returns: { decode, encode }
+// Returns: { decode, encode, limits }
 ```
 
 ## API
 
-| Method | Signature | Returns |
+| Member | Signature | Returns |
 |--------|-----------|---------|
-| `decode` | `(bytes: Uint8Array, params?: object) => Uint8Array` | Inflated payload, un-predicted when `params` requests it; the decoded prefix, flagged `truncated`, for a stream that ends before its final block. |
+| `decode` | `(bytes: Uint8Array, params?: object, opts?: { maxOutput?: number }) => Uint8Array` | Inflated payload, un-predicted when `params` requests it; the decoded prefix, flagged `truncated`, for a stream that ends before its final block. Throws `pdf/flate/output-limit` past `opts.maxOutput` (see [Output ceiling](#output-ceiling)). |
 | `encode` | `(bytes: Uint8Array, params?: object) => Uint8Array` | Predicted (when requested) then zlib-deflated payload. |
+| `limits` | `{ maxOutput: 268435456 }` (frozen) | The default ceilings. |
 
 `params` is optional: omit it, or leave `Predictor` at `1`, and the byte stream
 is passed through the raw zlib codec untouched.
+
+## Output ceiling
+
+A few hundred KiB of deflate data can inflate to hundreds of MiB (DEFLATE
+expands up to 1032:1). `decode` therefore stops at `opts.maxOutput` bytes of
+inflated output per stream — **256 MiB by default**, the same figure as the
+ooxml and odf `maxUncompressed` package limit — and throws
+`pdf/flate/output-limit` with `context: { limit: 'maxOutput', max, length }`
+(`length` is the compressed input size). `maxOutput: 0` disables the ceiling.
+
+- An input of at most `maxOutput / 2048` bytes cannot reach the ceiling and is
+  inflated in one call. A longer one is fed to fw's streaming decoder 16 KiB at
+  a time and abandoned as soon as the output passes the ceiling, so memory
+  stays near `maxOutput` instead of growing with the bomb.
+- The ceiling applies to the truncated-stream recovery too: a truncated bomb
+  throws `pdf/flate/output-limit` rather than returning a prefix.
+- `pdfFilterDispatch` calls `decode(bytes, params)`, so streams read through a
+  document get the default. To raise it, register a wrapper under the filter
+  name:
+
+```js
+const dispatch = runtime.resolve('pdfFilterDispatch');
+const flate = runtime.resolve('pdfFlate');
+dispatch.register('FlateDecode', {
+    decode: (bytes, params) => flate.decode(bytes, params, { maxOutput: 1024 * 1024 * 1024 }),
+    encode: flate.encode,
+});
+```
 
 ## Truncated streams
 
@@ -120,6 +149,7 @@ const out = dispatch.decode(streamObj);  // resolves /Filter and /DecodeParms
 | `pdf/flate/missing-fw` | `ParseError` | Factory invoked without the `@awacloud/fw` zlib module (no `zlibSync`/`unzlibSync`). |
 | `pdf/flate/bad-input` | `ParseError` | Argument is not a `Uint8Array`. |
 | `pdf/flate/inflate-failed` | `ParseError` | `unzlibSync` threw — corrupt or non-zlib payload, or a truncated stream from which nothing could be decoded (see [Truncated streams](#truncated-streams)). `cause` is the original error. |
+| `pdf/flate/output-limit` | `ParseError` | The inflated output passed `opts.maxOutput` (default 256 MiB) — see [Output ceiling](#output-ceiling). No `cause`. |
 | `pdf/flate/deflate-failed` | `ParseError` | `zlibSync` threw. |
 | `pdf/flate/bad-predictor` | `ParseError` | `Predictor` outside `{1, 2, 10..15}`. |
 | `pdf/flate/bad-predictor-params` | `ParseError` | `Columns`, `Colors` or `BitsPerComponent` ≤ 0. |

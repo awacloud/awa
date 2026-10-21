@@ -58,6 +58,7 @@ decodeShow(decoder, new Uint8Array([0x41, 0x42]));
 ## Notes
 
 - Decode priority: `/ToUnicode` first; when absent (or it has no entry for a code), the `/Encoding` table + `encodingAgl.glyphNameToUnicode` hop is tried for simple (non-`Type0`) fonts only.
+- A simple font's `/Encoding` is resolved before it is read: the entry itself may be an indirect reference (pdfLaTeX writes `/Encoding n 0 R` on every Type 1 font), and so may the `/Differences` and `/BaseEncoding` inside an encoding dictionary. Such a font decodes like one with a direct `/Encoding`; it is not recorded as `text/font-unresolved`.
 - Standard CMap: a `Type0` font whose `/Encoding` names a `Uni{GB,CNS,JIS,KS}-{UCS2,UTF16}[-HW]-{H,V}` predefined CMap (ISO 32000-2 §9.7.5.2) decodes a code without a ToUnicode entry as the UTF-16 code unit it is; a surrogate half is counted undecodable. `Identity-H`/`Identity-V` (codes are CIDs, not Unicode) and the legacy RKSJ/EUC/… CMaps (tables not bundled) decode nothing here — a composite font in that position with no ToUnicode stays an honest `text/undecodable` loss (CID→GID→Unicode font-program walking is out of tier-1 scope).
 - A code neither path resolves is counted **undecodable** and omitted from the text — never silently kept as a wrong glyph, never dropped without a count (`decodeShow`'s own return shape).
 - Glyph widths (`width`), by font kind:

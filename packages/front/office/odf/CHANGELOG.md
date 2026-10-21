@@ -4,6 +4,93 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-21
+
+### Added
+
+- **Frames at their place in the text** — `odt.read(bytes, { framesInRuns:
+  true })`. A `<draw:frame>` of a paragraph, heading, span or link body (a
+  picture anchored as a character between two words, say) becomes a
+  `{ type: 'frame', ...drawFrame model }` run at its position instead of
+  staying in the paragraph's `_extras.children`, where its place in the line
+  was lost and a read → write moved it after the text. `write` renders a
+  frame run in place; `toText` reads it as it reads the raw frame. The
+  paragraph `ctx` gains the optional `parseFrame` / `renderFrame` members.
+  The default read model is unchanged.
+
+### Fixed
+
+- **Byte-reproducible packages.** `pkgPackage.write` passed no
+  date to the ZIP writer, so every entry carried the write time and two
+  writes of the same document differed. Entries are now stamped
+  1980-01-01 00:00:00 (the MS-DOS epoch, as the OPC writer of
+  `@awacloud/ooxml` does), or `opts.mtime` (`number | Date`) when given;
+  `odt.write`, `ods.write` and `odp.write` pass their `opts.mtime` through.
+  A date the ZIP writer refuses (outside 1980-2099) throws `RenderError`
+  `odf/render-error/pkg` with the ZIP error as `cause`, as does any other
+  ZIP writer refusal (previously an untyped `Error`).
+- **Hidden table columns and rows.** `table:visibility` (`collapse`,
+  `filter`, `visible`) on `<table:table-column>` and `<table:table-row>` was
+  dropped on read — a hidden ODS column or row came back visible after a
+  read → write, and a consumer could not leave it out. Columns and rows now
+  carry `visibility` and write it back.
+- **Unknown frame child kind.** `drawFrame.renderFrame` returned a `null`
+  child for an unknown `child.kind`, which failed later in serialization
+  with an untyped `TypeError`; it now throws `ContractError`
+  `odf/contract-error/frame` (`context.kind`). `drawFrame` depends on
+  `odfErrors` (appended last); a factory wired by hand with the 1.0.0
+  two-argument call `drawFrame.factory(xml, image)` keeps working and keeps
+  the 1.0.0 `null` child for an unknown kind. Committed `dist/**` bundles
+  regenerated.
+- **Typed errors survive a frozen `Error.prototype`.** `OdfError` defined
+  `name` by assignment, which throws a `TypeError` once `@awacloud/fw`'s
+  `applyBase()` has frozen `Error.prototype`, so the typed error (code,
+  context) was lost. `name` is
+  now an own property set with `Object.defineProperty` (same shape:
+  writable, enumerable, configurable).
+- **No empty `<office:settings>`.** `odfSettings.serialize` wrote an empty
+  `<office:settings/>` for a model with no item set — every file the
+  writers produced by default — which the ODF schema refuses (the element
+  is optional, and holds one `config:config-item-set` or more when
+  present). `settings.xml` now has no `office:settings` child in that case;
+  a model with an item set or a kept child is written as before, and the
+  read model is unchanged (`{ itemSets: [] }`). Committed `dist/**` bundles
+  regenerated.
+- **Custom-shape geometry after the text.** `drawShape.renderShape` and the
+  `drawShapes` extra wrote `<draw:enhanced-geometry>` as the first child of
+  a `<draw:custom-shape>`; the schema puts it last, after the shape's text
+  (`text:p`, `text:list`), so every custom shape with text was refused. The
+  other children keep their read order, the geometry now comes last; the
+  read model is unchanged. Committed `dist/**` bundles regenerated (the
+  `-large` and `-full` roots, which carry the extra).
+- **Tables written with their columns.** `tableTable.renderTable` wrote no
+  `<table:table-column>` for a model with `columns: []` — the shape
+  `ods.sheet`, `ods.fromArrays` and `ods.empty` build — and the schema
+  requires a column before the rows. Such a table is now written with one
+  column repeated to the widest row (`table:number-columns-repeated`, left
+  out for a width of 1); a model with columns is written as before. Reading
+  a file written that way now shows that column (`columns: [{ repeated: N
+  }]`) where the model passed to `write` had none. Committed `dist/**`
+  bundles regenerated.
+- **Tracked-change regions carry `xml:id`.** `textTracked` and the
+  `textTrackedChanges` extra wrote `<text:changed-region>` with `text:id`
+  only. Since ODF 1.2 the region's ID is `xml:id` (required), which the
+  `text:change-id` of the change markers refers to: written tracked changes
+  were refused. A region with an id is now written with `xml:id` and
+  `text:id`, same value; the read model is unchanged. Committed `dist/**`
+  bundles regenerated (the roots carrying the extra).
+- **Every presentation page has a master page.** `odp.write` wrote a
+  `<draw:page>` without `draw:master-page-name` for a slide with no
+  `masterPageName` — `odp.empty()` and `odp.slide(name)` build such
+  slides — and never wrote a master page itself; the schema requires the
+  attribute, and a master page requires a page layout. Such a slide is now
+  written with `Default`, and when the styles written hold no master page
+  of that name, `styles.xml` gains one with a 28 × 15.75 cm landscape page
+  layout (`PM1`, or the first free `PM<n>`). A deck whose slides all name
+  a master page is written as before; the models passed in are not
+  modified. Reading such a file back shows `masterPageName: 'Default'` and
+  the two added styles. Committed `dist/**` bundles regenerated.
+
 ## [1.0.0] - 2026-10-07
 
 ### Added

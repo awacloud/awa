@@ -19,7 +19,7 @@ Model:
 {
   type: 'table',
   name?, styleName?,
-  columns: [ { styleName?, defaultCellStyleName?, repeated? } ],
+  columns: [ { styleName?, defaultCellStyleName?, repeated?, visibility? } ],
   headerRows?: integer,       // header rows count (top-N rows)
   rows: [ ...rowModel ],
   _extras?
@@ -40,10 +40,13 @@ The first `headerRows` rows of `rows` are rendered inside a
 | Method | Description |
 |---------|-------------|
 | `parseTable(el)` | Converts `<table:table>`. |
-| `renderTable(t)` | Builds the node. |
+| `renderTable(t)` | Builds the node. A model with no `columns` entry is written with one `<table:table-column>` repeated to the widest row (cells counted with `repeated`, a `colSpan` past the last cell included; no repeat attribute for a width of 1): the schema requires a column before the rows. The model passed in is not modified; reading the file back shows that column (`columns: [{ repeated: N }]`, no `repeated` for a width of 1). |
 
 ## Notes
 
+- `visibility` is `table:visibility` (`visible` | `collapse` | `filter`) of a
+  column, kept as written and absent when the attribute is; `renderTable`
+  writes it back. Rows carry the same field (see [`tableRow`](./row.md)).
 - `parseColumn` reads `table:number-columns-repeated` with no bound at
   all and keeps it raw in `columns[i].repeated`; nothing in
   `@awacloud/odf` expands repetitions, so the attribute is inert until a

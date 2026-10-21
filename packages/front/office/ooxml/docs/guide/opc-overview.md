@@ -25,7 +25,7 @@ mydoc.docx                       (ZIP container)
 ## Three roles
 
 1. **The ZIP container** (RFC ZIP, ISO/IEC 21320-1).
-   `@awacloud/ooxml` relies on [`@awacloud/fw/io/compress/zip.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.0.0/packages/front/fw/src/io/compress/zip.js)
+   `@awacloud/ooxml` relies on [`@awacloud/fw/io/compress/zip.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/src/io/compress/zip.js)
    (DEFLATE + ZIP64), zero external dependency.
 
 2. **`[Content_Types].xml`** declares the **MIME type** of each part:

@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 import { describe, test, expect } from 'bun:test';
-import { mdMath, splitMath, createMd } from '../../tests/_helpers/build.js';
+import { mdMath, mdSubsuper, mdHighlight, splitMath, expandMathInAst, createMd, walk } from '../../tests/_helpers/build.js';
 
 describe('mdMath', () => {
     test('inline math wraps in span.math.inline', () => {
@@ -81,5 +81,61 @@ describe('mdMath — trusted nodes under the safe default', () => {
         expect(html).toContain('<span class="math inline">a&lt;b</span>');
         expect(html).not.toContain('<img');
         expect(m.renderHtml(src, { safe: false })).toContain('<img src=x onerror');
+    });
+});
+
+describe('mdMath — a math span takes precedence over inline markup (like a code span)', () => {
+    const mathOf = (m, src) => {
+        const out = [];
+        for (const { node, entering } of walk(m.parse(src))) {
+            if (entering && (node.type === 'math_inline' || node.type === 'math_block')) out.push([node.type, node.literal]);
+        }
+        return out;
+    };
+    const types = (m, src) => {
+        const out = [];
+        for (const { node, entering } of walk(m.parse(src))) if (entering) out.push(node.type);
+        return out;
+    };
+
+    test('a tilde pair inside inline math is not strikethrough, whatever the install order', () => {
+        for (const m of [createMd().use(mdMath), createMd().use(mdSubsuper, mdMath), createMd().use(mdMath, mdSubsuper, mdHighlight)]) {
+            expect(mathOf(m, 'Water: $H~2~O$.\n')).toEqual([['math_inline', 'H~2~O']]);
+            expect(types(m, 'Water: $H~2~O$.\n')).not.toContain('strikethrough');
+            expect(types(m, 'Water: $H~2~O$.\n')).not.toContain('subscript');
+        }
+        expect(createMd().use(mdMath).renderHtml('$H~2~O$\n')).toBe('<p><span class="math inline">H~2~O</span></p>\n');
+    });
+
+    test('emphasis, links and display math spans are claimed too', () => {
+        const m = createMd().use(mdMath);
+        expect(mathOf(m, '$a*b*c$ and $[x](y)$ and $$x_1 + y_2$$\n'))
+            .toEqual([['math_inline', 'a*b*c'], ['math_inline', '[x](y)'], ['math_block', 'x_1 + y_2']]);
+        expect(types(m, '$a*b*c$ and $[x](y)$\n')).not.toContain('emph');
+        expect(types(m, '$a*b*c$ and $[x](y)$\n')).not.toContain('link');
+    });
+
+    test('a code span opened before the dollar still wins; non-math dollars keep one text node', () => {
+        const m = createMd().use(mdMath);
+        expect(mathOf(m, '`a $b` c$\n')).toEqual([]);
+        expect(types(m, 'Cost $5 today\n')).toEqual(['document', 'paragraph', 'text']);
+    });
+
+    test('escaped dollars stay literal; an escaped dollar inside a span is kept verbatim', () => {
+        const m = createMd().use(mdMath);
+        expect(m.renderHtml('Cost \\$5 and \\$10\n')).toBe('<p>Cost $5 and $10</p>\n');
+        expect(mathOf(m, '$a\\$b$\n')).toEqual([['math_inline', 'a\\$b']]);
+    });
+
+    test('expandMathInAst on an AST parsed without the claim still splits text', () => {
+        const ast = createMd().parse('Water: $H_2O$.\n');
+        expandMathInAst(ast);
+        const lits = [];
+        for (const { node, entering } of walk(ast)) if (entering && node.type === 'math_inline') lits.push(node.literal);
+        expect(lits).toEqual(['H_2O']);
+    });
+
+    test('without mdMath the core parse is unchanged', () => {
+        expect(types(createMd(), '$H~2~O$\n')).toContain('strikethrough');
     });
 });

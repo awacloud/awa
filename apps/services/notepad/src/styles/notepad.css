@@ -1,0 +1,236 @@
+/*
+ * Copyright (c) 2026 AwaCloud SAS
+ * Author: Matthieu Bouilloux
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Dual-licensed; see the NOTICE file for licensing and any additional terms.
+ */
+
+/* apps/services/notepad/src/styles/notepad.css — the notepad component
+ * sheet. Painted with the awaforge tokens only (tokens.css, linked first,
+ * or the host site's own awaforge layer). Every rule is scoped under
+ * `.awn`, so the sheet can be linked into any page without touching the
+ * host's styles. */
+
+/* ── 1. Aliases ────────────────────────────────────────────────────────────── */
+.awn {
+    --awn-bg: var(--af-bg);
+    --awn-fg: var(--af-fg);
+    --awn-muted: var(--af-muted);
+    --awn-accent: var(--af-accent);
+    --awn-surface: var(--af-surface);
+    --awn-rule: var(--af-rule);
+    --awn-border: var(--af-muted);            /* control boundary, >= 3:1 (WCAG 1.4.11) */
+    --awn-shadow: var(--af-shadow);
+    --awn-btn-bg: var(--af-hero-cta-bg);
+    --awn-btn-fg: var(--af-hero-cta-fg);
+    --awn-focus: var(--af-accent);
+    --awn-radius: var(--fw-radius-md);
+    --awn-target: 2.25rem;                    /* 36 px controls; 44 px under coarse pointers */
+    --awn-zoom: 1;                            /* text size, set by the controller */
+}
+@media (pointer: coarse) {
+    .awn { --awn-target: 2.75rem; }
+}
+
+/* ── 2. Frame ──────────────────────────────────────────────────────────────── */
+.awn {
+    /* A column: the bars take their height (hidden ones none), the text the rest. */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 16rem;
+    color: var(--awn-fg);
+    background: var(--awn-bg);
+    font: 400 var(--af-step-0)/1.5 var(--af-sans);
+    position: relative;
+}
+.awn *, .awn *::before, .awn *::after { box-sizing: border-box; }
+.awn[data-dragover="true"]::after {
+    content: "";
+    position: absolute;
+    inset: var(--fw-space-2);
+    border: 2px dashed var(--awn-accent);
+    border-radius: var(--fw-radius-lg);
+    pointer-events: none;
+}
+.awn :focus-visible { outline: 2px solid var(--awn-focus); outline-offset: 2px; }
+.awn-visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* ── 3. Controls ───────────────────────────────────────────────────────────── */
+.awn-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fw-space-2) var(--fw-space-4);
+    padding: var(--fw-space-1) var(--fw-space-3);
+    background: var(--awn-surface);
+    border-bottom: 1px solid var(--awn-rule);
+}
+.awn-group { display: flex; align-items: center; gap: var(--fw-space-1); }
+.awn-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--fw-space-2);
+    min-width: var(--awn-target);
+    min-height: var(--awn-target);
+    padding: 0 var(--fw-space-3);
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--awn-radius);
+    cursor: pointer;
+}
+.awn-btn--icon { padding: 0; }
+.awn-btn--text { border-color: var(--awn-border); }
+.awn-btn:hover { border-color: var(--awn-border); }
+.awn-btn[aria-pressed="true"] { color: var(--awn-btn-fg); background: var(--awn-btn-bg); }
+.awn-btn--primary { font-weight: 600; color: var(--awn-btn-fg); background: var(--awn-btn-bg); }
+.awn-icon {
+    width: 1.25rem; height: 1.25rem;
+    fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+}
+.awn-field {
+    min-height: var(--awn-target);
+    padding: 0 var(--fw-space-2);
+    font: inherit;
+    color: var(--awn-fg);
+    background: var(--awn-bg);
+    border: 1px solid var(--awn-border);
+    border-radius: var(--awn-radius);
+}
+/* The document's name: plainly visible, and a button that renames it in place. */
+.awn-name {
+    display: flex;
+    align-items: center;
+    gap: var(--fw-space-1);
+    min-width: 0;
+    min-height: var(--awn-target);
+    margin-inline-start: auto;
+    padding: 0 var(--fw-space-2);
+    overflow: hidden;
+    color: var(--awn-fg);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--fw-radius-md);
+    font-family: var(--af-mono);
+    font-size: var(--af-step-0);
+    white-space: nowrap;
+    cursor: text;
+}
+.awn-name:hover { border-color: var(--awn-rule); }
+.awn-name-text { overflow: hidden; text-overflow: ellipsis; }
+.awn-name-field {
+    margin-inline-start: auto;
+    width: min(22rem, 100%);
+    font-family: var(--af-mono);
+}
+.awn-dirty { color: var(--awn-accent); }
+
+/* ── 4. Find / Go to bars ──────────────────────────────────────────────────── */
+.awn-panel {
+    display: grid;
+    gap: var(--fw-space-1);
+    padding: var(--fw-space-2) var(--fw-space-3);
+    background: var(--awn-surface);
+    border-bottom: 1px solid var(--awn-rule);
+}
+.awn-panel-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--fw-space-2); }
+.awn-panel-row > label:first-child { min-width: 7rem; }
+.awn-panel-row > .awn-field { flex: 0 1 20rem; min-width: 8rem; }
+.awn-panel-row > .awn-line { flex: 0 0 6rem; min-width: 0; }
+.awn-check-wrap { display: inline-flex; align-items: center; gap: var(--fw-space-1); }
+.awn-panel-msg { margin: 0; min-height: 1.5em; color: var(--awn-muted); font-size: var(--af-step--1); }
+.awn-panel-msg:empty { display: none; }
+
+/* ── 5. Text ───────────────────────────────────────────────────────────────── */
+.awn-text {
+    display: block;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: var(--fw-space-3) var(--fw-space-4);
+    resize: none;
+    color: var(--awn-fg);
+    background: var(--awn-bg);
+    border: 0;
+    border-radius: 0;
+    font: 400 calc(0.9375rem * var(--awn-zoom))/1.5 var(--af-mono);
+    tab-size: 4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.awn[data-wrap="false"] .awn-text { white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+/* Find's matches (ui/highlight.js): translucent boxes in a layer over the
+   text that ignores the pointer, so the textarea stays native underneath. */
+.awn-marks { position: absolute; overflow: hidden; pointer-events: none; }
+.awn-marks-plane { position: absolute; inset: 0 auto auto 0; }
+.awn-mark {
+    position: absolute;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--awn-accent) 30%, transparent);
+}
+.awn-mark--current {
+    background: color-mix(in srgb, var(--awn-accent) 55%, transparent);
+    outline: 2px solid var(--awn-accent);
+}
+@media (forced-colors: active) {
+    .awn-mark { background: none; outline: 1px solid Highlight; }
+    .awn-mark--current { outline: 2px solid Highlight; }
+}
+.awn-text:focus-visible { outline-offset: -2px; }
+
+/* ── 6. Status bar ─────────────────────────────────────────────────────────── */
+.awn-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--fw-space-4);
+    padding: 0 var(--fw-space-3);
+    color: var(--awn-muted);
+    background: var(--awn-surface);
+    border-top: 1px solid var(--awn-rule);
+    font-size: var(--af-step--1);
+    font-variant-numeric: tabular-nums;
+}
+.awn-status-item { display: inline-flex; align-items: center; min-height: 1.75rem; white-space: nowrap; }
+.awn-status-end { margin-inline-start: auto; }
+/* A notice: an opening's progress (with Cancel), a note about the document. */
+.awn-status-notice { gap: var(--fw-space-2); color: var(--awn-fg); font-weight: 600; }
+.awn-status-action { min-height: 1.5rem; }
+.awn-status-select { min-height: 1.75rem; padding: 0 var(--fw-space-1); font-size: inherit; border-color: transparent; background: transparent; color: inherit; }
+.awn-status-select:hover { border-color: var(--awn-border); }
+.awn-status-select option { color: var(--awn-fg); background: var(--awn-bg); }
+
+/* ── 7. Question box ───────────────────────────────────────────────────────── */
+.awn-dialog {
+    max-width: min(32rem, calc(100% - 2rem));
+    padding: var(--fw-space-4) var(--fw-space-6);
+    color: var(--awn-fg);
+    background: var(--awn-surface);
+    border: 1px solid var(--awn-rule);
+    border-radius: var(--fw-radius-lg);
+    box-shadow: 0 8px 32px var(--awn-shadow);
+}
+.awn-dialog::backdrop { background: var(--awn-shadow); }
+.awn-dialog-title { margin: 0 0 var(--fw-space-2); font-size: var(--af-step-1); }
+.awn-dialog-msg { margin: 0 0 var(--fw-space-4); }
+.awn-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--fw-space-2); }
+
+@media (max-width: 40rem) {
+    .awn-bar { gap: var(--fw-space-1) var(--fw-space-2); padding-inline: var(--fw-space-2); }
+    .awn-name, .awn-name-field { flex-basis: 100%; margin-inline-start: 0; }
+    .awn-panel-row > label:first-child { min-width: 0; flex-basis: 100%; }
+}
+
+/* ── 8. Last: [hidden] beats every component `display` ─────────────────────── */
+.awn [hidden], .awn[hidden] { display: none !important; }

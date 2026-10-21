@@ -13,32 +13,38 @@
  * `fromMd` gained an `assets` input: `{ '<markdown image destination>':
  * Uint8Array }`, keyed EXACTLY as the markdown wrote it. This renderer
  * resolves an IR `image` node against it (falling back to the bytes a
- * `docx → IR` read carried in `escapes.docx.bytes`) and takes one of two
+ * reader carried in `escapes.docx.bytes` / `escapes.odt.bytes`) and takes one of two
  * paths:
  *
  * | Case | Result |
  * |---|---|
- * | JPEG bytes resolve | **PLACED** — `ctx.builder.addImage(...)` then a `q … cm /Im<n> Do Q` item. NO loss |
+ * | JPEG or PNG bytes resolve (see below) | **PLACED** — `ctx.builder.addImage(...)` then a `q … cm /Im<n> Do Q` item. NO loss |
  * | nothing resolved | italic `[image: …]` placeholder + `layout/image-dropped`, `reason: 'no-bytes'` |
- * | bytes resolve, encoding not placeable | italic placeholder + `layout/image-dropped`, `reason: 'unsupported-encoding'` (plus `format` when the header reader could name it) |
+ * | bytes resolve, encoding not placeable | italic placeholder + `layout/image-dropped`, `reason: 'unsupported-encoding'`, plus `format` when it can be named: `png` for a refused PNG, a known signature (`jpeg` — a CMYK JPEG —, `gif`, `webp`, `bmp`, `tiff`), else the subtype of the content type a reader carried with the bytes (`image/x` → `x`) |
  *
  * The placeholder path is the ORIGINAL v1 behaviour, unchanged: nothing is
  * ever silently dropped, and long alt text still wraps through
  * `ctx.flowChildren` in the `italic` style class.
  *
- * ## Why JPEG places and PNG does not (a measured boundary, not an omission)
+ * ## How JPEG and PNG place
  *
  * `pdfBuilder.addImage` decodes nothing — the bytes go into the XObject
- * stream verbatim behind the `/Filter` the caller names. JPEG entropy-coded
- * data IS a PDF image stream (`/DCTDecode`), so those bytes embed directly.
- * A PNG's `IDAT` is a zlib stream of *filtered scanlines*, which is NOT a
- * `/FlateDecode` image stream: embedding the file bytes would render
- * garbage, and doing it properly needs a zlib-to-Flate re-wrap (plus an
- * `/SMask` for the alpha colour types, and an `/Indexed` palette for colour
- * type 3). None of that is built here, so PNG is REFUSED with an honest
- * loss rather than guessed at — the "a pair whose fidelity cannot be
- * honestly stated is not shipped" rule applied at the format level. PNG
- * placement is not supported.
+ * stream verbatim behind the `/Filter` (and typed `/DecodeParms`) the
+ * caller names. JPEG entropy-coded data IS a PDF image stream
+ * (`/DCTDecode`), so those bytes embed directly. A PNG's `IDAT` is a zlib
+ * stream of *filtered scanlines* — exactly what `/FlateDecode` with a PNG
+ * `/Predictor 15` reads — so a non-interlaced colour type 0 or 2 PNG
+ * without `tRNS` embeds its concatenated `IDAT` verbatim behind
+ * `/DecodeParms << /Predictor 15 /Colors 1|3 /BitsPerComponent d /Columns
+ * w >>`, no inflate. A palette (type 3), alpha (types 4, 6) or colour-key
+ * (`tRNS`) PNG needs `ctx.zlib` (fw `zlib`, handed over by the facade): its
+ * stream is inflated into a buffer sized from `IHDR` — a larger stream
+ * fails, the decompression bound — unfiltered (None / Sub / Up / Average /
+ * Paeth), split into its colour samples (a palette expanded to 8-bit RGB)
+ * and a DeviceGray `/SMask` (omitted when every pixel is opaque), both
+ * re-deflated. Refused, naming `png`: an interlaced or malformed PNG, one
+ * whose filtered data would exceed 64 MiB, and a palette / alpha / colour
+ * key PNG when `ctx.zlib` is absent (a hand-wired facade).
  *
  * ## Placement geometry (the typesetter's published bounds, no new rule invented)
  *
@@ -141,9 +147,10 @@ export const oconvPdfRenderImage = {
         const IMAGE_SPACE_AFTER = 6;
 
         /**
-         * Image bytes for an IR `image` node: caller `assets[name]` first,
-         * then the docx reader's carried bytes (`escapes.docx.bytes`, the
-         * escapes bag), else `null`. Mirrored in ir-to-docx / ir-to-odt /
+         * Image bytes for an IR `image` node: caller `assets[name]` (else its
+         * percent-decoded form) first,
+         * then a reader's carried bytes (`escapes.docx.bytes`, else
+         * `escapes.odt.bytes` — the escapes bag), else `null`. Mirrored in ir-to-docx / ir-to-odt /
          * pdf/render/image — keep byte-identical (asset-bytes-drift.test.js).
          *
          * @param {object} node
@@ -152,11 +159,19 @@ export const oconvPdfRenderImage = {
          */
         function assetBytes(node, assets) {
             const name = node && typeof node.name === 'string' ? node.name : '';
-            if (assets && Object.prototype.hasOwnProperty.call(assets, name)
-                && assets[name] instanceof Uint8Array) {
-                return { bytes: assets[name], source: 'assets' };
+            const own = (key) => Boolean(assets) && Object.prototype.hasOwnProperty.call(assets, key)
+                && assets[key] instanceof Uint8Array;
+            if (own(name)) return { bytes: assets[name], source: 'assets' };
+            // The caller keys an image by its destination as written; the
+            // Markdown reader percent-encodes it (`<a b.png>` -> `a%20b.png`),
+            // so an exact miss tries the decoded form.
+            let decoded;
+            try { decoded = decodeURI(name); } catch { decoded = null; }
+            if (decoded !== null && decoded !== name && own(decoded)) {
+                return { bytes: assets[decoded], source: 'assets' };
             }
-            const esc = node && node.escapes && node.escapes.docx;
+            const bag = node && node.escapes;
+            const esc = bag && (bag.docx || bag.odt);
             if (esc && esc.bytes instanceof Uint8Array) {
                 return { bytes: esc.bytes, source: 'reader' };
             }
@@ -260,6 +275,251 @@ export const oconvPdfRenderImage = {
             return null;
         }
 
+        /** Cap on a PNG's filtered scanline bytes (the inflate output bound). */
+        const PNG_MAX_FILTERED = 64 * 1024 * 1024;
+
+        /**
+         * `true` when `bytes` start with the 8-byte PNG signature.
+         *
+         * @param {Uint8Array} bytes
+         * @returns {boolean}
+         */
+        function isPng(bytes) {
+            const SIG = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+            if (!(bytes instanceof Uint8Array) || bytes.length < 8) return false;
+            for (let i = 0; i < 8; i += 1) if (bytes[i] !== SIG[i]) return false;
+            return true;
+        }
+
+        /**
+         * The `addImage` spec (without `name`) for PNG bytes, or `null` to
+         * refuse them. A non-interlaced colour type 0 / 2 PNG without
+         * `tRNS` embeds its concatenated `IDAT` zlib stream VERBATIM as
+         * `/FlateDecode` behind a PNG `/Predictor 15` — no inflate. Every
+         * other placeable PNG (palette, alpha, colour key) needs `zlibApi`:
+         * its scanlines are inflated into a buffer sized from `IHDR` (a
+         * larger stream fails — the decompression bound), unfiltered, split
+         * into colour samples (a palette expanded to 8-bit RGB) and an
+         * optional DeviceGray `/SMask`, both re-deflated. Interlaced,
+         * malformed, or above {@link PNG_MAX_FILTERED} → `null`.
+         *
+         * @param {Uint8Array} bytes PNG bytes (signature already checked).
+         * @param {object|undefined} zlibApi fw `zlib` (`zlibSync`, `unzlibSync`).
+         * @returns {object|null}
+         */
+        function pngSpec(bytes, zlibApi) {
+            const n = bytes.length;
+            const u32 = (at) => (
+                (bytes[at] * 0x1000000) + (bytes[at + 1] << 16) + (bytes[at + 2] << 8) + bytes[at + 3]
+            );
+            let ihdr = null;
+            let plte = null;
+            let trns = null;
+            const idat = [];
+            let idatLen = 0;
+            for (let at = 8; at + 12 <= n;) {
+                const len = u32(at);
+                const type = String.fromCharCode(bytes[at + 4], bytes[at + 5], bytes[at + 6], bytes[at + 7]);
+                const start = at + 8;
+                if (start + len + 4 > n) return null;
+                const data = bytes.subarray(start, start + len);
+                if (type === 'IHDR') ihdr = data;
+                else if (type === 'PLTE') plte = data;
+                else if (type === 'tRNS') trns = data;
+                else if (type === 'IDAT') { idat.push(data); idatLen += len; }
+                else if (type === 'IEND') break;
+                at = start + len + 4;
+            }
+            if (!ihdr || ihdr.length !== 13 || idatLen === 0) return null;
+            const width = u32(16);
+            const height = u32(20);
+            const depth = ihdr[8];
+            const colorType = ihdr[9];
+            if (width < 1 || height < 1 || ihdr[10] !== 0 || ihdr[11] !== 0 || ihdr[12] !== 0) return null;
+            const DEPTHS = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };
+            const CHANNELS = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
+            if (!DEPTHS[colorType] || !DEPTHS[colorType].includes(depth)) return null;
+            if (colorType === 3 && (!plte || plte.length === 0 || plte.length % 3 !== 0)) return null;
+            const channels = CHANNELS[colorType];
+            const rowBytes = Math.ceil((width * channels * depth) / 8);
+            const filteredSize = height * (rowBytes + 1);
+            if (filteredSize > PNG_MAX_FILTERED) return null;
+            let stream = idat[0];
+            if (idat.length > 1) {
+                stream = new Uint8Array(idatLen);
+                let off = 0;
+                for (const part of idat) { stream.set(part, off); off += part.length; }
+            }
+            const colorSpace = (colorType === 0 || colorType === 4) ? 'DeviceGray' : 'DeviceRGB';
+            const int = (value) => ({ type: 'int', value });
+
+            if ((colorType === 0 || colorType === 2) && !trns) {
+                return {
+                    width, height, colorSpace, bitsPerComponent: depth,
+                    filter: 'FlateDecode',
+                    decodeParms: {
+                        type: 'dict',
+                        entries: {
+                            Predictor: int(15), Colors: int(channels),
+                            BitsPerComponent: int(depth), Columns: int(width)
+                        }
+                    },
+                    data: stream
+                };
+            }
+
+            if (!zlibApi || typeof zlibApi.unzlibSync !== 'function'
+                || typeof zlibApi.zlibSync !== 'function') return null;
+            let raw;
+            try {
+                raw = zlibApi.unzlibSync(stream, { out: new Uint8Array(filteredSize) });
+            } catch {
+                return null;
+            }
+            if (!raw || raw.length !== filteredSize) return null;
+
+            // Unfilter (None, Sub, Up, Average, Paeth) into contiguous rows.
+            const bpp = Math.max(1, (channels * depth) >> 3);
+            const pix = new Uint8Array(height * rowBytes);
+            for (let y = 0; y < height; y += 1) {
+                const filter = raw[y * (rowBytes + 1)];
+                if (filter > 4) return null;
+                const src = y * (rowBytes + 1) + 1;
+                const dst = y * rowBytes;
+                for (let i = 0; i < rowBytes; i += 1) {
+                    const a = i >= bpp ? pix[dst + i - bpp] : 0;
+                    const b = y > 0 ? pix[dst - rowBytes + i] : 0;
+                    const c = (y > 0 && i >= bpp) ? pix[dst - rowBytes + i - bpp] : 0;
+                    let pred = 0;
+                    if (filter === 1) pred = a;
+                    else if (filter === 2) pred = b;
+                    else if (filter === 3) pred = (a + b) >> 1;
+                    else if (filter === 4) {
+                        const p = a + b - c;
+                        const pa = Math.abs(p - a);
+                        const pb = Math.abs(p - b);
+                        const pc = Math.abs(p - c);
+                        pred = (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c);
+                    }
+                    pix[dst + i] = (raw[src + i] + pred) & 0xFF;
+                }
+            }
+
+            const count = width * height;
+            let color;
+            let alpha;
+            let bitsPerComponent = depth;
+            let maskBits = 8;
+            let transparent = false;
+            if (colorType === 3) {
+                // Palette: indices of `depth` bits, MSB first, rows byte-padded.
+                bitsPerComponent = 8;
+                const entries = plte.length / 3;
+                color = new Uint8Array(count * 3);
+                alpha = new Uint8Array(count);
+                let k = 0;
+                for (let y = 0; y < height; y += 1) {
+                    for (let x = 0; x < width; x += 1, k += 1) {
+                        const bit = x * depth;
+                        const byte = pix[y * rowBytes + (bit >> 3)];
+                        const idx = (byte >> (8 - depth - (bit & 7))) & ((1 << depth) - 1);
+                        if (idx >= entries) return null;
+                        color[k * 3] = plte[idx * 3];
+                        color[k * 3 + 1] = plte[idx * 3 + 1];
+                        color[k * 3 + 2] = plte[idx * 3 + 2];
+                        const a = trns && idx < trns.length ? trns[idx] : 0xFF;
+                        alpha[k] = a;
+                        if (a !== 0xFF) transparent = true;
+                    }
+                }
+            } else if (colorType === 4 || colorType === 6) {
+                // Grey / RGB samples then one alpha sample, 1 or 2 bytes each.
+                const sb = depth >> 3;
+                const cb = (channels - 1) * sb;
+                maskBits = depth;
+                color = new Uint8Array(count * cb);
+                alpha = new Uint8Array(count * sb);
+                for (let k = 0; k < count; k += 1) {
+                    const at = k * (cb + sb);
+                    color.set(pix.subarray(at, at + cb), k * cb);
+                    for (let j = 0; j < sb; j += 1) {
+                        const v = pix[at + cb + j];
+                        alpha[k * sb + j] = v;
+                        if (v !== 0xFF) transparent = true;
+                    }
+                }
+            } else {
+                // Grey / RGB with a tRNS colour key: the samples stay as they
+                // are (rows byte-padded, as PDF wants them); the key colour
+                // is transparent.
+                color = pix;
+                if (trns.length !== channels * 2) return null;
+                const key = [];
+                for (let j = 0; j < channels; j += 1) key.push((trns[j * 2] << 8) | trns[j * 2 + 1]);
+                alpha = new Uint8Array(count);
+                let k = 0;
+                for (let y = 0; y < height; y += 1) {
+                    for (let x = 0; x < width; x += 1, k += 1) {
+                        let match = true;
+                        for (let j = 0; j < channels; j += 1) {
+                            const s = x * channels + j;
+                            let v;
+                            if (depth === 16) v = (pix[y * rowBytes + s * 2] << 8) | pix[y * rowBytes + s * 2 + 1];
+                            else if (depth === 8) v = pix[y * rowBytes + s];
+                            else {
+                                const bit = s * depth;
+                                v = (pix[y * rowBytes + (bit >> 3)] >> (8 - depth - (bit & 7))) & ((1 << depth) - 1);
+                            }
+                            if (v !== key[j]) { match = false; break; }
+                        }
+                        alpha[k] = match ? 0 : 0xFF;
+                        if (match) transparent = true;
+                    }
+                }
+            }
+
+            const spec = {
+                width, height, colorSpace, bitsPerComponent,
+                filter: 'FlateDecode',
+                data: zlibApi.zlibSync(color)
+            };
+            if (transparent) {
+                spec.sMask = {
+                    width, height, colorSpace: 'DeviceGray', bitsPerComponent: maskBits,
+                    filter: 'FlateDecode',
+                    data: zlibApi.zlibSync(alpha)
+                };
+            }
+            return spec;
+        }
+
+        /**
+         * The format a refused image's bytes declare, for the loss detail:
+         * a known signature (`jpeg` — one the header reader refused, such
+         * as CMYK —, `gif`, `webp`, `bmp`, `tiff`), else the subtype of the
+         * content type a reader carried with them (`image/x-icon` →
+         * `x-icon`), else `null`.
+         *
+         * @param {Uint8Array} bytes
+         * @param {object} node The IR `image` node.
+         * @param {'assets'|'reader'} source Where the bytes came from.
+         * @returns {string|null}
+         */
+        function formatOf(bytes, node, source) {
+            const at = (i, s) => s.every((v, j) => bytes[i + j] === v);
+            if (bytes.length >= 3 && at(0, [0xFF, 0xD8, 0xFF])) return 'jpeg';
+            if (bytes.length >= 4 && at(0, [0x47, 0x49, 0x46, 0x38])) return 'gif';
+            if (bytes.length >= 12 && at(0, [0x52, 0x49, 0x46, 0x46]) && at(8, [0x57, 0x45, 0x42, 0x50])) return 'webp';
+            if (bytes.length >= 2 && at(0, [0x42, 0x4D])) return 'bmp';
+            if (bytes.length >= 4 && (at(0, [0x49, 0x49, 0x2A, 0]) || at(0, [0x4D, 0x4D, 0, 0x2A]))) return 'tiff';
+            if (source !== 'reader') return null;
+            const bag = node && node.escapes;
+            const esc = bag && (bag.docx || bag.odt);
+            const type = esc && typeof esc.contentType === 'string' ? esc.contentType : '';
+            const m = /^image\/([\w.+-]+)$/i.exec(type.trim());
+            return m ? m[1].toLowerCase() : null;
+        }
+
         /**
          * The `[image: …]` placeholder text for one `image` node — `alt`
          * wins, `name` is the fallback, `[image]` when both are empty.
@@ -324,7 +584,7 @@ export const oconvPdfRenderImage = {
          * placeholder and record `layout/image-dropped` with its reason.
          *
          * @param {object} node `oconv-ir/v1` `image` node (`{name, alt}`,
-         *   optionally carrying `escapes.docx.bytes`).
+         *   optionally carrying `escapes.docx.bytes` / `escapes.odt.bytes`).
          * @param {object} ctx Stack child context (see the module header).
          * @returns {{items: object[], losses: object[], height: number}}
          * @throws {Error} `oconv: pdf image renderer needs ctx.builder` when
@@ -341,19 +601,32 @@ export const oconvPdfRenderImage = {
                 return placeholder(ctx, name, alt, { reason: 'no-bytes', bytes: 0 });
             }
 
-            const header = readImageHeader(r.bytes);
-            if (header === null) {
-                return placeholder(ctx, name, alt, {
-                    reason: 'unsupported-encoding', bytes: r.bytes.length
-                });
-            }
-            if (header.filter === null) {
-                // Geometry known, container named — but its bytes are not a
-                // PDF image stream (PNG; see the module header).
-                return placeholder(ctx, name, alt, {
-                    reason: 'unsupported-encoding', bytes: r.bytes.length,
-                    format: header.format
-                });
+            let spec;
+            if (isPng(r.bytes)) {
+                spec = pngSpec(r.bytes, ctx.zlib);
+                if (spec === null) {
+                    return placeholder(ctx, name, alt, {
+                        reason: 'unsupported-encoding', bytes: r.bytes.length, format: 'png'
+                    });
+                }
+            } else {
+                const header = readImageHeader(r.bytes);
+                if (header === null || header.filter === null) {
+                    // No placeable encoding: name the format when the bytes
+                    // (or the reader that carried them) say what it is.
+                    const format = header ? header.format : formatOf(r.bytes, node, r.source);
+                    const detail = { reason: 'unsupported-encoding', bytes: r.bytes.length };
+                    if (format) detail.format = format;
+                    return placeholder(ctx, name, alt, detail);
+                }
+                spec = {
+                    width: header.width,
+                    height: header.height,
+                    colorSpace: header.colorSpace,
+                    bitsPerComponent: header.bitsPerComponent,
+                    filter: header.filter,
+                    data: r.bytes
+                };
             }
 
             const counter = ctx.imageCounter;
@@ -365,24 +638,16 @@ export const oconvPdfRenderImage = {
 
             const resourceName = `Im${counter.n}`;
             counter.n += 1;
-            sink.addImage({
-                name: resourceName,
-                width: header.width,
-                height: header.height,
-                colorSpace: header.colorSpace,
-                bitsPerComponent: header.bitsPerComponent,
-                filter: header.filter,
-                data: r.bytes
-            });
+            sink.addImage({ name: resourceName, ...spec });
 
             // One image pixel = one point at natural size; scale DOWN to the
             // column, never up. Vertical overflow is the stacker's existing
             // oversized-block rule, not a new one (see the module header).
             const indent = Number.isFinite(ctx.indent) ? ctx.indent : 0;
             const columnPt = ctx.layout.column - indent;
-            const scale = header.width > columnPt ? columnPt / header.width : 1;
-            const drawW = header.width * scale;
-            const drawH = header.height * scale;
+            const scale = spec.width > columnPt ? columnPt / spec.width : 1;
+            const drawW = spec.width * scale;
+            const drawH = spec.height * scale;
 
             return {
                 items: [{

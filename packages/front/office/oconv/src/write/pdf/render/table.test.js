@@ -174,6 +174,21 @@ describe('oconvPdfRenderTable — a 3×3 table with a header row', () => {
         expect(cells.slice(3).every((it) => it.style === 'regular')).toBe(true);
     });
 
+    test('a MIXED header cell keeps each run\'s face: italic → boldItalic, inline code → code, else bold', () => {
+        const mixed = { kind: 'cell', children: [{ kind: 'paragraph', children: [
+            run('Plain '), run('slanted ', { italic: true }), run('mono', { code: true })
+        ] }] };
+        const t = table([
+            { kind: 'row', header: true, children: [mixed, cell('H2')] },
+            row(['a', 'b'])
+        ]);
+        const result = renderNode(t);
+        expect(result.losses).toEqual([]);
+        const header = texts(result.items)[0];
+        expect(header.tokens.filter((tk) => tk.kind === 'word').map((tk) => [tk.text, tk.style]))
+            .toEqual([['Plain', 'bold'], ['slanted', 'boldItalic'], ['mono', 'code']]);
+    });
+
     test('column widths come from the content and every cell text stays inside its box', () => {
         const cells = texts(out.items);
         // Widths are content-derived: the header cell ('Col A', bold) is the

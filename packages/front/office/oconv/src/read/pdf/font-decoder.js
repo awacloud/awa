@@ -287,6 +287,24 @@ export const oconvPdfFontDecoder = {
          *   width: (code: number) => number, vertical: boolean,
          *   widthApproximated: () => boolean}}
          */
+        /**
+         * A font's `/Encoding` with its indirect parts resolved: the entry
+         * itself and, inside an encoding dictionary, `/Differences` and
+         * `/BaseEncoding` (pdfLaTeX writes `/Encoding n 0 R` on every Type 1
+         * font; `pdfFontEncoding.resolveEncoding` takes direct values only).
+         */
+        function directEncoding(entry, resolve) {
+            const e = entry && entry.type === 'ref' ? resolve(entry) : entry;
+            if (!e || e.type !== 'dict') return e;
+            const { Differences, BaseEncoding } = e.entries;
+            const indirect = (v) => v && v.type === 'ref';
+            if (!indirect(Differences) && !indirect(BaseEncoding)) return e;
+            const entries = { ...e.entries };
+            if (indirect(Differences)) entries.Differences = resolve(Differences);
+            if (indirect(BaseEncoding)) entries.BaseEncoding = resolve(BaseEncoding);
+            return { ...e, entries };
+        }
+
         function buildDecoder(fontDict, resolve) {
             const f = pdfFontMod.typeFont(fontDict);
             const cidBytes = f.subtype === 'Type0' ? 2 : 1;
@@ -304,7 +322,7 @@ export const oconvPdfFontDecoder = {
             // --- Encoding-table path (simple fonts only) ------------------
             let encTable = null;
             if (f.subtype !== 'Type0') {
-                encTable = pdfFontEncMod.resolveEncoding(f.encoding, (name) => {
+                encTable = pdfFontEncMod.resolveEncoding(directEncoding(f.encoding, resolve), (name) => {
                     try { return encLookupMod.lookupEncoding(name); }
                     catch { return null; }
                 });

@@ -48,7 +48,7 @@ the members `ir-to-pdf` assembles (`measurer`, `layout`, `column`,
 re-entry helper the facade binds to each renderer. `childContext` below
 rebuilds that helper the way the facade does: it re-enters the stack's
 `flowBlocks` at the width the table gives a cell, honouring the
-`styleOverride` it uses for header cells. Every IR is built with
+per-run `styleOverride` function it uses for header cells. Every IR is built with
 `oconvIr.node`, so it passes `oconvIr.validate`.
 
 ### Render a 2×2 table with a header row
@@ -98,7 +98,7 @@ const { items, losses, height, keepTogether } = oconvPdfRenderTable.render(table
 items.length;      // 7 — 3 rule items + 4 cell-content items
 losses;            // []
 height;            // 42.790000000000006 (42.79 to two decimals)
-keepTogether;      // true — a keep-with-next hint; the stack does not read it yet, so only keep-with-next is lost (a table is still never split across pages)
+keepTogether;      // true — "a table never splits"; informational, the stack does not read it (by design: keep-with-next is a heading rule)
 ```
 
 Executed against the live package (2026-10-06): `validate(tableNode).ok ===
@@ -130,7 +130,8 @@ DIFFERENT from [`render/list`](./list.md)'s empty branch, which carries no
 - **Column-width algorithm (the documented choice)**: every cell is
   measured TWICE unbroken (`minWidth` — widest single unbreakable word;
   `natWidth` — widest single block) with header cells measured in their
-  forced bold class. `Σ nat ≤ available` → widths = `nat` exactly (a
+  header classes (each run bold, an italic run bold italic, inline code in
+  its monospace face — a mixed header cell keeps each run's face). `Σ nat ≤ available` → widths = `nat` exactly (a
   narrower-than-column table is NOT stretched — the honest GFM look).
   `Σ nat > available ≥ Σ min` → scaled proportionally with a `max(min)`
   floor, excess clamp taken back from columns with slack —
@@ -161,9 +162,9 @@ DIFFERENT from [`render/list`](./list.md)'s empty branch, which carries no
 - [`pdf/render/list`](./list.md) — the sibling renderer whose degenerate
   return shape DIFFERS (no `height` key at all vs. this module's explicit
   `0`).
-- [`pdf/stack`](../stack.md) — `keepTogether` is currently inert on the
-  delegated-block path (see [`pdf-writer.md`](../../../../pdf-writer.md) §
-  "`keepTogether` is currently inert for delegated blocks" — measured, not
-  yet changed).
+- [`pdf/stack`](../stack.md) — the stack does not read a delegated
+  block's `keepTogether`, by design (see
+  [`pdf-writer.md`](../../../../pdf-writer.md) § "`keepTogether` on a
+  delegated block is informational, by design").
 - [`pdf-writer.md`](../../../../pdf-writer.md) — the full `layout/table-*`
   loss-code table.

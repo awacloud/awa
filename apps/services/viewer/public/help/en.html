@@ -1,0 +1,83 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Help — AWA Viewer</title>
+    <link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+    <link rel="stylesheet" href="help.css">
+</head>
+<body>
+    <header class="help-header">
+        <img src="../icons/icon.svg" alt="" width="28" height="28">
+        <h1>AWA Viewer — Help</h1>
+        <a href="fr.html" hreflang="fr" lang="fr">Français</a>
+    </header>
+    <main>
+        <p>AWA Viewer opens your documents and shows them on your device. Nothing is uploaded: the file is read by your browser and stays on your computer.</p>
+        <nav aria-label="Contents">
+            <ul>
+                <li><a href="#open">Open a document</a></li>
+                <li><a href="#read">Read and move around</a></li>
+                <li><a href="#keys">Keyboard shortcuts</a></li>
+                <li><a href="#install">Install the app</a></li>
+                <li><a href="#update">Updates</a></li>
+                <li><a href="#offline">Offline and privacy</a></li>
+            </ul>
+        </nav>
+
+        <h2 id="open">Open a document</h2>
+        <ul>
+            <li>Drop a file on the page, or choose <strong>Open</strong> (<kbd>Ctrl</kbd>+<kbd>O</kbd>).</li>
+            <li>Formats: PDF, Word (DOCX), Excel (XLSX), PowerPoint (PPTX), OpenDocument (ODT, ODS, ODP), Markdown and text files. Older Office files (DOC, XLS, PPT) are recognised but not opened yet.</li>
+            <li>No document at hand? Under the drop zone, <strong>Try a sample</strong> opens one of our showcase documents.</li>
+            <li>Several files at once: the first opens; the others wait on a line under the header, and each <strong>Open … in a new window</strong> opens the next one.</li>
+        </ul>
+
+        <h2 id="read">Read and move around</h2>
+        <ul>
+            <li>PDF pages and slides: <strong>Previous</strong> and <strong>Next</strong>, or type a page number.</li>
+            <li>Zoom: the zoom buttons and menu, or <strong>Fit width</strong>. Spreadsheets have one tab per sheet under the grid.</li>
+            <li><strong>Full screen</strong>, and <strong>Download</strong> to save the original file.</li>
+            <li><strong>Details</strong> (the <em>i</em> button) shows the file's details and <em>what this view leaves out</em>: anything the viewer could not draw is listed there, never hidden.</li>
+        </ul>
+
+        <h2 id="keys">Keyboard shortcuts</h2>
+        <table>
+            <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+            <tbody>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open a file</td></tr>
+                <tr><td><kbd>Page Down</kbd> / <kbd>Page Up</kbd></td><td>Next / previous page or slide</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>Home</kbd> / <kbd>Ctrl</kbd>+<kbd>End</kbd></td><td>First / last page or slide</td></tr>
+                <tr><td><kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd>, <kbd>Ctrl</kbd>+wheel</td><td>Zoom in / out / 100 %</td></tr>
+                <tr><td><kbd>←</kbd> <kbd>→</kbd> on the sheet tabs</td><td>Change sheet</td></tr>
+                <tr><td><kbd>Tab</kbd></td><td>Toolbar (one stop; <kbd>←</kbd> <kbd>→</kbd> inside), then the document</td></tr>
+            </tbody>
+        </table>
+
+        <h2 id="install">Install the app</h2>
+        <h3>Chrome, Edge</h3>
+        <p>Use the <strong>Install</strong> button in the header when it appears, the install icon in the address bar, or the browser's menu (<em>Install AWA Viewer</em> or <em>Apps → Install this site as an app</em>). The app then has its own window and icon.</p>
+        <h3>Firefox (Windows)</h3>
+        <p>Use the <strong>Add to taskbar</strong> button in the address bar.</p>
+        <h3>Safari</h3>
+        <p>On a Mac: <em>File → Add to Dock</em>. On an iPhone or iPad: <em>Share → Add to Home Screen</em>.</p>
+        <h3>Open your files with the app (Windows)</h3>
+        <p>Installed from Chrome or Edge, the viewer appears in <em>Open with</em> when you right-click a document. To make it the default app for a type of file: <em>Settings → Apps → Default apps</em>. Each file opens in a window of its own.</p>
+
+        <h2 id="update">Updates</h2>
+        <p>A new version installs in the background and never interrupts you: a line in the header says <em>A new version of the viewer is ready</em>; choose <strong>Update now</strong>, or <strong>Later</strong>. To check yourself: <strong>About → Check for updates</strong>.</p>
+
+        <h2 id="offline">Offline and privacy</h2>
+        <p>Once visited (or installed), the viewer works without a connection. Your documents are never sent anywhere; the only files the page loads are its own and, when you ask for one, a sample.</p>
+        <p class="note">Licences, notices and the version: <strong>About</strong>, in the header.</p>
+    </main>
+</body>
+</html>

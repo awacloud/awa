@@ -50,7 +50,8 @@ a.state;  // raw /State array items
 
 ```js
 a.kind;        // 'JavaScript'
-a.js;          // string or stream
+a.js;          // string, stream, or the indirect reference of a stream
+              // (the form a stream script takes in a dictionary; resolve it)
 a.sandboxed;   // true
 ```
 
@@ -67,7 +68,7 @@ a.sandboxed;   // true
 | `pdf/extra/action-ext/bad-t` | `ParseError` | `/T` wrong type. |
 | `pdf/extra/action-ext/missing-f` | `ParseError` | `/F` absent (SubmitForm/ImportData). |
 | `pdf/extra/action-ext/missing-js` | `ParseError` | `/JS` absent. |
-| `pdf/extra/action-ext/bad-js` | `ParseError` | `/JS` wrong type. |
+| `pdf/extra/action-ext/bad-js` | `ParseError` | `/JS` neither a string, a stream nor a reference. |
 
 ## See also
 

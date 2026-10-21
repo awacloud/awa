@@ -45,6 +45,7 @@ normaliseAxesCoords({ wght: 700 }, [wght]); // [0.6]
 
 - Out-of-range input is clamped by `normaliseAxisValue`; `normaliseAxesCoords` does not clamp after an `avar` remap.
 - `avarSegmentMaps` is the `segmentMaps` array decoded by [avar](../table/avar.md); its length should match the `fvar` axis count.
+- For an `avar` version 2 table only the segment maps are applied: the variation-store step of version 2 is not, so the result is the intermediate coordinate of that normalisation.
 - The output feeds the `coord` arguments of [instance](./instance.md) (`tupleScalar`).
 
 ## See also

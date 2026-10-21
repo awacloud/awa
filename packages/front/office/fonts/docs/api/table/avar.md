@@ -19,7 +19,7 @@ Per-axis segment map that adjusts the normalised coordinate `[-1,+1]` before the
 
 | Symbol | Type | Description |
 |--------|------|-------------|
-| `parseAvar` | function | `(bytes) => { majorVersion, minorVersion, segmentMaps: SegmentMap[] }`. |
+| `parseAvar` | function | `(bytes) => { majorVersion, minorVersion, segmentMaps: SegmentMap[], axisIndexMapOffset?, varStoreOffset? }`. Versions 1 and 2; the two offsets are present for version 2 only. Throws `fonts/avar-version` for another major version, `fonts/avar-short` when the header or the version 2 offsets are cut, `fonts/avar-bad-offset` when an offset points past the table. |
 | `applyAvarSegment` | function | `(segmentMap, normValue) => mappedNormValue`. |
 | `tableAvar` | factory | Factory. |
 
@@ -39,6 +39,13 @@ const remapped = applyAvarSegment(avar.segmentMaps[0], 0.5);
 
 - Coordinates in F2Dot14 (`int16` / 16384).
 - Linear interpolation between consecutive `axisValueMaps`.
+- Version 2 (OpenType 1.9.1) keeps the version 1 segment maps and adds
+  `axisIndexMapOffset` (a `DeltaSetIndexMap`) and `varStoreOffset` (an
+  `ItemVariationStore`), each counted from the start of the table, `0`
+  when absent. They are returned as read: the second step of the
+  version 2 normalisation (variation-store deltas added to the
+  segment-mapped coordinates) is applied neither here nor by
+  [`normaliseAxesCoords`](../variable/coordsConvert.md).
 
 ## See also
 

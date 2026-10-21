@@ -166,6 +166,53 @@ describe('odp module', () => {
         });
     });
 
+    describe('a master page for every slide (the schema requires draw:master-page-name)', () => {
+        const xml = runtime.resolve('xml');
+        const named = (nodes, tag) => (nodes || []).filter((n) => n.type === 'element' && n.name === tag);
+
+        test('a slide without one gets Default, and the styles gain that master page and its page layout', () => {
+            const doc = o.fromSlides([o.slide('A'), o.slide('B', { masterPageName: 'Own' })]);
+            const before = JSON.stringify(doc);
+            const back = o.read(o.write(doc));
+            expect(back.slides.map((s) => s.masterPageName)).toEqual(['Default', 'Own']);
+            const masters = named(back.styles.masterStyles, 'style:master-page');
+            expect(masters.map((m) => m.attrs)).toEqual([{ 'style:name': 'Default', 'style:page-layout-name': 'PM1' }]);
+            const layouts = named(back.styles.automaticStyles, 'style:page-layout');
+            expect(layouts.map((l) => l.attrs['style:name'])).toEqual(['PM1']);
+            expect(xml.serialize(layouts[0])).toContain('<style:page-layout-properties fo:page-width="28cm" fo:page-height="15.75cm" style:print-orientation="landscape"/>');
+            expect(JSON.stringify(doc)).toBe(before);
+        });
+
+        test('o.empty() is written with its master page', () => {
+            const back = o.read(o.write(o.empty()));
+            expect(back.slides[0].masterPageName).toBe('Default');
+            expect(named(back.styles.masterStyles, 'style:master-page')).toHaveLength(1);
+        });
+
+        test('a Default master page in the styles given is used as is; a used PM1 name is skipped', () => {
+            const stylesMod = runtime.resolve('odfStyles');
+            const given = stylesMod.empty();
+            given.masterStyles.push(xml.el('style:master-page', { 'style:name': 'Default', 'style:page-layout-name': 'X' }, []));
+            const kept = o.read(o.write(o.empty(), { styles: given }));
+            expect(named(kept.styles.masterStyles, 'style:master-page').map((m) => m.attrs['style:page-layout-name'])).toEqual(['X']);
+            expect(given.masterStyles).toHaveLength(1);
+
+            const taken = stylesMod.empty();
+            taken.automaticStyles.push(xml.el('style:page-layout', { 'style:name': 'PM1' }, []));
+            const bumped = o.read(o.write(o.empty(), { styles: taken }));
+            expect(named(bumped.styles.masterStyles, 'style:master-page')[0].attrs['style:page-layout-name']).toBe('PM2');
+            expect(taken.automaticStyles).toHaveLength(1);
+            expect(taken.masterStyles).toHaveLength(0);
+        });
+
+        test('a deck whose slides all name a master is written as before (no styles added)', () => {
+            const doc = o.fromSlides([o.slide('A', { masterPageName: 'M' })]);
+            const back = o.read(o.write(doc));
+            expect(back.styles.masterStyles).toEqual([]);
+            expect(back.styles.automaticStyles).toEqual([]);
+        });
+    });
+
     describe('read errors', () => {
         test('throws on wrong mimetype', () => {
             const pkg = runtime.resolve('pkgPackage');

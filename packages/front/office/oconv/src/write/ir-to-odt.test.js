@@ -4,12 +4,15 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /* global Bun */
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, afterEach, setSystemTime } from 'bun:test';
 import { fileURLToPath } from 'node:url';
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 import { fw_require as odfFwRequire, modules as odfModules } from '@awacloud/odf';
+import { fw_require as mdFwRequire, modules as mdModules } from '@awacloud/md';
+import { mdFrontmatter } from '@awacloud/md/extra/frontmatter.js';
 import { oconvIr } from '../ir/ir.js';
 import { oconvIrToOdt } from './ir-to-odt.js';
+import { oconvMdToIr } from '../read/md-to-ir.js';
 
 // One runtime for the whole file: `@awacloud/odf`'s own manifest
 // (fw_require + modules) provides `odt`; `oconvIr` provides the pivot.
@@ -128,6 +131,40 @@ describe('oconvIrToOdt — irToOdt() — lists', () => {
         expect(read.body[1].type).toBe('list');
         expect(read.body[1].ordered).toBe(false);
         expect(losses).toEqual([]);
+    });
+
+    test('task items: a ☐ / ☒ text run leads the first paragraph, no loss', () => {
+        const task = (t, text) => node('listItem', { escapes: { md: { task: t } } }, [
+            node('paragraph', {}, [node('run', { text, bold: true })])
+        ]);
+        const ir = doc([
+            node('list', { ordered: false }, [
+                task('unchecked', 'todo'),
+                task('checked', 'done'),
+                node('listItem', {}, [node('paragraph', {}, [node('run', { text: 'plain' })])])
+            ])
+        ]);
+        const { bytes, losses } = irToOdt(ir);
+        const items = odt.read(bytes).body[0].items;
+
+        expect(losses).toEqual([]);
+        expect(items[0].children[0].runs[0]).toEqual({ type: 'text', value: '☐ ' });
+        expect(items[1].children[0].runs[0]).toEqual({ type: 'text', value: '☒ ' });
+        expect(items[0].children[0].runs).toHaveLength(2);
+        expect(items[2].children[0].runs).toEqual([{ type: 'text', value: 'plain' }]);
+    });
+
+    test('a task flag on an item without a leading paragraph is a writer loss', () => {
+        const ir = doc([
+            node('list', { ordered: false }, [
+                node('listItem', { escapes: { md: { task: 'unchecked' } } }, [
+                    node('codeBlock', { info: '', text: 'x\n' })
+                ])
+            ])
+        ]);
+        const { losses } = irToOdt(ir);
+
+        expect(losses).toEqual([{ code: 'list/task-marker-dropped', detail: '[ ]' }]);
     });
 });
 
@@ -286,61 +323,81 @@ describe('oconvIrToOdt — irToOdt() — exhaustive absence of the four retired 
     });
 });
 
-describe('oconvIrToOdt — irToOdt() — degrades (still out of tier-2 scope)', () => {
-    test('codeBlock: one paragraph per line, exact block/degraded loss', () => {
+describe('oconvIrToOdt — irToOdt() — code blocks, quotes and rules', () => {
+    test('codeBlock: one Preformatted Text paragraph per line, no loss', () => {
         const ir = doc([node('codeBlock', { info: 'js', text: 'const a = 1;\nconst b = 2;' })]);
         const { bytes, losses } = irToOdt(ir);
         const read = odt.read(bytes);
 
-        expect(read.body).toHaveLength(2);
+        expect(losses).toEqual([]);
+        expect(read.body.map(p => p.styleName)).toEqual(['Preformatted_20_Text', 'Preformatted_20_Text']);
         expect(read.body[0].runs).toEqual([{ type: 'text', value: 'const a = 1;' }]);
         expect(read.body[1].runs).toEqual([{ type: 'text', value: 'const b = 2;' }]);
-        expect(losses).toEqual([{ code: 'block/degraded', detail: 'codeBlock' }]);
     });
 
-    test('codeBlock: exactly one trailing newline is dropped — no trailing empty paragraph', () => {
-        const { bytes, losses } = irToOdt(doc([node('codeBlock', { info: 'js', text: 'x\ny\n' })]));
+    test('codeBlock: indentation and inner runs of spaces become text:s, tabs text:tab', () => {
+        const ir = doc([node('codeBlock', { info: '', text: '  if (a)  b();\n\tc;\n x\n' })]);
+        const { bytes } = irToOdt(ir);
         const read = odt.read(bytes);
 
-        expect(read.body).toHaveLength(2);
-        expect(read.body[0].runs).toEqual([{ type: 'text', value: 'x' }]);
-        expect(read.body[1].runs).toEqual([{ type: 'text', value: 'y' }]);
-        expect(losses).toEqual([{ code: 'block/degraded', detail: 'codeBlock' }]);
+        expect(read.body.map(p => p.runs)).toEqual([
+            [{ type: 'space', count: 2 }, { type: 'text', value: 'if (a)' },
+                { type: 'space', count: 2 }, { type: 'text', value: 'b();' }],
+            [{ type: 'tab' }, { type: 'text', value: 'c;' }],
+            [{ type: 'space', count: 1 }, { type: 'text', value: 'x' }]
+        ]);
+        // A single interior space stays in the text.
+        expect(partText(bytes, 'content.xml')).toContain('<text:s text:c="2"/>if (a)<text:s text:c="2"/>b();');
     });
 
-    test('codeBlock: only ONE trailing newline is dropped — a second one keeps its empty line', () => {
-        const { bytes } = irToOdt(doc([node('codeBlock', { info: '', text: 'x\n\n' })]));
-        const read = odt.read(bytes);
+    test('codeBlock: exactly one trailing newline is dropped; interior and second empty lines kept', () => {
+        const { bytes: one } = irToOdt(doc([node('codeBlock', { info: 'js', text: 'x\ny\n' })]));
+        expect(odt.read(one).body).toHaveLength(2);
 
-        expect(read.body).toHaveLength(2);
-        expect(read.body[0].runs).toEqual([{ type: 'text', value: 'x' }]);
-        expect(read.body[1].runs.map(r => r.value ?? '').join('')).toBe('');
+        const { bytes: two } = irToOdt(doc([node('codeBlock', { info: '', text: 'x\n\n' })]));
+        expect(odt.read(two).body.map(p => p.runs.length)).toEqual([1, 0]);
+
+        const { bytes: interior } = irToOdt(doc([node('codeBlock', { info: '', text: 'a\n\nb\n' })]));
+        const body = odt.read(interior).body;
+        expect(body.map(p => p.runs.length)).toEqual([1, 0, 1]);
+        expect(body.every(p => p.styleName === 'Preformatted_20_Text')).toBe(true);
     });
 
-    test('codeBlock: an interior empty line is kept (a, empty, b)', () => {
-        const { bytes } = irToOdt(doc([node('codeBlock', { info: '', text: 'a\n\nb\n' })]));
-        const read = odt.read(bytes);
-
-        expect(read.body).toHaveLength(3);
-        expect(read.body[0].runs).toEqual([{ type: 'text', value: 'a' }]);
-        expect(read.body[1].runs.map(r => r.value ?? '').join('')).toBe('');
-        expect(read.body[2].runs).toEqual([{ type: 'text', value: 'b' }]);
-    });
-
-    test('blockquote: child blocks emitted in place, exact block/degraded loss', () => {
+    test('blockquote: its paragraphs styled Quotations, no loss', () => {
         const ir = doc([
-            node('blockquote', {}, [node('paragraph', {}, [node('run', { text: 'quoted' })])])
+            node('blockquote', {}, [
+                node('paragraph', {}, [node('run', { text: 'quoted' })]),
+                node('paragraph', {}, [node('run', { text: 'again', italic: true })])
+            ])
         ]);
         const { bytes, losses } = irToOdt(ir);
         const read = odt.read(bytes);
 
-        expect(read.body).toHaveLength(1);
-        expect(read.body[0].type).toBe('paragraph');
+        expect(losses).toEqual([]);
+        expect(read.body.map(p => p.styleName)).toEqual(['Quotations', 'Quotations']);
         expect(read.body[0].runs).toEqual([{ type: 'text', value: 'quoted' }]);
-        expect(losses).toEqual([{ code: 'block/degraded', detail: 'blockquote' }]);
     });
 
-    test('hr: dropped, exact block/dropped loss', () => {
+    test('blockquote: a nested quote and a non-paragraph child record their degrades', () => {
+        const ir = doc([
+            node('blockquote', {}, [
+                node('paragraph', {}, [node('run', { text: 'outer' })]),
+                node('blockquote', {}, [node('paragraph', {}, [node('run', { text: 'inner' })])]),
+                node('heading', { level: 2 }, [node('run', { text: 'quoted heading' })])
+            ])
+        ]);
+        const { bytes, losses } = irToOdt(ir);
+        const read = odt.read(bytes);
+
+        expect(losses).toEqual([
+            { code: 'block/degraded', detail: 'blockquote:nested' },
+            { code: 'block/degraded', detail: 'blockquote-child:heading' }
+        ]);
+        expect(read.body.map(b => [b.type, b.styleName]))
+            .toEqual([['paragraph', 'Quotations'], ['paragraph', 'Quotations'], ['heading', 'Heading_20_2']]);
+    });
+
+    test('hr: an empty Horizontal Line paragraph between its neighbours, no loss', () => {
         const ir = doc([
             node('paragraph', {}, [node('run', { text: 'before' })]),
             node('hr'),
@@ -349,10 +406,25 @@ describe('oconvIrToOdt — irToOdt() — degrades (still out of tier-2 scope)', 
         const { bytes, losses } = irToOdt(ir);
         const read = odt.read(bytes);
 
-        expect(read.body).toHaveLength(2);
-        expect(read.body[0].runs).toEqual([{ type: 'text', value: 'before' }]);
-        expect(read.body[1].runs).toEqual([{ type: 'text', value: 'after' }]);
-        expect(losses).toEqual([{ code: 'block/dropped', detail: 'hr' }]);
+        expect(losses).toEqual([]);
+        expect(read.body).toHaveLength(3);
+        expect(read.body[1].styleName).toBe('Horizontal_20_Line');
+        expect(read.body[1].runs).toEqual([]);
+    });
+
+    test('the three styles are defined in styles.xml, LibreOffice names and display names', () => {
+        const { bytes } = irToOdt(doc([
+            node('codeBlock', { info: '', text: 'x' }),
+            node('blockquote', {}, [node('paragraph', {}, [node('run', { text: 'q' })])]),
+            node('hr')
+        ]));
+        const stylesXml = partText(bytes, 'styles.xml');
+        for (const [name, display] of [['Preformatted_20_Text', 'Preformatted Text'],
+            ['Quotations', 'Quotations'], ['Horizontal_20_Line', 'Horizontal Line']]) {
+            expect(stylesXml).toContain(`style:name="${name}" style:display-name="${display}"`);
+        }
+        expect(stylesXml).toContain('style:font-pitch="fixed"');
+        expect(stylesXml).toContain('fo:border-bottom=');
     });
 
     test('block-level image: dropped, exact image/dropped loss', () => {
@@ -426,11 +498,9 @@ describe('oconvIrToOdt — irToOdt() — non-vacuity and determinism', () => {
         expect(losses).toEqual([]);
     });
 
-    // No byte-reproducibility is claimed for this direction: the fw zip
-    // writer stamps `_dosDateTime(mtime ?? Date.now())`, and that seam
-    // reaches the ODF `pkg.write` path too (BL-28). Two calls must agree
-    // on the *model* `odt.read()` recovers, never on container bytes.
-    test('model determinism without a byte claim: two calls deep-equal on odt.read models', () => {
+    // The model leg stays; the byte claim is the md -> odt leg below
+    // (BL-2744: the ODF package writer stamps a fixed entry date).
+    test('model determinism: two calls deep-equal on odt.read models', () => {
         const ir = doc([
             node('heading', { level: 2 }, [node('run', { text: 'Repeat' })]),
             node('paragraph', {}, [node('run', { text: 'same content twice' })]),
@@ -443,6 +513,34 @@ describe('oconvIrToOdt — irToOdt() — non-vacuity and determinism', () => {
 
         expect(odt.read(first.bytes).body).toEqual(odt.read(second.bytes).body);
         expect(first.losses).toEqual(second.losses);
+    });
+});
+
+describe('oconvIrToOdt — md -> odt is byte-reproducible (BL-2744)', () => {
+    // Own runtime: the md reader's manifest on top of odf's, so the leg
+    // runs the facade's md -> IR -> odt path without the facade.
+    const mdRuntime = new ModuleRuntime();
+    for (const m of [...odfFwRequire, ...odfModules, ...mdFwRequire, ...mdModules,
+                     mdFrontmatter, oconvIr, oconvMdToIr, oconvIrToOdt]) {
+        mdRuntime.register(m);
+    }
+    const { mdToIr } = mdRuntime.resolve('oconvMdToIr');
+    const { irToOdt: mdIrToOdt } = mdRuntime.resolve('oconvIrToOdt');
+    const markdown = [
+        '# Title', '',
+        'A *plain* paragraph with a [link](https://example.org).', '',
+        '- one', '- two', '',
+        '| a | b |', '|---|---|', '| 1 | 2 |', ''
+    ].join('\n');
+    afterEach(() => { setSystemTime(); });
+
+    test('the same Markdown converted twice with the clock moved between the runs gives identical bytes', () => {
+        setSystemTime(new Date(2026, 9, 20, 9, 15, 0));
+        const first = mdIrToOdt(mdToIr(markdown).ir).bytes;
+        setSystemTime(new Date(2031, 2, 7, 18, 42, 10));
+        const second = mdIrToOdt(mdToIr(markdown).ir).bytes;
+        expect(first.length).toBeGreaterThan(0);
+        expect(second).toEqual(first);
     });
 });
 
@@ -517,22 +615,23 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
 
     // NON-VACUITY: the fixture's assets KEY is asserted equal to the image
     // node's own `name`, so the lookup genuinely hits.
-    test('a block image with assets bytes is PLACED: Pictures/image1.png part, one 5.08cm x 3.81cm frame, image/size-defaulted', () => {
+    test('a block image with assets bytes is PLACED: Pictures/image1.png part, one frame at the image\'s own size, no loss', () => {
         const image = node('image', { name: 'logo.png', alt: 'Logo' });
         const assets = { 'logo.png': PNG };
         expect(Object.keys(assets)).toEqual([image.name]);      // non-vacuity
 
         const { bytes, losses } = irToOdt(doc([image]), { assets });
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'logo.png' }]);
+        expect(losses).toEqual([]);
         const parts = pictureParts(bytes);
         expect(parts.map(([path]) => path)).toEqual(['Pictures/image1.png']);
         expect(parts[0][1]).toEqual(PNG);
 
         const frames = framesOf(bytes);
         expect(frames).toHaveLength(1);
-        expect(frames[0].attrs['svg:width']).toBe('5.08cm');
-        expect(frames[0].attrs['svg:height']).toBe('3.81cm');
+        // The 1 x 1 px fixture at 96 dpi: 1/96 in = 0.026 cm.
+        expect(frames[0].attrs['svg:width']).toBe('0.026cm');
+        expect(frames[0].attrs['svg:height']).toBe('0.026cm');
         expect(frameHrefs(bytes)).toEqual(['Pictures/image1.png']);
 
         // A block image becomes ONE paragraph holding the frame.
@@ -551,7 +650,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         ])]);
         const { bytes, losses } = irToOdt(ir, { assets: { 'pic.png': PNG } });
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'pic.png' }]);
+        expect(losses).toEqual([]);
         const paras = descendants(xmlApi.parse(partText(bytes, 'content.xml')), 'text:p');
         expect(paras).toHaveLength(1);
         expect(paras[0].children.map(c => (c.type === 'text' ? 'text:' + c.value : c.name)))
@@ -567,7 +666,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         const ir = doc([node('paragraph', {}, [node('image', { name: 'only.png', alt: '' })])]);
         const { bytes, losses } = irToOdt(ir, { assets: { 'only.png': PNG } });
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'only.png' }]);
+        expect(losses).toEqual([]);
         expect(odt.read(bytes).body).toHaveLength(1);
         expect(frameHrefs(bytes)).toEqual(['Pictures/image1.png']);
     });
@@ -579,7 +678,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         ])]);
         const { bytes, losses } = irToOdt(ir, { assets: { 'h.png': PNG } });
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'h.png' }]);
+        expect(losses).toEqual([]);
         const hs = descendants(xmlApi.parse(partText(bytes, 'content.xml')), 'text:h');
         expect(hs).toHaveLength(1);
         expect(descendants(hs[0], 'draw:frame')).toHaveLength(1);
@@ -590,7 +689,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         image.escapes = { docx: { bytes: GIF, contentType: 'image/gif' } };
         const { bytes, losses } = irToOdt(doc([image]));
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'carried.gif' }]);
+        expect(losses).toEqual([]);
         const parts = pictureParts(bytes);
         expect(parts.map(([path]) => path)).toEqual(['Pictures/image1.gif']);
         expect(parts[0][1]).toEqual(GIF);
@@ -601,7 +700,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         image.escapes = { docx: { bytes: GIF, contentType: 'image/gif' } };
         const { bytes, losses } = irToOdt(doc([image]), { assets: { both: PNG } });
 
-        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'both' }]);
+        expect(losses).toEqual([]);
         const parts = pictureParts(bytes);
         expect(parts.map(([path]) => path)).toEqual(['Pictures/image1.png']);
         expect(parts[0][1]).toEqual(PNG);
@@ -614,10 +713,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         second.escapes = { docx: { bytes: GIF, contentType: 'image/gif' } };
         const { bytes, losses } = irToOdt(doc([first, second]));
 
-        expect(losses).toEqual([
-            { code: 'image/size-defaulted', detail: 'dup' },
-            { code: 'image/size-defaulted', detail: 'dup' }
-        ]);
+        expect(losses).toEqual([]);
         const parts = pictureParts(bytes);
         expect(parts.map(([path]) => path)).toEqual(['Pictures/image1.png']);
         expect(parts[0][1]).toEqual(PNG);
@@ -632,7 +728,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         ]);
         const { bytes, losses } = irToOdt(ir, { assets: { 'Grafik 1': PNG, 'a/b c.png': JPG } });
 
-        expect(losses.map(l => l.detail)).toEqual(['Grafik 1', 'a/b c.png', 'Grafik 1']);
+        expect(losses).toEqual([]);
         expect(pictureParts(bytes).map(([path]) => path))
             .toEqual(['Pictures/image1.png', 'Pictures/image2.jpg']);
         expect(frameHrefs(bytes))
@@ -647,7 +743,9 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         const ir = doc(Object.keys(assets).map(name => node('image', { name, alt: '' })));
         const { bytes, losses } = irToOdt(ir, { assets });
 
-        expect(losses).toHaveLength(8);
+        // The three readable headers are sized; the five others keep the
+        // default box and record it.
+        expect(losses.map(l => l.detail)).toEqual(['u', 'np', 's', 'ng', 'e']);
         expect(losses.every(l => l.code === 'image/size-defaulted')).toBe(true);
         const parts = pictureParts(bytes);
         expect(parts.map(([path]) => path)).toEqual([
@@ -686,7 +784,10 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         expect(calls[0].doc.pictures['Pictures/image1.png']).toBe(PNG);
         expect(calls[0].doc.body[0]).toEqual({
             type: 'paragraph',
-            runs: [{ type: 'image', href: 'Pictures/image1.png', width: '5.08cm', height: '3.81cm' }]
+            runs: [{
+                type: 'frame', anchorType: 'as-char', width: '0.026cm', height: '0.026cm',
+                child: { kind: 'image', href: 'Pictures/image1.png' }
+            }]
         });
     });
 
@@ -697,10 +798,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         ]);
         const { bytes, losses } = irToOdt(ir, { assets: { 'kept.png': PNG } });
 
-        expect(losses).toEqual([
-            { code: 'image/dropped', detail: 'gone.png' },
-            { code: 'image/size-defaulted', detail: 'kept.png' }
-        ]);
+        expect(losses).toEqual([{ code: 'image/dropped', detail: 'gone.png' }]);
         expect(odt.read(bytes).body).toHaveLength(1);
         expect(frameHrefs(bytes)).toEqual(['Pictures/image1.png']);
     });
@@ -721,10 +819,7 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         const { bytes, losses } = irToOdt(ir, {
             assets: { 'in-cell.png': PNG, 'in-item.png': JPG }
         });
-        expect(losses).toEqual([
-            { code: 'image/size-defaulted', detail: 'in-cell.png' },
-            { code: 'image/size-defaulted', detail: 'in-item.png' }
-        ]);
+        expect(losses).toEqual([]);
         const content = xmlApi.parse(partText(bytes, 'content.xml'));
         const cells = descendants(content, 'table:table-cell');
         expect(cells).toHaveLength(1);
@@ -757,7 +852,8 @@ function descendants(root, name, out = []) {
 const STYLE_NAMES = [
     'Standard', 'Text_20_body', 'Heading',
     'Heading_20_1', 'Heading_20_2', 'Heading_20_3',
-    'Heading_20_4', 'Heading_20_5', 'Heading_20_6'
+    'Heading_20_4', 'Heading_20_5', 'Heading_20_6',
+    'Preformatted_20_Text', 'Quotations', 'Horizontal_20_Line'
 ];
 
 /** Headings 1..6, one paragraph and a 2x2 header table. */
@@ -775,7 +871,7 @@ function presentableIr() {
 }
 
 describe('oconvIrToOdt — presentation (BL-1794)', () => {
-    test('styles.xml carries the 9 fixed named styles, in order', () => {
+    test('styles.xml carries the 12 fixed named styles, in order', () => {
         const { bytes } = irToOdt(presentableIr());
         const parsed = odfStyles.parse(partText(bytes, 'styles.xml'));
         expect(parsed.styles.map(e => e.attrs['style:name'])).toEqual(STYLE_NAMES);
@@ -814,7 +910,7 @@ describe('oconvIrToOdt — presentation (BL-1794)', () => {
         });
     });
 
-    test('a document with NO heading (and one with no block at all) still emits the 9 styles', () => {
+    test('a document with NO heading (and one with no block at all) still emits the 12 styles', () => {
         for (const ir of [
             doc([node('paragraph', {}, [node('run', { text: 'plain' })])]),
             doc([])
@@ -902,5 +998,72 @@ describe('oconvIrToOdt — presentation (BL-1794)', () => {
         // Non-vacuity: the compared parts are the presentation-bearing ones.
         expect(partText(a, 'styles.xml')).toContain('Heading_20_6');
         expect(partText(a, 'content.xml')).toContain('awa-c-b');
+    });
+});
+
+/* ── images: intrinsic size and alt text ─────────────────────────────── */
+
+const be32 = v => [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
+
+/** A header-only PNG: signature, IHDR (`w` × `h`), IEND; zero CRCs. */
+function pngHeader(w, h) {
+    const chunk = (type, data) =>
+        [...be32(data.length), ...[...type].map(c => c.charCodeAt(0)), ...data, 0, 0, 0, 0];
+    return new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        ...chunk('IHDR', [...be32(w), ...be32(h), 8, 2, 0, 0, 0]),
+        ...chunk('IEND', [])
+    ]);
+}
+
+describe('oconvIrToOdt — image intrinsic size and alt text', () => {
+    test('a readable header sets the frame size (96 dpi default), no loss', () => {
+        // 192 × 96 px at 96 dpi = 2 in × 1 in = 5.08 cm × 2.54 cm.
+        const { bytes, losses } = irToOdt(doc([node('image', { name: 'a', alt: '' })]),
+            { assets: { a: pngHeader(192, 96) } });
+
+        expect(losses).toEqual([]);
+        const frames = framesOf(bytes);
+        expect(frames).toHaveLength(1);
+        expect(frames[0].attrs['svg:width']).toBe('5.080cm');
+        expect(frames[0].attrs['svg:height']).toBe('2.540cm');
+    });
+
+    test('wider than 6 in: scaled to 6 in (15.24 cm), aspect kept', () => {
+        const { bytes } = irToOdt(doc([node('image', { name: 'w', alt: '' })]),
+            { assets: { w: pngHeader(1152, 192) } });
+        const [frame] = framesOf(bytes);
+        expect([frame.attrs['svg:width'], frame.attrs['svg:height']]).toEqual(['15.240cm', '2.540cm']);
+    });
+
+    test('an unreadable header keeps the default 5.08 cm × 3.81 cm frame and image/size-defaulted', () => {
+        const { bytes, losses } = irToOdt(doc([node('image', { name: 'b', alt: '' })]),
+            { assets: { b: BIN } });
+
+        expect(losses).toEqual([{ code: 'image/size-defaulted', detail: 'b' }]);
+        const [frame] = framesOf(bytes);
+        expect([frame.attrs['svg:width'], frame.attrs['svg:height']]).toEqual(['5.08cm', '3.81cm']);
+    });
+
+    test('alt text → an svg:title after the draw:image; none when alt is empty', () => {
+        const ir = doc([node('paragraph', {}, [
+            node('image', { name: 'p', alt: 'A diagram' }),
+            node('run', { text: ' and ' }),
+            node('image', { name: 'q', alt: '' })
+        ])]);
+        const { bytes, losses } = irToOdt(ir, { assets: { p: pngHeader(96, 96), q: pngHeader(96, 96) } });
+
+        expect(losses).toEqual([]);
+        const frames = framesOf(bytes);
+        expect(frames.map(f => f.children.map(c => c.name))).toEqual([
+            ['draw:image', 'svg:title'],
+            ['draw:image']
+        ]);
+        expect(descendants(frames[0], 'svg:title')[0].children[0].value).toBe('A diagram');
+        // The frame stays an as-char frame in its paragraph, between the runs.
+        const [para] = descendants(xmlApi.parse(partText(bytes, 'content.xml')), 'text:p');
+        expect(para.children.map(c => (c.type === 'text' ? 'text:' + c.value : c.name)))
+            .toEqual(['draw:frame', 'text: and ', 'draw:frame']);
+        expect(frames[0].attrs['text:anchor-type']).toBe('as-char');
     });
 });

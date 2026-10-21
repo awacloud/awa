@@ -31,6 +31,18 @@ describe('renderHtml', () => {
             .toBe('<pre><code class="language-js">let x = 1;\n</code></pre>\n');
     });
 
+    test('an info word already starting with language- is the class as is, as the reference renderers', () => {
+        expect(r('```language-r\nx\n```\n')).toBe('<pre><code class="language-r">x\n</code></pre>\n');
+        expect(r('```language-\nx\n```\n')).toBe('<pre><code class="language-">x\n</code></pre>\n');
+    });
+
+    test('other info words get the language- prefix (case-sensitive check, escaped)', () => {
+        expect(r('```r\nx\n```\n')).toBe('<pre><code class="language-r">x\n</code></pre>\n');
+        expect(r('```Language-r\nx\n```\n')).toBe('<pre><code class="language-Language-r">x\n</code></pre>\n');
+        expect(r('```a&b\nx\n```\n')).toBe('<pre><code class="language-a&amp;b">x\n</code></pre>\n');
+        expect(r('```\nx\n```\n')).toBe('<pre><code>x\n</code></pre>\n');
+    });
+
     test('indented code block', () => {
         expect(r('    code line\n'))
             .toBe('<pre><code>code line\n</code></pre>\n');
@@ -76,6 +88,24 @@ describe('renderHtml', () => {
     test('throws on invalid root', () => {
         expect(() => renderHtml(null)).toThrow();
         expect(() => renderHtml({})).toThrow();
+    });
+
+    test('an html block that keeps a trailing blank line ends with its own newline, as the reference renderers', () => {
+        const raw = { safe: false, disallowedRawHtml: false };
+        expect(r('- <pre>x\n\n- </pre>\n- b\n', raw))
+            .toBe('<ul>\n<li>\n<pre>x\n\n</li>\n<li>\n</pre>\n</li>\n<li>b</li>\n</ul>\n');
+        expect(r('<pre>x\n\n', raw)).toBe('<pre>x\n\n');
+        expect(r('> <pre>x\n>\n', raw)).toBe('<blockquote>\n<pre>x\n\n</blockquote>\n');
+        expect(r('<!-- c\n\n', raw)).toBe('<!-- c\n\n');
+    });
+
+    test('html blocks without a trailing blank line, and safe mode, are unchanged', () => {
+        const raw = { safe: false, disallowedRawHtml: false };
+        expect(r('<pre>x\n\ny</pre>\n', raw)).toBe('<pre>x\n\ny</pre>\n');
+        expect(r('<div>x\n\ny\n', raw)).toBe('<div>x\n<p>y</p>\n');
+        expect(r('- <pre>x\n\n- </pre>\n- b\n')).toBe('<ul>\n<li>\n</li>\n<li>\n</li>\n<li>b</li>\n</ul>\n');
+        // The AST keeps the reference literal: one trailing newline stripped.
+        expect(parse('- <pre>x\n\n- </pre>\n').firstChild.firstChild.firstChild.literal).toBe('<pre>x\n');
     });
 });
 

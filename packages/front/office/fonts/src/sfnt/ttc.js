@@ -98,6 +98,10 @@ export const fontTtc = {
                 return { ...t, offPos };
             });
             for (const e of dirEntries) {
+                if (e.offset + e.length > bytes.length)
+                    throw new ParseError('fonts/ttc-bad-offset',
+                        `TTC font ${index}: table ${untag(e.tagU32)} at ${e.offset} + ${e.length} runs past the file (${bytes.length} bytes)`,
+                        { context: { index, tag: untag(e.tagU32), offset: e.offset, length: e.length, fileLength: bytes.length } });
                 w.padTo4();
                 const start = w.pos;
                 const tbytes = new Uint8Array(bytes.buffer, bytes.byteOffset + e.offset, e.length);

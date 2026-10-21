@@ -63,7 +63,7 @@ export const pkgPackage = {
     deps: [odfErrors, odfShared, zip, pkgMimetype, pkgManifest],
 
     factory(errors, shared, zipMod, mimetypeMod, manifestMod) {
-        const { ParseError, ContractError } = errors;
+        const { ParseError, RenderError, ContractError } = errors;
         const { encodeText, decodeText } = shared;
 
         const MIMETYPE_PATH = 'mimetype';
@@ -177,10 +177,22 @@ export const pkgPackage = {
          * The `mimetype` entry is forced to be the first key in the file
          * map and stored uncompressed (`level: 0`).
          *
+         * Every ZIP entry is stamped with `opts.mtime`, which defaults to
+         * 1980-01-01 00:00:00 (the MS-DOS epoch), so two writes of the same
+         * package are byte-identical — the contract of the OPC writer
+         * (`@awacloud/ooxml` `opc/package.js` `write`). A value outside
+         * 1980-2099 is rejected by the ZIP writer and surfaces as
+         * `RenderError('odf/render-error/pkg')` with the ZIP error as cause.
+         *
          * @param {{ mimetype, manifest, parts }} pkg
+         * @param {{ mtime?: number|Date }} [opts]
          * @returns {Uint8Array}
+         * @throws {ContractError} `odf/contract-error/pkg` when `pkg.mimetype`
+         *         is missing.
+         * @throws {RenderError} `odf/render-error/pkg` when the ZIP writer
+         *         refuses the package (e.g. `mtime` outside 1980-2099).
          */
-        function write(pkg) {
+        function write(pkg, opts) {
             if (!pkg || !pkg.mimetype) {
                 throw new ContractError('odf/contract-error/pkg',
                     'pkg: package needs a mimetype',
@@ -200,7 +212,20 @@ export const pkgPackage = {
             // Manifest last (location doesn't matter, but consistent).
             files[MANIFEST_PATH] = encodeText(manifestMod.serialize(pkg.manifest));
 
-            return zipMod.zipSync(files);
+            // Local-time constructor, at call time: the ZIP writer encodes
+            // with local-time getters, so a UTC epoch number would fall
+            // before 1980 west of Greenwich.
+            const mtime = opts && opts.mtime !== undefined
+                ? opts.mtime
+                : new Date(1980, 0, 1, 0, 0, 0);
+
+            try {
+                return zipMod.zipSync(files, { mtime });
+            } catch (e) {
+                throw new RenderError('odf/render-error/pkg',
+                    'pkg: failed to zip package',
+                    { cause: e, context: { module: 'pkg' } });
+            }
         }
 
         /**

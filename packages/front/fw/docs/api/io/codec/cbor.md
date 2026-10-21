@@ -175,5 +175,5 @@ const worker = fw.createWorker(
 ## See also
 
 - [msgpack](./msgpack.md) — more compact non-IETF alternative
-- [buffer](./buffer.md) — awa internal binary format
+- [buffer](./buffer.md) — AWA internal binary format
 - [utf8](./utf8.md) — dependency

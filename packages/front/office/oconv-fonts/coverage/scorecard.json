@@ -1,0 +1,38 @@
+{
+  "schema": "office-scorecard/v1",
+  "package": "@awacloud/oconv-fonts",
+  "entries": [
+    {
+      "axis": "A",
+      "suite": {
+        "id": "bun-coverage-src",
+        "version": "bun 1.3.13",
+        "source": null
+      },
+      "date": "2026-10-17",
+      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "command": "bun cli.ts office-scorecard axis-a --pkg oconv-fonts",
+      "result": {
+        "kind": "percent",
+        "lines": 100,
+        "functions": 100,
+        "rows": 3,
+        "model": "mean-of-rows",
+        "pooled": {
+          "lines": 100,
+          "functions": 100
+        },
+        "basis": [
+          "src/**"
+        ],
+        "tests": {
+          "pass": 80,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      "skipped": []
+    }
+  ],
+  "comparators": []
+}

@@ -43,7 +43,7 @@ const { docxToIr } = docxRuntime.resolve('oconvDocxToIr');
  * Structural signature (kinds/levels/text only) of a produced IR — the
  * shared assertion helper for the "reader-swap" proof (F2: docx-to-ir and
  * odt-to-ir must be drop-in swappable in front of the same writer,
- * `ai/plans/oconv/spikes/w0-core/FINDINGS.md` F2). Applied to BOTH
+ * `ai/archives/plans/oconv/spikes/w0-core/FINDINGS.md` F2). Applied to BOTH
  * readers' IR output below for an equivalent document structure — this is
  * the literal proof the plan asks for, not a same-reader placeholder.
  */
@@ -769,6 +769,116 @@ describe('oconvOdtToIr — span inner markup', () => {
         expect(expectSpanInvariant(missingTarget)).toBe(1);
     });
 
+    test('framesInRuns: a text-box frame maps like the raw one; an image frame becomes an IR image', () => {
+        const typed = odt.read(odt.write({ body: [fields] }), { framesInRuns: true }).body[0];
+        // Non-vacuity: the frames really are typed runs here.
+        expect(typed.runs[0].runs.filter((e) => e.type === 'frame')).toHaveLength(2);
+        const { ir, losses } = odtToIr({ body: [typed] });
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(ir.children).toEqual([oconvIr.node('paragraph', {}, [
+            run('See ', { bold: true }), run('Table 3', { bold: true }), run(' and ', { bold: true }),
+            run('Caption', { bold: true }),
+            // The span flags are not image props; no package part → no bytes.
+            oconvIr.node('image', { name: 'Pic1', alt: '' }),
+            run('.', { bold: true })
+        ])]);
+        expect(losses).toEqual([
+            { code: 'inline/flattened', detail: 'text:reference-ref' },
+            { code: 'image/unresolved', detail: 'draw:frame' },
+            { code: 'image/bytes-unavailable', detail: 'Pic1' },
+            { code: 'inline/dropped', detail: 'text:bookmark' }
+        ]);
+    });
+
+    test('framesInRuns: a text-box frame at paragraph level and in a link records image/unresolved', () => {
+        const frame = { type: 'frame', anchorType: 'paragraph', child: { kind: 'text-box', children: [] } };
+        const { ir, losses } = odtToIr({ body: [{ type: 'paragraph', runs: [
+            { type: 'text', value: 'a ' }, frame,
+            { type: 'link', href: 'https://e.x', runs: [{ type: 'text', value: 'l' }, frame] }
+        ] }] });
+        expect(ir.children).toEqual([oconvIr.node('paragraph', {}, [
+            oconvIr.node('run', { text: 'a ' }), oconvIr.node('run', { text: 'l', link: 'https://e.x' })
+        ])]);
+        expect(losses).toEqual([
+            { code: 'image/unresolved', detail: 'draw:frame' },
+            { code: 'image/unresolved', detail: 'draw:frame' }
+        ]);
+    });
+
+    // Image frames (framesInRuns): an 8-byte PNG signature plus payload.
+    const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+
+    test('an image frame written and read back is an IR image carrying its bytes in escapes.odt', () => {
+        const bytes = odt.write({ pictures: { 'Pictures/a.png': PNG }, body: [{ type: 'paragraph', runs: [
+            { type: 'text', value: 'Logo: ' },
+            { type: 'image', href: 'Pictures/a.png', name: 'Logo', width: '1cm', height: '1cm' },
+            { type: 'text', value: ' end' }
+        ] }] });
+        const { ir, losses } = odtToIr(odt.read(bytes, { framesInRuns: true }));
+
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        const [p] = ir.children;
+        expect(p.children.map((c) => c.kind)).toEqual(['run', 'image', 'run']);
+        const img = p.children[1];
+        expect(img.name).toBe('Logo');
+        expect(img.alt).toBe('');
+        expect(img.escapes.odt.contentType).toBe('image/png');
+        expect([...img.escapes.odt.bytes]).toEqual([...PNG]);
+    });
+
+    test('alt text from svg:title (else svg:desc); the name falls back to the href basename', () => {
+        const titled = { type: 'frame', child: { kind: 'image', href: './Pictures/b.png' },
+            _extras: { children: [xml.el('svg:desc', {}, [xml.text('long')]), xml.el('svg:title', {}, [xml.text('Short')])] } };
+        const described = { type: 'frame', name: 'D', child: { kind: 'image', href: 'Pictures/b.png' },
+            _extras: { children: [xml.el('svg:desc', {}, [xml.text('Only desc')])] } };
+        const pkg = { parts: { 'Pictures/b.png': PNG }, manifest: { entries: [] } };
+        const { ir, losses } = odtToIr({ package: pkg, body: [{ type: 'paragraph', runs: [titled, described] }] });
+        const [a, b] = ir.children[0].children;
+        expect([a.name, a.alt, b.name, b.alt]).toEqual(['b.png', 'Short', 'D', 'Only desc']);
+        expect(a.escapes.odt).toEqual({ bytes: PNG, contentType: null });
+        expect(losses).toEqual([]);
+    });
+
+    test('a missing part or an external href records image/bytes-unavailable; an image in a link loses its target (inline/dropped link-target)', () => {
+        const ext = { type: 'frame', name: 'Ext', child: { kind: 'image', href: 'https://e.x/a.png' } };
+        const { ir, losses } = odtToIr({ package: { parts: {} }, body: [{ type: 'paragraph', runs: [
+            { type: 'link', href: 'https://e.x', runs: [{ type: 'text', value: 'l' }, ext] }
+        ] }] });
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(ir.children[0].children).toEqual([
+            oconvIr.node('run', { text: 'l', link: 'https://e.x' }), oconvIr.node('image', { name: 'Ext', alt: '' })
+        ]);
+        expect(losses).toEqual([
+            { code: 'image/bytes-unavailable', detail: 'Ext' },
+            { code: 'inline/dropped', detail: 'link-target' }
+        ]);
+    });
+
+    test('a link\'s untyped children: field text kept on the link with inline/flattened, '
+        + 'an empty bookmark recorded inline/dropped (written and read back)', () => {
+        const back = odt.read(odt.write({ body: [{ type: 'paragraph', runs: [
+            { type: 'link', href: 'https://e.x', runs: [{ type: 'text', value: 'see ' }],
+              _extras: { children: [
+                  xml.el('text:reference-ref', { 'text:ref-name': 'f1' }, [xml.text('Fig 1')]),
+                  xml.el('text:bookmark', { 'text:name': 'b1' }, [])
+              ] } }
+        ] }] })).body[0];
+        // Non-vacuity: the reader really parks both on the link's own extras.
+        expect(back.runs[0]._extras.children.map((c) => c.name)).toEqual(['text:reference-ref', 'text:bookmark']);
+
+        const { ir, losses } = odtToIr({ body: [back] });
+
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(ir.children).toEqual([oconvIr.node('paragraph', {}, [
+            run('see ', { link: 'https://e.x' }), run('Fig 1', { link: 'https://e.x' })
+        ])]);
+        expect(losses).toEqual([
+            { code: 'inline/flattened', detail: 'text:reference-ref' },
+            { code: 'inline/dropped', detail: 'text:bookmark' }
+        ]);
+    });
+
     test('raw elements inside a span: field text kept with inline/flattened, a '
         + 'text-box frame kept with image/unresolved, an image-only frame and an '
         + 'empty bookmark dropped (written and read back)', () => {
@@ -843,5 +953,107 @@ describe('oconvOdtToIr — span inner markup', () => {
             checked += expectSpanInvariant(para);
         }
         expect(checked).toBe(6);
+    });
+});
+
+// Code blocks, quotes and rules by paragraph style: LibreOffice's built-in
+// `Preformatted Text`, `Quotations` and `Horizontal Line` (also what pandoc
+// writes), by style name.
+describe('oconvOdtToIr — code blocks, quotes and rules by paragraph style', () => {
+    const para = (styleName, runs) => ({ type: 'paragraph', styleName, runs });
+    const text = (value) => ({ type: 'text', value });
+
+    test('consecutive Preformatted Text paragraphs → ONE codeBlock; spaces, tabs, breaks and spans kept', () => {
+        const back = odt.read(odt.write({ body: [
+            para('Preformatted_20_Text', [{ type: 'space', count: 2 }, text('if (a)'),
+                { type: 'space', count: 2 }, text('b();')]),
+            para('Preformatted_20_Text', []),
+            para('Preformatted_20_Text', [{ type: 'tab' }, text('c;'), { type: 'line-break' },
+                { type: 'span', value: 'd', bold: true }]),
+            para(undefined, [text('After.')])
+        ] }));
+        const { ir, losses } = odtToIr(back);
+
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        expect(ir.children).toEqual([
+            oconvIr.node('codeBlock', { info: '', text: '  if (a)  b();\n\n\tc;\nd' }),
+            oconvIr.node('paragraph', {}, [run('After.')])
+        ]);
+    });
+
+    test('code groups separated by prose stay two code blocks; an all-empty group is skipped', () => {
+        const { ir } = odtToIr({ body: [
+            para('Preformatted_20_Text', [text('one')]),
+            para(undefined, [text('prose')]),
+            para('Preformatted_20_Text', [text('two')]),
+            para(undefined, [text('more')]),
+            para('Preformatted_20_Text', [])
+        ] });
+        expect(ir.children.map((b) => b.kind)).toEqual(['codeBlock', 'paragraph', 'codeBlock', 'paragraph']);
+        expect(ir.children.map((b) => b.text).filter(Boolean)).toEqual(['one', 'two']);
+    });
+
+    test('consecutive Quotations paragraphs → ONE blockquote; an empty one does not split it', () => {
+        const back = odt.read(odt.write({ body: [
+            para('Quotations', [text('Q1')]),
+            para('Quotations', []),
+            para('Quotations', [{ type: 'span', value: 'Q2', italic: true }]),
+            para(undefined, [text('Between.')]),
+            para('Quotations', [text('Q3')])
+        ] }));
+        const { ir, losses } = odtToIr(back);
+
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        expect(ir.children).toEqual([
+            oconvIr.node('blockquote', {}, [
+                oconvIr.node('paragraph', {}, [run('Q1')]),
+                oconvIr.node('paragraph', {}, [run('Q2', { italic: true })])
+            ]),
+            oconvIr.node('paragraph', {}, [run('Between.')]),
+            oconvIr.node('blockquote', {}, [oconvIr.node('paragraph', {}, [run('Q3')])])
+        ]);
+    });
+
+    test('an EMPTY Horizontal Line paragraph → hr; one with text stays a paragraph', () => {
+        const { ir, losses } = odtToIr({ body: [
+            para('Horizontal_20_Line', []),
+            para('Horizontal_20_Line', [text('Not a rule')])
+        ] });
+        expect(losses).toEqual([]);
+        expect(ir.children).toEqual([
+            oconvIr.node('hr'),
+            oconvIr.node('paragraph', {}, [run('Not a rule')])
+        ]);
+    });
+
+    test('an automatic paragraph style whose parent is a block style resolves (one hop)', () => {
+        const back = odt.read(odt.write({
+            autoStyles: { styles: [
+                { name: 'P1', family: 'paragraph', parentStyleName: 'Preformatted_20_Text' },
+                { name: 'P2', family: 'paragraph', parentStyleName: 'Quotations' }
+            ] },
+            body: [para('P1', [text('code')]), para('P2', [text('quote')])]
+        }));
+        // Non-vacuity: the reader really surfaces the automatic styles.
+        expect(back.autoStyles.styles.map((s) => [s.name, s.parentStyleName]))
+            .toEqual([['P1', 'Preformatted_20_Text'], ['P2', 'Quotations']]);
+
+        const { ir } = odtToIr(back);
+        expect(ir.children.map((b) => b.kind)).toEqual(['codeBlock', 'blockquote']);
+    });
+
+    test('a block style inside a table cell and a list item resolves there too', () => {
+        const { ir } = odtToIr({ body: [
+            { type: 'table', rows: [{ type: 'row', cells: [{ type: 'cell', children: [
+                para('Preformatted_20_Text', [text('in cell')])
+            ] }] }] },
+            { type: 'list', ordered: false, items: [{ children: [para('Quotations', [text('in item')])] }] }
+        ] });
+        const cell = ir.children[0].children[0].children[0];
+        expect(cell.children).toEqual([oconvIr.node('codeBlock', { info: '', text: 'in cell' })]);
+        const item = ir.children[1].children[0];
+        expect(item.children.map((b) => b.kind)).toEqual(['blockquote']);
     });
 });

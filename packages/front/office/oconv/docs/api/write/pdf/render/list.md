@@ -129,6 +129,24 @@ Executed against the live package (2026-10-06): `items.length === 1`,
 `losses === []` — a `listItem` with no block children still draws its own
 marker and reaches neither `layout/list-empty` nor any other loss.
 
+### Probe — a task item the face cannot draw records its checkbox
+
+```js
+const task = node('listItem', { escapes: { md: { task: 'checked' } } }, [
+    node('paragraph', {}, [node('run', { text: 'Shipped' })])
+]);
+const taskList = node('list', { ordered: false }, [task]);
+const taskOut = oconvPdfRenderList.render(taskList, childContext(taskList, '0'));
+taskOut.items.length;   // 2 — the bullet and the item body, no ☒
+taskOut.losses;         // [{ code: 'list/task-marker-dropped', detail: '[x]' }]
+```
+
+Executed against the live package (2026-10-12): `items.length === 2`,
+one `list/task-marker-dropped` loss — the Standard 14 faces carry no ☐ /
+☒ glyph, so the checkbox is recorded rather than drawn as `?`. With a
+measurer whose `covers('☒', 'regular')` is `true`, the item's first
+paragraph gets a leading `☒ ` run instead, and nothing is recorded.
+
 ## Notes
 
 - **Degenerate-return shape differs from `render/table`'s, MEASURED, never

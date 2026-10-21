@@ -92,8 +92,9 @@ export const drawShapes = {
 
         function renderShape(s) {
             const kids = [];
-            if (s.enhancedGeometry) kids.push(renderEnhanced(s.enhancedGeometry));
             for (const c of s.children || []) kids.push(c);
+            // The schema puts the geometry after the shape's text.
+            if (s.enhancedGeometry) kids.push(renderEnhanced(s.enhancedGeometry));
             return xml.el(s.kind, { ...(s.attrs || {}) }, kids);
         }
 

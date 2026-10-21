@@ -95,18 +95,17 @@ export const pdfSecurity = {
 
         // Inspect `/CF /<StmF> /CFM` (StmF default name) to pick the
         // V=4 method — either 'AESV2' or 'V2'. Also resolves /StrF and
-        // /EFF (embedded file filter, ISO 32000-1 §7.6.5).
+        // /EFF (embedded file filter, ISO 32000-1 §7.6.5). Each class
+        // resolves on its own, as for V=5: an `Identity` /StmF leaves the
+        // streams unencrypted whatever /StrF names (ISO 32000-2 Table 20,
+        // Table 26 — no fallback to /StrF).
         function resolveV4Method(typedEncrypt) {
             const stmFName = nameValue(typedEncrypt.StmF) || 'Identity';
             const strFName = nameValue(typedEncrypt.StrF) || 'Identity';
             const effName  = nameValue(typedEncrypt.EFF)  || stmFName;
-            let streamMethod;
-            if (stmFName === 'Identity') {
-                if (strFName === 'Identity') streamMethod = 'Identity';
-                else streamMethod = resolveCfmFor(typedEncrypt, strFName);
-            } else {
-                streamMethod = resolveCfmFor(typedEncrypt, stmFName);
-            }
+            const streamMethod = stmFName === 'Identity'
+                ? 'Identity'
+                : resolveCfmFor(typedEncrypt, stmFName);
             const stringMethod = strFName === 'Identity'
                 ? 'Identity'
                 : resolveCfmFor(typedEncrypt, strFName);

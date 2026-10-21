@@ -5,7 +5,7 @@
 
 /**
  * Worker integration test — `src/worker.js`'s F6 message contract
- * (`ai/plans/oconv/spikes/w0-core/FINDINGS.md` Axis 4, verbatim): one
+ * (`ai/archives/plans/oconv/spikes/w0-core/FINDINGS.md` Axis 4, verbatim): one
  * conversion is one message, `{ id, name, bytes: ArrayBuffer, at?, sha256? }`
  * in (bytes transferred), `{ id, ms, error, chars, warnings, losses, markdown }`
  * out — errors returned as DATA, never thrown across the boundary.
@@ -382,9 +382,9 @@ describe('oconv worker — fromMd forwards `assets` (BL-980)', () => {
         // Without the manifest the image is dropped; with it, it is placed.
         expect(Object.keys(docxApi.read(new Uint8Array(bare.bytes)).images)).toHaveLength(0);
         expect(Object.keys(docxApi.read(new Uint8Array(withAssets.bytes)).images)).toHaveLength(1);
-        // Both record exactly one image loss — a drop, then a degrade.
+        // The drop is the one loss; the placed image is sized from its header.
         expect(bare.warnings).toBe(1);
-        expect(withAssets.warnings).toBe(1);
+        expect(withAssets.warnings).toBe(0);
     });
 
     test('`assets` reaches the pdf typesetter — a JPEG is PLACED off the main thread', async () => {

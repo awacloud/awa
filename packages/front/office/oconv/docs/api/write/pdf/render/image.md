@@ -9,7 +9,7 @@ status: complete
 
 # oconvPdfRenderImage
 
-> The `image` renderer — places JPEG, refuses honestly otherwise.
+> The `image` renderer — places JPEG and PNG, refuses honestly otherwise.
 
 **Module** `oconvPdfRenderImage` | **Source** `packages/front/office/oconv/src/write/pdf/render/image.js` | **Deps** `oconvPdfLinebreak` | **Worker-safe** yes
 
@@ -37,7 +37,7 @@ both supplied only by the real facade.
 | `render` | `(node: object, ctx: object) => {items: object[], losses: object[], height: number}` | block-local laid-out items (the renderer contract) | `Error` `oconv: pdf image renderer needs ctx.builder` — only on the placement path, when the facade supplied no image sink/counter |
 
 `node` is an `oconv-ir/v1` `image` node (`{name, alt}`, optionally carrying
-`escapes.docx.bytes`). `ctx` additionally reads `ctx.assets` (the caller's
+`escapes.docx.bytes` / `escapes.odt.bytes`). `ctx` additionally reads `ctx.assets` (the caller's
 image-bytes map).
 
 ## Examples
@@ -109,23 +109,24 @@ to two decimals).
 
 ## Notes
 
-- **Placement scope is JPEG only, a measured boundary, not an omission.**
-  `pdfBuilder.addImage` decodes nothing — bytes go into the XObject stream
-  verbatim behind the `/Filter` the caller names. JPEG entropy-coded data
-  **is** a PDF image stream (`/DCTDecode`), so it embeds directly. A PNG's
-  `IDAT` is a zlib stream of *filtered scanlines*, which is NOT a
-  `/FlateDecode` image stream — embedding the file bytes would render
-  garbage; doing it properly needs a zlib-to-Flate re-wrap plus an
-  `/SMask` for alpha and an `/Indexed` palette for colour type 3, none of
-  which the writer implements. PNG is REFUSED with an honest loss rather than
-  guessed at.
+- **Placement scope: JPEG and PNG.** `pdfBuilder.addImage` decodes
+  nothing — bytes go into the XObject stream verbatim behind the `/Filter`
+  (and typed `/DecodeParms`) the caller names. JPEG entropy-coded data
+  **is** a PDF image stream (`/DCTDecode`). A PNG's `IDAT` is a zlib stream
+  of *filtered scanlines*, which `/FlateDecode` reads behind a PNG
+  `/Predictor 15`: a non-interlaced PNG of colour type 0 or 2 without `tRNS` embeds its `IDAT` zlib stream verbatim as `/FlateDecode` behind a PNG `/Predictor 15`; a palette, alpha or colour-key PNG is inflated (bounded by its `IHDR` size), unfiltered and split into its colour samples (a palette expanded to 8-bit RGB) and a DeviceGray `/SMask`, both re-deflated. The decoding needs `ctx.zlib`
+  (the facade hands fw `zlib` over); without it those PNGs are refused.
+  Refused, naming `png`: an interlaced or malformed PNG, or one above
+  64 MiB of filtered data.
 - **Three-way outcome**: JPEG bytes resolve → PLACED (`ctx.builder.
   addImage(...)`, a `q … cm /Im<n> Do Q` item, NO loss). Nothing resolved →
   italic `[image: …]` placeholder + `layout/image-dropped`,
   `reason: 'no-bytes'`. Bytes resolve but the encoding is not placeable →
   same placeholder + `layout/image-dropped`, `reason: 'unsupported-
-  encoding'` (plus `format` when the header reader could name the
-  container, e.g. `'png'`).
+  encoding'`, plus `format` when it can be named — `'png'` for a refused
+  PNG, `'jpeg'` for a CMYK JPEG, a known signature (`'gif'`, `'webp'`,
+  `'bmp'`, `'tiff'`), else the subtype of the content type a reader carried
+  with the bytes.
 - **The `ctx.builder` seam exists because `pdfBuilder.addImage` needs a
   CURRENT PAGE**, and builder pages are created only AFTER stacking — a
   renderer runs during layout, before anyone knows which page its block
@@ -148,7 +149,7 @@ to two decimals).
   (`fw/no-factory-capture`), so each copy is pinned byte-identical to its
   sibling by a dedicated drift test rather than shared by import.
 - The resolution rule for image bytes is the SAME as the other two
-  writers: caller `assets[name]` first, then the docx reader's carried
+  writers: caller `assets[name]` (or its percent-decoded form) first, then a reader's carried
   `escapes.docx.bytes`, else nothing.
 - Capture-free (`fw/no-factory-capture`), worker-safe.
 

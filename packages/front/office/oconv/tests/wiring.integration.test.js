@@ -20,7 +20,7 @@
  *
  * A second block ("specifier pin") pins the bare specifiers and
  * runtime-module names this task's `main.js` actually binds to
- * (`ai/plans/oconv/spikes/w0-core/FINDINGS.md` §Import specifiers,
+ * (`ai/archives/plans/oconv/spikes/w0-core/FINDINGS.md` §Import specifiers,
  * extended by BATCH_14 W2) — a rename upstream in `@awacloud/ooxml`/`@awacloud/odf`/
  * `@awacloud/md`/`@awacloud/pdf`/`@awacloud/fonts`/`@awacloud/fw` fails HERE rather than being
  * discovered later.

@@ -37,7 +37,7 @@ const tc = runtime.resolve('xlsxThreadedComments');
 | `parsePersons` | `(text\|bytes) => persons[]` | Workbook-wide registry. |
 | `serializePersons` | `(persons) => string` | `<personList>` XML. |
 | `personsBytes` | `(persons) => Uint8Array` | UTF-8 bytes. |
-| `generateId` | `() => '{GUID}'` | RFC 4122 v4 from `crypto.getRandomValues`; without it, throws `xlsx/no-random-source` — pass the comment / person `id` explicitly. |
+| `generateId` | `() => '{GUID}'` | RFC 4122 v4 from `crypto.getRandomValues`, upper-case hexadecimal as the schema's `ST_Guid` requires (and Excel writes); without it, throws `xlsx/no-random-source` — pass the comment / person `id` explicitly. Ids a caller passes are written as given. |
 | `TC_NS`, `REL_TYPE_THREADED_COMMENT`, `REL_TYPE_PERSON`, `CT_THREADED_COMMENTS`, `CT_PERSONS` | string | OPC bindings. |
 
 ## Model (sheet level)

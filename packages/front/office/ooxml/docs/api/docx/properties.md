@@ -34,9 +34,11 @@ const props = runtime.resolve('docxProperties');
 | `parseParagraphProperties` | `(pPrEl) => ParagraphProperties \| undefined` | Typed bag. |
 | `renderParagraphProperties` | `(pPr) => element \| null` | `<w:pPr>`, or `null`. |
 | `parseTableProperties` | `(tblPrEl) => TableProperties \| undefined` | Typed bag; `undefined` when the element has no element children. |
-| `renderTableProperties` | `(tblPr) => element \| null` | `<w:tblPr>` (children: `tblStyle`, `tblW`, `tblBorders`, the `_extras` that precede `tblCellMar` in the schema, `tblCellMar`, then the `_extras` that follow it), or `null` when nothing would render. |
+| `renderTableProperties` | `(tblPr) => element \| null` | `<w:tblPr>` (the typed children and the `_extras` in `CT_TblPr` order), or `null` when nothing would render. `renderRunProperties` and `renderParagraphProperties` order theirs by `CT_RPr` / `CT_PPr` the same way. |
 | `readToggle` / `writeToggle` | boolean helpers | For element toggles. |
 | `valOf` / `elVal` | `w:val` helpers | Read / write the `w:val` attribute. |
+| `sequence(names)` | `(names: Array<string\|string[]>) => seq` | Indexes an `xsd:sequence` of child names for `orderBySequence`; an entry that is an array names elements sharing one place (a choice inside the sequence). |
+| `orderBySequence(children, seq)` | `(XmlNode[], seq) => XmlNode[]` | A new array of `children` sorted by their place in `seq`, stably. An `mc:AlternateContent` takes the place of the element its `mc:Fallback` (else its first `mc:Choice`) holds; a name `seq` does not list goes before the sequence's trailing `…Change` entry when it has one, else last. The same code as `ooxmlShared`'s (this module has no `ooxmlShared` dependency); `docxStructure` uses it to put the elements a read preserved in `_extras` back among the typed ones. |
 
 ## Model
 
@@ -46,7 +48,10 @@ RunProperties := {
     underline?: 'single'|'double'|…,
     color?: 'RRGGBB',                  // hex without '#'
     size?: number,                     // half-points (24 = 12pt)
-    font?: string,
+    font?: string,                     // <w:rFonts>: ascii, else hAnsi, else cs
+    fonts?: { hint?, ascii?, hAnsi?, eastAsia?, cs?,
+              asciiTheme?, hAnsiTheme?, eastAsiaTheme?, cstheme? },
+                                       // every <w:rFonts> attribute, as read
     vertAlign?: 'superscript'|'subscript'|'baseline',
     highlight?: string,
     rStyle?: string,                   // styleId
@@ -145,8 +150,9 @@ props.renderTableProperties({
 
 ## Coverage
 
-- **Typed**: bold/italic/strike/underline/color/size/font/vertAlign/highlight/rStyle (run); align/indent/spacing/pStyle/numPr/rPr (paragraph).
-- **Typed (table)**: `tblStyle` (`style`), `tblW` (`width`), `tblBorders` (`borders`, six edges), `tblCellMar` (`cellMargins`, six edges: `top`, `start`, `left`, `bottom`, `end`, `right`). `w:tblGrid`, `w:trPr`, `w:tcBorders`, `w:tblLook` and `w:tblStylePr` are not modelled; they stay verbatim in `_extras` (`tblLook` in `tblPr._extras`).
+- **Typed**: bold/italic/strike/underline/color/size/font/fonts/vertAlign/highlight/rStyle (run); align/indent/spacing/pStyle/numPr/rPr (paragraph).
+- **Run fonts**: `font` is one name (`w:ascii`, else `w:hAnsi`, else `w:cs`); a model without `fonts` writes it to the three as `<w:rFonts w:ascii w:hAnsi w:cs>`. A read also gives `fonts`, every attribute of `<w:rFonts>` by its local name (a `<w:rFonts>` holding only `w:hint` gives `fonts` and no `font`), and the writer writes `fonts` back as it is while `font` still equals the name it derives. A changed `font` is written to `ascii`, `hAnsi` and `cs`, and their theme attributes (`asciiTheme`, `hAnsiTheme`, `cstheme`) are left out — Word would otherwise apply the theme font over the edit; a removed `font` removes those six. `eastAsia`, `eastAsiaTheme` and `hint` are always kept; with no attribute left, no `<w:rFonts>` is written.
+- **Typed (table)**: `tblStyle` (`style`), `tblW` (`width`), `tblBorders` (`borders`, six edges), `tblCellMar` (`cellMargins`, six edges: `top`, `start`, `left`, `bottom`, `end`, `right`). `w:tblGrid`, `w:trPr`, `w:tcBorders`, `w:tblLook` and `w:tblStylePr` are not modelled; they stay verbatim in `_extras` (`tblLook` in `tblPr._extras`); a table written with no grid gets one derived from its rows (see [structure](./structure.md)).
 - **`_extras`**: everything else (kern, `w:lang`, `w:shd`, `w:tabs`, `w:keepNext`, …) — modelled by the `wmlRunFormatting` / `wmlParagraphFormatting` extras.
 
 ## Notes

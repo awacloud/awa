@@ -7,7 +7,9 @@
  * @fileoverview Parse/render `settings.xml`.
  *
  * Root: `<office:document-settings>` → `<office:settings>` →
- * zero or more `<config:config-item-set>`.
+ * zero or more `<config:config-item-set>` on read. On write,
+ * `<office:settings>` is left out when there is no item set and no kept
+ * child (the schema allows it out, never empty).
  *
  * Each item-set is preserved as a raw XML element node — no
  * deep typing, just preserve-and-emit.
@@ -72,12 +74,13 @@ export const odfSettings = {
             if (s._extras && s._extras.children) {
                 for (const c of s._extras.children) children.push(c);
             }
-            const settingsEl = xml.el('office:settings', {}, children);
+            // `office:settings` is optional but never empty in the schema:
+            // with nothing to hold, the root is written without it.
             const root = xml.el('office:document-settings', {
                 'xmlns:office': OFFICE_NS,
                 'xmlns:config': CONFIG_NS,
                 'office:version': ODF_VERSION
-            }, [settingsEl]);
+            }, children.length ? [xml.el('office:settings', {}, children)] : []);
             declareNamespaces(root, { carried: (opts && opts.namespaces) || {},
                 part: 'settings.xml', module: 'settings' });
             return xml.serialize(root);

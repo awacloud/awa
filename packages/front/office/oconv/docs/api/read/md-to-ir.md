@@ -51,7 +51,8 @@ frontmatter;    // null — no leading front-matter fence
 - A leading front-matter fence (`---`/`+++`/`;;;`) is stripped before parsing and never carried into the IR — recorded as loss `frontmatter/stripped`, detail = the fence's `lang`.
 - Nesting inline emphasis (`emph`/`strong`/`strikethrough`) flattens into per-run boolean flags — a new IR `run` is emitted whenever the effective flag set or link target changes.
 - A hard line break (`linebreak`) degrades to a single space (loss `inline/linebreak-degraded`); a soft break degrades to a single space with **no** loss.
-- An ordered list with `listStart > 1`, a GFM task-list checkbox, or a GFM table declaring column alignment each records a loss (`list/start-dropped`, `list/task-marker-dropped`, `table/align-dropped` respectively) — the IR vocabulary has no prop for any of the three.
+- An ordered list with `listStart > 1` or a GFM table declaring column alignment each records a loss (`list/start-dropped`, `table/align-dropped` respectively) — the IR vocabulary has no prop for either.
+- A GFM task-list checkbox is carried, not lost: the item becomes a `listItem` with `escapes.md = { task: 'checked' }` (`[x]` / `[X]`) or `{ task: 'unchecked' }` (`[ ]`). The docx and odt writers draw it as a leading `☒ ` / `☐ ` run, the md writer writes the marker back, the pdf writer draws it when the face covers the glyph — a writer that cannot draw it records `list/task-marker-dropped`.
 - Every other unmapped inline or block node kind is dropped through an exhaustive else-branch (`inline/dropped` / `block/dropped`, detail = the node's own `type`) — nothing falls through silently.
 - Out of scope: no YAML/TOML/JSON parsing of the stripped front-matter content, no footnote/math/emoji handling (their syntax parses as ordinary text under core `md.parse`).
 

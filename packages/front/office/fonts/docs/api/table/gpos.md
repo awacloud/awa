@@ -41,6 +41,7 @@ const kern = gpos.features.find(f => f.tag === 'kern');
 ## Notes
 
 - ValueRecord is variable-size depending on `valueFormat` — decoded byte-by-byte.
+- Pair Adjustment format 2 whose two value formats have no X/Y placement, advance or device bit has 0-byte records: no cell carries an adjustment. When such a grid declares more than 65,536 cells (`class1Count` × `class2Count`), it is built from one shared row of one shared cell instead of one object per cell; the cell values are the same.
 - Reuses `parseScriptList` / `parseFeatureList` / `parseLookupList` from GSUB.
 - `buildKerningTable` only captures `value1.xAdvance` — consumers needing richer ValueRecords should walk `gpos.lookups` directly.
 - Sub-lookup logic is split across `./gpos/value-record.js`, `./gpos/type1-single.js`, `./gpos/type2-pair.js`, `./gpos/type3-cursive.js`, `./gpos/type4-6-mark.js`, `./gpos/type7-8-context.js`, `./gpos/type9-extension.js`.

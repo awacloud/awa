@@ -97,12 +97,13 @@ export const drawShape = {
          */
         function renderShape(s) {
             const children = [];
-            if (s.enhancedGeometry && s.kind === 'draw:custom-shape') {
-                children.push(renderEnhanced(s.enhancedGeometry));
-            }
             if (s.children) for (const c of s.children) children.push(c);
             if (s._extras && s._extras.children) {
                 for (const c of s._extras.children) children.push(c);
+            }
+            // The schema puts the geometry after the shape's text.
+            if (s.enhancedGeometry && s.kind === 'draw:custom-shape') {
+                children.push(renderEnhanced(s.enhancedGeometry));
             }
             return xml.el(s.kind, { ...(s.attrs || {}) }, children);
         }

@@ -74,6 +74,7 @@ import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 import { fw_require as oconvFwRequire, modules as oconvModules } from '@awacloud/oconv';
 import { extras as mdExtras, fw_require as mdFwRequire, modules as mdModules } from '@awacloud/md';
 import { toModuleDefinitions } from './descriptors.ts';
+import { summarizeLosses } from './loss-summary.ts';
 import { timestampError } from './timestamp.ts';
 
 /** Mirrors `oconv.js`'s `SUPPORTED_FORMATS` — message-hint use only, see the module doc. */
@@ -97,6 +98,19 @@ export interface Loss {
     index?: string;
     /** pdf-writer losses only: the IR block kind (`paragraph`, `image`, ...). */
     kind?: string;
+}
+
+/**
+ * One entry of a result's `lossSummary`: a distinct `code` + `detail` of the
+ * `losses` ledger and how many times it occurs. Entries keep the order in
+ * which each first occurs; an object `detail` is compared by its JSON form;
+ * a pdf loss's `index` and `kind` are left out (`./loss-summary.ts`).
+ */
+export interface LossSummaryEntry {
+    code: string;
+    detail: string | Record<string, unknown>;
+    /** Occurrences of this `code` + `detail` in `losses` (at least 1). */
+    count: number;
 }
 
 /** `true` when the failure is a usage/config problem (bad format/target/pair) — the CLI shell exits 2 for these, 1 otherwise. */
@@ -221,6 +235,8 @@ export interface ToMdOutput {
     error: null;
     markdown: string;
     losses: Loss[];
+    /** `losses` grouped by `code` + `detail`, with a count. */
+    lossSummary: LossSummaryEntry[];
     lossy: boolean;
 }
 
@@ -239,7 +255,7 @@ export async function toMd(input: ToMdInput): Promise<ToMdResult> {
     return guard(async () => {
         const oconv = buildOconv();
         const result = await oconv.toMd(input);
-        return { markdown: result.markdown, losses: result.losses, lossy: result.lossy };
+        return { markdown: result.markdown, losses: result.losses, lossSummary: summarizeLosses(result.losses), lossy: result.lossy };
     });
 }
 
@@ -256,6 +272,8 @@ export interface FromMdOutput {
     bytes: Uint8Array;
     target: string;
     losses: Loss[];
+    /** `losses` grouped by `code` + `detail`, with a count. */
+    lossSummary: LossSummaryEntry[];
     lossy: boolean;
 }
 
@@ -266,7 +284,10 @@ export async function fromMd(input: FromMdInput): Promise<FromMdResult> {
     return guard(async () => {
         const oconv = buildOconv();
         const result = await oconv.fromMd(input);
-        return { bytes: result.bytes, target: result.target, losses: result.losses, lossy: result.lossy };
+        return {
+            bytes: result.bytes, target: result.target,
+            losses: result.losses, lossSummary: summarizeLosses(result.losses), lossy: result.lossy,
+        };
     });
 }
 
@@ -286,6 +307,8 @@ export interface ConvertOutput {
     format: string;
     target: string;
     losses: Loss[];
+    /** `losses` grouped by `code` + `detail`, with a count. */
+    lossSummary: LossSummaryEntry[];
     lossy: boolean;
 }
 
@@ -296,7 +319,10 @@ export async function convert(input: ConvertInput): Promise<ConvertResult> {
     return guard(async () => {
         const oconv = buildOconv();
         const result = await oconv.convert(input);
-        return { bytes: result.bytes, format: result.format, target: result.target, losses: result.losses, lossy: result.lossy };
+        return {
+            bytes: result.bytes, format: result.format, target: result.target,
+            losses: result.losses, lossSummary: summarizeLosses(result.losses), lossy: result.lossy,
+        };
     });
 }
 

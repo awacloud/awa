@@ -38,6 +38,13 @@ describe('drawShapes — parse/render', () => {
         const reparsed = ext.parseShape(back);
         expect(reparsed.enhancedGeometry.equations[0].attrs['draw:formula']).toBe('1+1');
     });
+    test('custom-shape: the text first, draw:enhanced-geometry last (schema order)', () => {
+        const el = xml.parse('<draw:custom-shape draw:name="cs2"><draw:enhanced-geometry draw:type="ellipse"/><text:p>Label</text:p></draw:custom-shape>');
+        const s = ext.parseShape(el);
+        const back = ext.renderShape(s);
+        expect(back.children.map((c) => c.name)).toEqual(['text:p', 'draw:enhanced-geometry']);
+        expect(ext.parseShape(xml.parse(xml.serialize(back)))).toEqual(s);
+    });
 });
 
 describe('drawShapes — hooks', () => {

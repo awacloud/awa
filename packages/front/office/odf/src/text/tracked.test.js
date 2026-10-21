@@ -86,9 +86,27 @@ describe('textTracked module', () => {
                 ]
             };
             const out = xml.serialize(t.renderTrackedChanges(m));
-            expect(out).toContain('<text:changed-region text:id="r1">');
+            expect(out).toContain('<text:changed-region xml:id="r1" text:id="r1">');
             expect(out).toContain('<text:insertion>');
             expect(out).toContain('<dc:creator>Alice</dc:creator>');
+        });
+
+        test('a region is written with xml:id (required since ODF 1.2) and text:id, same value; read back unchanged', () => {
+            const { xml, t } = build();
+            const m = t.parseTrackedChanges(xml.parse('<text:tracked-changes><text:changed-region text:id="ct1"><text:deletion>' +
+                '<office:change-info><dc:creator>B</dc:creator></office:change-info><text:p>gone</text:p></text:deletion></text:changed-region></text:tracked-changes>'));
+            const node = t.renderTrackedChanges(m);
+            expect(node.children[0].attrs).toEqual({ 'xml:id': 'ct1', 'text:id': 'ct1' });
+            expect(t.parseTrackedChanges(xml.parse(xml.serialize(node)))).toEqual(m);
+            const fromXmlId = t.parseTrackedChanges(xml.parse('<text:tracked-changes><text:changed-region xml:id="ct9"><text:insertion>' +
+                '<office:change-info/></text:insertion></text:changed-region></text:tracked-changes>'));
+            expect(t.renderTrackedChanges(fromXmlId).children[0].attrs).toEqual({ 'xml:id': 'ct9', 'text:id': 'ct9' });
+        });
+
+        test('a region without an id is written with no id attribute', () => {
+            const { t } = build();
+            const node = t.renderTrackedChanges({ trackedChanges: [{ id: '', kind: 'insertion' }] });
+            expect(node.children[0].attrs).toEqual({});
         });
 
         test('parse → render → parse stability', () => {

@@ -182,3 +182,52 @@ describe('drawingmlChart — title', () => {
         expect(xmlText).toContain('<c:title>');
     });
 });
+
+describe('drawingmlChart — series data (CT_StrRef / CT_NumRef hold a cache, literals stand alone)', () => {
+    const ser = (text) => text.slice(text.indexOf('<c:ser>'), text.indexOf('</c:ser>') + 8);
+    /** A chartSpace holding one plot of `plot` with the given series XML. */
+    const space = (plot, series) => '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea>'
+        + `<c:${plot}>${series}</c:${plot}></c:plotArea></c:chart></c:chartSpace>`;
+
+    test('the writer gives the name as c:v, categories as c:strLit, values as c:numLit — no reference', () => {
+        const text = ser(chart.serialize(chart.barChart({ series: [{ name: 'Q4', categories: ['EU', 'US'], values: [1, 2] }] })));
+        expect(text).toContain('<c:tx><c:v>Q4</c:v></c:tx>');
+        expect(text).toContain('<c:cat><c:strLit><c:ptCount val="2"/><c:pt idx="0"><c:v>EU</c:v></c:pt>');
+        expect(text).toContain('<c:val><c:numLit><c:formatCode>General</c:formatCode><c:ptCount val="2"/>');
+        for (const gone of ['c:strRef', 'c:numRef', 'c:f>']) expect(text).not.toContain(gone);
+        const xy = ser(chart.serialize(chart.scatterChart({ series: [{ name: 's', xValues: [1, 2], yValues: [3, 4] }] })));
+        expect(xy).toContain('<c:xVal><c:numLit>');
+        expect(xy).toContain('<c:yVal><c:numLit>');
+        expect(xy).not.toContain('Ref>');
+    });
+
+    test('the reader takes a reference\'s cache — what Office writes', () => {
+        const office = space('barChart', '<c:ser><c:idx val="0"/><c:order val="0"/>'
+            + '<c:tx><c:strRef><c:f>Sheet1!$B$1</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>Sales</c:v></c:pt></c:strCache></c:strRef></c:tx>'
+            + '<c:cat><c:strRef><c:f>Sheet1!$A$2:$A$3</c:f><c:strCache><c:ptCount val="2"/><c:pt idx="0"><c:v>EU</c:v></c:pt><c:pt idx="1"><c:v>US</c:v></c:pt></c:strCache></c:strRef></c:cat>'
+            + '<c:val><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="2"/><c:pt idx="0"><c:v>4.5</c:v></c:pt><c:pt idx="1"><c:v>7</c:v></c:pt></c:numCache></c:numRef></c:val>'
+            + '</c:ser>');
+        const s = chart.parse(office).series[0];
+        expect([s.name, s.categories, s.values]).toEqual(['Sales', ['EU', 'US'], [4.5, 7]]);
+
+        const years = space('lineChart', '<c:ser><c:idx val="0"/><c:order val="0"/>'
+            + '<c:cat><c:numRef><c:f>A2:A3</c:f><c:numCache><c:ptCount val="2"/><c:pt idx="0"><c:v>2024</c:v></c:pt><c:pt idx="1"><c:v>2025</c:v></c:pt></c:numCache></c:numRef></c:cat>'
+            + '<c:val><c:numRef><c:f>B2:B3</c:f><c:numCache><c:ptCount val="2"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numCache></c:numRef></c:val></c:ser>');
+        expect(chart.parse(years).series[0].categories).toEqual(['2024', '2025']);
+
+        const xy = space('scatterChart', '<c:ser><c:idx val="0"/><c:order val="0"/>'
+            + '<c:xVal><c:numRef><c:f>A2</c:f><c:numCache><c:ptCount val="1"/><c:pt idx="0"><c:v>3</c:v></c:pt></c:numCache></c:numRef></c:xVal>'
+            + '<c:yVal><c:numRef><c:f>B2</c:f><c:numCache><c:ptCount val="1"/><c:pt idx="0"><c:v>9</c:v></c:pt></c:numCache></c:numRef></c:yVal></c:ser>');
+        const p = chart.parse(xy).series[0];
+        expect([p.xValues, p.values]).toEqual([[3], [9]]);
+    });
+
+    test('the form this package wrote before (a literal inside a reference) still reads the same', () => {
+        const legacy = space('barChart', '<c:ser><c:idx val="0"/><c:order val="0"/>'
+            + '<c:tx><c:strRef><c:f>"Q4"</c:f><c:strLit><c:ptCount val="1"/><c:pt idx="0"><c:v>Q4</c:v></c:pt></c:strLit></c:strRef></c:tx>'
+            + '<c:cat><c:strRef><c:f>""</c:f><c:strLit><c:ptCount val="1"/><c:pt idx="0"><c:v>EU</c:v></c:pt></c:strLit></c:strRef></c:cat>'
+            + '<c:val><c:numRef><c:f>""</c:f><c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>5</c:v></c:pt></c:numLit></c:numRef></c:val></c:ser>');
+        const s = chart.parse(legacy).series[0];
+        expect([s.name, s.categories, s.values]).toEqual(['Q4', ['EU'], [5]]);
+    });
+});

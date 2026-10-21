@@ -24,6 +24,9 @@
  * |---|---|---|
  * | `heading` | `heading{level}` | `outlineLevel` is odt's own semantic field (`<text:h>`) — never a style-name heuristic. Clamped to 1–6, loss `heading/level-clamped` above 6. |
  * | `paragraph` | `paragraph` | Runs mapped 1:1 (see below). |
+ * | `paragraph` styled `Preformatted_20_Text` (LibreOffice's "Preformatted Text"; or an automatic style whose parent it is) | `codeBlock{info:''}` | CONSECUTIVE such paragraphs form ONE code block, one line each (an empty paragraph is a blank line; a group of empty lines only is skipped); text, `space`, `tab`, `line-break`, spans and links are kept as characters; a raw element or a frame inside records `inline/dropped`. |
+ * | `paragraph` styled `Quotations` (or via its automatic style) | `blockquote` of `paragraph`s | CONSECUTIVE such paragraphs form ONE quote (an empty one is skipped); quote nesting is not recoverable. |
+ * | `paragraph` styled `Horizontal_20_Line` (or via its automatic style) | `hr` when EMPTY | With content it stays a paragraph. |
  * | `list` | `list{ordered}` | `node.ordered !== undefined` → `{ordered: node.ordered}`, NO loss (a named style's binding is kept and its resolved flag is added — a resolvable content-automatic OR styles.xml named list style, `styleName` present or not). `ordered` absent (foreign/unprovable style) → the legacy bullet fallback, loss `list/numbering-unresolved`. Nesting is real (a `list` inside a `listItem`), not flattened — odt's parser preserves it natively. |
  * | `table` | `table` | Rows/cells mapped 1:1 (see below) — `odt.read()` types a text-body `<table:table>`, so a table is mapped, never dropped. |
  * | `unknown` (any other odt/draw element `odt.read()` didn't type) | — (dropped) | loss `block/dropped`, detail = the raw odf element name. `image/unresolved` instead when the element is `draw:frame`/`draw:image`. |
@@ -62,12 +65,11 @@
  * genuinely unrelated markup (a NESTED `<text:a>`, illegal in ODF, is parked
  * raw on the *enclosing link run's own* `_extras`, never here):
  *
- * - `draw:frame` / `draw:image` — an inline image reference. `@awacloud/odf`
- *   ships a dedicated typed parser for these (`drawFrame`/`drawImage`),
- *   but this reader's frozen dependency list is `['oconvIr', 'odt']`
- *   only, so resolving them here would mean re-implementing that parser
- *   ourselves against raw XML — the "reach into odf internals" this
- *   module must not do. Loss `image/unresolved`; no IR node emitted.
+ * - `draw:frame` / `draw:image` — an inline image reference left raw (a
+ *   result read without `framesInRuns`; `oconv` reads with it, see below).
+ *   Resolving it here would mean re-implementing odf's `drawFrame` parser
+ *   against raw XML — the "reach into odf internals" this module must not
+ *   do. Loss `image/unresolved`; no IR node emitted.
  * - anything else (bookmarks, fields, tracked-change markers, …) — loss
  *   `inline/dropped`, detail = the element name; no IR node emitted.
  *
@@ -82,6 +84,25 @@
  * `image/unresolved` for `draw:frame`/`draw:image`, otherwise
  * `inline/flattened` (detail = the element name: the text is kept, the
  * element's meaning — field, reference, note — is not).
+ *
+ * A result read with `odt.read(bytes, { framesInRuns: true })` (what
+ * `oconv` itself does) carries each frame as a `{ type: 'frame' }` run at
+ * its place instead. An IMAGE frame becomes an IR `image` there: `name` =
+ * the frame's `draw:name`, else the picture path's basename; `alt` = its
+ * `svg:title`, else its `svg:desc`; the bytes of the package part it names
+ * travel in `escapes.odt` (`{ bytes, contentType }` — the manifest media
+ * type, else `null`), which every writer reads after `escapes.docx`; a
+ * missing or external part records `image/bytes-unavailable` (the image
+ * reference is kept). Span flags never apply to an image, and an image
+ * inside a link keeps no target (`inline/dropped`, detail `link-target`).
+ * Any other frame maps like the raw frame above — loss `image/unresolved`
+ * (detail `draw:frame`), no IR node, except inside a span where a frame
+ * holding text (a text box, a title) keeps that text as one plain IR run.
+ *
+ * A link run's own untyped children (`_extras.children`: a field, a
+ * reference, a bookmark — or, read without `framesInRuns`, a frame inside
+ * the `<text:a>`) follow the span field-text rule above, after the link's
+ * runs (odf re-emits them there); the text they keep carries the link.
  *
  * ## Table mapping
  *
@@ -212,6 +233,193 @@ export const oconvOdtToIr = {
         }
 
         /**
+         * Text of a typed frame run (`odt.read(bytes, { framesInRuns: true })`):
+         * the text-box content, then the `svg:title` / `svg:desc` extras —
+         * the schema order of a `<draw:frame>`, as `rawText` reads the raw
+         * frame.
+         *
+         * @param {object} f odt frame run
+         * @returns {string}
+         */
+        function frameText(f) {
+            let s = '';
+            for (const c of (f.child && f.child.children) || []) s += rawText(c);
+            for (const c of (f._extras && f._extras.children) || []) s += rawText(c);
+            return s;
+        }
+
+        /**
+         * The package of the `odtToIr` call a `losses` array belongs to
+         * (`readResult.package`): image frames take their bytes from it.
+         * Keyed by the call's own `losses` array, so the `map*` functions
+         * keep their signatures and two calls never share an entry.
+         */
+        const packageOf = new WeakMap();
+
+        /**
+         * `name → parentStyleName` of the call's content automatic styles
+         * (`readResult.autoStyles`), keyed like {@link packageOf}: a
+         * paragraph whose style is automatic resolves its block style one
+         * hop up its parent.
+         */
+        const autoParentOf = new WeakMap();
+
+        /** Frozen paragraph-style names (display form, lower-cased) read as blocks. */
+        const CODE_STYLES = new Set(['preformatted text']);
+        const QUOTE_STYLES = new Set(['quotations']);
+        const RULE_STYLES = new Set(['horizontal line']);
+
+        /**
+         * `'code'` | `'quote'` | `'rule'` | `null` for one odt body node: a
+         * paragraph whose style name (its `_20_` decoded to a space),
+         * else its automatic style's parent, is a frozen block style.
+         */
+        function blockStyleOf(n, losses) {
+            if (!n || n.type !== 'paragraph' || !n.styleName) return null;
+            const kindOf = (name) => {
+                const key = String(name).replace(/_20_/g, ' ').toLowerCase();
+                if (CODE_STYLES.has(key)) return 'code';
+                if (QUOTE_STYLES.has(key)) return 'quote';
+                if (RULE_STYLES.has(key)) return 'rule';
+                return null;
+            };
+            const direct = kindOf(n.styleName);
+            if (direct) return direct;
+            const parents = autoParentOf.get(losses);
+            const parent = parents && parents.get(n.styleName);
+            return parent ? kindOf(parent) : null;
+        }
+
+        /**
+         * Text of a code paragraph's runs: text, spaces (`text:s`), tabs and
+         * line breaks kept, spans and links walked; a raw element or a
+         * frame inside it records `inline/dropped` (its name).
+         */
+        function codeTextOf(runs, losses) {
+            let s = '';
+            for (const r of runs || []) {
+                if (!r) continue;
+                switch (r.type) {
+                    case 'text': s += r.value || ''; break;
+                    case 'space': s += ' '.repeat(r.count || 1); break;
+                    case 'tab': s += '\t'; break;
+                    case 'line-break': s += '\n'; break;
+                    case 'span': s += Array.isArray(r.runs) ? codeTextOf(r.runs, losses) : (r.value || ''); break;
+                    case 'link': s += codeTextOf(r.runs, losses); break;
+                    case 'frame': losses.push({ code: 'inline/dropped', detail: 'draw:frame' }); break;
+                    case 'element': losses.push({ code: 'inline/dropped', detail: r.name || 'unknown' }); break;
+                    default: break;
+                }
+            }
+            return s;
+        }
+
+        /**
+         * Map a sequence of odt body / cell / item nodes to IR blocks:
+         * consecutive code paragraphs form ONE `codeBlock` (one line each,
+         * an empty paragraph a blank line; a group of empty lines only is
+         * skipped), consecutive quote paragraphs ONE `blockquote` (an
+         * empty one skipped), an EMPTY rule paragraph an `hr`; every other
+         * node goes through {@link mapBlock}.
+         */
+        function mapBlocks(nodes, losses) {
+            const out = [];
+            let code = null;
+            let quote = null;
+            const flushCode = () => {
+                if (code && code.some((line) => line)) {
+                    out.push(oconvIr.node('codeBlock', { info: '', text: code.join('\n') }));
+                }
+                code = null;
+            };
+            const flushQuote = () => {
+                if (quote && quote.length) out.push(oconvIr.node('blockquote', {}, quote));
+                quote = null;
+            };
+            for (const n of nodes || []) {
+                const kind = blockStyleOf(n, losses);
+                if (kind !== 'code') flushCode();
+                if (kind !== 'quote') flushQuote();
+                if (kind === 'code') {
+                    const extras = (n._extras && n._extras.children) || [];
+                    for (const el of extras) losses.push({ code: 'inline/dropped', detail: (el && el.name) || 'unknown' });
+                    (code || (code = [])).push(codeTextOf(n.runs, losses));
+                    continue;
+                }
+                if (kind === 'quote' || kind === 'rule') {
+                    const inlines = mapRuns(n, losses);
+                    if (kind === 'quote') {
+                        if (inlines.length) (quote || (quote = [])).push(oconvIr.node('paragraph', {}, inlines));
+                    } else {
+                        out.push(inlines.length ? oconvIr.node('paragraph', {}, inlines) : oconvIr.node('hr'));
+                    }
+                    continue;
+                }
+                const b = mapBlock(n, losses);
+                if (b) out.push(b);
+            }
+            flushCode();
+            flushQuote();
+            return out;
+        }
+
+        /** Text of the first `svg:title` (else `svg:desc`) among a frame's extras. */
+        function frameAlt(f) {
+            const extras = (f._extras && f._extras.children) || [];
+            for (const name of ['svg:title', 'svg:desc']) {
+                const el = extras.find((c) => c && c.type === 'element' && c.name === name);
+                if (el) return rawText(el);
+            }
+            return '';
+        }
+
+        /**
+         * IR `image` for a frame run whose child is an image: `name` = the
+         * frame's `draw:name`, else the href basename; `alt` = its title,
+         * else its description; the bytes of the package part the href
+         * names travel in `escapes.odt` (`{ bytes, contentType }`, the
+         * manifest's media type or `null`) — else `image/bytes-unavailable`.
+         *
+         * @param {object} f odt frame run (`child.kind === 'image'`)
+         * @param {{code:string, detail:string}[]} losses
+         * @returns {object}
+         */
+        function imageFromFrame(f, losses) {
+            const href = String(f.child.href || '');
+            const path = href.replace(/^\.\//, '');
+            const name = f.name || path.slice(path.lastIndexOf('/') + 1) || 'image';
+            const props = { name, alt: frameAlt(f) };
+            const pkg = packageOf.get(losses);
+            const bytes = pkg && pkg.parts && Object.prototype.hasOwnProperty.call(pkg.parts, path)
+                ? pkg.parts[path] : null;
+            if (bytes instanceof Uint8Array) {
+                const entry = ((pkg.manifest && pkg.manifest.entries) || [])
+                    .find((e) => e && e.fullPath === path);
+                props.escapes = { odt: { bytes, contentType: (entry && entry.mediaType) || null } };
+            } else {
+                losses.push({ code: 'image/bytes-unavailable', detail: name });
+            }
+            return oconvIr.node('image', props);
+        }
+
+        /**
+         * Map a typed frame run: an image frame becomes an IR `image`; any
+         * other frame records `image/unresolved`, and inside a span a frame
+         * holding text keeps it as one plain IR run.
+         *
+         * @param {object} f odt frame run
+         * @param {{code:string, detail:string}[]} losses
+         * @param {boolean} inSpan
+         * @returns {object[]}
+         */
+        function mapFrameRun(f, losses, inSpan) {
+            if (f.child && f.child.kind === 'image') return [imageFromFrame(f, losses)];
+            losses.push({ code: 'image/unresolved', detail: 'draw:frame' });
+            const t = inSpan ? frameText(f) : '';
+            return t === '' ? [] : [oconvIr.node('run', { text: t })];
+        }
+
+        /**
          * Map a span that carries `runs` (its inner markup, in document
          * order) entry by entry. The span's own flags are OR-ed onto every
          * produced IR run, so the flags of nested spans add up. The span's
@@ -240,8 +448,11 @@ export const oconvOdtToIr = {
                 if (!entry) continue;
                 const mapped = entry.type === 'element'
                     ? mapSpanElement(entry, losses)
-                    : mapRun(entry, losses);
+                    : entry.type === 'frame'
+                        ? mapFrameRun(entry, losses, true)
+                        : mapRun(entry, losses);
                 for (const ir of mapped) {
+                    if (ir.kind !== 'run') { out.push(ir); continue; }
                     ir.bold = ir.bold || flags.bold;
                     ir.italic = ir.italic || flags.italic;
                     ir.strike = ir.strike || flags.strike;
@@ -292,12 +503,25 @@ export const oconvOdtToIr = {
                     const out = [];
                     for (const inner of r.runs || []) {
                         for (const mapped of mapRun(inner, losses)) {
+                            if (mapped.kind === 'run') mapped.link = missing ? null : href;
+                            // An IR image has no link prop: its target is lost.
+                            else if (!missing) losses.push({ code: 'inline/dropped', detail: 'link-target' });
+                            out.push(mapped);
+                        }
+                    }
+                    // The link's own untyped children (a field, a reference,
+                    // a bookmark — odf re-emits them after the link's runs):
+                    // the span field-text rule, the text carrying the link.
+                    for (const el of (r._extras && r._extras.children) || []) {
+                        if (!el || el.type !== 'element') continue;
+                        for (const mapped of mapSpanElement(el, losses)) {
                             mapped.link = missing ? null : href;
                             out.push(mapped);
                         }
                     }
                     return out;
                 }
+                case 'frame': return mapFrameRun(r, losses, false);
                 default: return [];
             }
         }
@@ -334,11 +558,7 @@ export const oconvOdtToIr = {
         }
 
         function mapListItem(item, losses) {
-            const children = [];
-            for (const child of item.children || []) {
-                const b = mapBlock(child, losses);
-                if (b) children.push(b);
-            }
+            const children = mapBlocks(item.children, losses);
             const extras = item._extras && item._extras.children;
             if (extras) {
                 for (const el of extras) pushDropLoss((el && el.name) || 'unknown', losses);
@@ -361,12 +581,7 @@ export const oconvOdtToIr = {
 
         /** Map one odt table cell's typed `children` to IR cell content. */
         function mapCell(cell, losses) {
-            const children = [];
-            for (const child of cell.children || []) {
-                const b = mapBlock(child, losses);
-                if (b) children.push(b);
-            }
-            return oconvIr.node('cell', {}, children);
+            return oconvIr.node('cell', {}, mapBlocks(cell.children, losses));
         }
 
         /**
@@ -430,13 +645,17 @@ export const oconvOdtToIr = {
          */
         function odtToIr(readResult, _opts) {
             const losses = [];
-            const body = (readResult && readResult.body) || [];
-            const children = [];
-            for (const node of body) {
-                const b = mapBlock(node, losses);
-                if (b) children.push(b);
+            if (readResult && readResult.package) packageOf.set(losses, readResult.package);
+            const autoStyles = readResult && readResult.autoStyles && readResult.autoStyles.styles;
+            if (Array.isArray(autoStyles)) {
+                const parents = new Map();
+                for (const s of autoStyles) {
+                    if (s && s.name && s.parentStyleName) parents.set(s.name, s.parentStyleName);
+                }
+                autoParentOf.set(losses, parents);
             }
-            return { ir: oconvIr.doc(children), losses };
+            const body = (readResult && readResult.body) || [];
+            return { ir: oconvIr.doc(mapBlocks(body, losses)), losses };
         }
 
         return { odtToIr };

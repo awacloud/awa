@@ -6,7 +6,7 @@
 /**
  * @fileoverview Parse/render `<table:table-row>`.
  *
- * Model: `{ type: 'row', styleName?, repeated?, cells: [...], _extras? }`.
+ * Model: `{ type: 'row', styleName?, repeated?, visibility?, cells: [...], _extras? }`.
  *
  * @module odf/table/row
  */
@@ -50,6 +50,7 @@ export const tableRow = {
                 }
                 out.repeated = r;
             }
+            if (attrs['table:visibility']) out.visibility = attrs['table:visibility'];
             for (const c of el.children || []) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'table:table-cell' || c.name === 'table:covered-table-cell') {
@@ -69,6 +70,7 @@ export const tableRow = {
             const attrs = {};
             if (row.styleName) attrs['table:style-name'] = row.styleName;
             if (row.repeated && row.repeated > 1) attrs['table:number-rows-repeated'] = String(row.repeated);
+            if (row.visibility) attrs['table:visibility'] = row.visibility;
             const children = (row.cells || []).map(c => cellMod.renderCell(c));
             return xml.el('table:table-row', attrs, children);
         }

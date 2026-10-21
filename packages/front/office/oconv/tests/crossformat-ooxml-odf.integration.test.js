@@ -174,12 +174,11 @@ const DOCX_TO_ODT = [
     {
         name: 'poi-with-gif.docx',
         path: './_fixtures/corpus/real/poi-with-gif.docx',
-        // The ONLY writer-side loss in this pair's whole corpus. The reader
-        // ledger is EMPTY — the bytes reached the IR intact — and the odt
-        // writer PLACES the image as a `Pictures/` part at its default box,
-        // hence `image/size-defaulted` (see the two tests below).
+        // Both ledgers EMPTY: the bytes reached the IR intact, and the odt
+        // writer PLACES the image as a `Pictures/` part at the size its GIF
+        // header gives (see the two tests below).
         reader: [],
-        writer: [{ code: 'image/size-defaulted', detail: 'Grafik 1' }]
+        writer: []
     }
 ];
 
@@ -240,7 +239,7 @@ describe('crossformat docx->odt — exact loss ledgers (6 fixtures)', () => {
         });
     }
 
-    // The `image/size-defaulted` above is the placement, not a drop: the
+    // The image is placed, not dropped: the
     // docx reader carries the GIF program into the IR under
     // `escapes.docx.bytes`, and `src/write/ir-to-odt.js` writes exactly those
     // bytes as the odt's `Pictures/image1.gif` part (`.gif` sniffed from the
@@ -280,11 +279,12 @@ describe('crossformat docx->odt — exact loss ledgers (6 fixtures)', () => {
         expect(parts['Pictures/image1.gif']).toEqual(img.escapes.docx.bytes);
     });
 
-    // The return leg still loses the image, on the READ side: the odt reader
-    // keeps the written frame untyped, so `toMd` of the converted odt records
-    // `image/unresolved` and emits no image reference, while the direct read
-    // of the same source does. Pinned so the read-side limit stays visible.
-    test('poi-with-gif.docx — the image reference survives docx->md but not docx->odt->md: the odt reader leaves the written frame unresolved', async () => {
+    // The return leg keeps the image too: the odt reader types the written
+    // frame into an IR image carrying the picture part's bytes, and its alt
+    // text from the frame's `svg:title`. What the hop loses is the NAME —
+    // `ir-to-odt` writes no `draw:name`, so the reader names the asset after
+    // the picture path. Pinned so that writer limit stays visible.
+    test('poi-with-gif.docx — the image survives docx->md and docx->odt->md (bytes and alt kept; the odt hop renames the asset after its picture path)', async () => {
         const bytes = fixtureBytes('./_fixtures/corpus/real/poi-with-gif.docx');
 
         const direct = await oconv.toMd({
@@ -297,12 +297,20 @@ describe('crossformat docx->odt — exact loss ledgers (6 fixtures)', () => {
 
         const out = await oconv.convert({ name: 'poi-with-gif.docx', bytes, target: 'odt' });
         const via = await oconv.toMd({ name: 'x.odt', bytes: out.bytes, convertedAt: FIXED_AT });
-        expect(via.assets).toEqual([]);
-        expect(via.losses).toEqual([{ code: 'image/unresolved', detail: 'draw:frame' }]);
-        expect(bodyOf(via.markdown)).not.toContain('![');
+        expect(via.losses).toEqual([]);
+        expect(via.assets).toHaveLength(1);
+        expect(via.assets[0].kind).toBe('image');
+        expect(via.assets[0].name).toBe('image1.gif');
+        expect([...via.assets[0].bytes]).toEqual([...direct.assets[0].bytes]);
+        // The alt text (the source's own description, a file path) is the
+        // direct leg's, character for character.
+        const altOf = md => md.slice(md.indexOf('![') + 2, md.indexOf(']('));
+        expect(altOf(bodyOf(direct.markdown))).toContain('Sample.gif');
+        expect(altOf(bodyOf(via.markdown))).toBe(altOf(bodyOf(direct.markdown)));
+        expect(bodyOf(via.markdown)).toContain('](image1.gif)');
         expect(bodyOf(via.markdown)).not.toContain('Grafik');
 
-        // The surrounding prose is untouched — only the image is lost.
+        // The surrounding prose is untouched.
         expect(bodyOf(via.markdown)).toContain('Lorem ipsum dolor sit amet');
     });
 });
@@ -467,11 +475,10 @@ describe('crossformat — model-equivalence through the pair (writer-side ledger
         return bodyOf(read.markdown);
     }
 
-    // Six of the seven writer-empty fixtures measure EQUAL — pinned `toBe`.
-    // (`poi-with-gif.docx` is excluded by the leg's own rule: its writer
-    // ledger carries `image/size-defaulted`, and its measured difference —
-    // the odt reader leaves the written frame unresolved — is asserted in
-    // leg 1 instead.)
+    // Six of the eight writer-empty fixtures measure EQUAL — pinned `toBe`.
+    // (`poi-with-gif.docx` measures different: the odt hop renames the image
+    // asset after its picture path — asserted exactly in leg 1;
+    // `odt-structured.odt` is pinned below.)
     const EQUAL = [
         { name: 'docx-smoke.docx', path: './_fixtures/corpus/docx/docx-smoke.docx', target: 'odt' },
         { name: 'docx-structured.docx', path: './_fixtures/corpus/docx/docx-structured.docx', target: 'odt' },
@@ -488,7 +495,7 @@ describe('crossformat — model-equivalence through the pair (writer-side ledger
         });
     }
 
-    // The ONE writer-empty fixture that measures DIFFERENT. Pinned exactly,
+    // A writer-empty fixture that measures DIFFERENT. Pinned exactly,
     // with its root cause, rather than widened or narrowed to force equality
     // (office memory: assert the true measured relation).
     //

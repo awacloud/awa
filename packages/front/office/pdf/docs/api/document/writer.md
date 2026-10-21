@@ -1,7 +1,7 @@
 ---
 module: pdfWriter
 category: pdf/document
-dependencies: [pdfErrors, pdfSerializer]
+dependencies: [pdfErrors, pdfSerializer, sha256, bitArray]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > Model → PDF 2.0 `Uint8Array` — header, indirects, classical xref, trailer.
 
-**Module** `pdfWriter` | **Source** `packages/front/office/pdf/src/document/writer.js` | **Deps** `pdfErrors`, `pdfSerializer` | **Worker-safe** yes
+**Module** `pdfWriter` | **Source** `packages/front/office/pdf/src/document/writer.js` | **Deps** `pdfErrors`, `pdfSerializer`, `sha256`, `bitArray` | **Worker-safe** yes
 
 Emits a complete PDF document per ISO 32000-2 §7.5.2–7.5.5:
 
@@ -57,12 +57,24 @@ const writer = runtime.resolve('pdfWriter');
     root:      { num, gen },                 // required — trailer /Root
     info?:     { num, gen },                 // optional — /Info
     version?:  '2.0' | '1.7' | …             // default '2.0', matches /^\d\.\d$/
-    id?:       [ Uint8Array, Uint8Array ]    // 2 × 16 bytes for /ID
+    id?:       [ Uint8Array, Uint8Array ]    // 2 × 16 bytes for /ID; derived when omitted at '2.0'
 }
 ```
 
 `indirects` is sorted by `num` before emission, so the caller need not supply it
 in ascending order.
+
+### Derived `/ID`
+
+A PDF 2.0 file requires the trailer `/ID` (ISO 32000-2 Table 15). When
+`opts.id` is omitted and the version is `'2.0'` (the default), both halves
+of the written `/ID` are the first 16 bytes of the SHA-256 of every byte
+written before the trailer (header, objects, cross-reference table): the
+same input still gives the same bytes. An explicit `opts.id` is written as
+given, and another version without one gets no `/ID`. The digest comes from
+the `sha256` and `bitArray` dependencies, the last two and optional: a
+hand-wired `pdfWriter.factory(errors, serializer)` derives nothing and
+writes no `/ID` unless given one.
 
 ### Unresolvable objects (`skippedObjects`, `strict`)
 

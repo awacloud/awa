@@ -136,7 +136,9 @@ export const ods = {
          * Write a typed document tree to `.ods` bytes.
          *
          * @param {object} doc
-         * @param {object} [opts]
+         * @param {object} [opts] — `{ meta, settings, styles }`, each overriding the `doc.*` sidecar,
+         *        and `mtime` (`number|Date`), the ZIP entry date passed to `pkgPackage.write`
+         *        (default 1980-01-01 00:00:00: the output is byte-reproducible)
          * @returns {Uint8Array}
          */
         function write(doc, opts) {
@@ -169,7 +171,7 @@ export const ods = {
 
             carryParts(p, doc.package, { pkg, manifestMod });
 
-            return pkg.write(p);
+            return pkg.write(p, { mtime: opts.mtime });
         }
 
         function renderContent(doc) {

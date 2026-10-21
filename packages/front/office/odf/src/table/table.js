@@ -12,7 +12,7 @@
  * {
  *   type: 'table',
  *   name?, styleName?,
- *   columns: [ { styleName?, defaultCellStyleName?, repeated? } ],
+ *   columns: [ { styleName?, defaultCellStyleName?, repeated?, visibility? } ],
  *   headerRows?: integer,        // number of header rows (count of children
  *                                //   under <table:table-header-rows>)
  *   rows: [ ...rowModel ],
@@ -40,6 +40,7 @@ export const tableTable = {
             if (a['table:default-cell-style-name']) out.defaultCellStyleName = a['table:default-cell-style-name'];
             const r = parseInt(a['table:number-columns-repeated'], 10);
             if (Number.isFinite(r) && r > 1) out.repeated = r;
+            if (a['table:visibility'])              out.visibility = a['table:visibility'];
             return out;
         }
 
@@ -49,6 +50,7 @@ export const tableTable = {
             if (col.defaultCellStyleName) a['table:default-cell-style-name'] = col.defaultCellStyleName;
             if (col.repeated && col.repeated > 1)
                 a['table:number-columns-repeated'] = String(col.repeated);
+            if (col.visibility)           a['table:visibility'] = col.visibility;
             return xml.el('table:table-column', a, []);
         }
 
@@ -92,7 +94,32 @@ export const tableTable = {
         }
 
         /**
-         * Render a table model to a `<table:table>` element node.
+         * The number of columns the rows use: each cell counts its
+         * `repeated`, and a `colSpan` reaching past the last cell counts
+         * too. At least 1.
+         *
+         * @param {object[]} rows
+         * @returns {number}
+         */
+        function widthOf(rows) {
+            let width = 1;
+            for (const r of rows) {
+                let pos = 0;
+                for (const c of (r && r.cells) || []) {
+                    const rep = c.repeated > 1 ? c.repeated : 1;
+                    const span = c.colSpan > 1 ? c.colSpan : 1;
+                    width = Math.max(width, pos + rep - 1 + span);
+                    pos += rep;
+                }
+            }
+            return width;
+        }
+
+        /**
+         * Render a table model to a `<table:table>` element node. A model
+         * with no column is written with one `<table:table-column>`
+         * repeated to the rows' width: the schema needs a column before
+         * the rows.
          *
          * @param {object} t
          * @returns {object}
@@ -102,9 +129,10 @@ export const tableTable = {
             if (t.name)      attrs['table:name'] = t.name;
             if (t.styleName) attrs['table:style-name'] = t.styleName;
             const children = [];
-            for (const col of t.columns || []) children.push(renderColumn(col));
             const headerN = t.headerRows || 0;
             const rows = t.rows || [];
+            const columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
+            for (const col of columns) children.push(renderColumn(col));
             if (headerN > 0) {
                 const headerKids = rows.slice(0, headerN).map(r => rowMod.renderRow(r));
                 children.push(xml.el('table:table-header-rows', {}, headerKids));
