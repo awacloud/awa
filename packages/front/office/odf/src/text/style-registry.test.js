@@ -139,6 +139,21 @@ describe('textStyleRegistry module', () => {
             const r = reg.createRegistry({ styles: new Set(['awa-l-b']) });
             expect(r.listStyle({ ordered: false })).toBe('awa-l-b-2');
         });
+
+        // A34b: a style name is an NCName; LibreOffice's extended formats
+        // hold spaces and commas.
+        test('a format that is no name part gets a counted name, its format kept', () => {
+            const { reg } = build();
+            const r = reg.createRegistry({ styles: new Set(['awa-l-x2']) });
+            expect(r.listStyle({ ordered: true, numFormat: '0001, 0002, 0003, ...' })).toBe('awa-l-x1');
+            expect(r.listStyle({ ordered: true, numFormat: '一, 二, 三, ...' })).toBe('awa-l-x2-2');
+            expect(r.listStyle({ ordered: true, numFormat: '0001, 0002, 0003, ...' })).toBe('awa-l-x1');
+            expect(r.listStyle({ ordered: true, numFormat: '一' })).toBe('awa-l-n一');
+            expect(r.listStyle({ ordered: true, numFormat: '①' })).toBe('awa-l-x3');
+            const formats = JSON.stringify(r.toAutomaticStyles());
+            expect(formats).toContain('"style:num-format":"0001, 0002, 0003, ..."');
+            expect(formats).toContain('"style:num-format":"一, 二, 三, ..."');
+        });
     });
 
     // ------------------------------------------------------------------
@@ -423,7 +438,7 @@ describe('textStyleRegistry module', () => {
                     { 'text:level': '1', 'style:num-format': 'A' })
             ]);
             expect(listResolver(xml, reg, listEl).listNumbering('L1'))
-                .toEqual({ ordered: true, numFormat: 'A', source: 'auto' });
+                .toEqual({ ordered: true, numFormat: 'A', source: 'kept' });
         });
 
         test('defaults an absent num-format to "1"', () => {
@@ -432,7 +447,32 @@ describe('textStyleRegistry module', () => {
                 el(xml, 'text:list-level-style-number', { 'text:level': '1' })
             ]);
             expect(listResolver(xml, reg, listEl).listNumbering('L1'))
-                .toEqual({ ordered: true, numFormat: '1', source: 'auto' });
+                .toEqual({ ordered: true, numFormat: '1', source: 'kept' });
+        });
+
+        // T56 (a): only a style the write regenerates as it is is consumed;
+        // any other is kept as read, its numbering still derived.
+        test('a style the write would not regenerate is kept, not consumed', () => {
+            const { xml, reg } = build();
+            const listEl = el(xml, 'text:list-style', { 'style:name': 'L1' }, [
+                el(xml, 'text:list-level-style-number',
+                    { 'text:level': '1', 'style:num-prefix': '(', 'style:num-suffix': ')', 'style:num-format': 'a' }),
+                el(xml, 'text:list-level-style-number', { 'text:level': '2', 'style:num-format': 'i' })
+            ]);
+            const res = listResolver(xml, reg, listEl);
+            expect(res.listNumbering('L1')).toEqual({ ordered: true, numFormat: 'a', source: 'kept' });
+            expect([...res.consumed]).toEqual([]);
+        });
+
+        test('the style the registry generates is consumed, whatever its name', () => {
+            const { xml, reg } = build();
+            const r = reg.createRegistry();
+            r.listStyle({ ordered: true, numFormat: 'A' });
+            const [generated] = r.toAutomaticStyles()._extras.children;
+            const renamed = { ...generated, attrs: { ...generated.attrs, 'style:name': 'L7' } };
+            const res = listResolver(xml, reg, renamed);
+            expect(res.listNumbering('L7')).toEqual({ ordered: true, numFormat: 'A', source: 'auto' });
+            expect([...res.consumed]).toEqual(['L7']);
         });
 
         test('returns null for an unknown name', () => {

@@ -33,6 +33,7 @@ const { MAC_ROMAN } = encodingMacRoman.factory();
 ## Notes
 
 - 0x27 = `quotesingle`, 0x60 = `grave` — this matches `WinAnsiEncoding` (ISO 32000-2 Annex D) but differs from `StandardEncoding`, which uses `quoteright`/`quoteleft` at those two slots (`standard.js` `ascii` array); the printable ASCII range is not identical across all three encodings.
+- The high half (0x80 to 0xFF) follows ISO 32000-2 Annex D to its last code: 0xED = `Igrave`, 0xF0 = `apple`, 0xFF = `caron`. An earlier revision held a stray `Eacute` at 0xED, which shifted each code from 0xED to 0xFF onto the glyph of the code after it and left `caron` unmapped.
 - Unassigned slots → `.notdef`.
 
 ## See also

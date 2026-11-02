@@ -60,8 +60,8 @@ export const dr3d3d = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const n of out.dr3d) extras.push(f.renderElement(n));
             delete out.dr3d;
-            if (Array.isArray(frame._extras) || !frame._extras) out._extras = extras;
-            else out._extras = { ...frame._extras, children: extras };
+            if (Array.isArray(frame._extras)) out._extras = extras;
+            else out._extras = { ...(frame._extras || {}), children: extras };
             return out;
         }
 

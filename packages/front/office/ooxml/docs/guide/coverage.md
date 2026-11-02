@@ -3,7 +3,8 @@
 **Purpose**: understand what each coverage tier of `@awacloud/ooxml` types, what it only preserves, and which bundle to pick.
 **Prerequisites**: none beyond [Getting started](./getting-started.md); the tiers are the core sub-paths (`@awacloud/ooxml/docx`, …) and the bundles (`@awacloud/ooxml/docx-large`, `@awacloud/ooxml/docx-full`, …).
 
-`@awacloud/ooxml` types or preserves every element of the ECMA-376 Part 1 schemas through a layered architecture: a stable core (~95% of real-world usage, an estimate) plus opt-in [`extra/`](../api/extra/README.md) modules that promote elements from the `_extras` fallback to typed fields.
+`@awacloud/ooxml` is layered: a core types the structures most documents use and keeps every other element of the parts it models verbatim in `_extras`, and opt-in [`extra/`](../api/extra/README.md) modules name more of the ECMA-376 Part 1 schemas — some type a read through a walker hook, most are toolkits one calls on raw nodes. How much of a real file the package reads and writes back is measured, not estimated: see [Measured coverage](#measured-coverage) below.
+
 ## Coverage by schema
 
 | Schema | Spec | Core | + Extras | `extra/` modules |
@@ -21,18 +22,18 @@
 
 ## What the numbers mean
 
-The `+ Extras` column counts the schema elements that an extra either models or catalogues. The six `*-misc` modules (`wml-misc`, `sml-misc`, `pml-misc`, `dml-chart-misc`, `dml-main-misc`, `math-misc`) catalogue the long tail: each element is recognised, flagged `_passthrough: true` and preserved on a round trip, but it has no semantic model. "Full" coverage therefore means every element is either typed or preserved, not that every element has a semantic model, and it is not a conformance measurement. The packages the writers produce use the Transitional namespace URIs (for example `http://schemas.openxmlformats.org/wordprocessingml/2006/main`); the docx reader locates elements by their `w:` prefix and does not consult the namespace URI, so a document whose `w:` prefix is bound to the Strict URI is read the same way, then written back with the Transitional URIs. The "~95%" figures below are an estimate of real-world usage, not a measurement; the measured figures (an external validator over the written files, the readers over third-party files) are in [Measured coverage](#measured-coverage) below.
+The `+ Extras` column counts the schema elements that an extra either models or catalogues. It counts what an extra **names** — modelled by a toolkit's parse / render functions, or catalogued —, not what a read types: of all the extras only `wmlRunFormatting`, `wmlParagraphFormatting`, `wmlTableProperties`, `wmlSettings` and `dmlWpDrawing` carry a walker hook and type a `docx.read()`; the others are toolkits one calls on raw nodes (see the [bundles README](../api/bundles/README.md)). What a read does not type it keeps verbatim inside the parts the model reads, which the coverage scorecards measure. The six `*-misc` modules (`wml-misc`, `sml-misc`, `pml-misc`, `dml-chart-misc`, `dml-main-misc`, `math-misc`) catalogue the long tail: each element is recognised and flagged `_passthrough: true`, but it has no semantic model, and the column is a count of names, not a conformance measurement. The packages the writers produce use the Transitional namespace URIs (for example `http://schemas.openxmlformats.org/wordprocessingml/2006/main`); the docx reader locates elements by their `w:` prefix and does not consult the namespace URI, so a document whose `w:` prefix is bound to the Strict URI is read the same way, then written back with the Transitional URIs. The `~` values of the `Core` column are estimates of the elements the core types, not measurements; the measured figures (an external validator over the written files, the readers over third-party files) are in [Measured coverage](#measured-coverage) below.
 
 ## Choosing a tier
 
 | Need | Import |
 |------|--------|
-| ~95% real-world docx | [`docx-large`](../api/bundles/docx-large.md) |
-| Every docx element typed or preserved (VML, custGeom, transitional) | [`docx-full`](../api/bundles/docx-full.md) |
-| ~95% real-world xlsx | [`xlsx-large`](../api/bundles/xlsx-large.md) |
-| Every xlsx element typed or preserved (form controls, advanced anchors) | [`xlsx-full`](../api/bundles/xlsx-full.md) |
-| ~95% real-world pptx | [`pptx-large`](../api/bundles/pptx-large.md) |
-| Every pptx element typed or preserved (custGeom, …) | [`pptx-full`](../api/bundles/pptx-full.md) |
+| docx with typed run, paragraph and table properties, settings and drawings | [`docx-large`](../api/bundles/docx-large.md) |
+| The above + the VML, custom-geometry, transitional and long-tail toolkits | [`docx-full`](../api/bundles/docx-full.md) |
+| xlsx + the pivot, calculation, config and chart toolkits | [`xlsx-large`](../api/bundles/xlsx-large.md) |
+| The above + the form-control, anchor and long-tail toolkits | [`xlsx-full`](../api/bundles/xlsx-full.md) |
+| pptx + the animation, transition, notes, layout and chart toolkits | [`pptx-large`](../api/bundles/pptx-large.md) |
+| The above + the custom-geometry and long-tail toolkits | [`pptx-full`](../api/bundles/pptx-full.md) |
 
 Each `*-large`/`*-full` bundle is a pure `@awacloud/fw` factory descriptor —
 register it (and its declared extras) in a `ModuleRuntime` and resolve
@@ -63,19 +64,27 @@ Generated from `coverage/scorecard.json` (format `office-scorecard/v1`) in the r
 
 | Suite | Result | What is measured | Measured | Replay |
 |---|---|---|---|---|
-| `bun-coverage-src` bun 1.3.13 | lines 96.05 %, functions 95.76 % (mean of 81 source files) | the coverage gate's model over the declared basis (src/**) | 2026-10-17, `cf58af11f` | `bun cli.ts office-scorecard axis-a --pkg ooxml` |
+| `bun-coverage-src` bun 1.3.13 | lines 96.08 %, functions 95.70 % (mean of 81 source files) | the coverage gate's model over the declared basis (src/**) | 2026-10-26, `976d3b35e` | `bun cli.ts office-scorecard axis-a --pkg ooxml` |
+
+### Conformance suites
+
+| Suite | Result | What is measured | Measured | Replay |
+|---|---|---|---|---|
+| `tracked-changes-docx` poi@REL_5_5_1+libreoffice@26.8.0.3 | 78 / 79 | every wild docx whose document, header, footer, footnotes, endnotes or comments part holds a tracked-change element (w:ins, w:del, w:moveFrom, w:moveTo, a *PrChange, w:numberingChange, a move or custom-XML revision range marker, w:cellIns / w:cellDel / w:cellMerge) is read, written with the ooxml-validator round trip and read again; it passes when the count of every such element in those parts is unchanged and the second read's document deep-equals the first's (a model fixed point); a throw fails it | 2026-10-28, `f7d869cb7` | `bun cli.ts office-scorecard axis-b --suite tracked-changes-docx` |
+| `tracked-changes-docx-alternate-keep` poi@REL_5_5_1+libreoffice@26.8.0.3 | 79 / 79 | every wild docx whose document, header, footer, footnotes, endnotes or comments part holds a tracked-change element (w:ins, w:del, w:moveFrom, w:moveTo, a *PrChange, w:numberingChange, a move or custom-XML revision range marker, w:cellIns / w:cellDel / w:cellMerge) is read with docx.read(bytes, { alternateContent: 'keep' }) (the save-back read that keeps every mc:AlternateContent, both branches, in place), written from that model as the ooxml-validator round trip writes, and read again with the same option; it passes when the count of every such element in those parts is unchanged and the second read's document deep-equals the first's (a model fixed point); a throw fails it | 2026-10-28, `f7d869cb7` | `bun cli.ts office-scorecard axis-b --suite tracked-changes-docx-alternate-keep` |
 
 ### Output validity, judged by an external validator
 
 | Suite | Result | What is measured | Measured | Replay |
 |---|---|---|---|---|
-| [`ooxml-validator`](https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981) OOXML-Validator@2.1.6 | 31 / 31 | OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 33 (21 written, 12 round trips); 3 cases not run, each with its reason in the scorecard | 2026-10-15, `267167269` | `bun cli.ts office-scorecard axis-c --suite ooxml-validator` |
+| [`ooxml-validator`](https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981) OOXML-Validator@2.1.6 | 32 / 32 | OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 34 (22 written, 12 round trips); 3 cases not run, each with its reason in the scorecard | 2026-10-24, `a0b028f8d` | `bun cli.ts office-scorecard axis-c --suite ooxml-validator` |
+| [`ooxml-validator-tracked-changes`](https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981) OOXML-Validator@2.1.6 | 62 / 65 | OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 79 (0 written, 79 round trips); 14 cases not run, each with its reason in the scorecard | 2026-10-28, `c9cecc9f0` | `bun cli.ts office-scorecard axis-c --suite ooxml-validator-tracked-changes` |
 
 ### Robustness on wild and pathological inputs
 
 | Suite | Result | What is measured | Measured | Replay |
 |---|---|---|---|---|
 | [`poi-ooxml`](https://github.com/apache/poi/tree/094968cfc3d48224db08f0b7f0a6fc341b035114/test-data) poi@REL_5_5_1 | 566 / 566 ok | per file, the ooxml reader of the file kind (docx, xlsx including xlsm, pptx) reads it; ok when it returns or throws an error of the package's own hierarchy (OoxmlError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child; budget: 10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory | 2026-10-16, `5a94d770a` | `bun cli.ts office-scorecard axis-d --suite poi-ooxml --container` |
-| `libreoffice-ooxml` libreoffice@26.8.0.3 | 1759 / 1759 ok | per file, the ooxml reader of the file kind (docx, xlsx including xlsm, pptx) reads it; ok when it returns or throws an error of the package's own hierarchy (OoxmlError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child; budget: 10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory | 2026-10-16, `5a94d770a` | `bun cli.ts office-scorecard axis-d --suite libreoffice-ooxml --container` |
+| `libreoffice-ooxml` libreoffice@26.8.0.3 | 1759 / 1759 ok | per file, the ooxml reader of the file kind (docx, xlsx including xlsm, pptx) reads it; ok when it returns or throws an error of the package's own hierarchy (OoxmlError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child; budget: 10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory | 2026-11-02, `286387de3` | `bun cli.ts office-scorecard axis-d --suite libreoffice-ooxml --container` |
 
 <!-- office-scorecard:end -->

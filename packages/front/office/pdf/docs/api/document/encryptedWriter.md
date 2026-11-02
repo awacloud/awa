@@ -57,7 +57,7 @@ Mirrors `pdfWriter`'s `WriteOpts` (`indirects`, `root`, `info?`, `id?`, `version
         ownerPassword?: string | Uint8Array,
         userPassword?:  string | Uint8Array,
         permissions?:   number,        // /P bitmask (Table 24)
-        encryptMetadata?: boolean,     // default true
+        encryptMetadata?: boolean,     // default true; false leaves the /Type /Metadata stream clear
         randomBytes?: (n: number) => Uint8Array  // default globalThis.crypto.getRandomValues
     }
 }
@@ -67,6 +67,11 @@ Mirrors `pdfWriter`'s `WriteOpts` (`indirects`, `root`, `info?`, `id?`, `version
 omitted the writer uses `globalThis.crypto.getRandomValues`, read at call
 time; when neither exists the call throws `pdf/crypto/enc-writer/no-random`
 before producing any output. There is no non-cryptographic fallback.
+
+Every string and stream of the graph is encrypted, except what ISO 32000-2
+§ 7.6.2 leaves clear: the `/Contents` string of a signature dictionary
+(`/Type /Sig` or `/DocTimeStamp`), and the `/Type /Metadata` stream when
+`encryptMetadata` is false.
 
 ### `EncWriteResult`
 

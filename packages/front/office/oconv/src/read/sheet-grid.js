@@ -13,9 +13,15 @@
  * call {@link normalizeGrid} to pad every row to the sheet's widest row
  * and trim trailing all-empty rows/columns before building the IR
  * `table`/`row`/`cell` nodes (empty trailing rows/columns are trimmed).
+ * Under `opts.sheets` `'csv'` or `'tsv'` the readers write the grid
+ * through {@link gridToCsv} or {@link gridToTsv} instead. Under
+ * `opts.cellBudget`, a sheet whose padded grid ({@link paddedSize}) would
+ * exceed the budget is never padded: {@link sparseLines} (or
+ * {@link unpaddedRows} for csv / tsv) instead.
  *
  * > **Duplication note (deliberate).** Both `oconvXlsxToIr` and
- * > `oconvOdsToIr` carry their own inline copy of `normalizeGrid` because
+ * > `oconvOdsToIr` carry their own inline copy of `normalizeGrid` (and of
+ * > `gridToCsv` / `gridToTsv`) because
  * > an fw factory may not capture a module-scope binding
  * > (`fw/no-factory-capture` — the factory source is serialised into
  * > Workers and inlined by the standalone builder). The two copies are
@@ -58,4 +64,95 @@ export function normalizeGrid(rows) {
     grid = grid.map((r) => r.slice(0, lastCol + 1));
 
     return grid;
+}
+
+/**
+ * The grid as CSV (RFC 4180): a field holding a comma, a double quote, a
+ * CR or an LF is quoted, its quotes doubled; rows joined by LF.
+ * @param {string[][]} grid A normalised grid.
+ * @returns {string}
+ */
+export function gridToCsv(grid) {
+    const field = (s) => (/[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s);
+    return grid.map((r) => r.map(field).join(',')).join('\n');
+}
+
+/**
+ * The grid as TSV: a cell's backslash, tab, LF and CR written as the
+ * two-character escapes `\\`, `\t`, `\n`, `\r`; rows joined by LF.
+ * `escaped` says whether any cell needed it.
+ * @param {string[][]} grid A normalised grid.
+ * @returns {{text: string, escaped: boolean}}
+ */
+export function gridToTsv(grid) {
+    let escaped = false;
+    const ESC = { '\\': '\\\\', '\t': '\\t', '\n': '\\n', '\r': '\\r' };
+    const field = (s) => s.replace(/[\\\t\n\r]/g, (c) => { escaped = true; return ESC[c]; });
+    const text = grid.map((r) => r.map(field).join('\t')).join('\n');
+    return { text, escaped };
+}
+
+/**
+ * The A1 address of a 0-based cell: the column letters (`A` … `Z`, `AA` …,
+ * up to `XFD` and past it) then the 1-based row.
+ * @param {number} rowIdx
+ * @param {number} colIdx
+ * @returns {string}
+ */
+export function cellAddress(rowIdx, colIdx) {
+    let col = '';
+    for (let n = colIdx + 1; n > 0; n = Math.floor((n - 1) / 26)) {
+        col = String.fromCharCode(65 + ((n - 1) % 26)) + col;
+    }
+    return col + (rowIdx + 1);
+}
+
+/**
+ * The cell count of {@link normalizeGrid}`(rows)` — its kept rows times
+ * its kept columns — found from the row lengths, without building it.
+ * @param {string[][]} rows
+ * @returns {number}
+ */
+export function paddedSize(rows) {
+    let height = 0;
+    let width = 0;
+    (rows || []).forEach((r, i) => {
+        const row = r || [];
+        let n = row.length;
+        while (n > 0 && row[n - 1] === '') n--;
+        if (n > 0) { height = i + 1; width = Math.max(width, n); }
+    });
+    return height * width;
+}
+
+/**
+ * The rows never padded: each row's trailing empty cells trimmed, then the
+ * trailing empty rows. A NEW array; `rows` is untouched.
+ * @param {string[][]} rows
+ * @returns {string[][]}
+ */
+export function unpaddedRows(rows) {
+    const out = (rows || []).map((r) => {
+        const row = r || [];
+        let n = row.length;
+        while (n > 0 && row[n - 1] === '') n--;
+        return row.slice(0, n);
+    });
+    let last = out.length - 1;
+    while (last >= 0 && out[last].length === 0) last--;
+    return out.slice(0, last + 1);
+}
+
+/**
+ * One `<A1 address>: <text>` line per non-empty cell, in row then column
+ * order: the readers' form for a sheet past `opts.cellBudget`.
+ * @param {string[][]} rows
+ * @returns {string[]}
+ */
+export function sparseLines(rows) {
+    const lines = [];
+    unpaddedRows(rows).forEach((row, i) => row.forEach((text, j) => {
+        if (text !== '') lines.push(cellAddress(i, j) + ': ' + text);
+    }));
+    return lines;
 }

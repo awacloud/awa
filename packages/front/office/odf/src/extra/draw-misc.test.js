@@ -28,6 +28,6 @@ describe('drawMisc', () => {
         ext.hydrateFrame(f);
         expect(f.drawNodes).toHaveLength(1);
         const back = ext.dehydrateFrame(f);
-        expect(back._extras[0].name).toBe('draw:layer');
+        expect(back._extras.children[0].name).toBe('draw:layer');
     });
 });

@@ -21,8 +21,10 @@ const sources = subsetSources();
 const set = subsetDocuments(rt);
 
 describe('subset documents — sources', () => {
-    test('the twelve Liberation faces, Kalnia Glaze and the two CFF faces, once each', () => {
+    test('the twelve Liberation faces, the four Carlito and four Caladea faces, Kalnia Glaze and the two CFF faces, once each', () => {
         expect(sources.map((s) => s.id)).toEqual([
+            'caladea-bold', 'caladea-bold-italic', 'caladea-italic', 'caladea-regular',
+            'carlito-bold', 'carlito-bold-italic', 'carlito-italic', 'carlito-regular',
             'kalnia-glaze',
             'liberation-mono-bold', 'liberation-mono-bold-italic', 'liberation-mono-italic', 'liberation-mono-regular',
             'liberation-sans-bold', 'liberation-sans-bold-italic', 'liberation-sans-italic', 'liberation-sans-regular',
@@ -43,9 +45,9 @@ describe('subset documents — sources', () => {
 
 describe('subset documents — documents', () => {
     test('two documents per glyf face; the CFF faces skipped with the typed refusal', () => {
-        expect(set.docs.length).toBe(26);
+        expect(set.docs.length).toBe(42);
         expect(set.docs.every((d) => d.ext === 'ttf')).toBe(true);
-        expect(new Set(set.docs.map((d) => d.id)).size).toBe(26);
+        expect(new Set(set.docs.map((d) => d.id)).size).toBe(42);
         expect(set.skipped.map((s) => s.case)).toEqual([
             'source-sans-3-regular/text.ttf', 'source-sans-3-regular/full.ttf',
             'source-sans-3-vf-upright/text.ttf', 'source-sans-3-vf-upright/full.ttf',

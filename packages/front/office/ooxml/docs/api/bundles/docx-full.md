@@ -9,15 +9,19 @@ status: complete
 
 # docxFullBundle
 
-> Pre-wired bundle: `docx-large` + every remaining docx-touching extra (every WordprocessingML schema element typed or preserved).
+> Pre-wired bundle: `docx-large` + further toolkits (VML, custom geometry, transitional mapping, long-tail catalogues); none of them types a read.
 
 **Module** `docxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/docx-full.js` | **Deps** `docxLargeBundle` + 7 extras | **Worker-safe** yes
 
-Use this when you need exhaustive coverage — every WML element, including the long tail and Office 2003 / VML fixtures.
+It adds toolkits for the long tail and the Office 2003 / VML material; what a read types is `docx-large`'s, and what it does not type stays verbatim.
 
 ## Included
 
-Everything in [`docx-large`](./docx-large.md), plus:
+Everything in [`docx-large`](./docx-large.md) — its extras that type a read and its toolkits — plus:
+
+None of the extras below types a read.
+
+**Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
 
 - [`wmlVmlLegacy`](../extra/wml-vml-legacy.md) — `<w:pict>` / `<w:object>` / `<w:control>` / `<w:movie>`
 - [`dmlShapesAdvanced`](../extra/dml-shapes-advanced.md) — custom-geometry paths

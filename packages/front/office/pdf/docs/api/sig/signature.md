@@ -49,6 +49,7 @@ stable public contract; prefer the methods above.
     byteRange: [start1, len1, start2, len2],
     reference, cert, name, m, location, reason, contactInfo,
     v, propBuild, propAuthTime, propAuthType,
+    type, changes, r, adbeBuild,      // undefined when absent
     raw   // the source dict
 }
 ```
@@ -160,7 +161,7 @@ const sd = sig.locatePkcs7(typed.contents);
 | `pdf/sig/no-signer` / `empty-signers` / `bad-signer` | record `errors[]` | `signerInfos` absent / empty / malformed. |
 | `pdf/sig/unknown-digest` / `unknown-sigalg` | record `errors[]` | digestAlgorithm / signatureAlgorithm OID outside the supported set. |
 | `pdf/sig/no-hash` | record `errors[]` | Hash module unavailable for the resolved `hashAlg`. |
-| `pdf/sig/signer-info-short` / `no-encrypted-digest` | record `errors[]` | SignerInfo ASN.1 shape unexpected. |
+| `pdf/sig/no-encrypted-digest` | record `errors[]` | SignerInfo ASN.1 shape unexpected. |
 | `pdf/sig/digest-failed` | record `errors[]` | Failed to recompute the `/ByteRange` digest. The record is `{ code, message }`: the underlying error's message is appended to `message`, and no `cause` is attached. |
 | `pdf/sig/signed-attrs-parse-failed` / `digest-not-computed` / `digest-length-mismatch` / `digest-mismatch` / `no-message-digest-attr` | record `errors[]` | `signedAttrs` present but its `messageDigest` attribute fails to parse or match. |
 | `pdf/sig/signer-cert-not-found` | record `errors[]` | No embedded cert matches the SignerInfo's `IssuerAndSerialNumber`. |

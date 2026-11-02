@@ -70,8 +70,8 @@ export const tableMisc = {
                 if (n && n._passthrough) extras.push(h.renderElement(n));
             }
             delete out.tableNodes;
-            if (Array.isArray(t._extras) || !t._extras) out._extras = extras;
-            else out._extras = { ...t._extras, children: extras };
+            if (Array.isArray(t._extras)) out._extras = extras;
+            else out._extras = { ...(t._extras || {}), children: extras };
             return out;
         }
 

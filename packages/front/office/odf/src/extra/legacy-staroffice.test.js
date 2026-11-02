@@ -34,6 +34,6 @@ describe('legacyStaroffice', () => {
         ext.hydrateParagraph(p);
         expect(p.legacyNodes).toHaveLength(1);
         const out = ext.dehydrateParagraph(p);
-        expect(out._extras[0].name).toBe('ooow:extra');
+        expect(out._extras.children[0].name).toBe('ooow:extra');
     });
 });

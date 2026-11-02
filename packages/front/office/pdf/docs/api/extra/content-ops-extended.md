@@ -19,7 +19,8 @@ Covers `d0`/`d1` (Type 3 glyph-width operators, §9.6.4) and every key of the `/
 
 ```js
 const ext = runtime.resolve('pdfContentOpsExtended');
-// Returns: { typeExtGState, decodeType3CharOp, EXT_GSTATE_KEYS }
+// Returns: { typeExtGState, decodeType3CharOp, EXT_GSTATE_KEYS,
+//   typeHalftone, HALFTONE_KEYS }
 ```
 
 ## API
@@ -29,6 +30,8 @@ const ext = runtime.resolve('pdfContentOpsExtended');
 | `typeExtGState` | `(dict) => ExtGState` | Typed record covering every §8.4.5 Table 57 entry. |
 | `decodeType3CharOp` | `(op: string, operands: number[]) => { kind, wx, wy, bbox? }` | `d0` or `d1`. |
 | `EXT_GSTATE_KEYS` | frozen catalog | Map key → `{ kind, doc }`. |
+| `typeHalftone` | `(value) => Halftone` | A halftone dictionary or stream (its dictionary read) — the value an ExtGState's `HT` names — of `/HalftoneType` 1, 5, 6, 10 or 16: one field per key of its type's list, named after the key in lower case (`HalftoneName` → `halftonename`, `Width2` → `width2`), present only when the key is — a name, a byte string, a number, an integer or a boolean by its value, the keys of several types (`SpotFunction`, `TransferFunction`, `Default`) as read (a name by its value), a reference as read, `null` for a value of none of the key's types; for type 5 the colorant entries in `colorants` (name → value as read); for a stream its Table 5 keys (`Length`, `Filter` …) left to `typeStreamEntries`; plus `raw` and `_extras` (the other keys). |
+| `HALFTONE_KEYS` | frozen object | Halftone type → its keys (the Arlington PDF Model's lists). |
 
 ### Shape `ExtGState`
 
@@ -36,7 +39,7 @@ const ext = runtime.resolve('pdfContentOpsExtended');
 {
     type, lw, lc, lj, ml, d, ri, op, opNs, opm, font,
     bg, bg2, ucr, ucr2, tr, tr2, ht, fl, sm, sa,
-    bm, sMask, ca, caNs, ais, tk, useBlackPtComp, hto,
+    bm, sMask, ca, caNs, ais, tk, useBlackPtComp, hto, htp,
     raw, _extras
 }
 ```
@@ -70,6 +73,8 @@ ext.EXT_GSTATE_KEYS.CA.doc;  // 'stroke alpha [0,1]'
 | Code | Class | When |
 |------|-------|------|
 | `pdf/extra/ext-gstate/not-dict` | `ParseError` | Argument is not a dictionary. |
+| `pdf/extra/halftone/not-dict` | `ParseError` | `typeHalftone`: neither a dictionary nor a stream. |
+| `pdf/extra/halftone/bad-type` | `ParseError` | `typeHalftone`: `/HalftoneType` missing or not 1, 5, 6, 10, 16. |
 | `pdf/extra/ext-gstate/bad-type` | `ParseError` | `/Type` present and not `/ExtGState`. |
 | `pdf/extra/content-ops/unknown` | `ParseError` | Operator is neither `d0` nor `d1`. |
 | `pdf/extra/content-ops/bad-d0` | `ParseError` | `d0` does not have exactly 2 operands. |

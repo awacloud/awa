@@ -17,6 +17,12 @@
  * positioning attributes and wrap rules are preserved verbatim
  * through `_extras` for round-trip fidelity.
  *
+ * A read drawing keeps its source (`_source`) and its typed fields as
+ * read (`_read`): while they are unchanged it is written from the
+ * source, the ids the write assigns set in it (see `keptSource`). An
+ * extension writes an edit by giving the drawing a new source
+ * (`keepSource`; the opt-in `dmlWpDrawing` does it for the typed fields).
+ *
  * Document model :
  *
  * ```js
@@ -31,15 +37,21 @@
  *   title?: string,
  *   distT?, distB?, distL?, distR?,
  *   embedRef?: string,    // r:id of the image — auto-assigned on write
+ *   svgRef?: string,      // r:id of the SVG (asvg:svgBlip) — auto-assigned on write
  *   prstGeom?: string,    // 'rect' | 'roundRect' | … (default 'rect')
  *   image?: {
  *     data?: Uint8Array,        // bytes of the image file
  *     contentType?: string,     // sniffed if absent
- *     rId?: string              // alias of embedRef
+ *     rId?: string,             // alias of embedRef
+ *     svg?: {                   // the SVG the PNG stands in for (Office 2016)
+ *       data: Uint8Array, contentType?: string, rId?: string
+ *     }
  *   },
  *   anchorAttrs?: { ... },      // preserved attrs of <wp:anchor>
  *   anchorChildren?: [xmlNode], // wrap / positioning markers verbatim
- *   _extras?: [xmlNode]
+ *   _extras?: [xmlNode],
+ *   _source?: xmlNode,          // the <w:drawing> element as read
+ *   _read?: object              // the typed fields as read
  * }
  * ```
  *
@@ -73,6 +85,11 @@ export const docxDrawing = {
         const PIC_NS = NS.PIC;
         const R_NS = NS.R;
         const REL_TYPE_IMAGE = REL_TYPE.IMAGE;
+        // The Office 2016 SVG extension of a:blip: an a:ext of this uri
+        // holding <asvg:svgBlip r:embed> (the blip's own r:embed is the
+        // PNG fallback older readers draw).
+        const SVG_EXT_URI = '{96DAC541-7B7A-43D3-8B79-37D633B846F1}';
+        const SVG_NS = 'http://schemas.microsoft.com/office/drawing/2016/SVG/main';
 
         // --- Image content-type sniffing ---
 
@@ -161,7 +178,8 @@ export const docxDrawing = {
             const docPr = xml.findChild(wrapper, 'wp:docPr');
             if (docPr) {
                 if (docPr.attrs.id != null) out.docId = Number(docPr.attrs.id);
-                if (docPr.attrs.name)       out.docName = docPr.attrs.name;
+                // Required, may be empty: an empty name is kept as ''.
+                if (docPr.attrs.name != null) out.docName = docPr.attrs.name;
                 if (docPr.attrs.descr)      out.description = docPr.attrs.descr;
                 if (docPr.attrs.title)      out.title = docPr.attrs.title;
             }
@@ -207,6 +225,10 @@ export const docxDrawing = {
                     }
                 }
             }
+            // The source, and the typed fields as read: an untouched drawing
+            // is written from the source (see keptSource).
+            out._source = drawingEl;
+            out._read = structuredClone(typedFields(out));
             return out;
         }
 
@@ -255,6 +277,8 @@ export const docxDrawing = {
                 if (blip) {
                     if (blip.attrs['r:embed']) out.embedRef = blip.attrs['r:embed'];
                     if (blip.attrs['r:link'])  out.linkRef = blip.attrs['r:link'];
+                    const svgBlip = svgBlipOf(blip);
+                    if (svgBlip && svgBlip.attrs['r:embed']) out.svgRef = svgBlip.attrs['r:embed'];
                 }
                 const srcRect = xml.findChild(blipFill, 'a:srcRect');
                 if (srcRect) out.srcRect = parseSrcRect(srcRect);
@@ -279,9 +303,151 @@ export const docxDrawing = {
             }
         }
 
+        function svgBlipOf(blip) {
+            const extLst = xml.findChild(blip, 'a:extLst');
+            for (const ext of (extLst && extLst.children) || []) {
+                if (ext.type !== 'element' || ext.name !== 'a:ext' || ext.attrs.uri !== SVG_EXT_URI) continue;
+                const el = (ext.children || []).find(c => c.type === 'element' && /(^|:)svgBlip$/.test(c.name));
+                if (el) return el;
+            }
+            return null;
+        }
+
+        // --- Kept source ---
+
+        // The fields the read resolves (`image`, `chart`) or the write
+        // assigns (the ids) after `parseDrawing`: left out of `_read`, the
+        // ids rewritten in the source.
+        const LATE_FIELDS = new Set(['image', 'chart', 'embedRef', 'svgRef', 'chartRef', 'docId', '_source', '_read']);
+        const REL_NAMESPACES = new Set([R_NS, 'http://purl.oclc.org/ooxml/officeDocument/relationships']);
+
+        /**
+         * The typed fields of drawing `d`: all its fields but those the read
+         * resolves or the write assigns later (`image`, `chart`, `embedRef`,
+         * `svgRef`, `chartRef`, `docId`) and the kept source itself.
+         */
+        function typedFields(d) {
+            const out = {};
+            for (const k of Object.keys(d)) if (!LATE_FIELDS.has(k)) out[k] = d[k];
+            return out;
+        }
+
+        /**
+         * Make `element` (a `<w:drawing>`) the source drawing `d` is written
+         * from: `_source` set to it and `_read` to a copy of `d`'s typed
+         * fields, so the write emits it while those fields stay as they are
+         * now (an extension writing an edit, see `keptSource`).
+         */
+        function keepSource(d, element) {
+            d._source = element;
+            d._read = structuredClone(typedFields(d));
+            return d;
+        }
+
+        // Structural equality of two plain model values (`Object.is` on the
+        // leaves).
+        function sameModel(a, b) {
+            if (Object.is(a, b)) return true;
+            if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+            if (Array.isArray(a) !== Array.isArray(b)) return false;
+            const ka = Object.keys(a), kb = Object.keys(b);
+            if (ka.length !== kb.length) return false;
+            for (const k of ka) {
+                if (!Object.prototype.hasOwnProperty.call(b, k) || !sameModel(a[k], b[k])) return false;
+            }
+            return true;
+        }
+
+        // The relationships of the part being written, set by `docx.write`
+        // around each part's render: `links`, the ids it holds with their
+        // source meaning (hyperlinks, carried relationships), `media`, the
+        // ids it gives pictures and charts. Null outside a write.
+        let held = null;
+
+        /**
+         * Run `fn` with `scope` (`{ links: Set, media: Set }`) as the
+         * relationships of the part it renders: a kept source is written
+         * only when every relationship reference it holds is one of them.
+         */
+        function withRelationships(scope, fn) {
+            const before = held;
+            held = scope;
+            try { return fn(); } finally { held = before; }
+        }
+
+        /**
+         * The element an untouched drawing is written from: a copy of its
+         * `_source` with `wp:docPr id`, the picture's `a:blip r:embed`, its
+         * `asvg:svgBlip r:embed` and a chart's `c:chart r:id` set to the
+         * drawing's `docId`, `embedRef`, `svgRef` and `chartRef`. Null — the
+         * drawing is rebuilt from its typed fields — when those fields differ
+         * from `_read`, when a set id has no place in the source (or a place
+         * has no id), or when a relationship reference of the source names
+         * no relationship of the part (`withRelationships`).
+         */
+        function keptSource(d) {
+            const src = d._source;
+            if (!src || src.type !== 'element' || !d._read || !sameModel(typedFields(d), d._read)) return null;
+            const el = structuredClone(src);
+            const wrapper = xml.findChild(el, 'wp:inline') || xml.findChild(el, 'wp:anchor');
+            if (!wrapper) return null;
+            const docPr = xml.findChild(wrapper, 'wp:docPr');
+            if (d.docId != null) {
+                if (!docPr || docPr.attrs.id == null) return null;
+                docPr.attrs.id = String(d.docId);
+            }
+            const graphic = xml.findChild(wrapper, 'a:graphic');
+            const gd = graphic && xml.findChild(graphic, 'a:graphicData');
+            const isChart = gd && gd.attrs.uri === 'http://schemas.openxmlformats.org/drawingml/2006/chart';
+            const chartEl = isChart ? xml.findChild(gd, 'c:chart') : null;
+            const pic = gd && !isChart ? xml.findChild(gd, 'pic:pic') : null;
+            const blipFill = pic && xml.findChild(pic, 'pic:blipFill');
+            const blip = blipFill && xml.findChild(blipFill, 'a:blip');
+            const svgBlip = blip && svgBlipOf(blip);
+            const typed = new Map();
+            for (const [node, attr, value] of [[blip, 'r:embed', d.embedRef], [svgBlip, 'r:embed', d.svgRef],
+                [chartEl, 'r:id', d.chartRef]]) {
+                const at = node && node.attrs[attr];
+                if (Boolean(value) !== Boolean(at)) return null;
+                if (!value) continue;
+                node.attrs[attr] = String(value);
+                typed.set(node, attr);
+            }
+            return referencesHeld(el, typed) ? el : null;
+        }
+
+        // Every relationship reference of `el` is a relationship of the part
+        // being written: a typed one (`typed`: node → attribute) one of its
+        // `media` or `links` ids (a picture the read did not resolve keeps
+        // its carried relationship), any other one of its `links`. Outside a
+        // write, only the typed ones.
+        function referencesHeld(el, typed) {
+            const walk = (n, prefixes) => {
+                if (!n || n.type !== 'element') return true;
+                let scope = prefixes;
+                for (const [k, v] of Object.entries(n.attrs)) {
+                    if (!k.startsWith('xmlns:')) continue;
+                    if (scope === prefixes) scope = new Set(prefixes);
+                    if (REL_NAMESPACES.has(v)) scope.add(k.slice(6)); else scope.delete(k.slice(6));
+                }
+                for (const [k, v] of Object.entries(n.attrs)) {
+                    const colon = k.indexOf(':');
+                    const isRef = k === 'o:relid' || (colon > 0 && k !== 'xmlns' && scope.has(k.slice(0, colon)));
+                    if (!isRef || v === '') continue;
+                    if (typed.get(n) === k) {
+                        if (held && !held.media.has(v) && !held.links.has(v)) return false;
+                    } else if (!held || !held.links.has(v)) return false;
+                }
+                return (n.children || []).every(c => walk(c, scope));
+            };
+            return walk(el, new Set(['r']));
+        }
+
         // --- Render ---
 
         function renderDrawing(drawing) {
+            const kept = keptSource(drawing);
+            if (kept) return kept;
             const inner = drawing.mode === 'anchor'
                 ? renderAnchorWrapper(drawing)
                 : renderInlineWrapper(drawing);
@@ -343,7 +509,7 @@ export const docxDrawing = {
         function renderDocPr(d) {
             const a = {
                 id: String(d.docId != null ? d.docId : 1),
-                name: d.docName || 'Picture'
+                name: typeof d.docName === 'string' ? d.docName : 'Picture'
             };
             if (d.description) a.descr = d.description;
             if (d.title)       a.title = d.title;
@@ -402,14 +568,15 @@ export const docxDrawing = {
                 xml.el('pic:nvPicPr', {}, [
                     xml.el('pic:cNvPr', {
                         id: String(d.picId != null ? d.picId : 0),
-                        name: d.picName || d.docName || 'Picture'
+                        name: typeof d.picName === 'string' ? d.picName
+                            : typeof d.docName === 'string' ? d.docName : 'Picture'
                     }),
                     xml.el('pic:cNvPicPr', {})
                 ]),
                 xml.el('pic:blipFill', {}, [
                     xml.el('a:blip', d.embedRef
                         ? { 'r:embed': d.embedRef }
-                        : (d.linkRef ? { 'r:link': d.linkRef } : {})),
+                        : (d.linkRef ? { 'r:link': d.linkRef } : {}), renderSvgExt(d)),
                     // CT_BlipFillProperties order: blip, srcRect, stretch.
                     ...(d.srcRect ? [xml.el('a:srcRect', srcRectAttrs(d.srcRect))] : []),
                     xml.el('a:stretch', {}, [xml.el('a:fillRect', {})])
@@ -432,6 +599,16 @@ export const docxDrawing = {
             ]);
         }
 
+        // The SVG extension, for a picture whose SVG `docx.write` gave an id.
+        function renderSvgExt(d) {
+            if (!d.svgRef || !d.image || !d.image.svg || !d.image.svg.data) return [];
+            return [xml.el('a:extLst', {}, [
+                xml.el('a:ext', { uri: SVG_EXT_URI }, [
+                    xml.el('asvg:svgBlip', { 'xmlns:asvg': SVG_NS, 'r:embed': d.svgRef })
+                ])
+            ])];
+        }
+
         // --- Convenience builder ---
 
         /**
@@ -439,7 +616,8 @@ export const docxDrawing = {
          * image. `data` is a `Uint8Array` of the file bytes.
          *
          * Sizes accept numbers (EMU) or strings with units (`'2in'`,
-         * `'5cm'`, `'200px'`).
+         * `'5cm'`, `'200px'`). `opts.svg` (the SVG's bytes) makes the image
+         * the PNG fallback of that SVG (`image.svg`), as Word writes it.
          *
          * Resulting node is meant to live inside a run's `children` array :
          *
@@ -465,6 +643,7 @@ export const docxDrawing = {
             if (opts.description) out.description = opts.description;
             if (opts.title)       out.title = opts.title;
             if (opts.rId)         out.embedRef = opts.rId;
+            if (opts.svg)         out.image.svg = { data: opts.svg };
             if (opts.docId != null) out.docId = opts.docId;
             return out;
         }
@@ -514,7 +693,7 @@ export const docxDrawing = {
         }
 
         return {
-            parseDrawing, renderDrawing, image, chart, shape,
+            parseDrawing, renderDrawing, withRelationships, typedFields, keepSource, image, chart, shape,
             sniffImageType, extensionFor, toEmu,
             EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96,
             REL_TYPE_IMAGE,

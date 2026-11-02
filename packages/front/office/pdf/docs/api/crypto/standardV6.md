@@ -13,7 +13,7 @@ status: complete
 
 **Module** `pdfStandardV6` | **Source** `packages/front/office/pdf/src/crypto/standardV6.js` | **Deps** `pdfErrors`, `aes`, `cbc`, `sha256`, `sha384`, `sha512`, `bitArray`, `pdfAesGcm` | **Worker-safe** yes
 
-Implements Algorithm 2.B (Annex A): 64+ rounds of SHA-{256/384/512} over password + salt (+ extra), resistant to brute-force/rainbow-table attacks. Which hash function runs at each round depends on the remainder mod 3 of the last byte of the round's AES-CBC output (`hardening-runaway` bounds the loop at 1024 rounds). String/stream decryption shape is identical to V5 (IV-prefixed AES-256-CBC, no per-object rekeying); `pdfAesGcm` is optional, only required for `AESV4` (ISO/TS 32003).
+Implements Algorithm 2.B (Annex A): 64+ rounds of SHA-{256/384/512} over password + salt (+ extra), resistant to brute-force/rainbow-table attacks. Which hash function runs at each round depends on the remainder mod 3 of the last byte of the round's AES-CBC output (the last byte of the AES-CBC output is at most 255, so the loop ends by round 287). String/stream decryption shape is identical to V5 (IV-prefixed AES-256-CBC, no per-object rekeying); `pdfAesGcm` is optional, only required for `AESV4` (ISO/TS 32003).
 
 ## Resolve
 
@@ -28,8 +28,8 @@ const v6 = runtime.resolve('pdfStandardV6');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `tryPassword` | `(typedEncrypt: { O, U, OE, UE }, password, isOwner: boolean) => { fileEncryptionKey: Uint8Array \| null }` | `null` = rejected (try the next password). |
-| `decryptString` | `(typedEncrypt: { method? }, fek, objNum, gen, ciphertext) => Uint8Array` | AES-256-CBC (or AES-GCM for `method === 'AESV4'`). |
+| `tryPassword` | `(typedEncrypt: { O, U, OE, UE }, password, isOwner: boolean, opts?: { fastCipher?: boolean }) => { fileEncryptionKey: Uint8Array \| null }` | `null` = rejected (try the next password). With `opts.fastCipher === true` the AES work goes through fw's T-table `aes.ttable` (fast, **not constant-time**: for a trusted single-user host), else the constant-time `aes`; `readDocument`'s `fastCipher` passes it. |
+| `decryptString` | `(typedEncrypt: { method? }, fek, objNum, gen, ciphertext, opts?: { fastCipher?: boolean }) => Uint8Array` | AES-256-CBC (or AES-GCM for `method === 'AESV4'`, always constant-time). `opts.fastCipher`: as `tryPassword`. |
 | `decryptStream` | same signature as `decryptString` | Alias — identical implementation. |
 | `encryptString` | `(typedEncrypt: { method? }, fek, objNum, gen, plaintext, iv) => Uint8Array` | Encrypts (write side). `iv`: 16 bytes CBC / 12 bytes AESV4. |
 | `encryptStream` | same signature as `encryptString` | Alias — identical implementation. |
@@ -77,7 +77,6 @@ const { O, OE } = v6.buildOOE(ownerPwd, fek, U, valSalt2, keySalt2);
 | `pdf/crypto/v6/bad-ct-len` | `EncryptionError` | Ciphertext length not a multiple of 16. |
 | `pdf/crypto/v6/aes-decrypt-schedule` | `EncryptionError` | Key schedule failed on decrypt. |
 | `pdf/crypto/v6/cbc-decrypt-failed` | `EncryptionError` | CBC decrypt failed. |
-| `pdf/crypto/v6/hardening-runaway` | `EncryptionError` | Hardening loop exceeded 1024 rounds. |
 | `pdf/crypto/v6/bad-O-U` | `EncryptionError` | `/O`/`/U` not at least 48 bytes. |
 | `pdf/crypto/v6/bad-OE-UE` | `EncryptionError` | `/OE`/`/UE` not exactly 32 bytes. |
 | `pdf/crypto/v6/bad-string` | `EncryptionError` | Encrypted string shorter than 32 bytes. |

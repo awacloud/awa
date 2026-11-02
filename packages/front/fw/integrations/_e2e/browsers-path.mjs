@@ -13,15 +13,16 @@
  * — must therefore resolve to ONE in-repo location, or they populate two caches.
  *
  * This module is PURE: no side effect at import, no I/O beyond an `existsSync`
- * sanity check inside `repoRoot()`. `applyBrowsersPath()` is the single mutating
- * entry point and it mutates only the env object it is handed.
+ * sanity check inside `repoRoot()` and the `.git`-file / `commondir` reads of
+ * `mainTreeRoot()` (no `git` spawn). `applyBrowsersPath()` is the single
+ * mutating entry point and it mutates only the env object it is handed.
  *
  * Consumed by `preview.mjs` (before its dynamic `import('playwright')`) and, per
  * the plan, by the provisioning script landed separately.
  */
 
-import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
@@ -56,11 +57,41 @@ export function repoRoot() {
 }
 
 /**
+ * The MAIN checkout of `root`: when `<root>/.git` is a FILE (a linked
+ * worktree — `../awa-worktrees/<name>` or `.claude/worktrees/<name>`), read
+ * its `gitdir:` line, then `<gitdir>/commondir`, and return the parent of the
+ * common dir when its basename is `.git`. Otherwise (a main checkout, a bare
+ * layout, anything unparseable) `root` unchanged.
+ *
+ * File reads only — no `git` spawn, no marker walk-up. It exists so a
+ * worktree resolves the main checkout's browser cache and `third_party` needs
+ * no junction into the worktree: git for Windows deletes THROUGH a junction
+ * on `git worktree remove`, which emptied master's cache (BL-2761).
+ *
+ * @param {string} root absolute tree root (from `repoRoot()`)
+ * @returns {string} absolute main-checkout root, or `root`
+ */
+export function mainTreeRoot(root) {
+    try {
+        const dotGit = join(root, '.git');
+        if (!statSync(dotGit).isFile()) return root;
+        const line = /^gitdir:\s*(.+?)\s*$/m.exec(readFileSync(dotGit, 'utf8'));
+        if (!line) return root;
+        const gitdir = resolve(root, line[1]);
+        const common = resolve(gitdir, readFileSync(join(gitdir, 'commondir'), 'utf8').trim());
+        return basename(common) === '.git' ? dirname(common) : root;
+    } catch {
+        return root;
+    }
+}
+
+/**
  * Resolve the browsers path WITHOUT touching any environment.
  *
  * Precedence: an explicit, non-empty `PLAYWRIGHT_BROWSERS_PATH` wins — it is the
- * documented operator override (a worktree run pointing at the main tree's warm
- * cache is the intended use). Otherwise the in-repo location is used.
+ * documented operator override. Otherwise the in-repo location of the MAIN
+ * checkout (`mainTreeRoot`): from a linked worktree that is the main tree's
+ * warm cache, so `third_party` needs no junction (BL-2761).
  *
  * @param {Record<string, string|undefined>} [env] environment to read (never `process.env` implicitly in tests)
  * @returns {string} absolute path the browser cache must live at
@@ -69,7 +100,7 @@ export function resolveBrowsersPath(env = process.env) {
     const raw = env?.PLAYWRIGHT_BROWSERS_PATH;
     const explicit = typeof raw === 'string' ? raw.trim() : '';
     if (explicit !== '') return explicit;
-    return join(repoRoot(), BROWSERS_DIR_REL);
+    return join(mainTreeRoot(repoRoot()), BROWSERS_DIR_REL);
 }
 
 /**

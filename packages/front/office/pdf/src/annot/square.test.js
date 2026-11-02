@@ -120,3 +120,14 @@ describe('pdfShapeAnnot module', () => {
         expect(typeof pdfShapeAnnot.factory(_pdfErrors_TD1, {}, {}).typeShapeAnnot).toBe('function');
     });
 });
+
+describe('the line annotation keys LLO and CO (A40b)', () => {
+    test('LLO a number, CO the array as read; no new throw', () => {
+        const co = obj.array([obj.int(0), obj.int(5)]);
+        const a = typeShapeAnnot(obj.dict({ Subtype: obj.name('Line'), L: obj.array([obj.int(0), obj.int(0), obj.int(1), obj.int(1)]), LLO: obj.real(2.5), CO: co }), 'Line');
+        expect([a.llo, a.co]).toEqual([2.5, co]);
+        expect(a._extras).toEqual({});
+        const odd = typeShapeAnnot(obj.dict({ Subtype: obj.name('Line'), LLO: obj.name('x'), CO: obj.int(1) }), 'Line');
+        expect([odd.llo, odd.co]).toEqual([null, null]);
+    });
+});

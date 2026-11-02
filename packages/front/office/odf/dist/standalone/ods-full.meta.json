@@ -48,8 +48,8 @@
   ],
   "fwDependencies": [],
   "bytes": {
-    "dev": 205958,
-    "min": 113541
+    "dev": 211694,
+    "min": 116758
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

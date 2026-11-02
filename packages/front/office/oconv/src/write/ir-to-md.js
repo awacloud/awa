@@ -24,6 +24,7 @@
  * ir: oconv-ir/v1             # pivot version, from the `oconvIr` dependency
  * sourceFormat: docx          # ┐
  * sourceName: report.docx     # │
+ * title: "Annual report"      # │ the source's own title, when it states one
  * sourceBytes: 1556           # │ provenance — ALL caller-supplied (`meta`),
  * sourceSha256: 7be54104…     # │ so this module needs no crypto and no I/O
  * convertedAt: 2026-07-20T00:00:00Z   # │ ALWAYS caller-injected: this is what
@@ -91,9 +92,12 @@
  * markdown cannot express), `link/target-missing` (a run flagged as a
  * link with an empty target) and `inline/linebreak-degraded` (a `\n` hard
  * line break in a heading or a table cell, written as a space — a
- * paragraph writes it as a backslash line end) and
+ * paragraph writes it as a backslash line end),
  * `list/task-marker-dropped` (a GFM task item — `listItem.escapes.md.task`,
- * written back as `[ ]` / `[x]` — whose first block is not a paragraph).
+ * written back as `[ ]` / `[x]` — whose first block is not a paragraph) and
+ * `inline/flattened` (a list or a table inside a table cell, written
+ * inline: its pieces joined by `; `, the text kept, the structure not;
+ * `detail` `table cell list` / `table cell table`).
  *
  * @typedef {Object} OconvLoss
  * @property {string} code
@@ -102,7 +106,7 @@
 
 /**
  * One entry of the asset manifest. `bytes` appears only when the reader
- * stored the binary on the IR node (`escapes.docx.bytes` / `escapes.odt.bytes`); passed through
+ * stored the binary on the IR node (`escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`); passed through
  * BY REFERENCE, never serialized into the YAML.
  *
  * @typedef {Object} OconvAsset
@@ -281,7 +285,7 @@ export const oconvIrToMd = {
             if (!ctx.assetNames.has(name)) {
                 ctx.assetNames.add(name);
                 const asset = { kind: 'image', name };
-                const esc = n.escapes && (n.escapes.docx || n.escapes.odt);
+                const esc = n.escapes && (n.escapes.docx || n.escapes.odt || n.escapes.pdf || n.escapes.pptx);
                 const bytes = esc && esc.bytes;
                 if (bytes !== undefined) asset.bytes = bytes;
                 ctx.assets.push(asset);
@@ -330,8 +334,47 @@ export const oconvIrToMd = {
                     first = false;
                     continue;
                 }
+                if (block.kind === 'list' || block.kind === 'table') {
+                    // GFM holds no block in a cell: the text kept inline,
+                    // the structure not (profile v1's `inline/flattened`).
+                    let inBlock = false;
+                    for (const piece of flattenedPieces(block)) {
+                        // `; ` between the block's own pieces, the cell's
+                        // usual space before its first one.
+                        if (!first) cell.appendChild(textNode(inBlock ? '; ' : ' '));
+                        inBlock = true;
+                        if (piece.kind === 'image') cell.appendChild(imageNode(piece, ctx));
+                        else appendInlines(cell, piece.children, ctx);
+                        first = false;
+                    }
+                    ctx.losses.push({ code: 'inline/flattened', detail: 'table cell ' + block.kind });
+                    continue;
+                }
                 drop(ctx, 'table cell ' + String(block.kind));
             }
+        }
+
+        /**
+         * The pieces of a list or a table met in a cell, in reading order: a
+         * paragraph, a heading or an image is a piece; a list's items, a
+         * quote's blocks and a table's cells (row by row) give theirs.
+         */
+        function flattenedPieces(block) {
+            const out = [];
+            const walk = (b) => {
+                if (!b || typeof b !== 'object') return;
+                if (b.kind === 'paragraph' || b.kind === 'heading' || b.kind === 'image') { out.push(b); return; }
+                if (b.kind === 'codeBlock') {
+                    if (b.text) out.push({ kind: 'paragraph', children: [{ kind: 'run', text: String(b.text).replace(/\s+/g, ' ') }] });
+                    return;
+                }
+                if (b.kind === 'list' || b.kind === 'listItem' || b.kind === 'blockquote' || b.kind === 'table'
+                        || b.kind === 'row' || b.kind === 'cell') {
+                    for (const c of b.children || []) walk(c);
+                }
+            };
+            walk(block);
+            return out;
         }
 
         function tableNode(n, ctx) {
@@ -451,6 +494,38 @@ export const oconvIrToMd = {
 
         /* ── the profile v1 envelope ───────────────────────────────────── */
 
+        /** The front-matter forms `opts.frontMatter` may name (A46). */
+        const FRONT_MATTER_FORMS = new Set(['full', 'compact', 'none']);
+
+        /**
+         * `opts.frontMatter`, `'full'` when absent; anything else than a
+         * known form throws `oconv: bad front matter`.
+         *
+         * @param {object} [opts]
+         * @returns {string}
+         * @throws {Error} `oconv: bad front matter`
+         */
+        function frontMatterForm(opts) {
+            const v = opts ? opts.frontMatter : undefined;
+            if (v === undefined) return 'full';
+            if (typeof v !== 'string' || !FRONT_MATTER_FORMS.has(v)) {
+                throw new Error('oconv: bad front matter');
+            }
+            return v;
+        }
+
+        /** The ledger with one entry per `(code, detail)`, first-occurrence order, counted. */
+        function countedLosses(losses) {
+            const byKey = new Map();
+            for (const l of losses) {
+                const key = l.code + '\u0000' + l.detail;
+                const seen = byKey.get(key);
+                if (seen) seen.count++;
+                else byKey.set(key, { code: l.code, detail: l.detail, count: 1 });
+            }
+            return [...byKey.values()];
+        }
+
         function frontMatter(state) {
             const lines = [
                 '---',
@@ -460,6 +535,10 @@ export const oconvIrToMd = {
             for (const key of PROVENANCE_KEYS) {
                 if (state.meta[key] !== undefined) {
                     lines.push(key + ': ' + yamlScalar(state.meta[key]));
+                }
+                // The document's own title, after its name, when it states one.
+                if (key === 'sourceName' && typeof state.meta.title === 'string' && state.meta.title.trim()) {
+                    lines.push('title: ' + yamlScalar(state.meta.title.trim()));
                 }
             }
             lines.push('blocks: ' + state.blocks);
@@ -475,7 +554,8 @@ export const oconvIrToMd = {
                 lines.push('losses:');
                 for (const l of state.losses) {
                     lines.push('  - { code: ' + yamlScalar(l.code)
-                        + ', detail: ' + yamlScalar(l.detail) + ' }');
+                        + ', detail: ' + yamlScalar(l.detail)
+                        + (l.count === undefined ? '' : ', count: ' + l.count) + ' }');
                 }
             }
             if (state.assets.length) {
@@ -495,12 +575,20 @@ export const oconvIrToMd = {
          *
          * @param {object} ir `oconv-ir/v1` document node.
          * @param {OconvMeta} meta Caller-supplied provenance (+ reader losses).
-         * @param {object} [opts] Reserved for profile-v1-compatible options;
-         *   none is defined in v1.
+         * @param {{frontMatter?: 'full'|'compact'|'none'}} [opts]
+         *   `frontMatter` (A46): `'full'` (the default) writes the front
+         *   matter above; `'compact'` the same keys with one `losses` entry
+         *   per distinct `(code, detail)`, first-occurrence order, carrying
+         *   `count`; `'none'` no front matter (the body alone — not a
+         *   profile-v1 document; the result's fields are the sidecar). The
+         *   result's `losses` is the full ledger in every form. Other keys
+         *   are ignored.
+         * @throws {Error} `oconv: bad front matter` when `opts.frontMatter`
+         *   is present and is not one of the three forms.
          * @returns {OconvMdResult}
          */
         function irToMd(ir, meta, opts) {
-            void opts;
+            const form = frontMatterForm(opts);
             const m = meta || {};
             const ctx = {
                 losses: [], assets: [], assetNames: new Set(),
@@ -517,15 +605,16 @@ export const oconvIrToMd = {
                 .concat(ctx.losses);
             const lossy = losses.length > 0;
 
-            const markdown = frontMatter({
+            const head = form === 'none' ? '' : frontMatter({
                 ir: IR_VERSION,
                 meta: m,
                 blocks: blocks.length,
                 anchors: ctx.anchors,
                 lossy,
-                losses,
+                losses: form === 'compact' ? countedLosses(losses) : losses,
                 assets: ctx.assets
-            }) + body;
+            });
+            const markdown = head + body;
 
             return {
                 markdown, anchors: ctx.anchors, lossy, losses, assets: ctx.assets

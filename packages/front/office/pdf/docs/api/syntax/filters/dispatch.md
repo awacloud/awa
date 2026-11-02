@@ -36,7 +36,8 @@ entries preserved).
 const dispatch = runtime.resolve('pdfFilterDispatch');
 // Returns: { decode, decodeChain, encodeChain, register, names, decoders,
 //            normalizeFilterList, applyDecodeChain, applyEncodeChain,
-//            decodeStream }
+//            decodeStream, typeStreamEntries, typeDecodeParms,
+//            DECODE_PARMS_KEYS }
 ```
 
 ## API
@@ -52,6 +53,9 @@ const dispatch = runtime.resolve('pdfFilterDispatch');
 | `normalizeFilterList` | `(filterEntry) => string[]` | Expands abbreviations and returns the canonical name list. Useful to inspect a chain without decoding. |
 | `applyDecodeChain` | `(bytes, filters, params, decoders) => Uint8Array` | Lower-level decode against a **caller-supplied** decoder map. |
 | `applyEncodeChain` | `(bytes, filters, params, decoders) => Uint8Array` | Lower-level encode against a caller-supplied decoder map. |
+| `typeStreamEntries` | `(streamObj \| dict) => { length, filter, decodeParms, f, fFilter, fDecodeParms, dl }` | The entries every stream dictionary shares (ISO 32000-2 Table 5): `length` an integer or `{ num, gen }`; `filter` / `fFilter` the names as read (`[]` when absent, abbreviations kept); `decodeParms` / `fDecodeParms` one dictionary or `null` per filter (`null` when absent); `f` the file specification (string bytes, dictionary, or `{ num, gen }`); `dl` a non-negative integer. A value of another type gives `null`. |
+| `typeDecodeParms` | `(dict, filter) => DecodeParms` | A filter's decode parameters dictionary, `filter` its name (`FlateDecode`, `LZWDecode`, `CCITTFaxDecode`, `DCTDecode`, `JBIG2Decode`, `Crypt`; an abbreviation resolved): one field per key of its list, named after the key in lower case (`BitsPerComponent` → `bitspercomponent`, `BlackIs1` → `blackis1`), present only when the key is — an integer, a boolean or a name by its value, a stream or a reference as read, `null` for a value of another type — plus `raw` and `_extras`. The decode path does not use it. |
+| `DECODE_PARMS_KEYS` | frozen object | Filter → its keys (ISO 32000-2 Tables 8 to 14, the Arlington PDF Model's types). |
 | `decodeStream` | `(streamObj, decoders) => Uint8Array` | Lower-level `decode`: reads `/Filter` + `/DecodeParms` off the stream dictionary, then delegates to `applyDecodeChain`. |
 
 `decode`, `decodeChain` and `encodeChain` are thin bindings of the three
@@ -99,6 +103,20 @@ dispatch.normalizeFilterList(streamObj.dict.entries.Filter);
 // ['ASCII85Decode', 'FlateDecode']
 ```
 
+### Type the stream dictionary entries
+
+```js
+const { obj } = runtime.resolve('pdfParserObj');
+const entries = dispatch.typeStreamEntries(obj.stream(obj.dict({
+    Length: obj.ref(12, 0), Filter: obj.name('FlateDecode'),
+    DecodeParms: obj.dict({ Predictor: obj.int(12), Columns: obj.int(5) })
+}), new Uint8Array(0)));
+entries.length;       // { num: 12, gen: 0 } (an indirect /Length)
+entries.filter;       // ['FlateDecode']
+entries.decodeParms;  // [the /DecodeParms dictionary, as read]
+entries.dl;           // null
+```
+
 ### List the available filters
 
 ```js
@@ -115,7 +133,9 @@ dispatch.names();
 | `pdf/filter/bad-type` | `ParseError` | `/Filter` is neither a name nor an array. |
 | `pdf/filter/unsupported` | `ParseError` | Filter absent from `decoders`. |
 | `pdf/filter/no-encoder` | `ParseError` | `encodeChain` invoked for a filter with no `encode`. |
-| `pdf/filter/not-stream` | `ParseError` | `decode()`/`decodeStream()` given something other than a typed stream. |
+| `pdf/filter/not-stream` | `ParseError` | `decode()`/`decodeStream()` given something other than a typed stream; `typeStreamEntries()` given neither a stream nor a dictionary. |
+| `pdf/filter/decodeparms/not-dict` | `ParseError` | `typeDecodeParms`: not a dict. |
+| `pdf/filter/decodeparms/filter` | `ContractError` | `typeDecodeParms`: `filter` not a key of `DECODE_PARMS_KEYS` (after abbreviation). |
 | `pdf/filter/bad-decodeparms` | `ParseError` | `/DecodeParms` is neither a dict, an array, nor null. |
 
 ## See also

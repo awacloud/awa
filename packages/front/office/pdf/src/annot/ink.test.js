@@ -75,3 +75,13 @@ describe('pdfInkAnnot module', () => {
         expect(typeof pdfInkAnnot.factory(_pdfErrors_TD1, {}, {}).typeInkAnnot).toBe('function');
     });
 });
+
+describe('the ink annotation path (A40b)', () => {
+    test('Path the array as read, null for another type', () => {
+        const path = obj.array([obj.array([obj.int(0), obj.int(0)])]);
+        const a = typeInkAnnot(obj.dict({ Subtype: obj.name('Ink'), Path: path }));
+        expect(a.path).toBe(path);
+        expect(a._extras).toEqual({});
+        expect(typeInkAnnot(obj.dict({ Subtype: obj.name('Ink'), Path: obj.int(1) })).path).toBe(null);
+    });
+});

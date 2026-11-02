@@ -68,6 +68,6 @@ describe('textTrackedChanges — change marker hooks', () => {
         const out = ext.dehydrateParagraph(p);
         expect(out.changeMarkers).toBeUndefined();
         expect(out._extras).toBeDefined();
-        expect(out._extras[0].name).toBe('text:change-end');
+        expect(out._extras.children[0].name).toBe('text:change-end');
     });
 });

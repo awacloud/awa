@@ -2,7 +2,7 @@
   "name": "@awacloud/viewer",
   "version": "0.1.0",
   "license": "AGPL-3.0-only",
-  "description": "Browser-only document viewer (PDF, DOCX, XLSX, PPTX, ODT, ODS, ODP, Markdown, text): an installable PWA, or a component mounted inside any page. Nothing is uploaded.",
+  "description": "AWA Viewer: an installable, offline browser-only document viewer (PDF, Word, Excel, PowerPoint, OpenDocument, Markdown, text) — the standalone PWA over @awacloud/oview. Nothing is uploaded.",
   "keywords": [
     "document-viewer",
     "pdf",
@@ -20,7 +20,7 @@
   ],
   "private": true,
   "type": "module",
-  "main": "src/viewer.js",
+  "main": "src/main.js",
   "files": [
     "src/**/*.js",
     "!src/**/*.test.js",
@@ -32,10 +32,6 @@
     "CHANGELOG.md"
   ],
   "exports": {
-    ".": "./src/viewer.js",
-    "./element.js": "./src/element.js",
-    "./viewer.css": "./src/styles/viewer.css",
-    "./tokens.css": "./src/styles/tokens.css",
     "./package.json": "./package.json"
   },
   "sideEffects": [
@@ -48,7 +44,7 @@
   },
   "scripts": {
     "test": "bun test .",
-    "build": "bun ../../../cli.ts site-kit app-dist --app . && bun ../../demo/_build/bundle-js.js --dist dist --label @awacloud/viewer && bun tools/build-csp.js && bun tools/build-sw.js",
+    "build": "bun ../../../cli.ts site-kit app-dist --app . && bun ../../demo/_build/bundle-js.js --dist dist --label @awacloud/viewer && bun tools/build-csp.js && bun tools/build-sw.js && bun ../../demo/_build/gzip-dist.js --dist dist",
     "icons": "bun tools/build-icons.js",
     "samples": "bun tools/build-samples.js",
     "lint": "bunx eslint --no-warn-ignored ."
@@ -60,7 +56,8 @@
     "@awacloud/odf": "workspace:*",
     "@awacloud/md": "workspace:*",
     "@awacloud/fonts": "workspace:*",
-    "@awacloud/oconv": "workspace:*"
+    "@awacloud/oconv": "workspace:*",
+    "@awacloud/oview": "workspace:*"
   },
   "awa": {
     "maturity": "L1"

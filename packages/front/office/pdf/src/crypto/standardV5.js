@@ -90,13 +90,22 @@ export const pdfStandardV5 = {
             return out;
         }
 
-        function aesCbcDecrypt(key, iv, ciphertext) {
+        /**
+         * The AES of a read call: fw's T-table `aes.ttable` under the
+         * opt-in `opts.fastCipher === true` (fast, NOT constant-time: for a
+         * trusted single-user host), else the constant-time `aes`.
+         */
+        function aesOf(opts) {
+            return opts && opts.fastCipher === true && aes.ttable ? aes.ttable : aes;
+        }
+
+        function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
             if (ciphertext.length % 16 !== 0) {
                 throw new EncryptionError('pdf/crypto/v5/bad-ciphertext-len',
                     'AES-CBC ciphertext length must be a multiple of 16',
                     { context: { length: ciphertext.length } });
             }
-            const cipher = aes.fn(bytesToWords(key, 0, 32), true);
+            const cipher = A.fn(bytesToWords(key, 0, 32), true);
             if (cipher === false) {
                 throw new EncryptionError('pdf/crypto/v5/aes-schedule-failed',
                     'AES-256 key schedule failed');
@@ -123,7 +132,7 @@ export const pdfStandardV5 = {
             return buf.subarray(0, buf.length - pad);
         }
 
-        function tryPassword(typedEncrypt, password, isOwner) {
+        function tryPassword(typedEncrypt, password, isOwner, opts) {
             const O = typedEncrypt.O, U = typedEncrypt.U;
             const OE = typedEncrypt.OE, UE = typedEncrypt.UE;
             if (!(O instanceof Uint8Array) || O.length < 48 ||
@@ -156,7 +165,7 @@ export const pdfStandardV5 = {
                     '/OE and /UE must be exactly 32 bytes for v5',
                     { context: { length: oeue && oeue.length } });
             }
-            const fek = aesCbcDecrypt(intermediate, ZERO_IV, oeue);
+            const fek = aesCbcDecrypt(intermediate, ZERO_IV, oeue, aesOf(opts));
             return { fileEncryptionKey: fek };
         }
 
@@ -172,7 +181,7 @@ export const pdfStandardV5 = {
             }
             return pdfAesGcm;
         }
-        function decryptString(typedEncrypt, fek, _objNum, _gen, ciphertext) {
+        function decryptString(typedEncrypt, fek, _objNum, _gen, ciphertext, opts) {
             const method = methodOf(typedEncrypt, 'AESV3');
             if (method === 'AESV4') {
                 return requireGcm().decryptObjectGcm(fek, ciphertext);
@@ -183,11 +192,11 @@ export const pdfStandardV5 = {
             }
             const iv = ciphertext.subarray(0, 16);
             const body = ciphertext.subarray(16);
-            const pt = aesCbcDecrypt(fek, iv, body);
+            const pt = aesCbcDecrypt(fek, iv, body, aesOf(opts));
             return stripPkcs7(pt);
         }
-        function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext) {
-            return decryptString(typedEncrypt, fek, objNum, gen, ciphertext);
+        function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+            return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
         }
 
         // ---- ENCRYPT helpers (encrypted write side) ----

@@ -70,7 +70,8 @@ export const docxComments = {
                 id: Number(cEl.attrs['w:id']),
                 body: []
             };
-            if (cEl.attrs['w:author'])   out.author = cEl.attrs['w:author'];
+            // w:author is required (CT_Comment): an empty one is kept.
+            if (cEl.attrs['w:author'] !== undefined) out.author = cEl.attrs['w:author'];
             if (cEl.attrs['w:date'])     out.date = cEl.attrs['w:date'];
             if (cEl.attrs['w:initials']) out.initials = cEl.attrs['w:initials'];
             const { body, extras } = structure.parseBody(cEl);
@@ -81,7 +82,7 @@ export const docxComments = {
 
         function renderComment(c) {
             const attrs = { 'w:id': String(c.id) };
-            if (c.author)   attrs['w:author'] = c.author;
+            if (typeof c.author === 'string') attrs['w:author'] = c.author;
             if (c.date)     attrs['w:date'] = c.date;
             if (c.initials) attrs['w:initials'] = c.initials;
             const children = structure.renderBodyChildren({

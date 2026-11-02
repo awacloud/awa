@@ -78,3 +78,5 @@ others.
 
 Third-party components:
 - Liberation Fonts 2.1.5 — Copyright (c) 2012 Red Hat, Inc.; digitized data copyright (c) 2010 Google Corporation — OFL-1.1 — licence text: vendor/OFL.txt
+- Carlito 1.103 — Copyright (c) 2010-2013 by tyPoland Lukasz Dziedzic — OFL-1.1 — licence text: vendor/OFL-carlito.txt
+- Caladea 1.002 — Copyright (c) 2012 Huerta Tipografia — Apache-2.0 — licence text: vendor/LICENSE-apache-2.0.txt

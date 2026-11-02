@@ -298,7 +298,6 @@ Raised as `ContractError` unless noted.
 | `pdf/sign/bad-rsa-key` / `bad-ecdsa-key` / `bad-ed25519-key` | `privateKey` shape doesn't match the selected `algorithm`. |
 | `pdf/sign/rsa-failed` / `ed25519-failed` (`EncryptionError`) | The underlying fw signer returned `false`. |
 | `pdf/sign/pkcs7-too-large` | The built PKCS#7 blob exceeds `placeholderBytes`. |
-| `pdf/sign/hex-overflow` / `dts-hex-overflow` | PKCS#7 (or TimeStampToken) hex exceeds the reserved `/Contents` placeholder length. |
 | `pdf/sign/tst-too-large` | LTA `DocTimeStamp` TimeStampToken exceeds its placeholder. |
 | `pdf/sign/bad-extensions` | `algorithm: 'ed25519'` and the Catalog `/Extensions` (or its `ISO_` entry, or an element of an `ISO_` array) is not a dictionary, an array of dictionaries or a reference to one (ISO 32000-2 §7.12). `context: { shape }` names the offending value's type. Nothing is written. |
 | `pdf/sign/catalog-not-found` | The trailer `/Root` does not resolve to a dictionary (signature field, or the LT/LTA Catalog update). |

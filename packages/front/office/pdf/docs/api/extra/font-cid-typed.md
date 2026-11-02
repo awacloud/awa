@@ -19,7 +19,7 @@ Covers `/CIDFontType0` and `/CIDFontType2` (§9.7.4), `/CIDSystemInfo` (§9.7.3)
 
 ```js
 const ext = runtime.resolve('pdfFontCidTyped');
-// Returns: { typeCIDFont, typeCIDSystemInfo, decodeWidthsW, PREDEFINED_CMAPS }
+// Returns: { typeCIDFont, typeCIDSystemInfo, typeStyleDict, decodeWidthsW, PREDEFINED_CMAPS }
 ```
 
 ## API
@@ -28,6 +28,7 @@ const ext = runtime.resolve('pdfFontCidTyped');
 |--------|-----------|---------|
 | `typeCIDFont` | `(dict) => CIDFont` | Record for `/Type /Font /Subtype /CIDFontType{0,2}`. |
 | `typeCIDSystemInfo` | `(dict) => { registry, ordering, supplement }` | §9.7.3. |
+| `typeStyleDict` | `(dict) => { panose?, raw, _extras }` | A CIDFont's `/Style` dictionary: `panose` the string's bytes (`null` for another value), present only when the key is. |
 | `decodeWidthsW` | `(array) => Array<{ first, last, widths? , width? }>` | Expands `/W` runs. |
 | `PREDEFINED_CMAPS` | frozen catalog | Map `registry-ordering` → list of CMap names. |
 
@@ -60,6 +61,7 @@ ext.PREDEFINED_CMAPS['Adobe-GB1'].includes('GB-EUC-H'); // true
 | Code | Class | When |
 |------|-------|------|
 | `pdf/extra/cid-font/not-dict` | `ParseError` | Argument is not a dictionary. |
+| `pdf/extra/cid-font/style-not-dict` | `ParseError` | `typeStyleDict`: not a dict. |
 | `pdf/extra/cid-font/bad-type` | `ParseError` | `/Type` present and not `/Font`. |
 | `pdf/extra/cid-font/bad-subtype` | `ParseError` | `/Subtype` is not a CIDFontType. |
 | `pdf/extra/cid-font/missing-csi` | `ParseError` | `/CIDSystemInfo` missing. |

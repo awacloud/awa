@@ -20,7 +20,8 @@ status: complete
 ```js
 const ext = runtime.resolve('pdfOptionalContentExtended');
 // Returns: { evaluateVE, typeOrderTree, typeRBGroups,
-//   classifyOcgIntent, VE_OPERATORS }
+//   classifyOcgIntent, typeOptionalContent,
+//   OPTIONAL_CONTENT_KEYS, VE_OPERATORS }
 ```
 
 ## API
@@ -32,6 +33,8 @@ const ext = runtime.resolve('pdfOptionalContentExtended');
 | `typeRBGroups` | `(arr) => Array<Array<{ num, gen }>>` | Mutually-exclusive radio-button groups. |
 | `classifyOcgIntent` | `(value) => { view: boolean, design: boolean, names: string[] }` | |
 | `VE_OPERATORS` | frozen array | `['And','Or','Not']`. |
+| `typeOptionalContent` | `(dict, kind) => OC` | An optional content properties, membership or usage sub-dictionary (`kind` `properties`, `membership`, `creatorInfo`, `language`, `export`, `zoom`, `print`, `view`, `user`, `pageElement`): one field per key of its list, named after the key in lower case (`OCGs` → `ocgs`, `PrintState` → `printstate`), present only when the key is — a name, a string (its bytes) or a number by its value, an array or a dictionary as read, a reference as read, `OCGs` and `User`'s `Name` by the first of their types that fits, `null` for none — plus `raw` and `_extras`. |
+| `OPTIONAL_CONTENT_KEYS` | frozen object | Kind → its keys (the Arlington PDF Model's lists). |
 
 ## Examples
 
@@ -75,6 +78,8 @@ ext.classifyOcgIntent({ type: 'name', value: 'View' });
 | `pdf/extra/ocgx/rbg/not-array` | `ParseError` | `/RBGroups` is not an array. |
 | `pdf/extra/ocgx/rbg/bad-group` | `ParseError` | A group entry is not an array. |
 | `pdf/extra/ocgx/intent/bad` | `ParseError` | Intent is neither a name nor an array. |
+| `pdf/extra/oc/not-dict` | `ParseError` | `typeOptionalContent`: not a dict. |
+| `pdf/extra/oc/kind` | `ContractError` | `typeOptionalContent`: `kind` missing or unknown. |
 
 ## See also
 

@@ -385,7 +385,7 @@ describe('roundtrip — leg 5: profile-v1 input leg (front matter never leaks in
 });
 
 describe('roundtrip — leg 6: nested-list leg (md-nested.md, docx)', () => {
-    test('write leg preserves depth (pPr.numPr.ilvl === 1); the return leg flattens with the documented degrade', async () => {
+    test('write leg preserves depth (pPr.numPr.ilvl === 1); the return leg keeps it', async () => {
         const src = fixtureText(MD_NESTED);
         const B = await oconv.fromMd({ markdown: src, target: 'docx' });
 
@@ -396,11 +396,11 @@ describe('roundtrip — leg 6: nested-list leg (md-nested.md, docx)', () => {
         expect(nestedParagraphs.length).toBeGreaterThan(0);
 
         const T = await oconv.toMd({ name: 'nested.docx', bytes: B.bytes, convertedAt: FIXED_AT });
-        expect(T.losses.some(l => l.code === 'list/nesting-flattened')).toBe(true);
+        expect(T.losses.some(l => l.code === 'list/nesting-flattened')).toBe(false);
 
-        // The read-side degrade is documented, not silent: item text still
-        // survives, just flattened to a single level.
+        // The return leg reads the nested items back at their level.
         const body = bodyOf(T.markdown);
+        expect(body).toMatch(/\n {2,}[-*] Item A\.1/);
         expect(body).toContain('Item A');
         expect(body).toContain('Item A.1');
         expect(body).toContain('Item A.2');

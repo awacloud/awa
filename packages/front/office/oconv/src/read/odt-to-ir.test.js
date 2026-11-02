@@ -390,6 +390,34 @@ describe('oconvOdtToIr — odtToIr()', () => {
         expect(losses).toEqual([{ code: 'inline/dropped', detail: 'text:bookmark-start' }]);
     });
 
+    test('maps a section\'s content in place, nested sections too (A42)', () => {
+        const doc = {
+            body: [
+                { type: 'paragraph', runs: [{ type: 'text', value: 'Before' }] },
+                { type: 'section', name: 'Sect1', children: [
+                    { type: 'heading', level: 1, runs: [{ type: 'text', value: 'Inside' }] },
+                    { type: 'paragraph', runs: [{ type: 'text', value: 'Body of the section.' }] },
+                    { type: 'section', name: 'Sect2', children: [
+                        { type: 'paragraph', runs: [{ type: 'text', value: 'Nested.' }] }
+                    ] }
+                ] },
+                { type: 'paragraph', runs: [{ type: 'text', value: 'After' }] }
+            ]
+        };
+        const back = odt.read(odt.write(doc));
+        expect(back.body.some((n) => n.type === 'section')).toBe(true);
+        const { ir, losses } = odtToIr(back);
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(ir.children).toEqual([
+            oconvIr.node('paragraph', {}, [oconvIr.node('run', { text: 'Before' })]),
+            oconvIr.node('heading', { level: 1 }, [oconvIr.node('run', { text: 'Inside' })]),
+            oconvIr.node('paragraph', {}, [oconvIr.node('run', { text: 'Body of the section.' })]),
+            oconvIr.node('paragraph', {}, [oconvIr.node('run', { text: 'Nested.' })]),
+            oconvIr.node('paragraph', {}, [oconvIr.node('run', { text: 'After' })])
+        ]);
+        expect(losses).toEqual([]);
+    });
+
     test('drops a recognised-by-odf node with no IR equivalent (soft-page-break)', () => {
         const doc = {
             body: [
@@ -855,6 +883,49 @@ describe('oconvOdtToIr — span inner markup', () => {
         ]);
     });
 
+    test('a frame with no content child, only a title or a description, is an image without bytes (image/bytes-unavailable)', () => {
+        const titled = { type: 'frame', anchorType: 'as-char', name: 'Chart 1', width: '5.08cm', height: '3.81cm',
+            _extras: { children: [xml.el('svg:title', {}, [xml.text('Sales')])] } };
+        const described = { type: 'frame', _extras: { children: [xml.el('svg:desc', {}, [xml.text('Only desc')])] } };
+        const bare = { type: 'frame', name: 'Bare' };
+        const { ir, losses } = odtToIr({ package: { parts: {} }, body: [{ type: 'paragraph', runs: [
+            { type: 'text', value: 'a ' }, titled, described, bare
+        ] }] });
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(ir.children[0].children).toEqual([
+            oconvIr.node('run', { text: 'a ' }),
+            oconvIr.node('image', { name: 'Chart 1', alt: 'Sales' }),
+            oconvIr.node('image', { name: 'image', alt: 'Only desc' }),
+            oconvIr.node('image', { name: 'Bare', alt: '' })
+        ]);
+        expect(losses).toEqual([
+            { code: 'image/bytes-unavailable', detail: 'Chart 1' },
+            { code: 'image/bytes-unavailable', detail: 'image' },
+            { code: 'image/bytes-unavailable', detail: 'Bare' }
+        ]);
+    });
+
+    test('a frame with no typed child but another child (a plugin) stays image/unresolved', () => {
+        const plugin = { type: 'frame', name: 'Media object 1', _extras: { children: [
+            xml.el('draw:plugin', { 'xlink:href': 'Media/ok.wav' }, []), xml.el('svg:title', {}, [xml.text('Sound')])
+        ] } };
+        const { ir, losses } = odtToIr({ package: { parts: {} }, body: [{ type: 'paragraph', runs: [
+            { type: 'text', value: 'a' }, plugin
+        ] }] });
+        expect(ir.children[0].children).toEqual([oconvIr.node('run', { text: 'a' })]);
+        expect(losses).toEqual([{ code: 'image/unresolved', detail: 'draw:frame' }]);
+    });
+
+    test('an image without bytes written as an empty frame reads back with its name and alt', () => {
+        const bytes = odt.write({ body: [{ type: 'paragraph', runs: [
+            { type: 'frame', anchorType: 'as-char', name: 'Chart 1', width: '5.08cm', height: '3.81cm',
+              _extras: { children: [xml.el('svg:title', {}, [xml.text('Sales')])] } }
+        ] }] });
+        const { ir, losses } = odtToIr(odt.read(bytes, { framesInRuns: true }));
+        expect(ir.children).toEqual([oconvIr.node('paragraph', {}, [oconvIr.node('image', { name: 'Chart 1', alt: 'Sales' })])]);
+        expect(losses).toEqual([{ code: 'image/bytes-unavailable', detail: 'Chart 1' }]);
+    });
+
     test('a link\'s untyped children: field text kept on the link with inline/flattened, '
         + 'an empty bookmark recorded inline/dropped (written and read back)', () => {
         const back = odt.read(odt.write({ body: [{ type: 'paragraph', runs: [
@@ -926,8 +997,8 @@ describe('oconvOdtToIr — span inner markup', () => {
                 run('flagged', { bold: true, code: true }),
                 run('named', { italic: true }),
                 run('unresolved'),
-                run('anonymous'),
-                run('')
+                run('anonymous')
+                // the valueless span: no inline since T32 (b3c), its loss kept
             ])
         ]);
         expect(losses).toEqual([
@@ -1055,5 +1126,340 @@ describe('oconvOdtToIr — code blocks, quotes and rules by paragraph style', ()
         expect(cell.children).toEqual([oconvIr.node('codeBlock', { info: '', text: 'in cell' })]);
         const item = ir.children[1].children[0];
         expect(item.children.map((b) => b.kind)).toEqual(['blockquote']);
+    });
+});
+
+// A45a — an inline element at paragraph level, read with elementsInRuns.
+describe('oconvOdtToIr — paragraph-level element runs keep their text (A45a)', () => {
+    test('a cross-reference keeps its text in place; an empty bookmark is dropped as before', () => {
+        const para = { type: 'paragraph', runs: [
+            { type: 'text', value: 'See ' },
+            xml.el('text:reference-ref', { 'text:ref-name': 's43' }, [xml.text('4.3')]),
+            { type: 'text', value: ' below.' },
+            xml.el('text:bookmark', { 'text:name': 'b1' }, [])
+        ] };
+        const { ir, losses } = odtToIr({ body: [para] });
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(ir.children[0].children.map((r) => r.text).join('')).toBe('See 4.3 below.');
+        expect(losses).toEqual([
+            { code: 'inline/flattened', detail: 'text:reference-ref' },
+            { code: 'inline/dropped', detail: 'text:bookmark' }
+        ]);
+    });
+
+    test('in a heading and in a link body too; the link carries the kept text', () => {
+        const ref = xml.el('text:sequence-ref', {}, [xml.text('Table 2')]);
+        const { ir } = odtToIr({ body: [
+            { type: 'heading', outlineLevel: 2, runs: [{ type: 'text', value: 'About ' }, ref] },
+            { type: 'paragraph', runs: [{ type: 'link', href: 'https://e.x', runs: [{ type: 'text', value: 'see ' }, ref] }] }
+        ] });
+        expect(ir.children[0].children.map((r) => r.text).join('')).toBe('About Table 2');
+        expect(ir.children[1].children.map((r) => [r.text, r.link])).toEqual([['see ', 'https://e.x'], ['Table 2', 'https://e.x']]);
+    });
+
+    test('written bytes read back with elementsInRuns keep the element at its place', () => {
+        const bytes = odt.write({ body: [{ type: 'paragraph', runs: [
+            { type: 'text', value: 'See ' },
+            xml.el('text:reference-ref', { 'text:ref-name': 's43' }, [xml.text('4.3')]),
+            { type: 'text', value: ' below.' }
+        ] }] });
+        const { ir } = odtToIr(odt.read(bytes, { framesInRuns: true, elementsInRuns: true }));
+        expect(ir.children[0].children.map((r) => r.text).join('')).toBe('See 4.3 below.');
+    });
+});
+
+// A45c — a heading's outline number, from the document's outline style.
+describe('oconvOdtToIr — heading outline numbers (A45c)', () => {
+    /** `text:outline-style` raw element, one level per `[level, attrs]`. */
+    function outlineStyle(levels) {
+        return xml.el('text:outline-style', { 'style:name': 'Outline' }, levels.map(([lvl, attrs]) =>
+            xml.el('text:outline-level-style', { 'text:level': String(lvl), ...attrs }, [])));
+    }
+    function h(level, text, attrs) {
+        const node = { type: 'heading', outlineLevel: level, runs: [{ type: 'text', value: text }] };
+        if (attrs) node._extras = { attrs };
+        return node;
+    }
+    const headingTexts = (ir) => ir.children.filter((b) => b.kind === 'heading')
+        .map((b) => b.children.map((r) => r.text).join(''));
+    const TWO_LEVELS = [
+        [1, { 'style:num-format': '1' }],
+        [2, { 'style:num-format': '1', 'text:display-levels': '2' }],
+        [3, { 'style:num-format': '' }]
+    ];
+
+    test('a written ODT numbers its headings by its outline style', () => {
+        const bytes = odt.write({
+            styles: { styles: [outlineStyle(TWO_LEVELS)], automaticStyles: [], masterStyles: [] },
+            body: [h(1, 'A'), h(2, 'B'), h(2, 'C'), h(3, 'Plain'), h(1, 'D'), h(2, 'E')]
+        });
+        const { ir, losses } = odtToIr(odt.read(bytes, { framesInRuns: true, elementsInRuns: true }));
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(headingTexts(ir)).toEqual(['1 A', '1.1 B', '1.2 C', 'Plain', '2 D', '2.1 E']);
+        expect(ir.children[1].children[0]).toMatchObject({ kind: 'run', text: '1.1 ' });
+        expect(losses).toEqual([]);
+    });
+
+    test('a list header and a level without format get no label and keep the counters', () => {
+        const { ir } = odtToIr({
+            styles: { styles: [outlineStyle(TWO_LEVELS)] },
+            body: [h(1, 'A'), h(1, 'Header', { 'text:is-list-header': 'true' }), h(2, 'B'), h(3, 'C'), h(2, 'D')]
+        });
+        expect(headingTexts(ir)).toEqual(['1 A', 'Header', '1.1 B', 'C', '1.2 D']);
+    });
+
+    test('a restart takes its start value, else the level one', () => {
+        const levels = [
+            [1, { 'style:num-format': '1', 'text:start-value': '3' }],
+            [2, { 'style:num-format': '1', 'text:display-levels': '2', 'text:start-value': '2' }]
+        ];
+        const { ir } = odtToIr({
+            styles: { styles: [outlineStyle(levels)] },
+            body: [h(1, 'A'), h(2, 'B'), h(2, 'C', { 'text:restart-numbering': 'true', 'text:start-value': '7' }),
+                h(2, 'D'), h(2, 'E', { 'text:restart-numbering': 'true' }), h(1, 'F'), h(2, 'G')]
+        });
+        expect(headingTexts(ir)).toEqual(['3 A', '3.2 B', '3.7 C', '3.8 D', '3.2 E', '4 F', '4.2 G']);
+    });
+
+    test('letters, roman numerals, prefix and suffix; an unknown format is written as 1', () => {
+        const levels = [
+            [1, { 'style:num-format': 'I', 'style:num-suffix': '.' }],
+            [2, { 'style:num-format': 'a', 'text:display-levels': '2', 'style:num-prefix': '(', 'style:num-suffix': ')' }],
+            [3, { 'style:num-format': 'A', 'text:start-value': '26' }],
+            [4, { 'style:num-format': 'i', 'text:display-levels': '1' }],
+            [5, { 'style:num-format': '一' }]
+        ];
+        const { ir } = odtToIr({
+            styles: { styles: [outlineStyle(levels)] },
+            body: [h(1, 'A'), h(2, 'B'), h(2, 'C'), h(3, 'D'), h(3, 'E'), h(4, 'F'), h(4, 'G'), h(5, 'H'), h(1, 'I')]
+        });
+        expect(headingTexts(ir)).toEqual(['I. A', '(I.a) B', '(I.b) C', 'Z D', 'AA E', 'i F', 'ii G', '1 H', 'II. I']);
+    });
+
+    test('headings in sections and table cells are numbered; a heading inside a list is not', () => {
+        const cell = { cells: [{ children: [h(2, 'In cell')] }] };
+        const { ir } = odtToIr({
+            styles: { styles: [outlineStyle(TWO_LEVELS)] },
+            body: [
+                { type: 'section', children: [h(1, 'A')] },
+                { type: 'list', ordered: true, items: [{ children: [h(2, 'Listed')] }] },
+                { type: 'table', rows: [cell] },
+                h(2, 'B')
+            ]
+        });
+        // The heading alone in a list item stands among the headings (the
+        // list gives it up), still without a number.
+        expect(headingTexts(ir)).toEqual(['1 A', 'Listed', '1.2 B']);
+        expect(ir.children[1].kind).toBe('heading');
+        expect(ir.children[2].children[0].children[0].children[0].children.map((r) => r.text).join('')).toBe('1.1 In cell');
+    });
+
+    test('a typed outline-style entry of styles.listStyles (the large bundle) numbers too', () => {
+        const { ir } = odtToIr({
+            styles: { styles: [], listStyles: [{ type: 'outline-style', name: 'Outline', attrs: {}, levels: [
+                { type: 'level-outline', attrs: { 'text:level': '1', 'style:num-format': '1', 'style:num-suffix': '.' } }
+            ] }] },
+            body: [h(1, 'A'), h(1, 'B')]
+        });
+        expect(headingTexts(ir)).toEqual(['1. A', '2. B']);
+    });
+
+    test('no outline style, no label', () => {
+        const { ir } = odtToIr(odt.read(odt.write({ body: [h(1, 'A'), h(2, 'B')] })));
+        expect(headingTexts(ir)).toEqual(['A', 'B']);
+    });
+});
+
+// A45b — the table of contents, read on request (opts.include).
+describe('oconvOdtToIr — a table of contents under include toc (A45b)', () => {
+    const entry = (num, text, page) => xml.el('text:p', { 'text:style-name': 'Contents_20_1' }, [
+        xml.el('text:a', { 'xlink:type': 'simple', 'xlink:href': '#__RefHeading__1' }, [
+            xml.text(num), xml.el('text:s', { 'text:c': '2' }, []), xml.text(text),
+            xml.el('text:tab', {}, []), xml.text(page)
+        ])
+    ]);
+    const toc = xml.el('text:table-of-content', { 'text:name': 'Table of Contents1' }, [
+        xml.el('text:table-of-content-source', { 'text:outline-level': '2' }, [
+            xml.el('text:index-title-template', {}, [xml.text('Contents')])
+        ]),
+        xml.el('text:index-body', {}, [
+            xml.el('text:index-title', { 'text:name': 'Table of Contents1_Head' }, [
+                xml.el('text:p', {}, [xml.text('Contents')])
+            ]),
+            entry('1 ', 'Introduction', '7'),
+            entry('1.1 ', 'Scope', '7'),
+            xml.el('text:p', {}, [xml.el('text:s', {}, [])])
+        ])
+    ]);
+    const para = (text) => ({ type: 'paragraph', runs: [{ type: 'text', value: text }] });
+    const read = () => odt.read(odt.write({ body: [para('Before'), { type: 'unknown', element: toc }, para('After')] }),
+        { framesInRuns: true, elementsInRuns: true });
+    const texts = (ir) => ir.children.map((b) => b.children.map((r) => r.text).join(''));
+
+    test('its index-body paragraphs are read in place, no loss', () => {
+        const { ir, losses } = odtToIr(read(), { include: ['toc'] });
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(texts(ir)).toEqual(['Before', 'Contents', '1 Introduction 7', '1.1 Scope 7', 'After']);
+        expect(ir.children[2].children[0].link).toBeNull();
+        expect(losses).toEqual([]);
+    });
+
+    test('without the option it is dropped as before', () => {
+        for (const opts of [undefined, {}, { include: [] }]) {
+            const { ir, losses } = odtToIr(read(), opts);
+            expect(texts(ir)).toEqual(['Before', 'After']);
+            expect(losses).toEqual([{ code: 'block/dropped', detail: 'text:table-of-content' }]);
+        }
+    });
+
+    test('another index stays dropped under the option', () => {
+        const index = xml.el('text:alphabetical-index', {}, [xml.el('text:index-body', {}, [xml.el('text:p', {}, [xml.text('Term 3')])])]);
+        const { losses } = odtToIr({ body: [{ type: 'unknown', element: index }] }, { include: ['toc'] });
+        expect(losses).toEqual([{ code: 'block/dropped', detail: 'text:alphabetical-index' }]);
+    });
+
+    test('a bad include throws', () => {
+        for (const include of [['index'], ['toc', 'toc'], 'toc', [1]]) {
+            expect(() => odtToIr({ body: [] }, { include })).toThrow('oconv: bad odt include');
+        }
+    });
+});
+
+describe('oconvOdtToIr — a leading ballot box reads as a GFM task marker (T28)', () => {
+    /** An odt of one bullet list, one item per entry; each entry lists its runs (a string is a text run). */
+    function itemsOf(...items) {
+        const doc = {
+            body: [{
+                type: 'list',
+                ordered: false,
+                items: items.map((runs) => ({ children: [{
+                    type: 'paragraph',
+                    runs: runs.map((r) => (typeof r === 'string' ? { type: 'text', value: r } : r))
+                }] }))
+            }]
+        };
+        const { ir, losses } = odtToIr(odt.read(odt.write(doc)));
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        return ir.children[0].children.map((li) => ({
+            task: li.escapes?.md?.task,
+            text: li.children[0].children.map((r) => r.text).join('')
+        }));
+    }
+
+    test('☒ then a space in the first run, or ☐ and a space as a run of its own: checked / unchecked, the glyph stripped', () => {
+        expect(itemsOf(['☒ done'], ['☐ ', { type: 'span', value: 'todo', bold: true }])).toEqual([
+            { task: 'checked', text: 'done' },
+            { task: 'unchecked', text: 'todo' }
+        ]);
+    });
+
+    test('no space after the glyph, the glyph after text, or ☑: plain text', () => {
+        expect(itemsOf(['☐x'], ['a ☒ b'], ['☑ ticked'])).toEqual([
+            { task: undefined, text: '☐x' },
+            { task: undefined, text: 'a ☒ b' },
+            { task: undefined, text: '☑ ticked' }
+        ]);
+    });
+
+    test('a paragraph outside a list keeps the glyph', () => {
+        const doc = { body: [{ type: 'paragraph', runs: [{ type: 'text', value: '☐ not a task' }] }] };
+        const { ir } = odtToIr(odt.read(odt.write(doc)));
+        expect(ir.children[0].kind).toBe('paragraph');
+        expect(ir.children[0].children[0].text).toBe('☐ not a task');
+    });
+});
+
+describe('oconvOdtToIr — an empty paragraph is a spacer, skipped as in docx (T32 b1)', () => {
+    const para = (runs, styleName) => ({ type: 'paragraph', styleName, runs });
+    const text = (value) => ({ type: 'text', value });
+
+    test('empty paragraphs between and after paragraphs, and in a table cell, are left out without a loss', () => {
+        const { ir, losses } = odtToIr(odt.read(odt.write({ body: [
+            para([text('First.')]), para([]), para([]), para([text('Second.')]), para([]),
+            { type: 'table', rows: [{ type: 'row', cells: [{ type: 'cell', children: [para([]), para([text('Cell.')])] }] }] },
+            para([])
+        ] })));
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        expect(ir.children.map((b) => b.kind)).toEqual(['paragraph', 'paragraph', 'table']);
+        expect(ir.children[2].children[0].children[0].children).toEqual([oconvIr.node('paragraph', {}, [run('Cell.')])]);
+    });
+
+    test('an empty heading, an empty rule paragraph and an empty preformatted line are unchanged', () => {
+        const { ir } = odtToIr(odt.read(odt.write({ body: [
+            { type: 'heading', outlineLevel: 1, runs: [] },
+            para([], 'Horizontal_20_Line'),
+            para([text('a')], 'Preformatted_20_Text'), para([], 'Preformatted_20_Text'), para([text('b')], 'Preformatted_20_Text')
+        ] })));
+        expect(ir.children.map((b) => b.kind)).toEqual(['heading', 'hr', 'codeBlock']);
+        expect(ir.children[2].text).toBe('a\n\nb');
+    });
+
+    // T32 (b3c): an empty text run or span maps to no inline.
+    test('a paragraph of empty text runs and spans is a spacer too', () => {
+        const { ir, losses } = odtToIr({ body: [
+            para([text('First.')]),
+            para([text('')]),
+            para([{ type: 'span', styleName: 'T9', value: '' }]),
+            para([{ type: 'span', bold: true, value: '' }, text('')]),
+            para([text('Second.')])
+        ] });
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(ir.children).toEqual([oconvIr.node('paragraph', {}, [run('First.')]), oconvIr.node('paragraph', {}, [run('Second.')])]);
+        // the unresolved span style is still recorded, as before
+        expect(losses).toEqual([{ code: 'run/format-unresolved', detail: 'T9' }]);
+    });
+
+    test('an empty run adds nothing to a paragraph with text', () => {
+        const { ir } = odtToIr({ body: [para([text(''), text('Kept.'), { type: 'span', italic: true, value: '' }])] });
+        expect(ir.children).toEqual([oconvIr.node('paragraph', {}, [run('Kept.')])]);
+    });
+});
+
+describe('oconvOdtToIr — a heading alone in a list item', () => {
+    const N = oconvIr.node;
+    const para = (text) => ({ type: 'paragraph', runs: [{ type: 'text', value: text }] });
+    const heading = (text, level = 1) => ({ type: 'heading', outlineLevel: level, runs: [{ type: 'text', value: text }] });
+    const p = (text) => N('paragraph', {}, [N('run', { text })]);
+
+    test('is read as the heading at its place, the list split around it', () => {
+        const { ir, losses } = odtToIr({ body: [{ type: 'list', ordered: true, items: [
+            { children: [para('one')] }, { children: [heading('Title', 2)] }, { children: [para('two')] }
+        ] }] });
+        expect(oconvIr.validate(ir).ok).toBe(true);
+        expect(losses).toEqual([]);
+        expect(ir.children).toEqual([
+            N('list', { ordered: true }, [N('listItem', {}, [p('one')])]),
+            N('heading', { level: 2 }, [N('run', { text: 'Title' })]),
+            N('list', { ordered: true }, [N('listItem', {}, [p('two')])])
+        ]);
+    });
+
+    test('a heading at the bottom of one-item nested lists is read as the heading', () => {
+        const nest = (inner) => ({ type: 'list', ordered: true, items: [{ children: [inner] }] });
+        const { ir, losses } = odtToIr({ body: [para('b'), nest(nest(nest(heading('c', 3))))] });
+        expect(losses).toEqual([]);
+        expect(ir.children).toEqual([p('b'), N('heading', { level: 3 }, [N('run', { text: 'c' })])]);
+    });
+
+    test('an item holding two headings gives up both', () => {
+        const { ir, losses } = odtToIr({ body: [{ type: 'list', ordered: false, items: [
+            { children: [heading('One'), heading('Two')] }
+        ] }] });
+        expect(losses).toEqual([]);
+        expect(ir.children).toEqual([
+            N('heading', { level: 1 }, [N('run', { text: 'One' })]),
+            N('heading', { level: 1 }, [N('run', { text: 'Two' })])
+        ]);
+    });
+
+    test('an item holding a heading and a paragraph is unchanged', () => {
+        const { ir } = odtToIr({ body: [{ type: 'list', ordered: false, items: [
+            { children: [heading('H'), para('text')] }
+        ] }] });
+        expect(ir.children).toEqual([N('list', { ordered: false }, [N('listItem', {}, [
+            N('heading', { level: 1 }, [N('run', { text: 'H' })]), p('text')
+        ])])]);
     });
 });

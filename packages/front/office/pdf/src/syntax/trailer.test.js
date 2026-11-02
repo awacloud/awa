@@ -48,6 +48,11 @@ describe('typeTrailer', () => {
         expect(new TextDecoder().decode(t.id[0])).toBe('AAAA');
     });
 
+    test('Encrypt null is no Encrypt entry (ISO 32000 § 7.3.9: a null value is an absent entry)', () => {
+        const t = typeTrailer(obj.dict({ Size: obj.int(4), Root: obj.ref(1, 0), Encrypt: obj.nul() }));
+        expect('encrypt' in t).toBe(false);
+    });
+
     test('Encrypt as inline dict is preserved as-is', () => {
         const inline = obj.dict({ Filter: obj.name('Standard') });
         const dict = obj.dict({

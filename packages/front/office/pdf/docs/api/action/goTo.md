@@ -29,8 +29,8 @@ const goto = runtime.resolve('pdfActionGoTo');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `typeGoTo` | `(dict) => { kind: 'GoTo', dest, raw }` | Internal destination. |
-| `typeGoToR` | `(dict) => { kind: 'GoToR', file, dest, newWindow?, raw }` | Remote file. |
+| `typeGoTo` | `(dict) => { kind: 'GoTo', dest, sd?, raw }` | Internal destination; `sd` the ISO 32000-2 structure destination (`/SD`) as read. |
+| `typeGoToR` | `(dict) => { kind: 'GoToR', file, dest, newWindow?, sd?, raw }` | Remote file; `sd` as in `typeGoTo`. |
 | `typeGoToE` | `(dict) => { kind: 'GoToE', dest, file?, target?, newWindow?, raw }` | Embedded file. |
 
 ## Examples

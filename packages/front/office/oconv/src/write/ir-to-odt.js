@@ -29,12 +29,12 @@
  * | `paragraph` | `{type:'paragraph', runs}` | — |
  * | `list` (bullet or ordered) | `{type:'list', ordered, items:[{children:[…]}]}` — nesting PRESERVED; ordered lists also carry `numFormat:'1'` (md ordered lists are decimal) | — |
  * | `listItem` | one `items[]` entry, children = mapped blocks; a GFM task item (`escapes.md.task`, set by the md reader) gets a plain leading `☐ ` (U+2610, unchecked) or `☒ ` (U+2612, checked) text run in its first paragraph | `{code:'list/task-marker-dropped', detail:'[x]'\|'[ ]'}` only when a task item's first block is not a paragraph (the md reader never builds one) |
- * | `table` | typed `{type:'table', grid:true, columns, headerRows, rows:[{type:'row', cells:[{type:'cell', children:[…typed blocks]}]}]}` — leading IR rows with `header:true` become `headerRows`; cell content is fully typed by recursing `mapBlock`; `grid:true` makes `@awacloud/odf` synthesise bordered cells (`awa-c-b`) and a margins-aligned table (`awa-tb-m`) | — |
+ * | `table` | typed `{type:'table', grid:true, columns, headerRows, rows:[{type:'row', cells:[{type:'cell', children:[…typed blocks]}]}]}` — leading IR rows with `header:true` become `headerRows`; cell content is fully typed by recursing `mapBlock`; `grid:true` makes `@awacloud/odf` synthesise bordered cells (`awa-c-b`) and a margins-aligned table (`awa-tb-m`); a table without a row is not written (ODF needs one) | — |
  * | `codeBlock` | one `{type:'paragraph', styleName:'Preformatted_20_Text', runs}` per line of `text` (an empty line is an empty paragraph; the one trailing newline writes none); a run of 2+ spaces, or a space that starts the line or follows a tab, is a `space` run (`text:s` — ODF collapses plain spaces), a tab a `tab` run. The `info` string is not written | — |
  * | `blockquote` | each `paragraph` child → `{type:'paragraph', styleName:'Quotations', runs}`; a nested quote's paragraphs too; any other child keeps its own mapping, emitted in place | `{code:'block/degraded', detail:'blockquote:nested'}` per nested quote; `{code:'block/degraded', detail:'blockquote-child:<kind>'}` per non-paragraph child |
  * | `hr` | an EMPTY `{type:'paragraph', styleName:'Horizontal_20_Line', runs:[]}` | — |
  * | `image` (bytes reachable) | an odt `frame` run `{type:'frame', anchorType:'as-char', width, height, child:{kind:'image', href:'Pictures/image<k>.<ext>'}}` — its intrinsic size, else `5.08cm` × `3.81cm`; a non-empty `alt` as an `svg:title` raw child (`_extras.children`) — inline in place within its paragraph's runs, or as its own `{type:'paragraph', runs:[<frame run>]}` at block position; the bytes become the package part `href` names (§ Images below) | `{code:'image/size-defaulted', detail:name}` only when no size is read |
- * | `image` (no bytes reachable) | dropped | `{code:'image/dropped', detail:name}` |
+ * | `image` (no bytes reachable) | an odt `frame` run with no content child (`{type:'frame', anchorType:'as-char', width:'5.08cm', height:'3.81cm'}`), its name and alt written as for a placed image, at the same place | `{code:'image/placeholder', detail:name}` |
  *
  * ## Styles part
  *
@@ -75,11 +75,14 @@
  * `oconvIrToDocx.irToDocx` and `oconvIrToPdf.irToPdf`, so `oconv.fromMd`
  * threads ONE argument to all three writers. {@link assetBytes} resolves an
  * image node against it (caller `assets[name]` (or its percent-decoded form) first, then the bytes a
- * reader carried in `escapes.docx.bytes` / `escapes.odt.bytes`), and the decision is
+ * reader carried in `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`), and the decision is
  * taken in ONE place, `placeImage`, for both the inline and the
  * block-level call site:
  *
- * - no bytes reachable → the image is dropped, `image/dropped`;
+ * - no bytes reachable → the image keeps its place as a frame with no
+ *   content child (ODF allows none), in the default box, with its
+ *   `draw:name` and its alt text, and records `image/placeholder`; no
+ *   picture part is written for it;
  * - bytes reachable → the image is PLACED through `@awacloud/odf`'s typed
  *   frame run (rendered as `<draw:frame><draw:image/></draw:frame>`,
  *   anchored as a character) and its bytes travel in `odt.write`'s
@@ -102,10 +105,12 @@
  * `name`, which may carry spaces or slashes and no extension. When no image
  * is placed, `odt.write` receives no `pictures` key at all.
  *
+ * Each frame carries the IR `name` as its `draw:name`, unique per document
+ * as ODF frame names are: the first frame of a name takes it, a later one
+ * takes the first free `<name> (k)`, k from 2; an empty name writes none.
  * Reading such a document back through `oconvOdtToIr` (with `framesInRuns`,
- * as `oconv` does) recovers the image, its bytes and its alt text, but not
- * its name: this writer writes no `draw:name`, so the reader names the
- * image after its picture path.
+ * as `oconv` does) recovers the image, its bytes, its alt text and that
+ * name (an unnamed frame is named after its picture path).
  *
  * ## Run mapping
  *
@@ -196,7 +201,7 @@ export const oconvIrToOdt = {
          * Image bytes for an IR `image` node: caller `assets[name]` (else its
          * percent-decoded form) first,
          * then a reader's carried bytes (`escapes.docx.bytes`, else
-         * `escapes.odt.bytes` — the escapes bag), else `null`. Mirrored in ir-to-docx / ir-to-odt /
+         * `escapes.odt.bytes`, else `escapes.pdf.bytes`, else `escapes.pptx.bytes` — the escapes bag), else `null`. Mirrored in ir-to-docx / ir-to-odt /
          * pdf/render/image — keep byte-identical (asset-bytes-drift.test.js).
          *
          * @param {object} node
@@ -217,7 +222,7 @@ export const oconvIrToOdt = {
                 return { bytes: assets[decoded], source: 'assets' };
             }
             const bag = node && node.escapes;
-            const esc = bag && (bag.docx || bag.odt);
+            const esc = bag && (bag.docx || bag.odt || bag.pdf || bag.pptx);
             if (esc && esc.bytes instanceof Uint8Array) {
                 return { bytes: esc.bytes, source: 'reader' };
             }
@@ -320,8 +325,9 @@ export const oconvIrToOdt = {
          * The ONE place an image's fate is decided, for both call sites
          * (inline in `mapInlines`, block-level in `mapBlock`).
          *
-         * - {@link assetBytes} returns `null` → `image/dropped`, and `null`
-         *   is returned (the caller emits nothing).
+         * - {@link assetBytes} returns `null` → `image/placeholder`, and a
+         *   frame run with no content child is returned, in the default
+         *   `5.08cm` × `3.81cm` box, named and titled as below.
          * - bytes reachable → an odt frame run is returned, `{type:'frame',
          *   anchorType:'as-char', width, height, child:{kind:'image', href}}`
          *   sized by {@link imageExtent} — else the default `5.08cm` ×
@@ -335,34 +341,45 @@ export const oconvIrToOdt = {
          *
          * @param {object} n IR `image` node.
          * @param {OconvOdtLoss[]} losses
-         * @param {{assets: (Object<string, Uint8Array>|undefined), paths: Map<string, string>, pictures: Object<string, Uint8Array>}} ctx
+         * @param {{assets: (Object<string, Uint8Array>|undefined), paths: Map<string, string>, pictures: Object<string, Uint8Array>, frameNames: Set<string>}} ctx
          *   Per-call image state: the caller's manifest, `name` → part path,
-         *   and part path → bytes (insertion order = first occurrence).
-         * @returns {object|null} odt `image` run, or `null` when dropped.
+         *   part path → bytes (insertion order = first occurrence), and the
+         *   frame names already written.
+         * @returns {object} odt `frame` run.
          */
         function placeImage(n, losses, ctx) {
             const name = typeof n.name === 'string' ? n.name : '';
             const found = assetBytes(n, ctx.assets);
-            if (!found) {
-                losses.push({ code: 'image/dropped', detail: name });
-                return null;
-            }
-            let href = ctx.paths.get(name);
-            if (href === undefined) {
-                href = 'Pictures/image' + (ctx.paths.size + 1) + '.' + imageExtension(found.bytes);
-                ctx.paths.set(name, href);
-                ctx.pictures[href] = found.bytes;
-            }
             const frame = {
                 type: 'frame', anchorType: 'as-char',
-                width: '5.08cm', height: '3.81cm',
-                child: { kind: 'image', href }
+                width: '5.08cm', height: '3.81cm'
             };
-            const extent = imageExtent(found.bytes);
+            if (found) {
+                let href = ctx.paths.get(name);
+                if (href === undefined) {
+                    href = 'Pictures/image' + (ctx.paths.size + 1) + '.' + imageExtension(found.bytes);
+                    ctx.paths.set(name, href);
+                    ctx.pictures[href] = found.bytes;
+                }
+                frame.child = { kind: 'image', href };
+            } else {
+                // No bytes: a frame without a content child (ODF allows
+                // none) keeps the image's place, name and alt text.
+                losses.push({ code: 'image/placeholder', detail: name });
+            }
+            if (name) {
+                // `draw:name`, unique per document: a name already taken
+                // gets the first free ` (k)` suffix, k from 2.
+                let frameName = name;
+                for (let k = 2; ctx.frameNames.has(frameName); k++) frameName = name + ' (' + k + ')';
+                ctx.frameNames.add(frameName);
+                frame.name = frameName;
+            }
+            const extent = found ? imageExtent(found.bytes) : null;
             if (extent) {
                 frame.width = (extent.width * 2.54).toFixed(3) + 'cm';
                 frame.height = (extent.height * 2.54).toFixed(3) + 'cm';
-            } else {
+            } else if (found) {
                 losses.push({ code: 'image/size-defaulted', detail: name });
             }
             if (typeof n.alt === 'string' && n.alt) {
@@ -410,11 +427,10 @@ export const oconvIrToOdt = {
 
         /**
          * `paragraph` → one typed paragraph, or NOTHING when its mapped run
-         * list is empty (a paragraph whose images were ALL dropped: each
-         * drop is already recorded by `placeImage`, and an empty odt
-         * paragraph would collapse on the next CommonMark parse and break
-         * idempotence). A placed image is a run, so an image-only paragraph
-         * whose image is placed DOES produce a paragraph.
+         * list is empty (an empty odt paragraph would collapse on the next
+         * CommonMark parse and break idempotence). Every image is a frame
+         * run, with bytes or without, so an image-only paragraph DOES
+         * produce a paragraph.
          */
         function mapParagraph(n, losses, ctx) {
             const runs = mapInlines(n.children, losses, ctx);
@@ -427,7 +443,7 @@ export const oconvIrToOdt = {
          * header rows, and one `row`/`cell` per IR row/cell with cell
          * content fully typed by recursing `mapBlock`. `grid: true` asks
          * `@awacloud/odf` for bordered cells and a margins-aligned table.
-         * NO loss.
+         * NO loss. A table without a row is not written (see `mapBlock`).
          */
         function mapTable(n, losses, ctx) {
             const rows = n.children || [];
@@ -592,7 +608,9 @@ export const oconvIrToOdt = {
                 case 'heading': return [mapHeading(n, losses, ctx)];
                 case 'paragraph': return mapParagraph(n, losses, ctx);
                 case 'list': return [mapList(n, losses, ctx)];
-                case 'table': return [mapTable(n, losses, ctx)];
+                // A table without a row writes none: ODF needs one, and
+                // there is nothing to lose.
+                case 'table': return (n.children || []).length ? [mapTable(n, losses, ctx)] : [];
                 case 'codeBlock': return mapCodeBlock(n);
                 case 'blockquote': return mapQuote(n, losses, ctx);
                 case 'hr':
@@ -712,17 +730,18 @@ export const oconvIrToOdt = {
          * @param {{assets?: Object<string, Uint8Array>}} [opts] Same
          *   `assets` manifest as `oconvIrToDocx.irToDocx` /
          *   `oconvIrToPdf.irToPdf`. An image whose bytes are reachable
-         *   (`assets[name]` or its percent-decoded form, else the reader-carried `escapes.docx.bytes` / `escapes.odt.bytes`)
+         *   (`assets[name]` or its percent-decoded form, else the reader-carried `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`)
          *   is PLACED as a `Pictures/image<k>.<ext>` part at its intrinsic
          *   size (else the default 2 in × 1.5 in box, `image/size-defaulted`);
          *   one with no bytes
-         *   is dropped (`image/dropped`) — see {@link placeImage}.
+         *   keeps its place as an empty frame (`image/placeholder`) — see
+         *   {@link placeImage}.
          * @returns {OconvOdtResult}
          * @throws {Error} when `ir` fails `oconvIr.validate` — same shape
          *   as `oconvIrToDocx`: `oconv: invalid ir (<code> at <path>)`.
          */
         function irToOdt(ir, opts) {
-            const ctx = { assets: opts && opts.assets, paths: new Map(), pictures: {} };
+            const ctx = { assets: opts && opts.assets, paths: new Map(), pictures: {}, frameNames: new Set() };
             const v = irApi.validate(ir);
             if (!v.ok) {
                 const first = v.errors[0];

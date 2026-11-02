@@ -16,7 +16,8 @@ status: complete
 A thin layer over the raw trailer dictionary. It checks the **required** entries
 (`/Size`, `/Root`) and extracts the well-defined optional ones. `/Encrypt` is
 left raw (a reference is narrowed to `{num, gen}`, an inline dictionary is passed
-through). Entries this typer does not model — `/XRefStm` for hybrid-reference
+through); `/Encrypt null` is no entry (a null value is an absent one, ISO
+32000-2 § 7.3.9), so `encrypt` is absent. Entries this typer does not model — `/XRefStm` for hybrid-reference
 files among them — are reachable only through `raw`.
 
 ## Resolve

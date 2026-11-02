@@ -7,7 +7,8 @@
  * @fileoverview `mountNotepad()` end to end in Happy-DOM: the empty state,
  * opening, editing and saving (back to a file handle, or as a download),
  * the unsaved-changes question, refusals, find / replace / go to line,
- * format menus, view preferences, locale switching and `destroy()`.
+ * format menus, view preferences, the OS file drop and the picker fallback
+ * (fw `fileIntake`), locale switching and `destroy()`.
  *
  * @module notepad/notepad.test
  */
@@ -72,6 +73,12 @@ function dialog(root) {
     };
 }
 const tick = () => new Promise((r) => setTimeout(r, 0));
+/** A drag/drop event carrying a stub `dataTransfer`. */
+function dragEvent(type, { types = ['Files'], files = [] } = {}) {
+    const ev = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(ev, 'dataTransfer', { value: { types, files, dropEffect: '' } });
+    return ev;
+}
 
 describe('mountNotepad', () => {
     test('empty state: a named region, a labelled toolbar, a status bar', () => {
@@ -471,6 +478,73 @@ describe('mountNotepad', () => {
         expect(n.element.getAttribute('aria-label')).toBe('Éditeur de texte\u202f: Sans titre');
         expect(/** @type {HTMLElement} */ (n.element.querySelector('[data-action=save]')).getAttribute('title')).toBe('Télécharger une copie (Ctrl+S)');
         expect(n.element.querySelector('.awn-status')?.textContent).toContain('0 caractère');
+    });
+
+    test('an OS drop of several files: the first opens, the others go to the host, the mark is cleared', async () => {
+        const more = [];
+        const n = mount({ onMore: (items) => more.push(...items) });
+        const a = new File(['alpha'], 'a.txt');
+        const b = new File(['beta'], 'b.txt');
+        n.element.dispatchEvent(dragEvent('dragenter'));
+        expect(n.element.dataset.dragover).toBe('true');
+        n.element.dispatchEvent(dragEvent('drop', { files: [a, b] }));
+        await tick(); await tick();
+        expect(n.status.name).toBe('a.txt');
+        expect(n.text).toBe('alpha');
+        expect(more).toEqual([{ file: b }]);
+        expect(n.element.dataset.dragover).toBe('false');
+    });
+
+    test('a file drag over the notepad is marked and allowed; a text drag is left alone', () => {
+        const n = mount();
+        // A browser raises `dragenter` before `dragover`: the first marks, both allow the drop.
+        const enter = dragEvent('dragenter');
+        n.element.dispatchEvent(enter);
+        expect(enter.defaultPrevented).toBe(true);
+        expect(n.element.dataset.dragover).toBe('true');
+        const over = dragEvent('dragover');
+        n.element.dispatchEvent(over);
+        expect(over.defaultPrevented).toBe(true);
+        expect(n.element.dataset.dragover).toBe('true');
+        n.element.dispatchEvent(dragEvent('drop', { files: [] }));
+        expect(n.element.dataset.dragover).toBe('false');
+
+        const text = dragEvent('dragover', { types: ['text/plain'] });
+        n.element.dispatchEvent(text);
+        expect(text.defaultPrevented).toBe(false);
+        expect(n.element.dataset.dragover).toBe('false');
+        const entering = dragEvent('dragenter', { types: ['text/plain'] });
+        n.element.dispatchEvent(entering);
+        expect(entering.defaultPrevented).toBe(false);
+        expect(n.element.dataset.dragover).toBe('false');
+    });
+
+    test('the fallback picker: the first chosen file opens without a question, the others go to the host', async () => {
+        const more = [];
+        const n = mount({ onMore: (items) => more.push(...items) });
+        const input = /** @type {HTMLInputElement} */ (n.element.querySelector('input[type=file]'));
+        const a = new File(['one'], 'one.txt');
+        const b = new File(['two'], 'two.txt');
+        Object.defineProperty(input, 'files', { value: [a, b], configurable: true });
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await tick(); await tick();
+        expect(dialog(n.element).open).toBe(false);
+        expect(n.status.name).toBe('one.txt');
+        expect(n.text).toBe('one');
+        expect(more).toEqual([{ file: b }]);
+    });
+
+    test('after destroy a drop opens nothing', async () => {
+        const n = mount();
+        const region = n.element;
+        n.destroy();
+        mounted.length = 0;
+        const drop = dragEvent('drop', { files: [new File(['late'], 'late.txt')] });
+        region.dispatchEvent(drop);
+        await tick(); await tick();
+        expect(drop.defaultPrevented).toBe(false);
+        expect(n.status.name).not.toBe('late.txt');
+        expect(n.text).toBe('');
     });
 
     test('destroy removes everything', () => {

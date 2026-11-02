@@ -18,7 +18,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { SAMPLES as BUILT, buildSamples } from '../tools/build-samples.js';
 import { SAMPLES as PAGE } from '../src/app.js';
-import { mountViewer } from '../src/viewer.js';
+import { mountViewer } from '@awacloud/oview';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 

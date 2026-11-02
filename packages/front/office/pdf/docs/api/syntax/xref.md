@@ -45,7 +45,7 @@ const xref = runtime.resolve('pdfXref');
 |--------|-----------|---------|
 | `locateStartXref` | `(bytes: Uint8Array) => number` | Offset of the last `startxref`, or `-1`. |
 | `readStartXref` | `(bytes: Uint8Array, at: number) => number` | Offset of the xref it points to. |
-| `parseXrefTable` | `(bytes: Uint8Array, at: number) => { entries, end }` | Table plus the offset just after it. |
+| `parseXrefTable` | `(bytes: Uint8Array, at: number) => { entries, end, tolerated? }` | Table plus the offset just after it. Two shapes outside the standard are read and named in `tolerated` (absent when none): a subsection header ending with spaces or tabs before its EOL (`'subsection-header-space'`) and entries whose 18 field bytes end with a one-byte CR or LF (`'entry-eol-one-byte'`, a 19-byte stride). |
 | `parseTrailerDict` | `(bytes: Uint8Array, at: number) => { dict, end }` | Raw trailer plus the offset just after it. |
 | `readXrefStreamDict` | `(bytes: Uint8Array, at: number) => { num, gen, dict }` | The raw dict of the `/Type /XRef` stream object at `at`; the data is not decoded. |
 | `buildXrefStream` | `(opts: XrefStreamOpts) => Uint8Array` | One complete `num 0 obj … endobj` xref-stream section. The caller appends `startxref`/`%%EOF`. |

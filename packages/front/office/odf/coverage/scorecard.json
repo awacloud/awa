@@ -9,24 +9,24 @@
         "version": "bun 1.3.13",
         "source": null
       },
-      "date": "2026-10-17",
-      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "date": "2026-10-26",
+      "commit": "976d3b35efd5d87c67c83958937799f1b57be319",
       "command": "bun cli.ts office-scorecard axis-a --pkg odf",
       "result": {
         "kind": "percent",
-        "lines": 94.87,
-        "functions": 95.57,
+        "lines": 95.8,
+        "functions": 96.06,
         "rows": 81,
         "model": "mean-of-rows",
         "pooled": {
-          "lines": 95.18,
-          "functions": 95.5
+          "lines": 96.4,
+          "functions": 96.09
         },
         "basis": [
           "src/**"
         ],
         "tests": {
-          "pass": 973,
+          "pass": 1055,
           "fail": 0,
           "skip": 18
         }
@@ -40,14 +40,14 @@
         "version": "odfvalidator@0.13.0",
         "source": "https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff"
       },
-      "date": "2026-10-15",
-      "commit": "31604fbdb8296b32912776b65d1ba8fe07a87af7",
+      "date": "2026-10-24",
+      "commit": "c980706727a3adba03e807f4aa20d24a7e1f48d8",
       "command": "bun cli.ts office-scorecard axis-c --suite odfvalidator",
       "result": {
         "kind": "pass-total",
-        "pass": 15,
-        "total": 15,
-        "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 16 (11 written, 5 round trips)"
+        "pass": 16,
+        "total": 16,
+        "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 17 (12 written, 5 round trips)"
       },
       "skipped": [
         {
@@ -74,6 +74,105 @@
         "criterion": "per file, the odf reader of the file kind (odt, ods, odp) reads it; ok when it returns or throws an error of the package's own hierarchy (OdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
       },
       "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "tracked-changes-odt",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-10-27",
+      "commit": "9d987140e9d78076c7cfe02df93266e5fd228df2",
+      "command": "bun cli.ts office-scorecard axis-b --suite tracked-changes-odt",
+      "result": {
+        "kind": "pass-total",
+        "pass": 6,
+        "total": 11,
+        "criterion": "every wild odt whose content.xml holds a text:changed-region is read, written with the odfvalidator round trip and read again; it passes when the count of every change element (text:changed-region, text:insertion, text:deletion, text:format-change, text:change, text:change-start, text:change-end) of content.xml is unchanged and the second read's body deep-equals the first's (a model fixed point); a throw fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "tracked-changes-odt-elements-in-runs",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-10-27",
+      "commit": "d443b1fc5bf9392f4ab09f514c7e9b0b368c2c9f",
+      "command": "bun cli.ts office-scorecard axis-b --suite tracked-changes-odt-elements-in-runs",
+      "result": {
+        "kind": "pass-total",
+        "pass": 11,
+        "total": 11,
+        "criterion": "every wild odt whose content.xml holds a text:changed-region is read with odt.read(bytes, { framesInRuns: true, elementsInRuns: true }) (the opt-in that keeps every untyped inline element, a change mark among them, at its place), written from that model as the odfvalidator round trip writes, and read again with the same options; it passes when the count of every change element (text:changed-region, text:insertion, text:deletion, text:format-change, text:change, text:change-start, text:change-end) of content.xml is unchanged and the second read's body deep-equals the first's (a model fixed point); a throw fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "C",
+      "suite": {
+        "id": "odfvalidator-tracked-changes",
+        "version": "odfvalidator@0.13.0",
+        "source": "https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff"
+      },
+      "date": "2026-10-28",
+      "commit": "c9cecc9f09185e553dc43e6be642194a82f2b252",
+      "command": "bun cli.ts office-scorecard axis-c --suite odfvalidator-tracked-changes",
+      "result": {
+        "kind": "pass-total",
+        "pass": 0,
+        "total": 0,
+        "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 11 (0 written, 11 round trips)"
+      },
+      "skipped": [
+        {
+          "case": "tracked-changes/lo-odfexport/redlineTextFrame.odt",
+          "reason": "source not valid: 6 error(s): Error styles.xml[2,5278]: unexpected attribute \"loext:contextual-spacing\"; Error styles.xml[2,6145]: unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "case": "tracked-changes/lo-odfexport/tdf107292.odt",
+          "reason": "source not valid: 6 error(s): Error styles.xml[2,3637]: unexpected attribute \"loext:opacity\"; Error styles.xml[2,4523]: unexpected attribute \"loext:opacity\""
+        },
+        {
+          "case": "tracked-changes/lo-odfexport/tdf115815.odt",
+          "reason": "source not valid: 12 error(s): Error styles.xml[2,3669]: unexpected attribute \"loext:opacity\"; Error styles.xml[2,4572]: unexpected attribute \"loext:opacity\""
+        },
+        {
+          "case": "tracked-changes/lo-odfexport/tdf152710.odt",
+          "reason": "source not valid: 10 error(s): Error META-INF/manifest.xml: The file 'Pictures/100002010000032800000273CCB5A04C.png' shall not be listed in the 'META-INF/manifest.xml' file as it does not exist in the ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!; Error META-INF/manifest.xml: The file 'Pictures/10000201000003280000022273FC89F8.png' shall not be listed in the 'META-INF/manifest.xml..."
+        },
+        {
+          "case": "tracked-changes/lo-odfexport/whitespace.odt",
+          "reason": "source not valid: 6 error(s): Error styles.xml[31,144]: unexpected attribute \"loext:contextual-spacing\"; Error styles.xml[35,135]: unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/cp1000015.odt",
+          "reason": "source not valid: 3 error(s): Error styles.xml[2,4584]: unexpected attribute \"style:contextual-spacing\"; Error styles.xml[2,5353]: unexpected attribute \"style:contextual-spacing\""
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/ooo96040-2.odt",
+          "reason": "source not valid: 2 error(s): Error mimetype: There shall be no extra field for the 'mimetype' zip entry of ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.source.odt'!; Error mimetype: For more information on ODF package conformance see https://docs.oasis-open.org/office/v1.1/OpenDocument-v1.1.html#Ref_Package"
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/sectionprot2.odt",
+          "reason": "source not valid: 4 error(s): Error styles.xml[2,4750]: unexpected attribute \"loext:contextual-spacing\"; Error styles.xml[2,5898]: unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf121597.odt",
+          "reason": "source not valid: 9 error(s): Error styles.xml[2,5221]: unexpected attribute \"loext:contextual-spacing\"; Error styles.xml[2,6098]: unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf136929_framesOfParagraph.odt",
+          "reason": "source not valid: 106 error(s): Error styles.xml[2,7527]: unexpected attribute \"loext:hyphenation-no-caps\"; Error styles.xml[2,8403]: unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf170908_delText_sdt.odt",
+          "reason": "source not valid: 37 error(s): Error styles.xml[2,4085]: unexpected attribute \"loext:tab-stop-distance\"; Error styles.xml[2,4958]: unexpected attribute \"loext:hyphenation-keep-type\""
+        }
+      ]
     }
   ],
   "comparators": []

@@ -93,13 +93,22 @@ export const pdfStandardV6 = {
             return u8.length === outLen ? u8 : u8.subarray(0, outLen);
         }
 
-        function aesCbcEncryptRaw(key, iv, plaintext) {
+        /**
+         * The AES of a read call: fw's T-table `aes.ttable` under the
+         * opt-in `opts.fastCipher === true` (fast, NOT constant-time: for a
+         * trusted single-user host), else the constant-time `aes`.
+         */
+        function aesOf(opts) {
+            return opts && opts.fastCipher === true && aes.ttable ? aes.ttable : aes;
+        }
+
+        function aesCbcEncryptRaw(key, iv, plaintext, A = aes) {
             if (plaintext.length % 16 !== 0) {
                 throw new EncryptionError('pdf/crypto/v6/bad-pt-len',
                     'AES-CBC plaintext length must be a multiple of 16',
                     { context: { length: plaintext.length } });
             }
-            const cipher = aes.fn(
+            const cipher = A.fn(
                 bytesToWords(key, 0, key.length, _AES128_KEY_SCRATCH), false);
             if (cipher === false) {
                 throw new EncryptionError('pdf/crypto/v6/aes-schedule-failed', 'AES key schedule failed');
@@ -121,12 +130,12 @@ export const pdfStandardV6 = {
             return out;
         }
 
-        function aesCbcDecrypt(key, iv, ciphertext) {
+        function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
             if (ciphertext.length % 16 !== 0) {
                 throw new EncryptionError('pdf/crypto/v6/bad-ct-len',
                     'AES-CBC ciphertext length must be a multiple of 16');
             }
-            const cipher = aes.fn(bytesToWords(key, 0, key.length), true);
+            const cipher = A.fn(bytesToWords(key, 0, key.length), true);
             if (cipher === false || typeof cipher.decrypt !== 'function') {
                 throw new EncryptionError('pdf/crypto/v6/aes-decrypt-schedule',
                     'AES-256 decrypt key schedule failed');
@@ -153,7 +162,7 @@ export const pdfStandardV6 = {
             return buf.subarray(0, buf.length - pad);
         }
 
-        function hardenKey(password, salt, extra) {
+        function hardenKey(password, salt, extra, A = aes) {
             let K = hashBytes(sha256, concatBytes([password, salt, extra]), 32);
             let round = 0;
             while (true) {
@@ -162,7 +171,7 @@ export const pdfStandardV6 = {
                 for (let i = 0; i < 64; i++) K1.set(block, i * block.length);
                 const aesKey = K.subarray(0, 16);
                 const iv = K.subarray(16, 32);
-                const E = aesCbcEncryptRaw(aesKey, iv, K1);
+                const E = aesCbcEncryptRaw(aesKey, iv, K1, A);
                 let sum = 0;
                 for (let i = 0; i < 16; i++) sum = (sum + E[i]) % 3;
                 let nextHash, outLen;
@@ -171,17 +180,14 @@ export const pdfStandardV6 = {
                 else                { nextHash = sha512; outLen = 64; }
                 K = hashBytes(nextHash, E, outLen);
                 round++;
+                // E's last byte is at most 255: the loop ends by round 287.
                 if (round >= 64 && E[E.length - 1] <= round - 32) break;
-                if (round > 1024) {
-                    throw new EncryptionError('pdf/crypto/v6/hardening-runaway',
-                        'Algorithm 2.B exceeded 1024 rounds',
-                        { context: { round } });
-                }
             }
             return K.subarray(0, 32);
         }
 
-        function tryPassword(typedEncrypt, password, isOwner) {
+        function tryPassword(typedEncrypt, password, isOwner, opts) {
+            const A = aesOf(opts);
             const O = typedEncrypt.O, U = typedEncrypt.U;
             const OE = typedEncrypt.OE, UE = typedEncrypt.UE;
             if (!(O instanceof Uint8Array) || O.length < 48 ||
@@ -194,17 +200,17 @@ export const pdfStandardV6 = {
             const valSalt = target.subarray(32, 40);
             const keySalt = target.subarray(40, 48);
             const extra = isOwner ? U.subarray(0, 48) : new Uint8Array(0);
-            const valHash = hardenKey(pw, valSalt, extra);
+            const valHash = hardenKey(pw, valSalt, extra, A);
             for (let i = 0; i < 32; i++) {
                 if (valHash[i] !== target[i]) return { fileEncryptionKey: null };
             }
-            const intermediate = hardenKey(pw, keySalt, extra);
+            const intermediate = hardenKey(pw, keySalt, extra, A);
             const oeue = isOwner ? OE : UE;
             if (!(oeue instanceof Uint8Array) || oeue.length !== 32) {
                 throw new EncryptionError('pdf/crypto/v6/bad-OE-UE',
                     '/OE and /UE must be exactly 32 bytes for v6');
             }
-            const fek = aesCbcDecrypt(intermediate, ZERO_IV, oeue);
+            const fek = aesCbcDecrypt(intermediate, ZERO_IV, oeue, A);
             return { fileEncryptionKey: fek };
         }
 
@@ -220,7 +226,7 @@ export const pdfStandardV6 = {
             }
             return pdfAesGcm;
         }
-        function decryptString(typedEncrypt, fek, _objNum, _gen, ciphertext) {
+        function decryptString(typedEncrypt, fek, _objNum, _gen, ciphertext, opts) {
             const method = methodOf(typedEncrypt, 'AESV3');
             if (method === 'AESV4') {
                 return requireGcm().decryptObjectGcm(fek, ciphertext);
@@ -231,11 +237,11 @@ export const pdfStandardV6 = {
             }
             const iv = ciphertext.subarray(0, 16);
             const body = ciphertext.subarray(16);
-            const pt = aesCbcDecrypt(fek, iv, body);
+            const pt = aesCbcDecrypt(fek, iv, body, aesOf(opts));
             return stripPkcs7(pt);
         }
-        function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext) {
-            return decryptString(typedEncrypt, fek, objNum, gen, ciphertext);
+        function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+            return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
         }
 
         // ---- ENCRYPT helpers (encrypted write side) ----

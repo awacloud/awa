@@ -23,7 +23,9 @@ Bold has its OWN width table (`HELVETICA_BOLD_WIDTHS`), parsed from the vendored
 |--------|------|-------------|
 | `HELVETICA_WIDTHS` | const `number[256]` | Regular + Oblique widths. |
 | `HELVETICA_BOLD_WIDTHS` | const `number[256]` | Bold + BoldOblique widths. |
-| `helveticaRegular` | const | `{ fontName, familyName, flags, fontBBox, ascent, descent, capHeight, xHeight, stemV, stemH, italicAngle, weight, widths }`. |
+| `HELVETICA_EXTRA_WIDTHS` | const `Object<string, number>` | Regular + Oblique: the widths, by glyph name, of the 21 glyphs MacRomanEncoding and StandardEncoding name that the WinAnsi table cannot hold (`fi`, `fl`, `Lslash`, `dotlessi`, `fraction`, the accents `breve` … `caron`, and the Mac Roman math glyphs the face carries), from `vendor/afm/Helvetica.afm`. |
+| `HELVETICA_BOLD_EXTRA_WIDTHS` | const `Object<string, number>` | Bold + BoldOblique, from `vendor/afm/Helvetica-Bold.afm`. |
+| `helveticaRegular` | const | `{ fontName, familyName, flags, fontBBox, ascent, descent, capHeight, xHeight, stemV, stemH, italicAngle, weight, widths, extraWidths }`. |
 | `helveticaBold` | const | Bold variant — `widths: HELVETICA_BOLD_WIDTHS`. |
 | `helveticaOblique` | const | Oblique variant (`italicAngle` ≠ 0) — shares `HELVETICA_WIDTHS`. |
 | `helveticaBoldOblique` | const | Bold + Oblique — shares `HELVETICA_BOLD_WIDTHS`. |

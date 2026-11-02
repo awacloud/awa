@@ -28,7 +28,7 @@ export const pdfEmbeddedFile = {
         const { ParseError } = errors;
         const { isType } = parser;
 
-        const KNOWN_PARAMS = new Set(['Size', 'CreationDate', 'ModDate', 'CheckSum']);
+        const KNOWN_PARAMS = new Set(['Size', 'CreationDate', 'ModDate', 'CheckSum', 'Mac']);
 
         function typeEmbeddedFile(stream) {
             if (!isType(stream, 'stream')) {
@@ -63,6 +63,16 @@ export const pdfEmbeddedFile = {
                 }
                 out.params = typeParams(e.Params);
             }
+            // The stream entries (Table 5) `bytes` is encoded with, each
+            // only when present: an integer or a name by its value, an
+            // array or a dictionary as read.
+            if (isType(e.Length, 'int')) out.length = e.Length.value;
+            if (isType(e.Filter, 'name')) out.filter = e.Filter.value;
+            else if (isType(e.Filter, 'array')) out.filter = e.Filter;
+            if (isType(e.DecodeParms, 'dict') || isType(e.DecodeParms, 'array')) {
+                out.decodeParms = e.DecodeParms;
+            }
+            if (isType(e.DL, 'int')) out.dl = e.DL.value;
             for (const k of Object.keys(e)) {
                 if (k !== 'Type' && k !== 'Subtype' && k !== 'Params'
                     && k !== 'Length' && k !== 'Filter' && k !== 'DecodeParms'
@@ -73,7 +83,18 @@ export const pdfEmbeddedFile = {
             return out;
         }
 
+        /**
+         * Type an embedded file parameter dictionary (ISO 32000-2 Table 45):
+         * `size`, `creationDate`, `modDate`, `checkSum` and `mac` (the Mac OS
+         * dictionary as read, `null` for another value), each present only
+         * when the key is; the other keys in `_extras`.
+         */
         function typeParams(dict) {
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/embedded/bad-params',
+                    '/Params must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
             const e = dict.entries;
             const out = { raw: dict, _extras: {} };
             if (e.Size && (e.Size.type === 'int' || e.Size.type === 'real')) {
@@ -88,12 +109,13 @@ export const pdfEmbeddedFile = {
             if (e.CheckSum && e.CheckSum.type === 'string') {
                 out.checkSum = e.CheckSum.value;
             }
+            if (e.Mac !== undefined) out.mac = isType(e.Mac, 'dict') || isType(e.Mac, 'ref') ? e.Mac : null;
             for (const k of Object.keys(e)) {
                 if (!KNOWN_PARAMS.has(k)) out._extras[k] = e[k];
             }
             return out;
         }
 
-        return { typeEmbeddedFile };
+        return { typeEmbeddedFile, typeEmbeddedFileParams: typeParams };
     }
 };

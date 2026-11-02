@@ -495,7 +495,7 @@ describe('population — non-vacuity pins', () => {
         expect(POPULATION.filter((p) => p.startsWith('docs/api/') && p.endsWith('.md')).length).toBeGreaterThan(0);
     });
 
-    test('exactly the 7 src/*.ts ship, pinned by name', () => {
+    test('exactly the 8 src/*.ts ship, pinned by name', () => {
         const srcTs = POPULATION.filter((p) => p.startsWith('src/') && p.endsWith('.ts')).sort();
         expect(srcTs).toEqual([
             'src/core.ts',
@@ -503,6 +503,7 @@ describe('population — non-vacuity pins', () => {
             'src/index.ts',
             'src/loss-summary.ts',
             'src/mcp.ts',
+            'src/password.ts',
             'src/runtime.ts',
             'src/timestamp.ts',
         ]);

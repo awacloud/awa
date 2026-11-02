@@ -183,8 +183,7 @@ describe('verifySignature', () => {
             expect(r.verified).toBe(false);
             expect(r.valid).toBe(false);
             const codes = r.errors.map((e) => e.code);
-            // Either signer-info-short (most likely) or any dissection
-            // failure that prevented pk verify.
+            // Any SignerInfo failure that prevented pk verify.
             expect(codes.some((c) => c.startsWith('pdf/sig/'))).toBe(true);
         });
 
@@ -956,5 +955,17 @@ describe('_hashByteRange — no-.fn fallback (BL-272)', () => {
         } catch (e) {
             expect(e.code).toBe('pdf/sig/byterange/no-bitarray');
         }
+    });
+});
+
+describe('typeSignature: Type, Changes, R, ADBE_Build (A38e)', () => {
+    test('each read; undefined when absent', () => {
+        const r = typeSignature(sigDict({ Changes: obj.array([obj.int(1), obj.int(0), obj.int(0)]), R: obj.int(65541),
+            ADBE_Build: obj.string(new Uint8Array([55])) }));
+        expect([r.type, r.changes.type, r.r]).toEqual(['Sig', 'array', 65541]);
+        expect(r.adbeBuild).toEqual(new Uint8Array([55]));
+        const bare = typeSignature(obj.dict({ Filter: obj.name('Adobe.PPKLite'), SubFilter: obj.name('adbe.pkcs7.detached'),
+            Contents: obj.string(new Uint8Array([0x30]), 'hex'), ByteRange: obj.array([obj.int(0), obj.int(1), obj.int(2), obj.int(3)]) }));
+        expect([bare.type, bare.changes, bare.r, bare.adbeBuild]).toEqual([undefined, undefined, undefined, undefined]);
     });
 });

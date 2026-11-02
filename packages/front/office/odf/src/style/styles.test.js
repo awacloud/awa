@@ -71,6 +71,27 @@ describe('odfStyles module', () => {
             expect(out).toContain('<office:automatic-styles');
             expect(out).toContain('<office:master-styles');
         });
+
+        // A32: the schema orders the root's children font-face-decls,
+        // styles, automatic-styles, master-styles; other kept children
+        // follow, as read.
+        test('writes office:font-face-decls first, other root extras last', () => {
+            const s = styles.parse(`<?xml version="1.0"?>
+<office:document-styles
+  xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+  xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"
+  xmlns:x="urn:example:x">
+  <office:font-face-decls><style:font-face style:name="Arial"/></office:font-face-decls>
+  <office:styles/>
+  <office:automatic-styles/>
+  <office:master-styles/>
+  <x:extra/>
+</office:document-styles>`);
+            const root = xml.parse(styles.serialize(s, { namespaces: { x: 'urn:example:x' } }));
+            const names = root.children.filter((c) => c.type === 'element').map((c) => c.name);
+            expect(names).toEqual(['office:font-face-decls', 'office:styles',
+                'office:automatic-styles', 'office:master-styles', 'x:extra']);
+        });
     });
 
     // ------------------------------------------------------------------

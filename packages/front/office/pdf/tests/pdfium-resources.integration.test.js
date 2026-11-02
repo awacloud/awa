@@ -51,7 +51,8 @@ const blobId = (bytes) => createHash('sha1').update(`blob ${bytes.length}`).upda
 const REFUSED = {
     'bad_page_type.pdf': 'pdf/pages/missing-kids',
     'bookmarks_circular.pdf': 'pdf/parser/stream/expected-endstream',
-    'bug_113.pdf': 'pdf/xref/bad-digit',
+    // 19-byte xref entries (read since T44), then a trailer with no /Size.
+    'bug_113.pdf': 'pdf/trailer/missing-size',
     'bug_1139.pdf': 'pdf/content/unknown-op',
     'bug_1229106.pdf': 'pdf/pages/cycle',
     'bug_1265.pdf': 'pdf/xref/no-trailer',

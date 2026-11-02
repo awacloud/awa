@@ -47,7 +47,10 @@ export const pdfActionGoTo = {
                 throw new ParseError('pdf/action/goto/missing-d',
                     'GoTo action is missing /D');
             }
-            return { kind: 'GoTo', dest: e.D, raw: dict };
+            const out = { kind: 'GoTo', dest: e.D, raw: dict };
+            // ISO 32000-2: the structure destination.
+            if (e.SD && (e.SD.type === 'array' || e.SD.type === 'ref')) out.sd = e.SD;
+            return out;
         }
 
         function typeGoToR(dict) {
@@ -65,6 +68,7 @@ export const pdfActionGoTo = {
             if (e.NewWindow && e.NewWindow.type === 'bool') {
                 out.newWindow = e.NewWindow.value;
             }
+            if (e.SD && (e.SD.type === 'array' || e.SD.type === 'ref')) out.sd = e.SD;
             return out;
         }
 

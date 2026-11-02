@@ -73,8 +73,8 @@ export const textSectionsAdvanced = {
                     : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
                 for (const n of out.sectionNodes) extras.push(f.renderElement(n));
                 delete out.sectionNodes;
-                if (Array.isArray(s._extras) || !s._extras) out._extras = extras;
-                else out._extras = { ...s._extras, children: extras };
+                if (Array.isArray(s._extras)) out._extras = extras;
+                else out._extras = { ...(s._extras || {}), children: extras };
             }
             return out;
         }

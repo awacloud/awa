@@ -7,6 +7,27 @@ this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-02
+
+### Added
+
+- **Carlito and Caladea vendored**, the metric twins of Calibri and
+  Cambria, four styles each, byte-identical to the Chrome OS font
+  archives LibreOffice pins: Carlito 1.103 (`vendor/carlito/`, SIL OFL
+  1.1 with the Reserved Font Name Carlito; `vendor/OFL-carlito.txt`,
+  `vendor/NOTICE-carlito`) and Caladea 1.002 (`vendor/caladea/`, Apache
+  License 2.0 — the metric-compatible build; `vendor/LICENSE-apache-2.0.txt`,
+  `vendor/NOTICE-caladea`). `vendor/PROVENANCE.json` gains the `carlito`
+  and `caladea` trees (archive and per-file digests, the LibreOffice
+  corroboration, the metric measure); `NOTICE` lists both components. The
+  tarball gains the eight faces (3 008 188 bytes) and the four licence and
+  notice files.
+- **`faceUrls(opts)`**: the frozen map of every vendored family
+  (Liberation Sans, Serif, Mono, Carlito, Caladea) to the `URL` of each of
+  its four styles, resolved against `opts.vendorUrl` (default the
+  package's own `vendor/`); it reads nothing. The `oconvDefaultFaces`
+  descriptor, `loadDefaultFaces` and `registerDefaultFaces` are unchanged.
+
 ## [1.0.0] - 2026-10-07
 
 ### Added

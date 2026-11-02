@@ -1,0 +1,53 @@
+Caladea — Apache License, Version 2.0
+====================================
+
+Vendored payload: the 4 Caladea faces (Regular / Bold / Italic /
+BoldItalic), TrueType flavour, unmodified. This Caladea is
+metric-compatible with Cambria: a document set in Cambria keeps its line
+and page breaks when Caladea takes its place.
+Upstream: the Chrome OS font archive crosextrafonts-20130214 (Caladea
+1.002, the build LibreOffice ships). A later Caladea, published under the
+SIL Open Font License, has different metrics; it is not this payload.
+
+Copyright and licence, verbatim from the faces' name table
+----------------------------------------------------------
+
+    Copyright (c) 2012 Huerta Tipografia
+    Licensed under the Apache License, Version 2.0
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Trademark, verbatim from the faces' name table: "Caladea is a trademark
+of Huerta Tipografia."
+
+The upstream archive carries no licence file and no NOTICE file: the
+licence is stated in each face. Its full text is vendored beside this
+file as `LICENSE-apache-2.0.txt` (the text published at
+https://www.apache.org/licenses/LICENSE-2.0.txt).
+
+The Bold Italic face (`caladea/Caladea-BoldItalic.ttf`) names its style
+"Italic" in its name table; its OS/2 weight class (700) and style bits
+mark it bold italic. The face is vendored as published.
+
+Obligation surface
+------------------
+
+What a downstream redistributor owes (Apache License 2.0, section 4):
+
+  - give every recipient a copy of the licence (`LICENSE-apache-2.0.txt`)
+    — it and this file must therefore travel with `caladea/*.ttf` in any
+    redistribution, and must not be removed from this directory;
+  - retain the copyright, licence and trademark statements above, and
+    those in the faces themselves;
+  - mark any modified face as changed (section 4(b)); the faces here are
+    unmodified;
+  - no upstream NOTICE file exists, so section 4(d) adds nothing.
+
+The licence grants no right to use the trade name "Caladea" or the
+licensor's trademarks beyond describing the origin of the faces
+(section 6).
+
+The licence covers the vendored faces only. This package's own source is
+licensed separately; see the package LICENSE.
+
+Provenance, per-file sha256 and the upstream archive digest are locked in
+`PROVENANCE.json` beside this file.

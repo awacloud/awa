@@ -41,20 +41,28 @@ const styleRegistry = runtime.resolve('textStyleRegistry');
 | `registry.tableStyle` | `({align: 'margins'}) => string` | `table` automatic-style name (`awa-tb-m`) |
 | `registry.toAutomaticStyles` | `() => object \| null` | `styleAutomatic` model, `null` when nothing was requested |
 | `registry.toFontFaceDecls` | `() => object \| null` | `office:font-face-decls` element, `null` without monospace |
-| `createResolver` | `(contentAutoStyles, fontFaces, namedStyles) => resolver` | read-side resolver |
+| `createResolver` | `(contentAutoStyles, fontFaces, namedStyles, opts?: { semantic?: boolean }) => resolver` | read-side resolver; `semantic` see [Semantic styles](#semantic-styles-opt-in) |
 | `resolver.textFlags` | `(styleName: string) => object \| null` | `{bold?, italic?, strike?, monospace?, source}` |
-| `resolver.listNumbering` | `(styleName: string) => object \| null` | `{ordered, numFormat?, source}` |
+| `resolver.listNumbering` | `(styleName: string) => object \| null` | `{ordered, numFormat?, source}` (`source`: `'auto'`, `'kept'` or `'named'`) |
+| `resolver.listLevel` | `(styleName: string, level: number) => object \| null` | `{ordered, numFormat?}` of the style's level `level` |
 | `resolver.cellBorders` | `(styleName: string) => object \| null` | `{bordered: true, source}` |
 | `resolver.tableAlign` | `(styleName: string) => object \| null` | `{align: 'margins', source}` |
 | `resolver.consumed` | `Set<string>` | names resolved with `source: 'auto'` |
+| `typeListStyle` | `(el, source) => { source, levels }` | a `text:list-style` / `text:outline-style` element typed level by level (see List styles typed) |
+| `listStylesOf` | `({ content?, styles?, stylesAuto? }) => object` | the list styles of a document by name, from the raw elements of each container |
+| `typeSectionStyle` | `(el, source) => object` | a `section`-family `style:style` typed (see Section styles typed) |
+| `sectionStylesOf` | `({ content?, styles?, stylesAuto? }) => object` | the section styles of a document by name |
 
 ## Naming
 
 `textStyle` builds `'awa-t-'` plus the flag letters in the **fixed order**
 `b`, `i`, `s`, `m` — `{italic: true, bold: true}` and `{bold: true, italic:
 true}` both give `awa-t-bi`, and the same combination always returns the same
-name. `listStyle` gives `'awa-l-n' + numFormat` (default `'1'`) when ordered,
-`'awa-l-b'` for a bullet list. `cellStyle({bordered: true})` gives `awa-c-b`
+name. `listStyle` gives `'awa-l-n' + numFormat` (default `'1'`) when ordered and
+the format is made of XML name characters (`1`, `a`, `A`, `i`, `I` …),
+`'awa-l-x1'`, `'awa-l-x2'` … for any other format (LibreOffice's `0001, 0002,
+…`, `一, 二, …`: a style name is an NCName, which those are not), numbered in
+the order first met, and `'awa-l-b'` for a bullet list. `cellStyle({bordered: true})` gives `awa-c-b`
 and `tableStyle({align: 'margins'})` gives `awa-tb-m` — the only spec each
 accepts today; both are deduplicated (one style per registry, however many
 grid tables request it). A name already present in `reserved.styles`
@@ -142,7 +150,33 @@ else, no extra element child.
 `listNumbering` looks at the **first element child** of the `text:list-style`:
 `text:list-level-style-number` → `{ordered: true, numFormat}` (default `'1'`),
 `text:list-level-style-bullet` → `{ordered: false}`, anything else or no
-element child at all → `null`.
+element child at all → `null`. A content automatic list style resolves with
+`source: 'auto'` (consumed) only when it is the style the registry generates
+for that numbering — `listStyle({ ordered, numFormat })`'s ten levels, its
+name aside: the write rebuilds it as it was. Any other automatic list style
+(its own prefixes, suffixes, levels, bullets, positions …) resolves with
+`source: 'kept'`: its numbering is read, it is not consumed, and the list
+keeps its `styleName`, so the write names it and writes it back as read.
+
+## Semantic styles (opt-in)
+
+With `{ semantic: true }` (the read's `semanticStyles`), `textFlags` falls
+back, when the honesty rule above resolves nothing, to the emphasis the
+style states: the style (content automatic, else named) and its named
+parents up its `parentStyleName` chain (cycle-safe, 16 deep), their `text`
+bags merged child over parent; `bold` from `fo:font-weight` `bold` or a
+weight of 700 or more, `italic` from `fo:font-style` `italic` or
+`oblique`, `strike` from a `style:text-line-through-style` other than
+`none`, `monospace` from a monospace-declared `style:font-name`; every
+other key ignored. The answer has `source: 'named'` — keep-and-gain: the
+span keeps its `styleName` and nothing is consumed, so the style is written
+back as read. A chain stating no emphasis stays `null`.
+
+`listLevel(styleName, level)` answers one level of a list style: the
+`text:list-level-style-number` (`{ordered: true, numFormat}`) or
+`-bullet` (`{ordered: false}`) whose `text:level` is `level`, else `null`.
+Under the read's `semanticStyles`, a nested list with no style name asks
+it of its nearest styled ancestor list, at its own nesting depth.
 
 ## Resolution order and sources
 
@@ -223,3 +257,48 @@ const worker = fw.createWorker(/* … */);
   `toAutomaticStyles()` produces and `createResolver()` consumes
 - [odt/odt](../odt/odt.md) — wires both halves into `content.xml`
 - [text/content](./content.md) — threads the seam object down to the body nodes
+
+## List styles typed
+
+`typeListStyle(el, source)` types a `text:list-style` or `text:outline-style`
+element as `{ source, levels }`; `listStylesOf(raw)` gathers a document's:
+content.xml's automatic list styles (`'auto'`, consumed or not), styles.xml's
+named ones (`'named'`), its automatic ones (`'styles-auto'`, a name already
+taken left out) and its outline style (`'outline'`, under its `style:name`).
+The odt read's opt-in `listStyles` gives that map as `result.listStyles`.
+
+Each level, its fields present only when the style states them, lengths as
+written:
+
+| Field | From |
+|-------|------|
+| `level` | `text:level` |
+| `kind` | `'number'` (`text:list-level-style-number`, `text:outline-level-style`), `'bullet'`, `'image'` |
+| `numFormat`, `prefix`, `suffix` | `style:num-format`, `style:num-prefix`, `style:num-suffix` |
+| `startValue`, `displayLevels` | `text:start-value`, `text:display-levels` (numbers) |
+| `bulletChar`, `textStyleName`, `numLetterSync` | `text:bullet-char`, `text:style-name`, `style:num-letter-sync` (a boolean) |
+| `position` | `style:list-level-properties`: `{ mode: 'label-alignment', labelFollowedBy?, tabStopPosition?, textIndent?, marginLeft? }` from its `style:list-level-label-alignment`, or `{ mode: 'label-width-and-position', spaceBefore?, minLabelWidth?, minLabelDistance?, textAlign? }`; other attributes in `extraAttrs` / `alignmentExtraAttrs` |
+| `textProperties` | the level's `style:text-properties` attributes |
+| `extraAttrs` | any other attribute of the level (`loext:num-list-format`, an image's `xlink:*` …) |
+
+The map is a read view: the styles are written from `autoStyles` / `styles`
+as read, and editing the map writes nothing.
+
+## Section styles typed
+
+`typeSectionStyle(el, source)` types a `section`-family `style:style` from its
+`style:section-properties`; `sectionStylesOf(raw)` gathers a document's as
+`listStylesOf` gathers the list styles (`'auto'`, `'named'`, `'styles-auto'`).
+The odt read's opt-in `sectionStyles` gives that map as
+`result.sectionStyles`, the key a section's `styleName`. Each, its fields
+present only when the style states them, lengths as written:
+
+| Field | From |
+|-------|------|
+| `columns` | `style:columns`: `{ count?, gap?, columns?: [{ relWidth?, startIndent?, endIndent?, extraAttrs? }], separator?: { width?, height?, color?, style?, verticalAlign?, extraAttrs? } }` (`fo:column-count` a number, `fo:column-gap`, each `style:column`, the `style:column-sep`) |
+| `balance` | the inverse of `text:dont-balance-text-columns` |
+| `backgroundColor`, `editable`, `writingMode` | `fo:background-color`, `style:editable` (a boolean), `style:writing-mode` |
+| `extraAttrs` | any other attribute of `style:section-properties` |
+
+A read view, as the list styles: the styles are written from `autoStyles` /
+`styles` as read.

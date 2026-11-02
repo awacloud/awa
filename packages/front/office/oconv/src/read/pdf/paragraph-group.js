@@ -67,18 +67,40 @@
  */
 
 /**
+ * Two lines of one paragraph joined: a soft hyphen (U+00AD) ending the
+ * first after a letter, the next starting with a letter, is dropped and
+ * the word joined; under `lineHyphens` a hyphen (U+002D, U+2010) after a
+ * letter, the next starting with a lowercase letter, too — `'drop'`
+ * without it, `'keep'` with it; else one space.
+ */
+function joinLines(lines, lineHyphens) {
+    let out = lines[0];
+    for (let i = 1; i < lines.length; i++) {
+        const next = lines[i];
+        if (/\p{L}\u00ad$/u.test(out) && /^\p{L}/u.test(next)) out = out.slice(0, -1) + next;
+        else if (lineHyphens && /\p{L}[-\u2010]$/u.test(out) && /^\p{Ll}/u.test(next)) {
+            out = (lineHyphens === 'drop' ? out.slice(0, -1) : out) + next;
+        } else out += ' ' + next;
+    }
+    return out;
+}
+
+/**
  * Group positioned text pieces into paragraph strings.
  *
  * @param {{text: string, x: number, y: number, fontSize: number, xEnd?: number}[]} pieces
  *   Positioned text pieces in content-stream order. Empty-text pieces are
  *   ignored.
- * @param {{gapFactor?: number, yTol?: number, wordGap?: number}} [opts]
+ * @param {{gapFactor?: number, yTol?: number, wordGap?: number, lineHyphens?: string}} [opts]
  *   `gapFactor` (default 1.6) — new paragraph when the downward baseline
  *   gap exceeds this multiple of the previous line's font size. `yTol`
  *   (default 0.5) — same-line tolerance as a multiple of font size.
  *   `wordGap` (default 0.15) — one space between two same-line pieces when
  *   the horizontal gap, or the overlap, exceeds this multiple of the
  *   previous piece's font size.
+ *   `lineHyphens` — `'drop'` or `'keep'`: how a hyphen ending a line
+ *   before a lowercase letter joins (see `joinLines`); absent, one space
+ *   as for any line, a soft hyphen always joining.
  * @returns {string[]} One string per reconstructed paragraph (never empty
  *   strings; may be `[]`).
  */
@@ -86,6 +108,7 @@ export function groupParagraphs(pieces, opts) {
     const gapFactor = (opts && typeof opts.gapFactor === 'number') ? opts.gapFactor : 1.6;
     const yTol = (opts && typeof opts.yTol === 'number') ? opts.yTol : 0.5;
     const wordGap = (opts && typeof opts.wordGap === 'number') ? opts.wordGap : 0.15;
+    const lineHyphens = opts ? opts.lineHyphens : undefined;
 
     // Pass 1 — lines.
     const lines = [];
@@ -155,7 +178,7 @@ export function groupParagraphs(pieces, opts) {
             const gap = prev.y - ln.y;               // > 0 going down the page
             const fs = prev.fs || ln.fs || 12;
             if (gap < 0 || gap > gapFactor * fs) {
-                paras.push(para.join(' '));
+                paras.push(joinLines(para, lineHyphens));
                 para = [text];
             } else {
                 para.push(text);
@@ -163,6 +186,6 @@ export function groupParagraphs(pieces, opts) {
         }
         prev = ln;
     }
-    if (para) paras.push(para.join(' '));
+    if (para) paras.push(joinLines(para, lineHyphens));
     return paras;
 }

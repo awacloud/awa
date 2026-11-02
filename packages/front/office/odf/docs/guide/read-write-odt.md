@@ -194,10 +194,15 @@ back.body[4].rows[0].cells[1].children[0].runs[0].value; // 'h2'
 'fontFaces' in back;       // false — ditto for the font-face declaration
 ```
 
-**Resolution scope.** The read-side resolver covers `content.xml`
+**Resolution scope.** By default the read-side resolver covers `content.xml`
 automatic styles and `styles.xml` `office:styles` fully-mapped entries
-only — never parent-style-name chains; monospace requires a declared
-fixed-pitch or generic-modern font face.
+only — it does not follow parent-style-name chains; monospace requires a
+declared fixed-pitch or generic-modern font face. Two opt-in reads widen it
+(both default `false`): `odt.read(bytes, { semanticStyles: true })` reads
+the emphasis a style chain states and a nested list's numbering, keeping the
+style names, and `headerFooterContent: true` resolves the headers and footers
+against the `styles.xml` automatic styles. The default read is unchanged
+either way.
 
 ## Embedding an image
 

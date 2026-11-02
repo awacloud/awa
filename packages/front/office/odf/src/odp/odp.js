@@ -73,7 +73,7 @@ export const odp = {
         const { ParseError, ContractError } = errors;
         const { ODF_NS, ODF_VERSION, CT, encodeText,
                 parseXmlOrThrow, readSidecars, writeSidecars, carryParts,
-                sourceNamespaces, declareNamespaces } = shared;
+                sourceNamespaces, declareNamespaces, keptVersion, applyManifestVersion } = shared;
         // unused-dep guards
         void mimetypeMod;
 
@@ -152,7 +152,10 @@ export const odp = {
          * @param {object} doc
          * @param {object} [opts] — `{ meta, settings, styles }`, each overriding the `doc.*` sidecar,
          *        and `mtime` (`number|Date`), the ZIP entry date passed to `pkgPackage.write`
-         *        (default 1980-01-01 00:00:00: the output is byte-reproducible)
+         *        (default 1980-01-01 00:00:00: the output is byte-reproducible), and
+         *        `preserveInput` (default `false`): `true` writes from a structured clone of
+         *        `doc` (its `package` excepted, only read) and of `opts`, so the extensions'
+         *        dehydrate hooks leave the given model as it was; the bytes are the same
          * @returns {Uint8Array}
          */
         function write(doc, opts) {
@@ -162,6 +165,20 @@ export const odp = {
                     { context: { module: 'odp', argument: 'doc' } });
             }
             opts = opts || {};
+            if (opts.preserveInput !== undefined && typeof opts.preserveInput !== 'boolean') {
+                throw new ContractError('odf/contract-error/odp',
+                    'odp: write opts.preserveInput must be true or false',
+                    { context: { module: 'odp', argument: 'opts.preserveInput' } });
+            }
+            if (opts.preserveInput) {
+                // One clone of the model and of the options, so values they
+                // share stay shared; the read envelope `package`, only read,
+                // is not copied.
+                const { package: envelope, ...rest } = doc;
+                const copy = structuredClone({ doc: rest, opts });
+                doc = envelope === undefined ? copy.doc : { ...copy.doc, package: envelope };
+                opts = copy.opts;
+            }
             if (walker.hasExtensions) {
                 const dehydrated = {
                     slides: doc.slides,
@@ -176,15 +193,17 @@ export const odp = {
                 if (dehydrated.styles !== undefined) opts = { ...opts, styles: dehydrated.styles };
             }
             ({ doc, opts } = withDefaultMaster(doc, opts));
+            const kept = keptVersion(doc, opts, 'odp');
             const p = pkg.empty(CT_ODP);
 
-            const contentXml = renderContent(doc);
+            const contentXml = renderContent(doc, kept ? kept.of('content.xml') : undefined);
             pkg.setPart(p, 'content.xml', encodeText(contentXml), CT_XML);
 
             writeSidecars(p, doc, opts,
                 { pkg, metaMod, settingsMod, stylesMod }, CT_XML);
 
             carryParts(p, doc.package, { pkg, manifestMod });
+            applyManifestVersion(p, kept);
 
             return pkg.write(p, { mtime: opts.mtime });
         }
@@ -227,7 +246,7 @@ export const odp = {
             };
         }
 
-        function renderContent(doc) {
+        function renderContent(doc, version) {
             const slideEls = (doc.slides || []).map(s => slideMod.renderSlide(s));
             const presEl = xml.el('office:presentation', {}, slideEls);
             const bodyEl = xml.el('office:body', {}, [presEl]);
@@ -246,8 +265,10 @@ export const odp = {
                 'xmlns:fo':           ODF_NS.FO,
                 'xmlns:svg':          ODF_NS.SVG,
                 'xmlns:xlink':        ODF_NS.XLINK,
-                'office:version': ODF_VERSION
+                'office:version': version !== undefined ? version : ODF_VERSION
             }, children);
+            // keepVersion: a source part without a version is written without one.
+            if (root.attrs['office:version'] === null) delete root.attrs['office:version'];
             declareNamespaces(root, { carried: sourceNamespaces(doc.package, 'content.xml'),
                 part: 'content.xml', module: 'odp' });
             return xml.serialize(root);

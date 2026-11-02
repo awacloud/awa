@@ -107,6 +107,55 @@ describe('parseXrefTable', () => {
         const src = 'xref\n0 1\n00000000XX 65535 n \n';
         expect(() => parseXrefTable(te.encode(src), 0)).toThrow(ParseError);
     });
+
+    test('a well-formed table records no tolerance', () => {
+        expect(parseXrefTable(te.encode(SIMPLE_XREF), 0).tolerated).toBeUndefined();
+    });
+});
+
+describe('parseXrefTable — shapes real producers write (T44)', () => {
+    const ENTRIES = ['0000000000 65535 f', '0000000017 00000 n', '0000000081 00000 n'];
+    const EXPECTED = {
+        0: { offset: 0, gen: 65535, free: true },
+        1: { offset: 17, gen: 0, free: false },
+        2: { offset: 81, gen: 0, free: false }
+    };
+
+    test('a subsection header ending with spaces or a tab before its EOL', () => {
+        for (const header of ['0 3 \r\n', '0 3 \r', '0 3  \n', '0 3\t\n']) {
+            const src = `xref\n${header}${ENTRIES.map((e) => e + ' \n').join('')}trailer\n<< >>\n`;
+            const { entries, end, tolerated } = parseXrefTable(te.encode(src), 0);
+            expect(entries).toEqual(EXPECTED);
+            expect(tolerated).toEqual(['subsection-header-space']);
+            expect(new TextDecoder().decode(te.encode(src).subarray(end)).trimStart().startsWith('trailer')).toBe(true);
+        }
+    });
+
+    test('19-byte entries (a one-byte EOL), LF or CR', () => {
+        for (const eol of ['\n', '\r']) {
+            const src = `xref\n0 3\n${ENTRIES.map((e) => e + eol).join('')}trailer\n<< >>\n`;
+            const { entries, end, tolerated } = parseXrefTable(te.encode(src), 0);
+            expect(entries).toEqual(EXPECTED);
+            expect(tolerated).toEqual(['entry-eol-one-byte']);
+            expect(new TextDecoder().decode(te.encode(src).subarray(end)).trimStart().startsWith('trailer')).toBe(true);
+        }
+    });
+
+    test('every two-byte EOL reads as before, with no tolerance', () => {
+        for (const eol of [' \n', ' \r', '\r\n']) {
+            const src = `xref\n0 3\n${ENTRIES.map((e) => e + eol).join('')}trailer\n`;
+            const r = parseXrefTable(te.encode(src), 0);
+            expect(r.entries).toEqual(EXPECTED);
+            expect(r.tolerated).toBeUndefined();
+        }
+    });
+
+    test('a malformed field still throws pdf/xref/bad-digit', () => {
+        const src = 'xref\n0 2 \n0000000000 65535 f\n00000000X7 00000 n\n';
+        let code = null;
+        try { parseXrefTable(te.encode(src), 0); } catch (e) { code = e.code; }
+        expect(code).toBe('pdf/xref/bad-digit');
+    });
 });
 
 describe('parseTrailerDict', () => {

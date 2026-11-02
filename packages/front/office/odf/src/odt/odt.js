@@ -24,6 +24,13 @@
  * a `{ type: 'frame', ...drawFrame model }` run at its place in the text,
  * and `write` renders a frame run in place (`renderFrame` sink).
  *
+ * **Other inline elements.** A paragraph, heading or link child no run
+ * kind covers (a comment and its end, a bookmark, a field, a change mark,
+ * a soft page break …) stays in `_extras.children`, written back after the
+ * runs — unless `read(bytes, { elementsInRuns: true })`: each is then a raw
+ * `{ type: 'element', … }` run at its place, as a span body keeps it, and
+ * `write` writes it there.
+ *
  * Result of `read()` :
  *
  * ```js
@@ -97,7 +104,7 @@ export const odt = {
         const { ParseError, ContractError } = errors;
         const { ODF_NS, ODF_VERSION, CT, encodeText,
                 parseXmlOrThrow, readSidecars, writeSidecars, carryParts,
-                sourceNamespaces, declareNamespaces } = shared;
+                sourceNamespaces, declareNamespaces, keptVersion, applyManifestVersion } = shared;
         // unused-dep guard (referenced for runtime registration only)
         void mimetypeMod;
 
@@ -118,10 +125,44 @@ export const odt = {
          *   types every `draw:frame` of a paragraph, heading, span or link
          *   body as a `{ type: 'frame', ...drawFrame model }` run at its place
          *   instead of leaving it in `_extras.children` (or, in a span, as a
-         *   raw element entry).
+         *   raw element entry); `elementsInRuns` (default `false`, the 1.1.0
+         *   model): `true` keeps every other untyped element of a paragraph,
+         *   heading or link body as a raw `{ type: 'element', … }` run at its
+         *   place instead of an `_extras.children` entry (a frame too, when
+         *   `framesInRuns` does not type it). Derived views (`toText`) are
+         *   the same either way.
          * @returns {object}
          */
         function read(bytes, opts) {
+            if (opts && opts.semanticStyles !== undefined && typeof opts.semanticStyles !== 'boolean') {
+                throw new ContractError('odf/contract-error/odt',
+                    'odt: read opts.semanticStyles must be true or false',
+                    { context: { module: 'odt', argument: 'opts.semanticStyles' } });
+            }
+            const semanticStyles = !!(opts && opts.semanticStyles);
+            if (opts && opts.headerFooterContent !== undefined && typeof opts.headerFooterContent !== 'boolean') {
+                throw new ContractError('odf/contract-error/odt',
+                    'odt: read opts.headerFooterContent must be true or false',
+                    { context: { module: 'odt', argument: 'opts.headerFooterContent' } });
+            }
+            if (opts && opts.textBoxes !== undefined && typeof opts.textBoxes !== 'boolean') {
+                throw new ContractError('odf/contract-error/odt',
+                    'odt: read opts.textBoxes must be true or false',
+                    { context: { module: 'odt', argument: 'opts.textBoxes' } });
+            }
+            for (const key of ['listStyles', 'sectionStyles']) {
+                if (opts && opts[key] !== undefined && typeof opts[key] !== 'boolean') {
+                    throw new ContractError('odf/contract-error/odt',
+                        `odt: read opts.${key} must be true or false`,
+                        { context: { module: 'odt', argument: `opts.${key}` } });
+                }
+            }
+            const textBoxes = !!(opts && opts.textBoxes);
+            if (textBoxes && !(opts && opts.framesInRuns)) {
+                throw new ContractError('odf/contract-error/odt',
+                    'odt: read opts.textBoxes needs opts.framesInRuns',
+                    { context: { module: 'odt', argument: 'opts.textBoxes' } });
+            }
             const p = pkg.read(bytes, opts);
             if (p.mimetype !== CT_ODT) {
                 throw new ParseError('odf/parse-error/odt',
@@ -142,13 +183,202 @@ export const odt = {
             readSidecars(result, p, { metaMod, settingsMod, stylesMod });
 
             const parsed = parseContent(shared.decodeText(contentBytes), result.styles,
-                !!(opts && opts.framesInRuns));
+                !!(opts && opts.framesInRuns), !!(opts && opts.elementsInRuns), semanticStyles, textBoxes);
             result.body = parsed.body;
             if (parsed.autoStyles) result.autoStyles = parsed.autoStyles;
             if (parsed.fontFaces) result.fontFaces = parsed.fontFaces;
+            if (opts && (opts.listStyles || opts.sectionStyles) && styleRegMod) {
+                const st = result.styles || {};
+                const raw = (content) => ({
+                    content,
+                    styles: (st.styles || []).map(asElement),
+                    stylesAuto: (st.automaticStyles || []).map(asElement)
+                });
+                if (opts.listStyles) result.listStyles = styleRegMod.listStylesOf(raw(parsed.listStyleEls));
+                if (opts.sectionStyles) result.sectionStyles = styleRegMod.sectionStylesOf(raw(parsed.sectionStyleEls));
+            }
 
             walker.applyHydrate(result);
+            if (opts && opts.headerFooterContent) {
+                typeHeaderFooters(result.styles, !!opts.framesInRuns, !!opts.elementsInRuns, semanticStyles, textBoxes);
+            }
             return result;
+        }
+
+        // The header and footer elements of a master page.
+        const HEADER_FOOTER = new Set([
+            'style:header', 'style:header-left', 'style:header-first',
+            'style:footer', 'style:footer-left', 'style:footer-first'
+        ]);
+
+        // A raw element as read, or a large bundle's `{ kind, attrs,
+        // children }` bag (`stylePage`), as a raw element (a copy).
+        function asElement(n) {
+            if (!n || typeof n !== 'object') return n;
+            if (n.type === 'element') return structuredClone(n);
+            if (typeof n.kind === 'string') {
+                return { type: 'element', name: n.kind, attrs: { ...(n.attrs || {}) },
+                    children: (n.children || []).map(asElement) };
+            }
+            return structuredClone(n);
+        }
+
+        // The `styles.xml` model as written: with extensions, their
+        // dehydrate hooks applied to a copy (a bundle types parts of it out
+        // of the containers, e.g. its list styles into `listStyles`). The
+        // given model is not changed.
+        function writtenStyles(styles) {
+            if (!styles || !walker.hasExtensions) return styles;
+            const env = { styles: structuredClone(styles) };
+            walker.applyDehydrate(env);
+            return env.styles || styles;
+        }
+
+        // The read context of header and footer content: a resolver over the
+        // `styles.xml` automatic styles, named styles and font faces (it
+        // consumes nothing), and the read's frame and inline-element flags.
+        // `styles` is the model as written (`writtenStyles`).
+        function headerReadCtx(styles, framesInRuns, elementsInRuns, semanticStyles, textBoxes) {
+            const autoEls = (styles.automaticStyles || []).filter(c => c && c.type === 'element');
+            const autoModel = styleAutoMod ? styleAutoMod.parse(xml.el('office:automatic-styles', {}, autoEls)) : null;
+            const resolver = styleRegMod
+                ? styleRegMod.createResolver(autoModel, stylesSidecarFaces(styles), styles.styles || null,
+                    semanticStyles ? { semantic: true } : undefined)
+                : undefined;
+            const ctx = framesInRuns || elementsInRuns || semanticStyles
+                ? { ...(resolver || {}),
+                    ...(framesInRuns ? { parseFrame: frameMod.parseFrame } : {}),
+                    ...(elementsInRuns ? { elementsInRuns: true } : {}),
+                    ...(semanticStyles ? { listStack: [] } : {}) }
+                : resolver;
+            // This resolver consumes nothing: its boxes are typed with it.
+            if (textBoxes) ctx.parseFrame = (el) => typeBox(frameMod.parseFrame(el), ctx);
+            return ctx;
+        }
+
+        /**
+         * The read option `textBoxes`: a text-box frame gains
+         * `child.content`, its children typed as the body is under `ctx`
+         * (a read context whose resolver consumes no style, so the box's
+         * raw children, kept, still find their styles when written as
+         * read), and `child._contentRead`, that content as read (the write
+         * renders the box from `content` only when the two differ).
+         */
+        function typeBox(frame, ctx) {
+            const c = frame && frame.child;
+            if (c && c.kind === 'text-box') {
+                c.content = contentMod.parseBody(xml.el('draw:text-box', {}, c.children || []), ctx);
+                c._contentRead = structuredClone(c.content);
+            }
+            return frame;
+        }
+
+        /**
+         * The write side of `textBoxes`: a text box whose `content` differs
+         * from the content as read is written from it, through the write's
+         * style registry; any other frame as it is.
+         */
+        function boxAsWritten(frame, ctx) {
+            const c = frame && frame.child;
+            if (!c || c.kind !== 'text-box' || !Array.isArray(c.content) || sameModel(c.content, c._contentRead)) return frame;
+            return { ...frame, child: { ...c, children: contentMod.renderBody(c.content, ctx) } };
+        }
+
+        // Structural equality of two model values, `Object.is` on the leaves.
+        function sameModel(a, b) {
+            if (Object.is(a, b)) return true;
+            if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+            if (Array.isArray(a) !== Array.isArray(b)) return false;
+            const ka = Object.keys(a), kb = Object.keys(b);
+            if (ka.length !== kb.length) return false;
+            for (const k of ka) {
+                if (!Object.prototype.hasOwnProperty.call(b, k) || !sameModel(a[k], b[k])) return false;
+            }
+            return true;
+        }
+
+        // A raw element as a large bundle's `{ kind, attrs, children }` bag
+        // (any other node as it is).
+        function asBag(n) {
+            if (!n || n.type !== 'element') return n;
+            return { kind: n.name, attrs: { ...(n.attrs || {}) }, children: (n.children || []).map(asBag) };
+        }
+
+        /**
+         * The write side of `headerFooterContent`: a header or footer whose
+         * `content` equals what its children parse to (under the flags read)
+         * keeps its children; an edited one gets them from its `content`,
+         * rendered through a style registry of its own, whose automatic
+         * styles and font faces go into `styles.xml`. Returns the style
+         * names that registry handed out (the `content.xml` registry avoids
+         * them), or null.
+         */
+        function writeHeaderFooters(styles, doc) {
+            if (!styles) return null;
+            let flat = null;
+            const edited = [];
+            for (const mp of [...(styles.masterStyles || []), ...(styles.masterPages || [])]) {
+                if (!mp || (mp.name || mp.kind) !== 'style:master-page') continue;
+                for (const c of mp.children || []) {
+                    if (!c || !HEADER_FOOTER.has(c.name || c.kind) || !Array.isArray(c.content)) continue;
+                    const f = c._contentFlags || {};
+                    flat = flat || writtenStyles(styles);
+                    const read = contentMod.parseBody(asElement(c), headerReadCtx(flat, !!f.framesInRuns, !!f.elementsInRuns, !!f.semanticStyles, !!f.textBoxes));
+                    if (!sameModel(read, c.content)) edited.push(c);
+                }
+            }
+            if (!edited.length || !styleRegMod) return null;
+            const taken = reservedStyleNamesOf(doc.autoStyles);
+            const nameOf = (n) => n && n.attrs && n.attrs['style:name'];
+            for (const n of [...(flat.styles || []), ...(flat.automaticStyles || []),
+                ...(flat.pageLayouts || []), ...(flat.masterPages || [])]) {
+                if (nameOf(n)) taken.add(nameOf(n));
+            }
+            const faces = stylesSidecarFaces(flat);
+            const registry = styleRegMod.createRegistry({ styles: taken, fontFaces: faces.map(nameOf).filter(Boolean) });
+            const ctx = writeCtx(registry);
+            for (const c of edited) {
+                const els = contentMod.renderBody(c.content, ctx);
+                c.children = c.type === 'element' ? els : els.map(asBag);
+            }
+            const out = new Set();
+            const gen = registry.toAutomaticStyles();
+            if (gen && styleAutoMod) {
+                const rendered = (styleAutoMod.render(gen).children || []).filter(n => n && n.type === 'element');
+                styles.automaticStyles = [...(styles.automaticStyles || []), ...rendered];
+                for (const n of rendered) if (nameOf(n)) out.add(nameOf(n));
+            }
+            const genFaces = registry.toFontFaceDecls();
+            if (genFaces) {
+                const kids = (styles._extras && styles._extras.children) || [];
+                const decls = kids.find(n => n && n.type === 'element' && n.name === 'office:font-face-decls');
+                if (decls) decls.children = [...(decls.children || []), ...genFaces.children];
+                else styles._extras = { ...(styles._extras || {}), children: [genFaces, ...kids] };
+            }
+            return out;
+        }
+
+        /**
+         * The read option `headerFooterContent`: every header and footer of
+         * the `styles.xml` master pages (raw elements, or the large
+         * bundle's bags) gains `content`, its children typed with the
+         * body's model — a read context over the `styles.xml` automatic
+         * styles, named styles and font faces, which consumes nothing, and
+         * the read's frame and inline-element flags. The children stay as
+         * read.
+         */
+        function typeHeaderFooters(styles, framesInRuns, elementsInRuns, semanticStyles, textBoxes) {
+            if (!styles) return;
+            const ctx = headerReadCtx(writtenStyles(styles), framesInRuns, elementsInRuns, semanticStyles, textBoxes);
+            for (const mp of [...(styles.masterStyles || []), ...(styles.masterPages || [])]) {
+                if (!mp || (mp.name || mp.kind) !== 'style:master-page') continue;
+                for (const c of mp.children || []) {
+                    if (!c || !HEADER_FOOTER.has(c.name || c.kind)) continue;
+                    c.content = contentMod.parseBody(asElement(c), ctx);
+                    c._contentFlags = semanticStyles ? { framesInRuns, elementsInRuns, semanticStyles } : { framesInRuns, elementsInRuns };
+                    if (textBoxes) c._contentFlags.textBoxes = true;
+                }
+            }
         }
 
         /**
@@ -182,9 +412,13 @@ export const odt = {
          * @param {object} [stylesModel] — parsed `styles.xml` model, used
          *   read-only for named-style / font-face resolution.
          * @param {boolean} [framesInRuns] — type frames as runs in place.
+         * @param {boolean} [elementsInRuns] — keep untyped inline elements as
+         *   raw runs in place.
+         * @param {boolean} [semanticStyles] — read the emphasis and the
+         *   nested-list numbering styles state (the read's opt-in).
          * @returns {{body: Array<object>, autoStyles?: object, fontFaces?: Array<object>}}
          */
-        function parseContent(xmlString, stylesModel, framesInRuns) {
+        function parseContent(xmlString, stylesModel, framesInRuns, elementsInRuns, semanticStyles, textBoxes) {
             const root = parseXmlOrThrow(xmlString, 'odt',
                 { part: 'content.xml', module: 'odt' });
             if (root.name !== 'office:document-content') {
@@ -206,16 +440,41 @@ export const odt = {
                 ? styleRegMod.createResolver(
                     autoModel,
                     contentFaces.concat(stylesSidecarFaces(stylesModel)),
-                    (stylesModel && stylesModel.styles) || null)
+                    (stylesModel && stylesModel.styles) || null,
+                    semanticStyles ? { semantic: true } : undefined)
                 : undefined;
 
             const textEl = xml.findChild(bodyEl, 'office:text');
             // The read ctx: the resolver, plus the frame parser when frames
-            // are typed in place (`consumed` is the same Set either way).
-            const readCtx = framesInRuns
-                ? { ...(resolver || {}), parseFrame: frameMod.parseFrame }
+            // are typed in place and the `elementsInRuns` flag when untyped
+            // inline elements stay in place (`consumed` is the same Set
+            // either way).
+            const readCtx = framesInRuns || elementsInRuns || semanticStyles
+                ? { ...(resolver || {}),
+                    ...(framesInRuns ? { parseFrame: frameMod.parseFrame } : {}),
+                    ...(elementsInRuns ? { elementsInRuns: true } : {}),
+                    ...(semanticStyles ? { listStack: [] } : {}) }
                 : resolver;
+            if (textBoxes) {
+                // The boxes are typed under a resolver of their own over the
+                // same styles, whose consumption is not counted: a box
+                // written as read keeps the styles its raw children name.
+                const boxResolver = styleRegMod
+                    ? styleRegMod.createResolver(autoModel, contentFaces.concat(stylesSidecarFaces(stylesModel)),
+                        (stylesModel && stylesModel.styles) || null, semanticStyles ? { semantic: true } : undefined)
+                    : undefined;
+                const boxCtx = { ...(boxResolver || {}),
+                    ...(elementsInRuns ? { elementsInRuns: true } : {}),
+                    ...(semanticStyles ? { listStack: [] } : {}) };
+                boxCtx.parseFrame = (el) => typeBox(frameMod.parseFrame(el), boxCtx);
+                readCtx.parseFrame = boxCtx.parseFrame;
+            }
             const out = { body: textEl ? contentMod.parseBody(textEl, readCtx) : [] };
+            // Every automatic list style as written, consumed or not (the
+            // read's opt-in `listStyles`).
+            out.listStyleEls = autoEl ? xml.findAll(autoEl, 'text:list-style') : [];
+            // And every automatic style as written (`sectionStyles`).
+            out.sectionStyleEls = autoEl ? xml.findAll(autoEl, 'style:style') : [];
 
             const consumed = resolver ? resolver.consumed : new Set();
 
@@ -277,7 +536,19 @@ export const odt = {
          * @param {object} doc — `{ body, autoStyles?, fontFaces?, pictures?, meta?, settings?, styles?, package? }`
          * @param {object} [opts] — `{ meta, settings, styles }`, each overriding the `doc.*` sidecar,
          *        and `mtime` (`number|Date`), the ZIP entry date passed to `pkgPackage.write`
-         *        (default 1980-01-01 00:00:00: the output is byte-reproducible)
+         *        (default 1980-01-01 00:00:00: the output is byte-reproducible), and
+         *        `preserveInput` (default `false`): `true` writes from a structured clone of
+         *        `doc` (its `package` excepted, only read) and of `opts`, so the extensions'
+         *        dehydrate hooks leave the given model as it was; the bytes are the same;
+         *        `keepVersion` (default `false`): `true` writes each part with its source
+         *        part's `office:version` (none when it has none) and the manifest with the
+         *        source's version (from ODF 1.2 on) instead of `1.4`;
+         *        `cleanup` (default none): an array of named cleanups, applied to a
+         *        structured clone (the given model is left as it was), as `docx.write`'s:
+         *        `'emptyProperties'` drops every `style:*-properties` element with no
+         *        attribute and no child from the automatic styles of `content.xml` and
+         *        from the styles of `styles.xml`; another value throws
+         *        `ContractError('odf/contract-error/odt')` (`context.argument: 'opts.cleanup'`)
          * @returns {Uint8Array}
          */
         function write(doc, opts) {
@@ -287,6 +558,26 @@ export const odt = {
                     { context: { module: 'odt', argument: 'doc' } });
             }
             opts = opts || {};
+            if (opts.preserveInput !== undefined && typeof opts.preserveInput !== 'boolean') {
+                throw new ContractError('odf/contract-error/odt',
+                    'odt: write opts.preserveInput must be true or false',
+                    { context: { module: 'odt', argument: 'opts.preserveInput' } });
+            }
+            const cleanup = cleanupSpec(opts.cleanup);
+            if (opts.preserveInput || cleanup.size) {
+                // One clone of the model and of the options, so values they
+                // share stay shared; the read envelope `package`, only read,
+                // is not copied.
+                const { package: envelope, ...rest } = doc;
+                const copy = structuredClone({ doc: rest, opts });
+                doc = envelope === undefined ? copy.doc : { ...copy.doc, package: envelope };
+                opts = copy.opts;
+            }
+            if (cleanup.has('emptyProperties')) {
+                dropEmptyAutoProperties(doc.autoStyles);
+                dropEmptyPropertyNodes(opts.styles || doc.styles);
+            }
+            const headerNames = writeHeaderFooters(opts.styles || doc.styles, doc);
             if (walker.hasExtensions) {
                 const dehydrated = {
                     body: doc.body,
@@ -300,9 +591,10 @@ export const odt = {
                 if (dehydrated.settings !== undefined) opts = { ...opts, settings: dehydrated.settings };
                 if (dehydrated.styles !== undefined) opts = { ...opts, styles: dehydrated.styles };
             }
+            const kept = keptVersion(doc, opts, 'odt');
             const p = pkg.empty(CT_ODT);
 
-            const contentXml = renderContent(doc);
+            const contentXml = renderContent(doc, headerNames, kept ? kept.of('content.xml') : undefined);
             pkg.setPart(p, 'content.xml', encodeText(contentXml), CT_XML);
 
             writeSidecars(p, doc, opts,
@@ -311,11 +603,54 @@ export const odt = {
             writePictures(p, doc.pictures);
 
             carryParts(p, doc.package, { pkg, manifestMod });
+            applyManifestVersion(p, kept);
 
             return pkg.write(p, { mtime: opts.mtime });
         }
 
         /** Emit `doc.pictures` as parts; media type sniffed from the bytes. */
+        // `write`'s named cleanups (the names `docx.write` uses).
+        const CLEANUPS = new Set(['emptyProperties']);
+        const PROPERTY_ELEMENT = /^style:[a-z-]+-properties$/;
+
+        /** The validated `opts.cleanup` names (empty when absent). */
+        function cleanupSpec(value) {
+            if (value === undefined) return new Set();
+            const ok = Array.isArray(value)
+                && value.every(n => CLEANUPS.has(n))
+                && new Set(value).size === value.length;
+            if (!ok) {
+                throw new ContractError('odf/contract-error/odt',
+                    'odt: write opts.cleanup must be an array of distinct names among: ' + [...CLEANUPS].join(', '),
+                    { context: { module: 'odt', argument: 'opts.cleanup' } });
+            }
+            return new Set(value);
+        }
+
+        /** Delete, in place, every typed automatic-style properties bag with no attribute and no kept child. */
+        function dropEmptyAutoProperties(autoStyles) {
+            for (const st of (autoStyles && autoStyles.styles) || []) {
+                const kept = (st._extras && st._extras.propertyChildren) || {};
+                for (const key of Object.keys(st.properties || {})) {
+                    const bag = st.properties[key] || {};
+                    if (!Object.keys(bag).length && !(kept[key] && kept[key].length)) delete st.properties[key];
+                }
+            }
+        }
+
+        /** Remove, in place, every raw property element with no attribute (declarations aside) and no child. */
+        function dropEmptyPropertyNodes(node) {
+            if (!node || typeof node !== 'object' || ArrayBuffer.isView(node)) return;
+            if (Array.isArray(node)) { for (const n of node) dropEmptyPropertyNodes(n); return; }
+            if (Array.isArray(node.children)) {
+                node.children = node.children.filter(c => !(c && c.type === 'element'
+                    && PROPERTY_ELEMENT.test(c.name)
+                    && !Object.keys(c.attrs || {}).some(k => k !== 'xmlns' && !k.startsWith('xmlns:'))
+                    && !(c.children || []).some(k => k.type === 'element' || (k.type === 'text' && k.value.trim()))));
+            }
+            for (const key of Object.keys(node)) dropEmptyPropertyNodes(node[key]);
+        }
+
         function writePictures(p, pictures) {
             for (const path of Object.keys(pictures || {})) {
                 const bytes = pictures[path];
@@ -345,8 +680,16 @@ export const odt = {
         }
 
         /** The write ctx: the style registry's members plus the image and frame sinks. */
-        function writeCtx(registry) {
-            return { ...(registry || {}), renderImage: renderImageRun, renderFrame: frameMod.renderFrame };
+        // The write context; `version` (a `keepVersion` write) before ODF
+        // 1.3 writes an image's mime type under the attribute it was read
+        // from (1.2 has no `draw:mime-type` on images).
+        function writeCtx(registry, version) {
+            const asRead = typeof version === 'string' && parseFloat(version) < 1.3;
+            const ctx = { ...(registry || {}), renderImage: renderImageRun };
+            ctx.renderFrame = asRead
+                ? (f) => frameMod.renderFrame(boxAsWritten(f, ctx), { mimeTypeAsRead: true })
+                : (f) => frameMod.renderFrame(boxAsWritten(f, ctx));
+            return ctx;
         }
 
         /** Names already taken by the passthrough automatic-styles model. */
@@ -395,14 +738,16 @@ export const odt = {
             return model;
         }
 
-        function renderContent(doc) {
+        function renderContent(doc, headerNames, version) {
+            const reserved = reservedStyleNamesOf(doc.autoStyles);
+            for (const n of headerNames || []) reserved.add(n);
             const registry = styleRegMod
                 ? styleRegMod.createRegistry({
-                    styles: reservedStyleNamesOf(doc.autoStyles),
+                    styles: reserved,
                     fontFaces: reservedFaceNamesOf(doc.fontFaces)
                 })
                 : undefined;
-            const ctx = writeCtx(registry);
+            const ctx = writeCtx(registry, version);
             const body = contentMod.renderBody(doc.body || [], ctx);
             const textEl = xml.el('office:text', {}, body);
             const bodyEl = xml.el('office:body', {}, [textEl]);
@@ -431,8 +776,10 @@ export const odt = {
                 'xmlns:fo':     ODF_NS.FO,
                 'xmlns:svg':    ODF_NS.SVG,
                 'xmlns:xlink':  ODF_NS.XLINK,
-                'office:version': ODF_VERSION
+                'office:version': version !== undefined ? version : ODF_VERSION
             }, rootChildren);
+            // keepVersion: a source part without a version is written without one.
+            if (root.attrs['office:version'] === null) delete root.attrs['office:version'];
             declareNamespaces(root, { carried: sourceNamespaces(doc.package, 'content.xml'),
                 part: 'content.xml', module: 'odt' });
             return xml.serialize(root);

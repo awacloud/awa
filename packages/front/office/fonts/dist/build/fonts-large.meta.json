@@ -46,8 +46,8 @@
     "brotli"
   ],
   "bytes": {
-    "dev": 98706,
-    "min": 55480
+    "dev": 102630,
+    "min": 57314
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

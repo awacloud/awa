@@ -67,8 +67,8 @@ export const drawImageExtended = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const n of out.drawExtras) extras.push(f.renderElement(n));
             delete out.drawExtras;
-            if (Array.isArray(frame._extras) || !frame._extras) out._extras = extras;
-            else out._extras = { ...frame._extras, children: extras };
+            if (Array.isArray(frame._extras)) out._extras = extras;
+            else out._extras = { ...(frame._extras || {}), children: extras };
             return out;
         }
 

@@ -13,7 +13,7 @@
  * `fromMd` gained an `assets` input: `{ '<markdown image destination>':
  * Uint8Array }`, keyed EXACTLY as the markdown wrote it. This renderer
  * resolves an IR `image` node against it (falling back to the bytes a
- * reader carried in `escapes.docx.bytes` / `escapes.odt.bytes`) and takes one of two
+ * reader carried in `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`) and takes one of two
  * paths:
  *
  * | Case | Result |
@@ -150,7 +150,7 @@ export const oconvPdfRenderImage = {
          * Image bytes for an IR `image` node: caller `assets[name]` (else its
          * percent-decoded form) first,
          * then a reader's carried bytes (`escapes.docx.bytes`, else
-         * `escapes.odt.bytes` — the escapes bag), else `null`. Mirrored in ir-to-docx / ir-to-odt /
+         * `escapes.odt.bytes`, else `escapes.pdf.bytes`, else `escapes.pptx.bytes` — the escapes bag), else `null`. Mirrored in ir-to-docx / ir-to-odt /
          * pdf/render/image — keep byte-identical (asset-bytes-drift.test.js).
          *
          * @param {object} node
@@ -171,7 +171,7 @@ export const oconvPdfRenderImage = {
                 return { bytes: assets[decoded], source: 'assets' };
             }
             const bag = node && node.escapes;
-            const esc = bag && (bag.docx || bag.odt);
+            const esc = bag && (bag.docx || bag.odt || bag.pdf || bag.pptx);
             if (esc && esc.bytes instanceof Uint8Array) {
                 return { bytes: esc.bytes, source: 'reader' };
             }
@@ -514,7 +514,7 @@ export const oconvPdfRenderImage = {
             if (bytes.length >= 4 && (at(0, [0x49, 0x49, 0x2A, 0]) || at(0, [0x4D, 0x4D, 0, 0x2A]))) return 'tiff';
             if (source !== 'reader') return null;
             const bag = node && node.escapes;
-            const esc = bag && (bag.docx || bag.odt);
+            const esc = bag && (bag.docx || bag.odt || bag.pdf || bag.pptx);
             const type = esc && typeof esc.contentType === 'string' ? esc.contentType : '';
             const m = /^image\/([\w.+-]+)$/i.exec(type.trim());
             return m ? m[1].toLowerCase() : null;
@@ -584,7 +584,7 @@ export const oconvPdfRenderImage = {
          * placeholder and record `layout/image-dropped` with its reason.
          *
          * @param {object} node `oconv-ir/v1` `image` node (`{name, alt}`,
-         *   optionally carrying `escapes.docx.bytes` / `escapes.odt.bytes`).
+         *   optionally carrying `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`).
          * @param {object} ctx Stack child context (see the module header).
          * @returns {{items: object[], losses: object[], height: number}}
          * @throws {Error} `oconv: pdf image renderer needs ctx.builder` when

@@ -2,9 +2,9 @@
 
 Pure JavaScript library to read and write PDF documents in the browser, with
 no runtime dependency beyond
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.1.0/packages/front/fw)
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.2.0/packages/front/fw)
 and
-[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.1.0/packages/front/office/fonts).
+[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.2.0/packages/front/office/fonts).
 The reference is ISO 32000-2:2020 (PDF 2.0); PDF 1.x files
 are read too. `pdf.write` emits a `%PDF-2.0` header; `pdfBuilder.setVersion`
 and `pdfWriter.writeDocument({ version })` emit the header they are given
@@ -28,8 +28,10 @@ Known limits, so they are not a surprise:
 - The whole file must be in memory as a `Uint8Array`; there is no streaming
   reader.
 - An encrypted file is refused by `read` (`pdf/document/encrypted`) unless
-  you opt in to the raw container; decryption is done by calling the
-  security-handler modules (`pdfSecurity`, `pdfStandardV4/V5/V6`) yourself.
+  you pass `password` (decrypting read: the Standard handler V=4 R=4, V=5
+  R=5 and V=5 R=6; RC4 V=1 / V=2 through the opt-in `legacyRc4`) or opt in
+  to the raw ciphertext container with `allowEncrypted: true`. The empty
+  password is never tried on its own; see [Reading options](#reading-options).
 - A FlateDecode stream is inflated to at most 256 MiB (`pdfFlate.limits`):
   past that `pdf/flate/output-limit` is thrown instead of a decompression
   bomb filling memory. `pdfFlate.decode(bytes, params, { maxOutput })` sets
@@ -182,6 +184,49 @@ still referenced degrades to a recorded entry in `doc.losses` instead of
 throwing (a free `/Root` is still refused); `appendIncremental` extends a
 cross-reference-stream base with an uncompressed `/Type /XRef` section.
 
+## Reading options
+
+`api.read(bytes, opts)` and `pdfDocument.readDocument(bytes, opts)` take
+the options below; each is off by default, and a read given none of them is
+unchanged.
+
+| Option | Default | Effect |
+|---|---|---|
+| `password` | none | Opens an encrypted document: a string or bytes (`''` is the empty user password). The Standard handler V=4 R=4, V=5 R=5 or V=5 R=6 is applied, the password tried as the user, then as the owner password, and every string and stream is decrypted as it is read. Without it an encrypted document throws `pdf/document/encrypted`; a wrong one `pdf/document/bad-password`. Ignored on an unencrypted document. |
+| `legacyRc4` | none | The opt-in `pdfLegacyRc4Read` instance, which decrypts an RC4 V=1 / V=2 document (R2, R3) under `password`. The `pdf-legacy` bundle's `read` passes its own. |
+| `fastCipher` | `false` | With `password`: routes the key check and the AES-CBC decryption through fw's T-table AES (a 30-page R6 file reads in about 25 ms instead of 0.9 s). Not constant-time: for a trusted, single-user host only. |
+| `allowEncrypted` | `false` | `true` returns the raw ciphertext container of an encrypted document instead of throwing (an object stream's members cannot be read there). `password` wins over it. |
+| `recoverXref` | `false` | `true` rebuilds a cross-reference chain the reader cannot use (a wrong offset, an undecodable cross-reference stream, no `startxref`, a trailer without `/Root`) from the file's bytes and records `pdf/document/xref-rebuilt` in `doc.losses`. |
+
+```js
+// Reuses `api` and `bytes` of the Quick Start; `encrypted` is a password-protected file.
+const doc = api.read(encrypted, { password: 'user', fastCipher: true });
+console.log(doc.pages.length);
+```
+
+Two classic cross-reference table shapes that real producers write — a
+subsection header ending with spaces or tabs, and 19-byte entries — are read
+without any option; each is recorded once as `pdf/document/xref-tolerated` in
+`doc.losses`. The full reference is
+[`docs/api/document/document.md`](docs/api/document/document.md).
+
+### Titles
+
+The Info dictionary's strings (`typeInfo`'s `title`, `author` …) are the
+strings' bytes as read. `pdfInfo.decodeTextString(bytes)` turns a text string
+into a JavaScript string — UTF-16BE after its byte order mark (language
+escapes removed), UTF-8 after its BOM, else PDFDocEncoding. The opt-in
+`pdfXmpExtended.dcTitle(packet)` returns an XMP packet's `dc:title` (its
+`x-default` alternative, else the first, else a leaf value), which the leaf
+harvest of `parsePacket` does not reach.
+
+```js
+// Resolved from a `ModuleRuntime` with the core modules and `extras` registered.
+const info = rt.resolve('pdfInfo');
+console.log(info.decodeTextString(new Uint8Array([0xfe, 0xff, 0x00, 0x41, 0x20, 0xac])));  // 'A€'
+console.log(rt.resolve('pdfXmpExtended').dcTitle(xmpPacket));                              // 'Hello'
+```
+
 ## Bundles
 
 `src/main.js` exports the five descriptor arrays (`fw_require`,
@@ -280,7 +325,7 @@ src/
 
 API per module: [`docs/api/README.md`](docs/api/README.md). Sibling package
 with the same factory + bundles layout:
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.1.0/packages/front/office/ooxml).
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.2.0/packages/front/office/ooxml).
 
 ## Tests
 
@@ -376,6 +421,6 @@ Copyright (c) 2026 AwaCloud SAS
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/pdf`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.1.0/packages/front/office/pdf)
+- Source: [`packages/front/office/pdf`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.2.0/packages/front/office/pdf)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/pdf@1.1.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/pdf@1.2.0/SECURITY.md

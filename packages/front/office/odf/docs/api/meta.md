@@ -27,7 +27,7 @@ const meta = runtime.resolve('odfMeta');
 | Method | Description |
 |--------|-------------|
 | `parse(xmlString)` | Returns the model. Throws `ParseError` if the root is not `<office:document-meta>`. |
-| `serialize(meta, opts?)` | XML with prolog + office/meta/dc namespaces. The root also declares every other namespace prefix the output uses (e.g. an `ooo:` child kept in `_extras`), resolved from `opts.namespaces` (a prefix → URI map — the orchestrators pass the source `meta.xml` root's declarations), then from `odfShared.ODF_PREFIXES`. A prefix none of them declares throws `RenderError('odf/render-error/namespace')`, `context: { module: 'meta', part: 'meta.xml', prefix }`. |
+| `serialize(meta, opts?)` | XML with prolog + office/meta/dc namespaces. `opts.version` is the `office:version` written (default `1.4`; `null` writes no attribute — the `keepVersion` write passes the source part's). The root also declares every other namespace prefix the output uses (e.g. an `ooo:` child kept in `_extras`), resolved from `opts.namespaces` (a prefix → URI map — the orchestrators pass the source `meta.xml` root's declarations), then from `odfShared.ODF_PREFIXES`. A prefix none of them declares throws `RenderError('odf/render-error/namespace')`, `context: { module: 'meta', part: 'meta.xml', prefix }`. |
 | `empty()` | Minimal model `{ generator: '@awacloud/odf' }`. |
 
 ## Examples

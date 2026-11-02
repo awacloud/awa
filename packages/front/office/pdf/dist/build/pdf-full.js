@@ -835,7 +835,7 @@ export const pdfFullPackage = {
       const tok = tokenize(bytes, { start: at }), kw = tok.next();
       if (!kw || kw.kind !== "kw" || kw.value !== "xref")
         throw new ParseError("pdf/xref/no-xref-keyword", "expected xref keyword", { context: { offset: at } });
-      const entries = {};
+      const entries = {}, tolerated = new Set;
       for (;; ) {
         const first = tok.peek();
         if (!first || first.kind !== "int") {
@@ -847,13 +847,19 @@ export const pdfFullPackage = {
         const cnt = tok.next();
         if (!cnt || cnt.kind !== "int" || cnt.value < 0)
           throw new ParseError("pdf/xref/bad-subsection-header", "xref subsection header must be `<first> <count>`", { context: { offset: first.offset } });
-        let p = tok.pos();
+        let p = tok.pos(), q = p;
+        while (q < bytes.length && (bytes[q] === 32 || bytes[q] === 9))
+          q++;
+        if (q > p && q < bytes.length && (bytes[q] === 13 || bytes[q] === 10)) {
+          tolerated.add("subsection-header-space");
+          p = q;
+        }
         if (p < bytes.length && bytes[p] === 13)
           p++;
         if (p < bytes.length && bytes[p] === 10)
           p++;
         for (let k = 0;k < cnt.value; k++) {
-          if (p + 20 > bytes.length)
+          if (p + 19 > bytes.length)
             throw new ParseError("pdf/xref/truncated-entry", "truncated xref entry", { context: { offset: p, expected: 20 } });
           const off = parseIntBytes(bytes, p, 10);
           if (bytes[p + 10] !== 32)
@@ -869,11 +875,16 @@ export const pdfFullPackage = {
             gen,
             free: tag === 102
           };
-          p += 20;
+          const e1 = bytes[p + 18], e2 = bytes[p + 19];
+          if ((e1 === 13 || e1 === 10) && e2 !== 13 && e2 !== 10 && e2 !== 32) {
+            tolerated.add("entry-eol-one-byte");
+            p += 19;
+          } else
+            p += 20;
         }
         tok.seek(p);
       }
-      return { entries, end: tok.pos() };
+      return tolerated.size ? { entries, end: tok.pos(), tolerated: [...tolerated] } : { entries, end: tok.pos() };
     }
     function parseTrailerDict(bytes, at) {
       const tok = tokenize(bytes, { start: at }), kw = tok.next();
@@ -1025,7 +1036,7 @@ endobj
         out.info = { num: e.Info.num, gen: e.Info.gen };
       if (e.Prev && e.Prev.type === "int")
         out.prev = e.Prev.value;
-      if (e.Encrypt)
+      if (e.Encrypt && e.Encrypt.type !== "null")
         out.encrypt = e.Encrypt.type === "ref" ? { num: e.Encrypt.num, gen: e.Encrypt.gen } : e.Encrypt;
       if (e.ID && e.ID.type === "array" && e.ID.items.length === 2 && e.ID.items[0].type === "string" && e.ID.items[1].type === "string")
         out.id = [e.ID.items[0].value, e.ID.items[1].value];
@@ -1250,7 +1261,8 @@ endstream`);
       "NeedsRendering",
       "DSS",
       "AF",
-      "DPartRoot"
+      "DPartRoot",
+      "Extensions"
     ]);
     function typeCatalog(dict) {
       if (!isType(dict, "dict"))
@@ -1295,6 +1307,37 @@ endstream`);
         out.ocProperties = e.OCProperties;
       if (e.OutputIntents)
         out.outputIntents = e.OutputIntents;
+      const has = (v) => !!v && v.type !== "null";
+      if (has(e.Threads))
+        out.threads = e.Threads;
+      if (has(e.OpenAction))
+        out.openAction = e.OpenAction;
+      if (has(e.AA))
+        out.aa = e.AA;
+      if (has(e.URI))
+        out.uri = e.URI;
+      if (has(e.Extensions))
+        out.extensions = e.Extensions;
+      if (has(e.SpiderInfo))
+        out.spiderInfo = e.SpiderInfo;
+      if (has(e.PieceInfo))
+        out.pieceInfo = e.PieceInfo;
+      if (has(e.Perms))
+        out.perms = e.Perms;
+      if (has(e.Legal))
+        out.legal = e.Legal;
+      if (has(e.Requirements))
+        out.requirements = e.Requirements;
+      if (has(e.Collection))
+        out.collection = e.Collection;
+      if (isType(e.NeedsRendering, "bool"))
+        out.needsRendering = e.NeedsRendering.value;
+      if (has(e.DSS))
+        out.dss = e.DSS;
+      if (has(e.AF))
+        out.af = e.AF;
+      if (has(e.DPartRoot))
+        out.dPartRoot = e.DPartRoot;
       for (const k of Object.keys(e))
         if (!KNOWN.has(k))
           out._extras[k] = e[k];
@@ -1325,7 +1368,9 @@ endstream`);
             throw new ParseError("pdf/pages/too-many", "page count limit exceeded", { context: { maxPages } });
           return;
         }
-        const kids = node.entries.Kids;
+        let kids = node.entries.Kids;
+        if (kids && kids.type === "ref")
+          kids = resolveRef(kids);
         if (!kids || kids.type !== "array")
           throw new ParseError("pdf/pages/missing-kids", "intermediate page tree node missing /Kids array", { context: { ref, hasKids: !!kids } });
         for (const k of kids.items) {
@@ -1381,7 +1426,7 @@ endstream`);
       "OutputIntents",
       "DPart",
       "AssociatedFiles"
-    ]);
+    ]), has = (v) => !!v && v.type !== "null", isNum = (v) => !!v && (v.type === "int" || v.type === "real");
     function toBox(v) {
       if (!v || v.type !== "array" || v.items.length !== 4)
         return null;
@@ -1459,6 +1504,42 @@ endstream`);
         out.metadata = e.Metadata;
       if (e.Group)
         out.group = e.Group;
+      if (isType(e.LastModified, "string"))
+        out.lastModified = e.LastModified.value;
+      if (has(e.BoxColorInfo))
+        out.boxColorInfo = e.BoxColorInfo;
+      if (has(e.Thumb))
+        out.thumb = e.Thumb;
+      if (has(e.B))
+        out.b = e.B;
+      if (isNum(e.Dur))
+        out.dur = e.Dur.value;
+      if (has(e.Trans))
+        out.trans = e.Trans;
+      if (has(e.AA))
+        out.aa = e.AA;
+      if (has(e.PieceInfo))
+        out.pieceInfo = e.PieceInfo;
+      if (isType(e.StructParents, "int"))
+        out.structParents = e.StructParents.value;
+      if (isType(e.ID, "string"))
+        out.id = e.ID.value;
+      if (isNum(e.PZ))
+        out.pz = e.PZ.value;
+      if (has(e.SeparationInfo))
+        out.separationInfo = e.SeparationInfo;
+      if (isType(e.TemplateInstantiated, "name"))
+        out.templateInstantiated = e.TemplateInstantiated.value;
+      if (has(e.PresSteps))
+        out.presSteps = e.PresSteps;
+      if (has(e.VP))
+        out.vp = e.VP;
+      if (has(e.AF))
+        out.af = e.AF;
+      if (has(e.OutputIntents))
+        out.outputIntents = e.OutputIntents;
+      if (has(e.DPart))
+        out.dPart = e.DPart;
       for (const k of Object.keys(e))
         if (!KNOWN.has(k))
           out._extras[k] = e[k];
@@ -1648,11 +1729,9 @@ endstream`);
           case 3:
             out[i] = v - (left + up >> 1) & 255;
             break;
-          case 4:
+          default:
             out[i] = v - paeth(left, up, upLeft) & 255;
             break;
-          default:
-            throw new ParseError("pdf/flate/bad-png-filter", "unknown PNG filter tag", { context: { tag: filter } });
         }
       }
       return out;
@@ -2123,7 +2202,7 @@ endstream`);
     return { decode, encode };
   } });
     __register({ name: "pdfFilterDispatch", dependencies: ["pdfErrors","pdfFlate","pdfAsciiHex","pdfAscii85","pdfRunLength"], factory: function(errors, flate, asciiHex, ascii85, runLength) {
-    const { ParseError } = errors;
+    const { ParseError, ContractError } = errors;
     function isType(node, kind) {
       return !!(node && node.type === kind);
     }
@@ -2239,7 +2318,68 @@ endstream`);
     function names() {
       return Object.keys(decoders);
     }
+    function filterNames(v) {
+      if (v === void 0)
+        return [];
+      if (isType(v, "name"))
+        return [v.value];
+      if (isType(v, "array") && v.items.every((it) => isType(it, "name")))
+        return v.items.map((it) => it.value);
+      return null;
+    }
+    function filterParms(v) {
+      if (isType(v, "dict"))
+        return [v];
+      if (isType(v, "array") && v.items.every((it) => isType(it, "dict") || isType(it, "null")))
+        return v.items.map((it) => isType(it, "dict") ? it : null);
+      return null;
+    }
+    function typeStreamEntries(streamObj) {
+      const dict = isType(streamObj, "stream") ? streamObj.dict : streamObj;
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/filter/not-stream", "typeStreamEntries expects a stream or a stream dictionary", { context: { type: streamObj && streamObj.type } });
+      const e = dict.entries, refOf = (v) => isType(v, "ref") ? { num: v.num, gen: v.gen } : null;
+      return {
+        length: isType(e.Length, "int") ? e.Length.value : refOf(e.Length),
+        filter: filterNames(e.Filter),
+        decodeParms: filterParms(e.DecodeParms),
+        f: isType(e.F, "string") ? e.F.value : isType(e.F, "dict") ? e.F : refOf(e.F),
+        fFilter: filterNames(e.FFilter),
+        fDecodeParms: filterParms(e.FDecodeParms),
+        dl: isType(e.DL, "int") && e.DL.value >= 0 ? e.DL.value : null
+      };
+    }
+    const DECODE_READ = Object.freeze({
+      int: (v) => isType(v, "int") ? v.value : null,
+      bool: (v) => isType(v, "bool") ? v.value : null,
+      name: (v) => isType(v, "name") ? v.value : null,
+      stream: (v) => isType(v, "stream") ? v : null
+    }), keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), PREDICTOR = "Predictor:int Colors:int BitsPerComponent:int Columns:int", DECODE_PARMS_TYPES = Object.freeze({
+      FlateDecode: keyTypes(PREDICTOR),
+      LZWDecode: keyTypes(`${PREDICTOR} EarlyChange:int`),
+      CCITTFaxDecode: keyTypes("K:int EndOfLine:bool EncodedByteAlign:bool Columns:int Rows:int EndOfBlock:bool BlackIs1:bool DamagedRowsBeforeError:int"),
+      DCTDecode: keyTypes("ColorTransform:int"),
+      JBIG2Decode: keyTypes("JBIG2Globals:stream"),
+      Crypt: keyTypes("Type:name Name:name")
+    }), DECODE_PARMS_KEYS = Object.freeze(Object.fromEntries(Object.entries(DECODE_PARMS_TYPES).map(([filter, types]) => [filter, Object.freeze(Object.keys(types))])));
+    function typeDecodeParms(dict, filter) {
+      const name = typeof filter === "string" ? resolveAbbrev(filter) : filter;
+      if (typeof name !== "string" || !Object.prototype.hasOwnProperty.call(DECODE_PARMS_TYPES, name))
+        throw new ContractError("pdf/filter/decodeparms/filter", "filter must be a key of DECODE_PARMS_KEYS", { context: { filter } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/filter/decodeparms/not-dict", "decode parameters must be a dictionary", { context: { type: dict && dict.type } });
+      const types = DECODE_PARMS_TYPES[name], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (!Object.prototype.hasOwnProperty.call(types, k))
+          out._extras[k] = v;
+        else
+          out[k.toLowerCase()] = isType(v, "ref") ? v : DECODE_READ[types[k]](v);
+      return out;
+    }
     return {
+      typeStreamEntries,
+      typeDecodeParms,
+      DECODE_PARMS_KEYS,
       decode,
       decodeChain,
       encodeChain,
@@ -2252,8 +2392,1195 @@ endstream`);
       decodeStream
     };
   } });
-    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod) {
-    const { ParseError } = errors, tokenize = tokenizerMod && tokenizerMod.tokenize, parseIndirect = parserMod && parserMod.parseIndirect, locateStartXref = xrefMod && xrefMod.locateStartXref, readStartXref = xrefMod && xrefMod.readStartXref, parseXrefTable = xrefMod && xrefMod.parseXrefTable, parseTrailerDict = xrefMod && xrefMod.parseTrailerDict, typeTrailer = trailerMod && trailerMod.typeTrailer, typeCatalog = catalogMod && catalogMod.typeCatalog, typePage = pageMod && pageMod.typePage, walkPageTree = pagesMod && pagesMod.walkPageTree, HEADER_PREFIX = new Uint8Array([37, 80, 68, 70, 45]), XREF_KEYWORD = new Uint8Array([120, 114, 101, 102]), PDF_NULL = Object.freeze({ type: "null" }), SECTION_LOCAL_KEYS = new Set([
+    __register({ name: "pdfSecurity", dependencies: ["pdfErrors"], factory: function(errors) {
+    const { EncryptionError } = errors;
+    function asUint8(v) {
+      if (v == null)
+        return;
+      if (v instanceof Uint8Array)
+        return v;
+      if (typeof v === "string") {
+        const out = new Uint8Array(v.length);
+        for (let i = 0;i < v.length; i++)
+          out[i] = v.charCodeAt(i) & 255;
+        return out;
+      }
+      if (Array.isArray(v))
+        return new Uint8Array(v);
+      return;
+    }
+    function typeEncryptDict(dict) {
+      if (dict == null || typeof dict !== "object")
+        throw new EncryptionError("pdf/crypto/encrypt-dict/bad-input", "/Encrypt must be a dictionary");
+      const isNode = !(dict instanceof Map) && dict.type === "dict" && dict.entries !== null && typeof dict.entries === "object", plain = (n) => n && typeof n === "object" && (n.type === "int" || n.type === "real" || n.type === "bool" || n.type === "string") ? n.value : n, get = (k) => dict instanceof Map ? dict.get(k) : isNode ? plain(dict.entries[k]) : dict[k], V = get("V"), R = get("R"), Filter = get("Filter");
+      if (V === void 0 || R === void 0)
+        throw new EncryptionError("pdf/crypto/encrypt-dict/missing-V-R", "/Encrypt requires both /V and /R", { context: { V, R } });
+      if (typeof V !== "number" || typeof R !== "number")
+        throw new EncryptionError("pdf/crypto/encrypt-dict/bad-V-R-type", "/V and /R must be integers", { context: { V, R } });
+      return {
+        V,
+        R,
+        Filter,
+        SubFilter: get("SubFilter"),
+        Length: get("Length"),
+        CF: get("CF"),
+        StmF: get("StmF"),
+        StrF: get("StrF"),
+        EFF: get("EFF"),
+        O: asUint8(get("O")),
+        U: asUint8(get("U")),
+        OE: asUint8(get("OE")),
+        UE: asUint8(get("UE")),
+        Perms: asUint8(get("Perms")),
+        EncryptMetadata: get("EncryptMetadata") !== !1,
+        P: get("P"),
+        raw: dict
+      };
+    }
+    function nameValue(v) {
+      if (v == null)
+        return null;
+      if (typeof v === "string")
+        return v;
+      if (typeof v === "object" && v.type === "name")
+        return v.value;
+      return null;
+    }
+    function dictGet(d, key) {
+      if (d == null)
+        return;
+      if (d instanceof Map)
+        return d.get(key);
+      if (typeof d === "object" && d.type === "dict" && d.entries)
+        return d.entries[key];
+      if (typeof d === "object")
+        return d[key];
+      return;
+    }
+    function resolveV4Method(typedEncrypt) {
+      const stmFName = nameValue(typedEncrypt.StmF) || "Identity", strFName = nameValue(typedEncrypt.StrF) || "Identity", effName = nameValue(typedEncrypt.EFF) || stmFName, streamMethod = stmFName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, stmFName), stringMethod = strFName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, strFName), embeddedFileMethod = effName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, effName);
+      return {
+        method: streamMethod,
+        strMethod: stringMethod,
+        effMethod: embeddedFileMethod
+      };
+    }
+    function resolveCfmFor(typedEncrypt, filterName) {
+      const cf = typedEncrypt.CF, entry = dictGet(cf, filterName);
+      if (!entry)
+        throw new EncryptionError("pdf/crypto/v4/missing-cf-entry", "V=4 requires /CF /" + filterName + " entry", { context: { filterName } });
+      const cfm = nameValue(dictGet(entry, "CFM"));
+      if (cfm !== "AESV2" && cfm !== "V2")
+        throw new EncryptionError("pdf/crypto/v4/bad-cfm", "V=4 CFM must be AESV2 or V2", { context: { cfm } });
+      return cfm;
+    }
+    function resolveV5Method(typedEncrypt) {
+      const stmFName = nameValue(typedEncrypt.StmF) || "Identity", strFName = nameValue(typedEncrypt.StrF) || "Identity", effName = nameValue(typedEncrypt.EFF) || stmFName, streamMethod = stmFName === "Identity" ? "Identity" : resolveCfmForV5(typedEncrypt, stmFName), stringMethod = strFName === "Identity" ? "Identity" : resolveCfmForV5(typedEncrypt, strFName), embeddedFileMethod = effName === "Identity" ? "Identity" : resolveCfmForV5(typedEncrypt, effName);
+      return {
+        method: streamMethod,
+        strMethod: stringMethod,
+        effMethod: embeddedFileMethod
+      };
+    }
+    function resolveCfmForV5(typedEncrypt, filterName) {
+      const cf = typedEncrypt.CF, entry = dictGet(cf, filterName);
+      if (!entry)
+        return "AESV3";
+      const cfm = nameValue(dictGet(entry, "CFM"));
+      if (cfm == null)
+        return "AESV3";
+      if (cfm !== "AESV3" && cfm !== "AESV4")
+        throw new EncryptionError("pdf/crypto/v5/bad-cfm", "V=5 CFM must be AESV3 or AESV4", { context: { cfm } });
+      return cfm;
+    }
+    function selectHandler(typedEncrypt, handlers) {
+      if (!typedEncrypt || typeof typedEncrypt !== "object")
+        throw new EncryptionError("pdf/crypto/security/bad-typed", "selectHandler requires a typed /Encrypt");
+      const { V, R } = typedEncrypt;
+      if (V < 4)
+        throw new EncryptionError("pdf/crypto/unsupported-version", "Security Handler V=" + V + " is not supported at this level", { context: { V, R } });
+      if (V === 4) {
+        if (R !== 4)
+          throw new EncryptionError("pdf/crypto/unsupported-version", "Standard handler V=4 requires R=4", { context: { V, R } });
+        if (!handlers || !handlers.v4)
+          throw new EncryptionError("pdf/crypto/missing-handler", "no v4 handler provided");
+        const m = resolveV4Method(typedEncrypt);
+        return {
+          handler: handlers.v4,
+          revision: 4,
+          method: m.method,
+          strMethod: m.strMethod,
+          effMethod: m.effMethod
+        };
+      }
+      if (V !== 5)
+        throw new EncryptionError("pdf/crypto/unsupported-version", "Security Handler V=" + V + " is unknown", { context: { V, R } });
+      if (R === 5) {
+        if (!handlers || !handlers.v5)
+          throw new EncryptionError("pdf/crypto/missing-handler", "no v5 handler provided");
+        const m5 = resolveV5Method(typedEncrypt);
+        return {
+          handler: handlers.v5,
+          revision: 5,
+          method: m5.method,
+          strMethod: m5.strMethod,
+          effMethod: m5.effMethod
+        };
+      }
+      if (R === 6) {
+        if (!handlers || !handlers.v6)
+          throw new EncryptionError("pdf/crypto/missing-handler", "no v6 handler provided");
+        const m6 = resolveV5Method(typedEncrypt);
+        return {
+          handler: handlers.v6,
+          revision: 6,
+          method: m6.method,
+          strMethod: m6.strMethod,
+          effMethod: m6.effMethod
+        };
+      }
+      throw new EncryptionError("pdf/crypto/unsupported-version", "Standard handler revision R=" + R + " is not supported", { context: { V, R } });
+    }
+    function isEmbeddedFileStream(stream) {
+      if (!stream || stream.type !== "stream")
+        return !1;
+      const d = stream.dict;
+      if (!d || d.type !== "dict" || !d.entries)
+        return !1;
+      const t = d.entries.Type;
+      if (!t)
+        return !1;
+      if (t.type === "name")
+        return t.value === "EmbeddedFile";
+      if (typeof t === "string")
+        return t === "EmbeddedFile";
+      return !1;
+    }
+    function dispatchDecryptStream(selection, stream, fek, objNum, gen, ciphertext, opts) {
+      if (!selection || typeof selection !== "object" || !selection.handler)
+        throw new EncryptionError("pdf/crypto/security/bad-selection", "dispatchDecryptStream requires a selection from selectHandler");
+      const h = selection.handler, embedded = isEmbeddedFileStream(stream);
+      if ((embedded ? selection.effMethod : selection.method) === "Identity")
+        return ciphertext;
+      if (embedded) {
+        const typedView = { method: selection.effMethod };
+        if (typeof h.decryptEmbeddedFile === "function")
+          return h.decryptEmbeddedFile(typedView, fek, objNum, gen, ciphertext, opts);
+        if (typeof h.decryptStream === "function")
+          return h.decryptStream(typedView, fek, objNum, gen, ciphertext, opts);
+        throw new EncryptionError("pdf/crypto/security/no-eff", "selected handler lacks decryptEmbeddedFile and decryptStream");
+      }
+      if (typeof h.decryptStream !== "function")
+        throw new EncryptionError("pdf/crypto/security/no-stream", "selected handler lacks decryptStream");
+      const typedView = { method: selection.method };
+      return h.decryptStream(typedView, fek, objNum, gen, ciphertext, opts);
+    }
+    return {
+      typeEncryptDict,
+      selectHandler,
+      isEmbeddedFileStream,
+      dispatchDecryptStream
+    };
+  } });
+    __register({ name: "pdfStandardV4", dependencies: ["pdfErrors","aes","cbc","bitArray"], factory: function(errors, aes, cbc, bitArray) {
+    const { EncryptionError } = errors;
+    if (!aes || !cbc || !bitArray)
+      throw new EncryptionError("pdf/crypto/v4/missing-fw", "pdfStandardV4 requires aes, cbc, bitArray fw modules");
+    const PASSWORD_PADDING = new Uint8Array([
+      40,
+      191,
+      78,
+      94,
+      78,
+      117,
+      138,
+      65,
+      100,
+      0,
+      78,
+      86,
+      255,
+      250,
+      1,
+      8,
+      46,
+      46,
+      0,
+      182,
+      208,
+      104,
+      62,
+      128,
+      47,
+      12,
+      169,
+      254,
+      100,
+      83,
+      105,
+      122
+    ]), AES_SALT = new Uint8Array([115, 65, 108, 84]);
+    function bytesToWords(b, off, len) {
+      const n = len >>> 2, out = Array(n);
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        out[i] = b[j] << 24 | b[j + 1] << 16 | b[j + 2] << 8 | b[j + 3] | 0;
+      }
+      return out;
+    }
+    function wordsToBytes(w, into, off) {
+      for (let i = 0;i < w.length; i++) {
+        const j = off + (i << 2);
+        into[j] = w[i] >>> 24 & 255;
+        into[j + 1] = w[i] >>> 16 & 255;
+        into[j + 2] = w[i] >>> 8 & 255;
+        into[j + 3] = w[i] & 255;
+      }
+    }
+    function rc4(key, data) {
+      const S = new Uint8Array(256);
+      for (let i = 0;i < 256; i++)
+        S[i] = i;
+      let j = 0;
+      for (let i = 0;i < 256; i++) {
+        j = j + S[i] + key[i % key.length] & 255;
+        const t = S[i];
+        S[i] = S[j];
+        S[j] = t;
+      }
+      const out = new Uint8Array(data.length);
+      let a = 0, b = 0;
+      for (let n = 0;n < data.length; n++) {
+        a = a + 1 & 255;
+        b = b + S[a] & 255;
+        const t = S[a];
+        S[a] = S[b];
+        S[b] = t;
+        const k = S[S[a] + S[b] & 255];
+        out[n] = data[n] ^ k;
+      }
+      return out;
+    }
+    function md5(bytes) {
+      function rol(x, n) {
+        return x << n | x >>> 32 - n | 0;
+      }
+      const r = [
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21
+      ], k = [
+        3614090360,
+        3905402710,
+        606105819,
+        3250441966,
+        4118548399,
+        1200080426,
+        2821735955,
+        4249261313,
+        1770035416,
+        2336552879,
+        4294925233,
+        2304563134,
+        1804603682,
+        4254626195,
+        2792965006,
+        1236535329,
+        4129170786,
+        3225465664,
+        643717713,
+        3921069994,
+        3593408605,
+        38016083,
+        3634488961,
+        3889429448,
+        568446438,
+        3275163606,
+        4107603335,
+        1163531501,
+        2850285829,
+        4243563512,
+        1735328473,
+        2368359562,
+        4294588738,
+        2272392833,
+        1839030562,
+        4259657740,
+        2763975236,
+        1272893353,
+        4139469664,
+        3200236656,
+        681279174,
+        3936430074,
+        3572445317,
+        76029189,
+        3654602809,
+        3873151461,
+        530742520,
+        3299628645,
+        4096336452,
+        1126891415,
+        2878612391,
+        4237533241,
+        1700485571,
+        2399980690,
+        4293915773,
+        2240044497,
+        1873313359,
+        4264355552,
+        2734768916,
+        1309151649,
+        4149444226,
+        3174756917,
+        718787259,
+        3951481745
+      ], msgLenBytes = bytes.length, withOne = new Uint8Array((msgLenBytes + 8 >> 6 << 6) + 64);
+      withOne.set(bytes);
+      withOne[msgLenBytes] = 128;
+      const bitsLo = msgLenBytes * 8 >>> 0, bitsHi = Math.floor(msgLenBytes * 8 / 4294967296) >>> 0, dv = new DataView(withOne.buffer);
+      dv.setUint32(withOne.length - 8, bitsLo, !0);
+      dv.setUint32(withOne.length - 4, bitsHi, !0);
+      let a0 = 1732584193, b0 = -271733879, c0 = -1732584194, d0 = 271733878;
+      for (let off = 0;off < withOne.length; off += 64) {
+        const M = Array(16);
+        for (let i = 0;i < 16; i++)
+          M[i] = dv.getUint32(off + i * 4, !0);
+        let A = a0, B = b0, C = c0, D = d0;
+        for (let i = 0;i < 64; i++) {
+          let F, g;
+          if (i < 16) {
+            F = B & C | ~B & D;
+            g = i;
+          } else if (i < 32) {
+            F = D & B | ~D & C;
+            g = (5 * i + 1) % 16;
+          } else if (i < 48) {
+            F = B ^ C ^ D;
+            g = (3 * i + 5) % 16;
+          } else {
+            F = C ^ (B | ~D);
+            g = 7 * i % 16;
+          }
+          const t = A + F + k[i] + M[g] | 0;
+          A = D;
+          D = C;
+          C = B;
+          B = B + rol(t, r[i]) | 0;
+        }
+        a0 = a0 + A | 0;
+        b0 = b0 + B | 0;
+        c0 = c0 + C | 0;
+        d0 = d0 + D | 0;
+      }
+      const out = new Uint8Array(16), ov = new DataView(out.buffer);
+      ov.setUint32(0, a0, !0);
+      ov.setUint32(4, b0, !0);
+      ov.setUint32(8, c0, !0);
+      ov.setUint32(12, d0, !0);
+      return out;
+    }
+    function padPassword(pw) {
+      if (pw === void 0 || pw === null)
+        pw = "";
+      if (typeof pw === "string")
+        pw = new TextEncoder().encode(pw);
+      if (!(pw instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/bad-password", "password must be string or Uint8Array");
+      const out = new Uint8Array(32), take = Math.min(32, pw.length);
+      out.set(pw.subarray(0, take));
+      out.set(PASSWORD_PADDING.subarray(0, 32 - take), take);
+      return out;
+    }
+    function computeFileKey(pw, O, P, idFirst, encryptMetadata) {
+      if (!(O instanceof Uint8Array) || O.length !== 32)
+        throw new EncryptionError("pdf/crypto/v4/bad-O", "/O must be a 32-byte Uint8Array");
+      if (!(idFirst instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/bad-id", "first /ID element required");
+      const padded = padPassword(pw), extra = encryptMetadata === !1 ? 4 : 0, buf = new Uint8Array(68 + idFirst.length + extra);
+      let p = 0;
+      buf.set(padded, p);
+      p += 32;
+      buf.set(O, p);
+      p += 32;
+      new DataView(buf.buffer).setInt32(p, P | 0, !0);
+      p += 4;
+      buf.set(idFirst, p);
+      p += idFirst.length;
+      if (extra) {
+        buf[p++] = 255;
+        buf[p++] = 255;
+        buf[p++] = 255;
+        buf[p] = 255;
+      }
+      let h = md5(buf);
+      const nBytes = 16;
+      for (let i = 0;i < 50; i++)
+        h = md5(h.subarray(0, nBytes));
+      return h.subarray(0, nBytes);
+    }
+    function computeU(fileKey, idFirst) {
+      const seed = new Uint8Array(PASSWORD_PADDING.length + idFirst.length);
+      seed.set(PASSWORD_PADDING, 0);
+      seed.set(idFirst, PASSWORD_PADDING.length);
+      let h = md5(seed);
+      h = rc4(fileKey, h);
+      for (let i = 1;i <= 19; i++) {
+        const xk = new Uint8Array(fileKey.length);
+        for (let n = 0;n < fileKey.length; n++)
+          xk[n] = fileKey[n] ^ i;
+        h = rc4(xk, h);
+      }
+      const out = new Uint8Array(32);
+      out.set(h, 0);
+      return out;
+    }
+    function computeO(ownerPw, userPw) {
+      const oPad = padPassword(ownerPw && ownerPw.length ? ownerPw : userPw);
+      let h = md5(oPad);
+      for (let i = 0;i < 50; i++)
+        h = md5(h);
+      const rc4Key = h.subarray(0, 16);
+      let out = rc4(rc4Key, padPassword(userPw));
+      for (let i = 1;i <= 19; i++) {
+        const xk = new Uint8Array(16);
+        for (let n = 0;n < 16; n++)
+          xk[n] = rc4Key[n] ^ i;
+        out = rc4(xk, out);
+      }
+      return out;
+    }
+    function bytesEqual(a, b, n) {
+      const len = n === void 0 ? Math.min(a.length, b.length) : n;
+      for (let i = 0;i < len; i++)
+        if (a[i] !== b[i])
+          return !1;
+      return !0;
+    }
+    function objectKey(fileKey, objNum, gen, isAes) {
+      const extra = isAes ? 4 : 0, buf = new Uint8Array(fileKey.length + 5 + extra);
+      buf.set(fileKey, 0);
+      buf[fileKey.length + 0] = objNum & 255;
+      buf[fileKey.length + 1] = objNum >> 8 & 255;
+      buf[fileKey.length + 2] = objNum >> 16 & 255;
+      buf[fileKey.length + 3] = gen & 255;
+      buf[fileKey.length + 4] = gen >> 8 & 255;
+      if (isAes)
+        buf.set(AES_SALT, fileKey.length + 5);
+      return md5(buf).subarray(0, Math.min(fileKey.length + 5, 16));
+    }
+    function aesOf(opts) {
+      return opts && opts.fastCipher === !0 && aes.ttable ? aes.ttable : aes;
+    }
+    function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
+      if (ciphertext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v4/bad-ciphertext-len", "AES-CBC ciphertext length must be a multiple of 16");
+      const cipher = A.fn(bytesToWords(key, 0, key.length), !0);
+      if (cipher === !1)
+        throw new EncryptionError("pdf/crypto/v4/aes-schedule-failed", "AES-128 key schedule failed");
+      const ctWords = bytesToWords(ciphertext, 0, ciphertext.length), ivWords = bytesToWords(iv, 0, 16), ptWords = cbc.decrypt(cipher, ctWords, ivWords);
+      if (ptWords === !1)
+        throw new EncryptionError("pdf/crypto/v4/cbc-decrypt-failed", "AES-128-CBC decryption failed");
+      const out = new Uint8Array(ciphertext.length);
+      wordsToBytes(ptWords, out, 0);
+      return out;
+    }
+    function aesCbcEncrypt(key, iv, plaintext) {
+      if (plaintext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v4/bad-pt-len", "AES-CBC plaintext length must be a multiple of 16");
+      const cipher = aes.fn(bytesToWords(key, 0, key.length), !1);
+      if (cipher === !1 || typeof cipher.encrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v4/aes-encrypt-schedule", "AES-128 key schedule failed for encrypt");
+      const ptWords = bytesToWords(plaintext, 0, plaintext.length), ivWords = bytesToWords(iv, 0, 16), ctWords = cbc.encrypt(cipher, ptWords, ivWords);
+      if (ctWords === !1)
+        throw new EncryptionError("pdf/crypto/v4/cbc-encrypt-failed", "AES-128-CBC encryption failed");
+      const out = new Uint8Array(plaintext.length);
+      wordsToBytes(ctWords, out, 0);
+      return out;
+    }
+    function padPkcs7(buf) {
+      const pad = 16 - buf.length % 16, out = new Uint8Array(buf.length + pad);
+      out.set(buf);
+      for (let i = buf.length;i < out.length; i++)
+        out[i] = pad;
+      return out;
+    }
+    function stripPkcs7(buf) {
+      if (buf.length === 0)
+        return buf;
+      const pad = buf[buf.length - 1];
+      if (pad < 1 || pad > 16 || pad > buf.length)
+        return buf;
+      for (let i = buf.length - pad;i < buf.length; i++)
+        if (buf[i] !== pad)
+          return buf;
+      return buf.subarray(0, buf.length - pad);
+    }
+    function tryPassword(typedEncrypt, password, isOwner, _opts) {
+      const { O, U, idFirst } = typedEncrypt, P = typedEncrypt.P | 0, encryptMetadata = typedEncrypt.EncryptMetadata !== !1;
+      if (!(O instanceof Uint8Array) || O.length !== 32 || !(U instanceof Uint8Array) || U.length !== 32)
+        throw new EncryptionError("pdf/crypto/v4/bad-O-U", "/O and /U must be 32 bytes for v4");
+      if (!(idFirst instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/bad-id", "idFirst is required for v4 key derivation");
+      let userPw;
+      if (isOwner) {
+        const oPad = padPassword(password);
+        let h = md5(oPad);
+        for (let i = 0;i < 50; i++)
+          h = md5(h);
+        const rc4Key = h.subarray(0, 16);
+        let recovered = O;
+        for (let i = 19;i >= 0; i--) {
+          const xk = new Uint8Array(16);
+          for (let n = 0;n < 16; n++)
+            xk[n] = rc4Key[n] ^ i;
+          recovered = rc4(xk, recovered);
+        }
+        userPw = recovered;
+      } else
+        userPw = password;
+      const fk = computeFileKey(userPw, O, P, idFirst, encryptMetadata), u = computeU(fk, idFirst);
+      return bytesEqual(u, U, 16) ? { fileEncryptionKey: fk } : { fileEncryptionKey: null };
+    }
+    function decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      const method = typedEncrypt && typedEncrypt.method;
+      if (method === "AESV2") {
+        if (ciphertext.length < 16)
+          throw new EncryptionError("pdf/crypto/v4/bad-string", "AESV2 string must be at least 16 bytes (IV)");
+        const key = objectKey(fek, objNum, gen, !0), iv = ciphertext.subarray(0, 16), body = ciphertext.subarray(16);
+        if (body.length === 0)
+          return body;
+        const pt = aesCbcDecrypt(key, iv, body, aesOf(opts));
+        return stripPkcs7(pt);
+      }
+      if (method === "V2" || method === "RC4") {
+        const key = objectKey(fek, objNum, gen, !1);
+        return rc4(key, ciphertext);
+      }
+      throw new EncryptionError("pdf/crypto/v4/bad-method", "V4 method must be AESV2 or V2", { context: { method } });
+    }
+    function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
+    }
+    function decryptEmbeddedFile(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
+    }
+    function encryptEmbeddedFile(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);
+    }
+    function encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      const method = typedEncrypt && typedEncrypt.method;
+      if (!(plaintext instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/encrypt-bad-input", "plaintext must be Uint8Array");
+      if (method === "AESV2") {
+        if (!(iv instanceof Uint8Array) || iv.length !== 16)
+          throw new EncryptionError("pdf/crypto/v4/encrypt-bad-iv", "AESV2 IV must be 16 bytes");
+        const key = objectKey(fek, objNum, gen, !0), padded = padPkcs7(plaintext), body = aesCbcEncrypt(key, iv, padded), out = new Uint8Array(16 + body.length);
+        out.set(iv, 0);
+        out.set(body, 16);
+        return out;
+      }
+      if (method === "V2" || method === "RC4") {
+        const key = objectKey(fek, objNum, gen, !1);
+        return rc4(key, plaintext);
+      }
+      throw new EncryptionError("pdf/crypto/v4/bad-method", "V4 method must be AESV2 or V2", { context: { method } });
+    }
+    function encryptStream(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);
+    }
+    function buildOU(ownerPassword, userPassword, P, idFirst, encryptMetadata) {
+      if (!(idFirst instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/bad-id", "idFirst required to build /O and /U");
+      const O = computeO(ownerPassword, userPassword), fek = computeFileKey(userPassword, O, P, idFirst, encryptMetadata), U = computeU(fek, idFirst);
+      return { O, U, fek };
+    }
+    function buildPerms() {
+      return null;
+    }
+    return {
+      tryPassword,
+      decryptString,
+      decryptStream,
+      decryptEmbeddedFile,
+      encryptEmbeddedFile,
+      encryptString,
+      encryptStream,
+      buildOU,
+      buildPerms,
+      computeFileKey,
+      computeU,
+      computeO,
+      objectKey,
+      rc4,
+      md5,
+      padPassword,
+      PASSWORD_PADDING
+    };
+  } });
+    __register({ name: "pdfAesGcm", dependencies: ["pdfErrors","aes","gcm","bitArray"], factory: function(errors, aes, gcm, bitArray) {
+    const { EncryptionError } = errors;
+    function bytesToWords(b, off, len) {
+      const n = len >>> 2, out = Array(n);
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        out[i] = b[j] << 24 | b[j + 1] << 16 | b[j + 2] << 8 | b[j + 3] | 0;
+      }
+      return out;
+    }
+    if (!aes || !gcm || !bitArray)
+      throw new EncryptionError("pdf/crypto/gcm/missing-fw", "pdfAesGcm requires aes, gcm, bitArray fw modules");
+    function buildCipher(fek) {
+      if (!(fek instanceof Uint8Array) || fek.length !== 32)
+        throw new EncryptionError("pdf/crypto/gcm/bad-fek", "File Encryption Key must be 32 bytes (AES-256)", { context: { length: fek && fek.length } });
+      const c = aes.fn(bytesToWords(fek, 0, 32), !1);
+      if (c === !1)
+        throw new EncryptionError("pdf/crypto/gcm/aes-schedule-failed", "AES-256 key schedule failed");
+      return c;
+    }
+    function decryptObjectGcm(fek, framed) {
+      if (!(framed instanceof Uint8Array) || framed.length < 28)
+        throw new EncryptionError("pdf/crypto/gcm/bad-input", "AES-GCM framed input must be at least 28 bytes (IV + tag)");
+      const cipher = buildCipher(fek), iv = framed.subarray(0, 12), tag = framed.subarray(framed.length - 16), ct = framed.subarray(12, framed.length - 16), pt = gcm.decrypt(cipher, bitArray.ui8_to_ba(ct), bitArray.ui8_to_ba(iv), [], bitArray.ui8_to_ba(tag), 128);
+      if (pt === !1)
+        throw new EncryptionError("pdf/crypto/gcm/tag-mismatch", "AES-GCM authentication tag mismatch");
+      return bitArray.ba_to_ui8(pt);
+    }
+    function encryptObjectGcm(fek, plaintext, ivProvider) {
+      if (!(plaintext instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/gcm/bad-plaintext", "plaintext must be Uint8Array");
+      if (typeof ivProvider !== "function")
+        throw new EncryptionError("pdf/crypto/gcm/bad-iv-provider", "ivProvider must be a function returning 12 bytes");
+      const iv = ivProvider();
+      if (!(iv instanceof Uint8Array) || iv.length !== 12)
+        throw new EncryptionError("pdf/crypto/gcm/bad-iv", "ivProvider must return exactly 12 bytes (96-bit nonce)", { context: { length: iv && iv.length } });
+      const cipher = buildCipher(fek), res = gcm.encrypt(cipher, bitArray.ui8_to_ba(plaintext), bitArray.ui8_to_ba(iv), [], 128);
+      if (res === !1)
+        throw new EncryptionError("pdf/crypto/gcm/encrypt-failed", "AES-GCM encryption failed");
+      const ct = bitArray.ba_to_ui8(res.ct), tag = bitArray.ba_to_ui8(res.tag), out = new Uint8Array(12 + ct.length + 16);
+      out.set(iv, 0);
+      out.set(ct, 12);
+      out.set(tag, 12 + ct.length);
+      return out;
+    }
+    return { encryptObjectGcm, decryptObjectGcm };
+  } });
+    __register({ name: "pdfStandardV5", dependencies: ["pdfErrors","aes","cbc","sha256","bitArray","pdfAesGcm"], factory: function(errors, aes, cbc, sha256, bitArray, pdfAesGcm) {
+    const { EncryptionError } = errors;
+    if (!aes || !cbc || !sha256 || !bitArray)
+      throw new EncryptionError("pdf/crypto/v5/missing-fw", "pdfStandardV5 requires aes, cbc, sha256, bitArray fw modules");
+    const ZERO_IV = new Uint8Array(16);
+    function bytesToWords(b, off, len) {
+      const n = len >>> 2, out = Array(n);
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        out[i] = b[j] << 24 | b[j + 1] << 16 | b[j + 2] << 8 | b[j + 3] | 0;
+      }
+      return out;
+    }
+    function wordsToBytes(w, into, off) {
+      for (let i = 0;i < w.length; i++) {
+        const j = off + (i << 2);
+        into[j] = w[i] >>> 24 & 255;
+        into[j + 1] = w[i] >>> 16 & 255;
+        into[j + 2] = w[i] >>> 8 & 255;
+        into[j + 3] = w[i] & 255;
+      }
+    }
+    function passwordToBytes(password) {
+      if (password === void 0 || password === null || password === "")
+        return new Uint8Array(0);
+      if (password instanceof Uint8Array)
+        return password.length > 127 ? password.subarray(0, 127) : password;
+      if (typeof password === "string") {
+        const enc = new TextEncoder().encode(password);
+        return enc.length > 127 ? enc.subarray(0, 127) : enc;
+      }
+      throw new EncryptionError("pdf/crypto/v5/bad-password", "password must be string or Uint8Array");
+    }
+    function sha256Bytes(bytes) {
+      const ba = bitArray.ui8_to_ba(bytes), out = sha256.hash(ba);
+      return bitArray.ba_to_ui8(out);
+    }
+    function concatBytes(parts) {
+      let n = 0;
+      for (const p of parts)
+        n += p.length;
+      const out = new Uint8Array(n);
+      let off = 0;
+      for (const p of parts) {
+        out.set(p, off);
+        off += p.length;
+      }
+      return out;
+    }
+    function aesOf(opts) {
+      return opts && opts.fastCipher === !0 && aes.ttable ? aes.ttable : aes;
+    }
+    function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
+      if (ciphertext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v5/bad-ciphertext-len", "AES-CBC ciphertext length must be a multiple of 16", { context: { length: ciphertext.length } });
+      const cipher = A.fn(bytesToWords(key, 0, 32), !0);
+      if (cipher === !1)
+        throw new EncryptionError("pdf/crypto/v5/aes-schedule-failed", "AES-256 key schedule failed");
+      const ctWords = bytesToWords(ciphertext, 0, ciphertext.length), ivWords = bytesToWords(iv, 0, 16), ptWords = cbc.decrypt(cipher, ctWords, ivWords);
+      if (ptWords === !1)
+        throw new EncryptionError("pdf/crypto/v5/cbc-decrypt-failed", "AES-256-CBC decryption failed");
+      const out = new Uint8Array(ciphertext.length);
+      wordsToBytes(ptWords, out, 0);
+      return out;
+    }
+    function stripPkcs7(buf) {
+      if (buf.length === 0)
+        return buf;
+      const pad = buf[buf.length - 1];
+      if (pad < 1 || pad > 16 || pad > buf.length)
+        return buf;
+      for (let i = buf.length - pad;i < buf.length; i++)
+        if (buf[i] !== pad)
+          return buf;
+      return buf.subarray(0, buf.length - pad);
+    }
+    function tryPassword(typedEncrypt, password, isOwner, opts) {
+      const { O, U, OE, UE } = typedEncrypt;
+      if (!(O instanceof Uint8Array) || O.length < 48 || !(U instanceof Uint8Array) || U.length < 48)
+        throw new EncryptionError("pdf/crypto/v5/bad-O-U", "/O and /U must be at least 48 bytes for v5");
+      const pw = passwordToBytes(password), target = isOwner ? O : U, valSalt = target.subarray(32, 40), keySalt = target.subarray(40, 48);
+      let h;
+      if (isOwner) {
+        h = sha256Bytes(concatBytes([pw, valSalt, U.subarray(0, 48)]));
+        for (let i = 0;i < 32; i++)
+          if (h[i] !== O[i])
+            return { fileEncryptionKey: null };
+      } else {
+        h = sha256Bytes(concatBytes([pw, valSalt]));
+        for (let i = 0;i < 32; i++)
+          if (h[i] !== U[i])
+            return { fileEncryptionKey: null };
+      }
+      const intermediate = isOwner ? sha256Bytes(concatBytes([pw, keySalt, U.subarray(0, 48)])) : sha256Bytes(concatBytes([pw, keySalt])), oeue = isOwner ? OE : UE;
+      if (!(oeue instanceof Uint8Array) || oeue.length !== 32)
+        throw new EncryptionError("pdf/crypto/v5/bad-OE-UE", "/OE and /UE must be exactly 32 bytes for v5", { context: { length: oeue && oeue.length } });
+      return { fileEncryptionKey: aesCbcDecrypt(intermediate, ZERO_IV, oeue, aesOf(opts)) };
+    }
+    function methodOf(typedEncrypt, fallback) {
+      const m = typedEncrypt && typedEncrypt.method;
+      if (m === "AESV3" || m === "AESV4")
+        return m;
+      return fallback || "AESV3";
+    }
+    function requireGcm() {
+      if (!pdfAesGcm || typeof pdfAesGcm.decryptObjectGcm !== "function")
+        throw new EncryptionError("pdf/crypto/v5/missing-gcm", "AESV4 requires pdfAesGcm dependency");
+      return pdfAesGcm;
+    }
+    function decryptString(typedEncrypt, fek, _objNum, _gen, ciphertext, opts) {
+      if (methodOf(typedEncrypt, "AESV3") === "AESV4")
+        return requireGcm().decryptObjectGcm(fek, ciphertext);
+      if (!(ciphertext instanceof Uint8Array) || ciphertext.length < 32)
+        throw new EncryptionError("pdf/crypto/v5/bad-string", "AES-256 encrypted string must be at least 32 bytes (IV+1 block)");
+      const iv = ciphertext.subarray(0, 16), body = ciphertext.subarray(16), pt = aesCbcDecrypt(fek, iv, body, aesOf(opts));
+      return stripPkcs7(pt);
+    }
+    function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
+    }
+    function aesCbcEncrypt(key, iv, plaintext) {
+      if (plaintext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v5/bad-pt-len", "AES-CBC plaintext length must be a multiple of 16", { context: { length: plaintext.length } });
+      const cipher = aes.fn(bytesToWords(key, 0, key.length), !1);
+      if (cipher === !1 || typeof cipher.encrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v5/aes-encrypt-schedule", "AES key schedule failed for encrypt");
+      const ptWords = bytesToWords(plaintext, 0, plaintext.length), ivWords = bytesToWords(iv, 0, 16), ctWords = cbc.encrypt(cipher, ptWords, ivWords);
+      if (ctWords === !1)
+        throw new EncryptionError("pdf/crypto/v5/cbc-encrypt-failed", "AES-CBC encryption failed");
+      const out = new Uint8Array(plaintext.length);
+      wordsToBytes(ctWords, out, 0);
+      return out;
+    }
+    function padPkcs7(buf) {
+      const pad = 16 - buf.length % 16, out = new Uint8Array(buf.length + pad);
+      out.set(buf);
+      for (let i = buf.length;i < out.length; i++)
+        out[i] = pad;
+      return out;
+    }
+    function encryptString(typedEncrypt, fek, _objNum, _gen, plaintext, iv) {
+      if (!(plaintext instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v5/encrypt-bad-input", "plaintext must be Uint8Array");
+      if (methodOf(typedEncrypt, "AESV3") === "AESV4") {
+        if (!(iv instanceof Uint8Array) || iv.length !== 12)
+          throw new EncryptionError("pdf/crypto/v5/encrypt-bad-iv", "AESV4 IV must be a 12-byte Uint8Array");
+        return requireGcm().encryptObjectGcm(fek, plaintext, () => iv);
+      }
+      if (!(iv instanceof Uint8Array) || iv.length !== 16)
+        throw new EncryptionError("pdf/crypto/v5/encrypt-bad-iv", "IV must be a 16-byte Uint8Array");
+      const padded = padPkcs7(plaintext), body = aesCbcEncrypt(fek, iv, padded), out = new Uint8Array(16 + body.length);
+      out.set(iv, 0);
+      out.set(body, 16);
+      return out;
+    }
+    function encryptStream(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);
+    }
+    function buildUUE(password, fek, valSalt, keySalt) {
+      const pw = passwordToBytes(password), hVal = sha256Bytes(concatBytes([pw, valSalt])), U = new Uint8Array(48);
+      U.set(hVal, 0);
+      U.set(valSalt, 32);
+      U.set(keySalt, 40);
+      const intermediate = sha256Bytes(concatBytes([pw, keySalt])), UE = aesCbcEncrypt(intermediate, ZERO_IV, fek);
+      return { U, UE };
+    }
+    function buildOOE(password, fek, U48, valSalt, keySalt) {
+      const pw = passwordToBytes(password), hVal = sha256Bytes(concatBytes([pw, valSalt, U48])), O = new Uint8Array(48);
+      O.set(hVal, 0);
+      O.set(valSalt, 32);
+      O.set(keySalt, 40);
+      const intermediate = sha256Bytes(concatBytes([pw, keySalt, U48])), OE = aesCbcEncrypt(intermediate, ZERO_IV, fek);
+      return { O, OE };
+    }
+    function buildPerms(p, fek, encryptMetadata, randomBytes) {
+      const buf = new Uint8Array(16), v = p | 0;
+      buf[0] = v & 255;
+      buf[1] = v >>> 8 & 255;
+      buf[2] = v >>> 16 & 255;
+      buf[3] = v >>> 24 & 255;
+      buf[4] = 255;
+      buf[5] = 255;
+      buf[6] = 255;
+      buf[7] = 255;
+      buf[8] = encryptMetadata ? 84 : 70;
+      buf[9] = 97;
+      buf[10] = 100;
+      buf[11] = 98;
+      const rand = randomBytes(4);
+      buf[12] = rand[0];
+      buf[13] = rand[1];
+      buf[14] = rand[2];
+      buf[15] = rand[3];
+      const cipher = aes.fn(bytesToWords(fek, 0, 32), !1);
+      if (cipher === !1 || typeof cipher.encrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v5/perms-schedule", "AES-256-ECB schedule failed for /Perms");
+      const blk = cipher.encrypt(bytesToWords(buf, 0, 16)), out = new Uint8Array(16);
+      wordsToBytes(blk, out, 0);
+      return out;
+    }
+    return {
+      tryPassword,
+      decryptString,
+      decryptStream,
+      encryptString,
+      encryptStream,
+      buildUUE,
+      buildOOE,
+      buildPerms
+    };
+  } });
+    __register({ name: "pdfStandardV6", dependencies: ["pdfErrors","aes","cbc","sha256","sha384","sha512","bitArray","pdfAesGcm"], factory: function(errors, aes, cbc, sha256, sha384, sha512, bitArray, pdfAesGcm) {
+    const { EncryptionError } = errors;
+    if (!aes || !cbc || !sha256 || !sha384 || !sha512 || !bitArray)
+      throw new EncryptionError("pdf/crypto/v6/missing-fw", "pdfStandardV6 requires aes, cbc, sha256, sha384, sha512, bitArray");
+    const ZERO_IV = new Uint8Array(16), _AES128_KEY_SCRATCH = Array(4);
+    function bytesToWords(b, off, len, scratch) {
+      const n = len >>> 2, out = scratch && scratch.length >= n ? scratch : Array(n);
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        out[i] = b[j] << 24 | b[j + 1] << 16 | b[j + 2] << 8 | b[j + 3] | 0;
+      }
+      if (out.length !== n && out !== scratch)
+        out.length = n;
+      if (scratch && out === scratch)
+        out.length = n;
+      return out;
+    }
+    function wordsToBytes(w, into, off, count) {
+      const n = count === void 0 ? w.length : count;
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        into[j] = w[i] >>> 24 & 255;
+        into[j + 1] = w[i] >>> 16 & 255;
+        into[j + 2] = w[i] >>> 8 & 255;
+        into[j + 3] = w[i] & 255;
+      }
+    }
+    function concatBytes(parts) {
+      let n = 0;
+      for (const p of parts)
+        n += p.length;
+      const out = new Uint8Array(n);
+      let off = 0;
+      for (const p of parts) {
+        out.set(p, off);
+        off += p.length;
+      }
+      return out;
+    }
+    function passwordToBytes(password) {
+      if (password === void 0 || password === null || password === "")
+        return new Uint8Array(0);
+      if (password instanceof Uint8Array)
+        return password.length > 127 ? password.subarray(0, 127) : password;
+      if (typeof password === "string") {
+        const enc = new TextEncoder().encode(password);
+        return enc.length > 127 ? enc.subarray(0, 127) : enc;
+      }
+      throw new EncryptionError("pdf/crypto/v6/bad-password", "password must be string or Uint8Array");
+    }
+    function hashBytes(hashMod, bytes, outLen) {
+      const ba = bitArray.ui8_to_ba(bytes), digest = hashMod.hash(ba), u8 = bitArray.ba_to_ui8(digest);
+      return u8.length === outLen ? u8 : u8.subarray(0, outLen);
+    }
+    function aesOf(opts) {
+      return opts && opts.fastCipher === !0 && aes.ttable ? aes.ttable : aes;
+    }
+    function aesCbcEncryptRaw(key, iv, plaintext, A = aes) {
+      if (plaintext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v6/bad-pt-len", "AES-CBC plaintext length must be a multiple of 16", { context: { length: plaintext.length } });
+      const cipher = A.fn(bytesToWords(key, 0, key.length, _AES128_KEY_SCRATCH), !1);
+      if (cipher === !1)
+        throw new EncryptionError("pdf/crypto/v6/aes-schedule-failed", "AES key schedule failed");
+      const out = new Uint8Array(plaintext.length);
+      let p0 = iv[0] << 24 | iv[1] << 16 | iv[2] << 8 | iv[3], p1 = iv[4] << 24 | iv[5] << 16 | iv[6] << 8 | iv[7], p2 = iv[8] << 24 | iv[9] << 16 | iv[10] << 8 | iv[11], p3 = iv[12] << 24 | iv[13] << 16 | iv[14] << 8 | iv[15];
+      for (let off = 0;off < plaintext.length; off += 16) {
+        const b0 = plaintext[off] << 24 | plaintext[off + 1] << 16 | plaintext[off + 2] << 8 | plaintext[off + 3], b1 = plaintext[off + 4] << 24 | plaintext[off + 5] << 16 | plaintext[off + 6] << 8 | plaintext[off + 7], b2 = plaintext[off + 8] << 24 | plaintext[off + 9] << 16 | plaintext[off + 10] << 8 | plaintext[off + 11], b3 = plaintext[off + 12] << 24 | plaintext[off + 13] << 16 | plaintext[off + 14] << 8 | plaintext[off + 15], blk = cipher.encrypt([b0 ^ p0, b1 ^ p1, b2 ^ p2, b3 ^ p3]);
+        p0 = blk[0];
+        p1 = blk[1];
+        p2 = blk[2];
+        p3 = blk[3];
+        wordsToBytes(blk, out, off, 4);
+      }
+      return out;
+    }
+    function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
+      if (ciphertext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v6/bad-ct-len", "AES-CBC ciphertext length must be a multiple of 16");
+      const cipher = A.fn(bytesToWords(key, 0, key.length), !0);
+      if (cipher === !1 || typeof cipher.decrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v6/aes-decrypt-schedule", "AES-256 decrypt key schedule failed");
+      const ctWords = bytesToWords(ciphertext, 0, ciphertext.length), ivWords = bytesToWords(iv, 0, 16), ptWords = cbc.decrypt(cipher, ctWords, ivWords);
+      if (ptWords === !1)
+        throw new EncryptionError("pdf/crypto/v6/cbc-decrypt-failed", "AES-256-CBC decryption failed");
+      const out = new Uint8Array(ciphertext.length);
+      wordsToBytes(ptWords, out, 0, ptWords.length);
+      return out;
+    }
+    function stripPkcs7(buf) {
+      if (buf.length === 0)
+        return buf;
+      const pad = buf[buf.length - 1];
+      if (pad < 1 || pad > 16 || pad > buf.length)
+        return buf;
+      for (let i = buf.length - pad;i < buf.length; i++)
+        if (buf[i] !== pad)
+          return buf;
+      return buf.subarray(0, buf.length - pad);
+    }
+    function hardenKey(password, salt, extra, A = aes) {
+      let K = hashBytes(sha256, concatBytes([password, salt, extra]), 32), round = 0;
+      while (!0) {
+        const block = concatBytes([password, K, extra]), K1 = new Uint8Array(block.length * 64);
+        for (let i = 0;i < 64; i++)
+          K1.set(block, i * block.length);
+        const aesKey = K.subarray(0, 16), iv = K.subarray(16, 32), E = aesCbcEncryptRaw(aesKey, iv, K1, A);
+        let sum = 0;
+        for (let i = 0;i < 16; i++)
+          sum = (sum + E[i]) % 3;
+        let nextHash, outLen;
+        if (sum === 0) {
+          nextHash = sha256;
+          outLen = 32;
+        } else if (sum === 1) {
+          nextHash = sha384;
+          outLen = 48;
+        } else {
+          nextHash = sha512;
+          outLen = 64;
+        }
+        K = hashBytes(nextHash, E, outLen);
+        round++;
+        if (round >= 64 && E[E.length - 1] <= round - 32)
+          break;
+      }
+      return K.subarray(0, 32);
+    }
+    function tryPassword(typedEncrypt, password, isOwner, opts) {
+      const A = aesOf(opts), O = typedEncrypt.O, U = typedEncrypt.U, OE = typedEncrypt.OE, UE = typedEncrypt.UE;
+      if (!(O instanceof Uint8Array) || O.length < 48 || !(U instanceof Uint8Array) || U.length < 48)
+        throw new EncryptionError("pdf/crypto/v6/bad-O-U", "/O and /U must be at least 48 bytes for v6");
+      const pw = passwordToBytes(password), target = isOwner ? O : U, valSalt = target.subarray(32, 40), keySalt = target.subarray(40, 48), extra = isOwner ? U.subarray(0, 48) : new Uint8Array(0), valHash = hardenKey(pw, valSalt, extra, A);
+      for (let i = 0;i < 32; i++)
+        if (valHash[i] !== target[i])
+          return { fileEncryptionKey: null };
+      const intermediate = hardenKey(pw, keySalt, extra, A), oeue = isOwner ? OE : UE;
+      if (!(oeue instanceof Uint8Array) || oeue.length !== 32)
+        throw new EncryptionError("pdf/crypto/v6/bad-OE-UE", "/OE and /UE must be exactly 32 bytes for v6");
+      return { fileEncryptionKey: aesCbcDecrypt(intermediate, ZERO_IV, oeue, A) };
+    }
+    function methodOf(typedEncrypt, fallback) {
+      const m = typedEncrypt && typedEncrypt.method;
+      if (m === "AESV3" || m === "AESV4")
+        return m;
+      return fallback || "AESV3";
+    }
+    function requireGcm() {
+      if (!pdfAesGcm || typeof pdfAesGcm.decryptObjectGcm !== "function")
+        throw new EncryptionError("pdf/crypto/v6/missing-gcm", "AESV4 requires pdfAesGcm dependency");
+      return pdfAesGcm;
+    }
+    function decryptString(typedEncrypt, fek, _objNum, _gen, ciphertext, opts) {
+      if (methodOf(typedEncrypt, "AESV3") === "AESV4")
+        return requireGcm().decryptObjectGcm(fek, ciphertext);
+      if (!(ciphertext instanceof Uint8Array) || ciphertext.length < 32)
+        throw new EncryptionError("pdf/crypto/v6/bad-string", "AES-256 encrypted string must be at least 32 bytes");
+      const iv = ciphertext.subarray(0, 16), body = ciphertext.subarray(16), pt = aesCbcDecrypt(fek, iv, body, aesOf(opts));
+      return stripPkcs7(pt);
+    }
+    function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
+    }
+    function aesCbcEncrypt256(key, iv, plaintext) {
+      return aesCbcEncryptRaw(key, iv, plaintext);
+    }
+    function padPkcs7(buf) {
+      const pad = 16 - buf.length % 16, out = new Uint8Array(buf.length + pad);
+      out.set(buf);
+      for (let i = buf.length;i < out.length; i++)
+        out[i] = pad;
+      return out;
+    }
+    function encryptString(typedEncrypt, fek, _objNum, _gen, plaintext, iv) {
+      if (!(plaintext instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v6/encrypt-bad-input", "plaintext must be Uint8Array");
+      if (methodOf(typedEncrypt, "AESV3") === "AESV4") {
+        if (!(iv instanceof Uint8Array) || iv.length !== 12)
+          throw new EncryptionError("pdf/crypto/v6/encrypt-bad-iv", "AESV4 IV must be a 12-byte Uint8Array");
+        return requireGcm().encryptObjectGcm(fek, plaintext, () => iv);
+      }
+      if (!(iv instanceof Uint8Array) || iv.length !== 16)
+        throw new EncryptionError("pdf/crypto/v6/encrypt-bad-iv", "IV must be a 16-byte Uint8Array");
+      const padded = padPkcs7(plaintext), body = aesCbcEncrypt256(fek, iv, padded), out = new Uint8Array(16 + body.length);
+      out.set(iv, 0);
+      out.set(body, 16);
+      return out;
+    }
+    function encryptStream(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);
+    }
+    function buildUUE(password, fek, valSalt, keySalt) {
+      const pw = passwordToBytes(password), hVal = hardenKey(pw, valSalt, new Uint8Array(0)), U = new Uint8Array(48);
+      U.set(hVal, 0);
+      U.set(valSalt, 32);
+      U.set(keySalt, 40);
+      const intermediate = hardenKey(pw, keySalt, new Uint8Array(0)), UE = aesCbcEncrypt256(intermediate, ZERO_IV, fek);
+      return { U, UE };
+    }
+    function buildOOE(password, fek, U48, valSalt, keySalt) {
+      const pw = passwordToBytes(password), hVal = hardenKey(pw, valSalt, U48), O = new Uint8Array(48);
+      O.set(hVal, 0);
+      O.set(valSalt, 32);
+      O.set(keySalt, 40);
+      const intermediate = hardenKey(pw, keySalt, U48), OE = aesCbcEncrypt256(intermediate, ZERO_IV, fek);
+      return { O, OE };
+    }
+    function buildPerms(p, fek, encryptMetadata, randomBytes) {
+      const buf = new Uint8Array(16), v = p | 0;
+      buf[0] = v & 255;
+      buf[1] = v >>> 8 & 255;
+      buf[2] = v >>> 16 & 255;
+      buf[3] = v >>> 24 & 255;
+      buf[4] = 255;
+      buf[5] = 255;
+      buf[6] = 255;
+      buf[7] = 255;
+      buf[8] = encryptMetadata ? 84 : 70;
+      buf[9] = 97;
+      buf[10] = 100;
+      buf[11] = 98;
+      const rand = randomBytes(4);
+      buf[12] = rand[0];
+      buf[13] = rand[1];
+      buf[14] = rand[2];
+      buf[15] = rand[3];
+      const cipher = aes.fn(bytesToWords(fek, 0, 32, _AES128_KEY_SCRATCH), !1);
+      if (cipher === !1 || typeof cipher.encrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v6/perms-schedule", "AES-256-ECB schedule failed for /Perms");
+      const blk = cipher.encrypt(bytesToWords(buf, 0, 16)), out = new Uint8Array(16);
+      wordsToBytes(blk, out, 0, 4);
+      return out;
+    }
+    return {
+      tryPassword,
+      decryptString,
+      decryptStream,
+      encryptString,
+      encryptStream,
+      buildUUE,
+      buildOOE,
+      buildPerms
+    };
+  } });
+    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch","pdfSecurity","pdfStandardV4","pdfStandardV5","pdfStandardV6"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod, securityMod, v4Mod, v5Mod, v6Mod) {
+    const { ParseError, ContractError, EncryptionError } = errors, tokenize = tokenizerMod && tokenizerMod.tokenize, parseIndirect = parserMod && parserMod.parseIndirect, locateStartXref = xrefMod && xrefMod.locateStartXref, readStartXref = xrefMod && xrefMod.readStartXref, parseXrefTable = xrefMod && xrefMod.parseXrefTable, parseTrailerDict = xrefMod && xrefMod.parseTrailerDict, typeTrailer = trailerMod && trailerMod.typeTrailer, typeCatalog = catalogMod && catalogMod.typeCatalog, typePage = pageMod && pageMod.typePage, walkPageTree = pagesMod && pagesMod.walkPageTree, HEADER_PREFIX = new Uint8Array([37, 80, 68, 70, 45]), XREF_KEYWORD = new Uint8Array([120, 114, 101, 102]), PDF_NULL = Object.freeze({ type: "null" }), SECTION_LOCAL_KEYS = new Set([
       "Prev",
       "XRefStm",
       "Type",
@@ -2322,6 +3649,53 @@ endstream`);
         }
       return { ...dicts[0], entries };
     }
+    const OBJ_HEADER = /(?<![0-9A-Za-z])(\d{1,10})[\0\t\n\f\r ]+(\d{1,5})[\0\t\n\f\r ]+obj(?![0-9A-Za-z])/g, TRAILER_KEYWORD = /(?<![0-9A-Za-z])trailer(?![0-9A-Za-z])/g;
+    function nameEntry(dict, key) {
+      const v = dict && dict.type === "dict" && dict.entries[key];
+      return v && v.type === "name" ? v.value : null;
+    }
+    function rebuildXref(bytes) {
+      const text = new TextDecoder("latin1").decode(bytes), entries = {}, trailers = [];
+      let lastCatalog = null, maxNum = -1;
+      OBJ_HEADER.lastIndex = 0;
+      for (let m = OBJ_HEADER.exec(text);m !== null; m = OBJ_HEADER.exec(text)) {
+        const num = Number(m[1]), gen = Number(m[2]), at = m.index;
+        let def;
+        try {
+          def = parseIndirect(tokenize(bytes, { start: at }), () => null);
+        } catch (_e) {
+          continue;
+        }
+        entries[num] = { type: 1, offset: at, gen, free: !1 };
+        if (num > maxNum)
+          maxNum = num;
+        const value = def.value, dict = value && value.type === "stream" ? value.dict : value, type = nameEntry(dict, "Type");
+        if (type === "Catalog")
+          lastCatalog = { num, gen };
+        if (type === "XRef" && value.type === "stream")
+          trailers.push({ at, dict: value.dict });
+        else if (type === "ObjStm" && value.type === "stream" && objStreamMod && filterDispatchMod)
+          try {
+            objStreamMod.parseObjectStream(filterDispatchMod.decode(value), value.dict).forEach((member, index) => {
+              entries[member.num] = { type: 2, objStm: num, index, free: !1, offset: 0, gen: 0 };
+              if (member.num > maxNum)
+                maxNum = member.num;
+            });
+          } catch (_e) {}
+      }
+      TRAILER_KEYWORD.lastIndex = 0;
+      for (let m = TRAILER_KEYWORD.exec(text);m !== null; m = TRAILER_KEYWORD.exec(text))
+        try {
+          trailers.push({ at: m.index, dict: parseTrailerDict(bytes, m.index).dict });
+        } catch (_e) {}
+      trailers.sort((a, b) => b.at - a.at);
+      const merged = trailers.length > 0 ? mergeTrailerDicts(trailers.map((t) => t.dict)) : { type: "dict", entries: {} }, trailerEntries = { ...merged.entries };
+      if (!trailerEntries.Root && lastCatalog)
+        trailerEntries.Root = { type: "ref", num: lastCatalog.num, gen: lastCatalog.gen };
+      if (!trailerEntries.Size)
+        trailerEntries.Size = { type: "int", value: maxNum + 1 };
+      return { entries, trailer: { ...merged, entries: trailerEntries } };
+    }
     function readHeader(bytes) {
       if (bytes.length < 8)
         throw new ParseError("pdf/document/short", "input too short to contain a PDF header", { context: { length: bytes.length } });
@@ -2353,51 +3727,180 @@ endstream`);
         p++;
       return { version, end: p };
     }
+    function resolvedDict(node, resolve) {
+      const d = resolve(node);
+      if (!d || d.type !== "dict")
+        return d;
+      const entries = {};
+      for (const k of Object.keys(d.entries))
+        entries[k] = resolve(d.entries[k]);
+      const cf = entries.CF;
+      if (cf && cf.type === "dict") {
+        const cfEntries = {};
+        for (const k of Object.keys(cf.entries))
+          cfEntries[k] = resolve(cf.entries[k]);
+        entries.CF = { ...cf, entries: cfEntries };
+      }
+      return { ...d, entries };
+    }
+    function hasType(dict, value) {
+      const t = dict && dict.type === "dict" && dict.entries.Type;
+      return !!t && t.type === "name" && t.value === value;
+    }
+    function createDecryptor(encryptNode, trailerTyped, password, resolve, legacyRc4, fastCipher) {
+      const typed = securityMod.typeEncryptDict(resolvedDict(encryptNode, resolve)), filter = typed.Filter && typed.Filter.type === "name" ? typed.Filter.value : typed.Filter;
+      if (filter !== "Standard")
+        throw new EncryptionError("pdf/crypto/unsupported-filter", "only the Standard security handler is supported", { context: { filter } });
+      typed.idFirst = trailerTyped.id ? trailerTyped.id[0] : void 0;
+      const badPassword = () => new EncryptionError("pdf/document/bad-password", "the password opens the document neither as its user nor as its owner password", { context: { V: typed.V, R: typed.R } });
+      let strings, streams;
+      if (legacyRc4 && (typed.V === 1 || typed.V === 2)) {
+        const params = {
+          O: typed.O,
+          U: typed.U,
+          P: typed.P,
+          idFirst: typed.idFirst,
+          revision: typed.R,
+          keyLength: typed.V === 2 && typeof typed.Length === "number" ? typed.Length : 40,
+          encryptMetadata: typed.EncryptMetadata
+        };
+        let r = legacyRc4.validateUserPassword(password, params);
+        if (!r.ok)
+          r = legacyRc4.validateOwnerPassword(password, params);
+        if (!r.ok)
+          throw badPassword();
+        const fileKey = r.fileKey;
+        strings = (bytes, num, gen) => legacyRc4.decryptString(fileKey, num, gen, bytes);
+        streams = (stream, num, gen) => legacyRc4.decryptStream(fileKey, num, gen, stream.raw);
+      } else {
+        const selection = securityMod.selectHandler(typed, { v4: v4Mod, v5: v5Mod, v6: v6Mod }), h = selection.handler, copts = fastCipher ? { fastCipher: !0 } : void 0;
+        let fek = h.tryPassword(typed, password, !1, copts).fileEncryptionKey;
+        if (!fek)
+          fek = h.tryPassword(typed, password, !0, copts).fileEncryptionKey;
+        if (!fek)
+          throw badPassword();
+        const strView = { method: selection.strMethod };
+        strings = (bytes, num, gen) => selection.strMethod === "Identity" ? bytes : h.decryptString(strView, fek, num, gen, bytes, copts);
+        streams = (stream, num, gen) => securityMod.dispatchDecryptStream(selection, stream, fek, num, gen, stream.raw, copts);
+      }
+      const encryptNum = encryptNode && encryptNode.type === "ref" ? encryptNode.num : -1;
+      function walk(v, num, gen) {
+        if (!v || typeof v !== "object")
+          return v;
+        switch (v.type) {
+          case "string":
+            return { ...v, value: strings(v.value, num, gen) };
+          case "array":
+            return { ...v, items: v.items.map((x) => walk(x, num, gen)) };
+          case "dict": {
+            const sig = hasType(v, "Sig") || hasType(v, "DocTimeStamp"), entries = {};
+            for (const k of Object.keys(v.entries))
+              entries[k] = sig && k === "Contents" ? v.entries[k] : walk(v.entries[k], num, gen);
+            return { ...v, entries };
+          }
+          case "stream": {
+            if (hasType(v.dict, "XRef"))
+              return v;
+            const dict = walk(v.dict, num, gen);
+            if (hasType(v.dict, "Metadata") && !typed.EncryptMetadata)
+              return { ...v, dict };
+            const raw = v.raw instanceof Uint8Array ? streams(v, num, gen) : v.raw;
+            return { ...v, dict, raw };
+          }
+          default:
+            return v;
+        }
+      }
+      return {
+        decrypt(num, gen, value) {
+          return num === encryptNum ? value : walk(value, num, gen);
+        }
+      };
+    }
     function readDocument(bytes, opts = {}) {
       if (!(bytes instanceof Uint8Array))
         throw new ParseError("pdf/document/bad-input", "readDocument expects a Uint8Array", { context: { typeof: typeof bytes } });
-      const { version, end: headerEnd } = readHeader(bytes), sxAt = locateStartXref(bytes);
-      if (sxAt < 0)
-        throw new ParseError("pdf/document/no-startxref", "startxref keyword not found near EOF");
-      const xrefAt = readStartXref(bytes, sxAt), xref = { entries: {}, sections: [] }, losses = [], trailerDicts = [];
-      let cursor = xrefAt;
-      const seenSections = new Set;
-      function mergeSection(at, kind, entries) {
-        xref.sections.push({ at, kind, entries });
-        for (const k of Object.keys(entries))
-          if (!(k in xref.entries))
-            xref.entries[k] = entries[k];
-      }
-      for (let safety = 0;safety < 32 && cursor >= 0; safety++) {
-        if (seenSections.has(cursor))
-          break;
-        seenSections.add(cursor);
-        let dict;
-        if (startsXrefTable(bytes, skipWhitespace(bytes, cursor))) {
-          const section = parseXrefTable(bytes, cursor);
-          mergeSection(cursor, "table", section.entries);
-          dict = parseTrailerDict(bytes, section.end).dict;
-          const stmAt = dict && dict.entries && dict.entries.XRefStm;
-          if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < bytes.length) {
-            const hybrid = readXrefStreamSection(bytes, stmAt.value);
-            mergeSection(stmAt.value, "stream", hybrid.entries);
-          }
-        } else {
-          const section = readXrefStreamSection(bytes, cursor);
-          mergeSection(cursor, "stream", section.entries);
-          dict = section.dict;
+      const password = opts.password;
+      if (password !== void 0 && typeof password !== "string" && !(password instanceof Uint8Array))
+        throw new ContractError("pdf/document/bad-password-option", "opts.password must be a string or a Uint8Array", { context: { typeof: typeof password } });
+      const legacyRc4 = opts.legacyRc4;
+      if (legacyRc4 !== void 0 && !(legacyRc4 && [
+        "validateUserPassword",
+        "validateOwnerPassword",
+        "decryptString",
+        "decryptStream"
+      ].every((f) => typeof legacyRc4[f] === "function")))
+        throw new ContractError("pdf/document/bad-legacy-rc4-option", "opts.legacyRc4 must be the pdfLegacyRc4Read instance", { context: { typeof: typeof legacyRc4 } });
+      const fastCipher = opts.fastCipher;
+      if (fastCipher !== void 0 && typeof fastCipher !== "boolean")
+        throw new ContractError("pdf/document/bad-fast-cipher-option", "opts.fastCipher must be a boolean", { context: { typeof: fastCipher === null ? "null" : typeof fastCipher } });
+      const { version, end: headerEnd } = readHeader(bytes), xref = { entries: {}, sections: [] }, losses = [];
+      function walkChain() {
+        const sxAt = locateStartXref(bytes);
+        if (sxAt < 0)
+          throw new ParseError("pdf/document/no-startxref", "startxref keyword not found near EOF");
+        const xrefAt = readStartXref(bytes, sxAt), trailerDicts = [];
+        let cursor = xrefAt;
+        const seenSections = new Set;
+        function mergeSection(at, kind, entries) {
+          xref.sections.push({ at, kind, entries });
+          for (const k of Object.keys(entries))
+            if (!(k in xref.entries))
+              xref.entries[k] = entries[k];
         }
-        trailerDicts.push(dict);
-        const prev = dict && dict.type === "dict" && dict.entries && dict.entries.Prev;
-        if (prev && prev.type === "int" && prev.value >= 0 && prev.value !== cursor)
-          cursor = prev.value;
-        else
-          break;
+        for (let safety = 0;safety < 32 && cursor >= 0; safety++) {
+          if (seenSections.has(cursor))
+            break;
+          seenSections.add(cursor);
+          let dict;
+          if (startsXrefTable(bytes, skipWhitespace(bytes, cursor))) {
+            const section = parseXrefTable(bytes, cursor);
+            for (const shape of section.tolerated || [])
+              losses.push({
+                code: "pdf/document/xref-tolerated",
+                message: "a cross-reference table shape outside the standard was read",
+                context: { shape, at: cursor }
+              });
+            mergeSection(cursor, "table", section.entries);
+            dict = parseTrailerDict(bytes, section.end).dict;
+            const stmAt = dict && dict.entries && dict.entries.XRefStm;
+            if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < bytes.length) {
+              const hybrid = readXrefStreamSection(bytes, stmAt.value);
+              mergeSection(stmAt.value, "stream", hybrid.entries);
+            }
+          } else {
+            const section = readXrefStreamSection(bytes, cursor);
+            mergeSection(cursor, "stream", section.entries);
+            dict = section.dict;
+          }
+          trailerDicts.push(dict);
+          const prev = dict && dict.type === "dict" && dict.entries && dict.entries.Prev;
+          if (prev && prev.type === "int" && prev.value >= 0 && prev.value !== cursor)
+            cursor = prev.value;
+          else
+            break;
+        }
+        if (trailerDicts.length === 0)
+          throw new ParseError("pdf/document/no-trailer", "no usable trailer dictionary found");
+        return typeTrailer(mergeTrailerDicts(trailerDicts));
       }
-      if (trailerDicts.length === 0)
-        throw new ParseError("pdf/document/no-trailer", "no usable trailer dictionary found");
-      const trailerTyped = typeTrailer(mergeTrailerDicts(trailerDicts));
-      if (trailerTyped.encrypt && opts.allowEncrypted !== !0)
+      let trailerTyped;
+      try {
+        trailerTyped = walkChain();
+      } catch (err) {
+        if (opts.recoverXref !== !0 || !(err instanceof ParseError))
+          throw err;
+        const rebuilt = rebuildXref(bytes);
+        xref.entries = rebuilt.entries;
+        xref.sections = [{ at: null, kind: "rebuilt", entries: xref.entries }];
+        losses.push({
+          code: "pdf/document/xref-rebuilt",
+          message: "the cross-reference chain could not be used; the table was rebuilt from the file",
+          context: { cause: err.code, entries: Object.keys(xref.entries).length }
+        });
+        trailerTyped = typeTrailer(rebuilt.trailer);
+      }
+      if (trailerTyped.encrypt && opts.allowEncrypted !== !0 && password === void 0)
         throw new ParseError("pdf/document/encrypted", "document is encrypted (trailer /Encrypt present) \u2014 " + "no decrypt path is composed for readDocument; pass { allowEncrypted: true } to read the raw ciphertext container", { context: { encrypt: trailerTyped.encrypt } });
       const indirects = new Map, lossKeys = new Set, freeKeys = new Set, objStmMembers = new Map;
       function resolve(ref) {
@@ -2428,8 +3931,9 @@ endstream`);
         const tok = tokenize(bytes, { start: offset }), def = parseIndirect(tok, resolve);
         if (def.num !== num || def.gen !== gen)
           throw new ParseError("pdf/document/xref-mismatch", "xref points to a different object", { context: { expected: { num, gen }, found: { num: def.num, gen: def.gen } } });
-        indirects.set(key, { value: def.value, offset });
-        return def.value;
+        const value = decryptor ? decryptor.decrypt(num, gen, def.value) : def.value;
+        indirects.set(key, { value, offset });
+        return value;
       }
       function resolveFreeEntry(num, gen) {
         const key = num + ":" + gen;
@@ -2459,8 +3963,8 @@ endstream`);
         losses.push(loss);
       }
       function resolveCompressed(num, gen, entry) {
-        if (trailerTyped && trailerTyped.encrypt)
-          throw new ParseError("pdf/document/objstm-encrypted", "object streams of an encrypted document cannot be " + "read \u2014 no decrypt path is composed for readDocument", { context: { num, gen, objStm: entry.objStm } });
+        if (trailerTyped && trailerTyped.encrypt && !decryptor)
+          throw new ParseError("pdf/document/objstm-encrypted", "object streams of an encrypted document cannot be read without its password", { context: { num, gen, objStm: entry.objStm } });
         const containerNum = entry.objStm;
         let members = objStmMembers.get(containerNum);
         if (!members) {
@@ -2487,6 +3991,11 @@ endstream`);
             found: member ? member.num : null
           } });
         return member.value;
+      }
+      let decryptor = null;
+      if (trailerTyped.encrypt && password !== void 0) {
+        const encryptNode = trailerTyped.encrypt.type === "dict" ? trailerTyped.encrypt : { type: "ref", num: trailerTyped.encrypt.num, gen: trailerTyped.encrypt.gen };
+        decryptor = createDecryptor(encryptNode, trailerTyped, password, resolve, legacyRc4, fastCipher === !0);
       }
       const rootRef = trailerTyped.root, catalogDict = resolve({ type: "ref", num: rootRef.num, gen: rootRef.gen });
       if (freeKeys.has(rootRef.num + ":" + rootRef.gen))
@@ -2745,7 +4254,8 @@ ${opts.xrefOffset}
       AIS: { kind: "bool", doc: "alpha is shape" },
       TK: { kind: "bool", doc: "text knockout" },
       UseBlackPtComp: { kind: "name", doc: "ON|OFF|Default" },
-      HTO: { kind: "array", doc: "halftone origin [tx ty]" }
+      HTO: { kind: "array", doc: "halftone origin [tx ty]" },
+      HTP: { kind: "array", doc: "halftone phase [x y] (PDF 1.2, deprecated in 1.3)" }
     }), NUM = (v) => v && (v.type === "int" || v.type === "real");
     function typeExtGState(dict) {
       if (!isType(dict, "dict"))
@@ -2783,6 +4293,7 @@ ${opts.xrefOffset}
         tk: isType(e.TK, "bool") ? e.TK.value : null,
         useBlackPtComp: isType(e.UseBlackPtComp, "name") ? e.UseBlackPtComp.value : null,
         hto: isType(e.HTO, "array") ? e.HTO : null,
+        htp: isType(e.HTP, "array") ? e.HTP : null,
         raw: dict,
         _extras: {}
       };
@@ -2808,10 +4319,60 @@ ${opts.xrefOffset}
         bbox: [+operands[2], +operands[3], +operands[4], +operands[5]]
       };
     }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), COMMON = "Type:name HalftoneType:int HalftoneName:string", TRANSFER = "TransferFunction:dict|name|stream", HALFTONE_TYPES = Object.freeze({
+      1: keyTypes(`${COMMON} Frequency:num Angle:num SpotFunction:array|dict|name|stream AccurateScreens:bool ${TRANSFER}`),
+      5: keyTypes(`${COMMON} Default:dict|stream`),
+      6: keyTypes(`${COMMON} Width:int Height:int ${TRANSFER}`),
+      10: keyTypes(`${COMMON} Xsquare:int Ysquare:int ${TRANSFER}`),
+      16: keyTypes(`${COMMON} Width:int Height:int Width2:int Height2:int ${TRANSFER}`)
+    }), HALFTONE_KEYS = Object.freeze(Object.fromEntries(Object.entries(HALFTONE_TYPES).map(([type, types]) => [type, Object.freeze(Object.keys(types))]))), STREAM_KEYS = new Set(["Length", "Filter", "DecodeParms", "F", "FFilter", "FDecodeParms", "DL"]), HALFTONE_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => NUM(v) ? v.value : void 0,
+      int: (v) => isType(v, "int") ? v.value : void 0,
+      bool: (v) => isType(v, "bool") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0,
+      stream: (v) => isType(v, "stream") ? v : void 0
+    });
+    function halftoneValue(type, v) {
+      if (isType(v, "ref"))
+        return v;
+      const alts = type.split("|");
+      if (alts.length > 1) {
+        if (!alts.some((t) => HALFTONE_READ[t](v) !== void 0))
+          return null;
+        return isType(v, "name") ? v.value : v;
+      }
+      const r = HALFTONE_READ[type](v);
+      return r === void 0 ? null : r;
+    }
+    function typeHalftone(value) {
+      const dict = isType(value, "stream") ? value.dict : value;
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/halftone/not-dict", "a halftone must be a dictionary or a stream", { context: { type: value && value.type } });
+      const e = dict.entries, t = isType(e.HalftoneType, "int") ? e.HalftoneType.value : null, types = t !== null && Object.prototype.hasOwnProperty.call(HALFTONE_TYPES, t) ? HALFTONE_TYPES[t] : null;
+      if (!types)
+        throw new ParseError("pdf/extra/halftone/bad-type", "/HalftoneType must be 1, 5, 6, 10 or 16", { context: { actual: t } });
+      const out = { raw: value, _extras: {} };
+      if (t === 5)
+        out.colorants = {};
+      const streamed = isType(value, "stream");
+      for (const [k, v] of Object.entries(e))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = halftoneValue(types[k], v);
+        else if (t === 5)
+          out.colorants[k] = v;
+        else if (!(streamed && STREAM_KEYS.has(k)))
+          out._extras[k] = v;
+      return out;
+    }
     return {
       typeExtGState,
       decodeType3CharOp,
-      EXT_GSTATE_KEYS
+      EXT_GSTATE_KEYS,
+      typeHalftone,
+      HALFTONE_KEYS
     };
   } });
     __register({ name: "pdfFontCidTyped", dependencies: ["pdfErrors","pdfParserObj"], factory: function(errors, parserObj) {
@@ -2936,6 +4497,17 @@ ${opts.xrefOffset}
         supplement: numVal(e.Supplement, 0)
       };
     }
+    function typeStyleDict(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/cid-font/style-not-dict", "/Style must be a dictionary", { context: { type: dict && dict.type } });
+      const out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (k === "Panose")
+          out.panose = isType(v, "string") ? v.value : null;
+        else
+          out._extras[k] = v;
+      return out;
+    }
     function decodeWidthsW(arr) {
       if (!isType(arr, "array"))
         throw new ParseError("pdf/extra/cid-font/bad-w", "/W must be an array", { context: { type: arr && arr.type } });
@@ -2983,7 +4555,7 @@ ${opts.xrefOffset}
       }
       return out;
     }
-    return { typeCIDFont, typeCIDSystemInfo, decodeWidthsW, PREDEFINED_CMAPS };
+    return { typeCIDFont, typeCIDSystemInfo, typeStyleDict, decodeWidthsW, PREDEFINED_CMAPS };
   } });
     __register({ name: "pdfFontColorTagging", dependencies: ["pdfErrors","pdfParserObj"], factory: function(errors, parserObj) {
     const { ParseError } = errors, { isType } = parserObj, FONT_DESCRIPTOR_FLAGS = Object.freeze({
@@ -3042,14 +4614,112 @@ ${opts.xrefOffset}
         } catch (_e) {
           color = null;
         }
-      return {
+      const out = {
         subtype: "OpenType",
         length: stream.raw instanceof Uint8Array ? stream.raw.length : null,
         metadata: e.Metadata || null,
         color,
         raw: stream,
-        _extras: collectExtras(e, new Set(["Subtype", "Length", "Filter", "DecodeParms", "Metadata"]))
+        _extras: collectExtras(e, new Set([
+          "Subtype",
+          "Length",
+          "Filter",
+          "DecodeParms",
+          "Metadata",
+          "Length1",
+          "Length2",
+          "Length3"
+        ]))
       };
+      for (const [k, f] of LENGTH_KEYS)
+        if (e[k] !== void 0)
+          out[f] = isType(e[k], "int") ? e[k].value : null;
+      if (isType(e.Filter, "name"))
+        out.filter = e.Filter.value;
+      else if (isType(e.Filter, "array"))
+        out.filter = e.Filter;
+      if (isType(e.DecodeParms, "dict") || isType(e.DecodeParms, "array"))
+        out.decodeParms = e.DecodeParms;
+      return out;
+    }
+    const LENGTH_KEYS = Object.freeze([["Length1", "length1"], ["Length2", "length2"], ["Length3", "length3"]]);
+    function typeFontFileEntries(stream) {
+      if (!isType(stream, "stream") || !isType(stream.dict, "dict"))
+        throw new ParseError("pdf/extra/fontfile/not-stream", "a font file must be a stream", { context: { type: stream && stream.type } });
+      const e = stream.dict.entries, out = { raw: stream };
+      for (const [k, f] of LENGTH_KEYS)
+        if (e[k] !== void 0)
+          out[f] = isType(e[k], "int") ? e[k].value : null;
+      if (e.Subtype !== void 0)
+        out.subtype = isType(e.Subtype, "name") ? e.Subtype.value : null;
+      if (e.Metadata !== void 0)
+        out.metadata = isType(e.Metadata, "stream") || isType(e.Metadata, "ref") ? e.Metadata : null;
+      return out;
+    }
+    const DESCRIPTOR_KEYS = new Set([
+      "Type",
+      "FontName",
+      "FontFamily",
+      "FontStretch",
+      "FontWeight",
+      "Flags",
+      "FontBBox",
+      "ItalicAngle",
+      "Ascent",
+      "Descent",
+      "Leading",
+      "CapHeight",
+      "XHeight",
+      "StemV",
+      "StemH",
+      "AvgWidth",
+      "MaxWidth",
+      "MissingWidth",
+      "FontFile",
+      "FontFile2",
+      "FontFile3",
+      "CharSet",
+      "Style",
+      "Lang",
+      "FD",
+      "CIDSet"
+    ]);
+    function typeFontDescriptor(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/font-descriptor/not-dict", "font descriptor must be a dictionary", { context: { type: dict && dict.type } });
+      const e = dict.entries, nameOf = (v) => isType(v, "name") ? v.value : null, strOf = (v) => isType(v, "string") ? v.value : null, intOf = (v) => isType(v, "int") ? v.value : null, numOf = (v, dflt) => isNum(v) ? v.value : dflt, refOf = (v) => isType(v, "ref") ? { num: v.num, gen: v.gen } : null, streamOf = (v) => refOf(v) || (isType(v, "stream") ? v : null), dictOf = (v) => refOf(v) || (isType(v, "dict") ? v : null), box = isType(e.FontBBox, "array") && e.FontBBox.items.length === 4 && e.FontBBox.items.every(isNum) ? e.FontBBox.items.map((it) => it.value) : null;
+      return {
+        type: nameOf(e.Type),
+        fontName: nameOf(e.FontName),
+        fontFamily: strOf(e.FontFamily),
+        fontStretch: nameOf(e.FontStretch),
+        fontWeight: intOf(e.FontWeight),
+        flags: intOf(e.Flags),
+        fontBBox: box,
+        italicAngle: numOf(e.ItalicAngle, null),
+        ascent: numOf(e.Ascent, null),
+        descent: numOf(e.Descent, null),
+        leading: numOf(e.Leading, 0),
+        capHeight: numOf(e.CapHeight, null),
+        xHeight: numOf(e.XHeight, 0),
+        stemV: numOf(e.StemV, null),
+        stemH: numOf(e.StemH, 0),
+        avgWidth: numOf(e.AvgWidth, 0),
+        maxWidth: numOf(e.MaxWidth, 0),
+        missingWidth: numOf(e.MissingWidth, 0),
+        fontFile: streamOf(e.FontFile),
+        fontFile2: streamOf(e.FontFile2),
+        fontFile3: streamOf(e.FontFile3),
+        charSet: strOf(e.CharSet),
+        style: dictOf(e.Style),
+        lang: nameOf(e.Lang),
+        fd: dictOf(e.FD),
+        cidSet: streamOf(e.CIDSet),
+        _extras: collectExtras(e, DESCRIPTOR_KEYS)
+      };
+    }
+    function isNum(v) {
+      return !!v && (v.type === "int" || v.type === "real");
     }
     function collectExtras(entries, known) {
       const out = {};
@@ -3062,6 +4732,8 @@ ${opts.xrefOffset}
       decodeFontDescriptorFlags,
       detectColorFontTables,
       typeFontFile3OpenType,
+      typeFontFileEntries,
+      typeFontDescriptor,
       FONT_DESCRIPTOR_FLAGS,
       COLOR_OT_TABLES
     };
@@ -3073,7 +4745,8 @@ ${opts.xrefOffset}
       "Table",
       "PrintField",
       "Artifact",
-      "UserProperties"
+      "UserProperties",
+      "NSO"
     ]), KNOWN_BY_OWNER = {
       Layout: new Set([
         "O",
@@ -3112,11 +4785,12 @@ ${opts.xrefOffset}
         "ColumnWidths"
       ]),
       List: new Set(["O", "ListNumbering", "ContinuedList", "ContinuedFrom"]),
-      Table: new Set(["O", "RowSpan", "ColSpan", "Headers", "Scope", "Summary"]),
-      PrintField: new Set(["O", "Role", "checked", "Desc"]),
+      Table: new Set(["O", "RowSpan", "ColSpan", "Headers", "Scope", "Summary", "Short"]),
+      PrintField: new Set(["O", "Role", "checked", "Checked", "Desc"]),
       Artifact: new Set(["O", "Type", "BBox", "Attached", "Subtype"]),
       UserProperties: new Set(["O", "P"])
     };
+    KNOWN_BY_OWNER.NSO = new Set(["NS", ...Object.values(KNOWN_BY_OWNER).flatMap((set) => [...set])]);
     function knownFor(owner) {
       return KNOWN_BY_OWNER[owner] || new Set(["O"]);
     }
@@ -3147,6 +4821,9 @@ ${opts.xrefOffset}
         case "UserProperties":
           typed = readUserProperties(e);
           break;
+        case "NSO":
+          typed = readNso(e);
+          break;
         default:
           typed = { owner, vendor: !0 };
       }
@@ -3172,11 +4849,11 @@ ${opts.xrefOffset}
         textIndent: numVal(e.TextIndent, null),
         textAlign: nameVal(e.TextAlign),
         bbox: numArr(e.BBox),
-        width: numVal(e.Width, null),
-        height: numVal(e.Height, null),
+        width: numOrName(e.Width),
+        height: numOrName(e.Height),
         blockAlign: nameVal(e.BlockAlign),
         inlineAlign: nameVal(e.InlineAlign),
-        lineHeight: numVal(e.LineHeight, null),
+        lineHeight: numOrName(e.LineHeight),
         baselineShift: numVal(e.BaselineShift, null),
         textPosition: nameVal(e.TextPosition),
         textDecorationType: nameVal(e.TextDecorationType),
@@ -3184,7 +4861,23 @@ ${opts.xrefOffset}
         textDecorationThickness: numVal(e.TextDecorationThickness, null),
         columnCount: numVal(e.ColumnCount, null),
         columnGap: e.ColumnGap || null,
-        columnWidths: e.ColumnWidths || null
+        columnWidths: e.ColumnWidths || null,
+        tBorderStyle: nameOrAsRead(e.TBorderStyle),
+        tPadding: numVal(e.TPadding, null) ?? (isType(e.TPadding, "array") ? e.TPadding : null),
+        rubyAlign: nameVal(e.RubyAlign),
+        rubyPosition: nameVal(e.RubyPosition),
+        glyphOrientationVertical: isType(e.GlyphOrientationVertical, "int") ? e.GlyphOrientationVertical.value : nameVal(e.GlyphOrientationVertical)
+      };
+    }
+    function readNso(e) {
+      return {
+        ns: isType(e.NS, "dict") || isType(e.NS, "ref") ? e.NS : null,
+        ...readLayout(e),
+        ...readList(e),
+        ...readTable(e),
+        ...readPrintField(e),
+        ...readArtifact(e),
+        p: isType(e.P, "array") || isType(e.P, "ref") ? e.P : null
       };
     }
     function readList(e) {
@@ -3200,7 +4893,8 @@ ${opts.xrefOffset}
         colSpan: numVal(e.ColSpan, null),
         headers: e.Headers || null,
         scope: nameVal(e.Scope),
-        summary: isType(e.Summary, "string") ? e.Summary.value : null
+        summary: isType(e.Summary, "string") ? e.Summary.value : null,
+        short: isType(e.Short, "string") ? e.Short.value : null
       };
     }
     function readPrintField(e) {
@@ -3236,6 +4930,12 @@ ${opts.xrefOffset}
     }
     function nameVal(v) {
       return isType(v, "name") ? v.value : null;
+    }
+    function numOrName(v) {
+      return numVal(v, null) ?? nameVal(v);
+    }
+    function nameOrAsRead(v) {
+      return v ? isType(v, "name") ? v.value : v : null;
     }
     function numVal(v, dflt) {
       if (!v)
@@ -3465,7 +5165,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfAnnotExtended", dependencies: ["pdfErrors","pdfParserObj","pdfAnnot"], factory: function(errors, parserObj, annot) {
-    const { ParseError } = errors, { isType } = parserObj, { typeBaseAnnot, captureExtras } = annot, SUBTYPES = new Set([
+    const { ParseError, ContractError } = errors, { isType } = parserObj, { typeBaseAnnot, captureExtras } = annot, SUBTYPES = new Set([
       "Watermark",
       "3D",
       "RichMedia",
@@ -3486,7 +5186,26 @@ ${opts.xrefOffset}
       "ROpenArrow",
       "RClosedArrow",
       "Slash"
-    ]);
+    ]), MARKUP_SUBTYPES = Object.freeze([
+      "Text",
+      "FreeText",
+      "Line",
+      "Square",
+      "Circle",
+      "Polygon",
+      "PolyLine",
+      "Highlight",
+      "Underline",
+      "Squiggly",
+      "StrikeOut",
+      "Caret",
+      "Stamp",
+      "Ink",
+      "FileAttachment",
+      "Sound",
+      "Redact",
+      "Projection"
+    ]), MARKUP = new Set(MARKUP_SUBTYPES);
     function typeAnnotExtended(dict) {
       if (!isType(dict, "dict"))
         throw new ParseError("pdf/extra/annot-ext/not-dict", "annotation must be a dictionary", { context: { type: dict && dict.type } });
@@ -3532,7 +5251,11 @@ ${opts.xrefOffset}
       base["3DA"] = e["3DA"] || null;
       base["3DI"] = isType(e["3DI"], "bool") ? e["3DI"].value : null;
       base["3DB"] = e["3DB"] || null;
-      captureExtras(base, dict, new Set(["3DD", "3DV", "3DA", "3DI", "3DB"]));
+      if (e["3DU"] !== void 0)
+        base["3DU"] = e["3DU"];
+      if (e.GEO !== void 0)
+        base.GEO = e.GEO;
+      captureExtras(base, dict, new Set(["3DD", "3DV", "3DA", "3DI", "3DB", "3DU", "GEO"]));
       return base;
     }
     function typeRichMediaAnnot(dict) {
@@ -3614,6 +5337,75 @@ ${opts.xrefOffset}
       captureExtras(base, dict, new Set(["DA", "Q", "RC", "DS", "CL", "IT", "BE", "RD", "LE"]));
       return base;
     }
+    function typeMarkupEntries(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/annot-ext/not-dict", "annotation must be a dictionary", { context: { type: dict && dict.type } });
+      const e = dict.entries, subtype = isType(e.Subtype, "name") ? e.Subtype.value : null, markup = subtype !== null && MARKUP.has(subtype), out = {
+        subtype,
+        markup,
+        ca: isNum(e.ca) ? e.ca.value : null,
+        bm: isType(e.BM, "name") ? e.BM.value : null,
+        lang: isType(e.Lang, "string") ? e.Lang.value : null,
+        t: null,
+        popup: null,
+        rc: null,
+        creationDate: null,
+        irt: null,
+        subj: null,
+        rt: null,
+        it: null,
+        exData: null
+      };
+      if (!markup)
+        return out;
+      out.t = isType(e.T, "string") ? e.T.value : null;
+      out.popup = toRef(e.Popup);
+      out.rc = isType(e.RC, "string") ? e.RC.value : isType(e.RC, "stream") ? e.RC : toRef(e.RC);
+      out.creationDate = isType(e.CreationDate, "string") ? e.CreationDate.value : null;
+      out.irt = toRef(e.IRT) || (isType(e.IRT, "dict") ? e.IRT : null);
+      out.subj = isType(e.Subj, "string") ? e.Subj.value : null;
+      out.rt = isType(e.RT, "name") ? e.RT.value : null;
+      out.it = isType(e.IT, "name") ? e.IT.value : null;
+      out.exData = toRef(e.ExData) || (isType(e.ExData, "dict") ? e.ExData : null);
+      return out;
+    }
+    const READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => isNum(v) ? v.value : void 0,
+      int: (v) => isType(v, "int") ? v.value : void 0,
+      bool: (v) => isType(v, "bool") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0,
+      stream: (v) => isType(v, "stream") ? v : void 0
+    }), keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), APPEARANCE_TYPES = Object.freeze({
+      characteristics: keyTypes("R:int BC:array BG:array CA:string RC:string AC:string I:stream RI:stream IX:stream IF:dict TP:int"),
+      borderStyle: keyTypes("Type:name W:num S:name D:array"),
+      borderEffect: keyTypes("S:name I:num"),
+      iconFit: keyTypes("SW:name S:name A:array FB:bool")
+    }), APPEARANCE_KEYS = Object.freeze(Object.fromEntries(Object.entries(APPEARANCE_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeAppearanceDict(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(APPEARANCE_TYPES, kind))
+        throw new ContractError("pdf/extra/annot-ext/appearance/kind", "kind must be characteristics, borderStyle, borderEffect or iconFit", { context: { kind } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/annot-ext/appearance/not-dict", "an appearance dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = APPEARANCE_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries)) {
+        if (!Object.prototype.hasOwnProperty.call(types, k)) {
+          out._extras[k] = v;
+          continue;
+        }
+        const r = isType(v, "ref") ? v : READ[types[k]](v);
+        out[k.toLowerCase()] = r === void 0 ? null : r;
+      }
+      return out;
+    }
+    function isNum(v) {
+      return !!v && (v.type === "int" || v.type === "real");
+    }
+    function toRef(v) {
+      return isType(v, "ref") ? { num: v.num, gen: v.gen } : null;
+    }
     function toNumArray(v) {
       const out = [];
       for (const it of v.items) {
@@ -3634,6 +5426,10 @@ ${opts.xrefOffset}
       typePrinterMarkAnnot,
       typeTrapNetAnnot,
       typeFreeTextExtended,
+      typeMarkupEntries,
+      MARKUP_SUBTYPES,
+      typeAppearanceDict,
+      APPEARANCE_KEYS,
       FREETEXT_LINE_ENDINGS
     };
   } });
@@ -3786,7 +5582,42 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfFormActionsExtended", dependencies: ["pdfErrors","pdfParserObj"], factory: function(errors, parserObj) {
-    const { ParseError } = errors, { isType } = parserObj, EXTENDED_ACTION_SUBTYPES = new Set([
+    const { ParseError, ContractError } = errors, { isType } = parserObj, keyTypes = (text) => Object.freeze(Object.fromEntries(text ? text.split(" ").map((p) => p.split(":")) : [])), TABLE_TYPES = Object.freeze({
+      Thread: keyTypes("F:dict|string D:dict|int|string B:dict|int"),
+      Sound: keyTypes("Sound:stream Volume:num Synchronous:bool Repeat:bool Mix:bool"),
+      Movie: keyTypes("Annotation:dict T:string Operation:name"),
+      RichMediaExecute: keyTypes("TA:dict TI:dict CMD:dict"),
+      GoToDp: keyTypes("Dp:dict"),
+      SetState: keyTypes("T:array|dict AS:name"),
+      NOP: keyTypes("")
+    }), KEY_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => isType(v, "int") || isType(v, "real") ? v.value : void 0,
+      int: (v) => isType(v, "int") ? v.value : void 0,
+      bool: (v) => isType(v, "bool") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0,
+      stream: (v) => isType(v, "stream") ? v : void 0
+    });
+    function keyValue(type, v) {
+      if (isType(v, "ref"))
+        return v;
+      for (const t of type.split("|")) {
+        const r = KEY_READ[t](v);
+        if (r !== void 0)
+          return r;
+      }
+      return null;
+    }
+    function readTable(s, e) {
+      const out = {};
+      for (const [k, type] of Object.entries(TABLE_TYPES[s]))
+        if (e[k] !== void 0)
+          out[k.toLowerCase()] = keyValue(type, e[k]);
+      return out;
+    }
+    const EXTENDED_ACTION_SUBTYPES = new Set([
       "GoTo3DView",
       "SetOCGState",
       "Trans",
@@ -3795,7 +5626,8 @@ ${opts.xrefOffset}
       "SubmitForm",
       "ResetForm",
       "ImportData",
-      "JavaScript"
+      "JavaScript",
+      ...Object.keys(TABLE_TYPES)
     ]), KNOWN = {
       GoTo3DView: new Set(["Type", "S", "Next", "TA", "V"]),
       SetOCGState: new Set(["Type", "S", "Next", "State", "PreserveRB"]),
@@ -3805,7 +5637,8 @@ ${opts.xrefOffset}
       SubmitForm: new Set(["Type", "S", "Next", "F", "Fields", "Flags", "CharSet"]),
       ResetForm: new Set(["Type", "S", "Next", "Fields", "Flags"]),
       ImportData: new Set(["Type", "S", "Next", "F"]),
-      JavaScript: new Set(["Type", "S", "Next", "JS"])
+      JavaScript: new Set(["Type", "S", "Next", "JS"]),
+      ...Object.fromEntries(Object.entries(TABLE_TYPES).map(([s, types]) => [s, new Set(["Type", "S", "Next", ...Object.keys(types)])]))
     };
     function knownFor(s) {
       return KNOWN[s] || new Set(["Type", "S", "Next"]);
@@ -3847,6 +5680,8 @@ ${opts.xrefOffset}
         case "JavaScript":
           rec = readJavaScript(e);
           break;
+        default:
+          rec = readTable(e.S.value, e);
       }
       rec.kind = e.S.value;
       rec.raw = dict;
@@ -3927,10 +5762,46 @@ ${opts.xrefOffset}
           out[k] = entries[k];
       return out;
     }
-    return { typeExtendedAction, EXTENDED_ACTION_SUBTYPES };
+    const TRIGGERS = Object.freeze({
+      catalog: Object.freeze(["DC", "WS", "DS", "WP", "DP"]),
+      formField: Object.freeze(["K", "F", "V", "C"]),
+      pageObject: Object.freeze(["O", "C"]),
+      screenAnnotation: Object.freeze(["E", "X", "D", "U", "PO", "PC", "PV", "PI"]),
+      widgetAnnotation: Object.freeze(["E", "X", "D", "U", "Fo", "Bl", "PO", "PC", "PV", "PI"])
+    });
+    function typeAdditionalActions(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(TRIGGERS, kind))
+        throw new ContractError("pdf/extra/action-ext/aa-kind", `kind must be one of ${Object.keys(TRIGGERS).join(", ")}`, { context: { kind } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/action-ext/aa-not-dict", "an additional-actions dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const keys = TRIGGERS[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (keys.includes(k))
+          out[k.toLowerCase()] = keyValue("dict", v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const FIELD_ENTRY_TYPES = keyTypes("Parent:dict Kids:array T:string TU:string TM:string Ff:int AA:dict DS:string RV:string|stream");
+    function typeFieldEntries(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/action-ext/field-not-dict", "a field must be a dictionary", { context: { type: dict && dict.type } });
+      const out = { raw: dict };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(FIELD_ENTRY_TYPES, k))
+          out[k.toLowerCase()] = keyValue(FIELD_ENTRY_TYPES[k], v);
+      return out;
+    }
+    return {
+      typeExtendedAction,
+      EXTENDED_ACTION_SUBTYPES,
+      typeFieldEntries,
+      typeAdditionalActions,
+      ADDITIONAL_ACTION_TRIGGERS: TRIGGERS
+    };
   } });
     __register({ name: "pdfColorSpacesExtended", dependencies: ["pdfErrors","pdfParserObj"], factory: function(errors, parserObj) {
-    const { ParseError } = errors, { isType } = parserObj, COLOR_SPACE_FAMILIES = new Set([
+    const { ParseError, ContractError } = errors, { isType } = parserObj, COLOR_SPACE_FAMILIES = new Set([
       "CalGray",
       "CalRGB",
       "Lab",
@@ -4073,7 +5944,47 @@ ${opts.xrefOffset}
         return null;
       return out;
     }
-    return { typeColorSpace, COLOR_SPACE_FAMILIES };
+    const COLOR_PART_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => isType(v, "int") || isType(v, "real") ? v.value : void 0,
+      int: (v) => isType(v, "int") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0,
+      stream: (v) => isType(v, "stream") ? v : void 0
+    });
+    function colorPartValue(type, v) {
+      if (isType(v, "ref"))
+        return v;
+      for (const t of type.split("|")) {
+        const r = COLOR_PART_READ[t](v);
+        if (r !== void 0)
+          return r;
+      }
+      return null;
+    }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), COLOR_PART_TYPES = Object.freeze({
+      deviceN: keyTypes("Subtype:name Colorants:dict Process:dict MixingHints:dict"),
+      mixingHints: keyTypes("Solidities:dict PrintingOrder:array DotGain:dict"),
+      process: keyTypes("ColorSpace:array|name Components:array"),
+      solidities: keyTypes("Default:num"),
+      colorSpaceMap: keyTypes("DefaultRGB:array DefaultCMYK:array DefaultGray:array"),
+      functions: keyTypes("Default:dict|stream")
+    }), COLOR_PART_KEYS = Object.freeze(Object.fromEntries(Object.entries(COLOR_PART_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeColorPart(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(COLOR_PART_TYPES, kind))
+        throw new ContractError("pdf/extra/color-part/kind", `kind must be one of ${Object.keys(COLOR_PART_TYPES).join(", ")}`, { context: { kind } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/color-part/not-dict", "a colour dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = COLOR_PART_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = colorPartValue(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    return { typeColorSpace, COLOR_SPACE_FAMILIES, typeColorPart, COLOR_PART_KEYS };
   } });
     __register({ name: "pdfShadingTyped", dependencies: ["pdfErrors","pdfParserObj"], factory: function(errors, parserObj) {
     const { ParseError } = errors, { isType } = parserObj, NUM = (v) => v && (v.type === "int" || v.type === "real");
@@ -4260,7 +6171,46 @@ ${opts.xrefOffset}
         raw: obj_
       };
     }
-    return { typeShading, typeFunction };
+    const isRefV = (v) => isType(v, "ref"), KEY_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => isType(v, "int") || isType(v, "real") ? v.value : void 0,
+      int: (v) => isType(v, "int") ? v.value : void 0,
+      bool: (v) => isType(v, "bool") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0,
+      stream: (v) => isType(v, "stream") ? v : void 0
+    });
+    function keyValue(type, v) {
+      if (isRefV(v))
+        return v;
+      for (const t of type.split("|")) {
+        const r = KEY_READ[t](v);
+        if (r !== void 0)
+          return r;
+      }
+      return null;
+    }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), keysOf = (table) => Object.freeze(Object.fromEntries(Object.entries(table).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))]))), PATTERN_TYPES = Object.freeze({
+      1: keyTypes("Type:name PatternType:int PaintType:int TilingType:int BBox:array XStep:num YStep:num Resources:dict Matrix:array XUID:array"),
+      2: keyTypes("Type:name PatternType:int Shading:dict|stream Matrix:array ExtGState:dict")
+    }), PATTERN_KEYS = keysOf(PATTERN_TYPES), STREAM_KEYS = new Set(["Length", "Filter", "DecodeParms", "F", "FFilter", "FDecodeParms", "DL"]);
+    function typePattern(value) {
+      const dict = isType(value, "stream") ? value.dict : value;
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/shading/pattern/not-dict", "a pattern must be a dictionary or a stream", { context: { type: value && value.type } });
+      const e = dict.entries, t = isType(e.PatternType, "int") ? e.PatternType.value : null, types = t !== null && Object.prototype.hasOwnProperty.call(PATTERN_TYPES, t) ? PATTERN_TYPES[t] : null;
+      if (!types)
+        throw new ParseError("pdf/extra/shading/pattern/bad-type", "/PatternType must be 1 or 2", { context: { actual: t } });
+      const streamed = isType(value, "stream"), out = { raw: value, _extras: {} };
+      for (const [k, v] of Object.entries(e))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = keyValue(types[k], v);
+        else if (!(streamed && STREAM_KEYS.has(k)))
+          out._extras[k] = v;
+      return out;
+    }
+    return { typeShading, typeFunction, typePattern, PATTERN_KEYS };
   } });
     __register({ name: "pdfTransparencyTyped", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
     const { ParseError } = errors, { isType } = parser, BLEND_MODES = Object.freeze([
@@ -4356,7 +6306,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfSigPades", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
-    const { ParseError } = errors, { isType } = parser, SIG_SUBFILTERS = Object.freeze({
+    const { ParseError, ContractError } = errors, { isType } = parser, SIG_SUBFILTERS = Object.freeze({
       "adbe.x509.rsa_sha1": { pades: !1, kind: "legacy" },
       "adbe.pkcs7.sha1": { pades: !1, kind: "legacy" },
       "adbe.pkcs7.detached": { pades: !1, kind: "pkcs7-detached" },
@@ -4396,6 +6346,8 @@ ${opts.xrefOffset}
           transformParams: isType(e.TransformParams, "dict") ? e.TransformParams : null,
           data: e.Data || null,
           digestMethod: isType(e.DigestMethod, "name") ? e.DigestMethod.value : null,
+          digestValue: isType(e.DigestValue, "string") ? e.DigestValue.value : null,
+          digestLocation: isType(e.DigestLocation, "array") ? e.DigestLocation : null,
           raw: it
         });
       }
@@ -4520,12 +6472,111 @@ ${opts.xrefOffset}
       const last = trace[trace.length - 1];
       return { chainLevel: last ? last.level : null, trace };
     }
+    const isRefV = (v) => isType(v, "ref"), KEY_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => isType(v, "int") || isType(v, "real") ? v.value : void 0,
+      int: (v) => isType(v, "int") ? v.value : void 0,
+      bool: (v) => isType(v, "bool") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0,
+      stream: (v) => isType(v, "stream") ? v : void 0
+    });
+    function keyValue(type, v) {
+      if (isRefV(v))
+        return v;
+      for (const t of type.split("|")) {
+        const r = KEY_READ[t](v);
+        if (r !== void 0)
+          return r;
+      }
+      return null;
+    }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), keysOf = (table) => Object.freeze(Object.fromEntries(Object.entries(table).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))]))), SEED_VALUE_TYPES = Object.freeze({
+      field: keyTypes("Type:name Ff:int Filter:name SubFilter:array DigestMethod:array V:int Cert:dict Reasons:array MDP:dict TimeStamp:dict LegalAttestation:array AddRevInfo:bool LockDocument:name AppearanceFilter:string"),
+      cert: keyTypes("Type:name Ff:int Subject:array SignaturePolicyOID:string SignaturePolicyHashValue:string SignaturePolicyHashAlgorithm:name SignaturePolicyCommitmentType:array SubjectDN:array KeyUsage:array Issuer:array OID:array URL:string URLType:name"),
+      mdp: keyTypes("P:int"),
+      timeStamp: keyTypes("URL:string Ff:int")
+    }), SEED_VALUE_KEYS = keysOf(SEED_VALUE_TYPES);
+    function typeSeedValue(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(SEED_VALUE_TYPES, kind))
+        throw new ContractError("pdf/extra/pades/seed/kind", "kind must be field, cert, mdp or timeStamp", { context: { kind } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/pades/seed/not-dict", "a seed value must be a dictionary", { context: { type: dict && dict.type } });
+      const types = SEED_VALUE_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = keyValue(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const VRI_ENTRY_TYPES = keyTypes("Type:name Cert:array CRL:array OCSP:array TU:string TS:stream");
+    function typeVRIEntry(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/pades/vri/not-dict", "a VRI entry must be a dictionary", { context: { type: dict && dict.type } });
+      const out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(VRI_ENTRY_TYPES, k))
+          out[k.toLowerCase()] = keyValue(VRI_ENTRY_TYPES[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const BUILD_COMMON = "Name:name Date:string R:num PreRelease:bool OS:array NonEFontNoWarn:bool TrustedMode:bool V:num", BUILD_DATA_TYPES = Object.freeze({
+      data: keyTypes(BUILD_COMMON),
+      app: keyTypes(`${BUILD_COMMON} REx:string`),
+      sigQ: keyTypes(`${BUILD_COMMON} Preview:bool`)
+    }), BUILD_DATA_KEYS = keysOf(BUILD_DATA_TYPES), BUILD_PROPERTIES = Object.freeze([
+      ["Filter", "filter", "data"],
+      ["PubSec", "pubSec", "data"],
+      ["App", "app", "app"],
+      ["SigQ", "sigQ", "sigQ"]
+    ]);
+    function buildNotDict(value) {
+      return new ParseError("pdf/extra/pades/build/not-dict", "signature build data must be a dictionary", { context: { type: value && value.type } });
+    }
+    function typeBuildData(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(BUILD_DATA_TYPES, kind))
+        throw new ContractError("pdf/extra/pades/build/kind", "kind must be data, app or sigQ", { context: { kind } });
+      if (!isType(dict, "dict"))
+        throw buildNotDict(dict);
+      const types = BUILD_DATA_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = keyValue(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    function typeBuildProperties(dict) {
+      if (!isType(dict, "dict"))
+        throw buildNotDict(dict);
+      const e = dict.entries, out = { raw: dict, _extras: {} }, known = new Set;
+      for (const [key, field, kind] of BUILD_PROPERTIES) {
+        known.add(key);
+        if (e[key] === void 0)
+          continue;
+        const v = e[key];
+        out[field] = isType(v, "ref") ? v : isType(v, "dict") ? typeBuildData(v, kind) : null;
+      }
+      for (const k of Object.keys(e))
+        if (!known.has(k))
+          out._extras[k] = e[k];
+      return out;
+    }
     return {
       detectPadesProfile,
       typeReferenceArray,
       typeDSS,
+      typeVRIEntry,
       validateDocMdp,
       validateBLtaChain,
+      typeSeedValue,
+      SEED_VALUE_KEYS,
+      typeBuildData,
+      typeBuildProperties,
+      BUILD_DATA_KEYS,
       SIG_SUBFILTERS
     };
   } });
@@ -4612,6 +6663,8 @@ ${opts.xrefOffset}
         raw: dict,
         _extras: {}
       };
+      if (isType(e.Type, "name"))
+        out.type = e.Type.value;
       for (const k of Object.keys(e))
         if (!CF_ENTRY_KNOWN.has(k))
           out._extras[k] = e[k];
@@ -4679,8 +6732,8 @@ ${opts.xrefOffset}
       const out = {
         parent: e.Parent || null,
         dParts: toRefArray(e.DParts),
-        start: isType(e.Start, "int") ? e.Start.value : null,
-        end: isType(e.End, "int") ? e.End.value : null,
+        start: pageRef(e.Start),
+        end: pageRef(e.End),
         dpm: isType(e.DPM, "dict") ? typeDPM(e.DPM) : null,
         nodeNameTree: e.NodeNameTree || null,
         raw: dict,
@@ -4692,6 +6745,11 @@ ${opts.xrefOffset}
         if (!DPART_KNOWN.has(k))
           out._extras[k] = e[k];
       return out;
+    }
+    function pageRef(v) {
+      if (isType(v, "ref"))
+        return { num: v.num, gen: v.gen };
+      return isType(v, "int") ? v.value : null;
     }
     function typeDPM(dict) {
       if (!isType(dict, "dict"))
@@ -4830,7 +6888,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfXPrepress", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
-    const { ParseError } = errors, { isType } = parser, PDFX_PROFILES = Object.freeze({
+    const { ParseError, ContractError } = errors, { isType } = parser, PDFX_PROFILES = Object.freeze({
       "X-1a:2001": { iso: "ISO 15930-1:2001", color: "cmyk+spot", flavor: "closed" },
       "X-1a:2003": { iso: "ISO 15930-4:2003", color: "cmyk+spot", flavor: "closed" },
       "X-3:2002": { iso: "ISO 15930-3:2002", color: "any", flavor: "closed" },
@@ -4884,9 +6942,109 @@ ${opts.xrefOffset}
         warnings.push("page has no /BleedBox");
       return { pass: errors.length === 0, errors, warnings };
     }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), OPI_TYPES = Object.freeze({
+      "1.3": keyTypes("Type:name Version:num F:dict|string ID:string Comments:string Size:array CropRect:array CropFixed:array Position:array Resolution:array ColorType:name Color:array Tint:num Overprint:bool ImageType:array GrayMap:array Transparency:bool Tags:array"),
+      "2.0": keyTypes("Type:name Version:num F:dict|string MainImage:string Tags:array Size:array CropRect:array Overprint:bool Inks:array|name IncludedImageDimensions:array IncludedImageQuality:num")
+    }), OPI_KEYS = Object.freeze(Object.fromEntries(Object.entries(OPI_TYPES).map(([version, types]) => [version, Object.freeze(Object.keys(types))]))), OPI_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => isType(v, "int") || isType(v, "real") ? v.value : void 0,
+      bool: (v) => isType(v, "bool") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0
+    });
+    function opiValue(type, v) {
+      if (isType(v, "ref"))
+        return v;
+      const alts = type.split("|");
+      if (alts.length > 1) {
+        if (!alts.some((t) => OPI_READ[t](v) !== void 0))
+          return null;
+        return isType(v, "name") ? v.value : v;
+      }
+      const r = OPI_READ[type](v);
+      return r === void 0 ? null : r;
+    }
+    function opiNotDict(value) {
+      return new ParseError("pdf/extra/pdfx/opi/not-dict", "an OPI dictionary must be a dictionary", { context: { type: value && value.type } });
+    }
+    function typeOpiDict(dict, version) {
+      if (typeof version !== "string" || !Object.prototype.hasOwnProperty.call(OPI_TYPES, version))
+        throw new ContractError("pdf/extra/pdfx/opi/version", "version must be '1.3' or '2.0'", { context: { version } });
+      if (!isType(dict, "dict"))
+        throw opiNotDict(dict);
+      const types = OPI_TYPES[version], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = opiValue(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    function typeOpi(dict) {
+      if (!isType(dict, "dict"))
+        throw opiNotDict(dict);
+      const out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries)) {
+        if (k !== "1.3" && k !== "2.0") {
+          out._extras[k] = v;
+          continue;
+        }
+        const field = k === "1.3" ? "version13" : "version20";
+        if (isType(v, "ref"))
+          out[field] = v;
+        else
+          out[field] = isType(v, "dict") ? typeOpiDict(v, k) : null;
+      }
+      return out;
+    }
+    const PREPRESS_PART_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => isType(v, "int") || isType(v, "real") ? v.value : void 0,
+      int: (v) => isType(v, "int") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0,
+      stream: (v) => isType(v, "stream") ? v : void 0
+    });
+    function prepressPartValue(type, v) {
+      if (isType(v, "ref"))
+        return v;
+      for (const t of type.split("|")) {
+        const r = PREPRESS_PART_READ[t](v);
+        if (r !== void 0)
+          return r;
+      }
+      return null;
+    }
+    const PREPRESS_PART_TYPES = Object.freeze({
+      separation: keyTypes("Pages:array DeviceColorant:name|string ColorSpace:array"),
+      boxColorInfo: keyTypes("CropBox:dict BleedBox:dict TrimBox:dict ArtBox:dict"),
+      boxStyle: keyTypes("C:array W:num S:name D:array"),
+      trapRegion: keyTypes("TP:name TZ:array"),
+      outputProfileRef: keyTypes("CheckSum:string ColorantTable:array ICCVersion:string ProfileCS:string ProfileName:string URLs:array")
+    }), PREPRESS_PART_KEYS = Object.freeze(Object.fromEntries(Object.entries(PREPRESS_PART_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typePrepressPart(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(PREPRESS_PART_TYPES, kind))
+        throw new ContractError("pdf/extra/pdfx/part/kind", `kind must be one of ${Object.keys(PREPRESS_PART_TYPES).join(", ")}`, { context: { kind } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/pdfx/part/not-dict", "a prepress dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = PREPRESS_PART_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = prepressPartValue(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
     return {
       typePdfXOutputIntent,
       lintPdfXPage,
+      typeOpi,
+      typeOpiDict,
+      OPI_KEYS,
+      typePrepressPart,
+      PREPRESS_PART_KEYS,
       PDFX_PROFILES,
       COLOR_POLICY
     };
@@ -5012,7 +7170,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfOptionalContentExtended", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
-    const { ParseError } = errors, { isType } = parser, VE_OPERATORS = Object.freeze(["And", "Or", "Not"]);
+    const { ParseError, ContractError } = errors, { isType } = parser, VE_OPERATORS = Object.freeze(["And", "Or", "Not"]);
     function evaluateVE(ve, on) {
       if (!ve)
         throw new ParseError("pdf/extra/ocgx/ve/null", "VE expression is null");
@@ -5088,16 +7246,59 @@ ${opts.xrefOffset}
         names
       };
     }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), OPTIONAL_CONTENT_TYPES = Object.freeze({
+      properties: keyTypes("OCGs:array D:dict Configs:array"),
+      membership: keyTypes("Type:name OCGs:array|dict P:name VE:array"),
+      creatorInfo: keyTypes("Creator:string Subtype:name"),
+      language: keyTypes("Lang:string Preferred:name"),
+      export: keyTypes("ExportState:name"),
+      zoom: keyTypes("min:num max:num"),
+      print: keyTypes("Subtype:name PrintState:name"),
+      view: keyTypes("ViewState:name"),
+      user: keyTypes("Type:name Name:array|string"),
+      pageElement: keyTypes("Subtype:name")
+    }), OPTIONAL_CONTENT_KEYS = Object.freeze(Object.fromEntries(Object.entries(OPTIONAL_CONTENT_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))]))), KEY_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      string: (v) => isType(v, "string") ? v.value : void 0,
+      num: (v) => isType(v, "int") || isType(v, "real") ? v.value : void 0,
+      array: (v) => isType(v, "array") ? v : void 0,
+      dict: (v) => isType(v, "dict") ? v : void 0
+    });
+    function keyValue(type, v) {
+      if (isType(v, "ref"))
+        return v;
+      for (const t of type.split("|")) {
+        const r = KEY_READ[t](v);
+        if (r !== void 0)
+          return r;
+      }
+      return null;
+    }
+    function typeOptionalContent(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(OPTIONAL_CONTENT_TYPES, kind))
+        throw new ContractError("pdf/extra/oc/kind", `kind must be one of ${Object.keys(OPTIONAL_CONTENT_TYPES).join(", ")}`, { context: { kind } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/oc/not-dict", "an optional content dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = OPTIONAL_CONTENT_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = keyValue(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
     return {
       evaluateVE,
       typeOrderTree,
       typeRBGroups,
       classifyOcgIntent,
+      typeOptionalContent,
+      OPTIONAL_CONTENT_KEYS,
       VE_OPERATORS
     };
   } });
     __register({ name: "pdfEmbeddedFilesPortfolio", dependencies: ["pdfErrors"], factory: function(errors) {
-    const { ParseError } = errors, VIEW_MODES = new Set(["D", "T", "H", "C"]), SCHEMA_SUBTYPES = new Set([
+    const { ParseError, ContractError } = errors, VIEW_MODES = new Set(["D", "T", "H", "C"]), SCHEMA_SUBTYPES = new Set([
       "S",
       "D",
       "N",
@@ -5164,7 +7365,9 @@ ${opts.xrefOffset}
           throw new ParseError("pdf/portfolio/bad-schema-e", "/E must be boolean", { context: { field: name } });
         out.editable = e.E.value;
       }
-      const KNOWN = new Set(["Subtype", "N", "O", "V", "E"]);
+      if (e.Type)
+        out.type = isName(e.Type) ? e.Type.value : null;
+      const KNOWN = new Set(["Type", "Subtype", "N", "O", "V", "E"]);
       for (const k of Object.keys(e))
         if (!KNOWN.has(k))
           out._extras[k] = e[k];
@@ -5211,9 +7414,67 @@ ${opts.xrefOffset}
           out.ascending = as;
         } else
           throw new ParseError("pdf/portfolio/bad-sort-a", "/Sort /A must be a bool or array of bools");
+      if (e.Type)
+        out.type = isName(e.Type) ? e.Type.value : null;
       for (const k of Object.keys(e))
-        if (k !== "S" && k !== "A")
+        if (k !== "Type" && k !== "S" && k !== "A")
           out._extras[k] = e[k];
+      return out;
+    }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), COLLECTION_PART_TYPES = Object.freeze({
+      folder: keyTypes("Type:name ID:int Name:string Parent:dict Child:dict Next:dict CI:dict Desc:string CreationDate:string ModDate:string Thumb:stream Free:array"),
+      colors: keyTypes("Type:name Background:array CardBackground:array CardBorder:array PrimaryText:array SecondaryText:array"),
+      split: keyTypes("Type:name Direction:name Position:num"),
+      subitem: keyTypes("Type:name D:string|num P:string")
+    }), COLLECTION_PART_KEYS = Object.freeze(Object.fromEntries(Object.entries(COLLECTION_PART_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))]))), KEY_READ = Object.freeze({
+      name: (v) => isName(v) ? v.value : void 0,
+      string: (v) => isStr(v) ? v.value : void 0,
+      num: (v) => v && (v.type === "int" || v.type === "real") ? v.value : void 0,
+      int: (v) => isInt(v) ? v.value : void 0,
+      array: (v) => isArr(v) ? v : void 0,
+      dict: (v) => isDict(v) ? v : void 0,
+      stream: (v) => v && v.type === "stream" ? v : void 0
+    });
+    function keyValue(type, v) {
+      if (v && v.type === "ref")
+        return v;
+      for (const t of type.split("|")) {
+        const r = KEY_READ[t](v);
+        if (r !== void 0)
+          return r;
+      }
+      return null;
+    }
+    function typeCollectionPart(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(COLLECTION_PART_TYPES, kind))
+        throw new ContractError("pdf/portfolio/part/kind", `kind must be one of ${Object.keys(COLLECTION_PART_TYPES).join(", ")}`, { context: { kind } });
+      if (!isDict(dict))
+        throw new ParseError("pdf/portfolio/part/not-dict", "a collection dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = COLLECTION_PART_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = keyValue(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const FILE_PART_TYPES = Object.freeze({
+      ef: keyTypes("F:stream UF:stream"),
+      rf: keyTypes("F:array UF:array"),
+      mac: keyTypes("Subtype:int Creator:int ResFork:stream"),
+      target: keyTypes("R:name N:string P:int|string A:int|string T:dict")
+    }), FILE_PART_KEYS = Object.freeze(Object.fromEntries(Object.entries(FILE_PART_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeFilePart(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(FILE_PART_TYPES, kind))
+        throw new ContractError("pdf/portfolio/file-part/kind", `kind must be one of ${Object.keys(FILE_PART_TYPES).join(", ")}`, { context: { kind } });
+      if (!isDict(dict))
+        throw new ParseError("pdf/portfolio/file-part/not-dict", "a file part must be a dictionary", { context: { type: dict && dict.type } });
+      const types = FILE_PART_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = keyValue(types[k], v);
+        else
+          out._extras[k] = v;
       return out;
     }
     function typeNavigator(nav) {
@@ -5221,7 +7482,12 @@ ${opts.xrefOffset}
         return { ref: { num: nav.num, gen: nav.gen }, raw: nav };
       if (!isDict(nav))
         throw new ParseError("pdf/portfolio/bad-navigator", "/Navigator must be a dict or ref");
-      return { raw: nav, entries: nav.entries };
+      const out = { raw: nav, entries: nav.entries }, e = nav.entries;
+      if (e.Type !== void 0)
+        out.type = isName(e.Type) ? e.Type.value : null;
+      if (e.Layout !== void 0)
+        out.layout = isName(e.Layout) ? e.Layout.value : e.Layout && e.Layout.type === "array" ? e.Layout : null;
+      return out;
     }
     function typeCustomIcon(ci) {
       if (!isDict(ci) && !(ci && ci.type === "stream"))
@@ -5259,7 +7525,9 @@ ${opts.xrefOffset}
     function typeCollectionItem(ciDict) {
       if (!isDict(ciDict))
         throw new ParseError("pdf/portfolio/ci-not-dict", "/CI item must be a dict");
-      const out = { raw: ciDict, fields: {}, _extras: {} };
+      const out = { raw: ciDict, fields: {}, _extras: {} }, t = ciDict.entries.Type;
+      if (t && t.type === "name")
+        out.type = t.value;
       for (const [k, v] of Object.entries(ciDict.entries)) {
         if (k === "Type")
           continue;
@@ -5278,6 +7546,10 @@ ${opts.xrefOffset}
       typeNavigator,
       typeCustomIcon,
       typeCollectionItem,
+      typeCollectionPart,
+      COLLECTION_PART_KEYS,
+      typeFilePart,
+      FILE_PART_KEYS,
       VIEW_MODES,
       SCHEMA_SUBTYPES
     };
@@ -5475,12 +7747,20 @@ ${opts.xrefOffset}
       }
       return out;
     }
+    function dcTitle(input) {
+      const text = toText(input), bound = /xmlns:([\w-]+)\s*=\s*["']http:\/\/purl\.org\/dc\/elements\/1\.1\/["']/.exec(text), p = bound ? bound[1] : "dc", el = new RegExp("<" + p + ":title\\b[^>]*?(?:/>|>([\\s\\S]*?)</" + p + ":title>)").exec(text);
+      if (!el || el[1] === void 0)
+        return null;
+      const items = [...el[1].matchAll(/<([\w-]+):li\b([^>]*)>([^<]*)<\/\1:li>/g)].map((m) => ({ lang: (/xml:lang\s*=\s*["']([^"']*)["']/.exec(m[2]) || [])[1], value: decodeEntities(m[3]).trim() })), pick = items.length ? (items.find((it) => it.lang === "x-default") || items[0]).value : /<[\w]/.test(el[1]) ? "" : decodeEntities(el[1]).trim();
+      return pick ? pick : null;
+    }
     function parsePacket(input) {
       const pairs = extract(input);
       return { pairs, grouped: group(pairs) };
     }
     return {
       parsePacket,
+      dcTitle,
       extract,
       group,
       KNOWN_NAMESPACES
@@ -5550,7 +7830,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdf3dRichMedia", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
-    const { ParseError } = errors, { isType } = parser, THREE_D_KNOWN = new Set([
+    const { ParseError, ContractError } = errors, { isType } = parser, THREE_D_KNOWN = new Set([
       "Type",
       "Subtype",
       "Rect",
@@ -5607,6 +7887,9 @@ ${opts.xrefOffset}
         dis: isType(e.DIS, "name") ? e.DIS.value : null,
         tb: isType(e.TB, "bool") ? e.TB.value : null,
         np: isType(e.NP, "bool") ? e.NP.value : null,
+        style: isType(e.Style, "name") ? e.Style.value : null,
+        window: isType(e.Window, "dict") || isType(e.Window, "ref") ? e.Window : null,
+        transparent: isType(e.Transparent, "bool") ? e.Transparent.value : null,
         raw: dict
       };
     }
@@ -5634,6 +7917,7 @@ ${opts.xrefOffset}
         throw new ParseError("pdf/extra/rm/content/not-dict", "/RichMediaContent must be a dictionary", { context: { type: dict && dict.type } });
       const e = dict.entries;
       return {
+        ...e.Type ? { type: isType(e.Type, "name") ? e.Type.value : null } : {},
         assets: e.Assets || null,
         configurations: e.Configurations || null,
         views: e.Views || null,
@@ -5647,9 +7931,124 @@ ${opts.xrefOffset}
         throw new ParseError("pdf/extra/rm/state/bad", "state must be a string", { context: { type: typeof name } });
       return RM_INSTANCE_STATES[name] || null;
     }
+    const keyList = (text) => Object.freeze(text.split(" ")), MEASURE_KEYS = Object.freeze({
+      RD3: keyList("Type Subtype TRL AP A1 A2 N2 A3 A4 TP TX TY EL TS C V U P UT SC R S"),
+      AD3: keyList("Type Subtype TRL AP A1 D1 N1 A2 D2 N2 TP TX TY TS C V P UT DR S"),
+      PD3: keyList("Type Subtype TRL AP A1 D1 N1 A2 N2 TP TY TS C V U P UT S"),
+      LD3: keyList("Type Subtype TRL AP A1 N1 A2 N2 TP TY TS C V U P UT S"),
+      "3DC": keyList("Type Subtype TRL A1 N1 TP TB TS C UT S")
+    }), MEASURE_TEXT = new Set(["TRL", "N1", "N2", "U", "UT"]), MEASURE_NUMBER = new Set(["EL", "TS", "V"]), MEASURE_BOOL = new Set(["SC", "R", "DR"]), MEASURE_DICT = new Set(["S"]);
+    function measureValue(k, v) {
+      if (k === "Type" || k === "Subtype")
+        return isType(v, "name") ? v.value : null;
+      if (MEASURE_TEXT.has(k))
+        return isType(v, "string") ? v.value : null;
+      if (MEASURE_NUMBER.has(k))
+        return isType(v, "int") || isType(v, "real") ? v.value : null;
+      if (k === "P")
+        return isType(v, "int") ? v.value : null;
+      if (MEASURE_BOOL.has(k))
+        return isType(v, "bool") ? v.value : null;
+      if (MEASURE_DICT.has(k))
+        return isType(v, "dict") || isType(v, "ref") ? v : null;
+      return isType(v, "array") || isType(v, "ref") ? v : null;
+    }
+    function type3DMeasure(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/3d/measure/not-dict", "a 3D measurement must be a dictionary", { context: { type: dict && dict.type } });
+      const e = dict.entries, subtype = isType(e.Subtype, "name") ? e.Subtype.value : null, keys = subtype && Object.prototype.hasOwnProperty.call(MEASURE_KEYS, subtype) ? MEASURE_KEYS[subtype] : null;
+      if (!keys)
+        throw new ParseError("pdf/extra/3d/measure/bad-subtype", "/Subtype must be RD3, AD3, PD3, LD3 or 3DC", { context: { actual: subtype } });
+      const out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(e))
+        if (keys.includes(k))
+          out[k.toLowerCase()] = measureValue(k, v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), SCENE_TYPES = Object.freeze({
+      view: keyTypes("Type:name XN:text IN:text MS:name MA:array C2W:array U3DPath:array|text CO:number P:dict O:stream BG:dict RM:dict LS:dict SA:array NA:array NR:bool Snapshot:stream Params:array"),
+      crossSection: keyTypes("Type:name C:array O:array PO:number PC:array IV:bool PV:bool IC:array ST:bool SC:bool"),
+      node: keyTypes("Type:name N:text O:number V:bool M:array Instance:dict Data:stream|text RM:dict"),
+      renderMode: keyTypes("Type:name Subtype:name AC:array FC:array|name O:number CV:number"),
+      background: keyTypes("Type:name Subtype:name CS:name C:array EA:bool"),
+      lightingScheme: keyTypes("Type:name Subtype:name"),
+      units: keyTypes("TSm:number TSn:number TU:text USm:number USn:number UU:text DSm:number DSn:number DU:text"),
+      stream: keyTypes("Type:name Subtype:name VA:array DV:dict|int|name|text Resources:dict OnInstantiate:stream AN:dict ColorSpace:array|name"),
+      animationStyle: keyTypes("Type:name Subtype:name PC:int TM:number"),
+      reference: keyTypes("Type:name 3DD:stream"),
+      projection: keyTypes("Subtype:name CS:name F:number N:number FOV:number PS:name|number OS:number OB:name"),
+      markup: keyTypes("Type:name Subtype:name 3DA:dict|text 3DV:dict MD5:text"),
+      measureRef: keyTypes("Type:name Subtype:name M3DREF:dict")
+    }), STREAM_KEYS = new Set(["Length", "Filter", "DecodeParms", "F", "FFilter", "FDecodeParms", "DL"]), SCENE_KEYS = Object.freeze(Object.fromEntries(Object.entries(SCENE_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))]))), KEY_READ = Object.freeze({
+      name: (v) => isType(v, "name") ? v.value : void 0,
+      text: (v) => isType(v, "string") ? v.value : void 0,
+      number: (v) => isType(v, "int") || isType(v, "real") ? v.value : void 0,
+      int: (v) => isType(v, "int") ? v.value : void 0,
+      bool: (v) => isType(v, "bool") ? v.value : void 0,
+      array: (v) => isType(v, "array") || isType(v, "ref") ? v : void 0,
+      dict: (v) => isType(v, "dict") || isType(v, "ref") ? v : void 0,
+      stream: (v) => isType(v, "stream") || isType(v, "ref") ? v : void 0
+    });
+    function keyValue(type, v) {
+      for (const t of type.split("|")) {
+        const r = KEY_READ[t](v);
+        if (r !== void 0)
+          return r;
+      }
+      return null;
+    }
+    function type3DScene(value, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(SCENE_TYPES, kind))
+        throw new ContractError("pdf/extra/3d/scene/kind", `kind must be one of ${Object.keys(SCENE_TYPES).join(", ")}`, { context: { kind } });
+      const streamed = isType(value, "stream"), dict = streamed ? value.dict : value;
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/3d/scene/not-dict", "a 3D view or scene dictionary must be a dictionary or a stream", { context: { type: value && value.type } });
+      const types = SCENE_TYPES[kind], out = { raw: value, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = keyValue(types[k], v);
+        else if (!(streamed && STREAM_KEYS.has(k)))
+          out._extras[k] = v;
+      return out;
+    }
+    const RICH_MEDIA_TYPES = Object.freeze({
+      activation: keyTypes("Type:name Condition:name Animation:dict View:dict Configuration:dict Presentation:dict Scripts:array"),
+      animation: keyTypes("Type:name Subtype:name PlayCount:int Speed:number"),
+      command: keyTypes("Type:name C:text A:array|bool|int|number|text"),
+      configuration: keyTypes("Type:name Subtype:name Name:text Instances:array"),
+      deactivation: keyTypes("Type:name Condition:name"),
+      height: keyTypes("Default:int Max:int Min:int"),
+      instance: keyTypes("Type:name Subtype:name Asset:dict"),
+      position: keyTypes("Type:name HAlign:name VAlign:name HOffset:number VOffset:number"),
+      presentation: keyTypes("Type:name Style:name Window:dict Transparent:bool NavigationPane:bool Toolbar:bool PassContextClick:bool"),
+      settings: keyTypes("Type:name Activation:dict Deactivation:dict"),
+      width: keyTypes("Default:int Max:int Min:int"),
+      window: keyTypes("Type:name Width:dict Height:dict Position:dict")
+    }), RICH_MEDIA_KEYS = Object.freeze(Object.fromEntries(Object.entries(RICH_MEDIA_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeRichMedia(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(RICH_MEDIA_TYPES, kind))
+        throw new ContractError("pdf/extra/rm/dict/kind", `kind must be one of ${Object.keys(RICH_MEDIA_TYPES).join(", ")}`, { context: { kind } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/rm/dict/not-dict", "a RichMedia dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = RICH_MEDIA_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = keyValue(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
     return {
       type3DAnnot,
       type3DActivation,
+      type3DMeasure,
+      MEASURE_KEYS,
+      type3DScene,
+      SCENE_KEYS,
+      typeRichMedia,
+      RICH_MEDIA_KEYS,
       typeRichMediaAnnot,
       typeRichMediaContent,
       classifyRmInstanceState,
@@ -5759,8 +8158,34 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfMisc", dependencies: ["pdfErrors"], factory: function(errors) {
-    const { ParseError } = errors, REQUIREMENT_S_VALUES = new Set([
-      "EnableJavaScripts"
+    const { ParseError, ContractError } = errors, REQUIREMENT_S_VALUES = new Set([
+      "3DMarkup",
+      "AcroFormInteract",
+      "Action",
+      "Attachment",
+      "AttachmentEditing",
+      "Collection",
+      "CollectionEditing",
+      "DPartInteract",
+      "DigSig",
+      "DigSigMDP",
+      "DigSigValidation",
+      "EnableJavaScripts",
+      "Encryption",
+      "Geospatial2D",
+      "Geospatial3D",
+      "Markup",
+      "Multimedia",
+      "Navigation",
+      "OCAutoStates",
+      "OCInteract",
+      "PRC",
+      "RichMedia",
+      "STEP",
+      "SeparationSimulation",
+      "Transitions",
+      "U3D",
+      "glTF"
     ]);
     function isDict(v) {
       return v && v.type === "dict";
@@ -5776,6 +8201,9 @@ ${opts.xrefOffset}
     }
     function isInt(v) {
       return v && v.type === "int";
+    }
+    function isRef(v) {
+      return v && v.type === "ref";
     }
     function typeSpiderInfo(dict) {
       if (!isDict(dict))
@@ -5842,7 +8270,11 @@ ${opts.xrefOffset}
           if (v.type !== "string")
             throw new ParseError("pdf/misc/legal-bad-attestation", "/Attestation must be a string");
           out.attestation = v.value;
-        } else
+        } else if ((k === "HideAnnotationActions" || k === "GoToRemoteActions") && isInt(v))
+          out.flags[k] = v.value;
+        else if (k === "OptionalContent" && isBool(v))
+          out.optionalContent = v.value;
+        else
           out._extras[k] = v;
       return out;
     }
@@ -5857,13 +8289,39 @@ ${opts.xrefOffset}
         const e = it.entries;
         if (!e.S || !isName(e.S))
           throw new ParseError("pdf/misc/req-missing-S", "/Requirements entry needs /S name", { context: { index: i } });
-        out.push({
+        const entry = {
           raw: it,
           s: e.S.value,
           standard: REQUIREMENT_S_VALUES.has(e.S.value),
           rh: e.RH
-        });
+        };
+        if (e.Type)
+          entry.type = isName(e.Type) ? e.Type.value : null;
+        if (e.V)
+          entry.v = isName(e.V) ? e.V.value : isDict(e.V) || isRef(e.V) ? e.V : null;
+        if (e.Penalty)
+          entry.penalty = isInt(e.Penalty) ? e.Penalty.value : null;
+        if (e.DigSig)
+          entry.digSig = isDict(e.DigSig) || isRef(e.DigSig) ? e.DigSig : null;
+        if (e.Encrypt)
+          entry.encrypt = isDict(e.Encrypt) || isRef(e.Encrypt) ? e.Encrypt : null;
+        out.push(entry);
       }
+      return out;
+    }
+    function typeRequirementHandler(dict) {
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/req-handler-not-dict", "a requirement handler must be a dictionary");
+      const e = dict.entries, out = {
+        type: isName(e.Type) ? e.Type.value : null,
+        s: isName(e.S) ? e.S.value : null,
+        script: e.Script && e.Script.type === "string" ? e.Script.value : null,
+        raw: dict,
+        _extras: {}
+      };
+      for (const k of Object.keys(e))
+        if (k !== "Type" && k !== "S" && k !== "Script")
+          out._extras[k] = e[k];
       return out;
     }
     function typeDocMdpParams(dict) {
@@ -5880,6 +8338,8 @@ ${opts.xrefOffset}
           throw new ParseError("pdf/misc/docmdp-bad-V", "/DocMDP /V must be a name");
         out.version = e.V.value;
       }
+      if (isName(e.Type))
+        out.type = e.Type.value;
       const KNOWN = new Set(["Type", "P", "V"]);
       for (const k of Object.keys(e))
         if (!KNOWN.has(k))
@@ -5907,14 +8367,244 @@ ${opts.xrefOffset}
         throw new ParseError("pdf/misc/needsrendering-bad", "/NeedsRendering must be boolean");
       return v.value;
     }
+    const VIEWER_PREFS = [
+      ["HideToolbar", "hideToolbar", "bool", !1],
+      ["HideMenubar", "hideMenubar", "bool", !1],
+      ["HideWindowUI", "hideWindowUI", "bool", !1],
+      ["FitWindow", "fitWindow", "bool", !1],
+      ["CenterWindow", "centerWindow", "bool", !1],
+      ["DisplayDocTitle", "displayDocTitle", "bool", !1],
+      ["NonFullScreenPageMode", "nonFullScreenPageMode", "name", "UseNone"],
+      ["Direction", "direction", "name", "L2R"],
+      ["ViewArea", "viewArea", "name", "CropBox"],
+      ["ViewClip", "viewClip", "name", "CropBox"],
+      ["PrintArea", "printArea", "name", "CropBox"],
+      ["PrintClip", "printClip", "name", "CropBox"],
+      ["PrintScaling", "printScaling", "name", "AppDefault"],
+      ["Duplex", "duplex", "name", null],
+      ["PickTrayByPDFSize", "pickTrayByPDFSize", "bool", !1]
+    ], VIEWER_PREFS_KNOWN = new Set([
+      ...VIEWER_PREFS.map((p) => p[0]),
+      "PrintPageRange",
+      "NumCopies",
+      "Enforce"
+    ]);
+    function typeViewerPreferences(dict) {
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/viewer-prefs-not-dict", "/ViewerPreferences must be a dict");
+      const e = dict.entries, out = {};
+      for (const [key, field, kind, dflt] of VIEWER_PREFS) {
+        const v = e[key];
+        out[field] = (kind === "bool" ? isBool(v) : isName(v)) ? v.value : dflt;
+      }
+      const range = e.PrintPageRange;
+      out.printPageRange = isArr(range) && range.items.length % 2 === 0 && range.items.every(isInt) ? range.items.reduce((acc, it, i) => {
+        if (i % 2 === 0)
+          acc.push([it.value]);
+        else
+          acc[acc.length - 1].push(it.value);
+        return acc;
+      }, []) : null;
+      out.numCopies = isInt(e.NumCopies) && e.NumCopies.value > 0 ? e.NumCopies.value : null;
+      out.enforce = isArr(e.Enforce) && e.Enforce.items.every(isName) ? e.Enforce.items.map((it) => it.value) : null;
+      out.raw = dict;
+      out._extras = {};
+      for (const k of Object.keys(e))
+        if (!VIEWER_PREFS_KNOWN.has(k))
+          out._extras[k] = e[k];
+      return out;
+    }
+    const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), MEASUREMENT_TYPES = Object.freeze({
+      rectilinear: keyTypes("Type:name Subtype:name R:text X:array Y:array D:array A:array T:array S:array O:array CYX:number"),
+      geospatial: keyTypes("Type:name Subtype:name Bounds:array GCS:dict DCS:dict PDU:array GPTS:array LPTS:array PCSM:array"),
+      numberFormat: keyTypes("Type:name U:text C:number F:name D:int FD:bool RT:text RD:text PS:text SS:text O:name"),
+      viewport: keyTypes("Type:name BBox:array Name:text Measure:dict PtData:dict"),
+      pointData: keyTypes("Type:name Subtype:name Names:array XPTS:array"),
+      geographicCS: keyTypes("Type:name EPSG:int WKT:text"),
+      projectedCS: keyTypes("Type:name EPSG:int WKT:text"),
+      markupGeo: keyTypes("Type:name Subtype:name")
+    }), MEASUREMENT_KEYS = Object.freeze(Object.fromEntries(Object.entries(MEASUREMENT_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))]))), MEASUREMENT_READ = Object.freeze({
+      name: (v) => isName(v) ? v.value : null,
+      text: (v) => v && v.type === "string" ? v.value : null,
+      number: (v) => v && (v.type === "int" || v.type === "real") ? v.value : null,
+      int: (v) => isInt(v) ? v.value : null,
+      bool: (v) => isBool(v) ? v.value : null,
+      array: (v) => isArr(v) || isRef(v) ? v : null,
+      dict: (v) => isDict(v) || isRef(v) ? v : null,
+      stream: (v) => v && (v.type === "stream" || v.type === "ref") ? v : null
+    });
+    function readKey(type, v) {
+      if (isRef(v))
+        return v;
+      for (const t of type.split("|")) {
+        const r = MEASUREMENT_READ[t](v);
+        if (r !== null)
+          return r;
+      }
+      return null;
+    }
+    function typeMeasurement(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(MEASUREMENT_TYPES, kind))
+        throw new ContractError("pdf/misc/measurement/kind", `kind must be one of ${Object.keys(MEASUREMENT_TYPES).join(", ")}`, { context: { kind } });
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/measurement/not-dict", "a measurement dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = MEASUREMENT_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const FORM_COMMON = "Type:name FormType:int Ref:dict PieceInfo:dict LastModified:text OPI:dict OC:dict Name:name AF:array Measure:dict PtData:dict", IMAGE_COMMON = "Alternates:array SMaskInData:int Name:name StructParent:int ID:text OPI:dict OC:dict AF:array Measure:dict PtData:dict", XOBJECT_ENTRY_TYPES = Object.freeze({
+      image: keyTypes(`Type:name ${IMAGE_COMMON}`),
+      imageMask: keyTypes(`Type:name ImageMask:bool ${IMAGE_COMMON}`),
+      softMask: keyTypes("Type:name Name:name Matte:array AF:array"),
+      form: keyTypes(`${FORM_COMMON} XUID:array`),
+      printerMark: keyTypes(`${FORM_COMMON} MarkStyle:text Colorants:dict`),
+      trapNet: keyTypes(`${FORM_COMMON} PCM:name SeparationColorNames:array TrapRegions:array TrapStyles:text`),
+      ps: keyTypes("Level1:stream"),
+      psPassthrough: keyTypes("Subtype2:name Level1:stream PS:stream FormType:int BBox:array Matrix:array")
+    }), XOBJECT_ENTRY_KEYS = Object.freeze(Object.fromEntries(Object.entries(XOBJECT_ENTRY_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeXObjectEntries(value, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(XOBJECT_ENTRY_TYPES, kind))
+        throw new ContractError("pdf/misc/xobject/kind", `kind must be one of ${Object.keys(XOBJECT_ENTRY_TYPES).join(", ")}`, { context: { kind } });
+      const dict = value && value.type === "stream" ? value.dict : value;
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/xobject/not-dict", "an XObject must be a stream or a dictionary", { context: { type: value && value.type } });
+      const types = XOBJECT_ENTRY_TYPES[kind], out = { kind, raw: value };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+      return out;
+    }
+    const WEB_CAPTURE_TYPES = Object.freeze({
+      pageSet: keyTypes("Type:name S:name ID:text O:array SI:array|dict CT:text TS:text T:text TID:text"),
+      imageSet: keyTypes("Type:name S:name ID:text O:array SI:array|dict CT:text TS:text R:array|int"),
+      command: keyTypes("URL:text L:int F:int P:stream|text CT:text H:text S:dict"),
+      commandSettings: keyTypes("G:dict C:dict")
+    }), WEB_CAPTURE_KEYS = Object.freeze(Object.fromEntries(Object.entries(WEB_CAPTURE_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeWebCapture(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(WEB_CAPTURE_TYPES, kind))
+        throw new ContractError("pdf/misc/web-capture/kind", `kind must be one of ${Object.keys(WEB_CAPTURE_TYPES).join(", ")}`, { context: { kind } });
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/web-capture/not-dict", "a Web Capture dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = WEB_CAPTURE_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const FIELD_LOCK_TYPES = Object.freeze({
+      lock: keyTypes("Type:name Action:name Fields:array P:number"),
+      fieldMdp: keyTypes("Type:name Action:name Fields:array V:name"),
+      urTransform: keyTypes("Type:name Document:array Msg:text V:name Annots:array Form:array Signature:array EF:array P:bool")
+    });
+    function typeFieldLock(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(FIELD_LOCK_TYPES, kind))
+        throw new ContractError("pdf/misc/field-lock/kind", "kind must be lock, fieldMdp or urTransform", { context: { kind } });
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/field-lock/not-dict", "a field lock must be a dictionary", { context: { type: dict && dict.type } });
+      const types = FIELD_LOCK_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const PRESENTATION_TYPES = Object.freeze({
+      floatingWindow: keyTypes("Type:name D:array RT:int P:int O:int T:bool UC:bool R:int TT:array"),
+      transition: keyTypes("Type:name S:name D:number Dm:name M:name Di:int|name SS:number B:bool"),
+      navNode: keyTypes("Type:name NA:dict PA:dict Next:dict Prev:dict Dur:number"),
+      bead: keyTypes("Type:name T:dict N:dict V:dict P:dict R:array"),
+      thread: keyTypes("Type:name F:dict I:dict Metadata:stream"),
+      slideShow: keyTypes("Type:name Subtype:name Resources:dict StartResource:text"),
+      pageLabel: keyTypes("Type:name S:name P:text St:int"),
+      viewParams: keyTypes("Instance:dict Data:stream|text"),
+      outlines: keyTypes("Type:name First:dict Last:dict Count:int")
+    }), PRESENTATION_KEYS = Object.freeze(Object.fromEntries(Object.entries(PRESENTATION_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typePresentation(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(PRESENTATION_TYPES, kind))
+        throw new ContractError("pdf/misc/presentation/kind", "kind must be a key of PRESENTATION_KEYS", { context: { kind } });
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/presentation/not-dict", "a presentation dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = PRESENTATION_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const CATALOG_PART_TYPES = Object.freeze({
+      names: keyTypes("Dests:dict AP:dict JavaScript:dict Pages:dict Templates:dict IDS:dict URLS:dict EmbeddedFiles:dict AlternatePresentations:dict Renditions:dict"),
+      extensions: keyTypes("Type:name ISO_:array|dict"),
+      devExtensions: keyTypes("Type:name BaseVersion:name ExtensionLevel:int URL:text ExtensionRevision:text"),
+      uri: keyTypes("Base:text")
+    }), CATALOG_PART_KEYS = Object.freeze(Object.fromEntries(Object.entries(CATALOG_PART_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeCatalogPart(dict, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(CATALOG_PART_TYPES, kind))
+        throw new ContractError("pdf/misc/catalog-part/kind", "kind must be a key of CATALOG_PART_KEYS", { context: { kind } });
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/catalog-part/not-dict", "a catalog dictionary must be a dictionary", { context: { type: dict && dict.type } });
+      const types = CATALOG_PART_TYPES[kind], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
+    const OBJECT_ENTRY_TYPES = Object.freeze({
+      thumbnail: keyTypes("Type:name Subtype:name Width:int Height:int ColorSpace:name|array BitsPerComponent:int Decode:array"),
+      cmap: keyTypes("Type:name CMapName:name CIDSystemInfo:dict WMode:int UseCMap:name|stream"),
+      iccProfile: keyTypes("N:int Alternate:name|array Range:array Metadata:stream"),
+      pageTree: keyTypes("Type:name Parent:dict MediaBox:array CropBox:array Rotate:int"),
+      resource: keyTypes("Properties:dict Encoding:dict"),
+      encoding: keyTypes("Type:name"),
+      trailer: keyTypes("XRefStm:int"),
+      objectStream: keyTypes("Extends:stream")
+    }), OBJECT_ENTRY_KEYS = Object.freeze(Object.fromEntries(Object.entries(OBJECT_ENTRY_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeObjectEntries(value, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(OBJECT_ENTRY_TYPES, kind))
+        throw new ContractError("pdf/misc/object-entries/kind", "kind must be a key of OBJECT_ENTRY_KEYS", { context: { kind } });
+      const dict = value && value.type === "stream" ? value.dict : value;
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/object-entries/not-dict", "neither a stream nor a dictionary", { context: { type: value && value.type } });
+      const types = OBJECT_ENTRY_TYPES[kind], out = { raw: value, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
     return {
       typeSpiderInfo,
+      typeViewerPreferences,
       typeThreads,
       typeLegal,
       typeRequirements,
+      typeRequirementHandler,
       typeDocMdpParams,
       typePerms,
       typeNeedsRendering,
+      typeMeasurement,
+      MEASUREMENT_KEYS,
+      typeXObjectEntries,
+      XOBJECT_ENTRY_KEYS,
+      typeWebCapture,
+      WEB_CAPTURE_KEYS,
+      typeFieldLock,
+      typePresentation,
+      PRESENTATION_KEYS,
+      typeCatalogPart,
+      CATALOG_PART_KEYS,
+      typeObjectEntries,
+      OBJECT_ENTRY_KEYS,
       REQUIREMENT_S_VALUES
     };
   } });

@@ -415,18 +415,12 @@ export const pdfCcittFaxDecoder = {
             // Reference line for 2D modes: all-white initial line
             let refLine = new Uint8Array(columns);
 
-            // EOL handling helpers
+            // EOL handling helpers. Called only under `/EndOfLine true`: the
+            // EOL must be there, else resync on the next one.
             function expectEolMaybe() {
-                if (parms.EndOfLine) {
-                    // Must see EOL
-                    if (!readEolMaybe(reader)) {
-                        // try resync
-                        if (!skipToEol(reader)) return false;
-                    }
-                    return true;
+                if (!readEolMaybe(reader)) {
+                    if (!skipToEol(reader)) return false;
                 }
-                // Optional EOL: peek and consume if present
-                readEolMaybe(reader);
                 return true;
             }
 

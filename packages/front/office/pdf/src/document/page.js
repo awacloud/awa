@@ -46,6 +46,10 @@ export const pdfPage = {
             'DPart', 'AssociatedFiles'
         ]);
 
+        // A present value (a PDF null is the entry's absence, §7.3.9).
+        const has = (v) => !!v && v.type !== 'null';
+        const isNum = (v) => !!v && (v.type === 'int' || v.type === 'real');
+
         function toBox(v) {
             if (!v || v.type !== 'array' || v.items.length !== 4) return null;
             const r = new Array(4);
@@ -119,6 +123,28 @@ export const pdfPage = {
             if (e.Tabs && e.Tabs.type === 'name') out.tabs = e.Tabs.value;
             if (e.Metadata) out.metadata = e.Metadata;
             if (e.Group)    out.group    = e.Group;
+            // The other entries of Table 31, each only when present: a
+            // scalar by its value, anything else as read.
+            if (isType(e.LastModified, 'string')) out.lastModified = e.LastModified.value;
+            if (has(e.BoxColorInfo))   out.boxColorInfo   = e.BoxColorInfo;
+            if (has(e.Thumb))          out.thumb          = e.Thumb;
+            if (has(e.B))              out.b              = e.B;
+            if (isNum(e.Dur))          out.dur            = e.Dur.value;
+            if (has(e.Trans))          out.trans          = e.Trans;
+            if (has(e.AA))             out.aa             = e.AA;
+            if (has(e.PieceInfo))      out.pieceInfo      = e.PieceInfo;
+            if (isType(e.StructParents, 'int')) out.structParents = e.StructParents.value;
+            if (isType(e.ID, 'string')) out.id            = e.ID.value;
+            if (isNum(e.PZ))           out.pz             = e.PZ.value;
+            if (has(e.SeparationInfo)) out.separationInfo = e.SeparationInfo;
+            if (isType(e.TemplateInstantiated, 'name')) {
+                out.templateInstantiated = e.TemplateInstantiated.value;
+            }
+            if (has(e.PresSteps))      out.presSteps      = e.PresSteps;
+            if (has(e.VP))             out.vp             = e.VP;
+            if (has(e.AF))             out.af             = e.AF;
+            if (has(e.OutputIntents))  out.outputIntents  = e.OutputIntents;
+            if (has(e.DPart))          out.dPart          = e.DPart;
 
             for (const k of Object.keys(e)) {
                 if (!KNOWN.has(k)) out._extras[k] = e[k];

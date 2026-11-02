@@ -15,6 +15,8 @@
  *    present in an embedded OpenType font program by sfnt-table scan
  *  - `typeFontFile3OpenType(stream)`      → typed wrapper around a
  *    `/FontFile3` stream whose `/Subtype` is `/OpenType`
+ *  - `typeFontDescriptor(dict)`           → typed font descriptor of any
+ *    font kind (§9.8, Tables 120, 122 and 123), the `FD` values included
  *
  * @module pdf/extra/font-color-tagging
  */
@@ -114,14 +116,113 @@ export const pdfFontColorTagging = {
                 try { color = detectColorFontTables(stream.raw); }
                 catch (_e) { color = null; }
             }
-            return {
+            const out = {
                 subtype:  'OpenType',
                 length:   stream.raw instanceof Uint8Array ? stream.raw.length : null,
                 metadata: e.Metadata || null,
                 color,
                 raw:      stream,
-                _extras:  collectExtras(e, new Set(['Subtype', 'Length', 'Filter', 'DecodeParms', 'Metadata']))
+                _extras:  collectExtras(e, new Set(['Subtype', 'Length', 'Filter', 'DecodeParms', 'Metadata',
+                    'Length1', 'Length2', 'Length3']))
             };
+            for (const [k, f] of LENGTH_KEYS) {
+                if (e[k] !== undefined) out[f] = isType(e[k], 'int') ? e[k].value : null;
+            }
+            // The filters the bytes are encoded with (Table 5), only when
+            // present: a name by its value, an array or a dictionary as read.
+            if (isType(e.Filter, 'name')) out.filter = e.Filter.value;
+            else if (isType(e.Filter, 'array')) out.filter = e.Filter;
+            if (isType(e.DecodeParms, 'dict') || isType(e.DecodeParms, 'array')) {
+                out.decodeParms = e.DecodeParms;
+            }
+            return out;
+        }
+
+        const LENGTH_KEYS = Object.freeze([['Length1', 'length1'], ['Length2', 'length2'], ['Length3', 'length3']]);
+
+        /**
+         * The companion of `typeStreamEntries` for a font file stream: its
+         * own keys — `length1`, `length2`, `length3` (integers),
+         * `subtype` (a name), `metadata` (a stream or reference as read) —
+         * present only when the key is, `null` for a value of another
+         * type; no `_extras` (the stream keys are `typeStreamEntries`').
+         */
+        function typeFontFileEntries(stream) {
+            if (!isType(stream, 'stream') || !isType(stream.dict, 'dict')) {
+                throw new ParseError('pdf/extra/fontfile/not-stream',
+                    'a font file must be a stream',
+                    { context: { type: stream && stream.type } });
+            }
+            const e = stream.dict.entries;
+            const out = { raw: stream };
+            for (const [k, f] of LENGTH_KEYS) {
+                if (e[k] !== undefined) out[f] = isType(e[k], 'int') ? e[k].value : null;
+            }
+            if (e.Subtype !== undefined) out.subtype = isType(e.Subtype, 'name') ? e.Subtype.value : null;
+            if (e.Metadata !== undefined) {
+                out.metadata = isType(e.Metadata, 'stream') || isType(e.Metadata, 'ref') ? e.Metadata : null;
+            }
+            return out;
+        }
+
+        // Font descriptor entries (§9.8, Tables 120, 122 and 123).
+        const DESCRIPTOR_KEYS = new Set([
+            'Type', 'FontName', 'FontFamily', 'FontStretch', 'FontWeight', 'Flags',
+            'FontBBox', 'ItalicAngle', 'Ascent', 'Descent', 'Leading', 'CapHeight',
+            'XHeight', 'StemV', 'StemH', 'AvgWidth', 'MaxWidth', 'MissingWidth',
+            'FontFile', 'FontFile2', 'FontFile3', 'CharSet', 'Style', 'Lang', 'FD', 'CIDSet'
+        ]);
+
+        function typeFontDescriptor(dict) {
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/extra/font-descriptor/not-dict',
+                    'font descriptor must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
+            const e = dict.entries;
+            const nameOf = (v) => (isType(v, 'name') ? v.value : null);
+            const strOf = (v) => (isType(v, 'string') ? v.value : null);
+            const intOf = (v) => (isType(v, 'int') ? v.value : null);
+            const numOf = (v, dflt) => (isNum(v) ? v.value : dflt);
+            const refOf = (v) => (isType(v, 'ref') ? { num: v.num, gen: v.gen } : null);
+            // A font program or CIDSet must be indirect; a direct stream is kept as read.
+            const streamOf = (v) => refOf(v) || (isType(v, 'stream') ? v : null);
+            const dictOf = (v) => refOf(v) || (isType(v, 'dict') ? v : null);
+            const box = isType(e.FontBBox, 'array') && e.FontBBox.items.length === 4
+                && e.FontBBox.items.every(isNum) ? e.FontBBox.items.map((it) => it.value) : null;
+            return {
+                type:         nameOf(e.Type),
+                fontName:     nameOf(e.FontName),
+                fontFamily:   strOf(e.FontFamily),
+                fontStretch:  nameOf(e.FontStretch),
+                fontWeight:   intOf(e.FontWeight),
+                flags:        intOf(e.Flags),
+                fontBBox:     box,
+                italicAngle:  numOf(e.ItalicAngle, null),
+                ascent:       numOf(e.Ascent, null),
+                descent:      numOf(e.Descent, null),
+                leading:      numOf(e.Leading, 0),
+                capHeight:    numOf(e.CapHeight, null),
+                xHeight:      numOf(e.XHeight, 0),
+                stemV:        numOf(e.StemV, null),
+                stemH:        numOf(e.StemH, 0),
+                avgWidth:     numOf(e.AvgWidth, 0),
+                maxWidth:     numOf(e.MaxWidth, 0),
+                missingWidth: numOf(e.MissingWidth, 0),
+                fontFile:     streamOf(e.FontFile),
+                fontFile2:    streamOf(e.FontFile2),
+                fontFile3:    streamOf(e.FontFile3),
+                charSet:      strOf(e.CharSet),
+                style:        dictOf(e.Style),
+                lang:         nameOf(e.Lang),
+                fd:           dictOf(e.FD),
+                cidSet:       streamOf(e.CIDSet),
+                _extras:      collectExtras(e, DESCRIPTOR_KEYS)
+            };
+        }
+
+        function isNum(v) {
+            return !!v && (v.type === 'int' || v.type === 'real');
         }
 
         function collectExtras(entries, known) {
@@ -136,6 +237,8 @@ export const pdfFontColorTagging = {
             decodeFontDescriptorFlags,
             detectColorFontTables,
             typeFontFile3OpenType,
+            typeFontFileEntries,
+            typeFontDescriptor,
             FONT_DESCRIPTOR_FLAGS,
             COLOR_OT_TABLES
         };

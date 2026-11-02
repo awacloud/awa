@@ -9,7 +9,7 @@ Per-module reference, organised by sub-domain. Mirrors `src/`.
 | [`ooxmlErrors`](./errors.md) | `src/errors.js` | Typed error hierarchy + stable code catalog. |
 | [`ooxmlShared`](./_shared/README.md) | `src/_shared/index.js` | Namespaces, relationship types, EMU helpers, colour codecs. |
 
-> The XML parser is consumed from [`@awacloud/fw/io/codec/xml.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/io/codec/xml.md); the ZIP container from [`@awacloud/fw/io/compress/zip.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/io/compress/zip.md).
+> The XML parser is consumed from [`@awacloud/fw/io/codec/xml.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/packages/front/fw/docs/api/io/codec/xml.md); the ZIP container from [`@awacloud/fw/io/compress/zip.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/packages/front/fw/docs/api/io/compress/zip.md).
 
 ## OPC — Open Packaging Conventions
 
@@ -20,6 +20,8 @@ The ZIP container shared by the three formats (ECMA-376 part 2).
 | [`opcPackage`](./opc/package.md) | `src/opc/package.js` | Read/write an OPC package (ZIP + parts + rels). |
 | [`opcContentTypes`](./opc/content-types.md) | `src/opc/contentTypes.js` | `[Content_Types].xml` — MIME registry. |
 | [`opcRelationships`](./opc/relationships.md) | `src/opc/relationships.js` | `.rels` files — typed link graph. |
+| [`opcCoreProperties`](./opc/core-properties.md) | `src/opc/coreProperties.js` | The package's core properties (`docProps/core.xml`), read and typed. |
+| [`opcExtendedProperties`](./opc/extended-properties.md) | `src/opc/extendedProperties.js` | The package's extended properties (`docProps/app.xml`: the stored page count, word count, application), read and typed. |
 
 ## Markup Compatibility
 

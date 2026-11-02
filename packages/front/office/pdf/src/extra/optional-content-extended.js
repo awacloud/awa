@@ -10,7 +10,9 @@
  * nested array `[op, operand, ...]` with ops `And`, `Or`, `Not`. This
  * module evaluates such expressions, types `/Order` trees with embedded
  * sub-headings (string leaves), and surfaces RBGroups + `/Intent`
- * routing (View vs Design).
+ * routing (View vs Design). It also types the optional content
+ * properties, the membership dictionaries and the usage sub-dictionaries
+ * (`typeOptionalContent`).
  *
  * @module pdf/extra/optional-content-extended
  */
@@ -26,7 +28,7 @@ export const pdfOptionalContentExtended = {
     dependencies: ['pdfErrors', 'pdfParser'],
     deps: [pdfErrors, pdfParser],
     factory(errors, parser) {
-        const { ParseError } = errors;
+        const { ParseError, ContractError } = errors;
         const { isType } = parser;
 
         const VE_OPERATORS = Object.freeze(['And', 'Or', 'Not']);
@@ -130,11 +132,73 @@ export const pdfOptionalContentExtended = {
             };
         }
 
+        // The optional content dictionaries: per kind, the keys and their
+        // types (the Arlington PDF Model's), as `Key:type` pairs.
+        const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(' ').map((p) => p.split(':'))));
+        const OPTIONAL_CONTENT_TYPES = Object.freeze({
+            properties: keyTypes('OCGs:array D:dict Configs:array'),
+            membership: keyTypes('Type:name OCGs:array|dict P:name VE:array'),
+            creatorInfo: keyTypes('Creator:string Subtype:name'),
+            language: keyTypes('Lang:string Preferred:name'),
+            export: keyTypes('ExportState:name'),
+            zoom: keyTypes('min:num max:num'),
+            print: keyTypes('Subtype:name PrintState:name'),
+            view: keyTypes('ViewState:name'),
+            user: keyTypes('Type:name Name:array|string'),
+            pageElement: keyTypes('Subtype:name')
+        });
+        const OPTIONAL_CONTENT_KEYS = Object.freeze(Object.fromEntries(
+            Object.entries(OPTIONAL_CONTENT_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+        const KEY_READ = Object.freeze({
+            name: (v) => (isType(v, 'name') ? v.value : undefined),
+            string: (v) => (isType(v, 'string') ? v.value : undefined),
+            num: (v) => (isType(v, 'int') || isType(v, 'real') ? v.value : undefined),
+            array: (v) => (isType(v, 'array') ? v : undefined),
+            dict: (v) => (isType(v, 'dict') ? v : undefined)
+        });
+        function keyValue(type, v) {
+            if (isType(v, 'ref')) return v;
+            for (const t of type.split('|')) {
+                const r = KEY_READ[t](v);
+                if (r !== undefined) return r;
+            }
+            return null;
+        }
+
+        /**
+         * Type an optional content properties, membership or usage
+         * sub-dictionary (`kind` a key of `OPTIONAL_CONTENT_KEYS`): one
+         * field per key of its list, named after the key in lower case
+         * (`OCGs` → `ocgs`), present only when the key is; the other keys in
+         * `_extras`.
+         */
+        function typeOptionalContent(dict, kind) {
+            if (typeof kind !== 'string' || !Object.prototype.hasOwnProperty.call(OPTIONAL_CONTENT_TYPES, kind)) {
+                throw new ContractError('pdf/extra/oc/kind',
+                    `kind must be one of ${Object.keys(OPTIONAL_CONTENT_TYPES).join(', ')}`,
+                    { context: { kind } });
+            }
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/extra/oc/not-dict',
+                    'an optional content dictionary must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
+            const types = OPTIONAL_CONTENT_TYPES[kind];
+            const out = { raw: dict, _extras: {} };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                if (Object.prototype.hasOwnProperty.call(types, k)) out[k.toLowerCase()] = keyValue(types[k], v);
+                else out._extras[k] = v;
+            }
+            return out;
+        }
+
         return {
             evaluateVE,
             typeOrderTree,
             typeRBGroups,
             classifyOcgIntent,
+            typeOptionalContent,
+            OPTIONAL_CONTENT_KEYS,
             VE_OPERATORS
         };
     }

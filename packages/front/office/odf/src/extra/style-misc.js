@@ -69,8 +69,8 @@ export const styleMisc = {
                 if (n && n._passthrough) extras.push(h.renderElement(n));
             }
             delete out.styleNodes;
-            if (Array.isArray(s._extras) || !s._extras) out._extras = extras;
-            else out._extras = { ...s._extras, children: extras };
+            if (Array.isArray(s._extras)) out._extras = extras;
+            else out._extras = { ...(s._extras || {}), children: extras };
             return out;
         }
 

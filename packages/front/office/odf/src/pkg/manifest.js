@@ -122,10 +122,9 @@ export const pkgManifest = {
          */
         function serialize(manifest) {
             const m = manifest || { version: ODF_VERSION, entries: [] };
-            const attrs = {
-                'xmlns:manifest': MANIFEST_NS,
-                'manifest:version': m.version || ODF_VERSION
-            };
+            const attrs = { 'xmlns:manifest': MANIFEST_NS };
+            // A null version writes none (a manifest before ODF 1.2).
+            if (m.version !== null) attrs['manifest:version'] = m.version || ODF_VERSION;
             if (m._extras && m._extras.attrs) {
                 for (const k of Object.keys(m._extras.attrs)) {
                     attrs[k] = m._extras.attrs[k];

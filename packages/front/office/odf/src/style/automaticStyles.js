@@ -25,7 +25,13 @@
  *         tableCell?:  { ...flatAttrs },
  *         graphic?:    { ...flatAttrs }
  *       },
- *       _extras?
+ *       _extras?: {
+ *         attrs?,                      // other style:style attributes
+ *         children?,                   // other style:style children
+ *         propertyChildren?: {         // a property element's own children,
+ *           paragraph?: [node…], …    // verbatim, keyed like `properties`
+ *         }
+ *       }
  *     }
  *   ],
  *   _extras?
@@ -33,8 +39,10 @@
  * ```
  *
  * Each properties bag is a **flat attribute bag** of `key → string`. The
- * renderer reverses the mapping. Unknown grandchildren are preserved in
- * `_extras.children`.
+ * renderer reverses the mapping. A property element's own children (a
+ * `style:tab-stops`, a `style:drop-cap`, a `style:background-image` …)
+ * are kept verbatim in `_extras.propertyChildren` and written back inside
+ * that element; any other child of the style in `_extras.children`.
  *
  * @module odf/style/automaticStyles
  */
@@ -79,19 +87,24 @@ export const styleAutomatic = {
                 if (!known.has(k)) { xa[k] = a[k]; anyAttr = true; }
             }
             const xtraChildren = [];
+            const propertyChildren = {};
             for (const c of el.children || []) {
                 if (c.type !== 'element') continue;
                 const key = PROP_TAGS[c.name];
                 if (key) {
                     out.properties[key] = { ...(c.attrs || {}) };
+                    const kids = (c.children || []).filter(k => k.type === 'element');
+                    if (kids.length) propertyChildren[key] = kids;
                 } else {
                     xtraChildren.push(c);
                 }
             }
-            if (anyAttr || xtraChildren.length) {
+            const anyPropertyChild = Object.keys(propertyChildren).length > 0;
+            if (anyAttr || xtraChildren.length || anyPropertyChild) {
                 out._extras = {};
                 if (anyAttr) out._extras.attrs = xa;
                 if (xtraChildren.length) out._extras.children = xtraChildren;
+                if (anyPropertyChild) out._extras.propertyChildren = propertyChildren;
             }
             return out;
         }
@@ -103,10 +116,14 @@ export const styleAutomatic = {
                 for (const k of Object.keys(s._extras.attrs)) attrs[k] = s._extras.attrs[k];
             }
             const children = [];
-            for (const key of Object.keys(s.properties || {})) {
+            const kept = (s._extras && s._extras.propertyChildren) || {};
+            const keys = Object.keys(s.properties || {});
+            for (const key of Object.keys(kept)) if (!keys.includes(key)) keys.push(key);
+            for (const key of keys) {
                 const tag = TAG_BY_PROP[key];
                 if (!tag) continue;
-                children.push(xml.el(tag, { ...(s.properties[key] || {}) }, []));
+                const attrs = (s.properties && s.properties[key]) || {};
+                children.push(xml.el(tag, { ...attrs }, [...(kept[key] || [])]));
             }
             if (s._extras && s._extras.children) {
                 for (const c of s._extras.children) children.push(c);

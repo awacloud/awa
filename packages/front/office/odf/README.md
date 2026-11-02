@@ -4,7 +4,7 @@ Pure JavaScript library to read and write OpenDocument documents
 (ODF — `.odt`, `.ods`, `.odp`) in the browser. No npm dependency beyond
 the monorepo framework: ZIP, XML parsing/serialization and the ODF
 package container are either implemented here or consumed from
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/fw).
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/fw).
 
 The package exposes a typed document model for the three formats (a
 serializable JSON tree), a core set of parsers and orchestrators, and
@@ -14,13 +14,14 @@ in `_extras`, and `write(read(x))` re-emits the package parts it does
 not regenerate (pictures, thumbnails, embedded objects) byte-for-byte
 with their manifest media types, together with the read styles,
 settings and metadata; `meta:generator` is rewritten to
-`@awacloud/odf`. One limitation: a frame anchored directly in a paragraph
-is re-emitted after the paragraph's runs, not at its original position,
-unless the document is read with `odt.read(bytes, { framesInRuns: true })`
-(inside a `text:span`, frames, fields, spacing and nested spans keep
-their position). Two writes of the same document produce the same bytes:
+`@awacloud/odf`. One limitation: a frame, a comment, a bookmark, a field
+or any other element no run kind covers, anchored directly in a
+paragraph, is re-emitted after the paragraph's runs, not at its original
+position, unless the document is read with `odt.read(bytes, {
+framesInRuns: true, elementsInRuns: true })` (inside a `text:span`,
+frames, fields, spacing and nested spans keep their position). Two writes of the same document produce the same bytes:
 ZIP entries carry a fixed date, or the `opts.mtime` of `write`. It mirrors the architecture of the sibling package
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/office/ooxml).
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/office/ooxml).
 
 ## Installation
 
@@ -87,13 +88,44 @@ const styledBytes = odt.write(doc, { meta: { title: 'Doc', creator: 'Alice' } })
 
 ## Reading styles back
 
-`odt.read()` turns a style reference into semantic fields (`bold` / `italic`
-/ `strike` / `monospace`, list numbering, bordered cells, margins-aligned
-tables) only when the style is fully mapped and comes from the `content.xml`
-automatic styles or from the `styles.xml` `office:styles` named styles; it
-never follows `style:parent-style-name` chains, ignores the automatic styles
-of `styles.xml`, and leaves every other style as an opaque `styleName` — see
-[`docs/guide/read-write-odt.md`](./docs/guide/read-write-odt.md).
+By default `odt.read()` turns a style reference into semantic fields (`bold`
+/ `italic` / `strike` / `monospace`, list numbering, bordered cells,
+margins-aligned tables) only when the style is fully mapped and comes from the
+`content.xml` automatic styles or from the `styles.xml` `office:styles` named
+styles; it does not follow `style:parent-style-name` chains, ignores the
+automatic styles of `styles.xml`, and leaves every other style as an opaque
+`styleName` — see
+[`docs/guide/read-write-odt.md`](./docs/guide/read-write-odt.md). Two opt-in
+reads go further: `semanticStyles: true` reads what a style chain states (a
+span's emphasis through a `styles.xml` parent, a nested list's numbering), and
+`headerFooterContent: true` resolves a header or footer against the
+`styles.xml` automatic styles (see the table below).
+
+## Read and write options
+
+Every option below is opt-in: the default read and the default write are the
+ones of the previous release, and each option is off (`false`, or absent)
+unless it is passed. A value other than a boolean for `textBoxes`,
+`headerFooterContent`, `semanticStyles`, `listStyles`, `sectionStyles`,
+`preserveInput` or `keepVersion` throws
+`ContractError('odf/contract-error/<odt|ods|odp>')` with
+`context.argument: 'opts.<name>'` (`framesInRuns` and `elementsInRuns` read
+any other value as true or false). Full descriptions are in
+[`docs/api/odt/odt.md`](./docs/api/odt/odt.md),
+[`ods`](./docs/api/ods/ods.md) and [`odp`](./docs/api/odp/odp.md).
+
+| Option | On | Default | Effect |
+|--------|----|---------|--------|
+| `framesInRuns` | `odt.read` | `false` | Types each `draw:frame` of a paragraph, heading, span or link body as a `frame` run at its place. |
+| `elementsInRuns` | `odt.read` | `false` | Keeps every other untyped inline element (comment, bookmark, field, change mark …) as a raw `element` run at its place instead of an `_extras.children` entry. |
+| `textBoxes` | `odt.read` | `false` | Types the content of each text-box frame run as `child.content` (needs `framesInRuns`). |
+| `headerFooterContent` | `odt.read` | `false` | Types the children of each header and footer of the master pages as `content`; `write` writes an edited one from it. |
+| `semanticStyles` | `odt.read` | `false` | Reads the emphasis and the list numbering a style chain states, keeping the style names. |
+| `listStyles` | `odt.read` | `false` | Adds `listStyles`, the document's list styles typed level by level (a read view, not written). |
+| `sectionStyles` | `odt.read` | `false` | Adds `sectionStyles`, the document's section styles with their columns typed (a read view, not written). |
+| `preserveInput` | `odt.write`, `ods.write`, `odp.write` | `false` | Writes from a structured clone, so the given model is left as it was. |
+| `keepVersion` | `odt.write`, `ods.write`, `odp.write` | `false` | Writes each part with the `office:version` of its source part instead of `1.4`. |
+| `cleanup` | `odt.write` | absent | `['emptyProperties']` drops the `style:*-properties` elements with no attribute and no child. |
 
 ## Pre-built bundles (`dist/`)
 
@@ -201,8 +233,8 @@ bun test packages/front/office/odf/
 
 ## See also
 
-- [`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/office/ooxml) — sibling OOXML library
-- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/fw) — shared runtime + zip + crc32 + codecs
+- [`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/office/ooxml) — sibling OOXML library
+- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/fw) — shared runtime + zip + crc32 + codecs
 - [`CHANGELOG.md`](./CHANGELOG.md) — L0 → L4 history
 
 ## Exposed sub-paths
@@ -251,6 +283,6 @@ as stated in [`NOTICE`](./NOTICE).
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/odf`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.1.0/packages/front/office/odf)
+- Source: [`packages/front/office/odf`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/office/odf)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/odf@1.1.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/odf@1.2.0/SECURITY.md

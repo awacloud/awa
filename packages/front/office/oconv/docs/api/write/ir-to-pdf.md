@@ -95,7 +95,7 @@ explicit pdfOpts.fonts[class] > registered/posted oconvDefaultFaces[class] > Sta
 - **The default-face tier** is reached ONLY by the module NAME
   `oconvDefaultFaces` — this facade never imports a face pack. `main.js`
   registers a stand-in at version `0.0.0` whose `defaultFaces()` returns
-  `null`; a real pack (e.g. `@awacloud/oconv-fonts`, version `1.0.0`)
+  `null`; a real pack (e.g. `@awacloud/oconv-fonts`, version `1.1.0`)
   displaces it in either registration order. See
   [`pdf/default-faces`](./pdf/default-faces.md) for the full stand-in
   contract and [`pdf-writer.md`](../../pdf-writer.md) for the host
@@ -105,6 +105,7 @@ A style class resolved from Standard 14 while at least one other class is
 embedded (explicit or default) records `layout/font-fallback`; on the pure
 Standard 14 route (no `pdfOpts.fonts`, no registered/posted default map at
 all) nothing is recorded — it is the chosen route, not a fallback.
+A caller face (explicit or default) that `@awacloud/fonts` reads but that has no TrueType outlines — a CFF / CFF2 OpenType face, which `subsetForPdf` cannot subset — is not embedded: its class falls back to Standard 14 and records `layout/font-fallback` with `reason: 'no TrueType outlines'` in its detail, on every route (the face was asked for).
 
 ### Images
 

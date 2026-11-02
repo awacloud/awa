@@ -4,6 +4,402 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- **A write without `carry` keeps the relationships of the content the
+  model does not type.** `docx.read` sets `_relationships` on the document
+  (`document._relationships`), on each header, footer, footnotes, endnotes,
+  comments, numbering and settings model and on each chart model: the
+  relationships that part's XML names and the model does not write itself
+  (an OLE object, an ActiveX control, a SmartArt diagram, an external
+  picture link, a VML picture, fill or stroke, a picture bullet, an
+  attached template or mail-merge source, a chart's embedded workbook …),
+  with the slice of the source package they reach. `docx.write` without
+  `carry` writes back those its XML still names, under their source ids,
+  with their target parts, content types and own relationships (the
+  reference repair `carry` uses); the ids it allocates avoid them. Of the
+  1,469 real-world docx files of the test corpus, 135 left a dangling
+  relationship id after a write without `carry`; two do now, both truncated
+  sources. An unedited chart is still written as read under `carry`: the
+  field is not chart content. A consumer deep-comparing models sees the
+  new field.
+- **`extensions: 'keep'` read option of `docx.read`.** Keeps the elements
+  and attributes of the Office extension namespaces (`w14`, `w15`, `w16*`,
+  `wp14`) that markup compatibility removes by default: the `w14` text
+  effects, `w14:checkbox`, `w15:appearance` … stay in the model's
+  `_extras` and are written back. A paragraph's and a table row's
+  `w14:paraId` / `w14:textId` then read as `paraId` / `textId` (a
+  paragraph holding only a display equation keeps them too) and are
+  written back; `docx.write` writes each `paraId` once per part, so a
+  copied paragraph does not repeat it. The default (`'drop'`) is
+  unchanged and gives no `paraId`; another value throws
+  `docx/invalid-extensions`.
+- **`alternateContent` read option of `docx.read`.** `'fallback'` (the
+  default) resolves every `mc:AlternateContent` to its `mc:Fallback`, as
+  before; `'keep'` leaves it in place, verbatim, in the `_extras` of the
+  element that holds it (document, headers, footers, notes, comments), and
+  `docx.write` writes it back: a save-back no longer turns DrawingML
+  shapes, text boxes and charts into their VML fallback. A chart part only
+  a kept Choice references is then left unparsed and listed in
+  `unmodelledParts`, so the `carry` write option writes it back with its
+  relationship. Another value throws `docx/invalid-alternate-content`.
+- **`carry` write option (`docx.write`): the parts `read()` did not model
+  are written back.** Pass the read result as `carry` and every part
+  listed in `unmodelledParts` (theme, font table, web settings, document
+  properties, glossary document, embedded objects, …) is written with its
+  bytes, its content type and its relationships: from the package, the
+  document, the headers and footers (matched through the `opts.headers` /
+  `opts.footers` keys), the comments, footnotes and endnotes parts, and
+  the carried part's own relationships; external relationships of those
+  parts other than hyperlinks too. A carried relationship keeps its source
+  id, the writer allocating its own around them, so an `r:id` kept
+  verbatim in `_extras` still resolves; a carried part whose name the
+  writer uses for one of its own parts is written under a free name in the
+  same folder. A `carry` that is not that envelope throws
+  `docx/invalid-carry`. Without the option the output is unchanged by it.
+- **`preserveInput` write option (`docx.write`, `xlsx.write`,
+  `pptx.write`).** With `true` the writer works on a structured clone of
+  the model and of its options (`docx.write`'s `carry`, only read,
+  excepted), so the given model is left exactly as it was: the dehydrate
+  pass of a bundle no longer demotes typed fields back into `_extras` in
+  it, the ids the writer assigns (docx: `embedRef`, `chartRef`, `docId`,
+  `storeItemID`; pptx: `embedRef`, `chartRef`, a master's `layoutIds`) land
+  on the clone, and so do the writers' own patches (xlsx: the threaded
+  comments' authors added to `persons`). The bytes are the same. The
+  default (`false`) is unchanged; another value throws
+  `docx/invalid-preserve-input`, `xlsx/invalid-preserve-input` or
+  `pptx/invalid-preserve-input`. `xlsx.write` and `pptx.write` now take an
+  options object.
+- **`cleanup` write option of `docx.write`.** `cleanup:
+  ['emptyProperties']` drops every empty `rPr` / `pPr` (an empty
+  `<w:rPr/>` / `<w:pPr/>` read from a source, written back otherwise)
+  from the body and the story parts, working on a structured clone so
+  the caller's model is unchanged. A named list, so further cleanups can
+  join; an unknown or repeated name throws `docx/invalid-cleanup`.
+- **`danglingNumbering` write option (`docx.write`).** With `'keep'`, a
+  paragraph, header, footer, note, comment or style `numPr` that points at
+  a num the written numbering does not declare — or written without
+  `numbering` — is written as given instead of throwing
+  `docx/numbering-unknown-num` / `docx/numbering-missing`, so a file
+  `docx.read` accepted can be written back (Word ignores such a
+  reference). `'throw'`, the default, keeps both checks; another value
+  throws `docx/invalid-dangling-numbering`.
+- **`dmlWpDrawing` extension: typed drawings, and an edit keeps its
+  source.** The opt-in extension (`@awacloud/ooxml/extra/dml-wp-drawing`,
+  `docx.use`), now part of `docx-large` (and so `docx-full`), gives every
+  drawing a typed `frame` (Word's `wp14` ids, the effect extent, the frame
+  locks, `wp:docPr`'s hidden flag, hyperlink and decorative flag); an
+  anchored one a typed `layout` (simple position, horizontal and vertical
+  position, wrap with its polygon, relative size); a picture a `picture`
+  (alt text, hyperlink, decorative flag, locks, blip state, local-DPI
+  flag and colour effects, blip fill, black-and-white mode, rotation and
+  flips, adjust guides, fill, line, effect list); a shape (`wps:wsp`) a
+  `shape` (text-box flag, locks, a connector's connections, the shape
+  properties, the `wps:style` references with their colours, the body
+  properties — insets, anchor, columns, autofit, warp — and the text box's
+  paragraphs as `docxStructure` blocks); a group or canvas a typed `group`
+  / `canvas` whose children are typed shapes, pictures and nested groups.
+  Each colour keeps every transform; a number written with its unit
+  (strict) is kept as that string. Its edits are written into a copy of
+  the drawing's kept source at dehydrate, elements created at their schema
+  place, so a resized or retitled picture keeps its locks, blip state,
+  extension list, line and fill; a drawing whose structure changed is
+  rebuilt as before.
+- **`hydrateDrawing` / `dehydrateDrawing` hooks, and the drawing's kept
+  source.** The docx walker runs both on every drawing of a run, the
+  drawing's kept source their input (`_source`, the `<w:drawing>` element
+  as read, and `_read`, its typed fields as read): an extension may type
+  the source and write an edit back by replacing `_source`.
+  `docxDrawing` exports `typedFields`, `keepSource` and
+  `withRelationships` for such extensions.
+- **SVG pictures in DOCX.** A picture whose `a:blip` carries the Office
+  2016 SVG extension (`asvg:svgBlip r:embed`) reads with `svgRef` and
+  `image.svg` (`{ data, contentType: 'image/svg+xml', rId }`) beside its
+  PNG fallback, in the document and its headers, footers, notes and
+  comments; `docx.write` writes `image.svg` back as Word does — the SVG
+  part, its relationship, the `image/svg+xml` content type and the
+  extension in the blip — and `docxDrawing.image(bytes, { svg })` (so
+  `docx.imageRun`) builds such a picture. A picture without `image.svg`
+  is written as before.
+- **`opcCoreProperties.read(pkg)`**: the core properties of a read OPC
+  package — the part its root `…/metadata/core-properties` relationship
+  names — typed into fifteen string fields (`title`, `subject`, `creator`,
+  `keywords`, `description`, `lastModifiedBy`, `revision`, `category`,
+  `contentStatus`, `language`, `identifier`, `version`, `created`,
+  `modified`, `lastPrinted`); `null` without such a part, a
+  `ParseError` `opc/core-properties-invalid` for a part that is not core
+  properties.
+- **`opcExtendedProperties.read(pkg)`**: the extended properties of a
+  read OPC package (`docProps/app.xml`, transitional or strict
+  relationship) — the counts (`pages`, `words`, …) as non-negative
+  integers, the flags as booleans, the strings as text; `null` without
+  such a part, a `ParseError` `opc/extended-properties-invalid` for a part
+  that is not extended properties.
+- **`ignorablePrefixes` option of `markupCompatibility.process`** —
+  prefixes ignorable from the root down, as if the root listed them in
+  `mc:Ignorable` (a supported prefix still is not; `keepElements` still
+  win) — and **`ooxmlShared.WORD_EXTENSION_PREFIXES`**, the Office
+  extension prefixes `wordRootAttrs` lists in `mc:Ignorable`, which
+  `docx.read` now passes as that option.
+- **Math keeps its property elements.** Each OMML construct keeps the
+  untyped children of its property element (`m:ctrlPr`, `m:type`,
+  `m:degHide`, `m:grow` …) in `_prExtras`; a math run keeps its other
+  `m:rPr` children and its `w:rPr`, an `oMathPara` its
+  `m:oMathParaPr`; an empty character (`m:begChr m:val=""`) reads as
+  `''`.
+- **Theme colours of runs, and two run-level attributes.** Run
+  properties read `w:color`'s theme link as `colorTheme` and `w:u`'s
+  colour and theme link as `underlineColor` / `underlineTheme`
+  (`{ themeColor?, themeTint?, themeShade? }`), written back; a break
+  reads `w:clear` as `clear`, a note reference `w:customMarkFollows` as
+  `customMarkFollows`.
+- **A content control's end properties and inline content.** A block or
+  inline control keeps `w:sdtEndPr` in `_extras`; an inline control's
+  content is typed as a paragraph's children (bookmarks, fields,
+  revisions …), any other child kept in `_contentExtras`; `w:text` keeps
+  its attributes (`w:multiLine`).
+- **A hyperlink's other attributes.** `w:tgtFrame`, `w:tooltip` and
+  `w:docLocation` read as strings and `w:history` as a boolean on a
+  hyperlink node, and are written back.
+- **The page background.** `w:background` (the page colour, and a VML
+  background with its fill) reads as `document.background`
+  (`{ color?, themeColor?, themeTint?, themeShade?, _extras? }`) and is
+  written back before the body.
+- **The paper code of a section.** `w:pgSz w:code` reads as
+  `pageSize.code` (a number) and is written back.
+- **`w:spacing@w:lineRule` typed, and the other `w:spacing` / `w:ind`
+  attributes kept.** `parseParagraphProperties` (paragraphs, styles,
+  numbering levels) reads `spacing.lineRule` (`auto`, `exact`,
+  `atLeast`, as read) and keeps every attribute it does not type
+  (`beforeAutospacing`, `afterAutospacing`, `beforeLines`, `afterLines`,
+  `start`, `end`, `leftChars`, `firstLineChars`, …) in the new optional
+  `spacing.extraAttrs` / `indent.extraAttrs`, which
+  `renderParagraphProperties` writes back after the typed attributes.
+  Those attributes were dropped on every write before (exact and
+  at-least line spacing became auto), and an element holding only such
+  attributes was dropped whole.
+
+### Changed
+
+- **Tracked moves are typed.** `w:moveFrom` / `w:moveTo` read as
+  `revision` nodes `{ type: 'moveFrom' | 'moveTo', id, author?, date?,
+  children }` in place among a paragraph's children, and write back there.
+  They sat in the paragraph's `_extras`, so a write moved them to the
+  paragraph's end; a consumer that read them from `_extras` finds them
+  among `children` now. `docx.toText` reads a move destination and skips
+  a move source.
+- **Revision range markers are kept in place.** Inside a paragraph, a
+  move range marker or a custom XML revision range marker went to the
+  paragraph's `_extras` and was written at its end; between paragraphs, in
+  the body or in a block control, it was dropped, and in a table cell it
+  sat in the cell's `_extras`, written after the cell's blocks. The twelve
+  revision range markers now read as a `rangeMarker` node (`name`, `attrs`
+  verbatim) at their place and are written back there (new node type).
+- **Permission and proofing markers, and the bookmarks and comment ranges
+  between blocks, are kept in place.** `w:permStart`, `w:permEnd` and
+  `w:proofErr` join the `rangeMarker` node, in place inline and between
+  blocks: a paragraph held them in its `_extras` and wrote them at its end,
+  the body dropped them. Bookmarks and comment ranges between blocks — in
+  the body (main document and story parts), a block control's content, a
+  table cell — read as their typed nodes at their place and are written
+  back there: `docx.read` dropped those of the body and of block controls
+  and a cell held its own in its `_extras`, written after its blocks. A
+  bookmark keeps `colFirst` / `colLast` and every marker
+  `displacedByCustomXml`. A body child the model does not type is kept in
+  `document._extras`, a block control's in `_contentExtras`. A consumer
+  walking the body or a cell must type-check the new marker nodes there.
+- **Cells and rows inside a content control are read in place.** A
+  row-level `w:sdt` (wrapping cells) or a table-level one (wrapping rows)
+  stayed raw in the row's or table's `_extras`, so every walker of
+  `row.cells` / `table.rows` missed its content, and a write put a cell
+  inside a control at the row's end, shifting the columns. Its cells and
+  rows are now ordinary nodes at their place, with an optional `sdt` list
+  naming the controls around them (`{ group, properties?, _extras?,
+  _contentExtras? }`); the write puts them back inside their controls. A
+  model without `sdt` writes as before.
+- **A cell's block-level content control is typed in place.** A `w:sdt`
+  among a cell's blocks reads as the body's does — a `blockSdt` at its
+  place in the cell's `children` — and is written back there: it was kept
+  raw in the cell's `_extras`, written after the cell's blocks. A consumer
+  walking a cell's children must type-check `blockSdt` there.
+- **The docx walker visits notes and comments.** An extension's hooks now
+  see the footnotes', endnotes' and comments' blocks at read and at write,
+  as they see the body's, the headers' and the footers'
+  (`docx.write` hands its `footnotes` / `endnotes` / `comments` to the
+  dehydrate pass). A consumer of the opt-in `wml-*` extras finds a note's
+  or a comment's run, paragraph, table and settings properties typed
+  where it found them in `_extras`, and `dmlWpDrawing` writes an edited
+  note drawing into its source.
+- **Drawings are written from their source.** `docx.read` keeps each
+  drawing's `<w:drawing>` element (`_source`) and its typed fields as read
+  (`_read`); `docx.write` writes an untouched drawing from that source, the
+  ids it assigns (`docId`, `embedRef`, `svgRef`, `chartRef`) set in it, so
+  a picture's locks, blip state, line, alt text, extension list, a shape's
+  style references, groups and canvases are no longer rebuilt away. An
+  edited drawing, or one whose source names a relationship the written
+  part does not hold, is built from its typed fields as before.
+  `docxDrawing.withRelationships` sets those relationships. The Office
+  extension attributes the default read drops stay lost unless the read
+  uses `extensions: 'keep'`. A consumer deep-comparing drawings sees the
+  two new fields.
+- **`maxParts` defaults to 8,192** (was 1,024) in `opc.defaultLimits`, so
+  `opc.read`, `docx.read`, `xlsx.read` and `pptx.read` accept real
+  packages of several thousand parts (a deck of about 5,000 parts, most of
+  them media, or a 1,714-part LibreOffice export, both refused with
+  `opc/zip-bomb` before). Release note: a package of 1,025 to 8,192 parts
+  that 1.1.0 refused now reads; `maxUncompressed` (256 MiB) and `maxRatio`
+  (200) are unchanged and still bound the payload, and an explicit
+  `maxParts: 1024` keeps the old cap.
+- **The bundle pages say which extras type a read.** Of all the bundles'
+  extras only `wmlRunFormatting`, `wmlParagraphFormatting`,
+  `wmlTableProperties`, `wmlSettings` and `dmlWpDrawing` carry a walker
+  hook; the others are parse / render toolkits a read never calls, so a
+  read through `xlsx-*` / `pptx-*` types what the core types. Each
+  bundle page lists the two groups, the unmeasured "~95 %" / "every
+  element typed or preserved" claims are gone, and the coverage guide's
+  `+ Extras` column says it counts what an extra names. A test keeps each
+  page's list and the code together.
+
+### Fixed
+
+- **An empty `w:tblBorders` is written back.** It read as
+  `tblPr.borders = {}` and was written as nothing, so a save dropped it;
+  it has nothing to type, so it now stays verbatim in `tblPr._extras`,
+  written back in place (`borders` is absent for such an element).
+- **Colour transforms kept by the DrawingML toolkits.** The shared colour
+  codec keeps a transform it does not list (`a:satMod`, `a:alpha`,
+  `a:hueMod` …) as `{ kind, attrs }` instead of dropping it, and
+  `dmlFillsAdvanced` reads its gradient-stop and pattern colours with
+  their transforms (`mods`).
+- **`wmlSettings` keeps `w:attachedTemplate`.** The extension read it as a
+  `w:val` element, but it names its template by `r:id`, so a write
+  through `docx-large` dropped it; it now stays verbatim in `_extras`.
+- **A false placeholder flag stays false.** `w:showingPlcHdr` read as
+  true whatever its value, so `w:val="0"` was written as a placeholder
+  shown; its value is read, and false is written `w:val="0"`.
+- **An empty section is written back.** An empty `<w:sectPr/>` read as
+  nothing, so the save-back dropped it; it reads as `{}` and is written
+  back empty.
+- **No paragraph added to a cell whose block content is kept verbatim.**
+  The write added an empty `<w:p/>` to a cell with no typed paragraph,
+  even when the cell held block-level content kept in its `_extras` (a
+  `w:customXml` or `w:altChunk`): the save-back gained a paragraph. It now
+  adds one only to a cell with no block-level content at all.
+- **No adjacent text nodes in a raw subtree.** Where a read removed a
+  node between two pieces of text — an ignorable element (a
+  `w15:appearance` in a content control), an `mc:AlternateContent`
+  resolved to nothing, an XML comment the parser skips (in a
+  `w:sectPr`) — the raw subtree the read model keeps held the text as
+  two adjacent nodes; the write serialises them as one, so read, write,
+  read was not a fixed point. `markupCompatibility.process` now merges
+  them into one text node, on every part of docx, xlsx and pptx it runs
+  on.
+- **An undeclared Office extension prefix reads as the written part
+  does.** A part that used `w14` (or `wp14`, `w15`, `w16*`) without
+  listing it in `mc:Ignorable` kept that content in the read model,
+  while the writer lists every such prefix in `mc:Ignorable`, so the
+  read of the written part dropped it: no fixed point. `docx.read` now
+  treats those prefixes as ignorable in every part, whether listed or
+  not, as it already did for every part that lists them.
+- **An empty drawing name is kept.** An empty `wp:docPr` name read as
+  none and was written as `'Picture'`, and an empty picture name
+  (`pic:cNvPr`) was written as the `wp:docPr` name. Both now read and
+  write as the empty string the source holds.
+- **A hyperlink keeps its whole content.** A `<w:hyperlink>` read only
+  its runs, so a revision (`<w:del>`, `<w:ins>`), a bookmark or
+  comment-range marker, a `<w:proofErr>` or any other child inside a
+  link was dropped on every write (a table of contents' deleted entries
+  among them). Its children are now typed as a paragraph's, in place,
+  and any other child stays in the hyperlink's own `_extras`. A
+  hyperlink's `children` are no longer only runs: a consumer walking
+  them must type-check each, as for a paragraph's. `docx.toText` reads
+  them as a paragraph's (an insertion inside a link shows, a deletion
+  does not).
+- **Nothing inside a tracked change is dropped.** A `w:ins` / `w:del`
+  kept only its runs: a hyperlink, simple field, inline SDT, math zone or
+  nested revision inside it was lost on read. Its children are now typed
+  as a paragraph's, and any other child stays verbatim in the revision's
+  `_extras`. `docx.toText` reads a hyperlink inside an insertion.
+- **Preserved property children read in schema order.** The run,
+  paragraph and table property bags kept their preserved children
+  (`_extras`) in the source's order, which the writer corrects to the
+  schema order, so a source listing them out of order did not read as
+  its written form. They now read in that same order.
+- **Field characters keep their child and their lock.** A `<w:fldChar>`
+  read as its kind and dirty flag only, so the `<w:ffData>` of every
+  legacy form field (text input, check box, drop-down), a `<w:fldData>`,
+  a tracked `<w:numberingChange>` and the `w:fldLock` attribute were
+  dropped on every write. The child now stays verbatim in the node's
+  `_extras` and the lock reads as `fldLock: true` (new optional key);
+  both are written back.
+- **Empty run and paragraph properties round-trip.** An empty `<w:rPr/>`
+  or `<w:pPr/>` (LibreOffice writes them), and an empty paragraph-mark
+  `<w:rPr/>`, read as an empty object but were not written back, so a
+  read of the written file lost the object. The document writer now
+  writes the empty element for an empty object; a run or paragraph
+  without properties writes none, as before.
+- **Strict page sizes and margins.** `docx.read` read the universal
+  measures strict OOXML writes in `w:pgSz` and `w:pgMar` (`612pt`, `21cm`,
+  `1in`) as `NaN`, and `docx.write` wrote `NaN` back; they now read as
+  twips.
+- **Three more validity defects of the docx writers.** A delimiter's
+  `m:dPr` was written `begChr`, `endChr`, `sepChr` (`CT_DPr` puts
+  `sepChr` second); an empty `w:author` of a `w:ins` / `w:del` or a
+  comment was dropped although the attribute is required (it is now read
+  as `''` and written back); and the `wmlSettings` extension wrote
+  `w:noLineBreaksBefore` / `w:noLineBreaksAfter` bare, losing their
+  required `w:lang` and `w:val` — the element read is now written back
+  while its toggle stays on.
+- **An unedited chart is written back as read (with `carry`).** A chart
+  part was always rewritten from the chart model, which keeps the title,
+  the plot and the legend only: styles, colours, text properties and the
+  chart's own `mc:AlternateContent` were lost on every save-back. With
+  `carry`, a chart whose model is unedited is now written with its source
+  bytes (and its relationships); an edited one is still written from the
+  model.
+- **The relationships of the parts `docx.write` writes.** The writer
+  claimed fresh relationship ids (styles, numbering, settings, comments,
+  notes) before reserving those it keeps from the model (header and footer
+  keys, hyperlinks, pictures, charts), so a package could hold two
+  relationships with one id. With `carry`, `settings.xml`, `numbering.xml`
+  and `styles.xml` now keep their relationships to carried parts and their
+  external ones (an attached template, a picture bullet), and every
+  relationship id a written part still references in its XML is written
+  back from the source with its target part and that part's own
+  relationships: a VML picture or fill of a header or a footnote, a chart
+  inside a text box, a written chart part's embedded workbook.
+- **Schema order of the children the docx writers keep verbatim.** The
+  core cell-properties writer appended the `w:tcPr` children it keeps
+  after `w:tcW`, `w:gridSpan` and `w:vMerge`, so a `w:cnfStyle` (and,
+  through the `wmlTableProperties` extension, `w:tcBorders`, `w:noWrap`,
+  `w:tcMar` …) was written out of `CT_TcPr` order; the extension's own
+  `w:tblPr` writer put `w:tblCellMar` before `w:tblLayout` and the kept
+  children (`w:shd`) last; `wmlSettings` wrote the `w:compatSetting`
+  children before the legacy `w:compat` toggles; and `w:uiCompat97To2003`
+  was written last in `settings.xml`. All four now follow the schema; a
+  document already in order is written unchanged.
+- **DrawingML lines keep what they do not type, and kept shape
+  properties go back to their schema place.** `drawingmlShape.parseLine`
+  dropped every `a:ln` child but an `a:srgbClr` fill, `prstDash` and
+  `noFill`: a theme-coloured line (`schemeClr`, with its transforms), a
+  gradient or pattern line, a custom dash, the joins and the arrow heads
+  were lost on read and on write, and so was the `algn` attribute. They
+  are now kept verbatim in the optional `line._extras` and
+  `line.extraAttrs` and written back in schema order; `line.color` keeps
+  its meaning (the `RRGGBB` of an `a:srgbClr`, `null` for `noFill`), and a
+  typed `color` or `dash` set on such a line replaces the kept fill or
+  dash. `renderShapeProperties` also wrote the `spPr` children it keeps
+  verbatim after `a:ln`; a custom geometry or a gradient fill now goes
+  before it, effects after it, as `CT_ShapeProperties` orders them.
+- **`docx.write` `images`: an entry without bytes is skipped.** `docx.read`
+  lists an external picture (a relationship with `TargetMode="External"`)
+  in `images` with no `data`; passed back through the `images` write
+  option, it was written as a relationship to a media part holding no
+  bytes. Such an entry (or a `null` one, which threw a `TypeError`) is now
+  skipped; with `carry` the external relationship itself is written back.
+
 ## [1.1.0] - 2026-10-21
 
 ### Added

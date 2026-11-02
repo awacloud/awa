@@ -4,6 +4,219 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- **Inline elements at their place in the text** — `odt.read(bytes, {
+  elementsInRuns: true })`. Every element of a paragraph, heading or link
+  body that no run kind covers — a comment and its end, a bookmark, a
+  field, a change mark, an index mark, a soft page break, a shape, a frame
+  that `framesInRuns` does not type — becomes a raw `{ type: 'element',
+  name, attrs, children }` run at its position, as a span body already
+  keeps it, instead of an `_extras.children` entry that a write re-emitted
+  after the runs (a comment lost its anchor; two texts around a moved
+  element merged). `write` writes such a run in place; `textOf` gives it no
+  text outside a span and `toText` visits its text boxes where it visited
+  `_extras`, so derived views are the same in both modes. Off by default:
+  the default read is unchanged, and keeps these elements in
+  `_extras.children`. With `framesInRuns` and `elementsInRuns`, read,
+  write, read gives back the same body for every readable `.odt` of the
+  repository's wild test corpus. The pre-built bundles carry it.
+- **`preserveInput` write option (`odt.write`, `ods.write`,
+  `odp.write`).** With `true` the writer works on a structured clone of the
+  document (its `package`, only read, excepted) and of its options, so the
+  given model is left exactly as it was: an extension's dehydrate hook no
+  longer changes it in place, and an edited header or footer `content`
+  leaves the given `styles` model alone. The bytes are the same. The
+  default (`false`) is unchanged — without it, an extension's dehydrate
+  hook may change the given model, and `odt.write` of an edited header or
+  footer `content` replaces that header's or footer's children and adds the
+  automatic styles and font faces the edit needs to the given `styles`
+  model. Another value than a boolean throws `odf/contract-error/odt`,
+  `odf/contract-error/ods` or `odf/contract-error/odp`
+  (`context.argument: 'opts.preserveInput'`).
+- **`headerFooterContent` read option of `odt.read`, and the write back.**
+  With `true`, each header and footer of the `styles.xml` master pages
+  (`style:header`, `-left`, `-first`, `style:footer`, `-left`, `-first`)
+  gains `content`: its children typed with the body's model, resolved
+  against the `styles.xml` automatic styles, `framesInRuns` and
+  `elementsInRuns` applying as for the body. The raw children stay as
+  read; core read and the large and full bundles alike (a header list
+  reads `ordered` and `numFormat` under the bundles as under the core).
+  `odt.write` writes a header or footer from its children when its
+  `content` is unedited, and from its `content` otherwise: the automatic
+  styles an edit needs (direct formatting) go into `styles.xml`, under
+  names neither part uses — a list added beside a `styles.xml` list style
+  of the registry's name no longer writes a second style of that name.
+  Off by default; another value than a boolean throws
+  `odf/contract-error/odt` (`context.argument: 'opts.headerFooterContent'`).
+- **`odt.read`'s `textBoxes`.** An opt-in read option (it needs
+  `framesInRuns`; without it, or for another value than a boolean, it
+  throws `odf/contract-error/odt`): each text-box frame run gains
+  `child.content`, the box's paragraphs, headings, lists and tables typed
+  as the body is, with the read's own flags; the raw children stay.
+  `write` writes an untouched box from its children, byte for byte, and
+  an edited one from its content (frames and inline elements kept in
+  place); `toText` reads the content. Over the wild odt: 40 files with
+  typed boxes, written exactly as the default read writes them. Off by
+  default: the default read is unchanged.
+- **`odt.read`'s `listStyles`.** An opt-in read option: the result gains
+  `listStyles`, the document's list styles by name (content.xml's
+  automatic ones, styles.xml's named and automatic ones, the outline
+  style), each typed level by level — kind, number format, prefix,
+  suffix, start value, display levels, bullet char, text style, label
+  position (alignment or width-and-position), text properties.
+  `textStyleRegistry` exports `typeListStyle` and `listStylesOf`. Off by
+  default; another value than a boolean throws `odf/contract-error/odt`.
+- **`odt.read`'s `sectionStyles`.** An opt-in read option: the result
+  gains `sectionStyles`, the document's section styles by name, each
+  with its columns typed — count, gap, each column's relative width and
+  indents, the separator — and its balance, background colour,
+  editability and writing mode. `textStyleRegistry` exports
+  `typeSectionStyle` and `sectionStylesOf`. Off by default; another value
+  than a boolean throws `odf/contract-error/odt`.
+- **Style semantics read on request.** `odt.read(bytes, { semanticStyles:
+  true })`: a span whose style holds more than the four emphasis keys (an
+  rsid, a size, Asian variants …) or inherits from a `styles.xml` parent
+  gains the emphasis its style chain states, keep-and-gain (the style name
+  kept, nothing consumed, written back as read); a nested list with no
+  style name takes its nearest styled ancestor's numbering at its level.
+  The resolver gains `opts.semantic` and `listLevel`. The default read is
+  unchanged; another value than a boolean throws `odf/contract-error/odt`.
+- **List and item attributes kept.** On the default read, a list gains
+  its `xml:id` (`id`) and `text:continue-list` (`continueList`), an item
+  its `text:start-value` (`startValue`) and `xml:id` (`id`), and any
+  other attribute of these elements goes to `extraAttrs`; all are written
+  back. An untouched save dropped them (63 list ids, 12 item start
+  values, 1 continue-list in the wild test odt).
+- **`cleanup` write option of `odt.write`**, at parity with
+  `docx.write`'s: `cleanup: ['emptyProperties']` drops every
+  `style:*-properties` element with no attribute and no child from the
+  automatic styles of `content.xml` and the styles of `styles.xml`,
+  working on a structured clone so the caller's model is unchanged. An
+  unknown or repeated name throws `odf/contract-error/odt`
+  (`context.argument: 'opts.cleanup'`). Absent by default.
+- **`keepVersion` write option (`odt.write`, `ods.write`, `odp.write`).**
+  With `true`, each part is written with the `office:version` of its
+  source part (none when the source part has none; a part the source
+  lacks takes the source `content.xml`'s), and the manifest with the
+  source version from ODF 1.2 on (none before, the attribute being
+  1.2's): a round trip of a 1.2 or 1.3 document is then
+  checked against its own version's schema instead of 1.4's, which
+  refuses some of the markup carried from it. Under it, `odt.write` of a
+  source older than ODF 1.3 (which has no `draw:mime-type` on images)
+  writes an image read with LibreOffice's `loext:mime-type` under that
+  attribute. The default (`false`) stamps `1.4` as before and writes
+  `draw:mime-type`; another value throws the module's `ContractError`.
+  The low-level members behind it: `odfShared` gains `sourceRootAttrs`,
+  `keptVersion` and `applyManifestVersion`, the meta, settings and styles
+  `serialize` take `opts.version` (`null` writes no attribute) and
+  `pkgManifest.serialize` writes no `manifest:version` for `version:
+  null`.
+
+### Changed
+
+- **An image with both mime attributes reads and writes both.** An image
+  carrying `draw:mime-type` and `loext:mime-type` now reads the
+  `draw:mime-type` value as its `mimeType` (it read the `loext` one),
+  keeps the other as an extra attribute, and the default write emits both
+  attributes (it wrote only `draw:mime-type`, with the `loext` value). An
+  image with one attribute reads and writes as before.
+
+### Fixed
+
+- **An untouched odt save keeps its lists' numbering.** The read
+  consumed every automatic list style a list named and the write
+  gave the list a generic one built from its first level's format:
+  each level's own format, prefix and suffix, the display levels,
+  the bullets and the label positions were lost (all 64 styled lists
+  of the wild test odt). The read now consumes only a style the write
+  rebuilds as it is; any other stays in `autoStyles` and the list
+  keeps its `styleName` beside the numbering read from it
+  (`listNumbering`'s new `source: 'kept'`).
+- **Automatic-style property children survive a write.** An automatic
+  style kept the attributes of its `style:*-properties` elements and
+  dropped their children — a paragraph style's `style:tab-stops` or
+  `style:drop-cap`, a cell style's `style:background-image` — so an odt,
+  ods or odp write lost them and wrote an empty property element instead
+  (over the 316 wild odt: 376 of 426 children lost in 57 files, 51 empty
+  `<style:paragraph-properties/>` written). They are now kept, verbatim,
+  in the style's `_extras.propertyChildren` and written back in place;
+  the flat `properties` bags are unchanged.
+- **The bundles' extensions write back what they type.** Twenty opt-in
+  extensions (fields, tracked changes, meta and ruby, notes and other
+  passthrough text, sections, tables, shapes and frames, charts, 3D,
+  animations, presentation, scripts, settings, signatures, styles, list
+  headers) promote elements out of a node's `_extras` on read and render
+  them back on write. When every extra of a node had been promoted, the
+  write built an `_extras` array, which no renderer reads: the elements
+  were lost. Measured over the repository's wild test corpus, a document
+  written through the full bundle lost elements of 35 kinds in `.odt`
+  (fields, change marks, notes, index marks, soft page breaks, ruby…) and
+  of 21 kinds in `.ods` (frames, pictures, embedded objects, named ranges,
+  shapes…); it now writes exactly the elements the core writes. An
+  `_extras` array (a hook's own carrier) still round-trips as an array.
+  The pre-built bundles carry the fix.
+- **The large and full bundles write `styles.xml` back.** Their opt-in
+  extensions `textListDetailed` and `stylePage` type the list and outline
+  styles, page layouts and master pages of `styles.xml` on read, and on
+  write rendered them into an `_extras` array the serialiser never reads,
+  replacing the object that holds the root's other children: every
+  document read and written through an `odt`, `ods` or `odp` large or
+  full bundle lost its list and outline styles, page layouts, master
+  pages and font-face declarations (a list read back without its
+  numbering). Each element now goes back into its container (`styles`,
+  `automaticStyles`, `masterStyles`), recorded in a new optional
+  `container` field when it came from another one, and the root's other
+  children are left as read. `stylePage` also keeps the text of a header
+  or footer: a page bag's `children` now hold the non-element children at
+  their place, as read. `textListDetailed` also takes the
+  `text:list-header` elements it promotes out of the list's
+  `_extras.children` (the write puts them back). The
+  pre-built bundles that carry the two extensions are regenerated.
+- **A soft page break between table rows stays before its row.** A
+  `text:soft-page-break` read between two rows of a table (or of its
+  header rows) was kept with the table's extras and written after the
+  last row, where the ODF schema allows none: odfvalidator refused the
+  table. It is now written back before the row it preceded (the table
+  model keeps the row index in an internal `_softPageBreaks`, and the
+  break leaves `_extras.children`); a break whose row the model no longer
+  has is not written, and one read after the last row stays there, as
+  before.
+- **A generated list style always has a valid name.** The style registry
+  named a numbered list style `awa-l-n` followed by its number format,
+  so LibreOffice's extended formats (`0001, 0002, 0003, ...`,
+  `一, 二, 三, ...`) gave names with spaces and commas, which odfvalidator
+  refused. A format made of XML name characters keeps that name (`1`,
+  `a`, `I` …); any other is named `awa-l-x1`, `awa-l-x2` … in the order
+  first met. The number format written is unchanged.
+- **The prefix of a namespaced-token value is declared.** A written part
+  declared the namespace prefix of a formula's value but not that of the
+  five attributes the ODF schema types as a qualified name
+  (`form:control-implementation`, `chart:class`, `draw:engine`,
+  `draw:extrusion-metal-type`, `db:type`): a form control read from a
+  LibreOffice file (`ooo:com.sun.star.form.component.Form`) was written
+  without `xmlns:ooo`, which odfvalidator refused. The prefix is now
+  declared on the part's root when the source part or the known table
+  resolves it.
+- **`styles.xml` declares its font faces first.** `odfStyles.serialize`
+  wrote the kept `office:font-face-decls` after `office:master-styles`;
+  the ODF schema wants it before `office:styles`, and odfvalidator refused
+  every ODT, ODS and ODP write whose `styles.xml` declares font faces. It
+  is now written first, the root's other kept children still last; the
+  rest of the part is unchanged.
+- **A table without rows and a row without cells are written
+  schema-valid.** `renderTable` writes a table that would hold no row (an
+  empty sheet, `ods.write(ods.empty())`, or a text table with `rows: []`)
+  with one row of one empty cell, and `renderRow` writes a row with no
+  cell with one empty cell, as LibreOffice writes an empty sheet: the ODF
+  schema needs a row in a table and a cell in a row, and odfvalidator
+  refused both. A table whose rows sit in a row group kept among its
+  extras gets no added row, and a `headerRows` larger than the rows no
+  longer writes an empty `table:table-header-rows`. Read back, such a
+  table shows that row. Tables with rows and cells are written as before.
+
 ## [1.1.0] - 2026-10-21
 
 ### Added

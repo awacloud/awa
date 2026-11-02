@@ -26,7 +26,11 @@
  * stack and renderer stages are tier-agnostic. Mixing is allowed: a style
  * class resolved from tier 3 is listed in `measurer.fallbacks` (the FACADE
  * records `layout/font-fallback` per entry — this module records no loss
- * itself and stays pure).
+ * itself and stays pure). A caller face (tier 1 or 2) that `fonts` reads
+ * but that has no TrueType outlines (`head`, `glyphTable`, `loca` — what
+ * `subsetForPdf` requires; a CFF / CFF2 face) cannot be embedded: its
+ * class resolves to tier 3, is listed in `measurer.unembeddable` and in
+ * `measurer.fallbacks` even on an otherwise Standard 14 route.
  *
  * **No corpus mining lives here.** The `embeddedFacesFromPdf` recipe
  * (walk a PDF's `/Font` resources → `FontFile2` → `fonts.read`) is a TEST
@@ -83,6 +87,7 @@
  * | `widthOf(text, style, sizePt)` | advance sum, points |
  * | `covers(text, style)` | `true` when the style's face draws every character of `text` (embedded: a non-zero glyph; Standard 14: a WinAnsi byte) |
  * | `fallbacks` | style classes that fell back to Standard 14 |
+ * | `unembeddable` | style classes whose caller face has no TrueType outlines (also in `fallbacks`) |
  * | `s14VariantApprox` | Standard 14 bold metrics are the regular table |
  *
  * @type {{name: string, dependencies: string[],
@@ -280,19 +285,27 @@ export const oconvPdfMetrics = {
 
             const faces = {};
             const fallbacks = [];
+            const unembeddable = [];
             let embeddedCount = 0;
+
+            // `subsetForPdf`'s precondition: TrueType outlines.
+            const embeddable = (f) => !!(f.font && f.font.head && f.font.glyphTable && f.font.loca);
 
             for (const style of STYLE_CLASSES) {
                 const key = FONT_OPT_KEY[style];
                 const explicitBytes = supplied[key];
                 const defaultBytes = defaults[key];
+                let f = null;
                 if (explicitBytes !== undefined && explicitBytes !== null) {
-                    faces[style] = embeddedFace(style, explicitBytes, 'bad pdf font');
-                    embeddedCount += 1;
+                    f = embeddedFace(style, explicitBytes, 'bad pdf font');
                 } else if (defaultBytes !== undefined && defaultBytes !== null) {
-                    faces[style] = embeddedFace(style, defaultBytes, 'bad default font');
+                    f = embeddedFace(style, defaultBytes, 'bad default font');
+                }
+                if (f && embeddable(f)) {
+                    faces[style] = f;
                     embeddedCount += 1;
                 } else {
+                    if (f) unembeddable.push(style);
                     faces[style] = s14Face(style);
                     fallbacks.push(style);
                 }
@@ -300,8 +313,9 @@ export const oconvPdfMetrics = {
 
             // On the pure Standard 14 route nothing "fell back": it is the
             // chosen route, and the facade must not record a font-fallback
-            // loss for a document that never asked for an embedded face.
-            const reportedFallbacks = Object.freeze(embeddedCount === 0 ? [] : [...fallbacks]);
+            // loss for a document that never asked for an embedded face —
+            // except for a face asked for and not embeddable.
+            const reportedFallbacks = Object.freeze(embeddedCount === 0 ? [...unembeddable] : [...fallbacks]);
 
             const route = embeddedCount === 0
                 ? 'standard14'
@@ -392,6 +406,7 @@ export const oconvPdfMetrics = {
                 widthOf,
                 covers,
                 fallbacks: reportedFallbacks,
+                unembeddable: Object.freeze(unembeddable),
                 s14VariantApprox
             });
         }

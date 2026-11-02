@@ -189,3 +189,42 @@ describe('ooxmlMath — block math (oMathPara)', () => {
         expect(back.children[0].type).toBe('oMath');
     });
 });
+
+describe('ooxmlMath — property elements kept', () => {
+    const M = 'xmlns:m="m" xmlns:w="w"';
+    const back = (src) => {
+        const node = m.parseMathElement(xml.parse(src));
+        return { node, out: xml.serialize(m.renderMathElement(node)) };
+    };
+    const CTRL = '<m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math"/></w:rPr></m:ctrlPr>';
+
+    test('a fraction keeps m:type and m:ctrlPr; a radical m:degHide; a superscript its empty-but-present pr', () => {
+        const f = back(`<m:f ${M}><m:fPr><m:type m:val="lin"/>${CTRL}</m:fPr><m:num><m:r><m:t>1</m:t></m:r></m:num><m:den><m:r><m:t>2</m:t></m:r></m:den></m:f>`);
+        expect(f.node._prExtras.map((c) => c.name)).toEqual(['m:type', 'm:ctrlPr']);
+        expect(f.out).toContain('<m:fPr><m:type m:val="lin"/><m:ctrlPr>');
+        const rad = back(`<m:rad ${M}><m:radPr><m:degHide m:val="1"/>${CTRL}</m:radPr><m:deg/><m:e><m:r><m:t>x</m:t></m:r></m:e></m:rad>`);
+        expect(rad.out).toContain('<m:radPr><m:degHide m:val="1"/><m:ctrlPr>');
+        const sup = back(`<m:sSup ${M}><m:sSupPr/><m:e/><m:sup/></m:sSup>`);
+        expect(sup.node._prExtras).toEqual([]);
+        expect(sup.out).toContain('<m:sSupPr/>');
+    });
+
+    test('a delimiter keeps an empty m:begChr and its m:grow, after the typed characters', () => {
+        const d = back(`<m:d ${M}><m:dPr><m:begChr m:val=""/><m:endChr m:val="|"/><m:grow m:val="1"/></m:dPr><m:e/></m:d>`);
+        expect(d.node.open).toBe('');
+        expect(d.out).toContain('<m:dPr><m:begChr m:val=""/><m:endChr m:val="|"/><m:grow m:val="1"/></m:dPr>');
+    });
+
+    test('a math run keeps m:lit and its w:rPr; an oMathPara keeps m:oMathParaPr', () => {
+        const r = back(`<m:r ${M}><m:rPr><m:lit/><m:sty m:val="p"/></m:rPr><w:rPr><w:rFonts w:ascii="Cambria Math"/></w:rPr><m:t>a</m:t></m:r>`);
+        expect(r.node.rPr).toEqual({ sty: 'p', _extras: [expect.objectContaining({ name: 'm:lit' })] });
+        expect(r.out).toContain('</m:rPr><w:rPr><w:rFonts w:ascii="Cambria Math"/></w:rPr><m:t');
+        const para = m.parseOMathPara(xml.parse(`<m:oMathPara ${M}><m:oMathParaPr><m:jc m:val="left"/></m:oMathParaPr><m:oMath><m:r><m:t>x</m:t></m:r></m:oMath></m:oMathPara>`));
+        expect(xml.serialize(m.renderOMathPara(para))).toContain('<m:oMathPara><m:oMathParaPr><m:jc m:val="left"/></m:oMathParaPr><m:oMath>');
+    });
+
+    test('a construct without a property element writes none', () => {
+        expect(back(`<m:f ${M}><m:num/><m:den/></m:f>`).out).not.toContain('m:fPr');
+        expect(back(`<m:sSup ${M}><m:e/><m:sup/></m:sSup>`).out).not.toContain('m:sSupPr');
+    });
+});

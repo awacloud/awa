@@ -198,7 +198,7 @@ export const pptx = {
          * @param {Uint8Array} bytes
          * @param {object} [opts]
          * @param {number} [opts.maxParts] archive limit forwarded to
-         *        `opc.read` (default 1024 entries; `0` disables).
+         *        `opc.read` (default 8192 entries; `0` disables).
          * @param {number} [opts.maxUncompressed] archive limit forwarded to
          *        `opc.read` (default 256 MiB in total; `0` disables).
          * @param {number} [opts.maxRatio] archive limit forwarded to
@@ -384,7 +384,20 @@ export const pptx = {
 
         // --- Write ---
 
-        function write(pres) {
+        /**
+         * Write a presentation to `.pptx` bytes.
+         *
+         * @param {object} pres — `{ slides, slideLayouts?, slideMasters?, theme?, sldSize? }`
+         * @param {object} [opts] — `preserveInput` (default `false`): `true`
+         *        writes from a structured clone of `pres`, so the given model is
+         *        left exactly as it was (the extensions' dehydrate hooks and the
+         *        writer's own patches — a picture's `embedRef`, a chart's
+         *        `chartRef`, a master's `layoutIds` — reach the clone); the
+         *        bytes are the same. Another value throws
+         *        `ContractError('pptx/invalid-preserve-input')`.
+         * @returns {Uint8Array}
+         */
+        function write(pres, opts) {
             if (pres == null || typeof pres !== 'object' || Array.isArray(pres)) {
                 throw new ContractError('pptx/invalid-presentation',
                     'pptx.write: presentation must be an object with a slides array',
@@ -395,6 +408,13 @@ export const pptx = {
                     'pptx.write: presentation.slides must be an array',
                     { context: { path: 'slides', received: typeof pres.slides } });
             }
+            opts = opts || {};
+            if (opts.preserveInput !== undefined && typeof opts.preserveInput !== 'boolean') {
+                throw new ContractError('pptx/invalid-preserve-input',
+                    'pptx.write: opts.preserveInput must be true or false',
+                    { context: { received: opts.preserveInput === null ? 'null' : typeof opts.preserveInput } });
+            }
+            if (opts.preserveInput) pres = structuredClone(pres);
             if (walker.hasExtensions) walker.applyDehydrate(pres);
             const pkg = opc.empty();
             const slides = pres.slides || [];

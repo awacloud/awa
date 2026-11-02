@@ -63,10 +63,12 @@ before vendoring:
   **lossy**, exactly `[{code: 'slides/media-dropped', detail: 'table'},
   {code: 'slides/untitled', detail: ''}]`.
 - **`poi-pictures.pptx`** — 3 slides, each holding only a `<p:pic>`
-  picture, no title, no other text shape. Real-world confirmation of the
-  same combination repeated per slide: **lossy**, 3×
-  `slides/media-dropped` (detail `picture`) interleaved with 3×
-  `slides/untitled`, in slide order.
+  picture, no title, no other text shape — the same picture on the three.
+  Real-world confirmation of pictures placed on the default read: each
+  slide's picture is an image reference, the three share one asset
+  (`image1.png`, its bytes); **lossy** only by 3× `slides/untitled`.
+  (Before the pictures were carried, each recorded
+  `slides/media-dropped`, detail `picture`.)
 
 **No reader gap was found on any of these three files** — all three
 convert without throwing, and every loss recorded is one already covered

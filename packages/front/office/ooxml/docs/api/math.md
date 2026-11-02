@@ -49,7 +49,7 @@ const m = runtime.resolve('ooxmlMath');
 
 ```js
 mathElement :=
-  | { type:'mathRun', text, rPr?:{sty} }
+  | { type:'mathRun', text, rPr?:{sty?, _extras?}, _extras? }   // _extras: its w:rPr, verbatim
   | { type:'frac', numerator:[me], denominator:[me] }
   | { type:'sSup'|'sSub', base:[me], sup\|sub:[me] }
   | { type:'sSubSup', base:[me], sub:[me], sup:[me] }
@@ -60,6 +60,10 @@ mathElement :=
   | { type:'m', rows:[[[me]]] }
   | { type:'acc'|'bar'|'box', ... }
   | { type:'mathUnknown', node }
+
+// every construct with a property element (m:fPr, m:dPr, …) also carries
+// _prExtras?: [xmlNode] — that element's untyped children (m:ctrlPr …)
+// oMathPara := { type:'oMathPara', children:[oMath], _extras? }   // m:oMathParaPr
 ```
 
 ## Examples
@@ -100,6 +104,7 @@ m.renderOMath(node);
 - `delim` detects single-slot vs multi-slot automatically (`[[…], […]]`).
 - `mathRun.rPr.sty` follows §22.1.2.114: `'p'` plain, `'b'` bold, `'i'` italic, `'bi'` both.
 - OMML elements that are not modelled (limits, advanced alignment) become `mathUnknown` and are preserved in and out.
+- **Property elements**: a construct's property element (`m:fPr`, `m:sSupPr`, `m:radPr`, `m:naryPr`, `m:dPr`, `m:funcPr`, `m:mPr`, `m:accPr`, `m:barPr`, `m:boxPr`) gives its typed children to fields (`op`, `open` / `sep` / `close`, `char`, `pos`) and keeps the others (`m:ctrlPr`, `m:type`, `m:degHide`, `m:grow`, `m:subHide` …) verbatim in `_prExtras` — an empty array for a present, empty element — written after the typed ones. A character with an empty value (`m:begChr m:val=""`, no delimiter) reads as `''`. A math run keeps its `m:rPr` children other than `m:sty` (`m:lit`, `m:nor` …) in `rPr._extras` and its `w:rPr` in `_extras`; an `oMathPara` keeps its `m:oMathParaPr` in `_extras`.
 - The `xml:space="preserve"` attribute is set on `<m:t>` so significant whitespace survives the round-trip.
 
 ## See also

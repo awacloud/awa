@@ -76,6 +76,19 @@ describe('oconv-fonts pack surface', () => {
         expect(files).toContain('vendor/PROVENANCE.json');
     });
 
+    test('ships the eight Carlito and Caladea faces and their licence and notice files', () => {
+        const files = packSurface();
+        for (const family of ['Carlito', 'Caladea']) {
+            for (const style of ['Regular', 'Bold', 'Italic', 'BoldItalic']) {
+                expect(files).toContain(`vendor/${family.toLowerCase()}/${family}-${style}.ttf`);
+            }
+        }
+        for (const path of ['vendor/OFL-carlito.txt', 'vendor/NOTICE-carlito',
+            'vendor/LICENSE-apache-2.0.txt', 'vendor/NOTICE-caladea']) {
+            expect(files).toContain(path);
+        }
+    });
+
     test('ships no *.test.js path', () => {
         const files = packSurface();
         const testPaths = files.filter((f) => f.endsWith('.test.js'));

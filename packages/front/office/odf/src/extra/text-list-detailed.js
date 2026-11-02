@@ -97,6 +97,10 @@ export const textListDetailed = {
 
         // --- Hooks ---
 
+        // A list or outline style's usual container: office:styles. One met
+        // elsewhere records it (`container`) so it goes back there.
+        const HOME = 'styles';
+
         function hydrateStyles(styles) {
             if (!styles) return styles;
             const containers = ['styles', 'automaticStyles', 'masterStyles'];
@@ -106,7 +110,9 @@ export const textListDetailed = {
                 const listStyles = styles.listStyles || [];
                 for (const s of styles[k]) {
                     if (s && s.type === 'element' && LIST_STYLE_NAMES.has(s.name)) {
-                        listStyles.push(parseListStyle(s));
+                        const ls = parseListStyle(s);
+                        if (k !== HOME) ls.container = k;
+                        listStyles.push(ls);
                     } else {
                         remaining.push(s);
                     }
@@ -120,7 +126,9 @@ export const textListDetailed = {
                 const listStyles = styles.listStyles || [];
                 for (const s of styles._extras) {
                     if (s && s.type === 'element' && LIST_STYLE_NAMES.has(s.name)) {
-                        listStyles.push(parseListStyle(s));
+                        const ls = parseListStyle(s);
+                        ls.container = '_extras';
+                        listStyles.push(ls);
                     } else {
                         remaining.push(s);
                     }
@@ -132,13 +140,19 @@ export const textListDetailed = {
             return styles;
         }
 
+        // Each list style back into its container, after the elements left
+        // there; `_extras` (the root's other children) is never replaced.
+        // The given model is not changed: the containers are copied.
         function dehydrateStyles(styles) {
             if (!styles || !styles.listStyles || !styles.listStyles.length) return styles;
             const out = { ...styles };
-            const extras = Array.isArray(out._extras) ? [...out._extras] : [];
-            for (const ls of out.listStyles) extras.push(renderListStyle(ls));
+            for (const ls of out.listStyles) {
+                const k = ls.container || HOME;
+                // the first push into a container copies it
+                if (out[k] === styles[k]) out[k] = Array.isArray(styles[k]) ? [...styles[k]] : [];
+                out[k].push(renderListStyle(ls));
+            }
             delete out.listStyles;
-            if (extras.length) out._extras = extras;
             return out;
         }
 
@@ -159,6 +173,11 @@ export const textListDetailed = {
             if (Array.isArray(list._extras)) {
                 if (remaining.length) list._extras = remaining;
                 else delete list._extras;
+            } else if (remaining.length !== extras.length) {
+                // the promoted headers leave `children` (dehydrate puts them back)
+                if (remaining.length) list._extras.children = remaining;
+                else delete list._extras.children;
+                if (!Object.keys(list._extras).length) delete list._extras;
             }
             return list;
         }
@@ -166,10 +185,12 @@ export const textListDetailed = {
         function dehydrateList(list) {
             if (!list || !list.headers || !list.headers.length) return list;
             const out = { ...list };
-            const extras = Array.isArray(out._extras) ? [...out._extras] : [];
+            const extras = Array.isArray(out._extras) ? [...out._extras]
+                : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const h of out.headers) extras.push(renderListHeader(h));
             delete out.headers;
-            out._extras = extras;
+            if (Array.isArray(list._extras)) out._extras = extras;
+            else out._extras = { ...(list._extras || {}), children: extras };
             return out;
         }
 

@@ -21,7 +21,9 @@
  * ```
  *
  * For `kind: 'image'`, child has `href, mimeType?` (see `drawImage`).
- * For `kind: 'text-box'`, child has `children: [...rawXml]` preserved.
+ * For `kind: 'text-box'`, child has `children: [...rawXml]` preserved
+ * (and, read by `odt.read` with `textBoxes`, `content`: those children
+ * typed as the body is; see the odt module).
  * For `kind: 'object'`, child has `href?, attrs` preserved.
  *
  * @module odf/draw/frame
@@ -115,7 +117,7 @@ export const drawFrame = {
          * @param {object} f
          * @returns {object}
          */
-        function renderFrame(f) {
+        function renderFrame(f, opts) {
             const attrs = {};
             if (f.anchorType) attrs['text:anchor-type'] = f.anchorType;
             if (f.name)       attrs['draw:name']        = f.name;
@@ -128,17 +130,18 @@ export const drawFrame = {
                 for (const k of Object.keys(f._extras.attrs)) attrs[k] = f._extras.attrs[k];
             }
             const children = [];
-            if (f.child) children.push(renderChild(f.child));
+            if (f.child) children.push(renderChild(f.child, opts));
             if (f._extras && f._extras.children) {
                 for (const c of f._extras.children) children.push(c);
             }
             return xml.el('draw:frame', attrs, children);
         }
 
-        function renderChild(child) {
+        function renderChild(child, opts) {
             if (!child) return null;
             if (child.kind === 'image') {
-                return imageMod.renderImage({ href: child.href, mimeType: child.mimeType, _extras: child._extras });
+                return imageMod.renderImage({ href: child.href, mimeType: child.mimeType,
+                    _mimeTypeAttr: child._mimeTypeAttr, _extras: child._extras }, opts);
             }
             if (child.kind === 'text-box') {
                 return xml.el('draw:text-box', { ...(child.attrs || {}) }, (child.children || []).slice());

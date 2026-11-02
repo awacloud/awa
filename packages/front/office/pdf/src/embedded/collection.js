@@ -90,6 +90,12 @@ export const pdfCollection = {
                 }
                 out.navigator = e.Navigator;
             }
+            // The portfolio's colours, folders and split (Table 153), as
+            // read, each only when present (a PDF null is the absence).
+            const has = (v) => !!v && v.type !== 'null';
+            if (has(e.Colors))  out.colors  = e.Colors;
+            if (has(e.Folders)) out.folders = e.Folders;
+            if (has(e.Split))   out.split   = e.Split;
 
             for (const k of Object.keys(e)) {
                 if (!KNOWN.has(k)) out._extras[k] = e[k];

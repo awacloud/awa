@@ -7,6 +7,34 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 See [`README.md`](./README.md) for the usage guide.
 
+## [Unreleased]
+
+### Added
+
+- **Icons Windows draws without downsampling.** The manifest lists 16, 32,
+  48 and 256 px icons beside 192 and 512 px, for the `.ico` Chrome writes
+  when the app is installed on Windows, and the pages link a multi-size
+  `favicon.ico` (16 to 256 px). All drawn by `bun run icons` from the
+  shapes of `icon.svg`. The README says what this does and does not prove
+  about the lost-icon symptom, and how to repair a lost icon.
+
+### Changed
+
+- **Precompressed JavaScript.** `bun run build` now ends with the demos'
+  `gzip-dist` step: every file of 512 B or more that is not already
+  compressed gets a gzip-9 `.gz` twin (`src/main.js` 121,544 B →
+  42,115 B), which the site host serves to a client that accepts gzip.
+  The service worker's pre-cache list is unchanged (no `.gz`).
+- The file picker fallback and the OS file drop, the install prompt, the update flow
+  and the service worker now use `@awacloud/fw`'s `fileIntake`, `installPrompt`,
+  `swUpdate` and `precache`; behaviour unchanged.
+
+### Fixed
+
+- `public/sw.js` is valid UTF-8 again: two em dashes in its comments had
+  been saved as Windows-1252 bytes. A guard test now checks that every
+  text file under `public/` decodes as UTF-8.
+
 ## [0.1.0] — 2026-10-19
 
 ### Added

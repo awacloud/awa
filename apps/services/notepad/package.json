@@ -40,7 +40,7 @@
   },
   "scripts": {
     "test": "bun test .",
-    "build": "bun ../../../cli.ts site-kit app-dist --app . && bun ../../demo/_build/bundle-js.js --dist dist --label @awacloud/notepad && bun tools/build-csp.js && bun tools/build-sw.js",
+    "build": "bun ../../../cli.ts site-kit app-dist --app . && bun ../../demo/_build/bundle-js.js --dist dist --label @awacloud/notepad && bun tools/build-csp.js && bun tools/build-sw.js && bun ../../demo/_build/gzip-dist.js --dist dist",
     "icons": "bun tools/build-icons.js",
     "lint": "bunx eslint --no-warn-ignored ."
   },

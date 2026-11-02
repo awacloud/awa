@@ -28,7 +28,7 @@ export const pdfColorSpacesExtended = {
     dependencies: ['pdfErrors', 'pdfParserObj'],
     deps: [pdfErrors, pdfParserObj],
     factory(errors, parserObj) {
-        const { ParseError } = errors;
+        const { ParseError, ContractError } = errors;
         const { isType } = parserObj;
 
         const COLOR_SPACE_FAMILIES = new Set([
@@ -190,7 +190,68 @@ export const pdfColorSpacesExtended = {
             return out;
         }
 
-        return { typeColorSpace, COLOR_SPACE_FAMILIES };
+        const COLOR_PART_READ = Object.freeze({
+            name: (v) => (isType(v, 'name') ? v.value : undefined),
+            string: (v) => (isType(v, 'string') ? v.value : undefined),
+            num: (v) => (isType(v, 'int') || isType(v, 'real') ? v.value : undefined),
+            int: (v) => (isType(v, 'int') ? v.value : undefined),
+            array: (v) => (isType(v, 'array') ? v : undefined),
+            dict: (v) => (isType(v, 'dict') ? v : undefined),
+            stream: (v) => (isType(v, 'stream') ? v : undefined)
+        });
+        // A key's value by the first of its types that fits; a reference
+        // as read; null when none fits.
+        function colorPartValue(type, v) {
+            if (isType(v, 'ref')) return v;
+            for (const t of type.split('|')) {
+                const r = COLOR_PART_READ[t](v);
+                if (r !== undefined) return r;
+            }
+            return null;
+        }
+        const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(' ').map((p) => p.split(':'))));
+        // The colour dictionaries a colour space refers to: per kind, the
+        // keys and their types (the Arlington PDF Model's).
+        const COLOR_PART_TYPES = Object.freeze({
+            deviceN: keyTypes('Subtype:name Colorants:dict Process:dict MixingHints:dict'),
+            mixingHints: keyTypes('Solidities:dict PrintingOrder:array DotGain:dict'),
+            process: keyTypes('ColorSpace:array|name Components:array'),
+            solidities: keyTypes('Default:num'),
+            colorSpaceMap: keyTypes('DefaultRGB:array DefaultCMYK:array DefaultGray:array'),
+            functions: keyTypes('Default:dict|stream')
+        });
+        const COLOR_PART_KEYS = Object.freeze(Object.fromEntries(
+            Object.entries(COLOR_PART_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+
+        /**
+         * Type a DeviceN attributes dictionary (`kind` `deviceN`), its
+         * mixing hints (`mixingHints`), process (`process`) or solidities
+         * (`solidities`), a resource dictionary's default colour spaces
+         * (`colorSpaceMap`) or a dictionary of functions (`functions`): one
+         * field per key of its list, named after the key in lower case,
+         * present only when the key is; the other keys in `_extras`.
+         */
+        function typeColorPart(dict, kind) {
+            if (typeof kind !== 'string' || !Object.prototype.hasOwnProperty.call(COLOR_PART_TYPES, kind)) {
+                throw new ContractError('pdf/extra/color-part/kind',
+                    `kind must be one of ${Object.keys(COLOR_PART_TYPES).join(', ')}`,
+                    { context: { kind } });
+            }
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/extra/color-part/not-dict',
+                    'a colour dictionary must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
+            const types = COLOR_PART_TYPES[kind];
+            const out = { raw: dict, _extras: {} };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                if (Object.prototype.hasOwnProperty.call(types, k)) out[k.toLowerCase()] = colorPartValue(types[k], v);
+                else out._extras[k] = v;
+            }
+            return out;
+        }
+
+        return { typeColorSpace, COLOR_SPACE_FAMILIES, typeColorPart, COLOR_PART_KEYS };
     }
 };
 

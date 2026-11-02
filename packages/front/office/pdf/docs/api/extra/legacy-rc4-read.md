@@ -34,6 +34,7 @@ const ext = runtime.resolve('pdfLegacyRc4Read');
 | `computeFileKey` | `(password, params: { O, P, idFirst, revision, keyLength, encryptMetadata }) => Uint8Array` | File-key derivation, §7.6.3.3 Algorithm 2. |
 | `computeU` | `(fileKey, idFirst, revision) => Uint8Array` | Computes the `/U` value. |
 | `validateUserPassword` | `(password, params: { O, P, idFirst, revision, keyLength, encryptMetadata, U }) => { ok: true, fileKey } \| { ok: false }` | |
+| `validateOwnerPassword` | `(password, params)` — the same `params` | The owner password, §7.6.3.4 Algorithm 7: the user password recovered from `/O`, then checked as `validateUserPassword` does; same result. |
 | `objectKey` | `(fileKey, objNum, gen) => Uint8Array` | Per-object key. |
 | `decryptString` / `decryptStream` | `(fileKey, objNum, gen, bytes) => Uint8Array` | |
 | `PASSWORD_PADDING` | `Uint8Array(32)` | Padding constant, §7.6.3.3. |
@@ -49,6 +50,12 @@ const r = ext.validateUserPassword('', {
 });
 if (!r.ok) throw new Error('wrong password');
 const fileKey = r.fileKey;
+```
+
+### Read a whole RC4 document
+
+```js
+const doc = runtime.resolve('pdf').read(bytes, { password: '', legacyRc4: ext });
 ```
 
 ### Decrypt a stream

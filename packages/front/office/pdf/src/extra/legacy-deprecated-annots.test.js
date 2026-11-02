@@ -10,6 +10,7 @@ import { pdfErrors } from '../errors.js';
 const _pdfErrors_TD1 = pdfErrors.factory();
 const { ParseError } = _pdfErrors_TD1;
 import { pdfLegacyDeprecatedAnnots } from './legacy-deprecated-annots.js';
+const { ContractError } = _pdfErrors_TD1;
 
 const u8 = (s) => new TextEncoder().encode(s);
 const m = pdfLegacyDeprecatedAnnots.factory(_pdfErrors_TD1);
@@ -171,5 +172,77 @@ describe('extra/legacy-deprecated-annots — malformed input', () => {
             .toBe('pdf/legacy-annot/screen-bad-P');
         expect(m.typeScreenAnnot(screen({ P: obj.ref(2, 0) })).page.type).toBe('ref');
         expect(m.typeScreenAnnot(screen({ P: obj.dict({}) })).page.type).toBe('dict');
+    });
+});
+
+describe('extra/legacy-deprecated-annots — typeMediaDict (ISO 32000-2 § 13.2)', () => {
+    test('a media rendition: every field by its key, sub-dictionaries as read, the rest in _extras', () => {
+        const clip = obj.ref(7, 0);
+        const d = obj.dict({
+            Type: obj.name('Rendition'), S: obj.name('MR'), N: obj.string(u8('Intro')),
+            MH: obj.dict({}), BE: obj.dict({}), C: clip, P: obj.dict({}), SP: obj.dict({}),
+            Foo: obj.int(1)
+        });
+        const r = m.typeMediaDict(d, 'Rendition');
+        expect(r.type).toBe('Rendition');
+        expect(r.subtype).toBe('MR');
+        expect(new TextDecoder().decode(r.name)).toBe('Intro');
+        expect(r.clip).toBe(clip);
+        expect(r.mustHonor.type).toBe('dict');
+        expect(r.bestEffort.type).toBe('dict');
+        expect(r.playParameters.type).toBe('dict');
+        expect(r.screenParameters.type).toBe('dict');
+        expect('renditions' in r).toBe(false);
+        expect(r._extras).toEqual({ Foo: obj.int(1) });
+        expect(r.raw).toBe(d);
+    });
+
+    test('scalar fields by their value; a value of another type gives null; an absent key no field', () => {
+        const p = m.typeMediaDict(obj.dict({
+            V: obj.int(80), C: obj.bool(true), F: obj.int(3), A: obj.bool(false), RC: obj.real(2.5), D: obj.dict({})
+        }), 'MediaPlayParametersMHBE');
+        expect([p.volume, p.showControls, p.fit, p.autoPlay, p.repeatCount, p.duration.type]).toEqual([80, true, 3, false, 2.5, 'dict']);
+        const bad = m.typeMediaDict(obj.dict({ V: obj.name('loud'), C: obj.int(1), RC: obj.string(u8('x')) }), 'MediaPlayParametersMHBE');
+        expect([bad.volume, bad.showControls, bad.repeatCount]).toEqual([null, null, null]);
+        expect('fit' in bad).toBe(false);
+        expect(bad._extras).toEqual({});
+    });
+
+    test('every kind of MEDIA_KINDS types the keys of its table', () => {
+        const valueFor = { name: obj.name('x'), text: obj.string(u8('x')), int: obj.int(1), num: obj.real(1.5), bool: obj.bool(true), raw: obj.dict({}) };
+        expect(Object.isFrozen(m.MEDIA_KINDS)).toBe(true);
+        expect(Object.keys(m.MEDIA_KINDS).length).toBe(20);
+        for (const [kind, table] of Object.entries(m.MEDIA_KINDS)) {
+            const entries = {};
+            for (const [key, [, conv]] of Object.entries(table)) entries[key] = valueFor[conv];
+            const r = m.typeMediaDict(obj.dict(entries), kind);
+            expect(r._extras).toEqual({});
+            for (const [key, [field]] of Object.entries(table)) {
+                expect(r[field]).not.toBeUndefined();
+                expect(r[field]).not.toBeNull();
+            }
+        }
+    });
+
+    test('the movie dictionaries, the clip-section begin and end, a software identifier', () => {
+        const mv = m.typeMediaDict(obj.dict({ F: obj.string(u8('a.mov')), Aspect: obj.array([obj.int(4), obj.int(3)]), Rotate: obj.int(90), Poster: obj.bool(true) }), 'Movie');
+        expect([mv.rotate, mv.aspect.items.length, mv.poster.type]).toEqual([90, 2, 'bool']);
+        const act = m.typeMediaDict(obj.dict({ Mode: obj.name('Repeat'), Rate: obj.real(1.5), ShowControls: obj.bool(true), Synchronous: obj.bool(false) }), 'MovieActivation');
+        expect([act.mode, act.rate, act.showControls, act.synchronous]).toEqual(['Repeat', 1.5, true, false]);
+        const sec = m.typeMediaDict(obj.dict({ B: obj.dict({}), E: obj.dict({}) }), 'MediaClipSectionMHBE');
+        expect([sec.begin.type, sec.end.type]).toEqual(['dict', 'dict']);
+        const sw = m.typeMediaDict(obj.dict({ U: obj.string(u8('vnd.adobe.swname:ADBE_Acrobat')), LI: obj.bool(false), OS: obj.array([]) }), 'SoftwareIdentifier');
+        expect([new TextDecoder().decode(sw.uri), sw.lowInclusive, sw.os.type]).toEqual(['vnd.adobe.swname:ADBE_Acrobat', false, 'array']);
+    });
+
+    test('a non-dictionary throws pdf/legacy-annot/media-not-dict; an unknown kind pdf/legacy-annot/media-kind', () => {
+        let caught;
+        try { m.typeMediaDict(obj.array([]), 'Rendition'); } catch (e) { caught = e; }
+        expect(caught).toBeInstanceOf(ParseError);
+        expect(caught.code).toBe('pdf/legacy-annot/media-not-dict');
+        caught = undefined;
+        try { m.typeMediaDict(obj.dict({}), 'Nope'); } catch (e) { caught = e; }
+        expect(caught).toBeInstanceOf(ContractError);
+        expect(caught.code).toBe('pdf/legacy-annot/media-kind');
     });
 });

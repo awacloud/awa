@@ -43,9 +43,8 @@ live in `tests/_helpers/fonttools.js`; in short:
 - **Per file** — the container decodes, `fonts.read` returns on every
   font it holds, every table the package has a parser for (core and
   extras) returns, every `glyf` glyph resolves and every CharString of a
-  name-keyed `CFF ` font decodes. A WOFF2 whose `glyf` is transformed is
-  judged on its untransformed tables (the package does not reverse the
-  transform), without `fonts.read`.
+  name-keyed `CFF ` font decodes. A WOFF2 is reassembled into an SFNT
+  by `fontWoff2.toSfnt` (its transforms reversed) and judged as one.
 - **Per table** — every table instance the package has a parser for
   returns from that parser. Tables no parser reads are listed as skipped,
   with their count.

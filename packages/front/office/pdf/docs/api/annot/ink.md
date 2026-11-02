@@ -16,8 +16,9 @@ status: complete
 Subtype `/Ink`. A freehand trace: `/InkList` is an array of strokes, each stroke
 itself an array of coordinates `[x0 y0 x1 y1 …]` (pairs). `/BS` — part of the
 base record — carries width and style. The typer validates the shape strictly:
-an array of arrays of numeric pairs. `/InkList` is the only subtype-specific
-entry; everything else lands in the base record or in `_extras`.
+an array of arrays of numeric pairs. `/Path` (PDF 2.0) is `path`, the array
+as read (`null` for another value), present only when the key is; everything
+else lands in the base record or in `_extras`.
 
 ## Resolve
 

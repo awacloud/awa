@@ -59,17 +59,25 @@ export const markupCompatibility = {
          *     dropping happens inside a kept element). Matching is by
          *     prefix, like the rest of this module: a document binding
          *     the same namespace to another prefix is not recognised.
-         * @returns {object} the same `root` (mutated).
+         * @param {string[]} [options.ignorablePrefixes=[]] Prefixes
+         *     ignorable from the root down, as if the root listed them in
+         *     `mc:Ignorable` (a `supportedPrefixes` entry still is not).
+         * @returns {object} the same `root` (mutated). No element of it
+         *     holds two adjacent text nodes: the text around a dropped
+         *     node (or a comment the parser skipped) is merged into one.
          */
         function process(root, options) {
             const opts = {
                 supportedPrefixes: [],
                 preserveAlternateContent: false,
                 keepElements: [],
+                ignorablePrefixes: [],
                 ...(options || {})
             };
             if (!Array.isArray(opts.keepElements)) opts.keepElements = [];
-            walk(root, new Set(), opts, false);
+            const initial = Array.isArray(opts.ignorablePrefixes)
+                ? opts.ignorablePrefixes.filter(p => !opts.supportedPrefixes.includes(p)) : [];
+            walk(root, new Set(initial), opts, false);
             return root;
         }
 
@@ -134,7 +142,22 @@ export const markupCompatibility = {
                 walk(child, localIgnorable, opts, kept);
                 out.push(child);
             }
-            node.children = out;
+            node.children = mergeAdjacentText(out);
+        }
+
+        // One text node per run of adjacent ones: a dropped node (an
+        // ignorable element, a resolved AlternateContent, a comment the
+        // parser skips) leaves the text on both sides as two nodes, which
+        // a write serialises as one and the next read parses as one.
+        function mergeAdjacentText(children) {
+            const out = [];
+            for (const c of children) {
+                const prev = out[out.length - 1];
+                if (c.type === 'text' && prev && prev.type === 'text') {
+                    out[out.length - 1] = { type: 'text', value: prev.value + c.value };
+                } else out.push(c);
+            }
+            return out;
         }
 
         function parseSpaceSep(s) {

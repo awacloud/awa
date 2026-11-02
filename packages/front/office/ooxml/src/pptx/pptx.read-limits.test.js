@@ -63,7 +63,7 @@ function zeroBytes() {
 describe('pptx.read — archive limits', () => {
     test('defaults are unchanged', () => {
         expect(opc.defaultLimits).toEqual(
-            { maxParts: 1024, maxUncompressed: 268435456, maxRatio: 200, maxDepth: 1000 });
+            { maxParts: 8192, maxUncompressed: 268435456, maxRatio: 200, maxDepth: 1000 });
     });
 
     test('zero-filled part: default throws opc/zip-bomb on maxRatio', () => {
@@ -90,6 +90,26 @@ describe('pptx.read — archive limits', () => {
         expect(err.code).toBe('opc/zip-bomb');
         expect(err.context.limit).toBe('maxParts');
         expect(d.read(bytes, { maxParts: n }).presentation).toBeDefined();
+    });
+
+    // T47 (D10 B): real decks reach about 5,000 parts; the default allows
+    // 8,192, while the byte and ratio limits still bound the payload.
+    test('many small parts: 1,500 read with the defaults, 8,193 refuse, an explicit 1,024 still refuses', () => {
+        const withParts = (count) => {
+            const pkg = opc.read(baseBytes());
+            const extra = count - entryCount(baseBytes());
+            for (let i = 0; i < extra; i++) {
+                pkg.parts[`/ppt/media/p${i}.bin`] = Uint8Array.from({ length: 64 }, (_, k) => (i * 31 + k * 7) & 0xff);
+            }
+            return opc.write(pkg);
+        };
+        const many = withParts(1500);
+        expect(entryCount(many)).toBe(1500);
+        expect(d.read(many).presentation).toBeDefined();
+        const capped = thrown(() => d.read(many, { maxParts: 1024 }));
+        expect([capped.code, capped.context.limit, capped.context.max]).toEqual(['opc/zip-bomb', 'maxParts', 1024]);
+        const over = thrown(() => d.read(withParts(8193)));
+        expect([over.code, over.context.limit, over.context.max]).toEqual(['opc/zip-bomb', 'maxParts', 8192]);
     });
 
     test('maxUncompressed below the total throws', () => {

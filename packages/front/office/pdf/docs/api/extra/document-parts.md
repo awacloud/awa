@@ -27,7 +27,7 @@ const ext = runtime.resolve('pdfDocumentParts');
 | Member | Signature | Returns |
 |--------|-----------|---------|
 | `typeDPartRoot` | `(dict) => DPartRoot` | Root `/DPartRoot`. |
-| `typeDPart` | `(dict) => DPart` | A tree node. |
+| `typeDPart` | `(dict) => DPart` | A tree node; `start` and `end` are the first and last page of a leaf part, `{ num, gen }` (Table 408: page objects by reference; an integer is kept as read). |
 | `typeDPM` | `(dict) => DPM` | Metadata dict. |
 | `walkDParts` | `(root, visit) => void` | Depth-first traversal. |
 

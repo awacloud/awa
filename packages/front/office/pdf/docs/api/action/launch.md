@@ -26,7 +26,7 @@ const launch = runtime.resolve('pdfActionLaunch');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `typeLaunch` | `(dict) => { kind: 'Launch', sandboxed: true, securityWarning: string, file?, win?, mac?, unix?, newWindow?, raw }` | Typing only — no execution. |
+| `typeLaunch` | `(dict) => { kind: 'Launch', sandboxed: true, securityWarning: string, file?, win?, mac?, unix?, newWindow?, raw }` | Typing only — no execution. `mac` and `unix` are kept as read whatever their type (ISO 32000-2 leaves their content undefined); only a dictionary counts as a target. |
 
 ## Examples
 

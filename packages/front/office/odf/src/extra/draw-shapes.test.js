@@ -58,6 +58,6 @@ describe('drawShapes — hooks', () => {
     test('dehydrateFrame demotes shapes back', () => {
         const f = { type: 'frame', shapes: [{ type: 'shape-ext', kind: 'draw:ellipse', attrs: {} }] };
         const out = ext.dehydrateFrame(f);
-        expect(out._extras[0].name).toBe('draw:ellipse');
+        expect(out._extras.children[0].name).toBe('draw:ellipse');
     });
 });

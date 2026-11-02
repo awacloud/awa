@@ -38,7 +38,10 @@
  *         color?: 'RRGGBB',
  *         dash?: 'solid'|'dash'|'dot'|'dashDot'|...,
  *         cap?: 'flat'|'rnd'|'sq',
- *         compound?: 'sng'|'dbl'|'thickThin'|'thinThick'|'tri'
+ *         compound?: 'sng'|'dbl'|'thickThin'|'thinThick'|'tri',
+ *         extraAttrs?: { [name]: string }, // other a:ln attributes, verbatim
+ *         _extras?: [xmlNode]  // other a:ln children (a non-srgbClr fill,
+ *                              //   joins, arrow heads …), verbatim
  *     } | 'none',
  *     _extras?: [xmlNode]
  * }
@@ -79,6 +82,24 @@ export const drawingmlShape = {
         function renderColorChild(color) {
             return typedColor.render(color);
         }
+
+        // Schema order of `a:ln` (CT_LineProperties) and of `spPr`
+        // (CT_ShapeProperties), for the children kept verbatim. A
+        // hand-wired ooxmlShared without the ordering helper writes them
+        // after the typed ones (the old order).
+        const orderSeq = shared.sequence ? shared.sequence : () => null;
+        const ordered = (children, seq) => (seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children);
+        const LN_SEQ = orderSeq([
+            ['a:noFill', 'a:solidFill', 'a:gradFill', 'a:pattFill'], ['a:prstDash', 'a:custDash'],
+            ['a:round', 'a:bevel', 'a:miter'], 'a:headEnd', 'a:tailEnd', 'a:extLst'
+        ]);
+        const SPPR_SEQ = orderSeq([
+            'a:xfrm', ['a:custGeom', 'a:prstGeom'],
+            ['a:noFill', 'a:solidFill', 'a:gradFill', 'a:blipFill', 'a:pattFill', 'a:grpFill'],
+            'a:ln', ['a:effectLst', 'a:effectDag'], 'a:scene3d', 'a:sp3d', 'a:extLst'
+        ]);
+        const LN_TYPED_ATTRS = new Set(['w', 'cap', 'cmpd']);
+        const LN_FILLS = new Set(['a:noFill', 'a:solidFill', 'a:gradFill', 'a:pattFill']);
 
         function renderSrgbClr(rgb) {
             return xml.el('a:srgbClr', { val: String(rgb).replace(/^#/, '') });
@@ -178,17 +199,34 @@ export const drawingmlShape = {
             if (lnEl.attrs.w != null)   out.width = Number(lnEl.attrs.w);
             if (lnEl.attrs.cap)         out.cap = lnEl.attrs.cap;
             if (lnEl.attrs.cmpd)        out.compound = lnEl.attrs.cmpd;
-            // Color from <a:solidFill> child.
-            const sf = xml.findChild(lnEl, 'a:solidFill');
-            if (sf) {
-                const c = parseColorChild(sf);
-                if (c && c.rgb) out.color = c.rgb;
+            // Every other attribute (algn) rides verbatim in `extraAttrs`.
+            const extraAttrs = {};
+            let anyAttr = false;
+            for (const k of Object.keys(lnEl.attrs)) {
+                if (LN_TYPED_ATTRS.has(k) || k.startsWith('xmlns')) continue;
+                extraAttrs[k] = lnEl.attrs[k];
+                anyAttr = true;
             }
-            // Dash from <a:prstDash w:val="..."/>
-            const dash = xml.findChild(lnEl, 'a:prstDash');
-            if (dash) out.dash = dash.attrs.val;
-            // <a:noFill/> means line has no fill (transparent).
-            if (xml.findChild(lnEl, 'a:noFill')) out.color = null;
+            if (anyAttr) out.extraAttrs = extraAttrs;
+            const extras = [];
+            for (const c of lnEl.children) {
+                if (c.type !== 'element') continue;
+                if (c.name === 'a:solidFill') {
+                    // An `a:srgbClr` colour is typed (`RRGGBB`, transforms
+                    // dropped); any other colour is kept verbatim.
+                    const col = parseColorChild(c);
+                    if (col && col.rgb) out.color = col.rgb;
+                    else extras.push(c);
+                } else if (c.name === 'a:prstDash') {
+                    out.dash = c.attrs.val;
+                } else if (c.name === 'a:noFill') {
+                    // <a:noFill/> means line has no fill (transparent).
+                    out.color = null;
+                } else {
+                    extras.push(c);
+                }
+            }
+            if (extras.length) out._extras = extras;
             return out;
         }
 
@@ -201,6 +239,11 @@ export const drawingmlShape = {
             if (line.width != null) a.w = String(line.width);
             if (line.cap)           a.cap = line.cap;
             if (line.compound)      a.cmpd = line.compound;
+            if (line.extraAttrs) {
+                for (const k of Object.keys(line.extraAttrs)) {
+                    if (!(k in a)) a[k] = String(line.extraAttrs[k]);
+                }
+            }
             const children = [];
             if (line.color === null) {
                 children.push(xml.el('a:noFill', {}));
@@ -211,7 +254,15 @@ export const drawingmlShape = {
             if (line.dash) {
                 children.push(xml.el('a:prstDash', { val: line.dash }));
             }
-            return xml.el('a:ln', a, children);
+            if (!line._extras) return xml.el('a:ln', a, children);
+            // A typed colour or dash wins over a kept fill or dash (the
+            // schema allows one of each).
+            for (const ex of line._extras) {
+                if (line.color !== undefined && LN_FILLS.has(ex.name)) continue;
+                if (line.dash && ex.name === 'a:custDash') continue;
+                children.push(ex);
+            }
+            return xml.el('a:ln', a, ordered(children, LN_SEQ));
         }
 
         // --- Top-level shapeProps from spPr ---
@@ -273,8 +324,9 @@ export const drawingmlShape = {
             if (fillEl) children.push(fillEl);
             const lineEl = renderLine(props.line);
             if (lineEl) children.push(lineEl);
-            if (props._extras) for (const ex of props._extras) children.push(ex);
-            return xml.el(tag, {}, children);
+            if (!props._extras) return xml.el(tag, {}, children);
+            for (const ex of props._extras) children.push(ex);
+            return xml.el(tag, {}, ordered(children, SPPR_SEQ));
         }
 
         // --- EMU helpers (shared) ---

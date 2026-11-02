@@ -57,6 +57,7 @@ Modules for DOM manipulation, events, rendering, storage, and network communicat
 | Module | Deps | Worker-safe | Description |
 |--------|------|-------------|-------------|
 | [download](./fs/download.md) | none | no | File download |
+| [fileIntake](./fs/fileIntake.md) | none | no | File intake: picker, OS file drop, keyboard dropzone |
 | [fsAccess](./fs/fsAccess.md) | none | partial | File System Access API + OPFS (DOM-bound pickers, OPFS worker-safe) |
 | [indexedDB](./fs/indexedDB.md) | none | no | IndexedDB wrapper |
 | [remoteStore](./fs/remoteStore.md) | `ajax`, `ws`, `eventBus` | yes | Remote key-value store HTTP/WS + watch + batch |
@@ -79,9 +80,12 @@ Modules for DOM manipulation, events, rendering, storage, and network communicat
 |--------|------|-------------|-------------|
 | [backgroundSync](./sw/backgroundSync.md) | `serviceWorker` | no | Background Sync API — offline replay via SyncManager (Chrome only) |
 | [cache](./sw/cache.md) | none | yes | Cache API wrapper |
+| [installPrompt](./sw/installPrompt.md) | none | no | PWA install prompt deferral + File Handling launch queue |
+| [precache](./sw/precache.md) | `cache` | yes | Worker-side release precache + cache-first / network-first strategies |
 | [push](./sw/push.md) | `serviceWorker`, `b64` | no | PushManager wrapper — VAPID subscription, subscription, permission |
 | [serviceWorker](./sw/serviceWorker.md) | none | no | SW lifecycle (window-side) |
 | [sharedWorker](./sw/sharedWorker.md) | `processRPC` | no | SharedWorker cross-tab connection + bidirectional RPC |
+| [swUpdate](./sw/swUpdate.md) | `serviceWorker` | no | Waiting-release update flow: report once, check, apply, version |
 
 ### utils
 

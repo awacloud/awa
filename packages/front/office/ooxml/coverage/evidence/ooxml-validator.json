@@ -10,7 +10,7 @@
     "imageId": "sha256:bbe729911f1a680a2dc3980b7da1b31b69974aa356938d4cd434ac5a787ed27a",
     "version": "OOXML-Validator 2.1.6 (DocumentFormat.OpenXml 3.2.0) Microsoft365"
   },
-  "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 33 (21 written, 12 round trips)",
+  "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 34 (22 written, 12 round trips)",
   "documents": [
     {
       "file": "docx-text-table.docx",
@@ -93,7 +93,7 @@
     {
       "file": "xlsx-threaded-comments.xlsx",
       "kind": "written",
-      "sha256": "82fa83e8d9c417b898a53f6203934c5640fc461fa0202edd521f72ca66b45bc7",
+      "sha256": "48fc6ea6e1b77fe87b9e130ef37fd77a795a07c30081335923daff92355602c0",
       "errors": []
     },
     {
@@ -136,6 +136,12 @@
       "file": "pptx-picture-table.pptx",
       "kind": "written",
       "sha256": "1b498a7e3ea18a8ffe8507772caac167b9c4c5ca75d093b9ee88833797e81931",
+      "errors": []
+    },
+    {
+      "file": "pptx-kept-line-geometry.pptx",
+      "kind": "written",
+      "sha256": "2437edc91023366c7dfd0b19f4394566f182d39ebe62bfd3413d52ae8dda29b5",
       "errors": []
     },
     {
@@ -321,6 +327,6 @@
       "errors": []
     }
   ],
-  "date": "2026-10-15",
-  "commit": "2671672698b60363c63608a8931173ca72b45dcd"
+  "date": "2026-10-24",
+  "commit": "a0b028f8df7a25641a2e116fc943bd06bc1f1de7"
 }

@@ -44,6 +44,6 @@ describe('textMisc — hooks', () => {
         const p = { type: 'paragraph',
             text: [{ _passthrough: true, kind: 'page-count', attrs: {}, children: [] }] };
         const out = ext.dehydrateParagraph(p);
-        expect(out._extras[0].name).toBe('text:page-count');
+        expect(out._extras.children[0].name).toBe('text:page-count');
     });
 });

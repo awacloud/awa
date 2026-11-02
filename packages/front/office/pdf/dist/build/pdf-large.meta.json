@@ -22,6 +22,11 @@
     "pdfAscii85",
     "pdfRunLength",
     "pdfFilterDispatch",
+    "pdfSecurity",
+    "pdfStandardV4",
+    "pdfAesGcm",
+    "pdfStandardV5",
+    "pdfStandardV6",
     "pdfDocument",
     "pdfWriter",
     "pdf",
@@ -77,8 +82,8 @@
     "ed25519"
   ],
   "bytes": {
-    "dev": 209790,
-    "min": 121916
+    "dev": 313094,
+    "min": 181504
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

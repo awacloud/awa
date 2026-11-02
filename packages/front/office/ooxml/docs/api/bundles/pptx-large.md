@@ -9,11 +9,13 @@ status: complete
 
 # pptxLargeBundle
 
-> Pre-wired bundle: pptx core + P0 + P1 extras (~95% real-world pptx coverage).
+> Pre-wired bundle: pptx core + toolkits; none of its extras types a read today (a read through it types what the core types).
 
 **Module** `pptxLargeBundle` | **Source** `packages/front/office/ooxml/src/bundles/pptx-large.js` | **Deps** `pptx` + 12 extras | **Worker-safe** yes
 
 ## Included
+
+**Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
 
 - [`pmlAnimations`](../extra/pml-animations.md) — slide timing graph
 - [`pmlTransitions`](../extra/pml-transitions.md) — slide transitions

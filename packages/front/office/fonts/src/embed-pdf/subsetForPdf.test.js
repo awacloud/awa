@@ -76,6 +76,23 @@ describe('embedSubsetForPdf', () => {
         expect(r.widths.length).toBe(r.gidMap.size);
     });
 
+    test('a font read without a name table subsets without one; FontName falls back to Font', () => {
+        const { parseSfnt, packSfnt } = _rootRt.resolve('fontSfnt');
+        const tri = buildSimpleGlyph(
+            [{ x: 0, y: 0, onCurve: true }, { x: 100, y: 0, onCurve: true }, { x: 50, y: 100, onCurve: true }],
+            { xMin: 0, yMin: 0, xMax: 100, yMax: 100 });
+        const sfnt = parseSfnt(buildTtf({ glyphs: [new Uint8Array(0), tri], advances: [500, 700] }));
+        const tables = {};
+        for (const [tag, t] of Object.entries(sfnt.tables)) if (tag !== 'name') tables[tag] = t.bytes;
+        const font = fontsRead(packSfnt({ flavor: sfnt.flavor, tables }), { allowMissingName: true });
+        const r = subsetForPdf(font, [0x41]);
+        expect(r.postScriptName).toMatch(/^[A-Z]{6}\+Font$/);
+        expect(r.fontDescriptor.FontName).toBe(r.postScriptName);
+        const back = parseSfnt(r.subsetBytes);
+        expect(back.tables.name).toBeUndefined();
+        expect(fontsRead(r.subsetBytes, { allowMissingName: true }).glyphIndexForCodePoint(0x41)).toBe(1);
+    });
+
     test('subset is re-readable as a valid font', () => {
         const font = makeFont();
         const r = subsetForPdf(font, [0x41, 0x42]);

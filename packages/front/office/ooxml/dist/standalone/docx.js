@@ -2116,12 +2116,8 @@ export const docxBundled = {
       for (const c of p.children || [])
         if (c.type === "run")
           out.push(textOfRun(c));
-        else if (c.type === "hyperlink")
-          for (const r of c.children)
-            out.push(textOfRun(r));
-        else if (c.type === "ins")
-          for (const r of c.children)
-            out.push(textOfRun(r));
+        else if (c.type === "hyperlink" || c.type === "ins" || c.type === "moveTo")
+          out.push(textOfParagraph(c));
       return out.join("");
     }
     function textOfRun(r) {
@@ -2421,7 +2417,7 @@ export const docxBundled = {
       ["w16cid", "http://schemas.microsoft.com/office/word/2016/wordml/cid", !0],
       ["w16se", "http://schemas.microsoft.com/office/word/2015/wordml/symex", !0],
       ["w16sdtdh", "http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash", !0]
-    ]);
+    ]), WORD_EXTENSION_PREFIXES = Object.freeze(WORD_ROOT_PREFIXES.filter(([, , ext]) => ext).map(([p]) => p));
     function wordRootAttrs(nodes, opts) {
       const alwaysR = !(opts && opts.r === !1), used = new Set;
       collectUnscopedPrefixes(nodes, new Set(alwaysR ? ["w", "r"] : ["w"]), used);
@@ -2704,6 +2700,8 @@ export const docxBundled = {
           case "a:clrRepl":
             return { kind: "clrRepl", color: findFirstColor(el, { withMods: !0 }) };
           default:
+            if (/^a:\w+$/.test(el.name) && !(el.children || []).some((c) => c.type === "element"))
+              return { kind: el.name.slice(2), attrs: { ...el.attrs } };
             return null;
         }
       }
@@ -2743,7 +2741,7 @@ export const docxBundled = {
           case "clrRepl":
             return xml.el("a:clrRepl", {}, m.color ? [renderColor(m.color, { withMods: !0 })] : []);
           default:
-            return null;
+            return m.kind ? xml.el("a:" + m.kind, m.attrs || {}) : null;
         }
       }
       function findFirstColor(el, opts) {
@@ -2847,6 +2845,7 @@ export const docxBundled = {
       lookupCT,
       trackUnmodelledParts,
       wordRootAttrs,
+      WORD_EXTENSION_PREFIXES,
       encodeText,
       decodeText,
       createRidAllocator,
@@ -2861,7 +2860,7 @@ export const docxBundled = {
   } });
     __register({ name: "opcPackage", dependencies: ["ooxmlErrors","zip","opcContentTypes","opcRelationships","ooxmlShared"], factory: function(errors, zipMod, contentTypesMod, relsMod, shared) {
     const { ParseError, RenderError, ContractError } = errors, DEFAULT_LIMITS = Object.freeze({
-      maxParts: 1024,
+      maxParts: 8192,
       maxUncompressed: 268435456,
       maxRatio: 200,
       maxDepth: 1000
@@ -3266,6 +3265,22 @@ export const docxBundled = {
           attrs["w:" + k] = String(v);
       return Object.keys(attrs).length ? xml.el("w:rFonts", attrs) : null;
     }
+    const THEME_LINK = [["themeColor", "w:themeColor"], ["themeTint", "w:themeTint"], ["themeShade", "w:themeShade"]];
+    function themeLinkOf(el) {
+      const out = {};
+      for (const [k, a] of THEME_LINK)
+        if (el.attrs[a] != null)
+          out[k] = el.attrs[a];
+      return Object.keys(out).length ? out : void 0;
+    }
+    function withThemeLink(el, theme) {
+      if (theme) {
+        for (const [k, a] of THEME_LINK)
+          if (theme[k] != null)
+            el.attrs[a] = String(theme[k]);
+      }
+      return el;
+    }
     function parseRunProperties(rPrEl) {
       if (!rPrEl)
         return;
@@ -3283,12 +3298,22 @@ export const docxBundled = {
           case "w:strike":
             out.strike = readToggle(c);
             break;
-          case "w:u":
+          case "w:u": {
             out.underline = valOf(c) || "single";
+            if (c.attrs["w:color"] != null)
+              out.underlineColor = c.attrs["w:color"];
+            const theme = themeLinkOf(c);
+            if (theme)
+              out.underlineTheme = theme;
             break;
-          case "w:color":
+          }
+          case "w:color": {
             out.color = valOf(c);
+            const theme = themeLinkOf(c);
+            if (theme)
+              out.colorTheme = theme;
             break;
+          }
           case "w:sz":
             out.size = Number(valOf(c));
             break;
@@ -3311,7 +3336,7 @@ export const docxBundled = {
         }
       }
       if (extras.length)
-        out._extras = extras;
+        out._extras = orderBySequence(extras, RPR_SEQ);
       return out;
     }
     function renderRunProperties(rPr) {
@@ -3332,12 +3357,16 @@ export const docxBundled = {
       const strike = writeToggle("w:strike", rPr.strike);
       if (strike)
         children.push(strike);
-      if (rPr.color != null)
-        children.push(elVal("w:color", rPr.color));
+      if (rPr.color != null || rPr.colorTheme)
+        children.push(withThemeLink(rPr.color != null ? elVal("w:color", rPr.color) : xml.el("w:color", {}), rPr.colorTheme));
       if (rPr.size != null)
         children.push(elVal("w:sz", rPr.size));
-      if (rPr.underline != null)
-        children.push(elVal("w:u", rPr.underline));
+      if (rPr.underline != null) {
+        const u = elVal("w:u", rPr.underline);
+        if (rPr.underlineColor != null)
+          u.attrs["w:color"] = String(rPr.underlineColor);
+        children.push(withThemeLink(u, rPr.underlineTheme));
+      }
       if (rPr.highlight != null)
         children.push(elVal("w:highlight", rPr.highlight));
       if (rPr.vertAlign != null)
@@ -3356,7 +3385,28 @@ export const docxBundled = {
       "w:pStyle",
       "w:numPr",
       "w:rPr"
-    ]);
+    ]), SPACING_TYPED = new Set(["w:before", "w:after", "w:line", "w:lineRule"]), IND_TYPED = new Set(["w:left", "w:right", "w:firstLine", "w:hanging"]);
+    function keepExtraAttrs(el, out, typed) {
+      const extraAttrs = {};
+      let any = !1;
+      for (const k of Object.keys(el.attrs)) {
+        if (typed.has(k) && el.attrs[k])
+          continue;
+        if (k === "xmlns" || k.startsWith("xmlns:"))
+          continue;
+        extraAttrs[k] = el.attrs[k];
+        any = !0;
+      }
+      if (any)
+        out.extraAttrs = extraAttrs;
+    }
+    function writeExtraAttrs(a, extraAttrs) {
+      if (!extraAttrs)
+        return;
+      for (const k of Object.keys(extraAttrs))
+        if (!(k in a) && extraAttrs[k] !== void 0)
+          a[k] = String(extraAttrs[k]);
+    }
     function parseParagraphProperties(pPrEl) {
       if (!pPrEl)
         return;
@@ -3381,6 +3431,7 @@ export const docxBundled = {
               ind.firstLine = Number(c.attrs["w:firstLine"]);
             if (c.attrs["w:hanging"])
               ind.hanging = Number(c.attrs["w:hanging"]);
+            keepExtraAttrs(c, ind, IND_TYPED);
             if (Object.keys(ind).length)
               out.indent = ind;
             break;
@@ -3393,6 +3444,9 @@ export const docxBundled = {
               sp.after = Number(c.attrs["w:after"]);
             if (c.attrs["w:line"])
               sp.line = Number(c.attrs["w:line"]);
+            if (c.attrs["w:lineRule"])
+              sp.lineRule = c.attrs["w:lineRule"];
+            keepExtraAttrs(c, sp, SPACING_TYPED);
             if (Object.keys(sp).length)
               out.spacing = sp;
             break;
@@ -3419,7 +3473,7 @@ export const docxBundled = {
         }
       }
       if (extras.length)
-        out._extras = extras;
+        out._extras = orderBySequence(extras, PPR_SEQ);
       return out;
     }
     function renderParagraphProperties(pPr) {
@@ -3444,6 +3498,9 @@ export const docxBundled = {
           a["w:after"] = String(pPr.spacing.after);
         if (pPr.spacing.line != null)
           a["w:line"] = String(pPr.spacing.line);
+        if (pPr.spacing.lineRule != null)
+          a["w:lineRule"] = String(pPr.spacing.lineRule);
+        writeExtraAttrs(a, pPr.spacing.extraAttrs);
         children.push(xml.el("w:spacing", a));
       }
       if (pPr.indent) {
@@ -3456,15 +3513,13 @@ export const docxBundled = {
           a["w:firstLine"] = String(pPr.indent.firstLine);
         if (pPr.indent.hanging != null)
           a["w:hanging"] = String(pPr.indent.hanging);
+        writeExtraAttrs(a, pPr.indent.extraAttrs);
         children.push(xml.el("w:ind", a));
       }
       if (pPr.align != null)
         children.push(elVal("w:jc", pPr.align));
-      if (pPr.rPr) {
-        const rPrEl = renderRunProperties(pPr.rPr);
-        if (rPrEl)
-          children.push(rPrEl);
-      }
+      if (pPr.rPr)
+        children.push(renderRunProperties(pPr.rPr) || xml.el("w:rPr", {}, []));
       if (pPr._extras)
         for (const ex of pPr._extras)
           children.push(ex);
@@ -3599,7 +3654,10 @@ export const docxBundled = {
             out.width = parseWidth(c);
             break;
           case "w:tblBorders":
-            out.borders = parseTableBorders(c);
+            if ((c.children || []).some((k) => k.type === "element"))
+              out.borders = parseTableBorders(c);
+            else
+              extras.push(c);
             break;
           case "w:tblCellMar":
             out.cellMargins = parseCellMargins(c);
@@ -3611,7 +3669,7 @@ export const docxBundled = {
       if (!any)
         return;
       if (extras.length)
-        out._extras = extras;
+        out._extras = orderBySequence(extras, TBLPR_SEQ);
       return out;
     }
     function renderTableProperties(tblPr) {
@@ -3663,6 +3721,23 @@ export const docxBundled = {
     function renderColorChild(color) {
       return typedColor.render(color);
     }
+    const orderSeq = shared.sequence ? shared.sequence : () => null, ordered = (children, seq) => seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children, LN_SEQ = orderSeq([
+      ["a:noFill", "a:solidFill", "a:gradFill", "a:pattFill"],
+      ["a:prstDash", "a:custDash"],
+      ["a:round", "a:bevel", "a:miter"],
+      "a:headEnd",
+      "a:tailEnd",
+      "a:extLst"
+    ]), SPPR_SEQ = orderSeq([
+      "a:xfrm",
+      ["a:custGeom", "a:prstGeom"],
+      ["a:noFill", "a:solidFill", "a:gradFill", "a:blipFill", "a:pattFill", "a:grpFill"],
+      "a:ln",
+      ["a:effectLst", "a:effectDag"],
+      "a:scene3d",
+      "a:sp3d",
+      "a:extLst"
+    ]), LN_TYPED_ATTRS = new Set(["w", "cap", "cmpd"]), LN_FILLS = new Set(["a:noFill", "a:solidFill", "a:gradFill", "a:pattFill"]);
     function renderSrgbClr(rgb) {
       return xml.el("a:srgbClr", { val: String(rgb).replace(/^#/, "") });
     }
@@ -3761,17 +3836,35 @@ export const docxBundled = {
         out.cap = lnEl.attrs.cap;
       if (lnEl.attrs.cmpd)
         out.compound = lnEl.attrs.cmpd;
-      const sf = xml.findChild(lnEl, "a:solidFill");
-      if (sf) {
-        const c = parseColorChild(sf);
-        if (c && c.rgb)
-          out.color = c.rgb;
+      const extraAttrs = {};
+      let anyAttr = !1;
+      for (const k of Object.keys(lnEl.attrs)) {
+        if (LN_TYPED_ATTRS.has(k) || k.startsWith("xmlns"))
+          continue;
+        extraAttrs[k] = lnEl.attrs[k];
+        anyAttr = !0;
       }
-      const dash = xml.findChild(lnEl, "a:prstDash");
-      if (dash)
-        out.dash = dash.attrs.val;
-      if (xml.findChild(lnEl, "a:noFill"))
-        out.color = null;
+      if (anyAttr)
+        out.extraAttrs = extraAttrs;
+      const extras = [];
+      for (const c of lnEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:solidFill") {
+          const col = parseColorChild(c);
+          if (col && col.rgb)
+            out.color = col.rgb;
+          else
+            extras.push(c);
+        } else if (c.name === "a:prstDash")
+          out.dash = c.attrs.val;
+        else if (c.name === "a:noFill")
+          out.color = null;
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function renderLine(line) {
@@ -3786,6 +3879,11 @@ export const docxBundled = {
         a.cap = line.cap;
       if (line.compound)
         a.cmpd = line.compound;
+      if (line.extraAttrs) {
+        for (const k of Object.keys(line.extraAttrs))
+          if (!(k in a))
+            a[k] = String(line.extraAttrs[k]);
+      }
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
@@ -3793,7 +3891,16 @@ export const docxBundled = {
         children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
-      return xml.el("a:ln", a, children);
+      if (!line._extras)
+        return xml.el("a:ln", a, children);
+      for (const ex of line._extras) {
+        if (line.color !== void 0 && LN_FILLS.has(ex.name))
+          continue;
+        if (line.dash && ex.name === "a:custDash")
+          continue;
+        children.push(ex);
+      }
+      return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
     function parseShapeProperties(spPrEl) {
       if (!spPrEl)
@@ -3846,10 +3953,11 @@ export const docxBundled = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
-      if (props._extras)
-        for (const ex of props._extras)
-          children.push(ex);
-      return xml.el(tag, {}, children);
+      if (!props._extras)
+        return xml.el(tag, {}, children);
+      for (const ex of props._extras)
+        children.push(ex);
+      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -4030,7 +4138,7 @@ export const docxBundled = {
       if (docPr) {
         if (docPr.attrs.id != null)
           out.docId = Number(docPr.attrs.id);
-        if (docPr.attrs.name)
+        if (docPr.attrs.name != null)
           out.docName = docPr.attrs.name;
         if (docPr.attrs.descr)
           out.description = docPr.attrs.descr;
@@ -4081,6 +4189,8 @@ export const docxBundled = {
           }
         }
       }
+      out._source = drawingEl;
+      out._read = structuredClone(typedFields(out));
       return out;
     }
     function parseWpsInto(out, gdEl) {
@@ -4125,6 +4235,9 @@ export const docxBundled = {
             out.embedRef = blip.attrs["r:embed"];
           if (blip.attrs["r:link"])
             out.linkRef = blip.attrs["r:link"];
+          const svgBlip = svgBlipOf(blip);
+          if (svgBlip && svgBlip.attrs["r:embed"])
+            out.svgRef = svgBlip.attrs["r:embed"];
         }
         const srcRect = xml.findChild(blipFill, "a:srcRect");
         if (srcRect)
@@ -4147,7 +4260,117 @@ export const docxBundled = {
         }
       }
     }
+    function svgBlipOf(blip) {
+      const extLst = xml.findChild(blip, "a:extLst");
+      for (const ext of extLst && extLst.children || []) {
+        if (ext.type !== "element" || ext.name !== "a:ext" || ext.attrs.uri !== "{96DAC541-7B7A-43D3-8B79-37D633B846F1}")
+          continue;
+        const el = (ext.children || []).find((c) => c.type === "element" && /(^|:)svgBlip$/.test(c.name));
+        if (el)
+          return el;
+      }
+      return null;
+    }
+    const LATE_FIELDS = new Set(["image", "chart", "embedRef", "svgRef", "chartRef", "docId", "_source", "_read"]), REL_NAMESPACES = new Set([R_NS, "http://purl.oclc.org/ooxml/officeDocument/relationships"]);
+    function typedFields(d) {
+      const out = {};
+      for (const k of Object.keys(d))
+        if (!LATE_FIELDS.has(k))
+          out[k] = d[k];
+      return out;
+    }
+    function keepSource(d, element) {
+      d._source = element;
+      d._read = structuredClone(typedFields(d));
+      return d;
+    }
+    function sameModel(a, b) {
+      if (Object.is(a, b))
+        return !0;
+      if (!a || !b || typeof a !== "object" || typeof b !== "object")
+        return !1;
+      if (Array.isArray(a) !== Array.isArray(b))
+        return !1;
+      const ka = Object.keys(a), kb = Object.keys(b);
+      if (ka.length !== kb.length)
+        return !1;
+      for (const k of ka)
+        if (!Object.prototype.hasOwnProperty.call(b, k) || !sameModel(a[k], b[k]))
+          return !1;
+      return !0;
+    }
+    let held = null;
+    function withRelationships(scope, fn) {
+      const before = held;
+      held = scope;
+      try {
+        return fn();
+      } finally {
+        held = before;
+      }
+    }
+    function keptSource(d) {
+      const src = d._source;
+      if (!src || src.type !== "element" || !d._read || !sameModel(typedFields(d), d._read))
+        return null;
+      const el = structuredClone(src), wrapper = xml.findChild(el, "wp:inline") || xml.findChild(el, "wp:anchor");
+      if (!wrapper)
+        return null;
+      const docPr = xml.findChild(wrapper, "wp:docPr");
+      if (d.docId != null) {
+        if (!docPr || docPr.attrs.id == null)
+          return null;
+        docPr.attrs.id = String(d.docId);
+      }
+      const graphic = xml.findChild(wrapper, "a:graphic"), gd = graphic && xml.findChild(graphic, "a:graphicData"), isChart = gd && gd.attrs.uri === "http://schemas.openxmlformats.org/drawingml/2006/chart", chartEl = isChart ? xml.findChild(gd, "c:chart") : null, pic = gd && !isChart ? xml.findChild(gd, "pic:pic") : null, blipFill = pic && xml.findChild(pic, "pic:blipFill"), blip = blipFill && xml.findChild(blipFill, "a:blip"), svgBlip = blip && svgBlipOf(blip), typed = new Map;
+      for (const [node, attr, value] of [
+        [blip, "r:embed", d.embedRef],
+        [svgBlip, "r:embed", d.svgRef],
+        [chartEl, "r:id", d.chartRef]
+      ]) {
+        const at = node && node.attrs[attr];
+        if (Boolean(value) !== Boolean(at))
+          return null;
+        if (!value)
+          continue;
+        node.attrs[attr] = String(value);
+        typed.set(node, attr);
+      }
+      return referencesHeld(el, typed) ? el : null;
+    }
+    function referencesHeld(el, typed) {
+      const walk = (n, prefixes) => {
+        if (!n || n.type !== "element")
+          return !0;
+        let scope = prefixes;
+        for (const [k, v] of Object.entries(n.attrs)) {
+          if (!k.startsWith("xmlns:"))
+            continue;
+          if (scope === prefixes)
+            scope = new Set(prefixes);
+          if (REL_NAMESPACES.has(v))
+            scope.add(k.slice(6));
+          else
+            scope.delete(k.slice(6));
+        }
+        for (const [k, v] of Object.entries(n.attrs)) {
+          const colon = k.indexOf(":");
+          if (!(k === "o:relid" || colon > 0 && k !== "xmlns" && scope.has(k.slice(0, colon))) || v === "")
+            continue;
+          if (typed.get(n) === k) {
+            if (held && !held.media.has(v) && !held.links.has(v))
+              return !1;
+          } else if (!held || !held.links.has(v))
+            return !1;
+        }
+        return (n.children || []).every((c) => walk(c, scope));
+      };
+      return walk(el, new Set(["r"]));
+    }
     function renderDrawing(drawing) {
+      const kept = keptSource(drawing);
+      if (kept)
+        return kept;
       const inner = drawing.mode === "anchor" ? renderAnchorWrapper(drawing) : renderInlineWrapper(drawing);
       return xml.el("w:drawing", {}, [inner]);
     }
@@ -4208,7 +4431,7 @@ export const docxBundled = {
     function renderDocPr(d) {
       const a = {
         id: String(d.docId != null ? d.docId : 1),
-        name: d.docName || "Picture"
+        name: typeof d.docName === "string" ? d.docName : "Picture"
       };
       if (d.description)
         a.descr = d.description;
@@ -4264,12 +4487,12 @@ export const docxBundled = {
         xml.el("pic:nvPicPr", {}, [
           xml.el("pic:cNvPr", {
             id: String(d.picId != null ? d.picId : 0),
-            name: d.picName || d.docName || "Picture"
+            name: typeof d.picName === "string" ? d.picName : typeof d.docName === "string" ? d.docName : "Picture"
           }),
           xml.el("pic:cNvPicPr", {})
         ]),
         xml.el("pic:blipFill", {}, [
-          xml.el("a:blip", d.embedRef ? { "r:embed": d.embedRef } : d.linkRef ? { "r:link": d.linkRef } : {}),
+          xml.el("a:blip", d.embedRef ? { "r:embed": d.embedRef } : d.linkRef ? { "r:link": d.linkRef } : {}, renderSvgExt(d)),
           ...d.srcRect ? [xml.el("a:srcRect", srcRectAttrs(d.srcRect))] : [],
           xml.el("a:stretch", {}, [xml.el("a:fillRect", {})])
         ]),
@@ -4290,6 +4513,15 @@ export const docxBundled = {
         ])
       ]);
     }
+    function renderSvgExt(d) {
+      if (!d.svgRef || !d.image || !d.image.svg || !d.image.svg.data)
+        return [];
+      return [xml.el("a:extLst", {}, [
+        xml.el("a:ext", { uri: "{96DAC541-7B7A-43D3-8B79-37D633B846F1}" }, [
+          xml.el("asvg:svgBlip", { "xmlns:asvg": "http://schemas.microsoft.com/office/drawing/2016/SVG/main", "r:embed": d.svgRef })
+        ])
+      ])];
+    }
     function image(data, opts = {}) {
       const contentType = opts.contentType || sniffImageType(data), cx = toEmu(opts.cx || "2in"), cy = toEmu(opts.cy || cx * 0.75), out = {
         type: "drawing",
@@ -4306,6 +4538,8 @@ export const docxBundled = {
         out.title = opts.title;
       if (opts.rId)
         out.embedRef = opts.rId;
+      if (opts.svg)
+        out.image.svg = { data: opts.svg };
       if (opts.docId != null)
         out.docId = opts.docId;
       return out;
@@ -4343,6 +4577,9 @@ export const docxBundled = {
     return {
       parseDrawing,
       renderDrawing,
+      withRelationships,
+      typedFields,
+      keepSource,
       image,
       chart,
       shape,
@@ -4377,96 +4614,139 @@ export const docxBundled = {
     function renderSlot(name, elements) {
       return xml.el(name, {}, (elements || []).map(renderMathElement));
     }
+    function withPr(el, prName, node) {
+      readPr(node, el, prName, []);
+      return node;
+    }
+    function readPr(node, el, prName, typed) {
+      const pr = xml.findChild(el, prName);
+      if (pr)
+        node._prExtras = pr.children.filter((c) => c.type === "element" && !typed.includes(c.name));
+      return pr;
+    }
+    function renderPr(prName, typedChildren, n) {
+      if (!typedChildren.length && !n._prExtras)
+        return [];
+      return [xml.el(prName, {}, [...typedChildren, ...n._prExtras || []])];
+    }
+    function charOf(pr, name) {
+      const c = pr && xml.findChild(pr, name);
+      return c && c.attrs["m:val"] != null ? c.attrs["m:val"] : void 0;
+    }
     function parseMathRun(rEl) {
       const out = { type: "mathRun", text: "" }, rPrEl = xml.findChild(rEl, "m:rPr");
       if (rPrEl) {
-        const sty = xml.findChild(rPrEl, "m:sty");
+        const sty = xml.findChild(rPrEl, "m:sty"), rPr = {};
         if (sty)
-          out.rPr = { sty: sty.attrs["m:val"] };
+          rPr.sty = sty.attrs["m:val"];
+        const extras = rPrEl.children.filter((c) => c.type === "element" && c.name !== "m:sty");
+        if (extras.length)
+          rPr._extras = extras;
+        if (Object.keys(rPr).length)
+          out.rPr = rPr;
       }
+      const extras = [];
       for (const c of rEl.children) {
         if (c.type !== "element")
           continue;
         if (c.name === "m:t")
           out.text += xml.textContent(c);
+        else if (c.name !== "m:rPr")
+          extras.push(c);
       }
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
+    const SCRIPT_BEFORE_STY = new Set(["m:lit", "m:nor", "m:scr"]);
     function renderMathRun(r) {
       const children = [];
       if (r.rPr) {
         const inner = [];
+        if (r.rPr._extras)
+          inner.push(...r.rPr._extras.filter((c) => c.name !== "m:sty" && SCRIPT_BEFORE_STY.has(c.name)));
         if (r.rPr.sty)
           inner.push(xml.el("m:sty", { "m:val": r.rPr.sty }));
+        if (r.rPr._extras)
+          inner.push(...r.rPr._extras.filter((c) => !SCRIPT_BEFORE_STY.has(c.name)));
         if (inner.length)
           children.push(xml.el("m:rPr", {}, inner));
       }
+      if (r._extras)
+        children.push(...r._extras);
       children.push(xml.el("m:t", { "xml:space": "preserve" }, [xml.text(r.text || "")]));
       return xml.el("m:r", {}, children);
     }
     function parseFrac(fEl) {
-      return {
+      const out = {
         type: "frac",
         numerator: parseSlot(xml.findChild(fEl, "m:num")),
         denominator: parseSlot(xml.findChild(fEl, "m:den"))
       };
+      readPr(out, fEl, "m:fPr", []);
+      return out;
     }
     function renderFrac(f) {
       return xml.el("m:f", {}, [
+        ...renderPr("m:fPr", [], f),
         renderSlot("m:num", f.numerator),
         renderSlot("m:den", f.denominator)
       ]);
     }
     function parseSSup(el) {
-      return {
+      return withPr(el, "m:sSupPr", {
         type: "sSup",
         base: parseSlot(xml.findChild(el, "m:e")),
         sup: parseSlot(xml.findChild(el, "m:sup"))
-      };
+      });
     }
     function renderSSup(n) {
       return xml.el("m:sSup", {}, [
+        ...renderPr("m:sSupPr", [], n),
         renderSlot("m:e", n.base),
         renderSlot("m:sup", n.sup)
       ]);
     }
     function parseSSub(el) {
-      return {
+      return withPr(el, "m:sSubPr", {
         type: "sSub",
         base: parseSlot(xml.findChild(el, "m:e")),
         sub: parseSlot(xml.findChild(el, "m:sub"))
-      };
+      });
     }
     function renderSSub(n) {
       return xml.el("m:sSub", {}, [
+        ...renderPr("m:sSubPr", [], n),
         renderSlot("m:e", n.base),
         renderSlot("m:sub", n.sub)
       ]);
     }
     function parseSSubSup(el) {
-      return {
+      return withPr(el, "m:sSubSupPr", {
         type: "sSubSup",
         base: parseSlot(xml.findChild(el, "m:e")),
         sub: parseSlot(xml.findChild(el, "m:sub")),
         sup: parseSlot(xml.findChild(el, "m:sup"))
-      };
+      });
     }
     function renderSSubSup(n) {
       return xml.el("m:sSubSup", {}, [
+        ...renderPr("m:sSubSupPr", [], n),
         renderSlot("m:e", n.base),
         renderSlot("m:sub", n.sub),
         renderSlot("m:sup", n.sup)
       ]);
     }
     function parseRad(el) {
-      return {
+      return withPr(el, "m:radPr", {
         type: "rad",
         degree: parseSlot(xml.findChild(el, "m:deg")),
         base: parseSlot(xml.findChild(el, "m:e"))
-      };
+      });
     }
     function renderRad(n) {
       return xml.el("m:rad", {}, [
+        ...renderPr("m:radPr", [], n),
         renderSlot("m:deg", n.degree),
         renderSlot("m:e", n.base)
       ]);
@@ -4478,35 +4758,29 @@ export const docxBundled = {
         sub: parseSlot(xml.findChild(el, "m:sub")),
         sup: parseSlot(xml.findChild(el, "m:sup")),
         body: parseSlot(xml.findChild(el, "m:e"))
-      }, naryPr = xml.findChild(el, "m:naryPr");
-      if (naryPr) {
-        const chr = xml.findChild(naryPr, "m:chr");
-        if (chr && chr.attrs["m:val"])
-          out.op = chr.attrs["m:val"];
-      }
+      }, naryPr = readPr(out, el, "m:naryPr", ["m:chr"]), op = charOf(naryPr, "m:chr");
+      if (op != null)
+        out.op = op;
       return out;
     }
     function renderNary(n) {
       const children = [];
-      children.push(xml.el("m:naryPr", {}, [
-        xml.el("m:chr", { "m:val": n.op || "\u2211" })
-      ]));
+      children.push(...renderPr("m:naryPr", [
+        xml.el("m:chr", { "m:val": n.op ?? "\u2211" })
+      ], n));
       children.push(renderSlot("m:sub", n.sub));
       children.push(renderSlot("m:sup", n.sup));
       children.push(renderSlot("m:e", n.body));
       return xml.el("m:nary", {}, children);
     }
     function parseDelim(el) {
-      const out = { type: "d", children: [] }, dPr = xml.findChild(el, "m:dPr");
-      if (dPr) {
-        const beg = xml.findChild(dPr, "m:begChr"), end = xml.findChild(dPr, "m:endChr"), sep = xml.findChild(dPr, "m:sepChr");
-        if (beg && beg.attrs["m:val"])
-          out.open = beg.attrs["m:val"];
-        if (end && end.attrs["m:val"])
-          out.close = end.attrs["m:val"];
-        if (sep && sep.attrs["m:val"])
-          out.sep = sep.attrs["m:val"];
-      }
+      const out = { type: "d", children: [] }, dPr = readPr(out, el, "m:dPr", ["m:begChr", "m:sepChr", "m:endChr"]), open = charOf(dPr, "m:begChr"), close = charOf(dPr, "m:endChr"), sep = charOf(dPr, "m:sepChr");
+      if (open != null)
+        out.open = open;
+      if (close != null)
+        out.close = close;
+      if (sep != null)
+        out.sep = sep;
       for (const c of el.children) {
         if (c.type !== "element")
           continue;
@@ -4519,31 +4793,32 @@ export const docxBundled = {
       const children = [], pr = [];
       if (n.open != null)
         pr.push(xml.el("m:begChr", { "m:val": n.open }));
-      if (n.close != null)
-        pr.push(xml.el("m:endChr", { "m:val": n.close }));
       if (n.sep != null)
         pr.push(xml.el("m:sepChr", { "m:val": n.sep }));
-      if (pr.length)
-        children.push(xml.el("m:dPr", {}, pr));
+      if (n.close != null)
+        pr.push(xml.el("m:endChr", { "m:val": n.close }));
+      children.push(...renderPr("m:dPr", pr, n));
       for (const slot of n.children || [])
         children.push(renderSlot("m:e", slot));
       return xml.el("m:d", {}, children);
     }
     function parseFunc(el) {
-      return {
+      return withPr(el, "m:funcPr", {
         type: "func",
         name: parseSlot(xml.findChild(el, "m:fName")),
         body: parseSlot(xml.findChild(el, "m:e"))
-      };
+      });
     }
     function renderFunc(n) {
       return xml.el("m:func", {}, [
+        ...renderPr("m:funcPr", [], n),
         renderSlot("m:fName", n.name),
         renderSlot("m:e", n.body)
       ]);
     }
     function parseMatrix(el) {
       const out = { type: "m", rows: [] };
+      readPr(out, el, "m:mPr", []);
       for (const r of xml.findAll(el, "m:mr")) {
         const row = [];
         for (const c of xml.findAll(r, "m:e"))
@@ -4554,49 +4829,37 @@ export const docxBundled = {
     }
     function renderMatrix(n) {
       const rows = (n.rows || []).map((row) => xml.el("m:mr", {}, row.map((cell) => renderSlot("m:e", cell))));
-      return xml.el("m:m", {}, rows);
+      return xml.el("m:m", {}, [...renderPr("m:mPr", [], n), ...rows]);
     }
     function parseAcc(el) {
-      const out = { type: "acc", base: parseSlot(xml.findChild(el, "m:e")) }, accPr = xml.findChild(el, "m:accPr");
-      if (accPr) {
-        const chr = xml.findChild(accPr, "m:chr");
-        if (chr && chr.attrs["m:val"])
-          out.char = chr.attrs["m:val"];
-      }
+      const out = { type: "acc", base: parseSlot(xml.findChild(el, "m:e")) }, accPr = readPr(out, el, "m:accPr", ["m:chr"]), char = charOf(accPr, "m:chr");
+      if (char != null)
+        out.char = char;
       return out;
     }
     function renderAcc(n) {
       const children = [];
-      if (n.char != null)
-        children.push(xml.el("m:accPr", {}, [
-          xml.el("m:chr", { "m:val": n.char })
-        ]));
+      children.push(...renderPr("m:accPr", n.char != null ? [xml.el("m:chr", { "m:val": n.char })] : [], n));
       children.push(renderSlot("m:e", n.base));
       return xml.el("m:acc", {}, children);
     }
     function parseBar(el) {
-      const out = { type: "bar", base: parseSlot(xml.findChild(el, "m:e")) }, barPr = xml.findChild(el, "m:barPr");
-      if (barPr) {
-        const pos = xml.findChild(barPr, "m:pos");
-        if (pos && pos.attrs["m:val"])
-          out.pos = pos.attrs["m:val"];
-      }
+      const out = { type: "bar", base: parseSlot(xml.findChild(el, "m:e")) }, barPr = readPr(out, el, "m:barPr", ["m:pos"]), pos = charOf(barPr, "m:pos");
+      if (pos != null)
+        out.pos = pos;
       return out;
     }
     function renderBar(n) {
       const children = [];
-      if (n.pos)
-        children.push(xml.el("m:barPr", {}, [
-          xml.el("m:pos", { "m:val": n.pos })
-        ]));
+      children.push(...renderPr("m:barPr", n.pos != null ? [xml.el("m:pos", { "m:val": n.pos })] : [], n));
       children.push(renderSlot("m:e", n.base));
       return xml.el("m:bar", {}, children);
     }
     function parseBox(el) {
-      return { type: "box", base: parseSlot(xml.findChild(el, "m:e")) };
+      return withPr(el, "m:boxPr", { type: "box", base: parseSlot(xml.findChild(el, "m:e")) });
     }
     function renderBox(n) {
-      return xml.el("m:box", {}, [renderSlot("m:e", n.base)]);
+      return xml.el("m:box", {}, [...renderPr("m:boxPr", [], n), renderSlot("m:e", n.base)]);
     }
     function parseMathElement(el) {
       switch (el.name) {
@@ -4676,17 +4939,21 @@ export const docxBundled = {
       return xml.el("m:oMath", {}, children);
     }
     function parseOMathPara(el) {
-      const out = { type: "oMathPara", children: [] };
+      const out = { type: "oMathPara", children: [] }, extras = [];
       for (const c of el.children) {
         if (c.type !== "element")
           continue;
         if (c.name === "m:oMath")
           out.children.push(parseOMath(c));
+        else
+          extras.push(c);
       }
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function renderOMathPara(n) {
-      return xml.el("m:oMathPara", {}, (n.children || []).map(renderOMath));
+      return xml.el("m:oMathPara", {}, [...n._extras || [], ...(n.children || []).map(renderOMath)]);
     }
     function r(text, sty) {
       const out = { type: "mathRun", text: String(text || "") };
@@ -4815,6 +5082,25 @@ export const docxBundled = {
       "w:docGrid",
       "w:printerSettings",
       "w:sectPrChange"
+    ]), TCPR_SEQ = orderSeq([
+      "w:cnfStyle",
+      "w:tcW",
+      "w:gridSpan",
+      "w:hMerge",
+      "w:vMerge",
+      "w:tcBorders",
+      "w:shd",
+      "w:noWrap",
+      "w:tcMar",
+      "w:textDirection",
+      "w:tcFitText",
+      "w:vAlign",
+      "w:hideMark",
+      "w:headers",
+      "w:cellIns",
+      "w:cellDel",
+      "w:cellMerge",
+      "w:tcPrChange"
     ]);
     function parseRunChildren(rEl) {
       const out = [];
@@ -4829,8 +5115,10 @@ export const docxBundled = {
             out.push({ type: "delText", value: xml.textContent(c) });
             break;
           case "w:br": {
-            const kind = c.attrs["w:type"];
-            out.push(kind ? { type: "break", kind } : { type: "break" });
+            const kind = c.attrs["w:type"], br = kind ? { type: "break", kind } : { type: "break" };
+            if (c.attrs["w:clear"] != null)
+              br.clear = c.attrs["w:clear"];
+            out.push(br);
             break;
           }
           case "w:tab":
@@ -4846,11 +5134,13 @@ export const docxBundled = {
             out.push({ type: "commentReference", id: c.attrs["w:id"] });
             break;
           case "w:footnoteReference":
-            out.push({ type: "footnoteReference", id: c.attrs["w:id"] });
+          case "w:endnoteReference": {
+            const ref = { type: c.name.slice(2), id: c.attrs["w:id"] };
+            if (c.attrs["w:customMarkFollows"] != null)
+              ref.customMarkFollows = isOn(c.attrs["w:customMarkFollows"]);
+            out.push(ref);
             break;
-          case "w:endnoteReference":
-            out.push({ type: "endnoteReference", id: c.attrs["w:id"] });
-            break;
+          }
           case "w:drawing":
             out.push(drawingMod.parseDrawing(c));
             break;
@@ -4861,6 +5151,11 @@ export const docxBundled = {
             };
             if (c.attrs["w:dirty"])
               f.dirty = c.attrs["w:dirty"] === "1";
+            if (c.attrs["w:fldLock"] !== void 0 && isOn(c.attrs["w:fldLock"]))
+              f.fldLock = !0;
+            const kept = c.children.filter((k) => k.type === "element");
+            if (kept.length)
+              f._extras = kept;
             out.push(f);
             break;
           }
@@ -4888,9 +5183,13 @@ export const docxBundled = {
           case "delText":
             out.push(xml.el("w:delText", { "xml:space": "preserve" }, [xml.text(ch.value || "")]));
             break;
-          case "break":
-            out.push(ch.kind ? xml.el("w:br", { "w:type": ch.kind }) : xml.el("w:br", {}));
+          case "break": {
+            const a = ch.kind ? { "w:type": ch.kind } : {};
+            if (ch.clear != null)
+              a["w:clear"] = String(ch.clear);
+            out.push(xml.el("w:br", a));
             break;
+          }
           case "tab":
             out.push(xml.el("w:tab", {}));
             break;
@@ -4904,11 +5203,14 @@ export const docxBundled = {
             out.push(xml.el("w:commentReference", { "w:id": String(ch.id) }));
             break;
           case "footnoteReference":
-            out.push(xml.el("w:footnoteReference", { "w:id": String(ch.id) }));
+          case "endnoteReference": {
+            const a = {};
+            if (ch.customMarkFollows != null)
+              a["w:customMarkFollows"] = ch.customMarkFollows ? "1" : "0";
+            a["w:id"] = String(ch.id);
+            out.push(xml.el("w:" + ch.type, a));
             break;
-          case "endnoteReference":
-            out.push(xml.el("w:endnoteReference", { "w:id": String(ch.id) }));
-            break;
+          }
           case "drawing":
             out.push(drawingMod.renderDrawing(ch));
             break;
@@ -4916,7 +5218,9 @@ export const docxBundled = {
             const a = { "w:fldCharType": ch.kind };
             if (ch.dirty)
               a["w:dirty"] = "1";
-            out.push(xml.el("w:fldChar", a));
+            if (ch.fldLock)
+              a["w:fldLock"] = "1";
+            out.push(xml.el("w:fldChar", a, ch._extras || []));
             break;
           }
           case "instrText":
@@ -4941,21 +5245,35 @@ export const docxBundled = {
       const children = [], rPrEl = props.renderRunProperties(run.rPr);
       if (rPrEl)
         children.push(rPrEl);
+      else if (run.rPr && typeof run.rPr === "object")
+        children.push(xml.el("w:rPr", {}, []));
       children.push(...renderRunChildren(run.children));
       return xml.el("w:r", {}, children);
     }
+    const HYPERLINK_STRINGS = [["tgtFrame", "w:tgtFrame"], ["tooltip", "w:tooltip"], ["docLocation", "w:docLocation"]];
     function parseHyperlink(hEl) {
       const out = { type: "hyperlink", children: [] };
       if (hEl.attrs["r:id"])
         out.rId = hEl.attrs["r:id"];
       if (hEl.attrs["w:anchor"])
         out.anchor = hEl.attrs["w:anchor"];
+      for (const [k, a] of HYPERLINK_STRINGS)
+        if (hEl.attrs[a] != null)
+          out[k] = hEl.attrs[a];
+      if (hEl.attrs["w:history"] != null)
+        out.history = isOn(hEl.attrs["w:history"]);
+      const extras = [];
       for (const c of hEl.children) {
         if (c.type !== "element")
           continue;
-        if (c.name === "w:r")
-          out.children.push(parseRun(c));
+        const node = parseInline(c);
+        if (node)
+          out.children.push(node);
+        else
+          extras.push(c);
       }
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function renderHyperlink(h) {
@@ -4964,7 +5282,16 @@ export const docxBundled = {
         attrs["r:id"] = h.rId;
       if (h.anchor)
         attrs["w:anchor"] = h.anchor;
-      return xml.el("w:hyperlink", attrs, (h.children || []).map(renderRun));
+      for (const [k, a] of HYPERLINK_STRINGS)
+        if (h[k] != null)
+          attrs[a] = String(h[k]);
+      if (h.history != null)
+        attrs["w:history"] = h.history ? "1" : "0";
+      const children = renderInlines(h.children);
+      if (h._extras)
+        for (const ex of h._extras)
+          children.push(ex);
+      return xml.el("w:hyperlink", attrs, children);
     }
     function isOn(val) {
       return val == null || val === "1" || val === "true" || val === "on";
@@ -4987,7 +5314,7 @@ export const docxBundled = {
             out.id = Number(c.attrs["w:val"]);
             break;
           case "w:showingPlcHdr":
-            out.showingPlcHdr = !0;
+            out.showingPlcHdr = isOn(c.attrs["w:val"]);
             break;
           case "w:dataBinding": {
             const db = {};
@@ -5002,6 +5329,8 @@ export const docxBundled = {
           }
           case "w:text":
             out.kind = "text";
+            if (Object.keys(c.attrs).length)
+              out._kindNode = c;
             break;
           case "w:richText":
             out.kind = "richText";
@@ -5066,8 +5395,8 @@ export const docxBundled = {
         children.push(xml.el("w:tag", { "w:val": props.tag }));
       if (props.id != null)
         children.push(xml.el("w:id", { "w:val": String(props.id) }));
-      if (props.showingPlcHdr)
-        children.push(xml.el("w:showingPlcHdr", {}));
+      if (props.showingPlcHdr != null)
+        children.push(xml.el("w:showingPlcHdr", props.showingPlcHdr ? {} : { "w:val": "0" }));
       if (props.dataBinding) {
         const a = {};
         if (props.dataBinding.prefixMappings)
@@ -5079,7 +5408,7 @@ export const docxBundled = {
         children.push(xml.el("w:dataBinding", a));
       }
       if (props.kind === "text")
-        children.push(xml.el("w:text", {}));
+        children.push(props._kindNode || xml.el("w:text", {}));
       else if (props.kind === "richText")
         children.push(xml.el("w:richText", {}));
       else if (props.kind === "picture")
@@ -5106,52 +5435,177 @@ export const docxBundled = {
       const sdtPrEl = xml.findChild(sdtEl, "w:sdtPr"), sdtContentEl = xml.findChild(sdtEl, "w:sdtContent"), out = { type: isBlock ? "blockSdt" : "sdt", children: [] }, props = parseSdtProperties(sdtPrEl);
       if (props)
         out.properties = props;
+      const own = sdtEl.children.filter((c) => c.type === "element" && c.name !== "w:sdtPr" && c.name !== "w:sdtContent");
+      if (own.length)
+        out._extras = own;
       if (sdtContentEl)
-        if (isBlock)
+        if (isBlock) {
+          const extras = [];
           for (const c of sdtContentEl.children) {
             if (c.type !== "element")
               continue;
+            const marker = parseMarker(c);
             if (c.name === "w:p")
               out.children.push(parseParagraph(c));
             else if (c.name === "w:tbl")
               out.children.push(parseTable(c));
             else if (c.name === "w:sdt")
               out.children.push(parseSdt(c, !0));
+            else if (marker)
+              out.children.push(marker);
+            else
+              extras.push(c);
           }
-        else
+          if (extras.length)
+            out._contentExtras = extras;
+        } else {
+          const extras = [];
           for (const c of sdtContentEl.children) {
             if (c.type !== "element")
               continue;
-            if (c.name === "w:r")
-              out.children.push(parseRun(c));
-            else if (c.name === "w:hyperlink")
-              out.children.push(parseHyperlink(c));
-            else if (c.name === "w:sdt")
-              out.children.push(parseSdt(c, !1));
+            const node = parseInline(c);
+            if (node)
+              out.children.push(node);
+            else
+              extras.push(c);
           }
+          if (extras.length)
+            out._contentExtras = extras;
+        }
       return out;
     }
     function renderSdt(sdt) {
       const sdtChildren = [], propsEl = renderSdtProperties(sdt.properties);
       if (propsEl)
         sdtChildren.push(propsEl);
-      const isBlock = sdt.type === "blockSdt", contentChildren = [];
-      for (const c of sdt.children || [])
-        if (isBlock) {
+      if (sdt._extras)
+        sdtChildren.push(...sdt._extras);
+      const isBlock = sdt.type === "blockSdt";
+      let contentChildren = [];
+      if (isBlock)
+        for (const c of sdt.children || [])
           if (c.type === "paragraph")
             contentChildren.push(renderParagraph(c));
           else if (c.type === "table")
             contentChildren.push(renderTable(c));
           else if (c.type === "blockSdt")
             contentChildren.push(renderSdt(c));
-        } else if (c.type === "run")
-          contentChildren.push(renderRun(c));
-        else if (c.type === "hyperlink")
-          contentChildren.push(renderHyperlink(c));
-        else if (c.type === "sdt")
-          contentChildren.push(renderSdt(c));
+          else {
+            const marker = renderMarker(c);
+            if (marker)
+              contentChildren.push(marker);
+          }
+      else
+        contentChildren = renderInlines(sdt.children || []);
+      if (sdt._contentExtras)
+        contentChildren.push(...sdt._contentExtras);
       sdtChildren.push(xml.el("w:sdtContent", {}, contentChildren));
       return xml.el("w:sdt", {}, sdtChildren);
+    }
+    const REVISION_TAGS = { "w:ins": "ins", "w:del": "del", "w:moveFrom": "moveFrom", "w:moveTo": "moveTo" }, REVISION_ELEMENTS = { ins: "w:ins", del: "w:del", moveFrom: "w:moveFrom", moveTo: "w:moveTo" }, RANGE_MARKERS = new Set([
+      "w:moveFromRangeStart",
+      "w:moveFromRangeEnd",
+      "w:moveToRangeStart",
+      "w:moveToRangeEnd",
+      "w:customXmlInsRangeStart",
+      "w:customXmlInsRangeEnd",
+      "w:customXmlDelRangeStart",
+      "w:customXmlDelRangeEnd",
+      "w:customXmlMoveFromRangeStart",
+      "w:customXmlMoveFromRangeEnd",
+      "w:customXmlMoveToRangeStart",
+      "w:customXmlMoveToRangeEnd",
+      "w:permStart",
+      "w:permEnd",
+      "w:proofErr"
+    ]), MARKER_TYPES = {
+      "w:bookmarkStart": "bookmarkStart",
+      "w:bookmarkEnd": "bookmarkEnd",
+      "w:commentRangeStart": "commentRangeStart",
+      "w:commentRangeEnd": "commentRangeEnd"
+    }, MARKER_ELEMENTS = Object.fromEntries(Object.entries(MARKER_TYPES).map(([k, v]) => [v, k]));
+    function parseMarker(c) {
+      if (RANGE_MARKERS.has(c.name))
+        return parseRangeMarker(c);
+      const type = MARKER_TYPES[c.name];
+      if (!type)
+        return null;
+      const a = c.attrs, out = { type, id: a["w:id"] };
+      if (type === "bookmarkStart") {
+        out.name = a["w:name"];
+        if (a["w:colFirst"] !== void 0)
+          out.colFirst = Number(a["w:colFirst"]);
+        if (a["w:colLast"] !== void 0)
+          out.colLast = Number(a["w:colLast"]);
+      }
+      if (a["w:displacedByCustomXml"] !== void 0)
+        out.displacedByCustomXml = a["w:displacedByCustomXml"];
+      return out;
+    }
+    function renderMarker(m) {
+      if (m.type === "rangeMarker")
+        return renderRangeMarker(m);
+      const name = MARKER_ELEMENTS[m.type];
+      if (!name)
+        return null;
+      const a = { "w:id": String(m.id) };
+      if (m.type === "bookmarkStart") {
+        if (m.name)
+          a["w:name"] = m.name;
+        if (m.colFirst != null)
+          a["w:colFirst"] = String(m.colFirst);
+        if (m.colLast != null)
+          a["w:colLast"] = String(m.colLast);
+      }
+      if (m.displacedByCustomXml)
+        a["w:displacedByCustomXml"] = m.displacedByCustomXml;
+      return xml.el(name, a);
+    }
+    function parseRangeMarker(el) {
+      return { type: "rangeMarker", name: el.name.slice(2), attrs: { ...el.attrs } };
+    }
+    function renderRangeMarker(m) {
+      return xml.el("w:" + m.name, { ...m.attrs || {} }, []);
+    }
+    function parseInline(c) {
+      const marker = parseMarker(c);
+      if (marker)
+        return marker;
+      switch (c.name) {
+        case "w:r":
+          return parseRun(c);
+        case "w:hyperlink":
+          return parseHyperlink(c);
+        case "w:ins":
+        case "w:del":
+        case "w:moveFrom":
+        case "w:moveTo":
+          return parseRevision(c, REVISION_TAGS[c.name]);
+        case "w:sdt":
+          return parseSdt(c, !1);
+        case "m:oMath":
+          return mathMod.parseOMath(c);
+        case "w:fldSimple": {
+          const f = {
+            type: "fldSimple",
+            instr: c.attrs["w:instr"] || "",
+            children: []
+          };
+          if (c.attrs["w:dirty"])
+            f.dirty = c.attrs["w:dirty"] === "1";
+          for (const cc of c.children) {
+            if (cc.type !== "element")
+              continue;
+            if (cc.name === "w:r")
+              f.children.push(parseRun(cc));
+            else if (cc.name === "w:hyperlink")
+              f.children.push(parseHyperlink(cc));
+          }
+          return f;
+        }
+        default:
+          return null;
+      }
     }
     function parseParagraph(pEl) {
       const pPrEl = xml.findChild(pEl, "w:pPr"), pPr = props.parseParagraphProperties(pPrEl), children = [], extras = [];
@@ -5160,70 +5614,47 @@ export const docxBundled = {
           continue;
         if (c.name === "w:pPr")
           continue;
-        switch (c.name) {
-          case "w:r":
-            children.push(parseRun(c));
-            break;
-          case "w:hyperlink":
-            children.push(parseHyperlink(c));
-            break;
-          case "w:bookmarkStart":
-            children.push({
-              type: "bookmarkStart",
-              id: c.attrs["w:id"],
-              name: c.attrs["w:name"]
-            });
-            break;
-          case "w:bookmarkEnd":
-            children.push({ type: "bookmarkEnd", id: c.attrs["w:id"] });
-            break;
-          case "w:commentRangeStart":
-            children.push({ type: "commentRangeStart", id: c.attrs["w:id"] });
-            break;
-          case "w:commentRangeEnd":
-            children.push({ type: "commentRangeEnd", id: c.attrs["w:id"] });
-            break;
-          case "w:ins":
-            children.push(parseRevision(c, "ins"));
-            break;
-          case "w:del":
-            children.push(parseRevision(c, "del"));
-            break;
-          case "w:sdt":
-            children.push(parseSdt(c, !1));
-            break;
-          case "m:oMath":
-            children.push(mathMod.parseOMath(c));
-            break;
-          case "w:fldSimple": {
-            const f = {
-              type: "fldSimple",
-              instr: c.attrs["w:instr"] || "",
-              children: []
-            };
-            if (c.attrs["w:dirty"])
-              f.dirty = c.attrs["w:dirty"] === "1";
-            for (const cc of c.children) {
-              if (cc.type !== "element")
-                continue;
-              if (cc.name === "w:r")
-                f.children.push(parseRun(cc));
-              else if (cc.name === "w:hyperlink")
-                f.children.push(parseHyperlink(cc));
-            }
-            children.push(f);
-            break;
-          }
-          default:
-            extras.push(c);
-        }
+        const node = parseInline(c);
+        if (node)
+          children.push(node);
+        else
+          extras.push(c);
       }
       const out = { type: "paragraph", children };
       if (pPr)
         out.pPr = pPr;
       if (extras.length)
         out._extras = extras;
+      readIds(pEl, out);
       return out;
+    }
+    function readIds(el, out) {
+      const a = el.attrs || {};
+      if (a["w14:paraId"] != null)
+        out.paraId = a["w14:paraId"];
+      if (a["w14:textId"] != null)
+        out.textId = a["w14:textId"];
+    }
+    let paraIdsWritten = null;
+    function withParaIds(fn) {
+      const before = paraIdsWritten;
+      paraIdsWritten = new Set;
+      try {
+        return fn();
+      } finally {
+        paraIdsWritten = before;
+      }
+    }
+    function idAttrs(node) {
+      const attrs = {}, id = node.paraId;
+      if (id != null && !(paraIdsWritten && paraIdsWritten.has(String(id)))) {
+        attrs["w14:paraId"] = String(id);
+        if (paraIdsWritten)
+          paraIdsWritten.add(String(id));
+      }
+      if (node.textId != null)
+        attrs["w14:textId"] = String(node.textId);
+      return attrs;
     }
     function parseRevision(el, kind) {
       const out = {
@@ -5231,34 +5662,41 @@ export const docxBundled = {
         id: el.attrs["w:id"],
         children: []
       };
-      if (el.attrs["w:author"])
+      if (el.attrs["w:author"] !== void 0)
         out.author = el.attrs["w:author"];
       if (el.attrs["w:date"])
         out.date = el.attrs["w:date"];
+      const extras = [];
       for (const c of el.children) {
         if (c.type !== "element")
           continue;
-        if (c.name === "w:r")
-          out.children.push(parseRun(c));
+        const node = parseInline(c);
+        if (node)
+          out.children.push(node);
+        else
+          extras.push(c);
       }
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function renderRevision(rev) {
       const attrs = {};
       if (rev.id != null)
         attrs["w:id"] = String(rev.id);
-      if (rev.author)
+      if (typeof rev.author === "string")
         attrs["w:author"] = rev.author;
       if (rev.date)
         attrs["w:date"] = rev.date;
-      const tag = rev.type === "del" ? "w:del" : "w:ins";
-      return xml.el(tag, attrs, (rev.children || []).map(renderRun));
+      const children = renderInlines(rev.children);
+      if (rev._extras)
+        for (const ex of rev._extras)
+          children.push(ex);
+      return xml.el(REVISION_ELEMENTS[rev.type] || "w:ins", attrs, children);
     }
-    function renderParagraph(p) {
-      const children = [], pPrEl = props.renderParagraphProperties(p.pPr);
-      if (pPrEl)
-        children.push(pPrEl);
-      for (const c of p.children || [])
+    function renderInlines(nodes) {
+      const children = [];
+      for (const c of nodes || [])
         switch (c.type) {
           case "run":
             children.push(renderRun(c));
@@ -5268,6 +5706,8 @@ export const docxBundled = {
             break;
           case "ins":
           case "del":
+          case "moveFrom":
+          case "moveTo":
             children.push(renderRevision(c));
             break;
           case "sdt":
@@ -5290,27 +5730,27 @@ export const docxBundled = {
             children.push(xml.el("w:fldSimple", a, inner));
             break;
           }
-          case "bookmarkStart": {
-            const a = { "w:id": String(c.id) };
-            if (c.name)
-              a["w:name"] = c.name;
-            children.push(xml.el("w:bookmarkStart", a));
-            break;
-          }
+          case "bookmarkStart":
           case "bookmarkEnd":
-            children.push(xml.el("w:bookmarkEnd", { "w:id": String(c.id) }));
-            break;
           case "commentRangeStart":
-            children.push(xml.el("w:commentRangeStart", { "w:id": String(c.id) }));
-            break;
           case "commentRangeEnd":
-            children.push(xml.el("w:commentRangeEnd", { "w:id": String(c.id) }));
+          case "rangeMarker":
+            children.push(renderMarker(c));
             break;
         }
+      return children;
+    }
+    function renderParagraph(p) {
+      const children = [], pPrEl = props.renderParagraphProperties(p.pPr);
+      if (pPrEl)
+        children.push(pPrEl);
+      else if (p.pPr && typeof p.pPr === "object")
+        children.push(xml.el("w:pPr", {}, []));
+      children.push(...renderInlines(p.children));
       if (p._extras)
         for (const ex of p._extras)
           children.push(ex);
-      return xml.el("w:p", {}, children);
+      return xml.el("w:p", idAttrs(p), children);
     }
     function parseCell(tcEl) {
       const tcPrEl = xml.findChild(tcEl, "w:tcPr"), tcPr = tcPrEl ? parseCellProperties(tcPrEl) : void 0, children = [], extras = [];
@@ -5319,10 +5759,15 @@ export const docxBundled = {
           continue;
         if (c.name === "w:tcPr")
           continue;
+        const marker = parseMarker(c);
         if (c.name === "w:p")
           children.push(parseParagraph(c));
         else if (c.name === "w:tbl")
           children.push(parseTable(c));
+        else if (c.name === "w:sdt")
+          children.push(parseSdt(c, !0));
+        else if (marker)
+          children.push(marker);
         else
           extras.push(c);
       }
@@ -5333,6 +5778,7 @@ export const docxBundled = {
         out._extras = extras;
       return out;
     }
+    const CELL_BLOCKS = new Set(["w:p", "w:tbl", "w:sdt", "w:customXml", "w:altChunk"]);
     function renderCell(c) {
       const children = [], tcPrEl = renderCellProperties(c.tcPr);
       if (tcPrEl)
@@ -5342,10 +5788,17 @@ export const docxBundled = {
           children.push(renderParagraph(ch));
         else if (ch.type === "table")
           children.push(renderTable(ch));
+        else if (ch.type === "blockSdt")
+          children.push(renderSdt(ch));
+        else {
+          const marker = renderMarker(ch);
+          if (marker)
+            children.push(marker);
+        }
       if (c._extras)
         for (const ex of c._extras)
           children.push(ex);
-      if (!children.some((n) => n.name === "w:p"))
+      if (!children.some((n) => n && CELL_BLOCKS.has(n.name)))
         children.push(xml.el("w:p", {}));
       return xml.el("w:tc", {}, children);
     }
@@ -5390,50 +5843,95 @@ export const docxBundled = {
           children.push(ex);
       if (!children.length)
         return null;
-      return xml.el("w:tcPr", {}, children);
+      return xml.el("w:tcPr", {}, ordered(children, TCPR_SEQ));
+    }
+    function readWrapped(children, itemName, parseItem, items, extras) {
+      let group = 0;
+      const walk = (kids, chain, sink) => {
+        for (const c of kids) {
+          if (c.type !== "element")
+            continue;
+          if (c.name === itemName) {
+            const item = parseItem(c);
+            if (chain.length)
+              item.sdt = chain.slice();
+            items.push(item);
+          } else if (c.name === "w:sdt") {
+            const ctl = { group: group++ }, pr = parseSdtProperties(xml.findChild(c, "w:sdtPr"));
+            if (pr)
+              ctl.properties = pr;
+            const own = c.children.filter((k) => k.type === "element" && k.name !== "w:sdtPr" && k.name !== "w:sdtContent");
+            if (own.length)
+              ctl._extras = own;
+            const content = xml.findChild(c, "w:sdtContent"), inner = [], before = items.length;
+            walk(content ? content.children : [], [...chain, ctl], inner);
+            if (items.length === before)
+              sink.push(c);
+            else if (inner.length)
+              ctl._contentExtras = inner;
+          } else
+            sink.push(c);
+        }
+      };
+      walk(children, [], extras);
+    }
+    function renderWrapped(items, renderItem, out) {
+      const stack = [], target = () => stack.length ? stack[stack.length - 1].content : out, close = () => {
+        const { ctl, content } = stack.pop(), kids = [], pr = renderSdtProperties(ctl.properties);
+        if (pr)
+          kids.push(pr);
+        if (ctl._extras)
+          kids.push(...ctl._extras);
+        kids.push(xml.el("w:sdtContent", {}, [...content, ...ctl._contentExtras || []]));
+        target().push(xml.el("w:sdt", {}, kids));
+      };
+      for (const it of items) {
+        const chain = Array.isArray(it && it.sdt) ? it.sdt : [];
+        let k = 0;
+        while (k < stack.length && k < chain.length && chain[k] && stack[k].ctl.group === chain[k].group)
+          k++;
+        while (stack.length > k)
+          close();
+        for (;k < chain.length; k++)
+          if (chain[k])
+            stack.push({ ctl: chain[k], content: [] });
+        target().push(renderItem(it));
+      }
+      while (stack.length)
+        close();
     }
     function parseRow(trEl) {
       const cells = [], extras = [];
-      for (const c of trEl.children) {
-        if (c.type !== "element")
-          continue;
-        if (c.name === "w:tc")
-          cells.push(parseCell(c));
-        else if (c.name === "w:trPr")
-          extras.push(c);
-        else
-          extras.push(c);
-      }
+      readWrapped(trEl.children, "w:tc", parseCell, cells, extras);
       const out = { type: "row", cells };
       if (extras.length)
         out._extras = extras;
+      readIds(trEl, out);
       return out;
     }
     function renderRow(row) {
       const extras = row._extras || [], head = (name) => extras.filter((ex) => ex && ex.name === name), children = [...head("w:tblPrEx"), ...head("w:trPr")];
-      for (const c of row.cells || [])
-        children.push(renderCell(c));
+      renderWrapped(row.cells || [], renderCell, children);
       for (const ex of extras)
         if (!(ex && (ex.name === "w:tblPrEx" || ex.name === "w:trPr")))
           children.push(ex);
-      return xml.el("w:tr", {}, children);
+      return xml.el("w:tr", idAttrs(row), children);
     }
     function parseTable(tblEl) {
-      const rows = [], extras = [], out = { type: "table", rows };
+      const rows = [], extras = [], out = { type: "table", rows }, rest = [];
       for (const c of tblEl.children) {
         if (c.type !== "element")
           continue;
-        if (c.name === "w:tr")
-          rows.push(parseRow(c));
-        else if (c.name === "w:tblPr") {
+        if (c.name === "w:tblPr") {
           const tp = props.parseTableProperties(c);
           if (tp !== void 0)
             out.tblPr = tp;
           else
             extras.push(c);
         } else
-          extras.push(c);
+          rest.push(c);
       }
+      readWrapped(rest, "w:tr", parseRow, rows, extras);
       if (extras.length)
         out._extras = extras;
       return out;
@@ -5456,8 +5954,7 @@ export const docxBundled = {
       for (const ex of extras)
         if (ex !== pr && ex !== keptGrid)
           children.push(ex);
-      for (const r of t.rows || [])
-        children.push(renderRow(r));
+      renderWrapped(t.rows || [], renderRow, children);
       return xml.el("w:tbl", {}, children);
     }
     const SECT_KNOWN = new Set([
@@ -5467,7 +5964,11 @@ export const docxBundled = {
       "w:headerReference",
       "w:footerReference",
       "w:titlePg"
-    ]);
+    ]), UNIT_TWIPS = { in: 1440, pt: 20, pc: 240, pi: 240, cm: 566.9291338582677, mm: 56.69291338582677 }, UNIVERSAL_MEASURE = /^(-?[0-9]+(?:\.[0-9]+)?)(mm|cm|in|pt|pc|pi)$/;
+    function twipsMeasure(v) {
+      const m = UNIVERSAL_MEASURE.exec(v);
+      return m ? Math.round(Number(m[1]) * UNIT_TWIPS[m[2]]) : Number(v);
+    }
     function parseSection(sectPrEl) {
       const out = {}, extras = [];
       for (const c of sectPrEl.children) {
@@ -5477,11 +5978,13 @@ export const docxBundled = {
           case "w:pgSz":
             out.pageSize = {};
             if (c.attrs["w:w"])
-              out.pageSize.w = Number(c.attrs["w:w"]);
+              out.pageSize.w = twipsMeasure(c.attrs["w:w"]);
             if (c.attrs["w:h"])
-              out.pageSize.h = Number(c.attrs["w:h"]);
+              out.pageSize.h = twipsMeasure(c.attrs["w:h"]);
             if (c.attrs["w:orient"])
               out.pageSize.orient = c.attrs["w:orient"];
+            if (c.attrs["w:code"] != null && c.attrs["w:code"] !== "")
+              out.pageSize.code = Number(c.attrs["w:code"]);
             break;
           case "w:pgMar":
             out.pageMargin = {};
@@ -5496,7 +5999,7 @@ export const docxBundled = {
             ]) {
               const a = c.attrs["w:" + k];
               if (a != null)
-                out.pageMargin[k] = Number(a);
+                out.pageMargin[k] = twipsMeasure(a);
             }
             break;
           case "w:type":
@@ -5526,7 +6029,7 @@ export const docxBundled = {
       }
       if (extras.length)
         out._extras = extras;
-      return Object.keys(out).length ? out : void 0;
+      return out;
     }
     function renderSection(sect) {
       if (!sect)
@@ -5546,6 +6049,8 @@ export const docxBundled = {
           a["w:h"] = String(sect.pageSize.h);
         if (sect.pageSize.orient)
           a["w:orient"] = sect.pageSize.orient;
+        if (sect.pageSize.code != null)
+          a["w:code"] = String(sect.pageSize.code);
         children.push(xml.el("w:pgSz", a));
       }
       if (sect.pageMargin) {
@@ -5568,9 +6073,7 @@ export const docxBundled = {
       if (sect._extras)
         for (const ex of sect._extras)
           children.push(ex);
-      if (!children.length)
-        return null;
-      return xml.el("w:sectPr", {}, ordered(children, SECT_SEQ));
+      return xml.el("w:sectPr", {}, children.length ? ordered(children, SECT_SEQ) : []);
     }
     function blockMathOf(pEl) {
       let math = null;
@@ -5592,8 +6095,10 @@ export const docxBundled = {
           continue;
         switch (c.name) {
           case "w:p": {
-            const math = blockMathOf(c);
-            body.push(math ? mathMod.parseOMathPara(math) : parseParagraph(c));
+            const math = blockMathOf(c), node = math ? mathMod.parseOMathPara(math) : parseParagraph(c);
+            if (math)
+              readIds(c, node);
+            body.push(node);
             break;
           }
           case "w:tbl":
@@ -5608,8 +6113,13 @@ export const docxBundled = {
           case "w:sectPr":
             sectPr = parseSection(c);
             break;
-          default:
-            extras.push(c);
+          default: {
+            const marker = parseMarker(c);
+            if (marker)
+              body.push(marker);
+            else
+              extras.push(c);
+          }
         }
       }
       return { body, sectPr, extras };
@@ -5624,7 +6134,12 @@ export const docxBundled = {
         else if (node.type === "blockSdt")
           children.push(renderSdt(node));
         else if (node.type === "oMathPara")
-          children.push(xml.el("w:p", {}, [mathMod.renderOMathPara(node)]));
+          children.push(xml.el("w:p", idAttrs(node), [mathMod.renderOMathPara(node)]));
+        else {
+          const marker = renderMarker(node);
+          if (marker)
+            children.push(marker);
+        }
       if (doc._extras)
         for (const ex of doc._extras)
           children.push(ex);
@@ -5640,6 +6155,7 @@ export const docxBundled = {
       renderHyperlink,
       parseParagraph,
       renderParagraph,
+      withParaIds,
       parseTable,
       renderTable,
       parseRow,
@@ -6192,6 +6708,7 @@ export const docxBundled = {
       "w:docVars",
       "w:rsids",
       "m:mathPr",
+      "w:uiCompat97To2003",
       "w:attachedSchema",
       "w:themeFontLang",
       "w:clrSchemeMapping",
@@ -6357,7 +6874,7 @@ export const docxBundled = {
         id: Number(cEl.attrs["w:id"]),
         body: []
       };
-      if (cEl.attrs["w:author"])
+      if (cEl.attrs["w:author"] !== void 0)
         out.author = cEl.attrs["w:author"];
       if (cEl.attrs["w:date"])
         out.date = cEl.attrs["w:date"];
@@ -6371,7 +6888,7 @@ export const docxBundled = {
     }
     function renderComment(c) {
       const attrs = { "w:id": String(c.id) };
-      if (c.author)
+      if (typeof c.author === "string")
         attrs["w:author"] = c.author;
       if (c.date)
         attrs["w:date"] = c.date;
@@ -6528,11 +7045,13 @@ export const docxBundled = {
         supportedPrefixes: [],
         preserveAlternateContent: !1,
         keepElements: [],
+        ignorablePrefixes: [],
         ...options || {}
       };
       if (!Array.isArray(opts.keepElements))
         opts.keepElements = [];
-      walk(root, new Set, opts, !1);
+      const initial = Array.isArray(opts.ignorablePrefixes) ? opts.ignorablePrefixes.filter((p) => !opts.supportedPrefixes.includes(p)) : [];
+      walk(root, new Set(initial), opts, !1);
       return root;
     }
     function walk(node, ignorable, opts, kept) {
@@ -6577,7 +7096,18 @@ export const docxBundled = {
         walk(child, localIgnorable, opts, kept);
         out.push(child);
       }
-      node.children = out;
+      node.children = mergeAdjacentText(out);
+    }
+    function mergeAdjacentText(children) {
+      const out = [];
+      for (const c of children) {
+        const prev = out[out.length - 1];
+        if (c.type === "text" && prev && prev.type === "text")
+          out[out.length - 1] = { type: "text", value: prev.value + c.value };
+        else
+          out.push(c);
+      }
+      return out;
     }
     function parseSpaceSep(s) {
       if (!s)
@@ -7137,6 +7667,8 @@ export const docxBundled = {
       "dehydrateTable",
       "hydrateRow",
       "dehydrateRow",
+      "hydrateDrawing",
+      "dehydrateDrawing",
       "hydrateSettings",
       "dehydrateSettings"
     ];
@@ -7191,6 +7723,10 @@ export const docxBundled = {
               const r = applyHook(phase === "hydrate" ? "hydrateRow" : "dehydrateRow", node[i]);
               if (r)
                 node[i] = r;
+            } else if (node[i] && node[i].type === "drawing") {
+              const r = applyHook(phase === "hydrate" ? "hydrateDrawing" : "dehydrateDrawing", node[i]);
+              if (r)
+                node[i] = r;
             }
           }
           return;
@@ -7224,6 +7760,15 @@ export const docxBundled = {
           walkProperties(result.headers[k], phase);
         for (const k of Object.keys(result.footers || {}))
           walkProperties(result.footers[k], phase);
+        for (const item of result.footnotes && result.footnotes.notes || [])
+          if (item)
+            walkProperties(item.body, phase);
+        for (const item of result.endnotes && result.endnotes.notes || [])
+          if (item)
+            walkProperties(item.body, phase);
+        for (const item of result.comments && result.comments.comments || [])
+          if (item)
+            walkProperties(item.body, phase);
         if (result.styles && Array.isArray(result.styles.styles)) {
           const hrName = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hpName = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties";
           for (const st of result.styles.styles) {
@@ -7266,12 +7811,31 @@ export const docxBundled = {
       createRidAllocator,
       lookupCT,
       trackUnmodelledParts,
-      wordRootAttrs
+      wordRootAttrs,
+      WORD_EXTENSION_PREFIXES
     } = shared, _toText = textMod.toText, W_NS = NS.W, REPEATING_SECTION_ELEMENTS = Object.freeze(["w15:repeatingSection", "w15:repeatingSectionItem"]), REL_TYPE_DOC = REL_TYPE.DOC, REL_TYPE_HYPERLINK = REL_TYPE.HYPERLINK, CT_DOCUMENT = CT.DOCUMENT;
-    function storyRoot(bytes) {
+    function storyRoot(bytes, keepAlternate, keepExtensions) {
       const root = xml.parse(decodeText(bytes));
-      mc.process(root, { keepElements: REPEATING_SECTION_ELEMENTS });
+      mc.process(root, mcOptions(keepAlternate === !0, keepExtensions === !0));
       return root;
+    }
+    function mcOptions(keepAlternate, keepExtensions) {
+      const opts = {
+        keepElements: REPEATING_SECTION_ELEMENTS,
+        preserveAlternateContent: keepAlternate,
+        ignorablePrefixes: WORD_EXTENSION_PREFIXES
+      };
+      if (keepExtensions)
+        opts.supportedPrefixes = WORD_EXTENSION_PREFIXES;
+      return opts;
+    }
+    function chartRefsOf(tree) {
+      const refs = new Set;
+      walkDrawings(tree, (d) => {
+        if (d.chartRef)
+          refs.add(d.chartRef);
+      });
+      return refs;
     }
     function walkDrawings(doc, cb) {
       walkNodes(doc, (n) => {
@@ -7288,13 +7852,18 @@ export const docxBundled = {
           drawing.image.contentType = img.contentType;
           drawing.image.rId = drawing.embedRef;
         }
+        const svg = drawing.svgRef && images[drawing.svgRef];
+        if (svg) {
+          drawing.image = drawing.image || {};
+          drawing.image.svg = { data: svg.data, contentType: SVG_CT, rId: drawing.svgRef };
+        }
         if (drawing.chartRef && charts && charts[drawing.chartRef]) {
           drawing.chart = charts[drawing.chartRef].chart;
           drawing.kind = "chart";
         }
       };
     }
-    function storyDrawingTables(pkg, partName) {
+    function storyDrawingTables(pkg, partName, wantChart) {
       const images = {}, charts = {};
       for (const rel of pkg.rels[partName] || []) {
         if (rel.TargetMode === "External")
@@ -7309,6 +7878,8 @@ export const docxBundled = {
             contentType: lookupCT(pkg, target) || drawingMod.sniffImageType(data)
           };
         } else if (rel.Type === chartMod.REL_TYPE_CHART) {
+          if (wantChart && !wantChart.has(rel.Id))
+            continue;
           const target = relsMod.resolveTarget(partName, rel.Target), data = pkg.parts[target];
           if (data)
             charts[rel.Id] = { partName: target, chart: chartMod.parse(data) };
@@ -7351,22 +7922,132 @@ export const docxBundled = {
       return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio, maxDepth: o.maxDepth } : void 0;
     }
     function read(bytes, opts) {
+      const alternate = opts && opts.alternateContent !== void 0 ? opts.alternateContent : "fallback";
+      if (alternate !== "fallback" && alternate !== "keep")
+        throw new ContractError("docx/invalid-alternate-content", "docx.read: opts.alternateContent must be 'fallback' or 'keep'", { context: { received: alternate === null ? "null" : typeof alternate === "string" ? alternate : typeof alternate } });
+      const extensions = opts && opts.extensions !== void 0 ? opts.extensions : "drop";
+      if (extensions !== "drop" && extensions !== "keep")
+        throw new ContractError("docx/invalid-extensions", "docx.read: opts.extensions must be 'drop' or 'keep'", { context: { received: extensions === null ? "null" : typeof extensions === "string" ? extensions : typeof extensions } });
       const pkg = opc.read(bytes, archiveLimits(opts)), { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
         try {
-          return readPackage(p);
+          return readPackage(p, alternate === "keep", extensions === "keep");
         } catch (e) {
           throw typedPartXml(e);
         }
       });
       result.unmodelledParts = unmodelledParts;
+      for (const keep of keptParts.get(result) || []) {
+        const kept = keptRelationships(pkg, keep.part, keep.named, keep.written || writtenIds(result)), model = typeof keep.model === "function" ? keep.model() : keep.model;
+        if (kept && model)
+          model._relationships = kept;
+      }
       return result;
+    }
+    const REFERENCE_ATTR = /\b(?:r:[A-Za-z]+|o:relid)="([^"]+)"/g, keptParts = new WeakMap;
+    function idsIn(bytes) {
+      const out = new Set;
+      for (const m of decodeText(bytes).matchAll(REFERENCE_ATTR))
+        out.add(m[1]);
+      return out;
+    }
+    function storyWrittenIds(rels, bodies) {
+      const ids = new Set((rels || []).filter((r) => r && r.Type === REL_TYPE_HYPERLINK).map((r) => r.Id));
+      walkDrawings(bodies, (d) => {
+        if (d.image && d.image.data && d.embedRef)
+          ids.add(d.embedRef);
+        if (d.svgRef && svgOf(d.image))
+          ids.add(d.svgRef);
+        if (d.chart && d.chartRef)
+          ids.add(d.chartRef);
+      });
+      return ids;
+    }
+    function referencedIds(el, out = new Set) {
+      if (!el || el.type !== "element")
+        return out;
+      for (const [k, v] of Object.entries(el.attrs || {}))
+        if ((k === "o:relid" || /^r:[A-Za-z]+$/.test(k)) && v)
+          out.add(v);
+      for (const c of el.children || [])
+        referencedIds(c, out);
+      return out;
+    }
+    function writtenIds(result) {
+      const ids = new Set([
+        ...Object.keys(result.hyperlinks),
+        ...Object.keys(result.headers),
+        ...Object.keys(result.footers)
+      ]);
+      for (const [id, img] of Object.entries(result.images))
+        if (img && img.data instanceof Uint8Array)
+          ids.add(id);
+      walkDrawings(result.document, (d) => {
+        if (d.chart && d.chartRef)
+          ids.add(d.chartRef);
+      });
+      return ids;
+    }
+    function keptRelationships(pkg, part, named, written) {
+      if (!named || !named.size)
+        return null;
+      const own = (pkg.rels[part] || []).filter((r) => r && named.has(r.Id) && typeof r.Type === "string" && typeof r.Target === "string" && !written.has(r.Id) && (r.TargetMode === "External" || pkg.parts[relsMod.resolveTarget(part, r.Target)] !== void 0));
+      if (!own.length)
+        return null;
+      const slice = {
+        parts: {},
+        rels: { [part]: own.map((r) => ({ ...r })) },
+        contentTypes: { defaults: { ...pkg.contentTypes.defaults }, overrides: {} }
+      }, reach = (from, rel) => {
+        if (!rel || rel.TargetMode === "External" || typeof rel.Target !== "string")
+          return;
+        const name = relsMod.resolveTarget(from, rel.Target);
+        if (name in slice.parts || !pkg.parts[name])
+          return;
+        slice.parts[name] = pkg.parts[name];
+        const ct = pkg.contentTypes.overrides[name];
+        if (ct)
+          slice.contentTypes.overrides[name] = ct;
+        const sub = pkg.rels[name];
+        if (!sub || !sub.length)
+          return;
+        slice.rels[name] = sub.map((r) => ({ ...r }));
+        for (const r of sub)
+          reach(name, r);
+      };
+      for (const r of own)
+        reach(part, r);
+      return { part, package: slice };
+    }
+    function keptIdsOf(kept) {
+      return kept ? kept.package.rels[kept.part].map((r) => r && r.Id).filter((id) => typeof id === "string") : [];
+    }
+    function storyKeptOf(opts) {
+      const out = new Map, put = (written, model) => {
+        const k = keptOf(model);
+        if (k)
+          out.set(written, k);
+      };
+      put("/word/comments.xml", opts.comments);
+      put("/word/footnotes.xml", opts.footnotes);
+      put("/word/endnotes.xml", opts.endnotes);
+      put("/word/numbering.xml", opts.numbering);
+      put("/word/settings.xml", opts.settings);
+      Object.keys(opts.headers || {}).forEach((rId, i) => put(`/word/header${i + 1}.xml`, opts.headers[rId]));
+      Object.keys(opts.footers || {}).forEach((rId, i) => put(`/word/footer${i + 1}.xml`, opts.footers[rId]));
+      return out;
+    }
+    function keptOf(doc) {
+      const k = doc && doc._relationships, p = k && typeof k === "object" ? k.package : null;
+      if (typeof k?.part !== "string" || !p || typeof p !== "object" || !p.parts || typeof p.parts !== "object" || !p.rels || typeof p.rels !== "object" || !Array.isArray(p.rels[k.part]) || !p.contentTypes || typeof p.contentTypes !== "object")
+        return null;
+      return k;
     }
     function typedPartXml(e) {
       if (!e || e.code !== "xml/parse-error")
         return e;
       return new ParseError("docx/invalid-part-xml", `docx: failed to parse a part's XML (${e.message})`, { cause: e });
     }
-    function readPackage(pkg) {
+    function readPackage(pkg, keepAlternate, keepExtensions) {
       const docRel = (pkg.rels["/"] || []).find((r) => r.Type === REL_TYPE_DOC || r.Type.endsWith("/officeDocument"));
       if (!docRel)
         throw new ParseError("docx/missing-officeDocument-rel", "docx: no officeDocument relationship");
@@ -7379,13 +8060,24 @@ export const docxBundled = {
       } catch (e) {
         throw new ParseError("docx/invalid-xml", "docx: failed to parse document XML", { context: { partName: docPart }, cause: e });
       }
-      mc.process(root, { keepElements: REPEATING_SECTION_ELEMENTS });
-      const bodyEl = xml.findChild(root, "w:body");
+      mc.process(root, mcOptions(keepAlternate, keepExtensions));
+      const keeps = [{ model: null, part: docPart, named: referencedIds(root), written: null }], keepChart = (chart, partName, data) => {
+        keeps.push({ model: chart, part: partName, named: idsIn(data), written: new Set, bodies: null });
+      }, storyKeep = (partName, rootEl) => {
+        const keep = { model: null, part: partName, named: referencedIds(rootEl), written: null, bodies: null };
+        keeps.push(keep);
+        return keep;
+      }, bodyEl = xml.findChild(root, "w:body");
       if (!bodyEl)
         throw new ParseError("docx/missing-body", "docx: no <w:body> in document", { context: { partName: docPart } });
-      const { body, sectPr } = structure.parseBody(bodyEl), document = { type: "document", body };
+      const { body, sectPr, extras } = structure.parseBody(bodyEl), document = { type: "document", body };
       if (sectPr)
         document.sectPr = sectPr;
+      if (extras.length)
+        document._extras = extras;
+      const backgroundEl = xml.findChild(root, "w:background");
+      if (backgroundEl)
+        document.background = parseBackground(backgroundEl);
       const docRels = pkg.rels[docPart] || [], result = {
         document,
         package: pkg,
@@ -7394,7 +8086,10 @@ export const docxBundled = {
         headers: {},
         footers: {},
         images: {}
-      }, storyParts = [];
+      };
+      keeps[0].model = document;
+      keptParts.set(result, keeps);
+      const storyParts = [];
       for (const rel of docRels)
         switch (rel.Type) {
           case REL_TYPE_HYPERLINK:
@@ -7413,6 +8108,8 @@ export const docxBundled = {
             break;
           }
           case chartMod.REL_TYPE_CHART: {
+            if (keepAlternate)
+              break;
             const partName = relsMod.resolveTarget(docPart, rel.Target), data = pkg.parts[partName];
             if (data) {
               result.charts = result.charts || {};
@@ -7420,6 +8117,7 @@ export const docxBundled = {
                 partName,
                 chart: chartMod.parse(data)
               };
+              keepChart(result.charts[rel.Id].chart, partName, data);
             }
             break;
           }
@@ -7454,53 +8152,67 @@ export const docxBundled = {
           }
           case numberingMod.REL_TYPE_NUMBERING: {
             const partName = relsMod.resolveTarget(docPart, rel.Target), b = pkg.parts[partName];
-            if (b)
+            if (b) {
               result.numbering = numberingMod.parse(b);
+              keeps.push({ model: result.numbering, part: partName, named: idsIn(b), written: new Set, bodies: null });
+            }
             break;
           }
           case settingsMod.REL_TYPE_SETTINGS: {
             const partName = relsMod.resolveTarget(docPart, rel.Target), b = pkg.parts[partName];
-            if (b)
+            if (b) {
               result.settings = settingsMod.parse(b);
+              keeps.push({ model: () => result.settings, part: partName, named: idsIn(b), written: new Set, bodies: null });
+            }
             break;
           }
           case commentsMod.REL_TYPE_COMMENTS: {
             const partName = relsMod.resolveTarget(docPart, rel.Target), b = pkg.parts[partName];
             if (b) {
-              result.comments = commentsMod.parse(storyRoot(b));
+              const rootEl = storyRoot(b, keepAlternate, keepExtensions);
+              result.comments = commentsMod.parse(rootEl);
               storyParts.push([partName, bodiesOf(result.comments.comments)]);
+              Object.assign(storyKeep(partName, rootEl), { model: result.comments, bodies: bodiesOf(result.comments.comments) });
             }
             break;
           }
           case footnotesMod.REL_TYPE_FOOTNOTES: {
             const partName = relsMod.resolveTarget(docPart, rel.Target), b = pkg.parts[partName];
             if (b) {
-              result.footnotes = footnotesMod.parseFootnotes(storyRoot(b));
+              const rootEl = storyRoot(b, keepAlternate, keepExtensions);
+              result.footnotes = footnotesMod.parseFootnotes(rootEl);
               storyParts.push([partName, bodiesOf(result.footnotes.notes)]);
+              Object.assign(storyKeep(partName, rootEl), { model: result.footnotes, bodies: bodiesOf(result.footnotes.notes) });
             }
             break;
           }
           case footnotesMod.REL_TYPE_ENDNOTES: {
             const partName = relsMod.resolveTarget(docPart, rel.Target), b = pkg.parts[partName];
             if (b) {
-              result.endnotes = footnotesMod.parseEndnotes(storyRoot(b));
+              const rootEl = storyRoot(b, keepAlternate, keepExtensions);
+              result.endnotes = footnotesMod.parseEndnotes(rootEl);
               storyParts.push([partName, bodiesOf(result.endnotes.notes)]);
+              Object.assign(storyKeep(partName, rootEl), { model: result.endnotes, bodies: bodiesOf(result.endnotes.notes) });
             }
             break;
           }
           case headersMod.REL_TYPE_HEADER: {
             const partName = relsMod.resolveTarget(docPart, rel.Target), b = pkg.parts[partName];
             if (b) {
-              result.headers[rel.Id] = headersMod.parse(storyRoot(b), "header");
+              const rootEl = storyRoot(b, keepAlternate, keepExtensions);
+              result.headers[rel.Id] = headersMod.parse(rootEl, "header");
               storyParts.push([partName, [result.headers[rel.Id].body]]);
+              Object.assign(storyKeep(partName, rootEl), { model: result.headers[rel.Id], bodies: [result.headers[rel.Id].body] });
             }
             break;
           }
           case headersMod.REL_TYPE_FOOTER: {
             const partName = relsMod.resolveTarget(docPart, rel.Target), b = pkg.parts[partName];
             if (b) {
-              result.footers[rel.Id] = headersMod.parse(storyRoot(b), "footer");
+              const rootEl = storyRoot(b, keepAlternate, keepExtensions);
+              result.footers[rel.Id] = headersMod.parse(rootEl, "footer");
               storyParts.push([partName, [result.footers[rel.Id].body]]);
+              Object.assign(storyKeep(partName, rootEl), { model: result.footers[rel.Id], bodies: [result.footers[rel.Id].body] });
             }
             break;
           }
@@ -7508,11 +8220,29 @@ export const docxBundled = {
       attachTargets(document.body, result.hyperlinks);
       for (const [partName, bodies] of storyParts)
         attachTargets(bodies, hyperlinkTable(pkg.rels[partName]));
+      if (keepAlternate) {
+        const wanted = chartRefsOf(document);
+        for (const rel of docRels) {
+          if (rel.Type !== chartMod.REL_TYPE_CHART || rel.TargetMode === "External" || !wanted.has(rel.Id))
+            continue;
+          const partName = relsMod.resolveTarget(docPart, rel.Target), data = pkg.parts[partName];
+          if (!data)
+            continue;
+          result.charts = result.charts || {};
+          result.charts[rel.Id] = { partName, chart: chartMod.parse(data) };
+          keepChart(result.charts[rel.Id].chart, partName, data);
+        }
+      }
       walkDrawings(document, attachDrawing(result.images, result.charts));
       for (const [partName, bodies] of storyParts) {
-        const own = storyDrawingTables(pkg, partName);
+        const own = storyDrawingTables(pkg, partName, keepAlternate ? chartRefsOf(bodies) : null);
+        for (const ch of Object.values(own.charts))
+          keepChart(ch.chart, ch.partName, pkg.parts[ch.partName]);
         walkDrawings(bodies, attachDrawing(own.images, own.charts));
       }
+      for (const keep of keeps)
+        if (keep.bodies)
+          keep.written = storyWrittenIds(pkg.rels[keep.part], keep.bodies);
       walker.applyHydrate(result);
       return result;
     }
@@ -7522,6 +8252,21 @@ export const docxBundled = {
       if (doc.body !== void 0 && !Array.isArray(doc.body))
         throw new ContractError("docx/invalid-body", "docx.write: document.body must be an array", { context: { path: "body", received: typeof doc.body } });
       opts = opts || {};
+      if (opts.preserveInput !== void 0 && typeof opts.preserveInput !== "boolean")
+        throw new ContractError("docx/invalid-preserve-input", "docx.write: opts.preserveInput must be true or false", { context: { received: opts.preserveInput === null ? "null" : typeof opts.preserveInput } });
+      const cleanup = cleanupSpec(opts.cleanup);
+      if (opts.preserveInput || cleanup.size) {
+        const { carry: envelope, ...rest } = opts, copy = structuredClone({ doc, opts: rest });
+        doc = copy.doc;
+        opts = envelope === void 0 ? copy.opts : { ...copy.opts, carry: envelope };
+      }
+      if (cleanup.has("emptyProperties")) {
+        dropEmptyProperties(doc);
+        for (const key of CLEANUP_STORIES)
+          if (opts[key])
+            dropEmptyProperties(opts[key]);
+      }
+      const carry = carrySpec(opts);
       checkReferences(doc, opts);
       let settings = opts.settings;
       if (walker.hasExtensions) {
@@ -7529,6 +8274,9 @@ export const docxBundled = {
           document: doc,
           headers: opts.headers || {},
           footers: opts.footers || {},
+          footnotes: opts.footnotes,
+          endnotes: opts.endnotes,
+          comments: opts.comments,
           styles: opts.styles,
           settings: opts.settings
         };
@@ -7536,18 +8284,50 @@ export const docxBundled = {
         settings = parts.settings;
       }
       assignDocIds(doc, opts);
-      const pkg = opc.empty(), hyperlinks = opts.hyperlinks || derivedHyperlinks(doc), collected = collectImages(doc, opts.images), chartCollected = collectCharts(doc), story = collectStoryDrawings(opts, collected, chartCollected.length);
+      const pkg = opc.empty(), kept = keptOf(doc), keptIds = keptIdsOf(kept), storyKept = storyKeptOf(opts), hyperlinks = opts.hyperlinks || derivedHyperlinks(doc), collected = collectImages(doc, opts.images, keptIds), chartCollected = collectCharts(doc, keptIds), story = collectStoryDrawings(opts, collected, chartCollected.length, storyKept);
       for (const ext of collected.exts)
         pkg.contentTypes.defaults[ext] = extToContentType(ext);
       for (const img of collected.list.concat(story.media))
         opc.setPart(pkg, img.partName, img.data, img.contentType);
+      const chartSources = carry ? new Map(chartOwners(carry, chartCollected.concat(story.charts)).map(([src, written]) => [written, src])) : null;
       for (const ch of chartCollected.concat(story.charts)) {
-        opc.setPart(pkg, ch.partName, chartMod.bytesOf(ch.chart), chartMod.CT_CHART);
+        opc.setPart(pkg, ch.partName, unchangedChartBytes(carry, chartSources, ch) || chartMod.bytesOf(ch.chart), chartMod.CT_CHART);
         pkg.contentTypes.overrides[ch.partName] = chartMod.CT_CHART;
       }
-      const documentXml = renderDocument(doc);
+      const docMedia = new Set(collected.list.map((i) => i.rId).concat(chartCollected.map((c) => c.rId))), docLinks = new Set(Object.keys(hyperlinks)), writerIds = new Set([
+        ...docMedia,
+        ...docLinks,
+        ...Object.keys(opts.headers || {}),
+        ...Object.keys(opts.footers || {})
+      ]);
+      if (carry) {
+        for (const id of carry.docIds)
+          if (!writerIds.has(id))
+            docLinks.add(id);
+      }
+      for (const id of keptIds)
+        if (!writerIds.has(id))
+          docLinks.add(id);
+      const documentXml = drawingMod.withRelationships({ links: docLinks, media: docMedia }, () => structure.withParaIds(() => renderDocument(doc)));
       opc.setPart(pkg, "/word/document.xml", encodeText(documentXml), CT_DOCUMENT);
-      const docRels = [], _ridAlloc = createRidAllocator({ existing: docRels }), claimRid = (preferred) => _ridAlloc.claim(preferred);
+      const docRels = [], _ridAlloc = createRidAllocator({ existing: docRels });
+      if (carry)
+        for (const id of carry.docIds)
+          _ridAlloc.register(id);
+      for (const id of keptIds)
+        _ridAlloc.register(id);
+      for (const id of Object.keys(opts.headers || {}))
+        _ridAlloc.register(id);
+      for (const id of Object.keys(opts.footers || {}))
+        _ridAlloc.register(id);
+      for (const id of Object.keys(hyperlinks))
+        _ridAlloc.register(id);
+      for (const img of collected.list)
+        _ridAlloc.register(img.rId);
+      for (const ch of chartCollected)
+        _ridAlloc.register(ch.rId);
+      (opts.customXml || []).forEach((_, i) => _ridAlloc.register(`rIdCx${i + 1}`));
+      const claimRid = (preferred) => _ridAlloc.claim(preferred);
       function attachPart(opts_part, partName, rel) {
         opc.setPart(pkg, partName, opts_part.bytes, opts_part.contentType);
         docRels.push(rel);
@@ -7556,6 +8336,16 @@ export const docxBundled = {
         const rels = hyperlinkRels(derivedHyperlinks(bodies)).concat(story.rels.get(partName) || []);
         if (rels.length)
           opc.setRels(pkg, partName, rels);
+      }
+      function inStory(partName, bodies, fn) {
+        const links = new Set(Object.keys(derivedHyperlinks(bodies))), media = new Set((story.rels.get(partName) || []).map((r) => r.Id)), carried = carry ? carry.rels.get(partName) || [] : [];
+        for (const { rel } of carried)
+          if (!links.has(rel.Id) && !media.has(rel.Id))
+            links.add(rel.Id);
+        for (const id of keptIdsOf(storyKept.get(partName)))
+          if (!media.has(id))
+            links.add(id);
+        return drawingMod.withRelationships({ links, media }, () => structure.withParaIds(fn));
       }
       if (opts.styles)
         attachPart({
@@ -7586,7 +8376,7 @@ export const docxBundled = {
         });
       if (opts.comments) {
         attachPart({
-          bytes: commentsMod.bytesOf(opts.comments),
+          bytes: inStory("/word/comments.xml", bodiesOf(opts.comments.comments), () => commentsMod.bytesOf(opts.comments)),
           contentType: commentsMod.CT_COMMENTS
         }, "/word/comments.xml", {
           Id: claimRid(),
@@ -7597,7 +8387,7 @@ export const docxBundled = {
       }
       if (opts.footnotes) {
         attachPart({
-          bytes: footnotesMod.footnotesBytes(opts.footnotes),
+          bytes: inStory("/word/footnotes.xml", bodiesOf(opts.footnotes.notes), () => footnotesMod.footnotesBytes(opts.footnotes)),
           contentType: footnotesMod.CT_FOOTNOTES
         }, "/word/footnotes.xml", {
           Id: claimRid(),
@@ -7608,7 +8398,7 @@ export const docxBundled = {
       }
       if (opts.endnotes) {
         attachPart({
-          bytes: footnotesMod.endnotesBytes(opts.endnotes),
+          bytes: inStory("/word/endnotes.xml", bodiesOf(opts.endnotes.notes), () => footnotesMod.endnotesBytes(opts.endnotes)),
           contentType: footnotesMod.CT_ENDNOTES
         }, "/word/endnotes.xml", {
           Id: claimRid(),
@@ -7622,7 +8412,7 @@ export const docxBundled = {
         for (const rId of Object.keys(opts.headers)) {
           const target = `header${i}.xml`;
           attachPart({
-            bytes: headersMod.bytesOf(opts.headers[rId]),
+            bytes: inStory(`/word/${target}`, [opts.headers[rId].body], () => headersMod.bytesOf(opts.headers[rId])),
             contentType: headersMod.CT_HEADER
           }, `/word/${target}`, { Id: rId, Type: headersMod.REL_TYPE_HEADER, Target: target });
           attachStoryRels(`/word/${target}`, [opts.headers[rId].body]);
@@ -7634,7 +8424,7 @@ export const docxBundled = {
         for (const rId of Object.keys(opts.footers)) {
           const target = `footer${i}.xml`;
           attachPart({
-            bytes: headersMod.bytesOf(opts.footers[rId]),
+            bytes: inStory(`/word/${target}`, [opts.footers[rId].body], () => headersMod.bytesOf(opts.footers[rId])),
             contentType: headersMod.CT_FOOTER
           }, `/word/${target}`, { Id: rId, Type: headersMod.REL_TYPE_FOOTER, Target: target });
           attachStoryRels(`/word/${target}`, [opts.footers[rId].body]);
@@ -7677,12 +8467,260 @@ export const docxBundled = {
       });
       if (docRels.length)
         opc.setRels(pkg, "/word/document.xml", docRels);
-      opc.setRels(pkg, "/", [{
-        Id: "rId1",
-        Type: REL_TYPE_DOC,
-        Target: "word/document.xml"
-      }]);
+      if (carry) {
+        applyCarry(pkg, carry);
+        repairReferences(pkg, carry, chartOwners(carry, chartCollected.concat(story.charts)));
+      } else {
+        opc.setRels(pkg, "/", [{
+          Id: "rId1",
+          Type: REL_TYPE_DOC,
+          Target: "word/document.xml"
+        }]);
+        if (kept)
+          repairReferences(pkg, { pkg: kept.package, owners: [] }, [[kept.part, "/word/document.xml"]]);
+        for (const [written, k] of storyKept)
+          repairReferences(pkg, { pkg: k.package, owners: [] }, [[k.part, written]]);
+        for (const ch of chartCollected.concat(story.charts)) {
+          const k = keptOf(ch.chart);
+          if (k)
+            repairReferences(pkg, { pkg: k.package, owners: [] }, [[k.part, ch.partName]]);
+        }
+      }
       return opc.write(pkg);
+    }
+    function carrySpec(opts) {
+      if (opts.carry === void 0)
+        return null;
+      const c = opts.carry, p = c && typeof c === "object" ? c.package : null;
+      if (!p || typeof p !== "object" || !p.parts || typeof p.parts !== "object" || !p.rels || typeof p.rels !== "object" || !p.contentTypes || typeof p.contentTypes !== "object" || !Array.isArray(c.unmodelledParts))
+        throw new ContractError("docx/invalid-carry", "docx.write: opts.carry must be the { package, unmodelledParts } envelope read() returns", { context: { received: c === null ? "null" : typeof c } });
+      const listed = [];
+      for (const u of c.unmodelledParts) {
+        const name = u && u.partName;
+        if (typeof name === "string" && p.parts[name] && !listed.includes(name))
+          listed.push(name);
+      }
+      const owners = [["/", "/"]], docRel = (p.rels["/"] || []).find((r) => r && typeof r.Type === "string" && (r.Type === REL_TYPE_DOC || r.Type.endsWith("/officeDocument")));
+      if (docRel) {
+        const srcDoc = relsMod.resolveTarget("/", docRel.Target), internal = (p.rels[srcDoc] || []).filter((r) => r && r.TargetMode !== "External" && typeof r.Target === "string"), target = (r) => relsMod.resolveTarget(srcDoc, r.Target);
+        owners.push([srcDoc, "/word/document.xml"]);
+        const story = (keys, type, prefix) => keys.forEach((k, i) => {
+          const r = internal.find((x) => x.Id === k && x.Type === type);
+          if (r)
+            owners.push([target(r), `/word/${prefix}${i + 1}.xml`]);
+        });
+        story(Object.keys(opts.headers || {}), headersMod.REL_TYPE_HEADER, "header");
+        story(Object.keys(opts.footers || {}), headersMod.REL_TYPE_FOOTER, "footer");
+        for (const [given, type, written] of [
+          [opts.styles, stylesMod.REL_TYPE_STYLES, "/word/styles.xml"],
+          [opts.numbering, numberingMod.REL_TYPE_NUMBERING, "/word/numbering.xml"],
+          [opts.settings, settingsMod.REL_TYPE_SETTINGS, "/word/settings.xml"],
+          [opts.comments, commentsMod.REL_TYPE_COMMENTS, "/word/comments.xml"],
+          [opts.footnotes, footnotesMod.REL_TYPE_FOOTNOTES, "/word/footnotes.xml"],
+          [opts.endnotes, footnotesMod.REL_TYPE_ENDNOTES, "/word/endnotes.xml"]
+        ]) {
+          const r = given ? internal.find((x) => x.Type === type) : null;
+          if (r)
+            owners.push([target(r), written]);
+        }
+      }
+      const rels = new Map, add = (written, entry) => {
+        if (!rels.has(written))
+          rels.set(written, []);
+        rels.get(written).push(entry);
+      };
+      for (const [src, written] of owners)
+        for (const r of p.rels[src] || []) {
+          if (!r || typeof r.Target !== "string" || typeof r.Type !== "string")
+            continue;
+          if (r.TargetMode === "External") {
+            if (r.Type !== REL_TYPE_HYPERLINK)
+              add(written, { rel: r, target: null });
+            continue;
+          }
+          const t = relsMod.resolveTarget(src, r.Target);
+          if (listed.includes(t))
+            add(written, { rel: r, target: t });
+        }
+      const docIds = (rels.get("/word/document.xml") || []).map((x) => x.rel.Id), srcDoc = docRel ? relsMod.resolveTarget("/", docRel.Target) : null;
+      return { pkg: p, listed, rels, docIds, owners, srcDoc };
+    }
+    function applyCarry(pkg, spec) {
+      const src = spec.pkg, taken = new Set(Object.keys(pkg.parts).concat(spec.listed)), names = new Map;
+      for (const name of spec.listed)
+        names.set(name, pkg.parts[name] ? freePartName(name, taken) : name);
+      for (const name of spec.listed) {
+        const fin = names.get(name);
+        pkg.parts[fin] = src.parts[name];
+        carryContentType(pkg, src, name, fin);
+      }
+      const pointTo = (owner, rel, target) => {
+        if (target === null)
+          return rel.Target;
+        const fin = names.get(target) || target;
+        return relsMod.resolveTarget(owner, rel.Target) === fin ? rel.Target : relativeTarget(owner, fin);
+      }, carriedRel = (rel, Id, Target) => rel.TargetMode === "External" ? { Id, Type: rel.Type, Target, TargetMode: "External" } : { Id, Type: rel.Type, Target };
+      for (const [owner, list] of spec.rels) {
+        if (owner === "/")
+          continue;
+        const table = (pkg.rels[owner] || []).slice(), ids = createRidAllocator({ existing: table.concat(list.map((x) => x.rel)) });
+        for (const { rel, target } of list) {
+          const Id = table.some((x) => x.Id === rel.Id) ? ids.next() : rel.Id;
+          table.push(carriedRel(rel, Id, pointTo(owner, rel, target)));
+        }
+        opc.setRels(pkg, owner, table);
+      }
+      for (const name of spec.listed) {
+        const own = src.rels[name];
+        if (!own || !own.length)
+          continue;
+        const fin = names.get(name);
+        opc.setRels(pkg, fin, own.map((r) => {
+          if (!r || r.TargetMode === "External" || typeof r.Target !== "string")
+            return { ...r };
+          const t = relsMod.resolveTarget(name, r.Target);
+          return names.has(t) ? { ...r, Target: pointTo(fin, r, t) } : { ...r };
+        }));
+      }
+      const rootCarried = spec.rels.get("/") || [], rootIds = createRidAllocator({ existing: rootCarried.map((x) => x.rel.Id) });
+      opc.setRels(pkg, "/", [
+        { Id: rootIds.claim("rId1"), Type: REL_TYPE_DOC, Target: "word/document.xml" },
+        ...rootCarried.map(({ rel, target }) => carriedRel(rel, rel.Id, pointTo("/", rel, target)))
+      ]);
+    }
+    function carryContentType(pkg, src, name, fin) {
+      const srcDefaults = src.contentTypes.defaults || {}, srcOverrides = src.contentTypes.overrides || {};
+      if (srcOverrides[name]) {
+        pkg.contentTypes.overrides[fin] = srcOverrides[name];
+        return;
+      }
+      const ext = extensionOf(name), key = Object.keys(srcDefaults).find((k) => k.toLowerCase() === ext);
+      if (!ext || !key)
+        return;
+      const mine = Object.keys(pkg.contentTypes.defaults).find((k) => k.toLowerCase() === ext);
+      if (!mine)
+        pkg.contentTypes.defaults[key] = srcDefaults[key];
+      else if (pkg.contentTypes.defaults[mine] !== srcDefaults[key])
+        pkg.contentTypes.overrides[fin] = srcDefaults[key];
+    }
+    function unchangedChartBytes(spec, sources, ch) {
+      const srcName = sources && sources.get(ch.partName), data = srcName && spec.pkg.parts[srcName];
+      if (!data)
+        return null;
+      let read;
+      try {
+        read = chartMod.parse(data);
+      } catch {
+        return null;
+      }
+      const { _relationships, ...model } = ch.chart;
+      return sameModel(read, model) ? data : null;
+    }
+    function sameModel(a, b) {
+      if (Object.is(a, b))
+        return !0;
+      if (!a || !b || typeof a !== "object" || typeof b !== "object")
+        return !1;
+      if (Array.isArray(a) !== Array.isArray(b))
+        return !1;
+      const ka = Object.keys(a), kb = Object.keys(b);
+      if (ka.length !== kb.length)
+        return !1;
+      for (const k of ka)
+        if (!Object.prototype.hasOwnProperty.call(b, k) || !sameModel(a[k], b[k]))
+          return !1;
+      return !0;
+    }
+    function chartOwners(spec, charts) {
+      const out = [];
+      for (const ch of charts) {
+        const written = ch.owner || "/word/document.xml", pair = written === "/word/document.xml" ? [spec.srcDoc, written] : spec.owners.find(([, w]) => w === written), srcOwner = pair && pair[0];
+        if (!srcOwner)
+          continue;
+        const r = (spec.pkg.rels[srcOwner] || []).find((x) => x && x.Id === ch.rId && x.Type === chartMod.REL_TYPE_CHART && x.TargetMode !== "External" && typeof x.Target === "string");
+        if (r)
+          out.push([relsMod.resolveTarget(srcOwner, r.Target), ch.partName]);
+      }
+      return out;
+    }
+    function repairReferences(pkg, spec, more) {
+      const src = spec.pkg, copied = new Map, same = (a, b) => a && b && a.length === b.length && a.every((x, i) => x === b[i]);
+      function copyPart(name) {
+        if (copied.has(name))
+          return copied.get(name);
+        const data = src.parts[name];
+        if (!data)
+          return null;
+        const exists = pkg.parts[name], fin = exists && !same(exists, data) ? freePartName(name, new Set(Object.keys(pkg.parts))) : name;
+        copied.set(name, fin);
+        if (pkg.parts[fin])
+          return fin;
+        pkg.parts[fin] = data;
+        carryContentType(pkg, src, name, fin);
+        const own = src.rels[name] || [];
+        if (own.length) {
+          const table = [];
+          for (const r of own) {
+            if (!r || r.TargetMode === "External" || typeof r.Target !== "string") {
+              table.push({ ...r });
+              continue;
+            }
+            const t = copyPart(relsMod.resolveTarget(name, r.Target));
+            if (t)
+              table.push({ ...r, Target: relativeTarget(fin, t) });
+          }
+          opc.setRels(pkg, fin, table);
+        }
+        return fin;
+      }
+      for (const [srcPart, written] of spec.owners.concat(more)) {
+        if (written === "/" || !pkg.parts[written] || !/\.xml$/i.test(written))
+          continue;
+        const ids = new Set;
+        for (const m of decodeText(pkg.parts[written]).matchAll(REFERENCE_ATTR))
+          ids.add(m[1]);
+        const table = (pkg.rels[written] || []).slice(), have = new Set(table.map((x) => x.Id));
+        let changed = !1;
+        for (const id of ids) {
+          if (have.has(id))
+            continue;
+          const rel = (src.rels[srcPart] || []).find((x) => x && x.Id === id);
+          if (!rel || typeof rel.Target !== "string" || typeof rel.Type !== "string")
+            continue;
+          if (rel.TargetMode === "External")
+            table.push({ Id: id, Type: rel.Type, Target: rel.Target, TargetMode: "External" });
+          else {
+            const fin = copyPart(relsMod.resolveTarget(srcPart, rel.Target));
+            if (!fin)
+              continue;
+            table.push({ Id: id, Type: rel.Type, Target: relativeTarget(written, fin) });
+          }
+          have.add(id);
+          changed = !0;
+        }
+        if (changed)
+          opc.setRels(pkg, written, table);
+      }
+    }
+    function freePartName(name, taken) {
+      const slash = name.lastIndexOf("/"), dot = name.lastIndexOf("."), cut = dot > slash ? dot : name.length;
+      let n = 1;
+      while (taken.has(`${name.slice(0, cut)}_${n}${name.slice(cut)}`))
+        n++;
+      const out = `${name.slice(0, cut)}_${n}${name.slice(cut)}`;
+      taken.add(out);
+      return out;
+    }
+    function extensionOf(name) {
+      const file = name.slice(name.lastIndexOf("/") + 1), dot = file.lastIndexOf(".");
+      return dot > 0 ? file.slice(dot + 1).toLowerCase() : "";
+    }
+    function relativeTarget(fromPart, toPart) {
+      const from = fromPart === "/" ? [] : fromPart.slice(1).split("/").slice(0, -1), to = toPart.slice(1).split("/");
+      let i = 0;
+      while (i < from.length && i < to.length - 1 && from[i] === to[i])
+        i++;
+      return from.slice(i).map(() => "..").concat(to.slice(i)).join("/");
     }
     function extToContentType(ext) {
       switch (ext) {
@@ -7710,18 +8748,30 @@ export const docxBundled = {
           return "application/octet-stream";
       }
     }
-    function collectImages(doc, extra) {
+    const SVG_CT = "image/svg+xml";
+    function svgOf(img) {
+      const svg = img && img.svg;
+      if (!svg || !(svg.data instanceof Uint8Array))
+        return null;
+      return { data: svg.data, contentType: svg.contentType || SVG_CT, fileName: svg.fileName };
+    }
+    function collectImages(doc, extra, reserved) {
       const list = [], byData = new Map, exts = new Set, _ridAlloc = createRidAllocator({
         prefix: "rImg",
         existing: extra ? Object.keys(extra) : []
       });
+      for (const id of reserved || [])
+        _ridAlloc.register(id);
       let nextIdx = 1;
       function nextRId() {
         return _ridAlloc.next();
       }
       if (extra)
         for (const id of Object.keys(extra)) {
-          const e = extra[id], ct = e.contentType || drawingMod.sniffImageType(e.data), ext = drawingMod.extensionFor(ct), fileName = e.fileName || `image${nextIdx++}.${ext}`, partName = "/word/media/" + fileName, item = {
+          const e = extra[id];
+          if (!e || !(e.data instanceof Uint8Array))
+            continue;
+          const ct = e.contentType || drawingMod.sniffImageType(e.data), ext = drawingMod.extensionFor(ct), fileName = e.fileName || `image${nextIdx++}.${ext}`, partName = "/word/media/" + fileName, item = {
             rId: id,
             data: e.data,
             contentType: ct,
@@ -7732,13 +8782,10 @@ export const docxBundled = {
           byData.set(e.data, item);
           exts.add(ext);
         }
-      walkDrawings(doc, (drawing) => {
-        const img = drawing.image;
-        if (!img || !img.data)
-          return;
+      function itemFor(img, preferredId) {
         let item = byData.get(img.data);
         if (!item) {
-          const ct = img.contentType || drawingMod.sniffImageType(img.data), ext = drawingMod.extensionFor(ct), fileName = img.fileName || `image${nextIdx++}.${ext}`, preferredId = img.rId || drawing.embedRef, rId = preferredId || nextRId();
+          const ct = img.contentType || drawingMod.sniffImageType(img.data), ext = drawingMod.extensionFor(ct), fileName = img.fileName || `image${nextIdx++}.${ext}`, rId = preferredId || nextRId();
           if (preferredId)
             _ridAlloc.register(preferredId);
           item = {
@@ -7752,7 +8799,17 @@ export const docxBundled = {
           byData.set(img.data, item);
           exts.add(ext);
         }
-        drawing.embedRef = item.rId;
+        return item;
+      }
+      walkDrawings(doc, (drawing) => {
+        const img = drawing.image;
+        if (!img)
+          return;
+        if (img.data)
+          drawing.embedRef = itemFor(img, img.rId || drawing.embedRef).rId;
+        const svg = svgOf(img);
+        if (svg)
+          drawing.svgRef = img.svg.rId = itemFor(svg, img.svg.rId || drawing.svgRef).rId;
       });
       function addMedia(img) {
         const ct = img.contentType || drawingMod.sniffImageType(img.data), ext = drawingMod.extensionFor(ct), fileName = img.fileName || `image${nextIdx++}.${ext}`, item = {
@@ -7767,39 +8824,49 @@ export const docxBundled = {
       }
       return { list, exts, byData, addMedia };
     }
-    function collectStoryDrawings(opts, images, chartCount) {
+    function collectStoryDrawings(opts, images, chartCount, kept) {
       const rels = new Map, media = [], charts = [];
       let chartIdx = chartCount;
       function visit(partName, bodies) {
         const alloc = createRidAllocator({
           existing: Object.keys(derivedHyperlinks(bodies))
-        }), ridOf = new Map, out = [];
+        });
+        for (const id of keptIdsOf(kept && kept.get(partName)))
+          alloc.register(id);
+        const ridOf = new Map, out = [];
+        function ridFor(img, preferredId) {
+          let item = images.byData.get(img.data);
+          if (!item) {
+            item = images.addMedia(img);
+            media.push(item);
+          }
+          let rId = ridOf.get(item);
+          if (!rId) {
+            rId = alloc.claim(preferredId);
+            ridOf.set(item, rId);
+            out.push({
+              Id: rId,
+              Type: drawingMod.REL_TYPE_IMAGE,
+              Target: "media/" + item.fileName
+            });
+          }
+          return rId;
+        }
         walkDrawings(bodies, (drawing) => {
           const img = drawing.image;
-          if (img && img.data) {
-            let item = images.byData.get(img.data);
-            if (!item) {
-              item = images.addMedia(img);
-              media.push(item);
-            }
-            let rId = ridOf.get(item);
-            if (!rId) {
-              rId = alloc.claim(img.rId || drawing.embedRef);
-              ridOf.set(item, rId);
-              out.push({
-                Id: rId,
-                Type: drawingMod.REL_TYPE_IMAGE,
-                Target: "media/" + item.fileName
-              });
-            }
-            drawing.embedRef = rId;
-          }
+          if (img && img.data)
+            drawing.embedRef = ridFor(img, img.rId || drawing.embedRef);
+          const svg = svgOf(img);
+          if (svg)
+            drawing.svgRef = img.svg.rId = ridFor(svg, img.svg.rId || drawing.svgRef);
           if (drawing.chart) {
             const fileName = `chart${++chartIdx}.xml`, rId = alloc.claim(drawing.chartRef);
             charts.push({
               fileName,
               partName: "/word/charts/" + fileName,
-              chart: drawing.chart
+              chart: drawing.chart,
+              rId,
+              owner: partName
             });
             out.push({
               Id: rId,
@@ -7823,8 +8890,10 @@ export const docxBundled = {
       Object.keys(opts.footers || {}).forEach((rId, i) => visit(`/word/footer${i + 1}.xml`, [opts.footers[rId].body]));
       return { rels, media, charts };
     }
-    function collectCharts(doc) {
+    function collectCharts(doc, reserved) {
       const out = [], _ridAlloc = createRidAllocator({ prefix: "rChart" });
+      for (const id of reserved || [])
+        _ridAlloc.register(id);
       let nextIdx = 1;
       function nextRId() {
         return _ridAlloc.next();
@@ -7841,6 +8910,29 @@ export const docxBundled = {
       });
       return out;
     }
+    const CLEANUPS = new Set(["emptyProperties"]), CLEANUP_STORIES = ["headers", "footers", "footnotes", "endnotes", "comments"];
+    function cleanupSpec(value) {
+      if (value === void 0)
+        return new Set;
+      if (!(Array.isArray(value) && value.every((n) => CLEANUPS.has(n)) && new Set(value).size === value.length))
+        throw new ContractError("docx/invalid-cleanup", "docx.write: opts.cleanup must be an array of distinct names among: " + [...CLEANUPS].join(", "), { context: { received: Array.isArray(value) ? value.map(String) : value === null ? "null" : typeof value } });
+      return new Set(value);
+    }
+    function dropEmptyProperties(node) {
+      if (!node || typeof node !== "object" || ArrayBuffer.isView(node))
+        return;
+      if (Array.isArray(node)) {
+        for (const n of node)
+          dropEmptyProperties(n);
+        return;
+      }
+      for (const key of Object.keys(node)) {
+        const v = node[key];
+        dropEmptyProperties(v);
+        if ((key === "rPr" || key === "pPr") && v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).every((k) => v[k] === void 0))
+          delete node[key];
+      }
+    }
     function derivedHyperlinks(doc) {
       const out = {};
       walkRuns(doc, (node) => {
@@ -7853,9 +8945,14 @@ export const docxBundled = {
       return out;
     }
     function checkReferences(doc, opts) {
+      const dangling = opts.danglingNumbering === void 0 ? "throw" : opts.danglingNumbering;
+      if (dangling !== "throw" && dangling !== "keep")
+        throw new ContractError("docx/invalid-dangling-numbering", "docx.write: opts.danglingNumbering must be 'throw' or 'keep'", { context: { received: dangling === null ? "null" : typeof dangling } });
       let lostTarget = null, unresolved = null, danglingNumId = null, unknownNumId = null;
       const declaredNums = opts.numbering ? new Set((opts.numbering.nums || []).map((n) => Number(n && n.numId))) : null;
       function checkNumPr(numPr, where) {
+        if (dangling === "keep")
+          return;
         if (!numPr || numPr.numId == null || Number(numPr.numId) === 0)
           return;
         if (!declaredNums) {
@@ -8001,8 +9098,31 @@ export const docxBundled = {
       return out;
     }
     function renderDocument(doc) {
-      const bodyChildren = structure.renderBodyChildren(doc), body = xml.el("w:body", {}, bodyChildren), root = xml.el("w:document", wordRootAttrs([body]), [body]);
+      const bodyChildren = structure.renderBodyChildren(doc), body = xml.el("w:body", {}, bodyChildren), children = doc.background ? [renderBackground(doc.background), body] : [body], root = xml.el("w:document", wordRootAttrs(children), children);
       return xml.serialize(root);
+    }
+    const BACKGROUND_ATTRS = [
+      ["color", "w:color"],
+      ["themeColor", "w:themeColor"],
+      ["themeTint", "w:themeTint"],
+      ["themeShade", "w:themeShade"]
+    ];
+    function parseBackground(el) {
+      const out = {};
+      for (const [k, a] of BACKGROUND_ATTRS)
+        if (el.attrs[a] != null)
+          out[k] = el.attrs[a];
+      const kids = el.children.filter((c) => c.type === "element");
+      if (kids.length)
+        out._extras = kids;
+      return out;
+    }
+    function renderBackground(bg) {
+      const attrs = {};
+      for (const [k, a] of BACKGROUND_ATTRS)
+        if (bg[k] != null)
+          attrs[a] = String(bg[k]);
+      return xml.el("w:background", attrs, bg._extras ? bg._extras.slice() : []);
     }
     function fromText(paragraphs) {
       return {

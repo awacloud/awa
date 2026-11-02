@@ -185,6 +185,10 @@ export const OVERRIDES = Object.freeze({
         why: 'ISO 32000-2 12.8.1 Table 255: pairs of (offset, length) — the model types it as any non-negative integers',
         value: () => ints(0, 10, 20, 10)
     },
+    'DocTimeStamp/ByteRange': {
+        why: 'ISO 32000-2 12.8.5: the document time stamp takes the signature dictionary\'s ByteRange (Table 255, pairs of (offset, length)) — the model types it as any array',
+        value: () => ints(0, 10, 20, 10)
+    },
     'PageObject/Rotate': {
         why: 'ISO 32000-2 Table 31: a multiple of 90 — the model states it as a predicate the builder does not evaluate',
         value: () => ({ type: 'int', value: 90 })
@@ -204,6 +208,18 @@ export const OVERRIDES = Object.freeze({
     'PageTreeNodeRoot/Kids': {
         why: 'the page-tree walker types the pages under a node: with no kid there is no page to inherit from it',
         value: () => ({ type: 'array', items: [{ type: 'ref', num: 2, gen: 0 }] })
+    },
+    'AnnotRedact/Q': {
+        why: 'ISO 32000-2 Table 195: default 0 (left-justified), which the model row does not state — its first possible value is that default',
+        value: () => ({ type: 'int', value: 1 })
+    },
+    'InteractiveForm/Q': {
+        why: 'ISO 32000-2 Table 224: default 0 (left-justified), which the model row does not state — its first possible value is that default',
+        value: () => ({ type: 'int', value: 1 })
+    },
+    'ViewerPreferences/PrintPageRange': {
+        why: 'ISO 32000-2 Table 147: an even number of integers, read in pairs — the model links it to any positive integers, so the generic array holds one',
+        value: () => ints(1, 1)
     }
 });
 
@@ -277,7 +293,8 @@ export function createBuilder(model) {
             case 'rectangle':
                 return { type: 'array', items: [0, 0, 100, 100].map((v) => ({ type: 'int', value: v })) };
             case 'matrix':
-                return { type: 'array', items: [1, 0, 0, 1, 0, 0].map((v) => ({ type: 'int', value: v })) };
+                // a translation: the identity is the stated default of most matrix keys
+                return { type: 'array', items: [1, 0, 0, 1, 10, 20].map((v) => ({ type: 'int', value: v })) };
             case 'name-tree': return { type: 'dict', entries: { Names: { type: 'array', items: [] } } };
             case 'number-tree': return { type: 'dict', entries: { Nums: { type: 'array', items: [] } } };
             default: return { type: 'null' };
@@ -408,13 +425,19 @@ const withDict = (v, dict) => (v.type === 'stream' ? { type: 'stream', dict, raw
  */
 const b = (typer, call) => ({ typer, call: call || ((fn, v) => fn(v)) });
 const annot = b('pdfAnnot.typeAnnot', (fn, v, t) => fn(v, t.annotTypers));
+const markupEntries = b('pdfAnnotExtended.typeMarkupEntries');
 const action = b('pdfAction.typeAction', (fn, v, t) => fn(v, t.actionTypers));
 const extAction = b('pdfFormActionsExtended.typeExtendedAction');
 const font = b('pdfFont.typeFont');
+const fontDescriptor = b('pdfFontColorTagging.typeFontDescriptor');
 const resolverToEmpty = () => ({ type: 'dict', entries: {} });
 const colorSpace = (family) => b('pdfColorSpacesExtended.typeColorSpace',
     (fn, v) => fn({ type: 'array', items: [{ type: 'name', value: family }, v] }));
 const requirement = b('pdfMisc.typeRequirements', (fn, v) => fn({ type: 'array', items: [v] })[0]);
+const xobjectEntries = (kind) => b('pdfMisc.typeXObjectEntries', (fn, v) => fn(v, kind));
+const fieldEntries = b('pdfFormActionsExtended.typeFieldEntries');
+// the companion of the core typers that read keys without exposing them
+const companion = (kind) => b('pdfMisc.typeObjectEntries', (fn, v) => fn(v, kind));
 
 /** A parser value as the plain object `typeEncryptDict` reads (the package's own `_plainOf` in `sig/sign.js`). */
 function plainOf(node) {
@@ -472,57 +495,108 @@ function xrefRecords(fn, v) {
 }
 
 /**
- * Arlington object → the package typers bound to it (hand table). An
- * object absent from this table has no typer: every included key of it
- * counts as not handled.
+ * The model's stream objects (`isStreamObject`: the Table 5 keys listed);
+ * the package test pins this list against the model.
  */
-export const BINDINGS = Object.freeze({
+export const STREAM_OBJECTS = Object.freeze([
+    '3DStream', 'AFEmbeddedFileStream', 'CMapStream', 'EmbeddedFileStream', 'FontFile',
+    'FontFile2', 'FontFile3CIDType0', 'FontFile3OpenType', 'FontFile3Type1', 'FontFileType1',
+    'FunctionType0', 'FunctionType4', 'HalftoneType10', 'HalftoneType16', 'HalftoneType6',
+    'ICCProfileStream', 'Metadata', 'ObjectStream', 'PatternType1', 'ShadingType4', 'ShadingType5',
+    'ShadingType6', 'ShadingType7', 'SoundObject', 'Stream', 'Thumbnail', 'ToUnicodeCMapStream',
+    'XObjectFormPS', 'XObjectFormPSpassthrough', 'XObjectFormPrinterMark', 'XObjectFormTrapNet',
+    'XObjectFormType1', 'XObjectImage', 'XObjectImageMask', 'XObjectImageSoftMask', 'XRefStream'
+]);
+
+/** The Table 5 companion typer, bound to every stream object. */
+const streamEntries = b('pdfFilterDispatch.typeStreamEntries');
+
+/** @param {Record<string, object[]>} table @returns {Readonly<Record<string, object[]>>} */
+function withStreamEntries(table) {
+    const out = { ...table };
+    for (const name of STREAM_OBJECTS) out[name] = [...(out[name] || []), streamEntries];
+    return Object.freeze(out);
+}
+
+/**
+ * Arlington object → the package typers bound to it (hand table, plus the
+ * stream companion of `withStreamEntries`). An object absent from this table
+ * has no typer: every included key of it counts as not handled.
+ */
+export const BINDINGS = withStreamEntries({
     // Document structure
     Catalog: [b('pdfCatalog.typeCatalog')],
+    // The catalog's name, extensions and URI dictionaries, by their kind
+    ...Object.fromEntries([['Name', 'names'], ['Extensions', 'extensions'], ['DevExtensions', 'devExtensions'],
+        ['ISO_DevExtensions', 'devExtensions'], ['URI', 'uri']]
+        .map(([object, kind]) => [object, [b('pdfMisc.typeCatalogPart', (fn, v) => fn(v, kind))]])),
     PageObject: [b('pdfPage.typePage')],
-    PageTreeNode: pageTreeNode,
-    PageTreeNodeRoot: pageTreeNode,
-    FileTrailer: [b('pdfTrailer.typeTrailer')],
+    PageTreeNode: [...pageTreeNode, companion('pageTree')],
+    PageTreeNodeRoot: [...pageTreeNode, companion('pageTree')],
+    FileTrailer: [b('pdfTrailer.typeTrailer'), companion('trailer')],
     XRefStream: [b('pdfTrailer.typeTrailer', (fn, v) => fn(v.dict)), b('pdfCrossRefStream.parseCrossRefStream', xrefRecords)],
     DocInfo: [b('pdfInfo.typeInfo')],
     LinearizationParameterDict: [b('pdfLinearization.typeLinearizationDict')],
-    Resource: [b('pdfResources.typeResources', (fn, v) => fn(v, resolverToEmpty))],
+    Resource: [b('pdfResources.typeResources', (fn, v) => fn(v, resolverToEmpty)), companion('resource')],
     Metadata: [b('pdfXmp.typeXmpStream')],
     // Annotations
-    AnnotText: [annot], AnnotLink: [annot], AnnotFreeText: [annot, b('pdfAnnotExtended.typeAnnotExtended')],
-    AnnotLine: [annot], AnnotSquare: [annot], AnnotCircle: [annot], AnnotPolygon: [annot],
-    AnnotPolyLine: [annot], AnnotHighlight: [annot], AnnotUnderline: [annot], AnnotSquiggly: [annot],
-    AnnotStrikeOut: [annot], AnnotCaret: [annot], AnnotStamp: [annot], AnnotInk: [annot],
-    AnnotPopup: [annot], AnnotFileAttachment: [annot], AnnotWidget: [annot], AnnotRedact: [annot],
-    AnnotProjection: [annot],
-    AnnotSound: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdfLegacyDeprecatedAnnots.typeSoundAnnot')],
-    AnnotMovie: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdfLegacyDeprecatedAnnots.typeMovieAnnot')],
-    AnnotScreen: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdfLegacyDeprecatedAnnots.typeScreenAnnot')],
-    AnnotPrinterMark: [annot, b('pdfAnnotExtended.typeAnnotExtended')],
-    AnnotTrapNetwork: [annot, b('pdfAnnotExtended.typeAnnotExtended')],
-    AnnotWatermark: [annot, b('pdfAnnotExtended.typeAnnotExtended')],
-    Annot3D: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdf3dRichMedia.type3DAnnot')],
-    AnnotRichMedia: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdf3dRichMedia.typeRichMediaAnnot')],
+    // (`markupEntries`, the opt-in companion typer, on every annotation object)
+    AnnotText: [annot, markupEntries], AnnotLink: [annot, markupEntries],
+    AnnotFreeText: [annot, b('pdfAnnotExtended.typeAnnotExtended'), markupEntries],
+    AnnotLine: [annot, markupEntries], AnnotSquare: [annot, markupEntries],
+    AnnotCircle: [annot, markupEntries], AnnotPolygon: [annot, markupEntries],
+    AnnotPolyLine: [annot, markupEntries], AnnotHighlight: [annot, markupEntries],
+    AnnotUnderline: [annot, markupEntries], AnnotSquiggly: [annot, markupEntries],
+    AnnotStrikeOut: [annot, markupEntries], AnnotCaret: [annot, markupEntries],
+    AnnotStamp: [annot, markupEntries], AnnotInk: [annot, markupEntries],
+    AnnotPopup: [annot, markupEntries], AnnotFileAttachment: [annot, markupEntries],
+    AnnotWidget: [annot, markupEntries, fieldEntries], AnnotRedact: [annot, markupEntries],
+    AnnotProjection: [annot, markupEntries],
+    AnnotSound: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdfLegacyDeprecatedAnnots.typeSoundAnnot'), markupEntries],
+    AnnotMovie: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdfLegacyDeprecatedAnnots.typeMovieAnnot'), markupEntries],
+    AnnotScreen: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdfLegacyDeprecatedAnnots.typeScreenAnnot'), markupEntries],
+    AnnotPrinterMark: [annot, b('pdfAnnotExtended.typeAnnotExtended'), markupEntries],
+    AnnotTrapNetwork: [annot, b('pdfAnnotExtended.typeAnnotExtended'), markupEntries],
+    AnnotWatermark: [annot, b('pdfAnnotExtended.typeAnnotExtended'), markupEntries],
+    Annot3D: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdf3dRichMedia.type3DAnnot'), markupEntries],
+    AnnotRichMedia: [annot, b('pdfAnnotExtended.typeAnnotExtended'), b('pdf3dRichMedia.typeRichMediaAnnot'), markupEntries],
     Appearance: [b('pdfAppearance.typeAppearanceStreams')],
+    AppearancePrinterMark: [b('pdfAppearance.typeAppearanceStreams')],
+    AppearanceTrapNet: [b('pdfAppearance.typeAppearanceStreams')],
+    // An annotation's appearance dictionaries, by their kind
+    ...Object.fromEntries([['AppearanceCharacteristics', 'characteristics'], ['BorderStyle', 'borderStyle'],
+        ['BorderEffect', 'borderEffect'], ['IconFit', 'iconFit']]
+        .map(([object, kind]) => [object, [b('pdfAnnotExtended.typeAppearanceDict', (fn, v) => fn(v, kind))]])),
     // Interactive forms
     InteractiveForm: [b('pdfAcroForm.typeAcroForm')],
-    FieldTx: [b('pdfTextField.typeTextField')],
-    FieldChoice: [b('pdfChoiceField.typeChoiceField')],
-    FieldBtnCheckbox: [b('pdfButtonField.typeButtonField')],
-    FieldBtnPush: [b('pdfButtonField.typeButtonField')],
-    FieldBtnRadio: [b('pdfButtonField.typeButtonField')],
-    FieldSig: [b('pdfSignatureField.typeSignatureField')],
+    // (each with the companion of the shared and rich-text field keys)
+    Field: [fieldEntries],
+    FieldTx: [b('pdfTextField.typeTextField'), fieldEntries],
+    FieldChoice: [b('pdfChoiceField.typeChoiceField'), fieldEntries],
+    FieldBtnCheckbox: [b('pdfButtonField.typeButtonField'), fieldEntries],
+    FieldBtnPush: [b('pdfButtonField.typeButtonField'), fieldEntries],
+    FieldBtnRadio: [b('pdfButtonField.typeButtonField'), fieldEntries],
+    FieldSig: [b('pdfSignatureField.typeSignatureField'), fieldEntries],
+    SigFieldLock: [b('pdfMisc.typeFieldLock', (fn, v) => fn(v, 'lock'))],
+    FieldMDPTransformParameters: [b('pdfMisc.typeFieldLock', (fn, v) => fn(v, 'fieldMdp'))],
+    URTransformParameters: [b('pdfMisc.typeFieldLock', (fn, v) => fn(v, 'urTransform'))],
     // Actions
     ActionGoTo: [action], ActionGoToR: [action], ActionGoToE: [action], ActionLaunch: [action],
     ActionURI: [action], ActionNamed: [action],
-    ActionGoToDp: [action], ActionThread: [action], ActionSound: [action], ActionMovie: [action],
-    ActionRichMediaExecute: [action],
     // the kinds the opt-in extended typer declares (EXTENDED_ACTION_SUBTYPES)
+    ActionGoToDp: [action, extAction], ActionThread: [action, extAction], ActionSound: [action, extAction],
+    ActionMovie: [action, extAction], ActionRichMediaExecute: [action, extAction],
+    ActionNOP: [action, extAction], ActionSetState: [action, extAction],
     ActionHide: [action, extAction], ActionSubmitForm: [action, extAction],
     ActionResetForm: [action, extAction], ActionImportData: [action, extAction],
     ActionSetOCGState: [action, extAction], ActionRendition: [action, extAction],
     ActionTransition: [action, extAction], ActionGoTo3DView: [action, extAction],
     ActionECMAScript: [action, extAction],
+    // Additional actions, by the kind of the dictionary
+    ...Object.fromEntries([
+        ['AddActionCatalog', 'catalog'], ['AddActionFormField', 'formField'], ['AddActionPageObject', 'pageObject'],
+        ['AddActionScreenAnnotation', 'screenAnnotation'], ['AddActionWidgetAnnotation', 'widgetAnnotation']
+    ].map(([object, kind]) => [object, [b('pdfFormActionsExtended.typeAdditionalActions', (fn, v) => fn(v, kind))]])),
     // Logical structure
     StructTreeRoot: [b('pdfStructTree.typeStructTreeRoot')],
     StructElem: [b('pdfStructElement.typeStructElement')],
@@ -532,18 +606,37 @@ export const BINDINGS = Object.freeze({
     OptContentUsage: [b('pdfOCG.typeUsage')],
     OptContentConfig: [b('pdfOCConfig.typeOCConfig')],
     OptContentUsageApplication: [b('pdfOCConfig.typeUsageApp')],
+    ...Object.fromEntries([['OptContentProperties', 'properties'], ['OptContentMembership', 'membership'],
+        ['OptContentCreatorInfo', 'creatorInfo'], ['OptContentLanguage', 'language'], ['OptContentExport', 'export'],
+        ['OptContentZoom', 'zoom'], ['OptContentPrint', 'print'], ['OptContentView', 'view'], ['OptContentUser', 'user'],
+        ['OptContentPageElement', 'pageElement']
+    ].map(([object, kind]) => [object, [b('pdfOptionalContentExtended.typeOptionalContent', (fn, v) => fn(v, kind))]])),
     // Navigation
     OutlineItem: [b('pdfOutline.typeOutlineItem')],
     // Files and collections
     FileSpecification: [b('pdfFileSpec.typeFileSpec')],
     AFFileSpecification: [b('pdfFileSpec.typeFileSpec')],
     EmbeddedFileStream: [b('pdfEmbeddedFile.typeEmbeddedFile')],
+    AFEmbeddedFileStream: [b('pdfEmbeddedFile.typeEmbeddedFile')],
+    EmbeddedFileParameter: [b('pdfEmbeddedFile.typeEmbeddedFileParams')],
+    AFEmbeddedFileParameter: [b('pdfEmbeddedFile.typeEmbeddedFileParams')],
+    // File specification parts and go-to-embedded targets, by their kind
+    ...Object.fromEntries([['FileSpecEF', 'ef'], ['AFFileSpecEF', 'ef'], ['FileSpecRF', 'rf'], ['Mac', 'mac'],
+        ['Target', 'target'], ['TargetEmbedded', 'target']]
+        .map(([object, kind]) => [object, [b('pdfEmbeddedFilesPortfolio.typeFilePart', (fn, v) => fn(v, kind))]])),
     Collection: [b('pdfCollection.typeCollection'), b('pdfEmbeddedFilesPortfolio.typePortfolio')],
     CollectionSchema: [b('pdfEmbeddedFilesPortfolio.typeSchema')],
     CollectionField: [b('pdfEmbeddedFilesPortfolio.typeSchemaField', (fn, v) => fn('F', v))],
     CollectionSort: [b('pdfEmbeddedFilesPortfolio.typeSort')],
     CollectionItem: [b('pdfEmbeddedFilesPortfolio.typeCollectionItem')],
+    ...Object.fromEntries([['CollectionFolder', 'folder'], ['CollectionColors', 'colors'], ['CollectionSplit', 'split'], ['CollectionSubitem', 'subitem']]
+        .map(([object, kind]) => [object, [b('pdfEmbeddedFilesPortfolio.typeCollectionPart', (fn, v) => fn(v, kind))]])),
     Navigator: [b('pdfEmbeddedFilesPortfolio.typeNavigator')],
+    // Presentation and navigation dictionaries, by their kind
+    ...Object.fromEntries([['FloatingWindowParameters', 'floatingWindow'], ['Transition', 'transition'],
+        ['NavNode', 'navNode'], ['Bead', 'bead'], ['BeadFirst', 'bead'], ['Thread', 'thread'], ['SlideShow', 'slideShow'],
+        ['PageLabel', 'pageLabel'], ['ViewParams', 'viewParams']]
+        .map(([object, kind]) => [object, [b('pdfMisc.typePresentation', (fn, v) => fn(v, kind))]])),
     // Output intents
     OutputIntents: [b('pdfOutputIntent.typeOutputIntent'), b('pdfXPrepress.typePdfXOutputIntent')],
     // Fonts
@@ -553,23 +646,45 @@ export const BINDINGS = Object.freeze({
     FontCIDType2: [font, b('pdfFontCidTyped.typeCIDFont')],
     CIDSystemInfo: [b('pdfFontCidTyped.typeCIDSystemInfo')],
     FontFile3OpenType: [b('pdfFontColorTagging.typeFontFile3OpenType')],
+    // the font file streams' own keys (typeStreamEntries is bound too)
+    ...Object.fromEntries(['FontFile', 'FontFile2', 'FontFile3CIDType0', 'FontFile3Type1', 'FontFileType1']
+        .map((name) => [name, [b('pdfFontColorTagging.typeFontFileEntries')]])),
+    FontDescriptorType1: [fontDescriptor], FontDescriptorTrueType: [fontDescriptor],
+    FontDescriptorType3: [fontDescriptor], FontDescriptorCIDType0: [fontDescriptor],
+    FontDescriptorCIDType2: [fontDescriptor], CIDFontDescriptorMetrics: [fontDescriptor],
     // XObjects
-    XObjectImage: [b('pdfImages.typeImageXObject')],
-    XObjectImageMask: [b('pdfImages.typeImageXObject')],
-    XObjectImageSoftMask: [b('pdfImages.typeImageXObject')],
-    XObjectFormType1: [b('pdfImages.typeFormXObject')],
-    XObjectFormPrinterMark: [b('pdfImages.typeFormXObject')],
-    XObjectFormTrapNet: [b('pdfImages.typeFormXObject')],
-    XObjectFormPS: [b('pdfImages.typeXObject')],
-    XObjectFormPSpassthrough: [b('pdfImages.typeXObject')],
-    ObjectStream: [b('pdfObjStream.parseObjectStream', objStmRecords)],
+    // (each with the companion of the keys the core typers leave out)
+    XObjectImage: [b('pdfImages.typeImageXObject'), xobjectEntries('image')],
+    XObjectImageMask: [b('pdfImages.typeImageXObject'), xobjectEntries('imageMask')],
+    XObjectImageSoftMask: [b('pdfImages.typeImageXObject'), xobjectEntries('softMask')],
+    XObjectFormType1: [b('pdfImages.typeFormXObject'), xobjectEntries('form')],
+    XObjectFormPrinterMark: [b('pdfImages.typeFormXObject'), xobjectEntries('printerMark')],
+    XObjectFormTrapNet: [b('pdfImages.typeFormXObject'), xobjectEntries('trapNet')],
+    XObjectFormPS: [b('pdfImages.typeXObject'), xobjectEntries('ps')],
+    XObjectFormPSpassthrough: [b('pdfImages.typeXObject'), xobjectEntries('psPassthrough')],
+    ObjectStream: [b('pdfObjStream.parseObjectStream', objStmRecords), companion('objectStream')],
+    // the stream objects whose own keys only the companion types
+    Thumbnail: [companion('thumbnail')], CMapStream: [companion('cmap')], ToUnicodeCMapStream: [companion('cmap')],
+    ICCProfileStream: [companion('iccProfile')],
+    // Filter decode parameters, by the filter they belong to
+    ...Object.fromEntries(['FlateDecode', 'LZWDecode', 'CCITTFaxDecode', 'DCTDecode', 'JBIG2Decode', 'Crypt']
+        .map((filter) => [`Filter${filter}`, [b('pdfFilterDispatch.typeDecodeParms', (fn, v) => fn(v, filter))]])),
     Outline: [b('pdfOutline.walkOutline', (fn, v) => fn(v, () => ({ type: 'dict', entries: {
-        Title: { type: 'string', value: enc('x'), syntax: 'lit' }, Parent: { type: 'ref', num: 1, gen: 0 } } })))],
-    Encoding: [b('pdfFontEncoding.resolveEncoding', (fn, v) => fn(v, (n) => new Array(256).fill(n)))],
+        Title: { type: 'string', value: enc('x'), syntax: 'lit' }, Parent: { type: 'ref', num: 1, gen: 0 } } }))),
+        b('pdfMisc.typePresentation', (fn, v) => fn(v, 'outlines'))],
+    Encoding: [b('pdfFontEncoding.resolveEncoding', (fn, v) => fn(v, (n) => new Array(256).fill(n))), companion('encoding')],
     SignatureReferenceDocMDP: [sigRef], SignatureReferenceFieldMDP: [sigRef],
     SignatureReferenceIdentity: [sigRef], SignatureReferenceUR: [sigRef],
     // Graphics
     GraphicsStateParameter: [b('pdfContentOpsExtended.typeExtGState')],
+    // Colour and prepress dictionaries, by their kind
+    ...Object.fromEntries([['DeviceNDict', 'deviceN'], ['DeviceNMixingHints', 'mixingHints'], ['DeviceNProcess', 'process'],
+        ['Solidities', 'solidities'], ['ColorSpaceMap', 'colorSpaceMap'], ['DictionaryOfFunctions', 'functions']]
+        .map(([object, kind]) => [object, [b('pdfColorSpacesExtended.typeColorPart', (fn, v) => fn(v, kind))]])),
+    ...Object.fromEntries([['Separation', 'separation'], ['BoxColorInfo', 'boxColorInfo'], ['BoxStyle', 'boxStyle'],
+        ['TrapRegion', 'trapRegion'], ['DestOutputProfileRef', 'outputProfileRef']]
+        .map(([object, kind]) => [object, [b('pdfXPrepress.typePrepressPart', (fn, v) => fn(v, kind))]])),
+    StyleDict: [b('pdfFontCidTyped.typeStyleDict')],
     ShadingType1: [b('pdfShadingTyped.typeShading')], ShadingType2: [b('pdfShadingTyped.typeShading')],
     ShadingType3: [b('pdfShadingTyped.typeShading')], ShadingType4: [b('pdfShadingTyped.typeShading')],
     ShadingType5: [b('pdfShadingTyped.typeShading')], ShadingType6: [b('pdfShadingTyped.typeShading')],
@@ -587,7 +702,14 @@ export const BINDINGS = Object.freeze({
     EncryptionPublicKey: [encryptDict, b('pdfSigAesGcm.typeEncryptForGcm')],
     CryptFilter: [b('pdfSigAesGcm.typeCfEntry')],
     Signature: [b('pdfSignature.typeSignature')],
+    DocTimeStamp: [b('pdfSignature.typeSignature')],
+    // Signature build properties and data
+    SignatureBuildPropDict: [b('pdfSigPades.typeBuildProperties')],
+    SignatureBuildDataDict: [b('pdfSigPades.typeBuildData', (fn, v) => fn(v, 'data'))],
+    SignatureBuildDataAppDict: [b('pdfSigPades.typeBuildData', (fn, v) => fn(v, 'app'))],
+    SignatureBuildDataSigQDict: [b('pdfSigPades.typeBuildData', (fn, v) => fn(v, 'sigQ'))],
     DSS: [b('pdfSigPades.typeDSS')],
+    VRI: [b('pdfSigPades.typeVRIEntry')],
     DocMDPTransformParameters: [b('pdfMisc.typeDocMdpParams')],
     Permissions: [b('pdfMisc.typePerms')],
     LegalAttestation: [b('pdfMisc.typeLegal')],
@@ -596,9 +718,66 @@ export const BINDINGS = Object.freeze({
     DPart: [b('pdfDocumentParts.typeDPart')],
     DPM: [b('pdfDocumentParts.typeDPM')],
     WebCaptureInfo: [b('pdfMisc.typeSpiderInfo')],
+    ...Object.fromEntries([['WebCapturePageSet', 'pageSet'], ['WebCaptureImageSet', 'imageSet'], ['WebCaptureCommand', 'command'],
+        ['WebCaptureCommandSettings', 'commandSettings']].map(([object, kind]) => [object, [b('pdfMisc.typeWebCapture', (fn, v) => fn(v, kind))]])),
+    ViewerPreferences: [b('pdfMisc.typeViewerPreferences')],
     SoundObject: [b('pdfLegacyDeprecatedAnnots.typeSoundStream')],
+    // Multimedia dictionaries (ISO 32000-2 § 13.2) and the movie ones:
+    // `typeMediaDict` with the object's kind.
+    ...Object.fromEntries([
+        ['RenditionMedia', 'Rendition'], ['RenditionSelector', 'Rendition'],
+        ['RenditionMH', 'RenditionMHBE'], ['RenditionBE', 'RenditionMHBE'],
+        ['MediaClipData', 'MediaClipData'], ['MediaClipDataMHBE', 'MediaClipDataMHBE'],
+        ['MediaClipSection', 'MediaClipSection'], ['MediaClipSectionMHBE', 'MediaClipSectionMHBE'],
+        ['MediaCriteria', 'MediaCriteria'], ['MediaDuration', 'MediaDuration'],
+        ['MediaOffsetTime', 'MediaOffset'], ['MediaOffsetFrame', 'MediaOffset'], ['MediaOffsetMarker', 'MediaOffset'],
+        ['MediaPermissions', 'MediaPermissions'], ['MediaPlayParameters', 'MediaPlayParameters'],
+        ['MediaPlayParametersMH', 'MediaPlayParametersMHBE'], ['MediaPlayParametersBE', 'MediaPlayParametersMHBE'],
+        ['MediaPlayerInfo', 'MediaPlayerInfo'], ['MediaPlayers', 'MediaPlayers'],
+        ['MediaScreenParameters', 'MediaScreenParameters'], ['MediaScreenParametersMHBE', 'MediaScreenParametersMHBE'],
+        ['MinimumScreenSize', 'MinimumScreenSize'], ['SoftwareIdentifier', 'SoftwareIdentifier'],
+        ['Movie', 'Movie'], ['MovieActivation', 'MovieActivation']
+    ].map(([object, kind]) => [object, [b('pdfLegacyDeprecatedAnnots.typeMediaDict', (fn, v) => fn(v, kind))]])),
     RichMediaContent: [b('pdf3dRichMedia.typeRichMediaContent')],
+    // RichMedia dictionaries, by the kind of object
+    ...Object.fromEntries(['Activation', 'Animation', 'Command', 'Configuration', 'Deactivation', 'Height',
+        'Instance', 'Position', 'Presentation', 'Settings', 'Width', 'Window']
+        .map((kind) => [`RichMedia${kind}`, [b('pdf3dRichMedia.typeRichMedia', (fn, v) => fn(v, kind.charAt(0).toLowerCase() + kind.slice(1)))]])),
     '3DActivation': [b('pdf3dRichMedia.type3DActivation')],
+    // 3D measurements, by their /Subtype
+    ...Object.fromEntries(['3DMeasureRD3', '3DMeasureAD3', '3DMeasurePD3', '3DMeasureLD3', '3DMeasure3DC']
+        .map((name) => [name, [b('pdf3dRichMedia.type3DMeasure')]])),
+    // 3D views and scene, by the kind of object
+    ...Object.fromEntries([
+        ['3DView', 'view'], ['3DViewAddEntries', 'view'], ['3DCrossSection', 'crossSection'],
+        ['3DNode', 'node'], ['3DRenderMode', 'renderMode'], ['3DBackground', 'background'],
+        ['3DLightingScheme', 'lightingScheme'], ['3DUnits', 'units'],
+        // the 3D stream (typeStreamEntries is bound too), animation style, reference
+        ['3DStream', 'stream'], ['3DAnimationStyle', 'animationStyle'], ['3DReference', 'reference'],
+        ['Projection', 'projection'], ['ExData3DMarkup', 'markup'], ['ExDataProjection', 'measureRef']
+    ].map(([object, kind]) => [object, [b('pdf3dRichMedia.type3DScene', (fn, v) => fn(v, kind))]])),
+    // Measurement dictionaries, by the kind of object
+    ...Object.fromEntries([
+        ['MeasureRL', 'rectilinear'], ['MeasureGEO', 'geospatial'], ['NumberFormat', 'numberFormat'],
+        ['GeographicCoordinateSystem', 'geographicCS'], ['ProjectedCoordinateSystem', 'projectedCS'], ['ExDataMarkupGeo', 'markupGeo'],
+        ['Viewport', 'viewport'], ['PointData', 'pointData']
+    ].map(([object, kind]) => [object, [b('pdfMisc.typeMeasurement', (fn, v) => fn(v, kind))]])),
+    // Halftones (types 6, 10 and 16 are streams: typeStreamEntries is bound too)
+    ...Object.fromEntries(['HalftoneType1', 'HalftoneType5', 'HalftoneType6', 'HalftoneType10', 'HalftoneType16']
+        .map((name) => [name, [b('pdfContentOpsExtended.typeHalftone')]])),
+    // OPI: the /OPI dictionary and its version dictionaries
+    OPIVersion13: [b('pdfXPrepress.typeOpi')],
+    OPIVersion20: [b('pdfXPrepress.typeOpi')],
+    OPIVersion13Dict: [b('pdfXPrepress.typeOpiDict', (fn, v) => fn(v, '1.3'))],
+    OPIVersion20Dict: [b('pdfXPrepress.typeOpiDict', (fn, v) => fn(v, '2.0'))],
+    // Patterns (type 1 is a stream: typeStreamEntries is bound too)
+    PatternType1: [b('pdfShadingTyped.typePattern')],
+    PatternType2: [b('pdfShadingTyped.typePattern')],
+    // Signature seed values
+    SigFieldSeedValue: [b('pdfSigPades.typeSeedValue', (fn, v) => fn(v, 'field'))],
+    CertSeedValue: [b('pdfSigPades.typeSeedValue', (fn, v) => fn(v, 'cert'))],
+    MDPDict: [b('pdfSigPades.typeSeedValue', (fn, v) => fn(v, 'mdp'))],
+    TimeStampDict: [b('pdfSigPades.typeSeedValue', (fn, v) => fn(v, 'timeStamp'))],
     // Requirements (each entry of the catalog's /Requirements array)
     ...Object.fromEntries([
         'Requirements3DMarkup', 'RequirementsAcroFormInteract', 'RequirementsAction',
@@ -610,7 +789,8 @@ export const BINDINGS = Object.freeze({
         'RequirementsOCAutoStates', 'RequirementsOCInteract', 'RequirementsPRC', 'RequirementsRichMedia',
         'RequirementsSTEP', 'RequirementsSeparationSimulation', 'RequirementsTransitions',
         'RequirementsU3D', 'RequirementsglTF'
-    ].map((n) => [n, [requirement]]))
+    ].map((n) => [n, [requirement]])),
+    RequirementsHandler: [b('pdfMisc.typeRequirementHandler')]
 });
 
 /**

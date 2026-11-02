@@ -302,6 +302,43 @@ describe('oconvIrToMd — loss ledger', () => {
     });
 });
 
+describe('oconvIrToMd — a list or a table inside a table cell, inline (A43)', () => {
+    const p = (text) => node('paragraph', {}, [node('run', { text })]);
+    const table = (cells) => node('table', {}, [
+        node('row', { header: true }, [node('cell', {}, [p('Head')])]),
+        node('row', {}, [node('cell', {}, cells)])
+    ]);
+
+    test('a list in a cell: its items inline, joined by "; ", nested items too; one inline/flattened', () => {
+        const ir = doc([table([
+            p('Steps:'),
+            node('list', { ordered: true }, [
+                node('listItem', {}, [p('first')]),
+                node('listItem', {}, [p('second'), node('list', {}, [node('listItem', {}, [p('nested')])])])
+            ])
+        ])]);
+        const { losses, markdown } = irToMd(ir, META);
+        expect(markdown).toContain('| Steps: first; second; nested |');
+        expect(losses).toEqual([{ code: 'inline/flattened', detail: 'table cell list' }]);
+    });
+
+    test('a table in a cell: its cells row by row, joined by "; "', () => {
+        const inner = node('table', {}, [
+            node('row', { header: true }, [node('cell', {}, [p('a')]), node('cell', {}, [p('b')])]),
+            node('row', {}, [node('cell', {}, [p('c')]), node('cell', {}, [p('d')])])
+        ]);
+        const { losses, markdown } = irToMd(doc([table([inner])]), META);
+        expect(markdown).toContain('| a; b; c; d |');
+        expect(losses).toEqual([{ code: 'inline/flattened', detail: 'table cell table' }]);
+    });
+
+    test('an hr in a cell stays dropped; a cell of paragraphs unchanged', () => {
+        const { losses, markdown } = irToMd(doc([table([p('x'), p('y')])]), META);
+        expect(markdown).toContain('| x y |');
+        expect(losses).toEqual([]);
+    });
+});
+
 describe('oconvIrToMd — GFM task markers (`listItem.escapes.md.task`)', () => {
     /** A one-paragraph list item, flagged as a task when `task` is given. */
     const item = (text, task) => node('listItem', task ? { escapes: { md: { task } } } : {}, [
@@ -488,5 +525,68 @@ describe('oconvIrToMd — hard line breaks (a `\\n` in a run)', () => {
     test('a code run keeps its newline inside the code span', () => {
         const { markdown } = irToMd(doc([node('paragraph', {}, [node('run', { text: 'a\nb', code: true })])]), META);
         expect(bodyOf(markdown)).toBe('`a\nb`\n');
+    });
+});
+
+// A46 — opts.frontMatter: 'full' (default), 'compact', 'none'.
+describe('oconvIrToMd — front matter forms, opt-in (A46)', () => {
+    const LOSSES = [
+        { code: 'inline/dropped', detail: 'text:bookmark' },
+        { code: 'inline/flattened', detail: 'text:reference-ref' },
+        { code: 'inline/dropped', detail: 'text:bookmark' },
+        { code: 'inline/dropped', detail: 'text:bookmark' }
+    ];
+    const ir = doc([node('heading', { level: 1 }, [node('run', { text: 'Title' })]), node('paragraph', {}, [node('run', { text: 'Body.' })])]);
+    const meta = { ...META, losses: LOSSES };
+
+    test("'full' and no option give the same bytes", () => {
+        const plain = irToMd(ir, meta).markdown;
+        expect(irToMd(ir, meta, { frontMatter: 'full' }).markdown).toBe(plain);
+        expect(irToMd(ir, meta, {}).markdown).toBe(plain);
+        expect(plain.match(/- \{ code: inline\/dropped, detail: text:bookmark \}/g)).toHaveLength(3);
+    });
+
+    test("'compact': one ledger line per (code, detail), first-occurrence order, with its count", () => {
+        const r = irToMd(ir, meta, { frontMatter: 'compact' });
+        const full = irToMd(ir, meta).markdown;
+        expect(r.markdown).toContain('losses:\n'
+            + '  - { code: inline/dropped, detail: text:bookmark, count: 3 }\n'
+            + '  - { code: inline/flattened, detail: text:reference-ref, count: 1 }\n---\n');
+        // Everything else as the full form; the result keeps the full ledger.
+        expect(r.markdown.replace(/losses:[\s\S]*?---\n/, '')).toBe(full.replace(/losses:[\s\S]*?---\n/, ''));
+        expect(r.losses).toHaveLength(4);
+    });
+
+    test("'none': the body alone; the result's anchors and ledger unchanged", () => {
+        const r = irToMd(ir, meta, { frontMatter: 'none' });
+        const full = irToMd(ir, meta);
+        expect(r.markdown).toBe(full.markdown.replace(/^---\n[\s\S]*?\n---\n/, ''));
+        expect(r.markdown.startsWith('# Title')).toBe(true);
+        expect(r.anchors).toEqual(full.anchors);
+        expect(r.losses).toEqual(full.losses);
+        expect(r.lossy).toBe(true);
+    });
+
+    test('any other value throws `oconv: bad front matter`', () => {
+        for (const v of ['compacted', '', null, 1, true]) {
+            expect(() => irToMd(ir, meta, { frontMatter: v })).toThrow('oconv: bad front matter');
+        }
+    });
+});
+
+describe('oconvIrToMd — the document title (T34 d)', () => {
+    const doc1 = () => doc([node('paragraph', {}, [node('run', { text: 'Body' })])]);
+    const meta = (title) => ({ sourceFormat: 'pdf', sourceName: 'r.pdf', title, convertedAt: '2026-01-01T00:00:00Z', losses: [] });
+
+    test('meta.title is written right after sourceName; the body does not move', () => {
+        const withTitle = irToMd(doc1(), meta('Annual report: 2026')).markdown;
+        const without = irToMd(doc1(), meta(undefined)).markdown;
+        expect(withTitle).toContain('sourceName: r.pdf\ntitle: "Annual report: 2026"\nconvertedAt:');
+        expect(withTitle.replace('title: "Annual report: 2026"\n', '')).toBe(without);
+    });
+
+    test('an empty or blank title, or one that is not a string, is left out', () => {
+        const without = irToMd(doc1(), meta(undefined)).markdown;
+        for (const title of ['', '   ', 42]) expect(irToMd(doc1(), meta(title)).markdown).toBe(without);
     });
 });

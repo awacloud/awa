@@ -30,7 +30,7 @@ export const pdfInkAnnot = {
         const { isType: _isType } = parser;
         const { typeBaseAnnot, captureExtras } = annot;
 
-        const KNOWN = new Set(['InkList']);
+        const KNOWN = new Set(['InkList', 'Path']);
 
         function typeInkAnnot(dict) {
             const base = typeBaseAnnot(dict);
@@ -40,6 +40,9 @@ export const pdfInkAnnot = {
                     { context: { actual: base.subtype } });
             }
             base.inkList = toInkList(dict.entries.InkList);
+            // PDF 2.0: the path of the ink, as read
+            const path = dict.entries.Path;
+            if (path !== undefined) base.path = _isType(path, 'array') ? path : null;
             captureExtras(base, dict, KNOWN);
             return base;
         }

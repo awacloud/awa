@@ -30,6 +30,7 @@ import { a11y } from '@awacloud/fw/dom/utils/a11y.js';
 import { keybindings } from '@awacloud/fw/dom/utils/keybindings.js';
 import { download } from '@awacloud/fw/dom/fs/download.js';
 import { fsAccess } from '@awacloud/fw/dom/fs/fsAccess.js';
+import { fileIntake } from '@awacloud/fw/dom/fs/fileIntake.js';
 import { focus } from '@awacloud/fw/dom/utils/focus.js';
 import { utf8 } from '@awacloud/fw/io/codec/utf8.js';
 import { ui8 } from '@awacloud/fw/io/utils/ui8.js';
@@ -50,7 +51,7 @@ import { createHistory, diff } from './core/history.js';
 export { negotiateLocale, LOCALES } from './core/i18n.js';
 
 /** The fw modules the notepad resolves (registered with their deps). */
-const FW_MODULES = [i18n, a11y, keybindings, download, fsAccess, focus, utf8, ui8, str, date];
+const FW_MODULES = [i18n, a11y, keybindings, download, fsAccess, focus, utf8, ui8, str, date, fileIntake];
 
 /** Text sizes, as a factor of the base size. */
 export const ZOOM_STEPS = Object.freeze([0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3]);
@@ -385,7 +386,7 @@ export function mountNotepad(root, opts = {}) {
     async function pick() {
         if (!(await confirmDiscard())) return false;
         if (!fs.support().fsa) {
-            input.click();
+            intake.pick();
             return false;
         }
         /** @type {FileSystemFileHandle[]} */
@@ -405,11 +406,19 @@ export function mountNotepad(root, opts = {}) {
             return false;
         }
     }
-    input.addEventListener('change', () => {
-        const [file, ...rest] = input.files ? [...input.files] : [];
-        input.value = '';
-        more(rest.map((f) => ({ file: f })));
-        if (file) void read(file, null);
+    // The fallback picker's `change` and an OS file dropped anywhere on the
+    // notepad (fw `fileIntake`): the first file opens, the others go to `more`.
+    const intake = runtime.resolve('fileIntake').create({
+        input, dropTarget: region,
+        onFiles(files, source) {
+            const [file, ...rest] = files;
+            if (source === 'picker') {            // pick() already confirmed discarding
+                more(rest.map((f) => ({ file: f })));
+                void read(file, null);
+                return;
+            }
+            run(() => { more(rest.map((f) => ({ file: f }))); return open(file); });
+        }
     });
 
     /**
@@ -902,30 +911,6 @@ export function mountNotepad(root, opts = {}) {
     }
     text.addEventListener('wheel', wheelZoom, { passive: false });
 
-    // An OS file dropped anywhere on the notepad opens.
-    /** @param {DragEvent} e */
-    const hasFiles = (e) => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files');
-    region.addEventListener('dragover', (e) => {
-        if (!hasFiles(e)) return;
-        e.preventDefault();
-        if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-        region.dataset.dragover = 'true';
-    });
-    region.addEventListener('dragleave', (e) => {
-        if (!region.contains(/** @type {Node|null} */ (e.relatedTarget))) region.dataset.dragover = 'false';
-    });
-    region.addEventListener('drop', (e) => {
-        if (!hasFiles(e)) return;
-        e.preventDefault();
-        region.dataset.dragover = 'false';
-        const [file, ...rest] = e.dataTransfer ? [...e.dataTransfer.files] : [];
-        if (!file) return;
-        run(() => {
-            more(rest.map((f) => ({ file: f })));
-            return open(file);
-        });
-    });
-
     // Without the File System Access API, Save and Save as download a copy: say so.
     toolbar.setSaveMode(fs.support().fsa ? 'save' : 'download');
     label();
@@ -969,6 +954,7 @@ export function mountNotepad(root, opts = {}) {
         destroy() {
             dialog.answer('cancel');
             keys.dispose();
+            intake.dispose();
             text.removeEventListener('wheel', wheelZoom);
             if (remark) clearTimeout(remark);
             highlighter.destroy();

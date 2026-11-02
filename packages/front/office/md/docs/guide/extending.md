@@ -255,5 +255,5 @@ In short: **inside the md package → `Walker`**; **in multi-AST code → `treeW
 - [Existing extras](../api/extra/README.md) — copy the closest one as a base
 - [`api/md`](../api/md.md) — API surface to patch
 - [Coverage](./coverage.md) — what is already handled
-- [fw module pattern](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/guide/module-pattern.md)
-- [fw treeWalker](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/io/structures/tree-walker.md) — generic alternative
+- [fw module pattern](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/fw/docs/guide/module-pattern.md)
+- [fw treeWalker](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/fw/docs/api/io/structures/tree-walker.md) — generic alternative

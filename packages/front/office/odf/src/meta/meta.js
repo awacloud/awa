@@ -95,8 +95,10 @@ export const odfMeta = {
                 'xmlns:office': OFFICE_NS,
                 'xmlns:meta': META_NS,
                 'xmlns:dc': DC_NS,
-                'office:version': ODF_VERSION
+                'office:version': (opts && opts.version !== undefined) ? opts.version : ODF_VERSION
             }, [metaEl]);
+            // keepVersion: a source part without a version is written without one.
+            if (root.attrs['office:version'] === null) delete root.attrs['office:version'];
             declareNamespaces(root, { carried: (opts && opts.namespaces) || {},
                 part: 'meta.xml', module: 'meta' });
             return xml.serialize(root);

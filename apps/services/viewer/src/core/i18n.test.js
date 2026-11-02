@@ -4,8 +4,9 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview The catalogs mirror each other key for key, every key the
- * sources read exists, and locale negotiation picks by primary subtag.
+ * @fileoverview The shell catalogs mirror each other key for key, every key
+ * the shell sources read exists, and the shell shares no top-level group
+ * with the component's catalog (`@awacloud/oview`).
  *
  * @module viewer/core/i18n.test
  */
@@ -13,9 +14,10 @@ import { describe, test, expect } from 'bun:test';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
-import { i18n } from '@awacloud/fw/io/i18n/i18n.js';
-import { CATALOGS, LOCALES, createTranslator, negotiateLocale } from './i18n.js';
+import { CATALOGS } from './i18n.js';
+
+/** The shell's locales, in menu order. */
+const LOCALES = Object.keys(CATALOGS);
 
 /** Dotted key paths of a catalog (plural objects are leaves). */
 function keys(obj, prefix = '') {
@@ -39,7 +41,7 @@ describe('catalogs', () => {
             }
         }
     });
-    test('every literal t() / tn() key in the sources exists in en', () => {
+    test('every literal t() / tn() key in the shell sources exists in en', () => {
         const src = fileURLToPath(new URL('..', import.meta.url));
         const files = [];
         const walk = (dir) => {
@@ -60,28 +62,13 @@ describe('catalogs', () => {
         }
         expect(missing).toEqual([]);
     });
-});
-
-describe('negotiateLocale', () => {
-    test('primary subtag, first supported wins, English fallback', () => {
-        expect(negotiateLocale('fr-CA')).toBe('fr');
-        expect(negotiateLocale(null, '', ['de-DE', 'fr-FR'])).toBe('fr');
-        expect(negotiateLocale('de', 'es')).toBe('en');
-        expect(negotiateLocale()).toBe('en');
-    });
-});
-
-describe('createTranslator', () => {
-    const rt = new ModuleRuntime();
-    rt.registerDeep(i18n);
-    test('translates, interpolates, pluralises, switches locale', () => {
-        const tr = createTranslator(rt, 'fr');
-        expect(tr.t('toolbar.of', { count: 3 })).toBe('sur 3');
-        expect(tr.tn('count.pages', 1)).toBe('1 page');
-        expect(tr.tn('count.slides', 2)).toBe('2 diapositives');
-        tr.setLocale('en');
-        expect(tr.t('toolbar.open')).toBe('Open a document');
-        expect(tr.locale).toBe('en');
+    test('the shell catalog shares no top-level group with @awacloud/oview\'s', async () => {
+        // The component's catalog is read from the package's own file (a test may reach into it).
+        const pkg = import.meta.resolve('@awacloud/oview/package.json');
+        const { en: coreEn } = await import(new URL('./src/i18n/en.js', pkg).href);
+        const shellEn = CATALOGS.en;
+        expect(Object.keys(coreEn).length).toBeGreaterThan(0);
+        expect(Object.keys(shellEn).filter((group) => Object.hasOwn(coreEn, group))).toEqual([]);
     });
 });
 

@@ -317,10 +317,10 @@ describe('default-faces — registration order', () => {
     test('pack registered BEFORE registerAll(modules) still wins over the 0.0.0 stand-in (version precedence)', async () => {
         const rt = new ModuleRuntime();
         rt.registerAll(fw_require);
-        await registerDefaultFaces(rt);   // registers oconvDefaultFaces@1.0.0 first
+        await registerDefaultFaces(rt);   // registers oconvDefaultFaces@1.1.0 first
         rt.registerAll(modules);          // also (harmlessly) registers the @0.0.0 stand-in
 
-        expect(rt.has('oconvDefaultFaces', '1.0.0')).toBe(true);
+        expect(rt.has('oconvDefaultFaces', '1.1.0')).toBe(true);
         expect(rt.has('oconvDefaultFaces', '0.0.0')).toBe(true);
 
         const oconv = rt.resolve('oconv');
@@ -343,7 +343,7 @@ describe('default-faces — registration order', () => {
 
         // Registered AFTER the facade already resolved and ran once.
         await registerDefaultFaces(rt);
-        expect(rt.has('oconvDefaultFaces', '1.0.0')).toBe(true);
+        expect(rt.has('oconvDefaultFaces', '1.1.0')).toBe(true);
 
         const stillCached = await oconv.fromMd({ markdown: SAMPLE_MD, target: 'pdf', opts: { pdf: PDF_OPTS } });
         expect(stillCached.losses).toEqual(before.losses); // the held `oconv` handle is unaffected

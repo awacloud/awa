@@ -7,6 +7,363 @@ ISO 32000-1:2008 (PDF 1.7).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- **`pdfInfo.decodeTextString(bytes)`**: decodes a pdf text string such
+  as the Info `/Title` (UTF-16BE after its BOM, its language escapes
+  removed; UTF-8 after its BOM; else PDFDocEncoding); anything but bytes
+  throws `pdf/info/bad-text-string`. `typeInfo` still returns the strings
+  as bytes.
+- **`pdfXmpExtended.dcTitle(input)`**: the `dc:title` of an XMP packet —
+  its `x-default` alternative, else its first, else a leaf value — which
+  the leaf harvest of `parsePacket` does not reach.
+- **`parseXrefTable` names the shapes it tolerated.** Its result gains
+  `tolerated` (`'subsection-header-space'`, `'entry-eol-one-byte'`),
+  absent for a table in the standard's shape.
+- **Encrypted documents read with a password.** `read` and `readDocument`
+  take `password` (a string or bytes; `''` is the empty user password):
+  the Standard handler V=4 R=4, V=5 R=5 or V=5 R=6 is applied, the password
+  tried as the user, then as the owner password, and every object's
+  strings and stream payload are decrypted as it is read (a
+  cross-reference stream, the metadata stream under `EncryptMetadata
+  false` and a signature's `/Contents` stay as stored); an object
+  stream is decrypted as a stream and its members read as stored. Without
+  it an encrypted document still fails loud with `pdf/document/encrypted`
+  — the empty password is never tried on its own. New errors on the new
+  option only: `pdf/document/bad-password-option`,
+  `pdf/document/bad-password`, `pdf/crypto/unsupported-filter`.
+  `pdfSecurity.typeEncryptDict` accepts the typed dictionary `read` yields.
+- **RC4 V=1 / V=2 read with a password, through the legacy extra.** `read`
+  and `readDocument` take `legacyRc4`, the opt-in `pdfLegacyRc4Read`
+  instance: under `password`, an RC4 document (R2, R3) is decrypted with it
+  (the user, then the owner password). The `pdf-legacy` bundle's `read`
+  passes its own. `pdfLegacyRc4Read` gains `validateOwnerPassword`. New
+  error on the new option only: `pdf/document/bad-legacy-rc4-option`.
+- **A fast cipher for the decrypting read, opt-in.** `readDocument` /
+  `pdf.read` take `fastCipher: true` (with `password`): the key check —
+  the R6 key hardening above all — and the AES-CBC string and stream
+  decryption go through fw's T-table `aes.ttable.fn` instead of the
+  constant-time `aes.fn` (a 30-page R6 read 0.9 s → 25 ms; a stream 0.3 →
+  about 100 MB/s). Not constant-time: for a trusted, single-user host. The
+  Standard handlers' read functions and `dispatchDecryptStream` take an
+  optional trailing `opts`. New error on the new option only:
+  `pdf/document/bad-fast-cipher-option`.
+- **Cross-reference recovery, opt-in.** `readDocument` (and `pdf.read`)
+  take a new `recoverXref` option: with `true`, a cross-reference chain
+  the reader cannot use (a wrong offset, an undecodable cross-reference
+  stream, no `startxref`, a trailer without `/Root`) is rebuilt from the
+  file's bytes — object definitions in file order, object-stream
+  members, the merged trailer dictionaries — and the read records
+  `pdf/document/xref-rebuilt` in `losses`; `xref.sections` then holds the
+  one section `{ at: null, kind: 'rebuilt', entries }`. Without the option
+  every read is unchanged.
+- **Standard 14 metrics in every encoding.** `pdfBuilder.addFont`'s opt-in
+  `standard14` now also takes a Latin face in `MacRomanEncoding`,
+  `StandardEncoding` or with no `encoding` (its built-in StandardEncoding)
+  when the spec gives `encodings`, the `@awacloud/fonts` `encodingLookup`
+  API: each code's width is its glyph's (the WinAnsi table's, else the
+  record's `extraWidths`, else 0). Without `encodings` such a registration
+  still throws `pdf/builder/bad-font`; every other output unchanged.
+- **Entries the typers knew but never returned are now typed.** Each
+  of these typers listed the entries as known (so they were neither
+  typed nor in `_extras`, reachable only through `raw`) and now returns
+  them as new optional fields, set only when the entry is present —
+  numbers, integers, booleans and names by their value, strings as
+  bytes, dictionaries, arrays and streams as read; a dictionary without
+  them gives the record it gave before:
+  - `typePage`: `lastModified`, `boxColorInfo`, `thumb`, `b`, `dur`,
+    `trans`, `aa`, `pieceInfo`, `structParents`, `id`, `pz`,
+    `separationInfo`, `templateInstantiated`, `presSteps`, `vp`, `af`,
+    `outputIntents`, `dPart` (ISO 32000-2 Table 31);
+  - `typeCatalog`: `threads`, `openAction`, `aa`, `uri`, `spiderInfo`,
+    `pieceInfo`, `perms`, `legal`, `requirements`, `collection`,
+    `needsRendering`, `dss`, `af`, `dPartRoot` (Table 29);
+  - the four field typers: `parent`, `kids`, `tu`, `tm`, `aa` (Table 226),
+    plus `da` and `q` on the button and signature fields, `dv` on the
+    signature field and `rv` on the text field (Table 230);
+  - `typeEmbeddedFile`: `length`, `filter`, `decodeParms`, `dl` — what
+    its `bytes` are encoded with; the opt-in `typeSoundStream`: `type`,
+    `length`, `filter`, `decodeParms`; `typeFontFile3OpenType`: `filter`,
+    `decodeParms`;
+  - `typeCollection`: `colors`, `folders`, `split`; `typeFileSpec`:
+    `type`, `thumb`; `typeOutlineItem`: `se`; the opt-in
+    `typeCollectionItem`, `typeCfEntry` and `typeDocMdpParams`: `type`.
+- **Stream dictionary entries typed.** The core `pdfFilterDispatch`
+  gains `typeStreamEntries(stream)`, for a stream or its dictionary: the
+  entries every stream dictionary shares (ISO 32000-2 §7.3.8.2, Table 5)
+  — `/Length` (an integer or a reference), the `/Filter` and
+  `/DecodeParms` chain as read, the external-file entries `/F`,
+  `/FFilter`, `/FDecodeParms`, and `/DL`. The existing functions are
+  unchanged.
+- **The filter decode parameters.** `typeDecodeParms(dict, filter)` on
+  `pdfFilterDispatch` types the decode parameters of the Flate, LZW,
+  CCITT fax, DCT, JBIG2 and Crypt filters; the decode path unchanged.
+- **Viewer preferences typed.** The opt-in `pdfMisc` gains
+  `typeViewerPreferences(dict)` for the catalog's `/ViewerPreferences`
+  (ISO 32000-2 §12.2, Table 147): the window and display booleans, the
+  page-mode, direction, area, clip and scaling names at their Table 147
+  defaults when absent, `/Duplex`, `/PickTrayByPDFSize`, `/PrintPageRange`
+  as `[first, last]` pairs, `/NumCopies` and `/Enforce`; every other entry
+  in `_extras`. The core catalog record, which keeps the dictionary as
+  read (`viewerPrefs`), is unchanged.
+- **Font descriptors typed.** The opt-in `pdfFontColorTagging` gains
+  `typeFontDescriptor(dict)`, a typer for the font descriptor of any
+  font kind — simple, Type 3, CIDFont, or a value of a CIDFont
+  descriptor's `/FD` (ISO 32000-2 §9.8, Tables 120, 122 and 123): the
+  names, the family and character set strings, weight and flags, the
+  bounding box, the metrics (`/Leading`, `/XHeight`, `/StemH`,
+  `/AvgWidth`, `/MaxWidth`, `/MissingWidth` at their default 0 when
+  absent), the font programs and `/CIDSet` (`{ num, gen }` for a
+  reference), `/Style`, `/Lang` and `/FD`; every other entry in
+  `_extras`. The core font typers, which return the descriptor untyped
+  as `fontDescriptor`, are unchanged.
+- **The font file stream keys and the font name.** `typeFontFileEntries`
+  on the opt-in `pdfFontColorTagging` types a font file stream's own
+  keys (`Length1`–`Length3`, `Subtype`, `Metadata`);
+  `typeFontFile3OpenType` gains `length1`–`length3`; `typeStyleDict` on
+  the opt-in `pdfFontCidTyped` types a CIDFont's `/Style`; the core
+  `typeFont` gains `name` (`/Name`).
+- **Markup and PDF 2.0 annotation entries typed.** The opt-in
+  `pdfAnnotExtended` gains `typeMarkupEntries(dict)`, a companion typer
+  for an annotation of any subtype: the entries PDF 2.0 adds to every
+  annotation (`/ca`, `/BM`, `/Lang`, ISO 32000-2 Table 166) and, on the
+  markup subtypes listed in the new `MARKUP_SUBTYPES` (§12.5.6.2
+  Table 171, plus `Projection`), the markup entries of Table 172 (`/T`,
+  `/Popup`, `/RC`, `/CreationDate`, `/IRT`, `/Subj`, `/RT`, `/IT`,
+  `/ExData`), which the core annotation record keeps untyped in
+  `_extras`. The core record and the existing typers are unchanged.
+- **The annotation appearance dictionaries.** `typeAppearanceDict(dict,
+  kind)` on the opt-in `pdfAnnotExtended` types the appearance
+  characteristics, border style, border effect and icon fit; the line
+  annotation gains `llo` and `co`, the ink annotation `path`, the
+  opt-in `type3DAnnot` `3DU` and `GEO`.
+- **The remaining actions.** The opt-in `typeExtendedAction` types
+  Thread, Sound, Movie, RichMediaExecute, GoToDp and the PDF 1.2
+  SetState and NOP; `typeAdditionalActions(dict, kind)` types the
+  additional-actions dictionaries (catalog, form field, page, screen and
+  widget annotation triggers). The core `typeGoTo` / `typeGoToR` read
+  `SD` (`sd`).
+- **The form field keys.** `typeFieldEntries(dict)` on the opt-in
+  `pdfFormActionsExtended` types a field dictionary's shared keys and its
+  rich text (`DS`, `RV`) beside the core field typers;
+  `typeFieldLock(dict, kind)` on the opt-in `pdfMisc` types a signature
+  field's lock, the FieldMDP transform parameters and the UR transform
+  parameters (`urTransform`).
+- **The signature and DSS dictionaries.** `typeVRIEntry(dict)` on the
+  opt-in `pdfSigPades` types one VRI entry; `typeSeedValue(dict, kind)`
+  and `SEED_VALUE_KEYS` type a signature field's, certificate's, `/MDP`'s
+  and `/TimeStamp`'s seed value (`kind` `field`, `cert`, `mdp`,
+  `timeStamp`): one field per key of its list, named after the key in
+  lower case, present only when the key is; the other keys in `_extras`.
+  Errors: `pdf/extra/pades/seed/not-dict`, `pdf/extra/pades/seed/kind`.
+- **The signature build data.** `typeBuildData(dict, kind)` and
+  `typeBuildProperties(dict)` on the opt-in `pdfSigPades` type a
+  signature's `/Prop_Build` and its `Filter`, `PubSec`, `App` and `SigQ`
+  entries; `typeReferenceArray`'s entries gain `digestValue` and
+  `digestLocation`; the core `typeSignature` gains `type`, `changes`,
+  `r` and `adbeBuild`.
+- **The requirements of ISO 32000-2.** Each entry of the opt-in
+  `typeRequirements` gains `type`, `v`, `penalty`, `digSig` and
+  `encrypt` (present only when the key is); `REQUIREMENT_S_VALUES` holds
+  the 27 requirement types of ISO 32000-2; `typeRequirementHandler(dict)`
+  types a requirement handler (`type`, `s`, `script`).
+- **The structure attributes of ISO 32000-2 typed.** The opt-in
+  `typeStructAttribute` types the owner `NSO` (`ns` and every standard
+  owner's fields), the Layout keys `TBorderStyle`, `TPadding`,
+  `RubyAlign`, `RubyPosition`, `GlyphOrientationVertical`, and the
+  Table's `Short`. The core `typeStructElement` reads `Ref` (`ref`).
+- **The optional content dictionaries.** `typeOptionalContent(dict,
+  kind)` on the opt-in `pdfOptionalContentExtended` types the optional
+  content properties, the membership dictionaries and the usage
+  sub-dictionaries (creator info, language, export, zoom, print, view,
+  user, page element).
+- **The colour and prepress dictionaries.** `typeColorPart(dict, kind)`
+  on the opt-in `pdfColorSpacesExtended` types the DeviceN attributes,
+  mixing hints, process and solidities, the default colour spaces and a
+  dictionary of functions; `typePrepressPart(dict, kind)` on the opt-in
+  `pdfXPrepress` types separations, box colour information and style,
+  trap regions and the output profile reference; the opt-in
+  `typeExtGState` gains `htp` (PDF 1.2's halftone phase).
+- **`typeOpi(dict)`, `typeOpiDict(dict, version)` and `OPI_KEYS` on the
+  opt-in `pdfXPrepress`.** Type an image or form XObject's `/OPI`
+  dictionary (Open Prepress Interface): `version13` / `version20`, each
+  version dictionary with one field per key of its list, named after the
+  key in lower case, present only when the key is; the other keys in
+  `_extras`. A non-dictionary throws `pdf/extra/pdfx/opi/not-dict`, a
+  version other than `'1.3'`, `'2.0'` `pdf/extra/pdfx/opi/version`.
+- **`typeHalftone(value)` and `HALFTONE_KEYS` on the opt-in
+  `pdfContentOpsExtended`.** Types a halftone dictionary or stream (the
+  value an ExtGState's `HT` names) by its `/HalftoneType` (1, 5, 6, 10,
+  16): one field per key of its type's list, named after the key in
+  lower case, present only when the key is; a type 5 halftone's colorant
+  entries in `colorants`; a stream's own Table 5 keys left to
+  `typeStreamEntries`; the other keys in `_extras`. A value that is
+  neither a dictionary nor a stream throws `pdf/extra/halftone/not-dict`,
+  a missing or unknown `/HalftoneType` `pdf/extra/halftone/bad-type`.
+- **`typePattern(value)` and `PATTERN_KEYS` on the opt-in
+  `pdfShadingTyped`.** Types a tiling or shading pattern (by its
+  `/PatternType`; a tiling pattern's own Table 5 keys left to
+  `typeStreamEntries`): one field per key of its list, named after the
+  key in lower case, present only when the key is; the other keys in
+  `_extras`. Errors: `pdf/extra/shading/pattern/not-dict`,
+  `pdf/extra/shading/pattern/bad-type`.
+- **The 3D and RichMedia dictionaries.** `type3DScene(dict, kind)` and
+  `SCENE_KEYS` on the opt-in `pdf3dRichMedia` type the 3D view and scene
+  dictionaries — views (ISO 32000-2's `Snapshot` and `Params` included),
+  cross sections, nodes, render modes, backgrounds, lighting schemes,
+  units, the 3D stream (`stream`; `type3DScene` takes a stream as well,
+  its dictionary read and its own Table 5 keys left to
+  `typeStreamEntries`), animation styles (`animationStyle`), references
+  (`reference`), projections (`projection`), markup external data
+  (`markup`) and measurement references (`measureRef`), `kind` naming
+  which: one field per key of its list, named after the key in lower
+  case, present only when the key is; the other keys in `_extras`. A
+  non-dictionary throws
+  `pdf/extra/3d/scene/not-dict`, an unknown `kind`
+  `pdf/extra/3d/scene/kind`. `type3DMeasure(dict)` and `MEASURE_KEYS`
+  type a 3D measurement dictionary (`RD3`, `AD3`, `PD3`, `LD3`, `3DC`);
+  a non-dictionary throws `pdf/extra/3d/measure/not-dict`, a missing or
+  unknown `/Subtype` `pdf/extra/3d/measure/bad-subtype`.
+  `type3DActivation` reads `Style`, `Window` and `Transparent` (`style`,
+  `window`, `transparent`; `null` when absent).
+  `typeRichMedia(dict, kind)` and `RICH_MEDIA_KEYS` type the RichMedia
+  dictionaries — activation and deactivation, animation, command,
+  configuration, instance, position, presentation, settings, window and
+  its width and height, `kind` naming which; a non-dictionary throws
+  `pdf/extra/rm/dict/not-dict`, an unknown `kind`
+  `pdf/extra/rm/dict/kind`. `typeRichMediaContent` gains `type`, the
+  `/Type` name.
+- **`typeMeasurement(dict, kind)` and `MEASUREMENT_KEYS` on the opt-in
+  `pdfMisc`.** Types the measurement dictionaries — rectilinear and
+  geospatial measures, number formats, viewports, point data, the
+  coordinate systems (`geographicCS`, `projectedCS`) and a geospatial
+  markup's external data (`markupGeo`), `kind` naming which: one field
+  per key of its list, named after the key in lower case, present only
+  when the key is, a reference read as read for every key; the other keys
+  in `_extras`. A non-dictionary throws `pdf/misc/measurement/not-dict`,
+  an unknown `kind` `pdf/misc/measurement/kind`.
+- **`typeXObjectEntries(value, kind)` and `XOBJECT_ENTRY_KEYS` on the
+  opt-in `pdfMisc`.** The companion of the core XObject typers: the keys
+  of an image, image mask, soft mask, form, printer mark, trap network or
+  PostScript XObject they leave out (`Alternates`, `SMaskInData`, `ID`,
+  `StructParent`, `OPI`, `OC`, `AF`, `Measure`, `PtData`, `PieceInfo`,
+  `LastModified`, `XUID`, the trap network and printer mark keys …), one
+  field each, named after the key in lower case; no `_extras`. Errors:
+  `pdf/misc/xobject/not-dict`, `pdf/misc/xobject/kind`.
+- **The keys the core typers read without exposing.**
+  `typeObjectEntries(value, kind)` on the opt-in `pdfMisc` types a
+  thumbnail's, a CMap stream's, an ICC profile's, a page tree node's,
+  a resource dictionary's, an encoding's, the trailer's and an object
+  stream's keys beside the core typers; no core record changes.
+- **The name, extensions and URI dictionaries.** `typeCatalogPart(dict,
+  kind)` on the opt-in `pdfMisc` types the catalog's name dictionary,
+  its extensions and developer extensions dictionaries and its URI
+  dictionary; the core `typeCatalog` gains `extensions`.
+- **The embedded file parameters and the go-to-embedded targets.**
+  `pdfEmbeddedFile` exports `typeEmbeddedFileParams(dict)`, whose record
+  gains `mac`; `typeFilePart(dict, kind)` on the opt-in
+  `pdfEmbeddedFilesPortfolio` types a file specification's `/EF` and
+  `/RF`, the Mac OS file information and the targets; `typeFileSpec`
+  gains `ep` (PDF 2.0's encrypted payload).
+- **The collection folders, colours, split and sub-items.**
+  `typeCollectionPart(dict, kind)` on the opt-in `pdfEmbeddedFilesPortfolio`
+  types them; `typeSchemaField` and `typeSort` read the optional `/Type`
+  (`type`).
+- **The presentation and navigation dictionaries.**
+  `typePresentation(dict, kind)` on the opt-in `pdfMisc` types the
+  floating window parameters, transitions, navigation nodes, beads,
+  threads, slide shows, page labels, view parameters and the outline
+  root; `typeNavigator` on the opt-in `pdfEmbeddedFilesPortfolio`
+  gains `type` and `layout`.
+- **The Web Capture dictionaries.** `typeWebCapture(dict, kind)` on the
+  opt-in `pdfMisc` types the page sets, image sets, commands and command
+  settings.
+- **`typeMediaDict(dict, kind)` and `MEDIA_KINDS` on the opt-in
+  `pdfLegacyDeprecatedAnnots`.** Types the multimedia dictionaries the
+  Screen annotations and rendition actions point at (ISO 32000-2 § 13.2:
+  renditions, media clips and sections, play and screen parameters, media
+  criteria, durations and offsets, permissions, players, player info,
+  software identifiers, minimum screen size) and the movie and
+  movie-activation dictionaries: one field per key of the kind's table,
+  present only when the key is, the other keys in `_extras`. A
+  non-dictionary throws `pdf/legacy-annot/media-not-dict`, an unknown kind
+  `pdf/legacy-annot/media-kind` (`ContractError`). The existing functions
+  are unchanged.
+
+### Changed
+
+- **Typed records stop leaving some keys in `_extras`.** Each of these
+  entries was in the record's `_extras` and is now a typed field, set only
+  when the entry is present; a 1.1.0 consumer that read it from `_extras`
+  finds it in the field named here (the records are a read model, nothing
+  is written back from them):
+  - `typeCatalog`: `Extensions` is `extensions`;
+  - `typeStructElement`: `Ref` is `ref`;
+  - `typeFileSpec`: `EP` is `ep`;
+  - the embedded file parameters (`params` of `typeEmbeddedFile`):
+    `Mac` is `mac`;
+  - the ink annotation: `Path` is `path`; the line annotation: `LLO` is
+    `llo` and `CO` is `co`; the opt-in `type3DAnnot`: `3DU` and `GEO`
+    (named as the keys);
+  - the opt-in `typeExtGState`: `HTP` is `htp`;
+  - the opt-in `typeFontFile3OpenType`: `Length1` to `Length3` are
+    `length1` to `length3`;
+  - the opt-in `typeSchemaField` and `typeSort`: `Type` is `type`;
+  - the opt-in `typeStructAttribute`: the Table's `Short` and the print
+    field's `Checked` are typed, and an `NSO` owner (read as a vendor
+    owner, its keys in `_extras`) is typed with `ATTRIBUTE_OWNERS` holding
+    it;
+  - the opt-in `typeLegal`: `HideAnnotationActions` and
+    `GoToRemoteActions`, when integers, join `flags`; `OptionalContent`,
+    when a boolean, is `optionalContent` (a value of another type stays in
+    `_extras`).
+- **`typeStructAttribute` reads `Width`, `Height` and `LineHeight` given
+  as a name.** The Layout attributes `width`, `height` and `lineHeight`
+  were a number or `null`; a name is now returned by its value.
+- **`typeRequirements` marks all 27 requirement types of ISO 32000-2 as
+  `standard`.** `standard` was `true` for `EnableJavaScripts` only.
+- **`typeLaunch` keeps `Mac` and `Unix` as read, whatever their type.**
+  A non-dictionary value was dropped; a dictionary still counts as a
+  target, a value of another type does not.
+- **`pdfDocument` declares more dependencies.** The reader now composes
+  `pdfSecurity`, `pdfStandardV4`, `pdfStandardV5` and `pdfStandardV6`, so
+  a registry that composes `pdfDocument` itself also resolves fw's `aes`,
+  `cbc`, `sha256`, `sha384`, `sha512`, `bitArray` and `pdfAesGcm`.
+
+### Fixed
+
+- **Two classic cross-reference table shapes are read.** A subsection
+  header ending with spaces or tabs before its EOL, and entries of 19
+  bytes (a one-byte EOL), threw `pdf/xref/bad-digit`; both are now read,
+  each recorded once as a `pdf/document/xref-tolerated` loss. Any other
+  entry keeps the 20-byte stride, and a malformed field still throws.
+- **A page-tree `/Kids` given by reference.** `walkPageTree` refused
+  a `/Pages` node whose `/Kids` is an indirect reference to an array
+  (`pdf/pages/missing-kids`); any value may be indirect (ISO 32000-2
+  § 7.3.10), so the reference is now resolved first. A reference to
+  anything but an array still throws.
+- **`/Encrypt null` is a plaintext document.** `typeTrailer` typed a
+  trailer `/Encrypt null` as an encryption entry, so `readDocument`
+  refused the file `pdf/document/encrypted` (and, given a password,
+  built a reference with no number). A null value is an absent entry
+  (ISO 32000-2 § 7.3.9): the trailer now has no `encrypt` and the file
+  reads.
+- **A signature's `/Contents` is written clear.** `writeEncryptedDocument`
+  encrypted the `/Contents` string of a `/Type /Sig` or `/DocTimeStamp`
+  dictionary, which ISO 32000-2 § 7.6.2 leaves clear (and the decrypting
+  read leaves as stored); it is now written as given.
+- **`encryptMetadata: false` leaves the metadata stream clear.**
+  `writeEncryptedDocument` encrypted the `/Type /Metadata` stream even
+  when the flag said not to (ISO 32000-2 Table 20); it is now written as
+  given.
+- **`typeDPart` reads the pages of a document part.** `/Start` and
+  `/End` are references to the part's first and last page objects
+  (ISO 32000-2 Table 408); the opt-in typer read them as integers only,
+  so a conforming file gave `start` and `end` as `null`. A reference is
+  now `{ num, gen }`; an integer is kept as before.
+
 ## [1.1.0] - 2026-10-21
 
 ### Added

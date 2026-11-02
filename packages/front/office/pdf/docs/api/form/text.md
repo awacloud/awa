@@ -42,6 +42,10 @@ const tf = runtime.resolve('pdfTextField');
     da:     Uint8Array | null,
     q:      number,                // 0=left, 1=center, 2=right
     t:      Uint8Array | null,
+    // each only when present (Table 226, Table 230)
+    parent?: PdfObject, kids?: PdfObject, aa?: PdfObject,
+    tu?: Uint8Array, tm?: Uint8Array,
+    rv?: Uint8Array | PdfObject,   // /RV: the string's bytes, or the stream as read
     raw:    object,
     _extras:{ [key]: PdfObject }
 }

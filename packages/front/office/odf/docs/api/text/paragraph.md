@@ -100,6 +100,19 @@ provides the sink; without one it emits nothing). `textOf` reads a frame run
 as it reads the raw frame it replaces: no text at paragraph or link level,
 its character data inside a span.
 
+### Element runs (opt-in)
+
+When the read `ctx` carries `elementsInRuns` — `odt.read(bytes, {
+elementsInRuns: true })` — every element of a paragraph, heading or link
+body that no run kind covers (a comment and its end, a bookmark, a field, a
+change mark, a soft page break, a frame the `ctx` does not type) becomes a
+raw `{ type: 'element', name, attrs, children }` run at its place, as a span
+body keeps it, instead of an `_extras.children` entry. On write the run is
+written at its position. `textOf` gives such a run no text outside a span,
+as the `_extras` entry it replaces gave none, so derived views are the same
+either way. Off by default (`elementsInRuns: false`): the default read keeps
+these elements in `_extras.children`, re-emitted after the runs.
+
 ### Emphasis flags
 
 `bold` / `italic` / `strike` / `monospace` are booleans, meaningful on `span`

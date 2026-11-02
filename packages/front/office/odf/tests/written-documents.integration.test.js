@@ -47,11 +47,11 @@ function firstEntry(bytes) {
 const extrasNames = (node) => ((node._extras && node._extras.children) || []).map((c) => c.name);
 
 describe('written documents for the output-validity measure', () => {
-    test('11 documents, unique kebab-case ids prefixed by their extension', () => {
-        expect(docs).toHaveLength(11);
-        expect(new Set(docs.map((d) => d.id)).size).toBe(11);
+    test('12 documents, unique kebab-case ids prefixed by their extension', () => {
+        expect(docs).toHaveLength(12);
+        expect(new Set(docs.map((d) => d.id)).size).toBe(12);
         expect(docs.filter((d) => d.ext === 'odt')).toHaveLength(6);
-        expect(docs.filter((d) => d.ext === 'ods')).toHaveLength(3);
+        expect(docs.filter((d) => d.ext === 'ods')).toHaveLength(4);
         expect(docs.filter((d) => d.ext === 'odp')).toHaveLength(2);
         for (const d of docs) {
             expect(d.id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)+$/);
@@ -163,6 +163,17 @@ describe('written documents for the output-validity measure', () => {
         expect(rt.resolve('numberFormats').parse({ children: back.styles.styles }).formats.map((f) => f.kind))
             .toEqual(['date', 'percentage']);
         expect(read('ods-from-arrays').spreadsheet.tables[0].rows).toHaveLength(3);
+    });
+
+    test('ods: an empty sheet reads back as one row of one empty cell; a row without cells as one empty cell', () => {
+        const [empty, gap] = read('ods-empty-sheet-and-row').spreadsheet.tables;
+        expect([empty.name, gap.name]).toEqual(['Empty', 'Gap']);
+        expect(empty.rows).toHaveLength(1);
+        expect(empty.rows[0].cells).toHaveLength(1);
+        expect(empty.rows[0].cells[0].children).toEqual([]);
+        expect(gap.rows).toHaveLength(3);
+        expect(gap.rows[1].cells).toHaveLength(1);
+        expect(gap.rows[1].cells[0].children).toEqual([]);
     });
 
     test('odp: text slides, notes and the picture, shapes and table frame', () => {

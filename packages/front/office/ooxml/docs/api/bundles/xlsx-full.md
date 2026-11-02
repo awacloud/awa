@@ -9,13 +9,17 @@ status: complete
 
 # xlsxFullBundle
 
-> Pre-wired bundle: `xlsx-large` + remaining xlsx-touching extras (every SpreadsheetML schema element typed or preserved).
+> Pre-wired bundle: `xlsx-large` + further toolkits; none of them types a read.
 
 **Module** `xlsxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/xlsx-full.js` | **Deps** `xlsxLargeBundle` + 8 extras | **Worker-safe** yes
 
 ## Included
 
-Everything in [`xlsx-large`](./xlsx-large.md), plus:
+Everything in [`xlsx-large`](./xlsx-large.md) — its extras that type a read and its toolkits — plus:
+
+None of the extras below types a read.
+
+**Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
 
 - [`smlFormControls`](../extra/sml-form-controls.md) — ActiveX form controls
 - [`dmlShapesAdvanced`](../extra/dml-shapes-advanced.md) — custom geometry

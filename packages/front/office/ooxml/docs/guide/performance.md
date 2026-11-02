@@ -78,7 +78,7 @@ const doc = word.read(bytes, { maxUncompressed: 512 * 1024 * 1024 });
 ```js
 const opc = fw.runtime.resolve('opcPackage');
 const pkg = opc.read(bytes, {
-    maxParts: 2048,                // raise from default 1024
+    maxParts: 16384,               // raise from default 8192
     maxUncompressed: 512 * 1024 * 1024, // 512 MiB
     maxRatio: 100                  // tighter than the 200 default
 });

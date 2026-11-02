@@ -3,7 +3,8 @@
 The SIL OFL companion of `@awacloud/oconv` — vendored Liberation 2.1.5
 Sans/Serif/Mono font faces (12 TrueType programs) registered as an
 `@awacloud/fw` descriptor so `oconv`'s `md → pdf` route embeds real faces by
-default instead of falling back to the PDF Standard 14. See the
+default instead of falling back to the PDF Standard 14, and Carlito and
+Caladea (8 more), the metric twins of Calibri and Cambria, served by URL. See the
 [package README](../README.md) for the high-level overview, installation,
 coverage table and licence.
 
@@ -17,8 +18,8 @@ coverage table and licence.
 ## API reference
 
 Per-module reference, mirroring `src/`: see the [API index](./api/README.md)
-— one page per public member (3 pages, `createOconvDefaultFaces` /
-`loadDefaultFaces` / `registerDefaultFaces`).
+— one page per public member (4 pages, `createOconvDefaultFaces` /
+`loadDefaultFaces` / `registerDefaultFaces` / `faceUrls`).
 
 ## Project documents
 

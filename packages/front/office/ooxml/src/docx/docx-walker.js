@@ -6,7 +6,8 @@
 /**
  * @fileoverview Extension walker for `docx` — implements the `.use(...)`
  * registry, the `hydrate*` / `dehydrate*` hook dispatcher, and the tree
- * traversal that visits run/paragraph/table/row/cell properties.
+ * traversal that visits run/paragraph/table/row/cell properties and
+ * drawings.
  *
  * Exposed as a separate module so the orchestrator stays focused on
  * package layout / parsing / writing.
@@ -29,6 +30,7 @@ export const docxWalker = {
             'hydrateTcPr', 'dehydrateTcPr',
             'hydrateTable', 'dehydrateTable',
             'hydrateRow', 'dehydrateRow',
+            'hydrateDrawing', 'dehydrateDrawing',
             'hydrateSettings', 'dehydrateSettings'
         ];
 
@@ -81,6 +83,10 @@ export const docxWalker = {
                         } else if (node[i] && node[i].type === 'row') {
                             const r = applyHook(phase === 'hydrate' ? 'hydrateRow' : 'dehydrateRow', node[i]);
                             if (r) node[i] = r;
+                        } else if (node[i] && node[i].type === 'drawing') {
+                            // A run's drawing, its kept source the hooks' input.
+                            const r = applyHook(phase === 'hydrate' ? 'hydrateDrawing' : 'dehydrateDrawing', node[i]);
+                            if (r) node[i] = r;
                         }
                     }
                     return;
@@ -105,6 +111,10 @@ export const docxWalker = {
                 if (result.document) walkProperties(result.document, phase);
                 for (const k of Object.keys(result.headers || {})) walkProperties(result.headers[k], phase);
                 for (const k of Object.keys(result.footers || {})) walkProperties(result.footers[k], phase);
+                // The notes' and comments' bodies, typed as the body is.
+                for (const item of (result.footnotes && result.footnotes.notes) || []) if (item) walkProperties(item.body, phase);
+                for (const item of (result.endnotes && result.endnotes.notes) || []) if (item) walkProperties(item.body, phase);
+                for (const item of (result.comments && result.comments.comments) || []) if (item) walkProperties(item.body, phase);
                 if (result.styles && Array.isArray(result.styles.styles)) {
                     const hrName = phase === 'hydrate' ? 'hydrateRunProperties' : 'dehydrateRunProperties';
                     const hpName = phase === 'hydrate' ? 'hydrateParagraphProperties' : 'dehydrateParagraphProperties';

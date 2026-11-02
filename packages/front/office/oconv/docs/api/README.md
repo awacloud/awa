@@ -44,6 +44,7 @@ Internal helpers (`write/anchors.js`, `write/image-header.js`,
 | [`read/odp-to-ir`](./read/odp-to-ir.md) | `oconvOdpToIr` | `src/read/odp-to-ir.js` | `.odp` → IR, tier 1 — one heading + N paragraphs per slide, notes reachable. |
 | [`read/pdf-to-ir`](./read/pdf-to-ir.md) | `oconvPdfToIr` | `src/read/pdf-to-ir.js` | `.pdf` → IR, tier 1, text-first — tagged fast path + untagged fall-back. |
 | [`read/pdf/font-decoder`](./read/pdf/font-decoder.md) | `oconvPdfFontDecoder` | `src/read/pdf/font-decoder.js` | Per-font character decoder for the tier-1 pdf reader. |
+| [`read/pdf/image-png`](./read/pdf/image-png.md) | `oconvPdfImagePng` | `src/read/pdf/image-png.js` | A raw-pixel pdf picture written as a PNG, for the opt-in pdf pictures. |
 | [`read/pdf/text-extract`](./read/pdf/text-extract.md) | `oconvPdfTextExtract` | `src/read/pdf/text-extract.js` | Page-level positioned-text extraction for the tier-1 pdf reader. |
 | [`read/pdf/struct`](./read/pdf/struct.md) | `oconvPdfStruct` | `src/read/pdf/struct.js` | Tagged-PDF structure reader — the tier-1 pdf reader's fast-path detector. |
 | [`read/md-to-ir`](./read/md-to-ir.md) | `oconvMdToIr` | `src/read/md-to-ir.js` | Markdown text → IR — the `fromMd`/`convert` read side. |

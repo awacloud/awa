@@ -140,6 +140,14 @@ import {
 // (`"@awacloud/md/": ".../md/src/"`) maps it literally, while the
 // extension-less form 404s there and unlinks the whole oconv graph.
 import { mdFrontmatter } from '@awacloud/md/extra/frontmatter.js';
+// `pdfLegacyRc4Read` likewise lives only at pdf's documented `./extra/*`
+// sub-path (pdf's `extras`, not its `modules`); the facade passes it with a
+// password so RC4 files open. Read-only: PDF 2.0 forbids RC4 on
+// write.
+import { pdfLegacyRc4Read } from '@awacloud/pdf/extra/legacy-rc4-read.js';
+// `pdfXmpExtended` likewise (pdf's `extras`): the facade reads a pdf's XMP
+// `dc:title` with it for the front matter's `title`.
+import { pdfXmpExtended } from '@awacloud/pdf/extra/xmp-extended.js';
 
 import { oconvIr } from './ir/ir.js';
 import { oconvDocxToIr } from './read/docx-to-ir.js';
@@ -149,6 +157,7 @@ import { oconvOdsToIr } from './read/ods-to-ir.js';
 import { oconvPptxToIr } from './read/pptx-to-ir.js';
 import { oconvOdpToIr } from './read/odp-to-ir.js';
 import { oconvPdfFontDecoder } from './read/pdf/font-decoder.js';
+import { oconvPdfImagePng } from './read/pdf/image-png.js';
 import { oconvPdfTextExtract } from './read/pdf/text-extract.js';
 import { oconvPdfStruct } from './read/pdf/struct.js';
 import { oconvPdfToIr } from './read/pdf-to-ir.js';
@@ -235,7 +244,9 @@ export const pkg_require = [
     pdfBuilder, pdfFontEmbed,
     cmapToUnicode, encodingLookup, encodingAgl,
     standard14Lookup, fonts,
-    mdFrontmatter
+    mdFrontmatter,
+    pdfLegacyRc4Read,
+    pdfXmpExtended
 ];
 
 /**
@@ -265,6 +276,8 @@ export const modules = [
     ...mdExtras,
     ...pdfPkgRequire,
     ...pdfModules,
+    pdfLegacyRc4Read,
+    pdfXmpExtended,
     oconvIr,
     oconvDocxToIr,
     oconvOdtToIr,
@@ -273,6 +286,7 @@ export const modules = [
     oconvPptxToIr,
     oconvOdpToIr,
     oconvPdfFontDecoder,
+    oconvPdfImagePng,
     oconvPdfTextExtract,
     oconvPdfStruct,
     oconvPdfToIr,

@@ -32,6 +32,6 @@ describe('dsigSignatures', () => {
         ext.hydrateMetadata(m);
         expect(m.signatures).toBeDefined();
         const out = ext.dehydrateMetadata(m);
-        expect(out._extras[0].name).toBe('dsig:document-signatures');
+        expect(out._extras.children[0].name).toBe('dsig:document-signatures');
     });
 });

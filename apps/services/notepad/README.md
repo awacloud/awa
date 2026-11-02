@@ -77,9 +77,11 @@ Development: serve the repository root and open `/apps/services/notepad/public/`
 - Offline once visited, and updates that wait for you: a new release
   installs beside the running one; "A new version is ready" offers **Update
   now** (the unsaved text comes back as a draft after the reload) or
-  **Later**. Same worker design as the viewer's (`public/sw.js`: a
-  versioned, cache-first release with the licence texts; network-first from
-  the sources). Host `sw.js` uncached at a stable URL.
+  **Later**. Same worker design as the viewer's (`public/sw.js`, a script
+  over fw's `precache`: a versioned, cache-first release with the licence
+  texts; network-first from the sources; the page side, `src/core/pwa.js`, is
+  a thin adapter over fw's `installPrompt` and `swUpdate`). Host `sw.js`
+  uncached at a stable URL.
 - **Help** at the end of the toolbar (when the host passes `onHelp`) shows
   the help over the editor, in a modal panel closed by its button or Escape
   (`src/core/help.js`, the viewer's module): open, save and rename, find
@@ -96,14 +98,32 @@ Open Graph and Twitter tags (`og:image`: `screenshots/share.png`,
 (free, any browser) and a `<noscript>` line; the canonical link is added
 at build from `og:url` (`tools/build-csp.js`).
 
+## Icons on Windows
+
+Chrome on Windows does not use a site's `.ico` for an installed app: at
+install it writes its own `.ico` into the profile
+(`…\User Data\<profile>\Web Applications\…`) from the manifest's icons,
+and the shortcut runs `chrome_proxy.exe` with that icon. So the manifest
+lists the exact Windows sizes — 16, 32, 48 and 256 px PNGs beside 192 and
+512 — and Chrome no longer downsamples the 192 px tile for them;
+`public/favicon.ico` (the same four tiles, PNG images in an ICO, drawn by
+`bun run icons`) serves the tab, the bookmark and the shortcut fallbacks.
+Whether this ends the reported loss of an installed app's icon is **not
+proved**. When it recurs, look for Chrome's `.ico` in that folder: present,
+the Windows icon cache lost it; absent, Chrome removed it. Either way,
+`chrome://apps` → right-click AWA Notepad → **Create shortcuts** repairs it.
+
 ## fw modules used
 
 `i18n`, `a11y` (announcements), `keybindings`, `fsAccess` (pickers, writes),
-`download`, `focus` (dialog focus return), `utf8` + `ui8` (UTF-8 bytes),
-`str.escapeRegExp` (literal search), `date` (F5 stamp), `storage` (prefs),
-`indexedDB` (recovery journal), `serviceWorker`, `cache`
-(worker), sanity `base` (standalone page); the build tools hash with
-`webcryptoDigest` + `b64` / `hex` and draw the PNG icons with `zlib` + `crc32`.
+`fileIntake` (the fallback picker and the file drop), `download`, `focus`
+(dialog focus return), `utf8` + `ui8` (UTF-8 bytes), `str.escapeRegExp`
+(literal search), `date` (F5 stamp), `storage` (prefs), `indexedDB`
+(recovery journal), `serviceWorker`, `installPrompt` (install button, files
+the system opens the app with), `swUpdate` (waiting-release update flow),
+`cache` + `precache` (worker), sanity `base` (standalone page); the build
+tools hash with `webcryptoDigest` + `b64` / `hex` and draw the PNG icons with
+`zlib` + `crc32`.
 What fw does not have stays small and local: strict UTF-8 detection, UTF-16
 and Windows-1252 codecs, line-ending handling.
 
@@ -112,8 +132,8 @@ and Windows-1252 codecs, line-ending handling.
 ```sh
 bun test .            # unit + Happy-DOM tests
 bun run lint
-bun run build         # dist/: bundle, CSP, offline service worker (versioned release)
-bun run icons         # redraw public/icons/*.png (any, maskable, Apple touch) from icon.svg's shapes
+bun run build         # dist/: bundle, CSP, offline service worker (versioned release), then the .gz twins (gzip-dist, last)
+bun run icons         # redraw public/icons/*.png (any, maskable, Apple touch) and public/favicon.ico from icon.svg's shapes
 ```
 
 The build and the test suite run from the full awa monorepo toolchain: they

@@ -32,8 +32,8 @@
  * | Field | Source element |
  * |-------|---------------|
  * | `align` | `<w:jc w:val=…/>` |
- * | `indent` | `<w:ind w:left=… w:right=… w:firstLine=… w:hanging=…/>` |
- * | `spacing` | `<w:spacing w:before=… w:after=… w:line=…/>` |
+ * | `indent` | `<w:ind w:left=… w:right=… w:firstLine=… w:hanging=…/>`; other attributes verbatim in `indent.extraAttrs` |
+ * | `spacing` | `<w:spacing w:before=… w:after=… w:line=… w:lineRule=…/>`; other attributes verbatim in `spacing.extraAttrs` |
  * | `pStyle` | `<w:pStyle w:val=…/>` |
  * | `numPr` | `<w:numPr><w:ilvl/><w:numId/></w:numPr>` |
  *
@@ -212,6 +212,21 @@ export const docxProperties = {
             return Object.keys(attrs).length ? xml.el('w:rFonts', attrs) : null;
         }
 
+        // The theme link of a colour (w:color, w:u): ST_ThemeColor and
+        // its tint and shade, kept beside the colour value.
+        const THEME_LINK = [['themeColor', 'w:themeColor'], ['themeTint', 'w:themeTint'], ['themeShade', 'w:themeShade']];
+
+        function themeLinkOf(el) {
+            const out = {};
+            for (const [k, a] of THEME_LINK) if (el.attrs[a] != null) out[k] = el.attrs[a];
+            return Object.keys(out).length ? out : undefined;
+        }
+
+        function withThemeLink(el, theme) {
+            if (theme) for (const [k, a] of THEME_LINK) if (theme[k] != null) el.attrs[a] = String(theme[k]);
+            return el;
+        }
+
         function parseRunProperties(rPrEl) {
             if (!rPrEl) return undefined;
             const out = {};
@@ -222,8 +237,19 @@ export const docxProperties = {
                     case 'w:b':         out.bold = readToggle(c); break;
                     case 'w:i':         out.italic = readToggle(c); break;
                     case 'w:strike':    out.strike = readToggle(c); break;
-                    case 'w:u':         out.underline = valOf(c) || 'single'; break;
-                    case 'w:color':     out.color = valOf(c); break;
+                    case 'w:u': {
+                        out.underline = valOf(c) || 'single';
+                        if (c.attrs['w:color'] != null) out.underlineColor = c.attrs['w:color'];
+                        const theme = themeLinkOf(c);
+                        if (theme) out.underlineTheme = theme;
+                        break;
+                    }
+                    case 'w:color': {
+                        out.color = valOf(c);
+                        const theme = themeLinkOf(c);
+                        if (theme) out.colorTheme = theme;
+                        break;
+                    }
                     case 'w:sz':        out.size = Number(valOf(c)); break;
                     case 'w:rFonts':    out.font = c.attrs['w:ascii']
                                                 || c.attrs['w:hAnsi']
@@ -236,7 +262,9 @@ export const docxProperties = {
                         if (!RPR_KNOWN.has(c.name)) extras.push(c);
                 }
             }
-            if (extras.length) out._extras = extras;
+            // Preserved children in the schema order the writer emits (as
+            // for pPr and tblPr): a read of a written bag reads as its source.
+            if (extras.length) out._extras = orderBySequence(extras, RPR_SEQ);
             return out;
         }
 
@@ -257,9 +285,14 @@ export const docxProperties = {
             if (italic) children.push(italic);
             const strike = writeToggle('w:strike', rPr.strike);
             if (strike) children.push(strike);
-            if (rPr.color != null)     children.push(elVal('w:color', rPr.color));
+            // A theme link alone (no w:val) is written back as it was read.
+            if (rPr.color != null || rPr.colorTheme) children.push(withThemeLink(rPr.color != null ? elVal('w:color', rPr.color) : xml.el('w:color', {}), rPr.colorTheme));
             if (rPr.size != null)      children.push(elVal('w:sz', rPr.size));
-            if (rPr.underline != null) children.push(elVal('w:u', rPr.underline));
+            if (rPr.underline != null) {
+                const u = elVal('w:u', rPr.underline);
+                if (rPr.underlineColor != null) u.attrs['w:color'] = String(rPr.underlineColor);
+                children.push(withThemeLink(u, rPr.underlineTheme));
+            }
             if (rPr.highlight != null) children.push(elVal('w:highlight', rPr.highlight));
             if (rPr.vertAlign != null) children.push(elVal('w:vertAlign', rPr.vertAlign));
             if (rPr._extras) for (const ex of rPr._extras) children.push(ex);
@@ -271,6 +304,33 @@ export const docxProperties = {
         const PPR_KNOWN = new Set([
             'w:jc', 'w:ind', 'w:spacing', 'w:pStyle', 'w:numPr', 'w:rPr'
         ]);
+
+        // `w:spacing` and `w:ind`: the attributes typed above; every other
+        // one (lineRule aside: typed) rides verbatim in `extraAttrs`, source
+        // order, and is written back after the typed ones, which it never
+        // overrides. A typed attribute whose value the parse skipped (an
+        // empty string) is kept the same way.
+        const SPACING_TYPED = new Set(['w:before', 'w:after', 'w:line', 'w:lineRule']);
+        const IND_TYPED = new Set(['w:left', 'w:right', 'w:firstLine', 'w:hanging']);
+
+        function keepExtraAttrs(el, out, typed) {
+            const extraAttrs = {};
+            let any = false;
+            for (const k of Object.keys(el.attrs)) {
+                if (typed.has(k) && el.attrs[k]) continue;
+                if (k === 'xmlns' || k.startsWith('xmlns:')) continue;
+                extraAttrs[k] = el.attrs[k];
+                any = true;
+            }
+            if (any) out.extraAttrs = extraAttrs;
+        }
+
+        function writeExtraAttrs(a, extraAttrs) {
+            if (!extraAttrs) return;
+            for (const k of Object.keys(extraAttrs)) {
+                if (!(k in a) && extraAttrs[k] !== undefined) a[k] = String(extraAttrs[k]);
+            }
+        }
 
         function parseParagraphProperties(pPrEl) {
             if (!pPrEl) return undefined;
@@ -287,6 +347,7 @@ export const docxProperties = {
                         if (c.attrs['w:right'])     ind.right = Number(c.attrs['w:right']);
                         if (c.attrs['w:firstLine']) ind.firstLine = Number(c.attrs['w:firstLine']);
                         if (c.attrs['w:hanging'])   ind.hanging = Number(c.attrs['w:hanging']);
+                        keepExtraAttrs(c, ind, IND_TYPED);
                         if (Object.keys(ind).length) out.indent = ind;
                         break;
                     }
@@ -295,6 +356,8 @@ export const docxProperties = {
                         if (c.attrs['w:before']) sp.before = Number(c.attrs['w:before']);
                         if (c.attrs['w:after'])  sp.after = Number(c.attrs['w:after']);
                         if (c.attrs['w:line'])   sp.line = Number(c.attrs['w:line']);
+                        if (c.attrs['w:lineRule']) sp.lineRule = c.attrs['w:lineRule'];
+                        keepExtraAttrs(c, sp, SPACING_TYPED);
                         if (Object.keys(sp).length) out.spacing = sp;
                         break;
                     }
@@ -316,7 +379,7 @@ export const docxProperties = {
                         if (!PPR_KNOWN.has(c.name)) extras.push(c);
                 }
             }
-            if (extras.length) out._extras = extras;
+            if (extras.length) out._extras = orderBySequence(extras, PPR_SEQ);
             return out;
         }
 
@@ -335,6 +398,8 @@ export const docxProperties = {
                 if (pPr.spacing.before != null) a['w:before'] = String(pPr.spacing.before);
                 if (pPr.spacing.after != null)  a['w:after']  = String(pPr.spacing.after);
                 if (pPr.spacing.line != null)   a['w:line']   = String(pPr.spacing.line);
+                if (pPr.spacing.lineRule != null) a['w:lineRule'] = String(pPr.spacing.lineRule);
+                writeExtraAttrs(a, pPr.spacing.extraAttrs);
                 children.push(xml.el('w:spacing', a));
             }
             if (pPr.indent) {
@@ -343,12 +408,14 @@ export const docxProperties = {
                 if (pPr.indent.right != null)     a['w:right']     = String(pPr.indent.right);
                 if (pPr.indent.firstLine != null) a['w:firstLine'] = String(pPr.indent.firstLine);
                 if (pPr.indent.hanging != null)   a['w:hanging']   = String(pPr.indent.hanging);
+                writeExtraAttrs(a, pPr.indent.extraAttrs);
                 children.push(xml.el('w:ind', a));
             }
             if (pPr.align != null) children.push(elVal('w:jc', pPr.align));
             if (pPr.rPr) {
-                const rPrEl = renderRunProperties(pPr.rPr);
-                if (rPrEl) children.push(rPrEl);
+                // The paragraph mark's properties: a read `<w:rPr/>` is
+                // an empty object, written back empty.
+                children.push(renderRunProperties(pPr.rPr) || xml.el('w:rPr', {}, []));
             }
             if (pPr._extras) for (const ex of pPr._extras) children.push(ex);
             if (!children.length) return null;
@@ -477,13 +544,17 @@ export const docxProperties = {
                 switch (c.name) {
                     case 'w:tblStyle': out.style = valOf(c); break;
                     case 'w:tblW': out.width = parseWidth(c); break;
-                    case 'w:tblBorders': out.borders = parseTableBorders(c); break;
+                    // An empty one has nothing to type: kept verbatim.
+                    case 'w:tblBorders':
+                        if ((c.children || []).some(k => k.type === 'element')) out.borders = parseTableBorders(c);
+                        else extras.push(c);
+                        break;
                     case 'w:tblCellMar': out.cellMargins = parseCellMargins(c); break;
                     default: extras.push(c);
                 }
             }
             if (!any) return undefined;
-            if (extras.length) out._extras = extras;
+            if (extras.length) out._extras = orderBySequence(extras, TBLPR_SEQ);
             return out;
         }
 

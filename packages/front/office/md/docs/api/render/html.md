@@ -60,7 +60,7 @@ const { renderHtml } = renderHtmlMod.factory(mdErrors.factory());
 | `softbreak` | `'\n'` | Soft-line-break replacement (`' '`, `'<br />\n'`) |
 | `disallowedRawHtml` | `true` | Filters the GFM disallowed raw HTML tags (`<script>`, `<title>`, …); `false` keeps them |
 
-`sanitize` / `sanitizeOpts` are not options of this module: the [`md`](../md.md) facade applies them after calling `renderHtml`, through [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
+`sanitize` / `sanitizeOpts` are not options of this module: the [`md`](../md.md) facade applies them after calling `renderHtml`, through [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
 
 ## Examples
 
@@ -103,5 +103,5 @@ md.renderHtml('a\nb', { softbreak: '<br />\n' });
 
 - [`render/markdown`](./markdown.md) — roundtrip
 - [`render/xml`](./xml.md) — stable XML AST
-- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — post-render XSS pipe
+- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — post-render XSS pipe
 - [Read+write](../../guide/read-write.md)

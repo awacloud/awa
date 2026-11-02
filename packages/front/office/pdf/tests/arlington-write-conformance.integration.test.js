@@ -362,3 +362,24 @@ describe('the measure over the package\'s writers', () => {
         expect(r.unevaluated.length).toBe(23);
     });
 });
+
+describe('the sibling measure: the Standard 14 faces through the opt-in metrics', () => {
+    const rt = pdfRuntime();
+    const docs = pdfDocuments(rt, { metrics: true });
+    const r = checkDocuments(loadModel(TSV), docs, rt.resolve('pdf'));
+
+    test('the same seven documents, the two Standard 14 ones with the metrics', () => {
+        const plain = pdfDocuments(rt);
+        expect(docs.map((d) => d.id)).toEqual(plain.map((d) => d.id));
+        const changed = docs.filter((d, i) => Array.from(d.bytes).join() !== Array.from(plain[i].bytes).join()).map((d) => d.id);
+        expect(changed).toEqual(['builder-standard-14', 'write-standard-14']);
+    });
+
+    test('every case passes', () => {
+        expect(failures(r)).toEqual([]);
+        expect(r.cases.filter((c) => c.ok).length).toBe(387);
+        expect(r.cases.length).toBe(387);
+        expect(r.skipped.length).toBe(33);
+        expect(r.unevaluated.length).toBe(27);
+    });
+});

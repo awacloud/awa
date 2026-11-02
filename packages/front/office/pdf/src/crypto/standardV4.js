@@ -241,12 +241,21 @@ export const pdfStandardV4 = {
 
         // ---- AES-128-CBC primitives ----
 
-        function aesCbcDecrypt(key, iv, ciphertext) {
+        /**
+         * The AES of a read call: fw's T-table `aes.ttable` under the
+         * opt-in `opts.fastCipher === true` (fast, NOT constant-time: for a
+         * trusted single-user host), else the constant-time `aes`.
+         */
+        function aesOf(opts) {
+            return opts && opts.fastCipher === true && aes.ttable ? aes.ttable : aes;
+        }
+
+        function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
             if (ciphertext.length % 16 !== 0) {
                 throw new EncryptionError('pdf/crypto/v4/bad-ciphertext-len',
                     'AES-CBC ciphertext length must be a multiple of 16');
             }
-            const cipher = aes.fn(bytesToWords(key, 0, key.length), true);
+            const cipher = A.fn(bytesToWords(key, 0, key.length), true);
             if (cipher === false) {
                 throw new EncryptionError('pdf/crypto/v4/aes-schedule-failed',
                     'AES-128 key schedule failed');
@@ -305,7 +314,9 @@ export const pdfStandardV4 = {
         // ---- READ side ----
 
         // typedEncrypt minimal shape: { O, U, P, idFirst, encryptMetadata, method }
-        function tryPassword(typedEncrypt, password, isOwner) {
+        // `_opts` (the read's `fastCipher`) changes nothing here: the V4
+        // key check is MD5 and RC4, no AES.
+        function tryPassword(typedEncrypt, password, isOwner, _opts) {
             const O = typedEncrypt.O, U = typedEncrypt.U;
             const idFirst = typedEncrypt.idFirst;
             const P = typedEncrypt.P | 0;
@@ -342,7 +353,7 @@ export const pdfStandardV4 = {
             return ok ? { fileEncryptionKey: fk } : { fileEncryptionKey: null };
         }
 
-        function decryptString(typedEncrypt, fek, objNum, gen, ciphertext) {
+        function decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
             const method = typedEncrypt && typedEncrypt.method;
             if (method === 'AESV2') {
                 if (ciphertext.length < 16) {
@@ -353,7 +364,7 @@ export const pdfStandardV4 = {
                 const iv = ciphertext.subarray(0, 16);
                 const body = ciphertext.subarray(16);
                 if (body.length === 0) return body;
-                const pt = aesCbcDecrypt(key, iv, body);
+                const pt = aesCbcDecrypt(key, iv, body, aesOf(opts));
                 return stripPkcs7(pt);
             }
             if (method === 'V2' || method === 'RC4') {
@@ -364,15 +375,15 @@ export const pdfStandardV4 = {
                 'V4 method must be AESV2 or V2',
                 { context: { method } });
         }
-        function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext) {
-            return decryptString(typedEncrypt, fek, objNum, gen, ciphertext);
+        function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+            return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
         }
         // Embedded file stream (ISO 32000-1 §7.6.5): same per-object key
         // derivation as a regular stream, but the dispatched method comes
         // from /EFF. Callers pass a typed view whose `.method` is the
         // resolved `effMethod`.
-        function decryptEmbeddedFile(typedEncrypt, fek, objNum, gen, ciphertext) {
-            return decryptString(typedEncrypt, fek, objNum, gen, ciphertext);
+        function decryptEmbeddedFile(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+            return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
         }
         function encryptEmbeddedFile(typedEncrypt, fek, objNum, gen, plaintext, iv) {
             return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);

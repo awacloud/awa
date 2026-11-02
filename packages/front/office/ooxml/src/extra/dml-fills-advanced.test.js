@@ -99,3 +99,24 @@ describe('extra/dml-fills-advanced — color zoo', () => {
         }
     });
 });
+
+// T59 (d): colour transforms kept, the unlisted ones included.
+describe('extra/dml-fills-advanced — colour transforms', () => {
+    test('a gradient stop\'s tinted, saturated colour round-trips', () => {
+        const el = xml.parse('<a:gradFill xmlns:a="x"><a:gsLst><a:gs pos="0"><a:schemeClr val="accent1">'
+            + '<a:tint val="50000"/><a:satMod val="300000"/><a:alpha val="40000"/></a:schemeClr></a:gs></a:gsLst></a:gradFill>');
+        const g = m.parseGradFill(el);
+        expect(g.stops[0].color.mods).toEqual([
+            { kind: 'tint', attrs: { val: '50000' } }, { kind: 'satMod', attrs: { val: '300000' } }, { kind: 'alpha', attrs: { val: '40000' } }
+        ]);
+        expect(xml.serializeNode(m.renderGradFill(g))).toBe('<a:gradFill xmlns:a="x"><a:gsLst><a:gs pos="0"><a:schemeClr val="accent1">'
+            + '<a:tint val="50000"/><a:satMod val="300000"/><a:alpha val="40000"/></a:schemeClr></a:gs></a:gsLst></a:gradFill>');
+    });
+
+    test('the shared codec keeps a transform it does not list', () => {
+        const codec = _shared.createDmlColorCodec(xml);
+        const c = codec.parseColor(xml.parse('<a:prstClr xmlns:a="x" val="black"><a:hueMod val="90000"/></a:prstClr>'), { withMods: true });
+        expect(c.mods).toEqual([{ kind: 'hueMod', attrs: { val: '90000' } }]);
+        expect(xml.serializeNode(codec.renderColor(c, { withMods: true }))).toBe('<a:prstClr xmlns:a="x" val="black"><a:hueMod val="90000"/></a:prstClr>');
+    });
+});

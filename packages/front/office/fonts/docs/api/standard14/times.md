@@ -25,6 +25,7 @@ Bold, Italic and BoldItalic each have their OWN width table, parsed from the ven
 | `TIMES_BOLD_WIDTHS` | const `number[256]` | Bold widths. |
 | `TIMES_ITALIC_WIDTHS` | const `number[256]` | Italic widths. |
 | `TIMES_BOLD_ITALIC_WIDTHS` | const `number[256]` | BoldItalic widths. |
+| `TIMES_ROMAN_EXTRA_WIDTHS`, `TIMES_BOLD_EXTRA_WIDTHS`, `TIMES_ITALIC_EXTRA_WIDTHS`, `TIMES_BOLD_ITALIC_EXTRA_WIDTHS` | const `Object<string, number>` | Each variant's `extraWidths`: the widths, by glyph name, of the 21 glyphs MacRomanEncoding and StandardEncoding name that the WinAnsi table cannot hold (`fi`, `fl`, `Lslash`, `dotlessi`, `fraction`, the accents `breve` … `caron`, and the Mac Roman math glyphs the face carries), from its own AFM. |
 | `timesRoman` | const | Regular variant — `widths: TIMES_ROMAN_WIDTHS`. |
 | `timesBold` | const | Bold variant — `widths: TIMES_BOLD_WIDTHS`. |
 | `timesItalic` | const | Italic variant (`italicAngle` = -15.5) — `widths: TIMES_ITALIC_WIDTHS`. |

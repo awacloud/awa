@@ -65,8 +65,8 @@ export const officeMisc = {
                 if (n && n._passthrough) extras.push(h.renderElement(n));
             }
             delete out.officeNodes;
-            if (Array.isArray(m._extras) || !m._extras) out._extras = extras;
-            else out._extras = { ...m._extras, children: extras };
+            if (Array.isArray(m._extras)) out._extras = extras;
+            else out._extras = { ...(m._extras || {}), children: extras };
             return out;
         }
 

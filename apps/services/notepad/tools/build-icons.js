@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview Draw the notepad's PNG icons from the shapes of
+ * @fileoverview Draw the notepad's PNG icons and `favicon.ico` from the shapes of
  * `public/icons/icon.svg` — a navy rounded tile, a white spiral notebook
  * page with three text lines and three sky rings — through the shared
  * `apps/services/tools/icons.js` (no image tool). The outputs are
@@ -17,7 +17,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { rgb, roundRect, stroke, drawIconSet } from '../../tools/icons.js';
+import { rgb, roundRect, stroke, drawIconSet, drawIco } from '../../tools/icons.js';
 
 const NAVY = rgb('#00263d');
 const WHITE = rgb('#ffffff');
@@ -44,9 +44,13 @@ export const ICON = Object.freeze({
 });
 
 if (import.meta.main) {
-    const dir = join(resolve(import.meta.dir, '..'), 'public', 'icons');
+    const pub = join(resolve(import.meta.dir, '..'), 'public');
     for (const [name, bytes] of drawIconSet(ICON)) {
-        writeFileSync(join(dir, name), bytes);
+        writeFileSync(join(pub, 'icons', name), bytes);
         process.stdout.write(`build-icons: ${name} ${bytes.length} bytes\n`);
     }
+    // At the site root, where a browser looks for it without a link.
+    const ico = drawIco(ICON);
+    writeFileSync(join(pub, 'favicon.ico'), ico);
+    process.stdout.write(`build-icons: favicon.ico ${ico.length} bytes\n`);
 }

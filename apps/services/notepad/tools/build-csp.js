@@ -21,10 +21,13 @@
  * carry: `dist/_headers.json` (read by `services/site-host`, see its README)
  * holds the policy with `frame-ancestors 'none'`, `nosniff`, `no-referrer`, a
  * `Permissions-Policy` turning off the device features the app never uses,
- * `Cross-Origin-Opener-Policy: same-origin`, and `Cache-Control: no-cache`
- * on `/sw.js` so an update check always reaches the server (apps review P6,
- * PWA survey § updates). The header policy is derived from the meta one,
- * never a second copy of it.
+ * `Cross-Origin-Opener-Policy: same-origin`, `Strict-Transport-Security:
+ * max-age=2592000` (step 1, BL-2853, DSO ruling 2026-10-29: 30 days, no
+ * `includeSubDomains`, no `preload`; step 2 is `31536000` with
+ * `includeSubDomains` per domain, no earlier than 30 days after step 1 is
+ * live), and `Cache-Control: no-cache` on `/sw.js` so an update check
+ * always reaches the server (apps review P6, PWA survey § updates). The
+ * header policy is derived from the meta one, never a second copy of it.
  *
  * Usage: `bun tools/build-csp.js [--dist dist]` from the app directory.
  *
@@ -78,6 +81,14 @@ const url = /<meta property="og:url" content="(https:\/\/[^"]+)">/.exec(out)?.[1
 if (!url) throw new Error('build-csp: the page has no og:url to make its canonical link from');
 writeFileSync(page, out.replace('<meta property="og:type"', `<link rel="canonical" href="${url}">\n    <meta property="og:type"`));
 
+// HSTS (OP-HSTS, OP-B1023 R3, BL-2813; BL-2853, DSO ruling 2026-10-29): step 1
+// of the ramp, 30 days. Step 2 (31536000, includeSubDomains per domain) comes
+// no earlier than 30 days after step 1 is live. Bare max-age: no
+// includeSubDomains (it waits until every awacloud.com subdomain is proven
+// HTTPS-only), no preload (a separate owner ruling). Each producer of the
+// header carries its own copy.
+const HSTS_MAX_AGE_SECONDS = 2592000;
+
 // The header rules: the meta policy plus frame-ancestors (ignored in a meta).
 const headerRules = {
     version: 1,
@@ -90,7 +101,8 @@ const headerRules = {
                 'x-content-type-options': 'nosniff',
                 'referrer-policy': 'no-referrer',
                 'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), display-capture=()',
-                'cross-origin-opener-policy': 'same-origin'
+                'cross-origin-opener-policy': 'same-origin',
+                'strict-transport-security': `max-age=${HSTS_MAX_AGE_SECONDS}`
             }
         }
     ]

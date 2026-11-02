@@ -1,6 +1,6 @@
 # @awacloud/md
 
-Pure-JavaScript Markdown parser and serializer for the browser, built on CommonMark 0.31 and the GitHub Flavored Markdown extensions (tables, task lists, strikethrough, extended autolinks, the disallowed raw HTML filter). It parses to a CommonMark-compatible AST, renders HTML, Markdown (CommonMark + GFM roundtrip) and XML, offers opt-in extras (frontmatter, math, footnotes, wikilinks, admonitions, highlight, sub/superscript, table of contents, emoji, mermaid) and can assemble Markdown documents into one self-contained HTML page. The only dependency is [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/fw); no Node API is used.
+Pure-JavaScript Markdown parser and serializer for the browser, built on CommonMark 0.31 and the GitHub Flavored Markdown extensions (tables, task lists, strikethrough, extended autolinks, the disallowed raw HTML filter). It parses to a CommonMark-compatible AST, renders HTML, Markdown (CommonMark + GFM roundtrip) and XML, offers opt-in extras (frontmatter, math, footnotes, wikilinks, admonitions, highlight, sub/superscript, table of contents, emoji, mermaid) and can assemble Markdown documents into one self-contained HTML page. The only dependency is [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.0/packages/front/fw); no Node API is used.
 
 Coverage claim, with its limit: every example of the vendored CommonMark 0.31.2 specification passes; of the GFM 0.29 specification's 670 examples, 661 pass, and the 9 others are nested strong emphasis, where GFM 0.29 and CommonMark 0.31.2 disagree and md follows CommonMark; the extras are covered by their own tests only. See the [coverage guide](./docs/guide/coverage.md).
 
@@ -52,6 +52,22 @@ The resolved `md` carries `.createMd(opts)`, which spawns an independent instanc
 const m = md.createMd({ sourcepos: true });
 m.parse('# Title\n\nbody').firstChild.sourcepos;   // [[1, 1], [1, 7]]
 ```
+
+### Typography and nesting limit
+
+Two `createMd` options change what a document costs or says. `smart` (curly quotes) and `smartDashes` (en and em dashes for runs of hyphens, `…` for `...`) are independent, both off by default, and turn on together to give commonmark.js's full smart punctuation. `maxDepth` (default `1000`, `Infinity` opts out) bounds the nesting depth; a list, item or quote that would open deeper is refused while the text is parsed, with `md/limit-exceeded`, before the deeper tree is built:
+
+```js
+const typo = md.createMd({ smart: true, smartDashes: true });
+typo.renderHtml('"Wait" -- it\'s 1---2...');   // '<p>“Wait” – it’s 1—2…</p>\n'
+md.renderHtml('a -- b...');                    // '<p>a -- b...</p>\n': off by default
+
+const strict = md.createMd({ maxDepth: 5 });
+const deep = Array.from({ length: 40 }, (_, k) => '  '.repeat(k) + '- item').join('\n') + '\n';
+try { strict.parse(deep); } catch (e) { e.code; }   // 'md/limit-exceeded' (context { kind: 'maxDepth', limit: 5, depth: 6 })
+```
+
+See [`docs/api/md.md`](./docs/api/md.md) for the option table and [`docs/api/errors.md`](./docs/api/errors.md) for the codes.
 
 ### Bootstrap helper
 
@@ -177,7 +193,7 @@ The suite includes the CommonMark spec examples (`tests/commonmark-suite.test.js
 
 ## See also
 
-- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/fw): `ModuleRuntime` + shared helpers
+- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.0/packages/front/fw): `ModuleRuntime` + shared helpers
 - [CommonMark 0.31](https://spec.commonmark.org/0.31.2/): implemented spec
 - [GitHub Flavored Markdown](https://github.github.com/gfm/): GFM extensions
 
@@ -211,6 +227,6 @@ See [`docs/api/bundles/README.md`](./docs/api/bundles/README.md).
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/md`](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/office/md)
+- Source: [`packages/front/office/md`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.0/packages/front/office/md)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/SECURITY.md)
+- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/SECURITY.md)

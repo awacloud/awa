@@ -74,8 +74,8 @@ the cache caveat from the Notes: the held handle is not upgraded in place.
 ```js
 import { registerDefaultFaces } from '@awacloud/oconv-fonts';
 
-await registerDefaultFaces(runtime);          // registers oconvDefaultFaces@1.0.0
-runtime.has('oconvDefaultFaces', '1.0.0');    // true
+await registerDefaultFaces(runtime);          // registers oconvDefaultFaces@1.1.0
+runtime.has('oconvDefaultFaces', '1.1.0');    // true
 runtime.has('oconvDefaultFaces', '0.0.0');    // true — the stand-in stays registered,
                                               // it is simply no longer the LATEST version
 oconvDefaultFaces.family;                     // null — the handle resolved earlier is not upgraded
@@ -106,7 +106,7 @@ via `invalidate(..., {cascade: true})`).
   `ModuleRuntime#register` re-points an entry's `latestDef` only when the
   newly registered version sorts `>=` the current latest. So a real face
   pack carrying any version above `0.0.0` (the companion package ships
-  `1.0.0`) displaces this stand-in **whichever order the two are
+  `1.1.0`) displaces this stand-in **whichever order the two are
   registered in** — registration alone switches the default tier on, no
   import of the companion package anywhere in `@awacloud/oconv`, no flag.
 - **The cache caveat.** `ModuleRuntime` caches resolved instances. A face

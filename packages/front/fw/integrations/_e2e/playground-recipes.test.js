@@ -14,12 +14,12 @@
 
 import { describe, expect, it } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { BROWSERS_DIR_REL, applyBrowsersPath, resolveBrowsersPath } from './browsers-path.mjs';
+import { BROWSERS_DIR_REL, applyBrowsersPath, mainTreeRoot, resolveBrowsersPath } from './browsers-path.mjs';
 import {
     EXAMPLES_JSON_REL,
     RECIPES,
@@ -144,6 +144,32 @@ describe('preview gate — browsers path', () => {
     it('returns a pre-set env value verbatim (the documented operator override)', () => {
         expect(resolveBrowsersPath({ PLAYWRIGHT_BROWSERS_PATH: 'D:/warm/ms-playwright' })).toBe('D:/warm/ms-playwright');
         expect(resolveBrowsersPath({ PLAYWRIGHT_BROWSERS_PATH: '  D:/warm/ms-playwright  ' })).toBe('D:/warm/ms-playwright');
+    });
+
+    it('defaults to the MAIN checkout cache from a linked worktree (BL-2761)', () => {
+        // Scratch layout under the repo tmp/ (never the OS temp dir): `.git` is
+        // a FILE in the worktree, a directory in the main checkout.
+        const repo = resolve(HERE, '..', '..', '..', '..', '..');
+        mkdirSync(join(repo, 'tmp'), { recursive: true });
+        const base = mkdtempSync(join(repo, 'tmp', 'fw-browsers-path-'));
+        try {
+            const main = join(base, 'main');
+            mkdirSync(join(main, '.git', 'worktrees', 'w1'), { recursive: true });
+            writeFileSync(join(main, '.git', 'worktrees', 'w1', 'commondir'), '../..\n');
+            const wt = join(base, 'wt');
+            mkdirSync(wt);
+            writeFileSync(join(wt, '.git'), `gitdir: ${join(main, '.git', 'worktrees', 'w1')}\n`);
+            const bad = join(base, 'bad');
+            mkdirSync(bad);
+            writeFileSync(join(bad, '.git'), 'garbage\n');
+
+            expect(join(mainTreeRoot(wt), BROWSERS_DIR_REL)).toBe(join(main, 'third_party', 'ms-playwright'));
+            expect(mainTreeRoot(main)).toBe(main);
+            expect(mainTreeRoot(bad)).toBe(bad);
+            expect(resolveBrowsersPath({})).toBe(join(mainTreeRoot(repo), BROWSERS_DIR_REL));
+        } finally {
+            rmSync(base, { recursive: true, force: true });
+        }
     });
 
     it('ignores an empty/whitespace override and writes the value back', () => {

@@ -130,8 +130,12 @@ function appendSupportedHint(message: string): string {
     return message;
 }
 
+/** The `toMd` options whose refusal by `oconv` is the caller's mistake (`bad …` / `… needs format …`). */
+const OPTION_MESSAGE =
+    /^oconv: (bad (sheets|pdf infer|pdf declare|pdf include|odt include|docx include|form op budget|pdf recover xref|front matter|cell budget|archive limits|output budget|pdf line hyphens)|(sheets|sheet cell budget) needs format xlsx or ods|(pdf infer|pdf declare|pdf include|pdf password|pdf recover xref|pdf line hyphens|form op budget) needs format pdf|odt include needs format odt|docx include needs format docx|archive limits need an office source)$/;
+
 function isUsageMessage(message: string): boolean {
-    return /^oconv: unsupported (format|target|pair)$/.test(message);
+    return /^oconv: unsupported (format|target|pair)$/.test(message) || OPTION_MESSAGE.test(message);
 }
 
 async function guard<T extends object>(fn: () => Promise<T>): Promise<CoreError | ({ error: null } & T)> {
@@ -152,7 +156,21 @@ interface OconvFacade {
         convertedAt: string;
         format?: string;
         includeNotes?: boolean;
-    }): Promise<{ markdown: string; losses: Loss[]; lossy: boolean }>;
+        sheets?: string;
+        formOpBudget?: number;
+        pdfInfer?: string[];
+        pdfDeclare?: string[];
+        pdfInclude?: string[];
+        pdfPassword?: string | Uint8Array;
+        pdfRecoverXref?: boolean;
+        pdfLineHyphens?: string;
+        odtInclude?: string[];
+        docxInclude?: string[];
+        sheetCellBudget?: number;
+        archiveLimits?: ArchiveLimits;
+        outputBudget?: OutputBudget;
+        opts?: { frontMatter?: string };
+    }): Promise<{ markdown: string; losses: Loss[]; lossy: boolean; assets: Asset[] }>;
     fromMd(input: { markdown: string; name?: string; target?: string }): Promise<{
         bytes: Uint8Array;
         target: string;
@@ -229,6 +247,60 @@ export interface ToMdInput {
     format?: string;
     /** `pptx`/`odp` only, default `false` — forwarded verbatim to `oconv.toMd`. */
     includeNotes?: boolean;
+    /**
+     * `xlsx`/`ods` only: `'table'` (default, GFM tables), `'csv'` or `'tsv'` (each
+     * sheet a fenced block) — forwarded verbatim to `oconv.toMd`; a bad value or
+     * another format is a usage error.
+     */
+    sheets?: string;
+    /** `pdf` only: the per-page Form XObject operator budget (a safe integer >= 1). */
+    formOpBudget?: number;
+    /** `pdf` only: inference on an untagged pdf — `'headings'`, `'tables'`. */
+    pdfInfer?: string[];
+    /** `pdf` only: record a silent case — `'positional'`. */
+    pdfDeclare?: string[];
+    /** `pdf` only: parts brought back — `'images'` (their bytes in `assets`). */
+    pdfInclude?: string[];
+    /** `pdf` only: the user or owner password of an encrypted pdf. */
+    pdfPassword?: string | Uint8Array;
+    /** `pdf` only: `true` rebuilds an unusable cross-reference chain. */
+    pdfRecoverXref?: boolean;
+    /** `pdf` only: a word a hyphen cuts at a line end joined — `'drop'` (without the hyphen) or `'keep'` (with it). */
+    pdfLineHyphens?: string;
+    /** `odt` only: parts brought back — `'toc'`. */
+    odtInclude?: string[];
+    /** `docx` only: parts brought back — `'toc'`. */
+    docxInclude?: string[];
+    /** `xlsx`/`ods` only: a sheet whose padded table would hold more cells is written unpadded (`sheet/sparse-form`). */
+    sheetCellBudget?: number;
+    /** Office formats only: the reader's archive limits (`0` disables a check). */
+    archiveLimits?: ArchiveLimits;
+    /** Every format: a bound on the document's text; `'truncate'` keeps what fits (`doc/truncated`). */
+    outputBudget?: OutputBudget;
+    /** Writer options: `frontMatter` — `'full'` (default), `'compact'` or `'none'`. */
+    opts?: { frontMatter?: string };
+}
+
+/** `oconv.toMd`'s `archiveLimits`: any of the office readers' four archive limits. */
+export interface ArchiveLimits {
+    maxParts?: number;
+    maxUncompressed?: number;
+    maxRatio?: number;
+    maxDepth?: number;
+}
+
+/** `oconv.toMd`'s `outputBudget`: `bytes` of text, then `'throw'` (default) or `'truncate'`. */
+export interface OutputBudget {
+    bytes: number;
+    overflow?: 'throw' | 'truncate';
+}
+
+/** One entry of `oconv`'s asset manifest: an image the markdown references by `name`. */
+export interface Asset {
+    kind: string;
+    name: string;
+    /** Present when the reader captured the image bytes. */
+    bytes?: Uint8Array;
 }
 
 export interface ToMdOutput {
@@ -238,6 +310,8 @@ export interface ToMdOutput {
     /** `losses` grouped by `code` + `detail`, with a count. */
     lossSummary: LossSummaryEntry[];
     lossy: boolean;
+    /** The asset manifest, document order; `assetFiles` says which can be written. */
+    assets: Asset[];
 }
 
 export type ToMdResult = CoreError | ToMdOutput;
@@ -255,8 +329,41 @@ export async function toMd(input: ToMdInput): Promise<ToMdResult> {
     return guard(async () => {
         const oconv = buildOconv();
         const result = await oconv.toMd(input);
-        return { markdown: result.markdown, losses: result.losses, lossSummary: summarizeLosses(result.losses), lossy: result.lossy };
+        return {
+            markdown: result.markdown, losses: result.losses, lossSummary: summarizeLosses(result.losses), lossy: result.lossy,
+            assets: result.assets,
+        };
     });
+}
+
+/** An asset `assetFiles` will not write, and why. */
+export interface SkippedAsset {
+    name: string;
+    reason: 'no bytes' | 'unsafe name';
+}
+
+/**
+ * The assets a shell may write under a directory of its choice, at the
+ * relative path the markdown references (`name`). A name is safe when it
+ * is relative and stays inside that directory: `/`- or `\`-separated
+ * segments, none empty, `.` or `..`, and no `:` (a Windows drive or
+ * stream). An asset without bytes or with another name is skipped. Pure:
+ * the CLI and MCP shells do the writing.
+ */
+export function assetFiles(assets: Asset[]): { files: { name: string; bytes: Uint8Array }[]; skipped: SkippedAsset[] } {
+    const files: { name: string; bytes: Uint8Array }[] = [];
+    const skipped: SkippedAsset[] = [];
+    for (const a of assets) {
+        const segments = a.name.split(/[\\/]/);
+        if (a.name.includes(':') || segments.some((seg) => seg === '' || seg === '.' || seg === '..')) {
+            skipped.push({ name: a.name, reason: 'unsafe name' });
+        } else if (a.bytes === undefined) {
+            skipped.push({ name: a.name, reason: 'no bytes' });
+        } else {
+            files.push({ name: a.name, bytes: a.bytes });
+        }
+    }
+    return { files, skipped };
 }
 
 export interface FromMdInput {

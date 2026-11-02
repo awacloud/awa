@@ -214,10 +214,18 @@ it owns its wasi-sdk pin table (`build-env/pins.ts`) and imports nothing from
 `src/`. The SDK itself is never committed — the default install directory
 `build-env/sdk/` is gitignored.
 
+From a linked git worktree, whose `build-env/sdk/` is empty (the SDK is no
+worktree asset since the owner ruling of 2026-10-22),
+`discoverWasiSdk` falls back to the MAIN checkout's `build-env/sdk/`, derived
+from the git common dir (`.git` file → `gitdir` → `commondir`, no git spawn;
+`mainCheckoutSdkDir`). Search order: explicit `roots` (the whole scope when
+given), then this tree's `build-env/sdk/`, then the main checkout's. A tree
+with its own SDK keeps using it.
+
 | File | Role |
 |---|---|
 | `build-env/pins.ts` | Pin table: repo, release tag, per-OS asset + `sha256`. Single source of truth for the SDK version. |
-| `build-env/toolchain.ts` | `resolveAsset` · `discoverWasiSdk` (FS-only) · `downloadWasiSdk` · `verifyAndUnpack` · `enforcePinPolicy`. |
+| `build-env/toolchain.ts` | `resolveAsset` · `discoverWasiSdk` (FS-only) · `mainCheckoutSdkDir` · `downloadWasiSdk` · `verifyAndUnpack` · `enforcePinPolicy`. |
 
 ```ts
 import { downloadWasiSdk } from "tools/wasm-crypto/build-env/toolchain.ts";

@@ -83,6 +83,37 @@ export const ooxmlMath = {
                 (elements || []).map(renderMathElement));
         }
 
+        // --- Property elements ---
+        // A construct's property element (m:fPr, m:dPr, …): the children
+        // this module types are read into fields, the others are kept
+        // verbatim in `_prExtras` (an empty array for a present, empty
+        // element) and written after the typed ones (m:ctrlPr, last in
+        // every property element, among them).
+
+        /** `node` with the untyped children of its property element `prName`. */
+        function withPr(el, prName, node) {
+            readPr(node, el, prName, []);
+            return node;
+        }
+
+        function readPr(node, el, prName, typed) {
+            const pr = xml.findChild(el, prName);
+            if (pr) node._prExtras = pr.children.filter(c => c.type === 'element' && !typed.includes(c.name));
+            return pr;
+        }
+
+        function renderPr(prName, typedChildren, n) {
+            if (!typedChildren.length && !n._prExtras) return [];
+            return [xml.el(prName, {}, [...typedChildren, ...(n._prExtras || [])])];
+        }
+
+        // A character property (m:chr, m:begChr, …): an empty value is a
+        // character too (none drawn).
+        function charOf(pr, name) {
+            const c = pr && xml.findChild(pr, name);
+            return c && c.attrs['m:val'] != null ? c.attrs['m:val'] : undefined;
+        }
+
         // --- Math run (m:r) ---
 
         function parseMathRun(rEl) {
@@ -90,22 +121,36 @@ export const ooxmlMath = {
             const rPrEl = xml.findChild(rEl, 'm:rPr');
             if (rPrEl) {
                 const sty = xml.findChild(rPrEl, 'm:sty');
-                if (sty) out.rPr = { sty: sty.attrs['m:val'] };
+                const rPr = {};
+                if (sty) rPr.sty = sty.attrs['m:val'];
+                const extras = rPrEl.children.filter(c => c.type === 'element' && c.name !== 'm:sty');
+                if (extras.length) rPr._extras = extras;
+                if (Object.keys(rPr).length) out.rPr = rPr;
             }
+            // The run's other children (its w:rPr), verbatim.
+            const extras = [];
             for (const c of rEl.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'm:t') out.text += xml.textContent(c);
+                else if (c.name !== 'm:rPr') extras.push(c);
             }
+            if (extras.length) out._extras = extras;
             return out;
         }
+
+        // CT_RPR (math): lit, then the scr / sty choice, then brk, aln.
+        const SCRIPT_BEFORE_STY = new Set(['m:lit', 'm:nor', 'm:scr']);
 
         function renderMathRun(r) {
             const children = [];
             if (r.rPr) {
                 const inner = [];
+                if (r.rPr._extras) inner.push(...r.rPr._extras.filter(c => c.name !== 'm:sty' && SCRIPT_BEFORE_STY.has(c.name)));
                 if (r.rPr.sty) inner.push(xml.el('m:sty', { 'm:val': r.rPr.sty }));
+                if (r.rPr._extras) inner.push(...r.rPr._extras.filter(c => !SCRIPT_BEFORE_STY.has(c.name)));
                 if (inner.length) children.push(xml.el('m:rPr', {}, inner));
             }
+            if (r._extras) children.push(...r._extras);
             children.push(xml.el('m:t', { 'xml:space': 'preserve' },
                 [xml.text(r.text || '')]));
             return xml.el('m:r', {}, children);
@@ -114,15 +159,18 @@ export const ooxmlMath = {
         // --- Fraction (m:f) ---
 
         function parseFrac(fEl) {
-            return {
+            const out = {
                 type: 'frac',
                 numerator:   parseSlot(xml.findChild(fEl, 'm:num')),
                 denominator: parseSlot(xml.findChild(fEl, 'm:den'))
             };
+            readPr(out, fEl, 'm:fPr', []);
+            return out;
         }
 
         function renderFrac(f) {
             return xml.el('m:f', {}, [
+                ...renderPr('m:fPr', [], f),
                 renderSlot('m:num', f.numerator),
                 renderSlot('m:den', f.denominator)
             ]);
@@ -131,46 +179,49 @@ export const ooxmlMath = {
         // --- Superscript / Subscript / SubSup ---
 
         function parseSSup(el) {
-            return {
+            return withPr(el, 'm:sSupPr', {
                 type: 'sSup',
                 base: parseSlot(xml.findChild(el, 'm:e')),
                 sup:  parseSlot(xml.findChild(el, 'm:sup'))
-            };
+            });
         }
 
         function renderSSup(n) {
             return xml.el('m:sSup', {}, [
+                ...renderPr('m:sSupPr', [], n),
                 renderSlot('m:e', n.base),
                 renderSlot('m:sup', n.sup)
             ]);
         }
 
         function parseSSub(el) {
-            return {
+            return withPr(el, 'm:sSubPr', {
                 type: 'sSub',
                 base: parseSlot(xml.findChild(el, 'm:e')),
                 sub:  parseSlot(xml.findChild(el, 'm:sub'))
-            };
+            });
         }
 
         function renderSSub(n) {
             return xml.el('m:sSub', {}, [
+                ...renderPr('m:sSubPr', [], n),
                 renderSlot('m:e', n.base),
                 renderSlot('m:sub', n.sub)
             ]);
         }
 
         function parseSSubSup(el) {
-            return {
+            return withPr(el, 'm:sSubSupPr', {
                 type: 'sSubSup',
                 base: parseSlot(xml.findChild(el, 'm:e')),
                 sub:  parseSlot(xml.findChild(el, 'm:sub')),
                 sup:  parseSlot(xml.findChild(el, 'm:sup'))
-            };
+            });
         }
 
         function renderSSubSup(n) {
             return xml.el('m:sSubSup', {}, [
+                ...renderPr('m:sSubSupPr', [], n),
                 renderSlot('m:e', n.base),
                 renderSlot('m:sub', n.sub),
                 renderSlot('m:sup', n.sup)
@@ -180,15 +231,16 @@ export const ooxmlMath = {
         // --- Radical (m:rad) ---
 
         function parseRad(el) {
-            return {
+            return withPr(el, 'm:radPr', {
                 type: 'rad',
                 degree: parseSlot(xml.findChild(el, 'm:deg')),
                 base:   parseSlot(xml.findChild(el, 'm:e'))
-            };
+            });
         }
 
         function renderRad(n) {
             return xml.el('m:rad', {}, [
+                ...renderPr('m:radPr', [], n),
                 renderSlot('m:deg', n.degree),
                 renderSlot('m:e', n.base)
             ]);
@@ -204,19 +256,17 @@ export const ooxmlMath = {
                 sup:  parseSlot(xml.findChild(el, 'm:sup')),
                 body: parseSlot(xml.findChild(el, 'm:e'))
             };
-            const naryPr = xml.findChild(el, 'm:naryPr');
-            if (naryPr) {
-                const chr = xml.findChild(naryPr, 'm:chr');
-                if (chr && chr.attrs['m:val']) out.op = chr.attrs['m:val'];
-            }
+            const naryPr = readPr(out, el, 'm:naryPr', ['m:chr']);
+            const op = charOf(naryPr, 'm:chr');
+            if (op != null) out.op = op;
             return out;
         }
 
         function renderNary(n) {
             const children = [];
-            children.push(xml.el('m:naryPr', {}, [
-                xml.el('m:chr', { 'm:val': n.op || '∑' })
-            ]));
+            children.push(...renderPr('m:naryPr', [
+                xml.el('m:chr', { 'm:val': n.op ?? '∑' })
+            ], n));
             children.push(renderSlot('m:sub', n.sub));
             children.push(renderSlot('m:sup', n.sup));
             children.push(renderSlot('m:e', n.body));
@@ -227,15 +277,11 @@ export const ooxmlMath = {
 
         function parseDelim(el) {
             const out = { type: 'd', children: [] };
-            const dPr = xml.findChild(el, 'm:dPr');
-            if (dPr) {
-                const beg = xml.findChild(dPr, 'm:begChr');
-                const end = xml.findChild(dPr, 'm:endChr');
-                const sep = xml.findChild(dPr, 'm:sepChr');
-                if (beg && beg.attrs['m:val']) out.open = beg.attrs['m:val'];
-                if (end && end.attrs['m:val']) out.close = end.attrs['m:val'];
-                if (sep && sep.attrs['m:val']) out.sep = sep.attrs['m:val'];
-            }
+            const dPr = readPr(out, el, 'm:dPr', ['m:begChr', 'm:sepChr', 'm:endChr']);
+            const open = charOf(dPr, 'm:begChr'), close = charOf(dPr, 'm:endChr'), sep = charOf(dPr, 'm:sepChr');
+            if (open != null) out.open = open;
+            if (close != null) out.close = close;
+            if (sep != null) out.sep = sep;
             // Each <m:e> child is one "slot".
             for (const c of el.children) {
                 if (c.type !== 'element') continue;
@@ -247,10 +293,11 @@ export const ooxmlMath = {
         function renderDelim(n) {
             const children = [];
             const pr = [];
+            // CT_DPr order: begChr, sepChr, endChr.
             if (n.open != null)  pr.push(xml.el('m:begChr', { 'm:val': n.open }));
-            if (n.close != null) pr.push(xml.el('m:endChr', { 'm:val': n.close }));
             if (n.sep != null)   pr.push(xml.el('m:sepChr', { 'm:val': n.sep }));
-            if (pr.length) children.push(xml.el('m:dPr', {}, pr));
+            if (n.close != null) pr.push(xml.el('m:endChr', { 'm:val': n.close }));
+            children.push(...renderPr('m:dPr', pr, n));
             for (const slot of n.children || []) {
                 children.push(renderSlot('m:e', slot));
             }
@@ -260,15 +307,16 @@ export const ooxmlMath = {
         // --- Function (m:func) ---
 
         function parseFunc(el) {
-            return {
+            return withPr(el, 'm:funcPr', {
                 type: 'func',
                 name: parseSlot(xml.findChild(el, 'm:fName')),
                 body: parseSlot(xml.findChild(el, 'm:e'))
-            };
+            });
         }
 
         function renderFunc(n) {
             return xml.el('m:func', {}, [
+                ...renderPr('m:funcPr', [], n),
                 renderSlot('m:fName', n.name),
                 renderSlot('m:e', n.body)
             ]);
@@ -278,6 +326,7 @@ export const ooxmlMath = {
 
         function parseMatrix(el) {
             const out = { type: 'm', rows: [] };
+            readPr(out, el, 'm:mPr', []);
             for (const r of xml.findAll(el, 'm:mr')) {
                 const row = [];
                 for (const c of xml.findAll(r, 'm:e')) {
@@ -291,59 +340,49 @@ export const ooxmlMath = {
         function renderMatrix(n) {
             const rows = (n.rows || []).map(row =>
                 xml.el('m:mr', {}, row.map(cell => renderSlot('m:e', cell))));
-            return xml.el('m:m', {}, rows);
+            return xml.el('m:m', {}, [...renderPr('m:mPr', [], n), ...rows]);
         }
 
         // --- Accent (m:acc) and Bar (m:bar) and Box (m:box) ---
 
         function parseAcc(el) {
             const out = { type: 'acc', base: parseSlot(xml.findChild(el, 'm:e')) };
-            const accPr = xml.findChild(el, 'm:accPr');
-            if (accPr) {
-                const chr = xml.findChild(accPr, 'm:chr');
-                if (chr && chr.attrs['m:val']) out.char = chr.attrs['m:val'];
-            }
+            const accPr = readPr(out, el, 'm:accPr', ['m:chr']);
+            const char = charOf(accPr, 'm:chr');
+            if (char != null) out.char = char;
             return out;
         }
 
         function renderAcc(n) {
             const children = [];
-            if (n.char != null) {
-                children.push(xml.el('m:accPr', {}, [
-                    xml.el('m:chr', { 'm:val': n.char })
-                ]));
-            }
+            children.push(...renderPr('m:accPr',
+                n.char != null ? [xml.el('m:chr', { 'm:val': n.char })] : [], n));
             children.push(renderSlot('m:e', n.base));
             return xml.el('m:acc', {}, children);
         }
 
         function parseBar(el) {
             const out = { type: 'bar', base: parseSlot(xml.findChild(el, 'm:e')) };
-            const barPr = xml.findChild(el, 'm:barPr');
-            if (barPr) {
-                const pos = xml.findChild(barPr, 'm:pos');
-                if (pos && pos.attrs['m:val']) out.pos = pos.attrs['m:val'];
-            }
+            const barPr = readPr(out, el, 'm:barPr', ['m:pos']);
+            const pos = charOf(barPr, 'm:pos');
+            if (pos != null) out.pos = pos;
             return out;
         }
 
         function renderBar(n) {
             const children = [];
-            if (n.pos) {
-                children.push(xml.el('m:barPr', {}, [
-                    xml.el('m:pos', { 'm:val': n.pos })
-                ]));
-            }
+            children.push(...renderPr('m:barPr',
+                n.pos != null ? [xml.el('m:pos', { 'm:val': n.pos })] : [], n));
             children.push(renderSlot('m:e', n.base));
             return xml.el('m:bar', {}, children);
         }
 
         function parseBox(el) {
-            return { type: 'box', base: parseSlot(xml.findChild(el, 'm:e')) };
+            return withPr(el, 'm:boxPr', { type: 'box', base: parseSlot(xml.findChild(el, 'm:e')) });
         }
 
         function renderBox(n) {
-            return xml.el('m:box', {}, [renderSlot('m:e', n.base)]);
+            return xml.el('m:box', {}, [...renderPr('m:boxPr', [], n), renderSlot('m:e', n.base)]);
         }
 
         // --- Dispatch ---
@@ -402,17 +441,19 @@ export const ooxmlMath = {
 
         function parseOMathPara(el) {
             const out = { type: 'oMathPara', children: [] };
+            const extras = [];
             for (const c of el.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'm:oMath') out.children.push(parseOMath(c));
-                // m:oMathParaPr ignored for now
+                else extras.push(c); // m:oMathParaPr, verbatim
             }
+            if (extras.length) out._extras = extras;
             return out;
         }
 
         function renderOMathPara(n) {
             return xml.el('m:oMathPara', {},
-                (n.children || []).map(renderOMath));
+                [...(n._extras || []), ...(n.children || []).map(renderOMath)]);
         }
 
         // --- Builders ---

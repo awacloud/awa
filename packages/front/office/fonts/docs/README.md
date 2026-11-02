@@ -11,7 +11,8 @@ metrics, bitmaps), the `embed-pdf` helpers, ToUnicode CMap, Standard 14,
 PDF/legacy encodings, extras (RM05 hinting, Apple AAT parsers, Arabic/Indic/CJK
 shaper helpers, WOFF2 write, DSIG/MATH/JSTF) and bundles (`fonts-large`,
 `fonts-full`, `fonts-apple-aat`). The known limits (layout lookups parsed but
-not applied, WOFF2 `glyf` transform not reversed, TrueType-only subsetting,
+not applied, WOFF2 `decode` leaving the `glyf` transform unreversed
+(`toSfnt` reverses it), TrueType-only subsetting,
 Apple AAT state machines not decoded) are listed in the package README.
 
 ## Sections
@@ -34,6 +35,6 @@ Apple AAT state machines not decoded) are listed in the package README.
 
 ## See also
 
-- `@awacloud/ooxml` ([docs](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.1.0/packages/front/office/ooxml/docs)) — the sibling package whose docs layout (`api/` + `bundles/` + `guide/`) this one follows.
+- `@awacloud/ooxml` ([docs](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.2.0/packages/front/office/ooxml/docs)) — the sibling package whose docs layout (`api/` + `bundles/` + `guide/`) this one follows.
 - OpenType spec: <https://learn.microsoft.com/en-us/typography/opentype/spec/>.
 - TrueType Reference Manual: <https://developer.apple.com/fonts/TrueType-Reference-Manual/>.

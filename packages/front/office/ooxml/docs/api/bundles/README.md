@@ -2,16 +2,16 @@
 
 Pre-wired collections of [extra modules](../extra/README.md), exposed as pure fw factory descriptors. Each bundle declares the core format module (`docx` / `xlsx` / `pptx`) plus the relevant extras as dependencies. Register the descriptor in a `ModuleRuntime` and resolve it — the runtime wires every dependency transitively and the factory returns the enriched core instance.
 
-**Reading the Coverage column.** "~95%" is an estimate of real-world usage, not a measurement. A `full` bundle means every element of the ECMA-376 Part 1 schemas is either typed or preserved as a catalogued passthrough (see the [coverage guide](../../guide/coverage.md)); it is not a conformance measurement.
+**Reading the Coverage column.** A bundle's extras are of two kinds: those that **type a read** (a walker hook runs on every `read()` / `write()`) and **toolkits** (parse / render functions one calls on raw nodes, which a read never calls). Today only `docx-large` has extras of the first kind — `wmlRunFormatting`, `wmlParagraphFormatting`, `wmlTableProperties`, `wmlSettings` and `dmlWpDrawing`; every other extra of the six bundles is a toolkit, so a read through `xlsx-*` or `pptx-*` types what the core types. What the core does not type it keeps verbatim (`_extras`, kept sources), so a round trip loses little either way — the coverage scorecards measure it.
 
 | Bundle | Coverage | Resolve key | Source |
 |--------|----------|-------------|--------|
-| [`docx-large`](./docx-large.md) | docx ~95% | `'docxLargeBundle'` | [`src/bundles/docx-large.js`](../../../src/bundles/docx-large.js) |
-| [`docx-full`](./docx-full.md) | docx, every element typed or preserved | `'docxFullBundle'` | [`src/bundles/docx-full.js`](../../../src/bundles/docx-full.js) |
-| [`xlsx-large`](./xlsx-large.md) | xlsx ~95% | `'xlsxLargeBundle'` | [`src/bundles/xlsx-large.js`](../../../src/bundles/xlsx-large.js) |
-| [`xlsx-full`](./xlsx-full.md) | xlsx, every element typed or preserved | `'xlsxFullBundle'` | [`src/bundles/xlsx-full.js`](../../../src/bundles/xlsx-full.js) |
-| [`pptx-large`](./pptx-large.md) | pptx ~95% | `'pptxLargeBundle'` | [`src/bundles/pptx-large.js`](../../../src/bundles/pptx-large.js) |
-| [`pptx-full`](./pptx-full.md) | pptx, every element typed or preserved | `'pptxFullBundle'` | [`src/bundles/pptx-full.js`](../../../src/bundles/pptx-full.js) |
+| [`docx-large`](./docx-large.md) | docx: 5 extras type a read + toolkits | `'docxLargeBundle'` | [`src/bundles/docx-large.js`](../../../src/bundles/docx-large.js) |
+| [`docx-full`](./docx-full.md) | `docx-large` + further toolkits | `'docxFullBundle'` | [`src/bundles/docx-full.js`](../../../src/bundles/docx-full.js) |
+| [`xlsx-large`](./xlsx-large.md) | xlsx: toolkits only | `'xlsxLargeBundle'` | [`src/bundles/xlsx-large.js`](../../../src/bundles/xlsx-large.js) |
+| [`xlsx-full`](./xlsx-full.md) | `xlsx-large` + further toolkits | `'xlsxFullBundle'` | [`src/bundles/xlsx-full.js`](../../../src/bundles/xlsx-full.js) |
+| [`pptx-large`](./pptx-large.md) | pptx: toolkits only | `'pptxLargeBundle'` | [`src/bundles/pptx-large.js`](../../../src/bundles/pptx-large.js) |
+| [`pptx-full`](./pptx-full.md) | `pptx-large` + further toolkits | `'pptxFullBundle'` | [`src/bundles/pptx-full.js`](../../../src/bundles/pptx-full.js) |
 
 > **Looking for a single-factory entrypoint that does not require registering 40+ ooxml modules first?** See [pre-built bundles](./prebuilt/README.md) — each logical bundle ships in two pre-built surfaces under `dist/`: `dist/standalone/<root>.js` (`-bundled`, everything inlined) and `dist/build/<root>.js` (`-package`, the 6 fw modules injected by DI).
 
@@ -51,4 +51,4 @@ resolves the extras it actually declares, so nothing else is instantiated.
 
 - [Extra modules](../extra/README.md)
 - [Getting started](../../guide/getting-started.md)
-- [`@awacloud/fw` runtime](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/core/runtime.md)
+- [`@awacloud/fw` runtime](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/packages/front/fw/docs/api/core/runtime.md)

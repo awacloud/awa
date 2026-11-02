@@ -22,7 +22,10 @@ Model:
   ordered?: boolean,
   numFormat?: '1'|'a'|'A'|'i'|'I',
   continueNumbering?,
-  items: [ { children: [...nodes], _extras? } ],
+  id?,              // xml:id
+  continueList?,    // text:continue-list: the xml:id of the list whose numbering this one goes on
+  extraAttrs?,      // any other attribute of text:list, verbatim
+  items: [ { children: [...nodes], startValue?, id?, extraAttrs?, header?, _extras? } ],
   _extras?
 }
 ```
@@ -51,7 +54,8 @@ accept an optional trailing `ctx` — the `textStyleRegistry` object built by
 | `ctx.listNumbering(styleName)` | Read result |
 |---|---|
 | `null` (foreign / unprovable style) | opaque passthrough: `styleName` kept, no `ordered` field |
-| `{ …, source: 'auto' }` | *consume-and-drop*: `ordered`/`numFormat` gained, `styleName` **dropped** (the write side rebuilds the automatic list style) |
+| `{ …, source: 'auto' }` | *consume-and-drop*: `ordered`/`numFormat` gained, `styleName` **dropped** (the write side rebuilds the automatic list style — only a style it rebuilds as it is resolves so) |
+| `{ …, source: 'kept' }` | *keep-and-gain*: `ordered`/`numFormat` gained **and** `styleName` kept — a content automatic list style the write would not rebuild as it is (its own prefixes, suffixes, levels …), so it stays in `autoStyles` and is written back as read |
 | `{ …, source: 'named' }` | *keep-and-gain*: `ordered`/`numFormat` gained **and** `styleName` kept — a `styles.xml` named list style is a document-level resource that must not be orphaned |
 
 Keep-and-gain is idempotent precisely because of the write precedence above
@@ -118,7 +122,8 @@ odt.write({
 ## Notes
 
 - `text:list-header` items are parsed like `text:list-item` but carry `header: true` on the item.
-- `continueNumbering` is only set (`true`) when `text:continue-numbering="true"` is present; it is omitted otherwise, independently of `ordered`/`numFormat`.
+- `continueNumbering` is only set (`true`) when `text:continue-numbering="true"` is present; it is omitted otherwise, independently of `ordered`/`numFormat` (another value of the attribute rides in `extraAttrs`).
+- A list's `xml:id` (`id`) and `text:continue-list` (`continueList`), an item's or header's `text:start-value` (`startValue`, a number when it is one) and `xml:id` (`id`), and any other attribute of these elements (`extraAttrs`) are read and written back, so an untouched save keeps where numbering restarts and which list goes on which.
 - Two adjacent lists of different `ordered` values keep distinct semantics end-to-end through `odt.write`/`odt.read` — this field is the odf-side half of keeping adjacent lists of different numbering distinct; before it existed, both degraded to a single untyped `text:list` shape.
 
 ## See also

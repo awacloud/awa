@@ -44,6 +44,9 @@ const cf = runtime.resolve('pdfChoiceField');
     da:  Uint8Array | null,
     q:   number,
     t:   Uint8Array | null,
+    // each only when present (Table 226)
+    parent?: PdfObject, kids?: PdfObject, aa?: PdfObject,
+    tu?: Uint8Array, tm?: Uint8Array,
     raw, _extras
 }
 ```

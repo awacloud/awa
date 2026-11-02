@@ -11,9 +11,11 @@
  * - `createOconvDefaultFaces(faces)` — the `oconvDefaultFaces` fw descriptor.
  * - `loadDefaultFaces(opts)` — the async byte path (five vendored faces).
  * - `registerDefaultFaces(runtime, opts)` — load + `runtime.register`.
+ * - `faceUrls(opts)` — the URL of every vendored face (Liberation, Carlito,
+ *   Caladea), read by nothing.
  *
  * Frozen contract: `docs/descriptor.md`.
  */
 
 export { createOconvDefaultFaces } from './faces.js';
-export { loadDefaultFaces, registerDefaultFaces } from './loader.js';
+export { faceUrls, loadDefaultFaces, registerDefaultFaces } from './loader.js';

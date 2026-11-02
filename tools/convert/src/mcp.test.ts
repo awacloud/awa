@@ -13,8 +13,10 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { encryptedPdf, jpegPdf, JPEG_BYTES, PAGE_TEXT } from '../tests/pdf-fixtures.ts';
 import {
     MAX_INLINE_BYTES,
     MAX_INLINE_TEXT_CHARS,
@@ -443,5 +445,134 @@ describe('handleRequest', () => {
             params: { name: 'does_not_exist' },
         })) as { isError: boolean };
         expect(result.isError).toBe(true);
+    });
+});
+
+describe('callTool — to_md sheets (A58)', () => {
+    test('the schema offers sheets as table | csv | tsv, and the argument reaches oconv', async () => {
+        const toMdTool = TOOLS.find((t) => t.name === 'to_md')!;
+        expect((toMdTool.inputSchema.properties as Record<string, { enum?: string[] }>).sheets!.enum).toEqual(['table', 'csv', 'tsv']);
+        const { content, isError } = await callTool('to_md', { path: SAMPLE_DOCX_PATH, at: CONVERTED_AT, sheets: 'csv' });
+        expect(isError).toBe(true);
+        expect(content[0]!.text).toContain('sheets needs format xlsx or ods');
+    });
+});
+
+describe('callTool — to_md, every toMd opt-in (T35)', () => {
+    type Props = Record<string, { type: string; enum?: string[]; items?: { type: string; enum?: string[] } }>;
+    const props = (): Props => TOOLS.find((t) => t.name === 'to_md')!.inputSchema.properties as Props;
+    const scratch = mkdtempSync(join(tmpdir(), 'convert-mcp-t35-'));
+    process.once('exit', () => rmSync(scratch, { recursive: true, force: true }));
+
+    test('the schema lists every option, the lists with their known names', () => {
+        const p = props();
+        expect(p.pdfInfer).toMatchObject({ type: 'array', items: { type: 'string', enum: ['headings', 'tables', 'running'] } });
+        expect(p.pdfDeclare).toMatchObject({ type: 'array', items: { type: 'string', enum: ['positional'] } });
+        expect(p.pdfInclude).toMatchObject({ type: 'array', items: { type: 'string', enum: ['images'] } });
+        expect(p.odtInclude).toMatchObject({ type: 'array', items: { type: 'string', enum: ['toc'] } });
+        expect(p.docxInclude).toMatchObject({ type: 'array', items: { type: 'string', enum: ['toc'] } });
+        expect(p.formOpBudget!.type).toBe('integer');
+        expect(p.frontMatter).toMatchObject({ type: 'string', enum: ['full', 'compact', 'none'] });
+        expect(p.pdfRecoverXref!.type).toBe('boolean');
+        expect(p.pdfLineHyphens).toMatchObject({ type: 'string', enum: ['drop', 'keep'] });
+        expect(p.pdfPasswordPath!.type).toBe('string');
+        expect(p.assetsDir!.type).toBe('string');
+        expect(p.pdfPassword).toBeUndefined();
+    });
+
+    test('each argument reaches oconv: on a docx, its needs-format refusal is a usage error', async () => {
+        const password = join(scratch, 'password.txt');
+        writeFileSync(password, 'user');
+        const cases: [Record<string, unknown>, string][] = [
+            [{ formOpBudget: 10 }, 'oconv: form op budget needs format pdf'],
+            [{ pdfInfer: ['headings'] }, 'oconv: pdf infer needs format pdf'],
+            [{ pdfDeclare: ['positional'] }, 'oconv: pdf declare needs format pdf'],
+            [{ pdfInclude: ['images'] }, 'oconv: pdf include needs format pdf'],
+            [{ pdfPasswordPath: password }, 'oconv: pdf password needs format pdf'],
+            [{ pdfRecoverXref: true }, 'oconv: pdf recover xref needs format pdf'],
+            [{ odtInclude: ['toc'] }, 'oconv: odt include needs format odt'],
+            [{ pdfLineHyphens: 'drop' }, 'oconv: pdf line hyphens needs format pdf'],
+            [{ frontMatter: 'x' }, 'oconv: bad front matter'],
+            [{ docxInclude: ['x'] }, 'oconv: bad docx include'],
+        ];
+        for (const [option, message] of cases) {
+            const { content, isError } = await callTool('to_md', { path: SAMPLE_DOCX_PATH, at: CONVERTED_AT, ...option });
+            expect(isError).toBe(true);
+            expect(JSON.parse(content[0]!.text)).toEqual({ error: message, usage: true });
+        }
+        expect((await callTool('to_md', { path: SAMPLE_DOCX_PATH, at: CONVERTED_AT, docxInclude: ['toc'] })).isError).toBeFalsy();
+    });
+
+    test('a list argument must be an array of strings, formOpBudget an integer', async () => {
+        const cases: [Record<string, unknown>, string][] = [
+            [{ pdfInfer: 'headings' }, 'argument pdfInfer: expected array of string, got string'],
+            [{ odtInclude: [1] }, 'argument odtInclude: expected array of string, got array'],
+            [{ docxInclude: 'toc' }, 'argument docxInclude: expected array of string, got string'],
+            [{ formOpBudget: 1.5 }, 'argument formOpBudget: expected integer, got number'],
+        ];
+        for (const [option, message] of cases) {
+            const { content, isError } = await callTool('to_md', { path: SAMPLE_DOCX_PATH, at: CONVERTED_AT, ...option });
+            expect(isError).toBe(true);
+            expect(content[0]!.text).toContain(message);
+        }
+    });
+
+    test('pdfPasswordPath opens an encrypted pdf', async () => {
+        const pdf = join(scratch, 'locked.pdf');
+        writeFileSync(pdf, encryptedPdf());
+        const password = join(scratch, 'owner.txt');
+        writeFileSync(password, 'owner\n');
+        const { content, isError } = await callTool('to_md', { path: pdf, at: CONVERTED_AT, pdfPasswordPath: password });
+        expect(isError).toBe(false);
+        expect(JSON.parse(content[0]!.text).markdown).toContain(PAGE_TEXT);
+    });
+
+    test('assetsDir writes the pictures and lists them', async () => {
+        const pdf = join(scratch, 'picture.pdf');
+        writeFileSync(pdf, jpegPdf());
+        const dir = join(scratch, 'assets');
+        const { content, isError } = await callTool('to_md', { path: pdf, at: CONVERTED_AT, pdfInclude: ['images'], assetsDir: dir });
+        expect(isError).toBe(false);
+        const payload = JSON.parse(content[0]!.text);
+        expect(payload.assets).toEqual([{ name: 'image-7.jpg', path: join(dir, 'image-7.jpg'), bytesLength: JPEG_BYTES.length }]);
+        expect(payload.assetsSkipped).toEqual([]);
+        expect(Buffer.compare(readFileSync(join(dir, 'image-7.jpg')), Buffer.from(JPEG_BYTES))).toBe(0);
+    });
+});
+
+describe('callTool — to_md, the sheet, archive and output budgets (T46-T48)', () => {
+    type Props = Record<string, { type: string; properties?: Record<string, { type: string; enum?: string[] }> }>;
+    const props = (): Props => TOOLS.find((t) => t.name === 'to_md')!.inputSchema.properties as Props;
+
+    test('the schema lists them', () => {
+        const p = props();
+        expect(p.sheetCellBudget!.type).toBe('integer');
+        expect(p.archiveLimits!.type).toBe('object');
+        expect(Object.keys(p.archiveLimits!.properties!)).toEqual(['maxParts', 'maxUncompressed', 'maxRatio', 'maxDepth']);
+        expect(p.outputBudget!.type).toBe('object');
+        expect(p.outputBudget!.properties!.overflow!.enum).toEqual(['throw', 'truncate']);
+    });
+
+    test('each argument reaches oconv', async () => {
+        const cases: [Record<string, unknown>, Record<string, unknown>][] = [
+            [{ sheetCellBudget: 10 }, { error: 'oconv: sheet cell budget needs format xlsx or ods', usage: true }],
+            [{ outputBudget: { bytes: 0 } }, { error: 'oconv: bad output budget', usage: true }],
+            [{ archiveLimits: { other: 1 } }, { error: 'oconv: bad archive limits', usage: true }],
+            [{ outputBudget: { bytes: 1 } }, { error: 'oconv: output too large', usage: false }],
+        ];
+        for (const [option, expected] of cases) {
+            const { content, isError } = await callTool('to_md', { path: SAMPLE_DOCX_PATH, at: CONVERTED_AT, ...option });
+            expect(isError).toBe(true);
+            expect(JSON.parse(content[0]!.text)).toEqual(expected);
+        }
+        const { content, isError } = await callTool('to_md', { path: SAMPLE_DOCX_PATH, at: CONVERTED_AT, outputBudget: { bytes: 1, overflow: 'truncate' } });
+        expect(isError).toBe(false);
+        expect(JSON.parse(content[0]!.text).losses.some((l: { code: string }) => l.code === 'doc/truncated')).toBe(true);
+    });
+
+    test('an object argument must be an object', async () => {
+        const { content, isError } = await callTool('to_md', { path: SAMPLE_DOCX_PATH, at: CONVERTED_AT, archiveLimits: 5 });
+        expect(isError).toBe(true);
+        expect(content[0]!.text).toContain('argument archiveLimits: expected object, got number');
     });
 });

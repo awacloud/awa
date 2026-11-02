@@ -87,4 +87,5 @@ window.addEventListener('unload', unsub);
 ## See also
 
 - [cache](./cache.md) — Cache API (usable SW-side and window-side)
+- [swUpdate](./swUpdate.md) — waiting-release update flow built on this module
 - [broadcastChannel](../net/broadcastChannel.md) — alternative cross-tab communication

@@ -14,10 +14,15 @@
  * it into a reading-order list of struct elements each carrying its tag
  * (`/S`), the marked-content ids (`/MCID`) of its own content, and the
  * page index its content lives on (`/Pg`, matched by object identity
- * against the resolved page dicts). The reader (`../pdf-to-ir.js`) keys the
- * extracted, MCID-tagged text pieces to these elements to derive
- * headings/paragraphs directly from the tree — with content-stream order as
- * the fall-back when no struct tree exists.
+ * against the resolved page dicts). It also returns the tree itself in
+ * `/K` order (`tree`): each element `{ tag, pageIndex, kids }`, a kid a
+ * marked-content id `{ mcid, pageIndex }` (a marked-content reference's
+ * own `/Pg` wins) or a child element, its tag mapped through the tree's
+ * `/RoleMap` to a standard structure type. The reader
+ * (`../pdf-to-ir.js`) keys the extracted, MCID-tagged text pieces to
+ * these elements to derive headings, paragraphs, lists and tables
+ * directly from the tree — with content-stream order as the fall-back
+ * when no struct tree exists.
  *
  * Returns `null` for an untagged document (no `/StructTreeRoot`, or a
  * malformed one) — the reader then takes the positioning fall-back. Only a
@@ -39,6 +44,15 @@ export const oconvPdfStruct = {
     factory(structTreeMod) {
         // Capture-free: all helpers declared in the factory body.
 
+        /** The standard structure types (ISO 32000-1 § 14.8.4, ISO 32000-2 § 14.8.4); a RoleMap chain stops at one. */
+        const STANDARD = new Set([
+            'Document', 'DocumentFragment', 'Part', 'Art', 'Sect', 'Div', 'Aside', 'BlockQuote', 'Caption',
+            'TOC', 'TOCI', 'Index', 'NonStruct', 'Private', 'Title', 'P', 'H', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+            'L', 'LI', 'Lbl', 'LBody', 'Table', 'TR', 'TH', 'TD', 'THead', 'TBody', 'TFoot',
+            'Span', 'Quote', 'Note', 'FENote', 'Reference', 'BibEntry', 'Code', 'Link', 'Annot', 'Sub', 'Em', 'Strong',
+            'Ruby', 'RB', 'RT', 'RP', 'Warichu', 'WT', 'WP', 'Figure', 'Formula', 'Form', 'Artifact'
+        ]);
+
         function isStructElem(d) {
             if (!d || d.type !== 'dict') return false;
             if (!d.entries.S) return false;
@@ -52,7 +66,10 @@ export const oconvPdfStruct = {
          * @param {object} readResult Value of `pdf.read(bytes)`.
          * @param {(ref: object) => object} resolve Indirect-ref resolver.
          * @returns {null | {order: {tag: string|null, mcids: number[],
-         *   pageIndex: number}[]}}
+         *   pageIndex: number}[], tree: object[]}} `order` — the elements
+         *   flattened (each with its own ids, its tag as stored); `tree` —
+         *   the root elements in `/K` order, each `{ tag, pageIndex, kids }`
+         *   with its tag mapped through the `/RoleMap`.
          */
         function readStructure(readResult, resolve) {
             const stRef = readResult && readResult.catalog
@@ -125,7 +142,64 @@ export const oconvPdfStruct = {
             }
 
             for (const kid of st.kids) walk(kid, 0);
-            return { order };
+
+            // A custom tag mapped through the RoleMap to a standard type
+            // (16 hops at most; a cycle keeps the tag as stored).
+            const roleMap = st.roleMap && st.roleMap.type === 'dict' ? st.roleMap.entries : null;
+            function standardTag(tag) {
+                let t = tag;
+                const met = new Set();
+                for (let hop = 0; roleMap && t && !STANDARD.has(t) && hop < 16; hop++) {
+                    if (met.has(t)) return tag;
+                    met.add(t);
+                    const v = roleMap[t];
+                    if (!v || v.type !== 'name') break;
+                    t = v.value;
+                }
+                return t;
+            }
+            function pageOf(pg, inherited) {
+                if (!pg || pg.type !== 'ref') return inherited;
+                const idx = pageByRaw.get(safeResolve(pg));
+                return idx === undefined ? inherited : idx;
+            }
+
+            // The tree in /K order: ids and child elements interleaved.
+            const seenTree = new Set();
+            function treeNode(kRef, inheritedPage) {
+                const d = kRef.type === 'ref' ? safeResolve(kRef) : kRef;
+                if (!d || d.type !== 'dict') return null;
+                if (kRef.type === 'ref') {
+                    const key = kRef.num + ':' + kRef.gen;
+                    if (seenTree.has(key)) return null;
+                    seenTree.add(key);
+                }
+                const e = d.entries;
+                const pageIndex = pageOf(e.Pg, inheritedPage);
+                const kids = [];
+                const visitK = (K) => {
+                    if (!K) return;
+                    if (K.type === 'int') { kids.push({ mcid: K.value, pageIndex }); return; }
+                    if (K.type === 'array') { for (const it of K.items) visitK(it); return; }
+                    const kd = K.type === 'ref' ? safeResolve(K) : K;
+                    if (!kd || kd.type !== 'dict') return;
+                    if (isStructElem(kd)) {
+                        const child = treeNode(K, pageIndex);
+                        if (child) kids.push(child);
+                    } else if (kd.entries.MCID && kd.entries.MCID.type === 'int') {
+                        kids.push({ mcid: kd.entries.MCID.value, pageIndex: pageOf(kd.entries.Pg, pageIndex) });
+                    }
+                };
+                visitK(e.K);
+                const tag = (e.S && e.S.type === 'name') ? e.S.value : null;
+                return { tag: standardTag(tag), pageIndex, kids };
+            }
+            const tree = [];
+            for (const kid of st.kids) {
+                const n = treeNode(kid, 0);
+                if (n) tree.push(n);
+            }
+            return { order, tree };
         }
 
         return { readStructure };

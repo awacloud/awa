@@ -19,7 +19,7 @@ Types color spaces expressed as an array whose first element is the family name,
 
 ```js
 const ext = runtime.resolve('pdfColorSpacesExtended');
-// Returns: { typeColorSpace, COLOR_SPACE_FAMILIES }
+// Returns: { typeColorSpace, COLOR_SPACE_FAMILIES, typeColorPart, COLOR_PART_KEYS }
 ```
 
 ## API
@@ -28,6 +28,8 @@ const ext = runtime.resolve('pdfColorSpacesExtended');
 |--------|-----------|---------|
 | `typeColorSpace` | `(value) => CS` | Record `{ family, ..., raw }`. |
 | `COLOR_SPACE_FAMILIES` | `Set<string>` | The 12 known families. |
+| `typeColorPart` | `(dict, kind) => ColorPart` | A DeviceN attributes dictionary (`kind` `deviceN`: `Subtype`, `Colorants`, `Process`, `MixingHints`), its mixing hints (`mixingHints`), process (`process`: `ColorSpace` a name or an array) or solidities (`solidities`: `Default`), a resource dictionary's default colour spaces (`colorSpaceMap`) or a dictionary of functions (`functions`: `Default`): one field per key of its list, named after the key in lower case, present only when the key is — a name, a string (its bytes), a number or an integer by its value, an array, a dictionary or a stream as read, a key of several types by the first that fits, a reference as read, `null` for a value of another type — plus `raw` and `_extras`. |
+| `COLOR_PART_KEYS` | frozen object | Kind → its keys (the Arlington PDF Model's lists). |
 
 ## Examples
 
@@ -56,6 +58,8 @@ cs.attributes;  // dict | null
 | `pdf/extra/colorspace/bad-shape` | `ParseError` | Neither a name nor an array. |
 | `pdf/extra/colorspace/bad-family` | `ParseError` | Entry 0 is not a name. |
 | `pdf/extra/colorspace/unknown` | `ParseError` | Family outside `COLOR_SPACE_FAMILIES`. |
+| `pdf/extra/color-part/not-dict` | `ParseError` | `typeColorPart`: not a dict. |
+| `pdf/extra/color-part/kind` | `ContractError` | `typeColorPart`: `kind` missing or not a key of `COLOR_PART_KEYS`. |
 | `pdf/extra/colorspace/cal-no-dict` | `ParseError` | CalGray/CalRGB without a dict. |
 | `pdf/extra/colorspace/cal-truncated` | `ParseError` | CalGray/CalRGB truncated. |
 | `pdf/extra/colorspace/lab-truncated` | `ParseError` | Lab without a dict. |

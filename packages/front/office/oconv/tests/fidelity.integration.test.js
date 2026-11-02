@@ -68,8 +68,10 @@
  *     multi-sheet workbook.
  *  8. **pptx** (`corpus/pptx/*.pptx`, real-world, Apache POI `test-data`,
  *     Apache-2.0) — genuine title+body slides convert with zero loss;
- *     table/picture-only slides record `slides/media-dropped` +
- *     `slides/untitled` together, real-world-confirmed.
+ *     a table-only slide records `slides/media-dropped` +
+ *     `slides/untitled` together, a picture-only slide places its picture
+ *     (one asset per distinct picture) beside `slides/untitled`,
+ *     real-world-confirmed.
  *  9. **odp** (`corpus/odp/*.odp`, first-party, `@awacloud/odf`'s public writer)
  *     — both `includeNotes` paths exercised: `false` records
  *     `slides/notes-omitted`, `true` renders a `blockquote` instead; a
@@ -358,20 +360,21 @@ describe('fidelity — pptx fixtures (real-world, tier 1)', () => {
         ]);
     });
 
-    test('poi-pictures.pptx — 3 picture-only, untitled slides record 3x media-dropped(picture) interleaved with 3x untitled, in slide order', async () => {
+    test('poi-pictures.pptx — 3 picture-only, untitled slides: the picture placed on each, one asset, 3x untitled', async () => {
         const bytes = fixtureBytes('./_fixtures/corpus/pptx/poi-pictures.pptx');
         const result = await oconv.toMd({
             name: 'poi-pictures.pptx', bytes, convertedAt: FIXED_AT
         });
         expect(result.lossy).toBe(true);
         expect(result.losses).toEqual([
-            { code: 'slides/media-dropped', detail: 'picture' },
             { code: 'slides/untitled', detail: '' },
-            { code: 'slides/media-dropped', detail: 'picture' },
             { code: 'slides/untitled', detail: '' },
-            { code: 'slides/media-dropped', detail: 'picture' },
             { code: 'slides/untitled', detail: '' }
         ]);
+        // The three slides draw the same picture: one asset, three references.
+        expect(result.assets.map((a) => a.name)).toEqual(['image1.png']);
+        expect(result.assets[0].bytes).toBeInstanceOf(Uint8Array);
+        expect(result.markdown.split('![](image1.png)').length - 1).toBe(3);
     });
 });
 
@@ -554,15 +557,14 @@ describe('fidelity — profile shape (whole corpus)', () => {
 });
 
 describe('fidelity — real-world corpus (owner-authorized vendoring, Apache POI test-data)', () => {
-    test('poi-numbering.docx — converts; real-world list nesting is flattened (documented, not new)', async () => {
+    test('poi-numbering.docx — converts with zero loss; real-world list nesting is kept by level', async () => {
         const bytes = fixtureBytes('./_fixtures/corpus/real/poi-numbering.docx');
         const result = await oconv.toMd({
             name: 'poi-numbering.docx', bytes, convertedAt: FIXED_AT
         });
-        expect(result.lossy).toBe(true);
-        expect(result.losses).toEqual([
-            { code: 'list/nesting-flattened', detail: 'numId 1 ilvl 1' }
-        ]);
+        expect(result.lossy).toBe(false);
+        expect(result.losses).toEqual([]);
+        expect(result.markdown).toContain('- Level 1\n  - Level 2\n    - Level 3\n      - Level 4\n');
     });
 
     test('poi-table-alignment.docx — converts with zero loss', async () => {
@@ -733,11 +735,12 @@ describe('fidelity — md -> pdf (F9 bounded typesetter, office/BATCH_33)', () =
         expect(png.losses.some((l) => l.code === 'layout/image-dropped')).toBe(false);
     });
 
-    test('md-degrade.md + assets — fromMd(docx): the image is PLACED at its own size, no image loss replaces image/dropped', async () => {
+    test('md-degrade.md + assets — fromMd(docx): the image is PLACED at its own size, no image loss replaces image/placeholder', async () => {
         const src = fixtureText('./_fixtures/corpus/md/md-degrade.md');
 
         const bare = await oconv.fromMd({ markdown: src, target: 'docx' });
-        expect(bare.losses.map((l) => l.code)).toContain('image/dropped');
+        // without the asset: a placeholder picture, no media (T32 b3c)
+        expect(bare.losses.map((l) => l.code)).toContain('image/placeholder');
         expect(Object.keys(docxApi.read(bare.bytes).images)).toHaveLength(0);
 
         const withAssets = await oconv.fromMd({
@@ -749,7 +752,7 @@ describe('fidelity — md -> pdf (F9 bounded typesetter, office/BATCH_33)', () =
         expect([...read.images[Object.keys(read.images)[0]].data]).toEqual([...ASSET_PNG]);
     });
 
-    test('md-degrade.md — fromMd(docx | odt): the task checkboxes are drawn as ☒ / ☐, no task loss', async () => {
+    test('md-degrade.md — fromMd(docx | odt): the task checkboxes are drawn as ☒ / ☐, no task loss, and read back as task markers', async () => {
         const src = fixtureText('./_fixtures/corpus/md/md-degrade.md');
         for (const target of ['docx', 'odt']) {
             const written = await oconv.fromMd({ markdown: src, target });
@@ -758,7 +761,7 @@ describe('fidelity — md -> pdf (F9 bounded typesetter, office/BATCH_33)', () =
                 bytes: written.bytes, name: 'degrade.' + target,
                 convertedAt: '2026-10-12T00:00:00Z'
             });
-            expect(back.markdown).toContain('- ☒ Completed task\n- ☐ Open task\n');
+            expect(back.markdown).toContain('- [x] Completed task\n- [ ] Open task\n');
         }
     });
 

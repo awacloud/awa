@@ -127,6 +127,12 @@ export const blockParser = {
                 lastMatchedContainer:  doc,
                 refmap:                createLinkRefMap(),
                 lastLineLength:        0,
+                // Block depth of each open container (the document 0), and
+                // the depth past which addChild refuses (parse's opts).
+                depthOf:               new WeakMap([[doc, 0]]),
+                maxDepth:              Infinity,
+                // findNextNonspace's last scan of the current line.
+                nnLine: 0, nnFrom: 0, nnAt: 0, nnTab: false,
 
                 findNextNonspace,
                 advanceOffset,
@@ -148,6 +154,8 @@ export const blockParser = {
                     { context: { gotType: typeof input } });
             }
             const p = makeParser();
+            const maxDepth = opts && opts.maxDepth;
+            if (typeof maxDepth === 'number' && maxDepth >= 0) p.maxDepth = maxDepth;
 
             const lines = input.split(reLineEnding);
             let len = lines.length;

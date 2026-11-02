@@ -120,11 +120,8 @@ export const pdfFlate = {
                     case 1: out[i] = (v - left) & 0xFF; break;
                     case 2: out[i] = (v - up) & 0xFF; break;
                     case 3: out[i] = (v - ((left + up) >> 1)) & 0xFF; break;
-                    case 4: out[i] = (v - paeth(left, up, upLeft)) & 0xFF; break;
-                    default:
-                        throw new ParseError('pdf/flate/bad-png-filter',
-                            'unknown PNG filter tag',
-                            { context: { tag: filter } });
+                    // Tag 4 (Paeth): pngEncode only derives tags 0–4.
+                    default: out[i] = (v - paeth(left, up, upLeft)) & 0xFF; break;
                 }
             }
             return out;

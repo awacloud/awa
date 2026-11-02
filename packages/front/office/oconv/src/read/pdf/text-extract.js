@@ -23,12 +23,31 @@
  *
  * ```
  * {
- *   items:  [{ kind:'text', x, y, fontSize, xEnd, text, mcid },
- *            { kind:'image', mcid }],   // content-stream order
+ *   items:  [{ kind:'text', x, y, fontSize, xEnd, text, mcid, bold },
+ *            { kind:'image', mcid },
+ *            { kind:'rule', x0, y0, x1, y1 }],   // content-stream order;
+ *                                                  // rules only with opts.rules
  *   counts: { operators, decoded, undecodable },
  *   losses: [{ code, detail }]
  * }
  * ```
+ *
+ * With `opts.images` (opt-in), a **placeable** picture's item also carries
+ * `resource` (its resource name), `name`, `bytes`, `contentType` and
+ * `masked`, and records no loss: an indirect image XObject drawn by `Do`
+ * (inside a form too), not an `/ImageMask`, whose last filter is
+ * `DCTDecode` or `JPXDecode` and no earlier one, whose `/Decode` (if any)
+ * is the default, and whose decoded bytes (the filters before it applied,
+ * the last passed through) are a JPEG file (`FF D8 FF`: `image/jpeg`,
+ * named `image-<obj>.jpg`) or a JP2 file (its signature box: `image/jp2`,
+ * `image-<obj>.jp2`; `-<gen>` before the extension when the generation is
+ * not 0). `masked` is true when it has an `/SMask` or a `/Mask`. A
+ * picture with no such last filter is placeable too when
+ * `oconvPdfImagePng.imageToPng` writes its samples as a PNG (`image/png`,
+ * `image-<obj>.png`; Gray, RGB, ICCBased 1 or 3, Indexed, 1–16 bits, a
+ * same-size soft mask or a colour-key mask as alpha): `masked` is then
+ * true only for a mask it could not apply. Every other picture keeps the
+ * bare item and its `image/dropped`.
  *
  * `x`/`y` is the piece's start and `xEnd` the x where it ends, both in the
  * page's device space. Each show operator advances the text matrix by the
@@ -74,7 +93,7 @@
  * | `text/undecodable` | ≥1 char code in a show run resolved to no Unicode (detail = count); the codes are counted, never silently kept |
  * | `text/font-unresolved` | a `Tf` named a font absent from `/Resources` or whose dict failed to type; that run's bytes are counted undecodable |
  * | `text/width-approximated` | a font's glyph widths could not be read from the font (no `/Widths` on a non-Standard-14 font, a malformed width array, …) and a declared fallback width (500/1000 em) placed its text; recorded once per font resource per page (detail = the resource name). Text is kept; only the end positions — and so the inferred word spaces — are approximate |
- * | `image/dropped` | an image XObject draw (`Do`) or inline image (`BI`) — tier 1 keeps no images; recorded from inside a form too |
+ * | `image/dropped` | an image XObject draw (`Do`) or inline image (`BI`) — tier 1 keeps no images (a placeable picture under `opts.images` excepted); recorded from inside a form too, once per draw; detail = the picture: `<name> (<num> <gen> R, <w>x<h>)` (a direct object without the reference, the size left out when not integers), `inline (<w>x<h>)` or `inline`, `xobject` for a `Do` without a name operand, the bare name when the resources lack it or it is no image |
  * | `xobject/form-dropped` | a Form XObject whose stream cannot be used, so its text is not extracted; detail = `<name>: <reason>`, the reason one of `not a stream`, `undecodable stream`, `unparsable stream` |
  * | `xobject/form-cycle` | a Form XObject drawn from inside itself (directly or through other forms) — not re-entered (detail = the resource name) |
  * | `xobject/form-depth` | a Form XObject that would nest deeper than 12 forms — not executed (detail = the resource name) |
@@ -91,16 +110,17 @@ import { pdfResources } from '@awacloud/pdf';
 import { pdfFilterDispatch } from '@awacloud/pdf';
 import { pdfContentStream } from '@awacloud/pdf';
 import { oconvPdfFontDecoder } from './font-decoder.js';
+import { oconvPdfImagePng } from './image-png.js';
 
 export const oconvPdfTextExtract = {
     name: 'oconvPdfTextExtract',
     dependencies: [
         'pdfResources', 'pdfFilterDispatch', 'pdfContentStream',
-        'oconvPdfFontDecoder'
+        'oconvPdfFontDecoder', 'oconvPdfImagePng'
     ],
-    deps: [pdfResources, pdfFilterDispatch, pdfContentStream, oconvPdfFontDecoder],
+    deps: [pdfResources, pdfFilterDispatch, pdfContentStream, oconvPdfFontDecoder, oconvPdfImagePng],
 
-    factory(resourcesMod, dispatchMod, contentStreamMod, fontDecoderMod) {
+    factory(resourcesMod, dispatchMod, contentStreamMod, fontDecoderMod, imagePngMod) {
         // Capture-free: all helpers declared in the factory body.
 
         /** 2×3 affine multiply (PDF matrix order a b c d e f), `m1` then `m2`. */
@@ -116,6 +136,12 @@ export const oconvPdfTextExtract = {
         }
 
         const IDENTITY = [1, 0, 0, 1, 0, 0];
+        // Rules (opt-in): a straight segment within RULE_AXIS_TOL of an axis
+        // and longer than RULE_MIN_LEN; a filled rectangle thinner than
+        // RULE_THIN (device units).
+        const RULE_AXIS_TOL = 0.5;
+        const RULE_MIN_LEN = 5;
+        const RULE_THIN = 2;
 
         /**
          * Word-space threshold of a `TJ` position adjustment, in ems: an
@@ -160,6 +186,71 @@ export const oconvPdfTextExtract = {
             if (!Number.isSafeInteger(v) || v < 1) {
                 throw new Error('oconv: bad form op budget');
             }
+        }
+
+        /** The two passthrough image filters (`normalizeFilterList` resolves abbreviations). */
+        const PASSTHROUGH = { DCTDecode: 'DCTDecode', JPXDecode: 'JPXDecode' };
+        /** The JP2 signature box (ISO/IEC 15444-1 I.5.1). */
+        const JP2_SIGNATURE = [0, 0, 0, 12, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A];
+
+        /**
+         * A placeable picture (opt-in `opts.images`): an indirect image
+         * XObject, not an image mask, either whose last filter is
+         * `DCTDecode` or `JPXDecode` (and no earlier one), with a default
+         * `/Decode`, whose decoded bytes are a JPEG or a JP2 file, or whose
+         * samples `oconvPdfImagePng.imageToPng` writes as a PNG — `{ name,
+         * bytes, contentType, masked }`, else `null`.
+         */
+        /** `<w>x<h>` from an image dict's two size keys, or `''` when either is not an integer. */
+        function sizeOf(e, wKey, hKey, wAlt, hAlt) {
+            const w = e[wKey] || e[wAlt];
+            const h = e[hKey] || e[hAlt];
+            return w && h && w.type === 'int' && h.type === 'int' ? w.value + 'x' + h.value : '';
+        }
+
+        /** The `image/dropped` detail of a `Do` of an image XObject: its name, object and size. */
+        function pictureDetail(name, entry, xo) {
+            const dict = xo && xo.type === 'stream' ? xo.dict : xo;
+            const size = dict && dict.entries ? sizeOf(dict.entries, 'Width', 'Height') : '';
+            const parts = [];
+            if (entry && entry.type === 'ref') parts.push(entry.num + ' ' + entry.gen + ' R');
+            if (size) parts.push(size);
+            return parts.length ? name + ' (' + parts.join(', ') + ')' : name;
+        }
+
+        function placeable(entry, xo, resolve) {
+            if (!entry || entry.type !== 'ref' || !xo || xo.type !== 'stream') return null;
+            const e = xo.dict.entries;
+            if (e.ImageMask && e.ImageMask.value === true) return null;
+            const nameOf = (ext) => `image-${entry.num}${entry.gen ? '-' + entry.gen : ''}.${ext}`;
+            let names;
+            try { names = dispatchMod.normalizeFilterList(e.Filter); } catch { return null; }
+            const last = names.length > 0 ? PASSTHROUGH[names[names.length - 1]] : undefined;
+            if (!last) {
+                let png;
+                try { png = imagePngMod.imageToPng(xo, resolve); } catch { png = null; }
+                return png ? { name: nameOf('png'), bytes: png.bytes, contentType: 'image/png', masked: png.masked } : null;
+            }
+            if (names.slice(0, -1).some((n) => PASSTHROUGH[n])) return null;
+            if (e.Decode !== undefined) {
+                const d = e.Decode.type === 'array' ? e.Decode.items : null;
+                if (!d || d.length % 2 !== 0
+                        || !d.every((it, i) => (it.type === 'int' || it.type === 'real') && it.value === i % 2)) return null;
+            }
+            let bytes;
+            try { bytes = dispatchMod.decode(xo); } catch { return null; }
+            const at = (sig) => bytes.length >= sig.length && sig.every((v, i) => bytes[i] === v);
+            let ext;
+            let contentType;
+            if (last === 'DCTDecode' && at([0xFF, 0xD8, 0xFF])) { ext = 'jpg'; contentType = 'image/jpeg'; }
+            else if (last === 'JPXDecode' && at(JP2_SIGNATURE)) { ext = 'jp2'; contentType = 'image/jp2'; }
+            else return null;
+            return {
+                name: nameOf(ext),
+                bytes: bytes === xo.raw ? bytes.slice() : bytes,
+                contentType,
+                masked: !!(e.SMask || e.Mask)
+            };
         }
 
         function numOf(arg) {
@@ -225,10 +316,13 @@ export const oconvPdfTextExtract = {
          *
          * @param {object} page Typed page (value from `pdf.read().pages[i]`).
          * @param {(ref: object) => object} resolve Indirect-ref resolver.
-         * @param {{formOpBudget?: number}} [opts] `formOpBudget` — the
+         * @param {{formOpBudget?: number, rules?: boolean, images?: boolean}} [opts]
+         *   `formOpBudget` — the
          *   per-page Form XObject operator budget (default `FORM_OPS_MAX`,
          *   1,000,000). Validated at entry, before any stream is decoded
-         *   (`assertFormOpBudget`).
+         *   (`assertFormOpBudget`). `rules` — the page's rules as items.
+         *   `images` — a placeable picture's bytes on its item (module
+         *   header).
          * @returns {{items: object[], counts: object, losses: object[]}}
          * @throws {Error} `oconv: bad form op budget` when `opts.formOpBudget`
          *   is present and is not a safe integer >= 1.
@@ -298,6 +392,15 @@ export const oconvPdfTextExtract = {
             let curMcid = null;
             const mcidStack = [];
             const approxReported = new Set();
+            // Rules (opt-in, `opts.rules`): the current path's segments in
+            // device space, `{ x0, y0, x1, y1, curved }`, and its rectangles.
+            const wantRules = !!(opts && opts.rules === true);
+            // Pictures (opt-in, `opts.images`): a placeable one's bytes on its item.
+            const wantImages = !!(opts && opts.images === true);
+            let pathSegs = [];
+            let pathRects = [];
+            let cur = null;
+            let subStart = null;
             // The state the stream being walked started from: an unbalanced
             // `Q` / `EMC` never reaches past it (0 / identity / null on the
             // page; the form's entry state inside a form).
@@ -310,6 +413,49 @@ export const oconvPdfTextExtract = {
                 const comb = mul(tm, ctm);           // text-space (0,0) → device
                 const effFs = fontSize * Math.hypot(comb[2], comb[3]) || fontSize;
                 return { x: comb[4], y: comb[5], fs: effFs };
+            }
+
+            /** User-space (x, y) to device space under the CTM. */
+            function dev(x, y) {
+                return { x: ctm[0] * x + ctm[2] * y + ctm[4], y: ctm[1] * x + ctm[3] * y + ctm[5] };
+            }
+
+            /** Push `{ kind: 'rule' }` for an axis-parallel segment over `RULE_MIN_LEN`. */
+            function pushRule(a, b) {
+                const dx = Math.abs(b.x - a.x);
+                const dy = Math.abs(b.y - a.y);
+                const flat = dy <= RULE_AXIS_TOL && dx > RULE_MIN_LEN;
+                const upright = dx <= RULE_AXIS_TOL && dy > RULE_MIN_LEN;
+                if (!flat && !upright) return;
+                items.push({
+                    kind: 'rule',
+                    x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y),
+                    x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y)
+                });
+            }
+
+            /** Paint the current path: its rules when stroked or filled, then end it. */
+            function paint(stroke, fill) {
+                if (wantRules) {
+                    if (stroke) {
+                        for (const sg of pathSegs) if (!sg.curved) pushRule(sg.a, sg.b);
+                    }
+                    if (fill) {
+                        for (const r of pathRects) {
+                            const xs = r.map((q) => q.x);
+                            const ys = r.map((q) => q.y);
+                            const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+                            const w = x1 - x0, h = y1 - y0;
+                            // A thin rectangle, axis-parallel: its centre line.
+                            if (h < RULE_THIN && w > RULE_MIN_LEN) pushRule({ x: x0, y: (y0 + y1) / 2 }, { x: x1, y: (y0 + y1) / 2 });
+                            else if (w < RULE_THIN && h > RULE_MIN_LEN) pushRule({ x: (x0 + x1) / 2, y: y0 }, { x: (x0 + x1) / 2, y: y1 });
+                        }
+                    }
+                }
+                pathSegs = [];
+                pathRects = [];
+                cur = null;
+                subStart = null;
             }
 
             function td(tx, ty) {
@@ -355,7 +501,8 @@ export const oconvPdfTextExtract = {
                 if (text) {
                     items.push({
                         kind: 'text', x: start.x, y: start.y, fontSize: start.fs,
-                        xEnd: origin().x, text, mcid: curMcid
+                        // No current decoder when a TJ kern alone made the text.
+                        xEnd: origin().x, text, mcid: curMcid, bold: !!(curDecoder && curDecoder.bold)
                     });
                 }
             }
@@ -545,10 +692,14 @@ export const oconvPdfTextExtract = {
                         sub = s && s.type === 'name' ? s.value : null;
                     } catch { sub = null; }
                 }
+                const pic = wantImages && sub === 'Image' ? placeable(entry, xo, resolve) : null;
+                const detail = sub === 'Image' ? pictureDetail(nameArg.value, entry, xo) : nameArg.value;
                 if (sub === 'Form') {
                     drawForm(entry, xo, nameArg.value);
+                } else if (pic) {
+                    items.push({ kind: 'image', mcid: curMcid, resource: nameArg.value, detail, ...pic });
                 } else {
-                    losses.push({ code: 'image/dropped', detail: nameArg.value });
+                    losses.push({ code: 'image/dropped', detail });
                     items.push({ kind: 'image', mcid: curMcid });
                 }
             }
@@ -621,10 +772,53 @@ export const oconvPdfTextExtract = {
                         curMcid = mcidStack.length > mcidFloor ? mcidStack.pop() : baseMcid;
                         break;
                     case 'Do': drawXObject(op); break;
-                    case 'BI':
-                        losses.push({ code: 'image/dropped', detail: 'inline' });
+                    case 'BI': {
+                        const d = op.args && op.args[0] && op.args[0].type === 'dict' ? op.args[0].entries : null;
+                        const size = d ? sizeOf(d, 'W', 'H', 'Width', 'Height') : '';
+                        losses.push({ code: 'image/dropped', detail: size ? 'inline (' + size + ')' : 'inline' });
                         items.push({ kind: 'image', mcid: curMcid });
                         break;
+                    }
+                    // Path construction and painting (rules, opt-in).
+                    case 'm':
+                        if (wantRules) { cur = dev(numOf(op.args[0]), numOf(op.args[1])); subStart = cur; }
+                        break;
+                    case 'l':
+                        if (wantRules) {
+                            const p2 = dev(numOf(op.args[0]), numOf(op.args[1]));
+                            if (cur) pathSegs.push({ a: cur, b: p2, curved: false });
+                            cur = p2;
+                        }
+                        break;
+                    case 'c': case 'v': case 'y':
+                        if (wantRules) {
+                            const n = op.args ? op.args.length : 0;
+                            const p2 = n >= 2 ? dev(numOf(op.args[n - 2]), numOf(op.args[n - 1])) : cur;
+                            if (cur && p2) pathSegs.push({ a: cur, b: p2, curved: true });
+                            cur = p2;
+                        }
+                        break;
+                    case 'h':
+                        if (wantRules && cur && subStart && (cur.x !== subStart.x || cur.y !== subStart.y)) {
+                            pathSegs.push({ a: cur, b: subStart, curved: false });
+                            cur = subStart;
+                        }
+                        break;
+                    case 're':
+                        if (wantRules) {
+                            const x = numOf(op.args[0]), y = numOf(op.args[1]);
+                            const w = numOf(op.args[2]), hh = numOf(op.args[3]);
+                            const c4 = [dev(x, y), dev(x + w, y), dev(x + w, y + hh), dev(x, y + hh)];
+                            for (let k = 0; k < 4; k++) pathSegs.push({ a: c4[k], b: c4[(k + 1) % 4], curved: false });
+                            pathRects.push(c4);
+                            cur = c4[0];
+                            subStart = c4[0];
+                        }
+                        break;
+                    case 'S': case 's': paint(true, false); break;
+                    case 'f': case 'F': case 'f*': paint(false, true); break;
+                    case 'B': case 'B*': case 'b': case 'b*': paint(true, true); break;
+                    case 'n': paint(false, false); break;
                     default: break;
                 }
             }

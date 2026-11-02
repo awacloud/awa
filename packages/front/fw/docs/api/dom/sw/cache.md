@@ -113,4 +113,5 @@ const worker = fw.createWorker(
 ## See also
 
 - [serviceWorker](./serviceWorker.md) — SW lifecycle (window-side)
+- [precache](./precache.md) — worker-side release precache with cache-first / network-first strategies
 - [broadcastChannel](../net/broadcastChannel.md) — SW ↔ clients communication

@@ -44,6 +44,7 @@ const out = runtime.resolve('pdfOutline');
     dest?,                                    // /Dest, kept raw
     color?: [r, g, b],                        // /C, 3 numbers
     F?: number,                               // style flags
+    se?,                                      // /SE, the structure element, kept raw
     ref?: { num, gen },                       // set by walkOutline only
     raw, _extras
 }
@@ -94,10 +95,8 @@ if (item.dest) {
 | `pdf/outline/bad-first` | `ParseError` | `/First` is not a ref. |
 | `pdf/outline/no-resolver` | `ParseError` | `resolveRef` not supplied. |
 | `pdf/outline/max-depth` | `ParseError` | Depth exceeds `opts.maxDepth`. |
-| `pdf/outline/non-ref-sibling` | `ParseError` | A sibling entry is not a ref. |
 | `pdf/outline/cycle` | `ParseError` | An item was visited twice. |
 | `pdf/outline/too-many` | `ParseError` | Item count exceeds `opts.maxItems`. |
-| `pdf/outline/runaway` | `ParseError` | Sibling chain exceeds the item cap (infinite-loop guard). |
 | `pdf/outline/item/not-dict` | `ParseError` | `typeOutlineItem` receives a non-dict. |
 | `pdf/outline/missing-title` | `ParseError` | `/Title` absent. |
 

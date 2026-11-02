@@ -56,6 +56,8 @@ export const stylePage = {
         ]);
 
 
+        // An element becomes a bag; any other child (text, CDATA, a
+        // comment: a header's words) stays in place as the node read.
         function parseNode(el) {
             const out = {
                 kind: el.name,
@@ -63,14 +65,13 @@ export const stylePage = {
                 children: []
             };
             for (const c of el.children || []) {
-                if (c.type !== 'element') continue;
-                out.children.push(parseNode(c));
+                out.children.push(c && c.type === 'element' ? parseNode(c) : c);
             }
             return out;
         }
 
         function renderNode(n) {
-            const kids = (n.children || []).map(renderNode);
+            const kids = (n.children || []).map((c) => (c && c.kind ? renderNode(c) : c));
             return xml.el(n.kind, { ...(n.attrs || {}) }, kids);
         }
 
@@ -79,6 +80,17 @@ export const stylePage = {
         }
 
         // --- Hooks ---
+
+        // The container each element belongs in (page layouts in
+        // office:automatic-styles, master pages in office:master-styles):
+        // a bag met elsewhere records it (`container`) so it goes back there.
+        const HOME = { 'style:page-layout': 'automaticStyles', 'style:master-page': 'masterStyles' };
+
+        function bag(el, container) {
+            const n = parseNode(el);
+            if (container !== HOME[el.name]) n.container = container;
+            return n;
+        }
 
         function hydrateStyles(styles) {
             if (!styles) return styles;
@@ -90,8 +102,8 @@ export const stylePage = {
                 const masters = styles.masterPages || [];
                 for (const s of styles[k]) {
                     if (!s || s.type !== 'element') { remaining.push(s); continue; }
-                    if (s.name === 'style:page-layout')  pages.push(parseNode(s));
-                    else if (s.name === 'style:master-page') masters.push(parseNode(s));
+                    if (s.name === 'style:page-layout')  pages.push(bag(s, k));
+                    else if (s.name === 'style:master-page') masters.push(bag(s, k));
                     else remaining.push(s);
                 }
                 if (pages.length) styles.pageLayouts = pages;
@@ -104,8 +116,8 @@ export const stylePage = {
                 const masters = styles.masterPages || [];
                 for (const s of styles._extras) {
                     if (!s || s.type !== 'element') { remaining.push(s); continue; }
-                    if (s.name === 'style:page-layout')  pages.push(parseNode(s));
-                    else if (s.name === 'style:master-page') masters.push(parseNode(s));
+                    if (s.name === 'style:page-layout')  pages.push(bag(s, '_extras'));
+                    else if (s.name === 'style:master-page') masters.push(bag(s, '_extras'));
                     else remaining.push(s);
                 }
                 if (pages.length) styles.pageLayouts = pages;
@@ -116,17 +128,24 @@ export const stylePage = {
             return styles;
         }
 
+        // Each bag back into its container, after the elements left there;
+        // `_extras` (the root's other children) is never replaced. The
+        // given model is not changed: the containers are copied.
         function dehydrateStyles(styles) {
             if (!styles) return styles;
             if ((!styles.pageLayouts || !styles.pageLayouts.length) &&
                 (!styles.masterPages || !styles.masterPages.length)) return styles;
             const out = { ...styles };
-            const extras = Array.isArray(out._extras) ? [...out._extras] : [];
-            for (const p of out.pageLayouts || []) extras.push(renderNode(p));
-            for (const m of out.masterPages || []) extras.push(renderNode(m));
+            const put = (n) => {
+                const k = n.container || HOME[n.kind];
+                // the first push into a container copies it
+                if (out[k] === styles[k]) out[k] = Array.isArray(styles[k]) ? [...styles[k]] : [];
+                out[k].push(renderNode(n));
+            };
+            for (const p of out.pageLayouts || []) put(p);
+            for (const m of out.masterPages || []) put(m);
             delete out.pageLayouts;
             delete out.masterPages;
-            if (extras.length) out._extras = extras;
             return out;
         }
 

@@ -63,22 +63,26 @@
  * @module tool-convert/mcp
  */
 
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import pkg from '../package.json' with { type: 'json' };
 import {
     CONVERT_PAIRS,
     FROM_MD_TARGETS,
     TO_MD_FORMATS,
+    assetFiles,
     convert as coreConvert,
     fromMd as coreFromMd,
     isCoreError,
     toHtml as coreToHtml,
     toMd as coreToMd,
+    type Asset,
     type Loss,
     type LossSummaryEntry,
+    type ToMdInput,
 } from './core.ts';
+import { passwordFromFile } from './password.ts';
 import { timestampError } from './timestamp.ts';
 
 const VERSION: string = typeof pkg.version === 'string' ? pkg.version : '0.0.0';
@@ -135,6 +139,9 @@ export class RpcFailure extends Error {
 interface SchemaProperty {
     type: string;
     description?: string;
+    enum?: string[];
+    items?: { type: string; enum?: string[] };
+    properties?: Record<string, { type: string; enum?: string[]; description?: string }>;
 }
 
 export interface ToolDef {
@@ -273,6 +280,52 @@ const LOSS_VIEW_HINT =
     `The result's "lossSummary" groups the losses by code and detail with a count; pass "lossView": "summary" ` +
     `to receive it without the per-occurrence "losses" array (recommended — that array grows with the document).`;
 
+/**
+ * The `toMd` options the arguments carry, under oconv's own names — only
+ * those given; oconv validates every value. The password is read from
+ * `pdfPasswordPath` (`passwordFromFile`): no argument carries it in clear.
+ */
+function toMdOptions(args: Record<string, unknown>): Partial<ToMdInput> | { error: string } {
+    let pdfPassword: Uint8Array | undefined;
+    if (args.pdfPasswordPath !== undefined) {
+        try {
+            pdfPassword = passwordFromFile(new Uint8Array(readFileSync(args.pdfPasswordPath as string)));
+        } catch (e) {
+            return { error: `cannot read pdfPasswordPath: ${(e as Error).message}` };
+        }
+    }
+    const options: Partial<ToMdInput> = {
+        includeNotes: args.includeNotes as boolean | undefined,
+        sheets: args.sheets as string | undefined,
+        formOpBudget: args.formOpBudget as number | undefined,
+        pdfInfer: args.pdfInfer as string[] | undefined,
+        pdfDeclare: args.pdfDeclare as string[] | undefined,
+        pdfInclude: args.pdfInclude as string[] | undefined,
+        pdfPassword,
+        pdfRecoverXref: args.pdfRecoverXref as boolean | undefined,
+        pdfLineHyphens: args.pdfLineHyphens as string | undefined,
+        odtInclude: args.odtInclude as string[] | undefined,
+        docxInclude: args.docxInclude as string[] | undefined,
+        sheetCellBudget: args.sheetCellBudget as number | undefined,
+        archiveLimits: args.archiveLimits as ToMdInput['archiveLimits'],
+        outputBudget: args.outputBudget as ToMdInput['outputBudget'],
+        opts: args.frontMatter === undefined ? undefined : { frontMatter: args.frontMatter as string },
+    };
+    return Object.fromEntries(Object.entries(options).filter(([, v]) => v !== undefined));
+}
+
+/** Write the assets `assetFiles` accepts under `dir`; the payload lists what was written and what was not. */
+function writeAssets(dir: string, assets: Asset[]): Record<string, unknown> {
+    const { files, skipped } = assetFiles(assets);
+    const written = files.map((f) => {
+        const path = join(dir, f.name);
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, f.bytes);
+        return { name: f.name, path, bytesLength: f.bytes.byteLength };
+    });
+    return { assets: written, assetsSkipped: skipped };
+}
+
 async function handleToMd(args: Record<string, unknown>): Promise<Record<string, unknown>> {
     // Checked BEFORE readBinaryInput: a usage error in `at` or `lossView`
     // must win even when the input cannot be read at all.
@@ -288,16 +341,19 @@ async function handleToMd(args: Record<string, unknown>): Promise<Record<string,
         name: args.name as string | undefined,
     });
     if (isInputError(input)) return { error: input.error, usage: true };
+    const options = toMdOptions(args);
+    if (isInputError(options)) return { error: options.error, usage: true };
 
     const result = await coreToMd({
         name: input.name,
         bytes: input.bytes,
         convertedAt: at,
         format: args.format as string | undefined,
-        includeNotes: args.includeNotes as boolean | undefined,
+        ...options,
     });
     if (isCoreError(result)) return { error: result.error, usage: result.usage };
-    return deliverText(result.markdown, 'md', 'markdown', args.outPath as string | undefined, lossFields(result, view));
+    const assets = args.assetsDir === undefined ? {} : writeAssets(args.assetsDir as string, result.assets);
+    return deliverText(result.markdown, 'md', 'markdown', args.outPath as string | undefined, { ...lossFields(result, view), ...assets });
 }
 
 async function handleFromMd(args: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -367,8 +423,21 @@ export const TOOLS: ToolDef[] = [
             `headings, plus whatever this specific conversion recorded — see the result's "losses" array ` +
             `(office/oconv's docs/loss-matrix.md has the fidelity table per source format). ` +
             `Options mirror the CLI's "to-md" verb: "format" overrides extension-based detection, "includeNotes" ` +
-            `(pptx/odp only, default false) includes speaker notes, "at" pins the ISO-8601 provenance timestamp ` +
-            `(default: now — @awacloud/oconv never defaults it itself). "outPath" writes the markdown to that ` +
+            `(pptx/odp only, default false) includes speaker notes, "sheets" (xlsx/ods only: "table", the default, ` +
+            `"csv" or "tsv" — each sheet as a fenced csv/tsv block, far fewer tokens than a table on a dense ` +
+            `sheet) chooses how sheets are written, "at" pins the ISO-8601 provenance timestamp ` +
+            `(default: now — @awacloud/oconv never defaults it itself). The other options are @awacloud/oconv's ` +
+            `toMd inputs of the same name, each for the source format it names: "pdfInfer" (headings, tables on an ` +
+            `untagged pdf), "pdfDeclare", "pdfInclude" (["images"]: the pictures, written under "assetsDir"), ` +
+            `"pdfRecoverXref", "pdfLineHyphens" ("drop" or "keep": a word cut by a line-end hyphen joined), "pdfPasswordPath" (a file holding the password of an encrypted pdf — no argument ` +
+            `takes the password itself), "formOpBudget", "odtInclude" (["toc"]), "docxInclude" (["toc"]), "sheetCellBudget" (xlsx/ods: a ` +
+            `sheet whose padded table would pass it is written one addressed line per value), "archiveLimits" ` +
+            `(office formats: the reader's maxParts, maxUncompressed, maxRatio, maxDepth), "outputBudget" ` +
+            `({bytes, overflow}: past bytes of text the conversion fails, or with overflow "truncate" keeps what ` +
+            `fits) and "frontMatter" ("compact" or ` +
+            `"none" shrink the front matter); one on another source format, or a value oconv refuses, is a usage ` +
+            `error. "assetsDir" writes each image whose bytes the conversion returned under that directory and ` +
+            `lists them in "assets" (unwritten ones in "assetsSkipped"). "outPath" writes the markdown to that ` +
             `file instead of returning it inline; large output is written to a file automatically even without it. ` +
             LOSS_VIEW_HINT,
         inputSchema: {
@@ -379,6 +448,78 @@ export const TOOLS: ToolDef[] = [
                 name: { type: 'string', description: 'Source file name (drives format detection). Required with bytesBase64.' },
                 format: { type: 'string', description: `Explicit source format, overrides name-based detection: ${TO_MD_FORMATS.join(' | ')}.` },
                 includeNotes: { type: 'boolean', description: 'pptx/odp only: include speaker notes. Default false.' },
+                sheets: {
+                    type: 'string',
+                    enum: ['table', 'csv', 'tsv'],
+                    description: 'xlsx/ods only: how each sheet is written — "table" (default, a GFM table), "csv" or "tsv" (a fenced block, much smaller on a dense sheet).',
+                },
+                pdfInfer: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['headings', 'tables', 'running'] },
+                    description: 'pdf only: inference on an untagged pdf — headings from type size and weight, tables from rules or aligned text, running headers and footers left out.',
+                },
+                pdfDeclare: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['positional'] },
+                    description: 'pdf only: "positional" records one struct/positional loss when the structure was built from positions.',
+                },
+                pdfInclude: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['images'] },
+                    description: 'pdf only: "images" places JPEG, JPEG 2000 and raw-pixel pictures; their bytes are written under "assetsDir".',
+                },
+                pdfRecoverXref: { type: 'boolean', description: 'pdf only: true rebuilds an unusable cross-reference chain.' },
+                pdfLineHyphens: {
+                    type: 'string',
+                    enum: ['drop', 'keep'],
+                    description: 'pdf only: a word a hyphen cuts at a line end is joined — "drop" without the hyphen, "keep" with it (a soft hyphen always joins).',
+                },
+                pdfPasswordPath: {
+                    type: 'string',
+                    description: 'pdf only: a file holding the user or owner password of an encrypted pdf (one trailing line break is dropped).',
+                },
+                formOpBudget: { type: 'integer', description: 'pdf only: per-page Form XObject operator budget, default 1000000.' },
+                odtInclude: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['toc'] },
+                    description: 'odt only: "toc" reads a table of contents\' entries as paragraphs.',
+                },
+                docxInclude: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['toc'] },
+                    description: 'docx only: "toc" reads a table of contents control\'s entries as paragraphs.',
+                },
+                sheetCellBudget: {
+                    type: 'integer',
+                    description: 'xlsx/ods only: a sheet whose padded table would hold more cells is written unpadded, one "<A1 address>: <text>" line per value (loss sheet/sparse-form).',
+                },
+                archiveLimits: {
+                    type: 'object',
+                    description: 'Office formats only: the reader\'s archive limits, each a non-negative integer (0 disables a check); odt, ods and odp take the first three.',
+                    properties: {
+                        maxParts: { type: 'integer', description: 'Entries in the archive (default 8192 for docx, xlsx, pptx; 4096 for odt, ods, odp).' },
+                        maxUncompressed: { type: 'integer', description: 'Total inflated bytes (default 256 MiB).' },
+                        maxRatio: { type: 'integer', description: 'Inflated / compressed ratio per entry (default 200).' },
+                        maxDepth: { type: 'integer', description: 'Element depth of an XML part (default 1000; docx, xlsx, pptx).' },
+                    },
+                },
+                outputBudget: {
+                    type: 'object',
+                    description: 'Every format: a bound on the document\'s text (UTF-8 bytes), checked before the markdown is built.',
+                    properties: {
+                        bytes: { type: 'integer', description: 'The budget, a positive integer.' },
+                        overflow: { type: 'string', enum: ['throw', 'truncate'], description: '"throw" (default) fails; "truncate" keeps what fits (loss doc/truncated).' },
+                    },
+                },
+                frontMatter: {
+                    type: 'string',
+                    enum: ['full', 'compact', 'none'],
+                    description: '"full" (default), "compact" (the loss ledger counted per code and detail) or "none" (the body alone).',
+                },
+                assetsDir: {
+                    type: 'string',
+                    description: 'Write each image whose bytes the conversion returned under this directory, at the path the markdown names.',
+                },
                 at: {
                     type: 'string',
                     description: 'RFC 3339 date-time, e.g. 2026-01-01T00:00:00.000Z. Default: now. Any other value is a usage error.',
@@ -475,9 +616,20 @@ function validateArgs(def: ToolDef, args: Record<string, unknown>): string | nul
     for (const [k, v] of Object.entries(args)) {
         const spec = def.inputSchema.properties[k];
         if (!spec) return `unknown argument: ${k}`;
-        if (typeof v !== spec.type) return `argument ${k}: expected ${spec.type}, got ${typeof v}`;
+        if (!hasSchemaType(v, spec)) return `argument ${k}: expected ${describeSchemaType(spec)}, got ${Array.isArray(v) ? 'array' : typeof v}`;
     }
     return null;
+}
+
+/** The JSON-schema type check: `integer` and `array` (of `items.type`) beside the `typeof` names. Enums are left to oconv. */
+function hasSchemaType(v: unknown, spec: SchemaProperty): boolean {
+    if (spec.type === 'integer') return Number.isInteger(v);
+    if (spec.type === 'array') return Array.isArray(v) && v.every((item) => typeof item === spec.items?.type);
+    return typeof v === spec.type;
+}
+
+function describeSchemaType(spec: SchemaProperty): string {
+    return spec.type === 'array' ? `array of ${spec.items?.type}` : spec.type;
 }
 
 function textResult(payload: Record<string, unknown>, isError: boolean): { content: Array<{ type: 'text'; text: string }>; isError: boolean } {

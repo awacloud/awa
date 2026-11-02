@@ -25,7 +25,7 @@ Every error thrown by `@awacloud/md` extends `MdError` and carries a kebab-case 
 | `md/replace-node-no-parent` | `ContractError` | `replaceNode` | `oldNode` is detached |
 | `md/wrap-node-no-parent` | `ContractError` | `wrapNode` | `node` is detached |
 | `md/flatten-node-no-parent` | `ContractError` | `flattenNode` | `node` is detached |
-| `md/limit-exceeded` | `ContractError` | `md.parse` | `maxDepth` / `maxNodes` / `maxUrlLength` exceeded |
+| `md/limit-exceeded` | `ContractError` | `md.parse`, `blockParser.parse` (`maxDepth` only, when given) | `maxDepth` / `maxNodes` / `maxUrlLength` exceeded; a block container deeper than `maxDepth` is refused as it opens |
 | `md/parse-error` | `ContractError` | `blockCursor.incorporateLine` (internal invariant) | A block `continue` rule returned an illegal value |
 | `md/document-bad-input` | `ContractError` | `mdHtmlDocument.renderFragment`, `mdHtmlDocument.build` | `documents` empty / entry without string `path`+`source` |
 | `md/document-bad-option` | `ContractError` | `mdHtmlTheme.css`, `mdHtmlDocument.build` | Unknown `theme`, or an invalid `mdHtmlDocument.build` option |
@@ -134,4 +134,4 @@ try {
 
 - [`md`](./md.md) — the facade that throws `ContractError` on non-string input
 - [`render/html`](./render/html.md) — throws `RenderError`
-- [`@awacloud/fw` errors](https://github.com/awacloud/awa/tree/@awacloud/md@1.1.0/packages/front/fw/docs/api) — the framework's own error pattern
+- [`@awacloud/fw` errors](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.0/packages/front/fw/docs/api) — the framework's own error pattern

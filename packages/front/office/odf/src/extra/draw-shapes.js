@@ -134,8 +134,8 @@ export const drawShapes = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const s of out.shapes) extras.push(renderShape(s));
             delete out.shapes;
-            if (Array.isArray(f._extras) || !f._extras) out._extras = extras;
-            else out._extras = { ...f._extras, children: extras };
+            if (Array.isArray(f._extras)) out._extras = extras;
+            else out._extras = { ...(f._extras || {}), children: extras };
             return out;
         }
 

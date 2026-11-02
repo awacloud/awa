@@ -5,7 +5,7 @@
  * Dual-licensed; see the NOTICE file for licensing and any additional terms.
  */
 
-/* apps/services/viewer/src/styles/tokens.css — DERIVED COPY of apps/awaforge/assets/tokens.css (sha256 acd36fbdf3029af7a977b043751144ccb6a9003062398b0b430b338df4e64e10 at copy time). The awaforge token layer: the viewer's identity. Never edit here: re-copy from the source; src/styles/tokens.test.js pins equality. */
+/* packages/front/office/oview/src/styles/tokens.css — DERIVED COPY of the awaforge token layer (apps/awaforge/assets/tokens.css, sha256 acd36fbdf3029af7a977b043751144ccb6a9003062398b0b430b338df4e64e10 at copy time). Never edit here: re-copy from the source; the standalone application's guard test pins equality. */
 /* apps/awaforge — token layer (sites-design W1, D5 / P2 dark-first). Custom properties ONLY;
  * emitted FIRST. color-scheme lives in styles.css (LAST) — F1.
  * Two rules, no more: `:root` (the dark default) and `:root` under the light preference.

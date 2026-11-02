@@ -342,3 +342,27 @@ describe('oconvPdfFontDecoder — glyph widths, composite fonts', () => {
         expect(notArray.widthApproximated()).toBe(true);
     });
 });
+
+describe('oconvPdfFontDecoder — bold (A13b)', () => {
+    const font = (entries) => obj.dict({ Type: obj.name('Font'), Subtype: obj.name('Type1'), ...entries });
+    test('a bold weight in the name, the subset tag removed', () => {
+        expect(buildDecoder(font({ BaseFont: obj.name('Helvetica-Bold') }), identity).bold).toBe(true);
+        expect(buildDecoder(font({ BaseFont: obj.name('ABCDEF+ArialMT-SemiboldItalic') }), identity).bold).toBe(true);
+        expect(buildDecoder(font({ BaseFont: obj.name('Helvetica') }), identity).bold).toBe(false);
+        expect(buildDecoder(font({ BaseFont: obj.name('Times-Roman') }), identity).bold).toBe(false);
+    });
+    test('the font descriptor: a weight of 600 or more, the ForceBold flag', () => {
+        const fdict = (entries) => obj.dict({ Type: obj.name('FontDescriptor'), FontName: obj.name('X'), ...entries });
+        expect(buildDecoder(font({ BaseFont: obj.name('X'), FontDescriptor: fdict({ FontWeight: obj.int(700) }) }), identity).bold).toBe(true);
+        expect(buildDecoder(font({ BaseFont: obj.name('X'), FontDescriptor: fdict({ FontWeight: obj.int(400) }) }), identity).bold).toBe(false);
+        expect(buildDecoder(font({ BaseFont: obj.name('X'), FontDescriptor: fdict({ Flags: obj.int(262144 + 32) }) }), identity).bold).toBe(true);
+        expect(buildDecoder(font({ BaseFont: obj.name('X'), FontDescriptor: fdict({ Flags: obj.int(32) }) }), identity).bold).toBe(false);
+    });
+    test('a Type 0 font: its descendant counts', () => {
+        const t0 = obj.dict({ Type: obj.name('Font'), Subtype: obj.name('Type0'), BaseFont: obj.name('X-Identity-H'),
+            Encoding: obj.name('Identity-H'),
+            DescendantFonts: obj.array([obj.dict({ Type: obj.name('Font'), Subtype: obj.name('CIDFontType2'),
+                BaseFont: obj.name('NotoSans-Black'), CIDSystemInfo: obj.dict({}) })]) });
+        expect(buildDecoder(t0, identity).bold).toBe(true);
+    });
+});

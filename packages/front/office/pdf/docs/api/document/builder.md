@@ -42,7 +42,7 @@ const doc = b.builder();
 |--------|-----------|-------|
 | `addPage` | `(opts?: { mediaBox?: number[4], cropBox?: number[4], rotate?: number, resources?: DictObj }) => Builder` | Starts a new page (default `mediaBox` is US Letter `[0,0,612,792]`); becomes the target of subsequent `addContent`/`addFont` calls. |
 | `addContent` | `(data: string \| Uint8Array) => Builder` | Appends one content stream to the **current** page. |
-| `addFont` | `(spec: { name: string, baseFont: string, subtype?: string, encoding?: 'WinAnsiEncoding' \| 'MacRomanEncoding' \| 'StandardEncoding', standard14?: Standard14Lookup }) => Builder` | **Legacy shape** — registers a non-embedded font reference (`subtype` defaults to `Type1`) into the current page's `/Resources /Font`. The font dictionary is allocated once per distinct `(baseFont, subtype, encoding)` and shared by every page that registers it. Without `encoding` the emitted bytes are frozen. |
+| `addFont` | `(spec: { name: string, baseFont: string, subtype?: string, encoding?: 'WinAnsiEncoding' \| 'MacRomanEncoding' \| 'StandardEncoding', standard14?: Standard14Lookup, encodings?: EncodingLookup }) => Builder` | **Legacy shape** — registers a non-embedded font reference (`subtype` defaults to `Type1`) into the current page's `/Resources /Font`. The font dictionary is allocated once per distinct `(baseFont, subtype, encoding)` and shared by every page that registers it. Without `encoding` the emitted bytes are frozen. |
 | `addFont` | `(spec: { name: string, embedded: SimpleEmbed \| CidEmbed }) => Builder` | **Embedded shape** — takes a [`pdfFontEmbed`](../font/embed.md) result and allocates every indirect it needs (see [Embedded fonts](#embedded-fonts)). Exactly one of `baseFont` / `embedded` must be given. |
 | `addImage` | `(spec: { name, width, height, colorSpace, bitsPerComponent, data, filter?, decodeParms?, sMask? }) => Builder` | Allocates an **image XObject** as an indirect stream and registers it into the current page's `/Resources /XObject` (see [Images](#images)). Decodes nothing; emits no content operator. |
 | `addMetadata` | `(meta: object) => Builder` | Merges Info-dict fields. `Title`/`Author`/`Subject`/`Keywords`/`Creator`/`Producer`/`CreationDate`/`ModDate` are always emitted as PDF strings; other keys are kept only if their value is already a string. |
@@ -61,6 +61,7 @@ Every chain method except `build` returns the same `Builder` instance.
 | `subtype` | `string` | `/Subtype`; defaults to `Type1`. |
 | `encoding` | `'WinAnsiEncoding' \| 'MacRomanEncoding' \| 'StandardEncoding'` | Optional. One of the three predefined simple-font encodings of ISO 32000-1 § 9.6.6 / Annex D, emitted as `/Encoding /<name>` after the existing keys: `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`. Absent (or `undefined`) emits no `/Encoding` key and the bytes are identical to a spec without the option — the default is unchanged. Any other value, or `encoding` combined with `embedded`, throws `pdf/builder/bad-font` with `{ name, encoding }` in its `context`. No `/Differences` or custom encoding dictionaries. |
 | `standard14` | `Standard14Lookup` | Optional opt-in: the `@awacloud/fonts` `standard14Lookup` API (`isStandard14`, `lookupStandard14`), as `pdfFont.typeFont` takes it. Given, the dictionary also carries the `FirstChar`, `LastChar`, `Widths` and `FontDescriptor` PDF 2.0 requires for every simple font (see [Standard 14 metrics](#standard-14-metrics)). Absent (or `undefined`), the bytes are the frozen legacy ones. |
+| `encodings` | `EncodingLookup` | With `standard14`, for a Latin face in `MacRomanEncoding`, `StandardEncoding` or with no `encoding`: the `@awacloud/fonts` `encodingLookup` API (`lookupEncoding`), which names each code's glyph (see [Standard 14 metrics](#standard-14-metrics)). |
 
 **Shared dictionary.** A non-embedded font dictionary is allocated once per
 distinct `(baseFont, subtype, encoding)` and shared by every page that
@@ -88,10 +89,18 @@ takes them.
 The metrics' width tables are per WinAnsi code for the twelve Latin faces
 and per built-in code for `Symbol` and `ZapfDingbats`, so the option takes
 `encoding: 'WinAnsiEncoding'` for a Latin face and no `encoding` for the two
-symbolic ones. Any other encoding, a `baseFont` outside the 14, a `subtype`
-other than `Type1`, or a `standard14` value that is not such an API throws
-`pdf/builder/bad-font`. A registration with the option and one without it
-are two dictionaries.
+symbolic ones as they are. A Latin face in `MacRomanEncoding`,
+`StandardEncoding` or with no `encoding` (its built-in encoding,
+StandardEncoding) also needs `encodings`, the `@awacloud/fonts`
+`encodingLookup` API: each code 32–255 takes the width of the glyph its
+encoding names there — the WinAnsi table's (through WinAnsi's glyph
+names), else the record's `extraWidths` (the glyphs WinAnsi lacks: `fi`,
+`fl`, `Lslash`, `dotlessi`, the accents …), else 0 (a glyph the face does
+not have, or an empty code). A Latin face in one of those encodings
+without `encodings`, a symbolic face with an `encoding`, a `baseFont`
+outside the 14, a `subtype` other than `Type1`, or a `standard14` or
+`encodings` value that is not such an API throws `pdf/builder/bad-font`. A
+registration with the option and one without it are two dictionaries.
 
 ```js
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
@@ -315,7 +324,7 @@ the on-page size directly.
 |------|-------|------|
 | `pdf/builder/no-page` | `RenderError` | `addContent`, `addFont` or `addImage` called before any `addPage`. |
 | `pdf/builder/bad-bytes` | `RenderError` | `addContent` data is neither `string` nor `Uint8Array`. |
-| `pdf/builder/bad-font` | `RenderError` | `addFont` spec has no `name`; or neither / both of `baseFont` and `embedded`; or an `embedded` value that is not a well-formed `pdfFontEmbed` result; or an `encoding` that is not one of the three predefined names, or is combined with `embedded`; or a `standard14` option that is not a `standard14Lookup` API, names a `baseFont` outside the 14 or a `subtype` other than `Type1`, or pairs a Latin face with an `encoding` other than `WinAnsiEncoding` (or a `Symbol` / `ZapfDingbats` face with any `encoding`). |
+| `pdf/builder/bad-font` | `RenderError` | `addFont` spec has no `name`; or neither / both of `baseFont` and `embedded`; or an `embedded` value that is not a well-formed `pdfFontEmbed` result; or an `encoding` that is not one of the three predefined names, or is combined with `embedded`; or a `standard14` option that is not a `standard14Lookup` API, names a `baseFont` outside the 14 or a `subtype` other than `Type1`, or pairs a Latin face with an `encoding` other than `WinAnsiEncoding` without an `encodings` API (or a `Symbol` / `ZapfDingbats` face with any `encoding`), or an `encodings` value that is not an `encodingLookup` API. |
 | `pdf/builder/bad-image` | `RenderError` | `addImage` spec is not an object, or one of `name` / `width` / `height` / `colorSpace` / `bitsPerComponent` / `data` / `filter` / `decodeParms` is missing or ill-typed, or an `sMask` carries a nested `sMask`. `err.context.keys` lists the offending keys; `err.context.sMask` is `true` when the failure is on the mask leg. |
 | `pdf/builder/bad-metadata` | `RenderError` | `addMetadata` argument is not an object. |
 | `pdf/builder/bad-version` | `RenderError` | `setVersion` value doesn't match `/^\d\.\d$/`. |

@@ -12,7 +12,8 @@
  *
  * Rare gstate-extra ops covered: `d0`, `d1` (Type 3 font char-width
  * shape operators, §9.6.4) ; `gs` is L0 already, but this module also
- * exposes the catalog of every ExtGState key.
+ * exposes the catalog of every ExtGState key, and types the halftones an
+ * ExtGState's `HT` names (`typeHalftone`).
  *
  * @module pdf/extra/content-ops-extended
  */
@@ -60,7 +61,8 @@ export const pdfContentOpsExtended = {
             AIS:     { kind: 'bool',  doc: 'alpha is shape' },
             TK:      { kind: 'bool',  doc: 'text knockout' },
             UseBlackPtComp: { kind: 'name', doc: 'ON|OFF|Default' },
-            HTO:     { kind: 'array', doc: 'halftone origin [tx ty]' }
+            HTO:     { kind: 'array', doc: 'halftone origin [tx ty]' },
+            HTP:     { kind: 'array', doc: 'halftone phase [x y] (PDF 1.2, deprecated in 1.3)' }
         });
 
         const NUM = (v) => v && (v.type === 'int' || v.type === 'real');
@@ -107,6 +109,7 @@ export const pdfContentOpsExtended = {
                 tk:              isType(e.TK, 'bool')  ? e.TK.value  : null,
                 useBlackPtComp:  isType(e.UseBlackPtComp, 'name') ? e.UseBlackPtComp.value : null,
                 hto:             isType(e.HTO, 'array') ? e.HTO : null,
+                htp:             isType(e.HTP, 'array') ? e.HTP : null,
                 raw:             dict,
                 _extras:         {}
             };
@@ -143,10 +146,87 @@ export const pdfContentOpsExtended = {
             };
         }
 
+        // The halftones: per /HalftoneType, its keys and their types (the
+        // Arlington PDF Model's), as `Key:type` pairs apart by a space; a
+        // type of several, `a|b`, takes any.
+        const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(' ').map((p) => p.split(':'))));
+        const COMMON = 'Type:name HalftoneType:int HalftoneName:string';
+        const TRANSFER = 'TransferFunction:dict|name|stream';
+        const HALFTONE_TYPES = Object.freeze({
+            1: keyTypes(`${COMMON} Frequency:num Angle:num SpotFunction:array|dict|name|stream AccurateScreens:bool ${TRANSFER}`),
+            5: keyTypes(`${COMMON} Default:dict|stream`),
+            6: keyTypes(`${COMMON} Width:int Height:int ${TRANSFER}`),
+            10: keyTypes(`${COMMON} Xsquare:int Ysquare:int ${TRANSFER}`),
+            16: keyTypes(`${COMMON} Width:int Height:int Width2:int Height2:int ${TRANSFER}`)
+        });
+        const HALFTONE_KEYS = Object.freeze(Object.fromEntries(
+            Object.entries(HALFTONE_TYPES).map(([type, types]) => [type, Object.freeze(Object.keys(types))])));
+        // A stream halftone's Table 5 keys: typeStreamEntries' part.
+        const STREAM_KEYS = new Set(['Length', 'Filter', 'DecodeParms', 'F', 'FFilter', 'FDecodeParms', 'DL']);
+        const HALFTONE_READ = Object.freeze({
+            name: (v) => (isType(v, 'name') ? v.value : undefined),
+            string: (v) => (isType(v, 'string') ? v.value : undefined),
+            num: (v) => (NUM(v) ? v.value : undefined),
+            int: (v) => (isType(v, 'int') ? v.value : undefined),
+            bool: (v) => (isType(v, 'bool') ? v.value : undefined),
+            array: (v) => (isType(v, 'array') ? v : undefined),
+            dict: (v) => (isType(v, 'dict') ? v : undefined),
+            stream: (v) => (isType(v, 'stream') ? v : undefined)
+        });
+
+        function halftoneValue(type, v) {
+            if (isType(v, 'ref')) return v;
+            const alts = type.split('|');
+            if (alts.length > 1) {
+                // A key of several types: the value as read, a name by its value.
+                if (!alts.some((t) => HALFTONE_READ[t](v) !== undefined)) return null;
+                return isType(v, 'name') ? v.value : v;
+            }
+            const r = HALFTONE_READ[type](v);
+            return r === undefined ? null : r;
+        }
+
+        /**
+         * Type a halftone dictionary or stream (its dictionary read), its
+         * kind given by its `/HalftoneType` (`HALFTONE_KEYS`: 1, 5, 6, 10,
+         * 16): one field per key of its list, named after the key in lower
+         * case (`HalftoneName` → `halftonename`), present only when the key
+         * is; for type 5 the other keys (colorants) in `colorants`; for a
+         * stream its Table 5 keys left to `typeStreamEntries`; the other
+         * keys in `_extras`.
+         */
+        function typeHalftone(value) {
+            const dict = isType(value, 'stream') ? value.dict : value;
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/extra/halftone/not-dict',
+                    'a halftone must be a dictionary or a stream',
+                    { context: { type: value && value.type } });
+            }
+            const e = dict.entries;
+            const t = isType(e.HalftoneType, 'int') ? e.HalftoneType.value : null;
+            const types = t !== null && Object.prototype.hasOwnProperty.call(HALFTONE_TYPES, t) ? HALFTONE_TYPES[t] : null;
+            if (!types) {
+                throw new ParseError('pdf/extra/halftone/bad-type',
+                    '/HalftoneType must be 1, 5, 6, 10 or 16',
+                    { context: { actual: t } });
+            }
+            const out = { raw: value, _extras: {} };
+            if (t === 5) out.colorants = {};
+            const streamed = isType(value, 'stream');
+            for (const [k, v] of Object.entries(e)) {
+                if (Object.prototype.hasOwnProperty.call(types, k)) out[k.toLowerCase()] = halftoneValue(types[k], v);
+                else if (t === 5) out.colorants[k] = v;
+                else if (!(streamed && STREAM_KEYS.has(k))) out._extras[k] = v;
+            }
+            return out;
+        }
+
         return {
             typeExtGState,
             decodeType3CharOp,
-            EXT_GSTATE_KEYS
+            EXT_GSTATE_KEYS,
+            typeHalftone,
+            HALFTONE_KEYS
         };
     }
 };

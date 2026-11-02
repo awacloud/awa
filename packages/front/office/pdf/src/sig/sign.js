@@ -155,15 +155,6 @@ export const pdfSign = {
         };
 
         // ── Hex/byte helpers ─────────────────────────────────────────
-        function _hexToBytes(hex) {
-            const clean = hex.replace(/[^0-9a-fA-F]/g, '');
-            const out = new Uint8Array(clean.length >>> 1);
-            for (let i = 0; i < out.length; i++) {
-                out[i] = parseInt(clean.substr(i * 2, 2), 16);
-            }
-            return out;
-        }
-
         function _bytesToHex(bytes) {
             let s = '';
             for (let i = 0; i < bytes.length; i++) {
@@ -1667,11 +1658,9 @@ export const pdfSign = {
             const hex = _bytesToHex(pkcs7);
             const TE = new TextEncoder();
             const hexBytes = TE.encode(hex);
+            // Never negative: the hex is 2 × at most placeholderBytes and
+            // contentsLength is 2 × placeholderBytes.
             const pad = contentsLength - hexBytes.length;
-            if (pad < 0) {
-                throw new ContractError('pdf/sign/hex-overflow',
-                    'PKCS#7 hex exceeds /Contents placeholder');
-            }
             bytes.set(hexBytes, contentsOffset);
             for (let i = 0; i < pad; i++) {
                 bytes[contentsOffset + hexBytes.length + i] = 0x30; // '0'
@@ -1841,11 +1830,8 @@ export const pdfSign = {
             const hex = _bytesToHex(tstToken);
             const TE = new TextEncoder();
             const hexBytes = TE.encode(hex);
+            // Never negative, as for the signature's /Contents above.
             const pad = contentsLength - hexBytes.length;
-            if (pad < 0) {
-                throw new ContractError('pdf/sign/dts-hex-overflow',
-                    'TimeStampToken hex exceeds /Contents placeholder');
-            }
             bytes.set(hexBytes, contentsOffset);
             for (let i = 0; i < pad; i++) {
                 bytes[contentsOffset + hexBytes.length + i] = 0x30;

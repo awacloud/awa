@@ -91,7 +91,8 @@ export const oconvOdpToIr = {
             }
 
             for (const para of (slide && slide.bodyParagraphs) || []) {
-                if (para) blocks.push(node('paragraph', {}, [node('run', { text: para })]));
+                if (para && typeof para === 'object') blocks.push(para);
+                else if (para) blocks.push(node('paragraph', {}, [node('run', { text: para })]));
             }
 
             const notes = slide && slide.notes;

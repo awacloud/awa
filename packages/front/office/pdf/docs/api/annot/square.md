@@ -19,7 +19,7 @@ every subtype; the remaining entries are gated on `expected`:
 | `expected` | Fields set |
 |------------|------------|
 | `Square`, `Circle` | `ic`, `rd` (`/RD`) |
-| `Line` | `ic`, `l` (`/L`), `le` (`/LE`), `ll` (`/LL`), `lle` (`/LLE`), `cap` (`/Cap`), `cp` (`/CP`), `it` (`/IT`), `measure` (`/Measure`) |
+| `Line` | `ic`, `l` (`/L`), `le` (`/LE`), `ll` (`/LL`), `lle` (`/LLE`), `cap` (`/Cap`), `cp` (`/CP`), `it` (`/IT`), `measure` (`/Measure`), `llo` (`/LLO`, a number) and `co` (`/CO`, the array as read), each present only when the key is |
 | `Polygon`, `PolyLine` | `ic`, `vertices` (`/Vertices`), `le`, `it`, `measure`, `path` (`/Path`) |
 
 Every other entry — including `/BE`, handled by the base typer, and the shared

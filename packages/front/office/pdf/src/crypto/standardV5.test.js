@@ -299,6 +299,16 @@ describe('pdfStandardV5 — encrypt-side guards', () => {
                 .toBe('pdf/crypto/v5/encrypt-bad-iv');
         }
     });
+
+    test('a caller key that is not whole AES blocks is refused by buildUUE / buildOOE', () => {
+        const v5 = build();
+        const salt = new Uint8Array(8);
+        const U = new Uint8Array(48);
+        expect(codeOfV5(() => v5.buildUUE('pw', new Uint8Array(15), salt, salt)))
+            .toBe('pdf/crypto/v5/bad-pt-len');
+        expect(codeOfV5(() => v5.buildOOE('pw', new Uint8Array(33), U, salt, salt)))
+            .toBe('pdf/crypto/v5/bad-pt-len');
+    });
 });
 
 describe('pdfStandardV5 — hostile fw crypto stack', () => {

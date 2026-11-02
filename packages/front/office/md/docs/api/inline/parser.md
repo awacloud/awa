@@ -67,6 +67,7 @@ The factory takes a 13th, **undeclared** `options` parameter (not part of `depen
 | `extendedAutolinks` | `boolean` | `true` | GFM `https://…`, `www.…`, `email@` auto-detection |
 | `sourcepos` | `boolean` | `false` | Attaches `sourcepos` to produced nodes |
 | `smart` | `boolean` | `false` | Enables smart-punctuation delimiter handling |
+| `smartDashes` | `boolean` | `false` | Turns runs of `-` into en / em dashes and `...` into `…` in plain string runs (see [`md.createMd`](../md.md)) |
 
 ## Examples
 
@@ -97,11 +98,11 @@ ip.parse(block, refmap);
 - The delimiter stack handles emphasis (`*`, `_`), strong (`**`, `__`), strikethrough (`~~`) — each character can be left/right flanking depending on the Unicode context (`P`/`S`/`Z` punctuation classes). Each delimiter character keeps its own search bounds, split by run length and by whether the closer can open: an unmatched `**` or a tilde run of another length inside `~~…~~` does not cancel the strikethrough (`~~x a**b y~~` and `~~a~b~~` both render `<del>`), and an unmatched `~~` does not cancel a strong emphasis around it. The bounds are positions in the stack, so they stay valid when a matched pair removes an opener.
 - A link destination written between `(` and `)` may nest parentheses at most 32 levels deep (the cap `cmark` uses); a deeper one is not read as a destination and the text stays text. Repeated unclosed link destinations, `![[]()` and unclosed `<!--`, `<?`, `<![CDATA[` or `<!X` openers parse in time linear in their length.
 - An extended email autolink may not end with `-` or `_`: `a.b-c_d@a.b-` and `a.b-c_d@a.b_` are no autolink at all (GFM allows only `.` at the end of an address, and a trailing `.` is excluded from the address and stays text).
-- There is no `disallowedRawHtml` / `safe` construction option on this module — raw-HTML filtering and `javascript:` neutralization happen at render time (`renderHtml`'s `safe` option), not during inline parsing. For a complete sanitizer, see [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) consumed via `md.createMd({ sanitize: true })`.
+- There is no `disallowedRawHtml` / `safe` construction option on this module — raw-HTML filtering and `javascript:` neutralization happen at render time (`renderHtml`'s `safe` option), not during inline parsing. For a complete sanitizer, see [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) consumed via `md.createMd({ sanitize: true })`.
 
 ## See also
 
 - [`block/parser`](../block/parser.md) — produces the input containers
 - [`refs/link-refs`](../refs/link-refs.md) — refmap used for resolution
 - [`common`](../common.md) — char codes, ENTITY, ESCAPABLE
-- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — advanced XSS protection (consumed via `md.createMd({ sanitize: true })`)
+- [`@awacloud/fw/dom/rendering/sanitize`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/fw/docs/api/dom/rendering/sanitize.md) — advanced XSS protection (consumed via `md.createMd({ sanitize: true })`)

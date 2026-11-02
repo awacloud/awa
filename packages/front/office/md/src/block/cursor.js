@@ -79,14 +79,30 @@ export const mdBlockCursor = {
             let i = this.offset;
             let cols = this.column;
             let c;
-            while ((c = currentLine.charAt(i)) !== '') {
-                if (c === ' ') {
-                    i++; cols++;
-                } else if (c === '\t') {
-                    i++; cols += 4 - (cols % 4);
-                } else {
-                    break;
+            if (this.nnLine === this.lineNumber && this.nnFrom <= i && i <= this.nnAt && !this.nnTab) {
+                // The last scan of this line found its next non-space past
+                // spaces only: reuse it (the column follows the offset), so
+                // a deep line is not rescanned once per open container.
+                cols += this.nnAt - i;
+                i = this.nnAt;
+                c = currentLine.charAt(i);
+            } else {
+                const from = i;
+                let tab = false;
+                while ((c = currentLine.charAt(i)) !== '') {
+                    if (c === ' ') {
+                        i++; cols++;
+                    } else if (c === '\t') {
+                        tab = true;
+                        i++; cols += 4 - (cols % 4);
+                    } else {
+                        break;
+                    }
                 }
+                this.nnLine = this.lineNumber;
+                this.nnFrom = from;
+                this.nnAt = i;
+                this.nnTab = tab;
             }
             this.blank = c === '\n' || c === '\r' || c === '';
             this.nextNonspace       = i;
@@ -108,6 +124,14 @@ export const mdBlockCursor = {
             while (!this.blocks[this.tip.type].canContain(tag)) {
                 this.finalize(this.tip, this.lineNumber - 1);
             }
+            // Refused while parsing, before the work a deeper tree costs:
+            // the same error md.parse's post-parse check throws.
+            const depth = (this.depthOf.get(this.tip) || 0) + 1;
+            if (depth > this.maxDepth) {
+                throw new ContractError('md/limit-exceeded',
+                    'md.parse: nesting depth exceeded limit (' + this.maxDepth + ')',
+                    { context: { kind: 'maxDepth', limit: this.maxDepth, depth } });
+            }
             const column_number = offset + 1;
             const newBlock = new Node(tag, [
                 [this.lineNumber, column_number],
@@ -115,6 +139,7 @@ export const mdBlockCursor = {
             ]);
             newBlock.stringContent = '';
             this.tip.appendChild(newBlock);
+            this.depthOf.set(newBlock, depth);
             this.tip = newBlock;
             return newBlock;
         }

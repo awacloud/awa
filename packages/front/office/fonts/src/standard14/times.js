@@ -206,29 +206,69 @@ export const standard14Times = {
         })();
         // END-GENERATED-WIDTHS:TIMES_BOLD_ITALIC_WIDTHS
 
+        // The widths, by glyph name, of the glyphs MacRomanEncoding and
+        // StandardEncoding name that the WinAnsi tables cannot hold.
+        // GENERATED-WIDTHS:TIMES_ROMAN_EXTRA_WIDTHS
+        const TIMES_ROMAN_EXTRA_WIDTHS = Object.freeze({
+            Delta: 612, Lslash: 611, breve: 333, caron: 333, dotaccent: 333, dotlessi: 278, fi: 556, fl: 556,
+            fraction: 167, greaterequal: 549, hungarumlaut: 333, infinity: 677, lessequal: 549, lozenge: 471, lslash: 278, notequal: 549,
+            ogonek: 333, partialdiff: 476, radical: 453, ring: 333, summation: 600
+        });
+        // END-GENERATED-WIDTHS:TIMES_ROMAN_EXTRA_WIDTHS
+
+        // GENERATED-WIDTHS:TIMES_BOLD_EXTRA_WIDTHS
+        const TIMES_BOLD_EXTRA_WIDTHS = Object.freeze({
+            Delta: 612, Lslash: 667, breve: 333, caron: 333, dotaccent: 333, dotlessi: 278, fi: 556, fl: 556,
+            fraction: 167, greaterequal: 549, hungarumlaut: 333, infinity: 752, lessequal: 549, lozenge: 494, lslash: 278, notequal: 549,
+            ogonek: 333, partialdiff: 494, radical: 549, ring: 333, summation: 600
+        });
+        // END-GENERATED-WIDTHS:TIMES_BOLD_EXTRA_WIDTHS
+
+        // GENERATED-WIDTHS:TIMES_ITALIC_EXTRA_WIDTHS
+        const TIMES_ITALIC_EXTRA_WIDTHS = Object.freeze({
+            Delta: 612, Lslash: 556, breve: 333, caron: 333, dotaccent: 333, dotlessi: 278, fi: 500, fl: 500,
+            fraction: 167, greaterequal: 549, hungarumlaut: 333, infinity: 677, lessequal: 549, lozenge: 471, lslash: 278, notequal: 549,
+            ogonek: 333, partialdiff: 476, radical: 453, ring: 333, summation: 600
+        });
+        // END-GENERATED-WIDTHS:TIMES_ITALIC_EXTRA_WIDTHS
+
+        // GENERATED-WIDTHS:TIMES_BOLD_ITALIC_EXTRA_WIDTHS
+        const TIMES_BOLD_ITALIC_EXTRA_WIDTHS = Object.freeze({
+            Delta: 612, Lslash: 611, breve: 333, caron: 333, dotaccent: 333, dotlessi: 278, fi: 556, fl: 556,
+            fraction: 167, greaterequal: 549, hungarumlaut: 333, infinity: 752, lessequal: 549, lozenge: 494, lslash: 278, notequal: 549,
+            ogonek: 333, partialdiff: 494, radical: 549, ring: 333, summation: 600
+        });
+        // END-GENERATED-WIDTHS:TIMES_BOLD_ITALIC_EXTRA_WIDTHS
+
         const timesRoman = Object.freeze({
             ...COMMON,
-            fontName: 'Times-Roman', italicAngle: 0, weight: 'Roman', widths: TIMES_ROMAN_WIDTHS
+            fontName: 'Times-Roman', italicAngle: 0, weight: 'Roman', widths: TIMES_ROMAN_WIDTHS,
+            extraWidths: TIMES_ROMAN_EXTRA_WIDTHS
         });
         const timesBold = Object.freeze({
             ...COMMON,
-            fontName: 'Times-Bold', italicAngle: 0, weight: 'Bold', stemV: 139, widths: TIMES_BOLD_WIDTHS
+            fontName: 'Times-Bold', italicAngle: 0, weight: 'Bold', stemV: 139, widths: TIMES_BOLD_WIDTHS,
+            extraWidths: TIMES_BOLD_EXTRA_WIDTHS
         });
         const timesItalic = Object.freeze({
             ...COMMON,
             fontName: 'Times-Italic', italicAngle: -15.5, weight: 'Roman',
             flags: 0x22 | 0x40,                        // + Italic
-            widths: TIMES_ITALIC_WIDTHS
+            widths: TIMES_ITALIC_WIDTHS,
+            extraWidths: TIMES_ITALIC_EXTRA_WIDTHS
         });
         const timesBoldItalic = Object.freeze({
             ...COMMON,
             fontName: 'Times-BoldItalic', italicAngle: -15, weight: 'Bold', stemV: 139,
             flags: 0x22 | 0x40,
-            widths: TIMES_BOLD_ITALIC_WIDTHS
+            widths: TIMES_BOLD_ITALIC_WIDTHS,
+            extraWidths: TIMES_BOLD_ITALIC_EXTRA_WIDTHS
         });
 
         return {
             TIMES_ROMAN_WIDTHS, TIMES_BOLD_WIDTHS, TIMES_ITALIC_WIDTHS, TIMES_BOLD_ITALIC_WIDTHS,
+            TIMES_ROMAN_EXTRA_WIDTHS, TIMES_BOLD_EXTRA_WIDTHS, TIMES_ITALIC_EXTRA_WIDTHS,
+            TIMES_BOLD_ITALIC_EXTRA_WIDTHS,
             timesRoman, timesBold, timesItalic, timesBoldItalic
         };
     }

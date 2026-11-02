@@ -16,8 +16,8 @@
  *   decodes, `fonts.read` returns on every font it holds, every table
  *   the package has a parser for returns, every `glyf` glyph resolves
  *   and every CharString of a name-keyed `CFF ` font decodes. A WOFF2
- *   whose `glyf` is transformed is judged on its untransformed tables
- *   (the transform is not reversed, a documented limit).
+ *   is reassembled into an SFNT by `fontWoff2.toSfnt` (its transforms
+ *   reversed) and judged as one.
  * - **tables**: one case per table instance (file, font, tag) the
  *   package has a parser for, raw table files included; it passes when
  *   the parser returns.
@@ -218,9 +218,10 @@ export function errorDetail(e) {
  * Run the measure over a list of files.
  * @param {{ path: string, bytes: Uint8Array }[]} files upstream paths (POSIX) and bytes
  * @param {ModuleRuntime} [rt]
+ * @param {{ read?: object }} [opts] `read`: options passed to `fonts.read` (e.g. `{ allowMissingName: true }`); absent, `fonts.read(bytes)` as before
  * @returns {Measure}
  */
-export function measure(files, rt = fontsRuntime()) {
+export function measure(files, rt = fontsRuntime(), opts = {}) {
     const parsers = tableParsers(rt);
     const api = /** @type {{ read(b: Uint8Array): any }} */ (rt.resolve('fonts'));
     const { parseSfnt } = rt.resolve('fontSfnt');
@@ -238,19 +239,14 @@ export function measure(files, rt = fontsRuntime()) {
      * Run every parser of one font's tables; returns the failures.
      * @param {string} label
      * @param {Record<string, Uint8Array>} tables
-     * @param {Set<string>} [transformed] WOFF2-transformed tags
      */
-    const runTables = (label, tables, transformed = new Set()) => {
+    const runTables = (label, tables) => {
         const ctx = tableContext(rt, tables);
         const fails = [];
         for (const tag of Object.keys(tables).sort()) {
             const parse = parsers[tag];
             const id = `${label} :: ${tag}`;
             if (!parse) { noParser.set(tag, (noParser.get(tag) || 0) + 1); continue; }
-            if (transformed.has(tag)) {
-                out.tables.skipped.push({ case: id, reason: 'WOFF2-transformed table: the transform is not reversed (documented limit)' });
-                continue;
-            }
             try {
                 parse(tables[tag], ctx);
                 out.tables.cases.push({ case: id, ok: true });
@@ -274,7 +270,7 @@ export function measure(files, rt = fontsRuntime()) {
         const tables = Object.fromEntries(Object.entries(sfnt.tables).map(([t, v]) => [t, v.bytes]));
         const fails = runTables(label, tables).map((f) => prefix + f);
         let font = null;
-        try { font = api.read(bytes); } catch (e) { fails.unshift(`${prefix}read: ${errorDetail(e)}`); }
+        try { font = opts.read === undefined ? api.read(bytes) : api.read(bytes, opts.read); } catch (e) { fails.unshift(`${prefix}read: ${errorDetail(e)}`); }
         if (font && font.glyphTable) {
             for (let gid = 0; gid < font.numGlyphs; gid++) {
                 try { font.getGlyphByIndex(gid); } catch (e) { fails.push(`${prefix}glyph ${gid}: ${errorDetail(e)}`); break; }
@@ -343,12 +339,7 @@ export function measure(files, rt = fontsRuntime()) {
             } else if (kind === 'woff') {
                 fails = runSfnt(path, woff.decode(bytes), '');
             } else {
-                // fonts.read is not applied: the package returns the
-                // decoded tables, not an SFNT (transforms not reversed).
-                const d = woff2.decode(bytes);
-                const tables = Object.fromEntries(Object.entries(d.tables).map(([t, v]) => [t, v.bytes]));
-                const transformed = new Set(Object.entries(d.tables).filter(([, v]) => v.transformed).map(([t]) => t));
-                fails = runTables(path, tables, transformed);
+                fails = runSfnt(path, woff2.toSfnt(bytes), '');
             }
         } catch (e) {
             fails.push(`container: ${errorDetail(e)}`);

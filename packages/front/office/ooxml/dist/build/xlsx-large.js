@@ -340,7 +340,7 @@ export const xlsxLargePackage = {
       ["w16cid", "http://schemas.microsoft.com/office/word/2016/wordml/cid", !0],
       ["w16se", "http://schemas.microsoft.com/office/word/2015/wordml/symex", !0],
       ["w16sdtdh", "http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash", !0]
-    ]);
+    ]), WORD_EXTENSION_PREFIXES = Object.freeze(WORD_ROOT_PREFIXES.filter(([, , ext]) => ext).map(([p]) => p));
     function wordRootAttrs(nodes, opts) {
       const alwaysR = !(opts && opts.r === !1), used = new Set;
       collectUnscopedPrefixes(nodes, new Set(alwaysR ? ["w", "r"] : ["w"]), used);
@@ -623,6 +623,8 @@ export const xlsxLargePackage = {
           case "a:clrRepl":
             return { kind: "clrRepl", color: findFirstColor(el, { withMods: !0 }) };
           default:
+            if (/^a:\w+$/.test(el.name) && !(el.children || []).some((c) => c.type === "element"))
+              return { kind: el.name.slice(2), attrs: { ...el.attrs } };
             return null;
         }
       }
@@ -662,7 +664,7 @@ export const xlsxLargePackage = {
           case "clrRepl":
             return xml.el("a:clrRepl", {}, m.color ? [renderColor(m.color, { withMods: !0 })] : []);
           default:
-            return null;
+            return m.kind ? xml.el("a:" + m.kind, m.attrs || {}) : null;
         }
       }
       function findFirstColor(el, opts) {
@@ -766,6 +768,7 @@ export const xlsxLargePackage = {
       lookupCT,
       trackUnmodelledParts,
       wordRootAttrs,
+      WORD_EXTENSION_PREFIXES,
       encodeText,
       decodeText,
       createRidAllocator,
@@ -780,7 +783,7 @@ export const xlsxLargePackage = {
   } });
     __register({ name: "opcPackage", dependencies: ["ooxmlErrors","zip","opcContentTypes","opcRelationships","ooxmlShared"], factory: function(errors, zipMod, contentTypesMod, relsMod, shared) {
     const { ParseError, RenderError, ContractError } = errors, DEFAULT_LIMITS = Object.freeze({
-      maxParts: 1024,
+      maxParts: 8192,
       maxUncompressed: 268435456,
       maxRatio: 200,
       maxDepth: 1000
@@ -2071,11 +2074,13 @@ export const xlsxLargePackage = {
         supportedPrefixes: [],
         preserveAlternateContent: !1,
         keepElements: [],
+        ignorablePrefixes: [],
         ...options || {}
       };
       if (!Array.isArray(opts.keepElements))
         opts.keepElements = [];
-      walk(root, new Set, opts, !1);
+      const initial = Array.isArray(opts.ignorablePrefixes) ? opts.ignorablePrefixes.filter((p) => !opts.supportedPrefixes.includes(p)) : [];
+      walk(root, new Set(initial), opts, !1);
       return root;
     }
     function walk(node, ignorable, opts, kept) {
@@ -2120,7 +2125,18 @@ export const xlsxLargePackage = {
         walk(child, localIgnorable, opts, kept);
         out.push(child);
       }
-      node.children = out;
+      node.children = mergeAdjacentText(out);
+    }
+    function mergeAdjacentText(children) {
+      const out = [];
+      for (const c of children) {
+        const prev = out[out.length - 1];
+        if (c.type === "text" && prev && prev.type === "text")
+          out[out.length - 1] = { type: "text", value: prev.value + c.value };
+        else
+          out.push(c);
+      }
+      return out;
     }
     function parseSpaceSep(s) {
       if (!s)
@@ -2216,6 +2232,23 @@ export const xlsxLargePackage = {
     function renderColorChild(color) {
       return typedColor.render(color);
     }
+    const orderSeq = shared.sequence ? shared.sequence : () => null, ordered = (children, seq) => seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children, LN_SEQ = orderSeq([
+      ["a:noFill", "a:solidFill", "a:gradFill", "a:pattFill"],
+      ["a:prstDash", "a:custDash"],
+      ["a:round", "a:bevel", "a:miter"],
+      "a:headEnd",
+      "a:tailEnd",
+      "a:extLst"
+    ]), SPPR_SEQ = orderSeq([
+      "a:xfrm",
+      ["a:custGeom", "a:prstGeom"],
+      ["a:noFill", "a:solidFill", "a:gradFill", "a:blipFill", "a:pattFill", "a:grpFill"],
+      "a:ln",
+      ["a:effectLst", "a:effectDag"],
+      "a:scene3d",
+      "a:sp3d",
+      "a:extLst"
+    ]), LN_TYPED_ATTRS = new Set(["w", "cap", "cmpd"]), LN_FILLS = new Set(["a:noFill", "a:solidFill", "a:gradFill", "a:pattFill"]);
     function renderSrgbClr(rgb) {
       return xml.el("a:srgbClr", { val: String(rgb).replace(/^#/, "") });
     }
@@ -2314,17 +2347,35 @@ export const xlsxLargePackage = {
         out.cap = lnEl.attrs.cap;
       if (lnEl.attrs.cmpd)
         out.compound = lnEl.attrs.cmpd;
-      const sf = xml.findChild(lnEl, "a:solidFill");
-      if (sf) {
-        const c = parseColorChild(sf);
-        if (c && c.rgb)
-          out.color = c.rgb;
+      const extraAttrs = {};
+      let anyAttr = !1;
+      for (const k of Object.keys(lnEl.attrs)) {
+        if (LN_TYPED_ATTRS.has(k) || k.startsWith("xmlns"))
+          continue;
+        extraAttrs[k] = lnEl.attrs[k];
+        anyAttr = !0;
       }
-      const dash = xml.findChild(lnEl, "a:prstDash");
-      if (dash)
-        out.dash = dash.attrs.val;
-      if (xml.findChild(lnEl, "a:noFill"))
-        out.color = null;
+      if (anyAttr)
+        out.extraAttrs = extraAttrs;
+      const extras = [];
+      for (const c of lnEl.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name === "a:solidFill") {
+          const col = parseColorChild(c);
+          if (col && col.rgb)
+            out.color = col.rgb;
+          else
+            extras.push(c);
+        } else if (c.name === "a:prstDash")
+          out.dash = c.attrs.val;
+        else if (c.name === "a:noFill")
+          out.color = null;
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function renderLine(line) {
@@ -2339,6 +2390,11 @@ export const xlsxLargePackage = {
         a.cap = line.cap;
       if (line.compound)
         a.cmpd = line.compound;
+      if (line.extraAttrs) {
+        for (const k of Object.keys(line.extraAttrs))
+          if (!(k in a))
+            a[k] = String(line.extraAttrs[k]);
+      }
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
@@ -2346,7 +2402,16 @@ export const xlsxLargePackage = {
         children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
-      return xml.el("a:ln", a, children);
+      if (!line._extras)
+        return xml.el("a:ln", a, children);
+      for (const ex of line._extras) {
+        if (line.color !== void 0 && LN_FILLS.has(ex.name))
+          continue;
+        if (line.dash && ex.name === "a:custDash")
+          continue;
+        children.push(ex);
+      }
+      return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
     function parseShapeProperties(spPrEl) {
       if (!spPrEl)
@@ -2399,10 +2464,11 @@ export const xlsxLargePackage = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
-      if (props._extras)
-        for (const ex of props._extras)
-          children.push(ex);
-      return xml.el(tag, {}, children);
+      if (!props._extras)
+        return xml.el(tag, {}, children);
+      for (const ex of props._extras)
+        children.push(ex);
+      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -2524,96 +2590,139 @@ export const xlsxLargePackage = {
     function renderSlot(name, elements) {
       return xml.el(name, {}, (elements || []).map(renderMathElement));
     }
+    function withPr(el, prName, node) {
+      readPr(node, el, prName, []);
+      return node;
+    }
+    function readPr(node, el, prName, typed) {
+      const pr = xml.findChild(el, prName);
+      if (pr)
+        node._prExtras = pr.children.filter((c) => c.type === "element" && !typed.includes(c.name));
+      return pr;
+    }
+    function renderPr(prName, typedChildren, n) {
+      if (!typedChildren.length && !n._prExtras)
+        return [];
+      return [xml.el(prName, {}, [...typedChildren, ...n._prExtras || []])];
+    }
+    function charOf(pr, name) {
+      const c = pr && xml.findChild(pr, name);
+      return c && c.attrs["m:val"] != null ? c.attrs["m:val"] : void 0;
+    }
     function parseMathRun(rEl) {
       const out = { type: "mathRun", text: "" }, rPrEl = xml.findChild(rEl, "m:rPr");
       if (rPrEl) {
-        const sty = xml.findChild(rPrEl, "m:sty");
+        const sty = xml.findChild(rPrEl, "m:sty"), rPr = {};
         if (sty)
-          out.rPr = { sty: sty.attrs["m:val"] };
+          rPr.sty = sty.attrs["m:val"];
+        const extras = rPrEl.children.filter((c) => c.type === "element" && c.name !== "m:sty");
+        if (extras.length)
+          rPr._extras = extras;
+        if (Object.keys(rPr).length)
+          out.rPr = rPr;
       }
+      const extras = [];
       for (const c of rEl.children) {
         if (c.type !== "element")
           continue;
         if (c.name === "m:t")
           out.text += xml.textContent(c);
+        else if (c.name !== "m:rPr")
+          extras.push(c);
       }
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
+    const SCRIPT_BEFORE_STY = new Set(["m:lit", "m:nor", "m:scr"]);
     function renderMathRun(r) {
       const children = [];
       if (r.rPr) {
         const inner = [];
+        if (r.rPr._extras)
+          inner.push(...r.rPr._extras.filter((c) => c.name !== "m:sty" && SCRIPT_BEFORE_STY.has(c.name)));
         if (r.rPr.sty)
           inner.push(xml.el("m:sty", { "m:val": r.rPr.sty }));
+        if (r.rPr._extras)
+          inner.push(...r.rPr._extras.filter((c) => !SCRIPT_BEFORE_STY.has(c.name)));
         if (inner.length)
           children.push(xml.el("m:rPr", {}, inner));
       }
+      if (r._extras)
+        children.push(...r._extras);
       children.push(xml.el("m:t", { "xml:space": "preserve" }, [xml.text(r.text || "")]));
       return xml.el("m:r", {}, children);
     }
     function parseFrac(fEl) {
-      return {
+      const out = {
         type: "frac",
         numerator: parseSlot(xml.findChild(fEl, "m:num")),
         denominator: parseSlot(xml.findChild(fEl, "m:den"))
       };
+      readPr(out, fEl, "m:fPr", []);
+      return out;
     }
     function renderFrac(f) {
       return xml.el("m:f", {}, [
+        ...renderPr("m:fPr", [], f),
         renderSlot("m:num", f.numerator),
         renderSlot("m:den", f.denominator)
       ]);
     }
     function parseSSup(el) {
-      return {
+      return withPr(el, "m:sSupPr", {
         type: "sSup",
         base: parseSlot(xml.findChild(el, "m:e")),
         sup: parseSlot(xml.findChild(el, "m:sup"))
-      };
+      });
     }
     function renderSSup(n) {
       return xml.el("m:sSup", {}, [
+        ...renderPr("m:sSupPr", [], n),
         renderSlot("m:e", n.base),
         renderSlot("m:sup", n.sup)
       ]);
     }
     function parseSSub(el) {
-      return {
+      return withPr(el, "m:sSubPr", {
         type: "sSub",
         base: parseSlot(xml.findChild(el, "m:e")),
         sub: parseSlot(xml.findChild(el, "m:sub"))
-      };
+      });
     }
     function renderSSub(n) {
       return xml.el("m:sSub", {}, [
+        ...renderPr("m:sSubPr", [], n),
         renderSlot("m:e", n.base),
         renderSlot("m:sub", n.sub)
       ]);
     }
     function parseSSubSup(el) {
-      return {
+      return withPr(el, "m:sSubSupPr", {
         type: "sSubSup",
         base: parseSlot(xml.findChild(el, "m:e")),
         sub: parseSlot(xml.findChild(el, "m:sub")),
         sup: parseSlot(xml.findChild(el, "m:sup"))
-      };
+      });
     }
     function renderSSubSup(n) {
       return xml.el("m:sSubSup", {}, [
+        ...renderPr("m:sSubSupPr", [], n),
         renderSlot("m:e", n.base),
         renderSlot("m:sub", n.sub),
         renderSlot("m:sup", n.sup)
       ]);
     }
     function parseRad(el) {
-      return {
+      return withPr(el, "m:radPr", {
         type: "rad",
         degree: parseSlot(xml.findChild(el, "m:deg")),
         base: parseSlot(xml.findChild(el, "m:e"))
-      };
+      });
     }
     function renderRad(n) {
       return xml.el("m:rad", {}, [
+        ...renderPr("m:radPr", [], n),
         renderSlot("m:deg", n.degree),
         renderSlot("m:e", n.base)
       ]);
@@ -2625,35 +2734,29 @@ export const xlsxLargePackage = {
         sub: parseSlot(xml.findChild(el, "m:sub")),
         sup: parseSlot(xml.findChild(el, "m:sup")),
         body: parseSlot(xml.findChild(el, "m:e"))
-      }, naryPr = xml.findChild(el, "m:naryPr");
-      if (naryPr) {
-        const chr = xml.findChild(naryPr, "m:chr");
-        if (chr && chr.attrs["m:val"])
-          out.op = chr.attrs["m:val"];
-      }
+      }, naryPr = readPr(out, el, "m:naryPr", ["m:chr"]), op = charOf(naryPr, "m:chr");
+      if (op != null)
+        out.op = op;
       return out;
     }
     function renderNary(n) {
       const children = [];
-      children.push(xml.el("m:naryPr", {}, [
-        xml.el("m:chr", { "m:val": n.op || "\u2211" })
-      ]));
+      children.push(...renderPr("m:naryPr", [
+        xml.el("m:chr", { "m:val": n.op ?? "\u2211" })
+      ], n));
       children.push(renderSlot("m:sub", n.sub));
       children.push(renderSlot("m:sup", n.sup));
       children.push(renderSlot("m:e", n.body));
       return xml.el("m:nary", {}, children);
     }
     function parseDelim(el) {
-      const out = { type: "d", children: [] }, dPr = xml.findChild(el, "m:dPr");
-      if (dPr) {
-        const beg = xml.findChild(dPr, "m:begChr"), end = xml.findChild(dPr, "m:endChr"), sep = xml.findChild(dPr, "m:sepChr");
-        if (beg && beg.attrs["m:val"])
-          out.open = beg.attrs["m:val"];
-        if (end && end.attrs["m:val"])
-          out.close = end.attrs["m:val"];
-        if (sep && sep.attrs["m:val"])
-          out.sep = sep.attrs["m:val"];
-      }
+      const out = { type: "d", children: [] }, dPr = readPr(out, el, "m:dPr", ["m:begChr", "m:sepChr", "m:endChr"]), open = charOf(dPr, "m:begChr"), close = charOf(dPr, "m:endChr"), sep = charOf(dPr, "m:sepChr");
+      if (open != null)
+        out.open = open;
+      if (close != null)
+        out.close = close;
+      if (sep != null)
+        out.sep = sep;
       for (const c of el.children) {
         if (c.type !== "element")
           continue;
@@ -2666,31 +2769,32 @@ export const xlsxLargePackage = {
       const children = [], pr = [];
       if (n.open != null)
         pr.push(xml.el("m:begChr", { "m:val": n.open }));
-      if (n.close != null)
-        pr.push(xml.el("m:endChr", { "m:val": n.close }));
       if (n.sep != null)
         pr.push(xml.el("m:sepChr", { "m:val": n.sep }));
-      if (pr.length)
-        children.push(xml.el("m:dPr", {}, pr));
+      if (n.close != null)
+        pr.push(xml.el("m:endChr", { "m:val": n.close }));
+      children.push(...renderPr("m:dPr", pr, n));
       for (const slot of n.children || [])
         children.push(renderSlot("m:e", slot));
       return xml.el("m:d", {}, children);
     }
     function parseFunc(el) {
-      return {
+      return withPr(el, "m:funcPr", {
         type: "func",
         name: parseSlot(xml.findChild(el, "m:fName")),
         body: parseSlot(xml.findChild(el, "m:e"))
-      };
+      });
     }
     function renderFunc(n) {
       return xml.el("m:func", {}, [
+        ...renderPr("m:funcPr", [], n),
         renderSlot("m:fName", n.name),
         renderSlot("m:e", n.body)
       ]);
     }
     function parseMatrix(el) {
       const out = { type: "m", rows: [] };
+      readPr(out, el, "m:mPr", []);
       for (const r of xml.findAll(el, "m:mr")) {
         const row = [];
         for (const c of xml.findAll(r, "m:e"))
@@ -2701,49 +2805,37 @@ export const xlsxLargePackage = {
     }
     function renderMatrix(n) {
       const rows = (n.rows || []).map((row) => xml.el("m:mr", {}, row.map((cell) => renderSlot("m:e", cell))));
-      return xml.el("m:m", {}, rows);
+      return xml.el("m:m", {}, [...renderPr("m:mPr", [], n), ...rows]);
     }
     function parseAcc(el) {
-      const out = { type: "acc", base: parseSlot(xml.findChild(el, "m:e")) }, accPr = xml.findChild(el, "m:accPr");
-      if (accPr) {
-        const chr = xml.findChild(accPr, "m:chr");
-        if (chr && chr.attrs["m:val"])
-          out.char = chr.attrs["m:val"];
-      }
+      const out = { type: "acc", base: parseSlot(xml.findChild(el, "m:e")) }, accPr = readPr(out, el, "m:accPr", ["m:chr"]), char = charOf(accPr, "m:chr");
+      if (char != null)
+        out.char = char;
       return out;
     }
     function renderAcc(n) {
       const children = [];
-      if (n.char != null)
-        children.push(xml.el("m:accPr", {}, [
-          xml.el("m:chr", { "m:val": n.char })
-        ]));
+      children.push(...renderPr("m:accPr", n.char != null ? [xml.el("m:chr", { "m:val": n.char })] : [], n));
       children.push(renderSlot("m:e", n.base));
       return xml.el("m:acc", {}, children);
     }
     function parseBar(el) {
-      const out = { type: "bar", base: parseSlot(xml.findChild(el, "m:e")) }, barPr = xml.findChild(el, "m:barPr");
-      if (barPr) {
-        const pos = xml.findChild(barPr, "m:pos");
-        if (pos && pos.attrs["m:val"])
-          out.pos = pos.attrs["m:val"];
-      }
+      const out = { type: "bar", base: parseSlot(xml.findChild(el, "m:e")) }, barPr = readPr(out, el, "m:barPr", ["m:pos"]), pos = charOf(barPr, "m:pos");
+      if (pos != null)
+        out.pos = pos;
       return out;
     }
     function renderBar(n) {
       const children = [];
-      if (n.pos)
-        children.push(xml.el("m:barPr", {}, [
-          xml.el("m:pos", { "m:val": n.pos })
-        ]));
+      children.push(...renderPr("m:barPr", n.pos != null ? [xml.el("m:pos", { "m:val": n.pos })] : [], n));
       children.push(renderSlot("m:e", n.base));
       return xml.el("m:bar", {}, children);
     }
     function parseBox(el) {
-      return { type: "box", base: parseSlot(xml.findChild(el, "m:e")) };
+      return withPr(el, "m:boxPr", { type: "box", base: parseSlot(xml.findChild(el, "m:e")) });
     }
     function renderBox(n) {
-      return xml.el("m:box", {}, [renderSlot("m:e", n.base)]);
+      return xml.el("m:box", {}, [...renderPr("m:boxPr", [], n), renderSlot("m:e", n.base)]);
     }
     function parseMathElement(el) {
       switch (el.name) {
@@ -2823,17 +2915,21 @@ export const xlsxLargePackage = {
       return xml.el("m:oMath", {}, children);
     }
     function parseOMathPara(el) {
-      const out = { type: "oMathPara", children: [] };
+      const out = { type: "oMathPara", children: [] }, extras = [];
       for (const c of el.children) {
         if (c.type !== "element")
           continue;
         if (c.name === "m:oMath")
           out.children.push(parseOMath(c));
+        else
+          extras.push(c);
       }
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function renderOMathPara(n) {
-      return xml.el("m:oMathPara", {}, (n.children || []).map(renderOMath));
+      return xml.el("m:oMathPara", {}, [...n._extras || [], ...(n.children || []).map(renderOMath)]);
     }
     function r(text, sty) {
       const out = { type: "mathRun", text: String(text || "") };
@@ -4398,11 +4494,16 @@ export const xlsxLargePackage = {
       walker.use(...extensions);
       return api;
     }
-    function write(workbook) {
+    function write(workbook, opts) {
       if (workbook == null || typeof workbook !== "object" || Array.isArray(workbook))
         throw new ContractError("xlsx/invalid-workbook", "xlsx.write: workbook must be an object with a sheets array", { context: { received: workbook === null ? "null" : typeof workbook } });
       if (workbook.sheets !== void 0 && !Array.isArray(workbook.sheets))
         throw new ContractError("xlsx/invalid-sheets", "xlsx.write: workbook.sheets must be an array", { context: { path: "sheets", received: typeof workbook.sheets } });
+      opts = opts || {};
+      if (opts.preserveInput !== void 0 && typeof opts.preserveInput !== "boolean")
+        throw new ContractError("xlsx/invalid-preserve-input", "xlsx.write: opts.preserveInput must be true or false", { context: { received: opts.preserveInput === null ? "null" : typeof opts.preserveInput } });
+      if (opts.preserveInput)
+        workbook = structuredClone(workbook);
       if (walker.hasExtensions)
         walker.applyDehydrate(workbook);
       const pkg = opc.empty(), sheets = workbook.sheets || [], sst = [], sstIndex = new Map;
@@ -8494,13 +8595,13 @@ export const xlsxLargePackage = {
     __register({ name: "dmlFillsAdvanced", dependencies: ["xml","ooxmlShared"], factory: function(xml, shared) {
     const codec = shared.createDmlColorCodec(xml), COLOR_TAGS = codec.COLOR_TAGS;
     function parseColor(el) {
-      return codec.parseColor(el, { withMods: !1 });
+      return codec.parseColor(el, { withMods: !0 });
     }
     function renderColor(c) {
-      return codec.renderColor(c, { withMods: !1 });
+      return codec.renderColor(c, { withMods: !0 });
     }
     function findFirstColor(el) {
-      return codec.findFirstColor(el, { withMods: !1 });
+      return codec.findFirstColor(el, { withMods: !0 });
     }
     function parseGradFill(el) {
       const out = { attrs: { ...el.attrs }, stops: [] };

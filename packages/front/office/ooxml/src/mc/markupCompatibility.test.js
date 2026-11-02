@@ -269,3 +269,59 @@ describe('markupCompatibility — setIgnorable', () => {
             .toEqual(['w14', 'w15']);
     });
 });
+
+describe('markupCompatibility — ignorablePrefixes', () => {
+    const ROOT = '<root xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
+        + ' xmlns:w14="urn:w14" xmlns:w15="urn:w15">';
+
+    test('a listed prefix is ignorable from the root down although the root lists no mc:Ignorable', () => {
+        const root = xml.parse(ROOT + '<p w14:paraId="1" a="x"><w14:thing/><q/></p></root>');
+        mc.process(root, { ignorablePrefixes: ['w14'] });
+        const p = root.children[0];
+        expect(p.attrs).toEqual({ a: 'x' });
+        expect(p.children.map((c) => c.name)).toEqual(['q']);
+    });
+
+    test('a supported prefix stays, a keepElements element stays with its subtree', () => {
+        const root = xml.parse(ROOT + '<p w14:paraId="1"><w15:repeatingSection w14:x="2"/><w15:other/></p></root>');
+        mc.process(root, { ignorablePrefixes: ['w14', 'w15'], supportedPrefixes: ['w14'], keepElements: ['w15:repeatingSection'] });
+        const p = root.children[0];
+        expect(p.attrs).toEqual({ 'w14:paraId': '1' });
+        expect(p.children.map((c) => [c.name, c.attrs])).toEqual([['w15:repeatingSection', { 'w14:x': '2' }]]);
+    });
+
+    test('without the option an undeclared prefix is kept, as before', () => {
+        const root = xml.parse(ROOT + '<p w14:paraId="1"/></root>');
+        mc.process(root);
+        expect(root.children[0].attrs).toEqual({ 'w14:paraId': '1' });
+    });
+});
+
+describe('markupCompatibility — adjacent text nodes', () => {
+    const ROOT = '<root xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
+        + ' xmlns:w15="urn:w15" mc:Ignorable="w15">';
+
+    test('text, a dropped ignorable element, text: one text node holding both values', () => {
+        const root = xml.parse(ROOT + '<p>a <w15:appearance/> b<q/></p></root>');
+        mc.process(root);
+        expect(root.children[0].children).toEqual([
+            { type: 'text', value: 'a  b' },
+            { type: 'element', name: 'q', attrs: {}, children: [] }
+        ]);
+    });
+
+    test('text, a comment the parser drops, text: one text node', () => {
+        const root = xml.parse('<root><p>a<!-- c -->b</p></root>');
+        mc.process(root);
+        expect(root.children[0].children).toEqual([{ type: 'text', value: 'ab' }]);
+    });
+
+    test('inside a keepElements subtree, and around an AlternateContent resolved to nothing', () => {
+        const root = xml.parse(ROOT + '<w15:kept>x<!-- c -->y</w15:kept>'
+            + '<p>a<mc:AlternateContent><mc:Choice Requires="zz"><zz/></mc:Choice>'
+            + '</mc:AlternateContent>b</p></root>');
+        mc.process(root, { keepElements: ['w15:kept'] });
+        expect(root.children[0].children).toEqual([{ type: 'text', value: 'xy' }]);
+        expect(root.children[1].children).toEqual([{ type: 'text', value: 'ab' }]);
+    });
+});

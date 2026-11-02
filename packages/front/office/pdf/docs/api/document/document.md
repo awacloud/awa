@@ -1,7 +1,7 @@
 ---
 module: pdfDocument
 category: pdf/document
-dependencies: [pdfErrors, pdfTokenizer, pdfParser, pdfXref, pdfTrailer, pdfCatalog, pdfPage, pdfPages, pdfCrossRefStream, pdfObjStream, pdfFilterDispatch]
+dependencies: [pdfErrors, pdfTokenizer, pdfParser, pdfXref, pdfTrailer, pdfCatalog, pdfPage, pdfPages, pdfCrossRefStream, pdfObjStream, pdfFilterDispatch, pdfSecurity, pdfStandardV4, pdfStandardV5, pdfStandardV6]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > Top-level read orchestrator — `Uint8Array` → navigable typed model.
 
-**Module** `pdfDocument` | **Source** `packages/front/office/pdf/src/document/document.js` | **Deps** `pdfErrors`, `pdfTokenizer`, `pdfParser`, `pdfXref`, `pdfTrailer`, `pdfCatalog`, `pdfPage`, `pdfPages`, `pdfCrossRefStream`, `pdfObjStream`, `pdfFilterDispatch` | **Worker-safe** yes
+**Module** `pdfDocument` | **Source** `packages/front/office/pdf/src/document/document.js` | **Deps** `pdfErrors`, `pdfTokenizer`, `pdfParser`, `pdfXref`, `pdfTrailer`, `pdfCatalog`, `pdfPage`, `pdfPages`, `pdfCrossRefStream`, `pdfObjStream`, `pdfFilterDispatch`, `pdfSecurity`, `pdfStandardV4`, `pdfStandardV5`, `pdfStandardV6` | **Worker-safe** yes
 
 Full pipeline: header → xref (chaining `/Prev`, at most 32 sections) → trailer →
 catalog → pages. It builds an **indirect resolver** (`doc._raw.resolve`) backed
@@ -66,7 +66,7 @@ const docMod = runtime.resolve('pdfDocument');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `readDocument` | `(bytes: Uint8Array, opts?: { allowEncrypted?: boolean }) => Document` | Full model. |
+| `readDocument` | `(bytes: Uint8Array, opts?: { allowEncrypted?: boolean, recoverXref?: boolean, password?: string \| Uint8Array, legacyRc4?: object, fastCipher?: boolean }) => Document` | Full model; `password` opens an encrypted document (see [Encrypted documents](#encrypted-documents)); `recoverXref: true` rebuilds an unusable cross-reference table from the bytes (see [Cross-reference recovery](#cross-reference-recovery)). |
 | `readHeader` | `(bytes: Uint8Array) => { version, end }` | Header only. |
 
 ### `Document` shape
@@ -124,14 +124,88 @@ if (doc.catalog.metadata) {
 }
 ```
 
+## Cross-reference recovery
+
+Two classic-table shapes that real producers write are read without the
+option: a subsection header ending with spaces or tabs before its EOL,
+and 19-byte entries (a one-byte EOL). Each shape met records one
+`pdf/document/xref-tolerated` loss (`context.shape`
+`'subsection-header-space'` or `'entry-eol-one-byte'`, `context.at` the
+section's offset).
+
+By default the reader follows `startxref` and the `/Prev` chain and
+throws on the first section it cannot use (a wrong offset, a
+cross-reference stream whose filter it cannot decode, no `startxref`).
+With `{ recoverXref: true }` (only `true` enables it), such a failure —
+any `pdf/…` `ParseError` of the walk, or a trailer without `/Root` —
+rebuilds the table from the file's bytes instead:
+
+- every `N G obj` definition, in file order, the later one winning (an
+  incremental update);
+- the members of every object stream that decodes, at the container's
+  place in that order;
+- the trailer merged, newest first, from every parsable `trailer`
+  dictionary and cross-reference stream dictionary; `/Root` the last
+  catalog found when none names one, `/Size` one past the highest
+  object number when none gives it.
+
+A rebuilt read records `pdf/document/xref-rebuilt` in `doc.losses` (its
+`context.cause` the code that made the walk fail, `context.entries` the
+number of entries rebuilt), and `doc.xref.sections` holds one section
+`{ at: null, kind: 'rebuilt', entries }`. A file with no catalog at all
+still throws `pdf/trailer/missing-root`. A readable chain is never
+rebuilt.
+
+```js
+const doc = docMod.readDocument(bytes, { recoverXref: true });
+doc.losses.some((l) => l.code === 'pdf/document/xref-rebuilt'); // true when it was rebuilt
+```
+
 ## Encrypted documents
 
 `readDocument` fails loud on an encrypted input: when the
-trailer carries `/Encrypt`, it throws `pdf/document/encrypted` instead
+trailer carries `/Encrypt` (`/Encrypt null` is no entry, so a plaintext
+document), it throws `pdf/document/encrypted` instead
 of silently returning a model whose strings and streams are still
-ciphertext. Pass `{ allowEncrypted: true }` to opt into today's raw
-behaviour (the object graph is returned unmodified — no decrypt is
-performed):
+ciphertext.
+
+`{ password }` (a string or a `Uint8Array`; `''` is the empty user
+password most protected files carry) opens it: the `/Encrypt` dictionary
+is typed by [`pdfSecurity.typeEncryptDict`](../crypto/security.md), the
+Standard handler V=4 R=4 (AESV2, RC4), V=5 R=5 or V=5 R=6 (AESV3, AESV4)
+chosen by `selectHandler`, the password tried as the user password, then
+as the owner password, and every indirect object is decrypted as it is
+resolved: its strings by the `/StrF` crypt filter, its stream payload by
+`/StmF` (`/EFF` for an embedded file), `Identity` leaving a class as
+stored. Left as stored (ISO 32000-2 § 7.6.2): the `/Encrypt` dictionary, a
+cross-reference stream, the `/Type /Metadata` stream when
+`EncryptMetadata` is false, the `/Contents` of a signature dictionary
+(`/Type /Sig` or `/DocTimeStamp`). An object stream is decrypted like
+any stream and its members are read as stored (they are not encrypted
+again inside it). RC4 V=1 / V=2 (R2, R3) needs `legacyRc4`, the
+[`pdfLegacyRc4Read`](../extra/legacy-rc4-read.md) instance of the opt-in
+extras (the `pdf-legacy` bundle's `read` passes its own when given a
+password): the file key is checked against `/U`, the password tried as the
+user, then as the owner password, and every string and stream decrypted
+with its per-object RC4 key. Without it such a document throws
+`pdf/crypto/unsupported-version`. Without `password` every result is
+unchanged; on an unencrypted document it is ignored; it wins over
+`allowEncrypted`.
+
+`fastCipher: true` (opt-in, with `password`) routes the decryptor's AES
+through fw's T-table path, `aes.ttable.fn`: the key check (V4, V5 and the
+R6 key hardening of Algorithm 2.B, about 0.4 s a check through the
+default) and the AES-CBC string and stream decryption — measured on
+qpdf's 30-page R6 file, a whole read 0.9 s → 25 ms, and a 2 MiB stream
+0.3 → about 100 MB/s. The T-table path is **not constant-time**: its
+memory accesses depend on the key, so a process sharing the machine's
+caches could observe them. Use it on a trusted, single-user host (a local
+viewer), never on a shared one; the default stays the constant-time
+`aes.fn`. AESV4 (GCM) and RC4 are not affected. `false` or absent reads
+as today; another value throws `pdf/document/bad-fast-cipher-option`.
+
+Pass `{ allowEncrypted: true }` instead to read the raw container (the
+object graph is returned unmodified — no decrypt is performed):
 
 ```js
 try {
@@ -144,11 +218,11 @@ try {
 
 // Explicit opt-out — returns the raw (still-encrypted) container:
 const raw = docMod.readDocument(bytes, { allowEncrypted: true });
+
+// Decrypted, with the (often empty) user password or the owner password:
+const doc = docMod.readDocument(bytes, { password: '' });
 ```
 
-The full compose-decrypt read path (password API, V4/V5/V6 handler
-selection, per-object decrypt through `resolveByKey`) is **not provided**
-by this module — it only fails loud on an encrypted input.
 
 ## Errors
 
@@ -159,7 +233,12 @@ by this module — it only fails loud on an encrypted input.
 | `pdf/document/bad-input` | `ParseError` | Argument is not a `Uint8Array`. |
 | `pdf/document/no-startxref` | `ParseError` | No `startxref` at the end of the file. |
 | `pdf/document/no-trailer` | `ParseError` | No usable trailer. |
-| `pdf/document/encrypted` | `ParseError` | Trailer carries `/Encrypt` and `opts.allowEncrypted` is not `true`. |
+| `pdf/document/bad-fast-cipher-option` | `ContractError` | `opts.fastCipher` is present and not a boolean. |
+| `pdf/document/encrypted` | `ParseError` | Trailer carries `/Encrypt`, and neither `opts.password` nor `opts.allowEncrypted: true` is given. |
+| `pdf/document/bad-password-option` | `ContractError` | `opts.password` is neither a string nor a `Uint8Array`. |
+| `pdf/document/bad-legacy-rc4-option` | `ContractError` | `opts.legacyRc4` is not the `pdfLegacyRc4Read` instance (`validateUserPassword`, `validateOwnerPassword`, `decryptString`, `decryptStream`). |
+| `pdf/document/bad-password` | `EncryptionError` | `opts.password` opens the document neither as its user nor as its owner password. |
+| `pdf/crypto/unsupported-filter` | `EncryptionError` | Under `opts.password`, the `/Encrypt` `/Filter` is not `Standard`. |
 | `pdf/document/missing-xref` | `ParseError` | Reference absent from the table. |
 | `pdf/document/free-object` | `ParseError` | The catalog (`/Root`) is free in every xref section. Any other free reference is recorded in `doc.losses` instead of thrown. |
 | `pdf/document/bad-offset` | `ParseError` | Xref offset out of range. |
@@ -170,7 +249,7 @@ by this module — it only fails loud on an encrypted input.
 | `pdf/document/objstm-nested` | `ParseError` | An object stream is itself stored inside another object stream. |
 | `pdf/document/objstm-not-stream` | `ParseError` | The object a type-2 entry names as its container is not a stream. |
 | `pdf/document/objstm-mismatch` | `ParseError` | The container member at the entry's index carries another object number. |
-| `pdf/document/objstm-encrypted` | `ParseError` | A compressed object was reached under `allowEncrypted` — no decrypt path is composed. |
+| `pdf/document/objstm-encrypted` | `ParseError` | A compressed object of an encrypted document was reached under `allowEncrypted` (without `password`): its object stream is still ciphertext. |
 
 It also propagates every code from [`pdfXref`](../syntax/xref.md),
 [`pdfTrailer`](../syntax/trailer.md), [`pdfCatalog`](./catalog.md),

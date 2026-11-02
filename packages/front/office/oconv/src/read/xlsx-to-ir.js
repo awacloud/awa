@@ -40,6 +40,31 @@
  *   plus a `numFmt` in `xl/styles.xml`, which is dropped formatting (see
  *   below), so a date-formatted cell surfaces as its raw serial number.
  *
+ * ## `opts.sheets` — CSV or TSV instead of a table
+ *
+ * `'table'` (the default, or absent) maps a sheet as above. `'csv'` or
+ * `'tsv'` writes the same normalised grid as ONE IR `codeBlock` (`info`
+ * `csv` / `tsv`) under the sheet's heading instead of a `table` — far
+ * fewer bytes than a pipe table on a dense sheet. csv follows RFC 4180 (a
+ * field holding a comma, a double quote, a CR or an LF is quoted, its quotes
+ * doubled; rows joined by LF); tsv writes a cell's backslash, tab, LF and CR
+ * as two-character escapes and records `sheet/tsv-escaped` once per sheet
+ * when it did. Every other loss is recorded as for a table. Another value
+ * throws `oconv: bad sheets`.
+ *
+ * ## `opts.cellBudget` — a sheet too wide to pad
+ *
+ * Padding every row to the widest makes a table of rows times columns: one
+ * wide row in a long sheet can make tens of millions of empty cells. Under
+ * `opts.cellBudget` (a positive safe integer, else `oconv: bad cell
+ * budget`), a sheet whose padded grid would hold more cells is never
+ * padded: under `'table'` it gives one IR `paragraph` per non-empty cell,
+ * `<A1 address>: <text>`, in row then column order; under `'csv'` /
+ * `'tsv'`, its rows unpadded (each row's trailing empty cells trimmed).
+ * Either way `sheet/sparse-form` records the sheet name and the padded and
+ * kept cell counts. The size is found from the row lengths, before any
+ * padding (`paddedSize`, mirrored from {@link module:oconv/read/sheet-grid}).
+ *
  * ## Loss codes emitted by this module
  *
  * | Code | Meaning |
@@ -99,6 +124,104 @@ export const oconvXlsxToIr = {
             return grid;
         }
 
+        function gridToCsv(grid) {
+            const field = (s) => (/[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s);
+            return grid.map((r) => r.map(field).join(',')).join('\n');
+        }
+
+        function gridToTsv(grid) {
+            let escaped = false;
+            const ESC = { '\\': '\\\\', '\t': '\\t', '\n': '\\n', '\r': '\\r' };
+            const field = (s) => s.replace(/[\\\t\n\r]/g, (c) => { escaped = true; return ESC[c]; });
+            const text = grid.map((r) => r.map(field).join('\t')).join('\n');
+            return { text, escaped };
+        }
+
+        /** `opts.sheets`: `'table'` (also when absent), `'csv'` or `'tsv'`, else throws. */
+        function sheetsMode(opts) {
+            const v = opts && opts.sheets;
+            if (v === undefined || v === 'table') return 'table';
+            if (v === 'csv' || v === 'tsv') return v;
+            throw new Error('oconv: bad sheets');
+        }
+
+        /**
+         * The block(s) of one sheet's grid: an IR `table` under `'table'`,
+         * a `codeBlock` (`info` `csv` / `tsv`) otherwise; none for an empty
+         * grid. A TSV escape records `sheet/tsv-escaped` once.
+         */
+        function gridBlock(grid, mode, sheetName, losses, table) {
+            if (!grid.length) return null;
+            if (mode === 'table') return table();
+            if (mode === 'csv') return node('codeBlock', { info: 'csv', text: gridToCsv(grid) });
+            const tsv = gridToTsv(grid);
+            if (tsv.escaped) losses.push({ code: 'sheet/tsv-escaped', detail: sheetName });
+            return node('codeBlock', { info: 'tsv', text: tsv.text });
+        }
+
+        /* ── sparse form past `opts.cellBudget` (mirror of ./sheet-grid.js) ── */
+
+        function cellAddress(rowIdx, colIdx) {
+            let col = '';
+            for (let n = colIdx + 1; n > 0; n = Math.floor((n - 1) / 26)) {
+                col = String.fromCharCode(65 + ((n - 1) % 26)) + col;
+            }
+            return col + (rowIdx + 1);
+        }
+
+        function paddedSize(rows) {
+            let height = 0;
+            let width = 0;
+            (rows || []).forEach((r, i) => {
+                const row = r || [];
+                let n = row.length;
+                while (n > 0 && row[n - 1] === '') n--;
+                if (n > 0) { height = i + 1; width = Math.max(width, n); }
+            });
+            return height * width;
+        }
+
+        function unpaddedRows(rows) {
+            const out = (rows || []).map((r) => {
+                const row = r || [];
+                let n = row.length;
+                while (n > 0 && row[n - 1] === '') n--;
+                return row.slice(0, n);
+            });
+            let last = out.length - 1;
+            while (last >= 0 && out[last].length === 0) last--;
+            return out.slice(0, last + 1);
+        }
+
+        function sparseLines(rows) {
+            const lines = [];
+            unpaddedRows(rows).forEach((row, i) => row.forEach((text, j) => {
+                if (text !== '') lines.push(cellAddress(i, j) + ': ' + text);
+            }));
+            return lines;
+        }
+
+        /** `opts.cellBudget`: absent, or a positive safe integer, else throws. */
+        function cellBudgetOf(opts) {
+            const v = opts && opts.cellBudget;
+            if (v === undefined) return undefined;
+            if (!Number.isSafeInteger(v) || v < 1) throw new Error('oconv: bad cell budget');
+            return v;
+        }
+
+        /**
+         * The blocks of a sheet whose padded table is past the budget,
+         * never padded: one paragraph per value (`<A1 address>: <text>`)
+         * under `'table'`, the unpadded rows under `'csv'` / `'tsv'`; the
+         * `sheet/sparse-form` loss records the padded and kept counts.
+         */
+        function sparseBlocks(rawRows, size, mode, sheetName, losses) {
+            const lines = sparseLines(rawRows);
+            losses.push({ code: 'sheet/sparse-form', detail: `${sheetName}: ${size} padded cells, ${lines.length} kept` });
+            if (mode === 'table') return lines.map((text) => node('paragraph', {}, [node('run', { text })]));
+            return [gridBlock(unpaddedRows(rawRows), mode, sheetName, losses, null)];
+        }
+
         /** Stringify one xlsx cell's value, recording a formula-as-value loss. */
         function cellText(cell, sheetName, rowIdx, colIdx, losses) {
             if (!cell) return '';
@@ -132,10 +255,18 @@ export const oconvXlsxToIr = {
          * `oconv-ir/v1` document plus its loss ledger.
          *
          * @param {object} readResult Value of `xlsx.read(bytes)`.
-         * @param {object} [_opts] Reserved for future options; unused today.
+         * @param {{sheets?: string, cellBudget?: number}} [opts] `sheets` —
+         *   `'table'` (default), `'csv'` or `'tsv'`: how each sheet's grid is
+         *   written (see the module header); else `oconv: bad sheets`.
+         *   `cellBudget` — a positive safe integer: a sheet whose padded
+         *   table would hold more cells is written unpadded (see the module
+         *   header); else `oconv: bad cell budget`.
          * @returns {{ir: object, losses: {code: string, detail: string}[]}}
+         * @throws {Error} `oconv: bad sheets`, `oconv: bad cell budget`
          */
-        function xlsxToIr(readResult, _opts) {
+        function xlsxToIr(readResult, opts) {
+            const mode = sheetsMode(opts);
+            const budget = cellBudgetOf(opts);
             const losses = [];
             const sheets = (readResult && readResult.workbook
                 && readResult.workbook.sheets) || [];
@@ -148,8 +279,14 @@ export const oconvXlsxToIr = {
 
                 const rawRows = (sheet.rows || []).map((row, r) =>
                     (row || []).map((cell, c) => cellText(cell, sheetName, r, c, losses)));
-                const grid = normalizeGrid(rawRows);
-                if (grid.length) blocks.push(tableFromGrid(grid));
+                const size = budget === undefined ? 0 : paddedSize(rawRows);
+                if (budget !== undefined && size > budget) {
+                    blocks.push(...sparseBlocks(rawRows, size, mode, sheetName, losses));
+                } else {
+                    const grid = normalizeGrid(rawRows);
+                    const block = gridBlock(grid, mode, sheetName, losses, () => tableFromGrid(grid));
+                    if (block) blocks.push(block);
+                }
 
                 let formatSeen = false;
                 for (const row of sheet.rows || []) {

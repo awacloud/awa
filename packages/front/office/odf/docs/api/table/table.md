@@ -22,6 +22,8 @@ Model:
   columns: [ { styleName?, defaultCellStyleName?, repeated?, visibility? } ],
   headerRows?: integer,       // header rows count (top-N rows)
   rows: [ ...rowModel ],
+  _softPageBreaks?: integer[],  // internal: the index in `rows` of the row each
+                                //   <text:soft-page-break> read precedes
   _extras?
 }
 ```
@@ -40,10 +42,17 @@ The first `headerRows` rows of `rows` are rendered inside a
 | Method | Description |
 |---------|-------------|
 | `parseTable(el)` | Converts `<table:table>`. |
-| `renderTable(t)` | Builds the node. A model with no `columns` entry is written with one `<table:table-column>` repeated to the widest row (cells counted with `repeated`, a `colSpan` past the last cell included; no repeat attribute for a width of 1): the schema requires a column before the rows. The model passed in is not modified; reading the file back shows that column (`columns: [{ repeated: N }]`, no `repeated` for a width of 1). |
+| `renderTable(t)` | Builds the node. A model with no `columns` entry is written with one `<table:table-column>` repeated to the widest row (cells counted with `repeated`, a `colSpan` past the last cell included; no repeat attribute for a width of 1): the schema requires a column before the rows. The model passed in is not modified; reading the file back shows that column (`columns: [{ repeated: N }]`, no `repeated` for a width of 1). A model that would write no row (no row in `rows`, and no `table:table-row-group` or `table:table-rows` among `_extras.children`) is written with one row of one empty cell: the schema requires a row too, and reading back shows that row. `headerRows` counts the model's rows only: a larger value writes every row as a header row and never an empty `<table:table-header-rows>`. |
 
 ## Notes
 
+- A `text:soft-page-break` read between two rows (or two header rows) is not
+  kept in `_extras.children`: the table model records the index of the row it
+  preceded in the internal `_softPageBreaks`, and `renderTable` writes it back
+  before that row (the ODF schema allows none after the last row). An index
+  whose row the model no longer has writes nothing; a break read after the
+  last row stays there, as before. The array is absent for a table without
+  such a break.
 - `visibility` is `table:visibility` (`visible` | `collapse` | `filter`) of a
   column, kept as written and absent when the attribute is; `renderTable`
   writes it back. Rows carry the same field (see [`tableRow`](./row.md)).

@@ -13,7 +13,7 @@ status: complete
 
 **Module** `standard14Lookup` | **Source** `packages/front/office/fonts/src/standard14/lookup.js` | **Deps** `fontErrors`, `standard14Helvetica`, `standard14Times`, `standard14Courier`, `standard14Symbol`, `standard14ZapfDingbats` | **Worker-safe** yes
 
-Resolves a PostScript font name ('Helvetica', 'Times-Roman', 'Courier-Bold', 'Symbol', 'ZapfDingbats', etc.) to its metrics record.
+Resolves a PostScript font name ('Helvetica', 'Times-Roman', 'Courier-Bold', 'Symbol', 'ZapfDingbats', etc.) to its metrics record. A Latin face's record (the 12 Helvetica, Times and Courier faces) carries `widths` (per WinAnsi code) and `extraWidths` (by glyph name, the glyphs MacRomanEncoding and StandardEncoding name that WinAnsi lacks); Symbol and ZapfDingbats carry `widths` per built-in code only.
 
 ## Exports
 

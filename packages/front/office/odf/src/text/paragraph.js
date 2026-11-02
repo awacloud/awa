@@ -196,12 +196,14 @@ export const textParagraph = {
          *   a link run (it is routed like any other untyped element).
          * @param {boolean} [positional] when true (span bodies), an untyped
          *   element is kept as the raw node at its position in `runs` instead
-         *   of being routed to `extras`.
+         *   of being routed to `extras`. A read ctx carrying `elementsInRuns`
+         *   does the same for paragraph, heading and link bodies.
          * @returns {{runs: Array<object>, extras: Array<object>}}
          */
         function parseInline(children, ctx, insideLink, positional) {
             const runs = [];
             const extras = [];
+            const inPlace = positional || !!(ctx && ctx.elementsInRuns);
             for (const c of children || []) {
                 if (c.type === 'text') {
                     runs.push({ type: 'text', value: c.value });
@@ -221,7 +223,7 @@ export const textParagraph = {
                     } else if (c.name === 'draw:frame' && ctx
                         && typeof ctx.parseFrame === 'function') {
                         runs.push(ctx.parseFrame(c));
-                    } else if (positional) {
+                    } else if (inPlace) {
                         runs.push(c);
                     } else {
                         extras.push(c);
@@ -390,7 +392,10 @@ export const textParagraph = {
                     case 'tab':        out.push('\t'); break;
                     case 'line-break': out.push('\n'); break;
                     case 'link':       out.push(textOfRuns(r.runs)); break;
-                    case 'element':    out.push(xml.textContent(r)); break;
+                    // A raw element gives its character data inside a span;
+                    // outside one (`elementsInRuns`) none, as the `_extras`
+                    // entry it replaces gave none.
+                    case 'element':    if (inSpan) out.push(xml.textContent(r)); break;
                     // A frame run reads like the raw frame it replaces: its
                     // character data inside a span (a raw entry there), none
                     // at paragraph / link level (`_extras` there).

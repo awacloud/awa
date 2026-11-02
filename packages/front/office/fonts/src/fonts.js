@@ -101,20 +101,31 @@ export const fonts = {
         const { Glyph } = glyphMod;
         const { resolveGlyphPath } = compositeResolveMod;
 
-        function buildFont(sfnt) {
+        /**
+         * Build the font model from a parsed sfnt. `opts.allowMissingName`
+         * reads a font without a `name` table (`font.name` null, every
+         * `font.names` field undefined) instead of throwing
+         * `fonts/missing-name`.
+         *
+         * @param {object} sfnt
+         * @param {{ allowMissingName?: boolean }} [opts]
+         */
+        function buildFont(sfnt, opts) {
             if (!sfnt.tables.head) throw new ParseError('fonts/missing-head', 'font is missing the required `head` table');
             if (!sfnt.tables.maxp) throw new ParseError('fonts/missing-maxp', 'font is missing the required `maxp` table');
             if (!sfnt.tables.hhea) throw new ParseError('fonts/missing-hhea', 'font is missing the required `hhea` table');
             if (!sfnt.tables.hmtx) throw new ParseError('fonts/missing-hmtx', 'font is missing the required `hmtx` table');
             if (!sfnt.tables.cmap) throw new ParseError('fonts/missing-cmap', 'font is missing the required `cmap` table');
-            if (!sfnt.tables.name) throw new ParseError('fonts/missing-name', 'font is missing the required `name` table');
+            if (!sfnt.tables.name && !(opts && opts.allowMissingName)) {
+                throw new ParseError('fonts/missing-name', 'font is missing the required `name` table');
+            }
 
             const head = parseHead(sfnt.tables.head.bytes);
             const maxp = parseMaxp(sfnt.tables.maxp.bytes);
             const hhea = parseHhea(sfnt.tables.hhea.bytes);
             const hmtx = parseHmtx(sfnt.tables.hmtx.bytes, hhea.numberOfHMetrics, maxp.numGlyphs);
             const cmap = parseCmap(sfnt.tables.cmap.bytes);
-            const nameTable = parseName(sfnt.tables.name.bytes);
+            const nameTable = sfnt.tables.name ? parseName(sfnt.tables.name.bytes) : null;
             const os2  = sfnt.tables['OS/2'] ? parseOs2(sfnt.tables['OS/2'].bytes) : null;
             const post = sfnt.tables.post   ? parsePost(sfnt.tables.post.bytes, maxp.numGlyphs) : null;
 
@@ -246,12 +257,12 @@ export const fonts = {
                 if (typeof ext[hook] === 'function') ext[hook](payload);
             }
         }
-        function read(bytes) {
+        function read(bytes, opts) {
             if (!(bytes instanceof Uint8Array))
                 throw new ContractError('fonts/read-input', 'fonts.read expects Uint8Array',
                     { context: { actual: typeof bytes } });
             const sfnt = parseSfnt(bytes);
-            const font = buildFont(sfnt);
+            const font = buildFont(sfnt, opts);
             notify('hydrateFont', font);
             return font;
         }

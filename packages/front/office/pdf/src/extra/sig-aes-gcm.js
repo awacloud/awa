@@ -100,6 +100,7 @@ export const pdfSigAesGcm = {
                 raw:       dict,
                 _extras:   {}
             };
+            if (isType(e.Type, 'name')) out.type = e.Type.value;
             for (const k of Object.keys(e)) {
                 if (!CF_ENTRY_KNOWN.has(k)) out._extras[k] = e[k];
             }

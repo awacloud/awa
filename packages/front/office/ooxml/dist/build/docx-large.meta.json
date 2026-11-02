@@ -36,7 +36,8 @@
     "mathAdvanced",
     "dmlWpPositioning",
     "dmlEffects",
-    "dmlFillsAdvanced"
+    "dmlFillsAdvanced",
+    "dmlWpDrawing"
   ],
   "fwDependencies": [
     "xml",
@@ -48,8 +49,8 @@
     "crc32"
   ],
   "bytes": {
-    "dev": 369393,
-    "min": 203079
+    "dev": 471412,
+    "min": 263126
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

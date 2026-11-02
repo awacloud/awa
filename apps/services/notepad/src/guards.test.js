@@ -26,7 +26,7 @@ import { describe, test, expect } from 'bun:test';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { drawIconSet, ICON_FILES } from '../../tools/icons.js';
+import { drawIconSet, drawIco, ICON_FILES, ICO_SIZES } from '../../tools/icons.js';
 import { ICON } from '../tools/build-icons.js';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
@@ -111,6 +111,32 @@ describe('the standalone page', () => {
             const [size] = ICON_FILES[name];
             expect(committed.readUInt32BE(16)).toBe(size);
             expect(committed.readUInt32BE(20)).toBe(size);
+        }
+    });
+    test('the Windows sizes: the manifest names the 16, 32, 48 and 256 px tiles, the pages link favicon.ico (the drawIco bytes) before the SVG', () => {
+        const manifest = JSON.parse(readFileSync(here('../public/manifest.webmanifest'), 'utf8'));
+        for (const size of ICO_SIZES) {
+            expect(manifest.icons.some((i) => i.src === `icons/icon-${size}.png` && i.sizes === `${size}x${size}`
+                && i.type === 'image/png' && i.purpose === 'any'), `${size} px`).toBe(true);
+        }
+        // Chrome builds its own .ico from the PNGs: the manifest never lists one.
+        expect(manifest.icons.some((i) => i.src.endsWith('.ico'))).toBe(false);
+        for (const [page, prefix] of [['index.html', ''], ['help/en.html', '../'], ['help/fr.html', '../']]) {
+            const text = readFileSync(here(`../public/${page}`), 'utf8');
+            const ico = text.indexOf(`<link rel="icon" href="${prefix}favicon.ico" sizes="16x16 32x32 48x48 256x256">`);
+            expect(ico, page).toBeGreaterThan(0);
+            expect(text.indexOf(`<link rel="icon" type="image/svg+xml" href="${prefix}icons/icon.svg">`), page).toBeGreaterThan(ico);
+        }
+        const committed = readFileSync(here('../public/favicon.ico'));
+        expect(committed.equals(drawIco(ICON)), 'favicon.ico: run bun run icons').toBe(true);
+    });
+    test('every text file under public/ is UTF-8', () => {
+        const decoder = new TextDecoder('utf-8', { fatal: true });
+        const files = readdirSync(here('../public'), { recursive: true }).map(String)
+            .filter((f) => /\.(js|html|css|webmanifest|json|md)$/.test(f));
+        expect(files).toContain('sw.js');
+        for (const file of files) {
+            expect(() => decoder.decode(readFileSync(join(here('../public'), file))), file).not.toThrow();
         }
     });
     test('the manifest: a stable id, one window per file, install screenshots Chrome accepts', () => {

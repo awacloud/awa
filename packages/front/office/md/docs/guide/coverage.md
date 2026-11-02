@@ -8,9 +8,9 @@
 
 | Suite | Cases | Pass | Ref. |
 |-------|------:|-----:|------|
-| CommonMark 0.31.2 spec examples | 652 | 652 | [`tests/commonmark-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/office/md/tests/commonmark-suite.test.js) |
+| CommonMark 0.31.2 spec examples | 652 | 652 | [`tests/commonmark-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/commonmark-suite.test.js) |
 | GFM 0.29 spec examples (cmark-gfm `0.29.0.gfm.13`) | 670 | 661 | `tests/gfm-spec.integration.test.js` |
-| GFM, hand-curated cases | 52 | 52 | [`tests/gfm-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/office/md/tests/gfm-suite.test.js) |
+| GFM, hand-curated cases | 52 | 52 | [`tests/gfm-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/gfm-suite.test.js) |
 
 How to read these figures: the CommonMark row runs every example of the vendored CommonMark 0.31.2 `spec.txt` through `parse` + `renderHtml`, and a lockfile test pins the version and the example count. The GFM spec row runs every example of the vendored GFM 0.29 `spec.txt` with exactly the extensions its fence names, as cmark-gfm does; the 9 examples that do not pass (398, 426, 434, 435, 436, 473, 474, 475, 477) are nested strong emphasis such as `****foo****`, where GFM 0.29 and CommonMark 0.31.2 disagree: md follows CommonMark 0.31.2. The hand-curated GFM cases predate that row and are kept as a second check. The extras have no conformance suite: each one is covered by its own sibling tests only. The measured figures, with their dates and the commands that replay them, are in [Measured coverage](#measured-coverage) below.
 
@@ -22,6 +22,7 @@ How to read these figures: the CommonMark row runs every example of the vendored
 | Inlines: code spans, emphasis/strong (with delimiter stack), links (inline/reference/shortcut/collapsed/autolink), images, raw HTML inline, hard/soft breaks, character/numeric entities, backslash escapes | CommonMark 0.31.2 §6 — every spec example passes |
 | GFM: tables (with alignment), task list items, strikethrough `~~x~~`, extended autolinks (`https://…`, `www.…`, `email@`), disallowed raw HTML filter | GFM 0.29 spec — 661 of 670 examples; the 9 others are nested strong emphasis, where md follows CommonMark 0.31.2 |
 | Smart punctuation (`smart: true`) | curly quotes only; dashes and ellipses are not produced (commonmark.js `smart_punct.txt`: 12 of 15 examples) |
+| Smart dashes and ellipses (`smartDashes: true`, opt-in) | en / em dashes and `…`, by commonmark.js's rule; with `smart: true` too, commonmark.js `smart_punct.txt` passes 15 of 15 examples |
 
 ## Opt-in extras (10)
 
@@ -52,10 +53,10 @@ Pre-wired composition: [`md-full`](../api/bundles/md-full.md) (deterministic ord
 
 ## Adding a test case
 
-1. **Spec coverage** — the CommonMark suite reads the vendored fixture [`tests/_fixtures/commonmark/spec.txt`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/office/md/tests/_fixtures/commonmark/spec.txt), not a `references/SPEC/*.json` file (per the repo-wide rule that `references/` is never a code dependency — anything a test needs is vendored into the package); [`tests/spec-version.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/office/md/tests/spec-version.test.js) locks its version (`0.31.2`) and example count (652). No manual edits to `spec.txt`. The GFM suite is **not** auto-drawn from a spec file — [`tests/gfm-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/office/md/tests/gfm-suite.test.js) is a hand-curated set of cases transcribed from `references/SPEC/Markdown/GitHub Flavored Markdown Spec.htm` (cited in the file's own header comment only; extraction from the structured HTML was impractical). Extend it by hand-writing a new case, not by regenerating from a spec source.
+1. **Spec coverage** — the CommonMark suite reads the vendored fixture [`tests/_fixtures/commonmark/spec.txt`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/_fixtures/commonmark/spec.txt), not a `references/SPEC/*.json` file (per the repo-wide rule that `references/` is never a code dependency — anything a test needs is vendored into the package); [`tests/spec-version.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/spec-version.test.js) locks its version (`0.31.2`) and example count (652). No manual edits to `spec.txt`. The GFM suite is **not** auto-drawn from a spec file — [`tests/gfm-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/gfm-suite.test.js) is a hand-curated set of cases transcribed from `references/SPEC/Markdown/GitHub Flavored Markdown Spec.htm` (cited in the file's own header comment only; extraction from the structured HTML was impractical). Extend it by hand-writing a new case, not by regenerating from a spec source.
 2. **Core behavior (out-of-spec)** — add to the sibling `*.test.js` of the relevant module (`src/block/parser.test.js`, `src/inline/parser.test.js`, `src/render/html.test.js`).
 3. **Extra** — add to the sibling `src/extra/<name>.test.js`. Format: `describe('<extra> module', () => { ... })` with a factory-metadata test plus per-case tests.
-4. **Integration** — add to `tests/<scenario>.test.js`. See [`tests/manipulation.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/office/md/tests/manipulation.test.js) as an example.
+4. **Integration** — add to `tests/<scenario>.test.js`. See [`tests/manipulation.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/manipulation.test.js) as an example.
 
 Re-run `bun test packages/front/office/md/`; everything must stay green.
 
@@ -76,7 +77,7 @@ Generated from `coverage/scorecard.json` (format `office-scorecard/v1`) in the r
 
 | Suite | Result | What is measured | Measured | Replay |
 |---|---|---|---|---|
-| `bun-coverage-src` bun 1.3.13 | lines 96.88 %, functions 94.72 % (mean of 50 source files) | the coverage gate's model over the declared basis (src/**) | 2026-10-17, `cf58af11f` | `bun cli.ts office-scorecard axis-a --pkg md` |
+| `bun-coverage-src` bun 1.3.13 | lines 96.88 %, functions 94.72 % (mean of 50 source files) | the coverage gate's model over the declared basis (src/**) | 2026-10-26, `976d3b35e` | `bun cli.ts office-scorecard axis-a --pkg md` |
 
 ### Conformance suites
 
@@ -86,6 +87,7 @@ Generated from `coverage/scorecard.json` (format `office-scorecard/v1`) in the r
 | [`gfm-spec`](https://github.com/github/cmark-gfm/blob/0.29.0.gfm.13/test/spec.txt) 0.29-gfm@0.29.0.gfm.13 | 661 / 670 | each example runs with exactly the GFM extensions its fence names, as cmark-gfm runs them: createMd({ extendedAutolinks: names autolink, disallowedRawHtml: names tagfilter }) (tables, strikethrough and task lists are always on in md); renderHtml(example, { safe: false }) equals the expected HTML byte for byte; examples marked disabled are skipped; 2 cases not run, each with its reason in the scorecard | 2026-10-13, `e93e57e5d` | `bun cli.ts office-scorecard axis-b --suite gfm-spec` |
 | [`commonmark-regressions`](https://github.com/commonmark/commonmark.js/blob/0.31.2/test/regression.txt) commonmark.js@0.31.2 | 32 / 32 | renderHtml(example, { safe: false }) of createMd({ extendedAutolinks: false, disallowedRawHtml: false }) equals the expected HTML byte for byte (commonmark.js runs this file with its default parser) | 2026-10-13, `e93e57e5d` | `bun cli.ts office-scorecard axis-b --suite commonmark-regressions` |
 | [`commonmark-smart`](https://github.com/commonmark/commonmark.js/blob/0.31.2/test/smart_punct.txt) commonmark.js@0.31.2 | 12 / 15 | renderHtml(example, { safe: false }) of createMd({ extendedAutolinks: false, disallowedRawHtml: false, smart: true }) equals the expected HTML byte for byte (commonmark.js runs this file with new Parser({ smart: true })) | 2026-10-13, `e93e57e5d` | `bun cli.ts office-scorecard axis-b --suite commonmark-smart` |
+| [`commonmark-smart-dashes`](https://github.com/commonmark/commonmark.js/blob/0.31.2/test/smart_punct.txt) commonmark.js@0.31.2 | 15 / 15 | renderHtml(example, { safe: false }) of createMd({ extendedAutolinks: false, disallowedRawHtml: false, smart: true, smartDashes: true }) equals the expected HTML byte for byte (commonmark.js runs this file with new Parser({ smart: true }); md splits that option in two: smart for the quotes, smartDashes for the dashes and ellipses) | 2026-10-24, `e65982e34` | `bun cli.ts office-scorecard axis-b --suite commonmark-smart-dashes` |
 
 ### Robustness on wild and pathological inputs
 

@@ -152,8 +152,7 @@ describe('walkOutline — traversal limits and malformed nodes', () => {
 
     test('a /Next that is not an indirect reference terminates the chain', () => {
         // typeOutlineItem only records /Next when it is a ref, so a
-        // malformed sibling link ends the walk instead of throwing — the
-        // walk-level `non-ref-sibling` guard is unreachable from here.
+        // malformed sibling link ends the walk instead of throwing.
         const map = {
             '10:0': obj.dict({ Title: obj.string(u8('A')), Next: obj.dict({}) })
         };

@@ -95,6 +95,9 @@ const hex = runtime.resolve('hex');
 | `push` | dom/sw | PushManager wrapper — VAPID subscription, subscription, permission state |
 | `serviceWorker` | dom/sw | SW lifecycle (window-side) |
 | `sharedWorker` | dom/sw | SharedWorker cross-tab connection + bidirectional RPC |
+| `installPrompt` | dom/sw | PWA install prompt deferral + File Handling launch queue |
+| `precache` | dom/sw | Worker-side release precache + cache-first / network-first strategies |
+| `swUpdate` | dom/sw | Waiting-release update flow: report once, check, apply, version |
 | `date` | io/time | Date helpers + timezone (Intl) |
 | `i18n` | io/i18n | Catalogues + interpolation + plurals (Intl) |
 | `ansi` | io/text | ANSI / VT100 / xterm parser + serialiser (CSI, OSC, SGR, cursor) |
@@ -201,6 +204,7 @@ const hex = runtime.resolve('hex');
 | `animate` | dom/display | Animation utilities |
 | `fullscreen` | dom/display | Fullscreen API |
 | `download` | dom/fs | File download |
+| `fileIntake` | dom/fs | File intake: picker, OS file drop, keyboard-operable dropzone → `File[]` |
 | `fsAccess` | dom/fs | File System Access API + OPFS — pick, read, write, list (partial worker-safe) |
 | `indexedDB` | dom/fs | IndexedDB wrapper |
 | `remoteStore` | dom/fs | Remote key-value store — HTTP/WS transport, watch, batch, auto-reconnect |

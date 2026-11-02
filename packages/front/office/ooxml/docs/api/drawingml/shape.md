@@ -61,11 +61,25 @@ shapeProps := {
         color?: 'RRGGBB',
         dash?: 'solid'|'dash'|'dot'|'dashDot'|…,
         cap?: 'flat'|'rnd'|'sq',
-        compound?: 'sng'|'dbl'|'thickThin'|'thinThick'|'tri'
+        compound?: 'sng'|'dbl'|'thickThin'|'thinThick'|'tri',
+        extraAttrs?: { [name: string]: string },  // other a:ln attributes (algn), verbatim
+        _extras?: [xmlNode]         // other a:ln children, verbatim (see below)
     },
     _extras?: [xmlNode]
 }
 ```
+
+A read `a:ln` keeps what the typed fields do not hold: a `solidFill` whose
+colour is not an `a:srgbClr` (a theme `schemeClr`, `prstClr`, `sysClr`, with
+its transforms), `gradFill`, `pattFill`, `custDash`, the joins (`round`,
+`bevel`, `miter`), `headEnd`, `tailEnd` and `extLst` go to `line._extras`,
+attributes other than `w`, `cap` and `cmpd` to `line.extraAttrs`, and the
+writer puts them back in schema order. `color` stays the `RRGGBB` string of
+an `a:srgbClr` (its transforms dropped) or `null` for `noFill`. A typed
+`color` (or `null`) set on such a line replaces the kept fill, a typed `dash`
+the kept `custDash`. The `spPr` children kept in `_extras` (`custGeom`,
+`gradFill`, `blipFill`, `effectLst`, `scene3d`, …) are written at their
+schema place too: geometry and fill before `a:ln`, effects after it.
 
 ## Examples
 

@@ -41,6 +41,8 @@ export const pdfShapeAnnot = {
             'RD', 'IC', 'L', 'LE', 'LL', 'LLE', 'Cap', 'CP', 'Measure', 'IT',
             'Vertices', 'Path'
         ]);
+        // a line's leader line offset and caption offset (PDF 1.7)
+        const LINE_KNOWN = new Set([...KNOWN, 'LLO', 'CO']);
 
         function typeShapeAnnot(dict, expected) {
             if (!VALID.has(expected)) {
@@ -70,6 +72,8 @@ export const pdfShapeAnnot = {
                 base.cp  = isType(e.CP, 'name') ? e.CP.value : null;
                 base.it  = isType(e.IT, 'name') ? e.IT.value : null;
                 base.measure = isType(e.Measure, 'dict') ? e.Measure : null;
+                if (e.LLO !== undefined) base.llo = toNum(e.LLO, null);
+                if (e.CO !== undefined) base.co = isType(e.CO, 'array') ? e.CO : null;
             }
             if (expected === 'Polygon' || expected === 'PolyLine') {
                 base.vertices = toNumArray(e.Vertices, 'pdf/annot/shape/bad-vertices');
@@ -79,7 +83,7 @@ export const pdfShapeAnnot = {
                 base.path     = isType(e.Path, 'array') ? e.Path : null;
             }
 
-            captureExtras(base, dict, KNOWN);
+            captureExtras(base, dict, expected === 'Line' ? LINE_KNOWN : KNOWN);
             return base;
         }
 

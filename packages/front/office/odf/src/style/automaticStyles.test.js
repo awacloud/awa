@@ -60,3 +60,36 @@ describe('styleAutomatic module', () => {
         });
     });
 });
+
+describe('styleAutomatic — property element children (T38)', () => {
+    const SRC = '<office:automatic-styles><style:style style:name="P1" style:family="paragraph" style:parent-style-name="Standard">'
+        + '<style:paragraph-properties fo:text-align="end"><style:tab-stops><style:tab-stop style:position="12.9cm" style:type="center"/></style:tab-stops>'
+        + '<style:drop-cap style:lines="3"/></style:paragraph-properties>'
+        + '<style:text-properties fo:font-weight="bold"/></style:style></office:automatic-styles>';
+
+    test('the children of a property element are kept, in order, beside the flat attribute bag', () => {
+        const { xml, s } = build();
+        const m = s.parse(xml.parse(SRC));
+        const st = m.styles[0];
+        expect(st.properties.paragraph).toEqual({ 'fo:text-align': 'end' });
+        expect(st._extras.propertyChildren.paragraph.map((c) => c.name)).toEqual(['style:tab-stops', 'style:drop-cap']);
+        expect(st._extras.propertyChildren.text).toBeUndefined();
+    });
+
+    test('they are written back inside their property element: parse → render → parse is a fixed point', () => {
+        const { xml, s } = build();
+        const once = s.parse(xml.parse(SRC));
+        const rendered = s.render(once);
+        const para = rendered.children[0].children.find((c) => c.name === 'style:paragraph-properties');
+        expect(para.children.filter((c) => c.type === 'element').map((c) => c.name)).toEqual(['style:tab-stops', 'style:drop-cap']);
+        expect(s.parse(xml.parse(xml.serialize(rendered)))).toEqual(once);
+    });
+
+    test('a propertyChildren key with no attribute bag still writes its element', () => {
+        const { xml, s } = build();
+        const el = s.renderStyle({ name: 'P2', family: 'paragraph', properties: {},
+            _extras: { propertyChildren: { paragraph: [xml.el('style:tab-stops', {}, [])] } } });
+        expect(el.children.map((c) => c.name)).toEqual(['style:paragraph-properties']);
+        expect(el.children[0].children.map((c) => c.name)).toEqual(['style:tab-stops']);
+    });
+});

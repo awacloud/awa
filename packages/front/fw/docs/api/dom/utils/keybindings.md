@@ -76,9 +76,11 @@ Parses a combo and returns a descriptor or an array (chord).
 
 **Accepted modifiers** (case-insensitive): `Ctrl`, `Shift`, `Alt`, `Meta`/`Cmd`/`Super`.
 
-**Keys**: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`/`Esc`, `Tab`, `Enter`/`Return`, `Space`, `Backspace`, `Delete`/`Del`, `ArrowUp`/`Up`, `ArrowDown`/`Down`, `ArrowLeft`/`Left`, `ArrowRight`/`Right`, `Home`, `End`, `PageUp`, `PageDown`, `Insert`.
+**Keys**: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`/`Esc`, `Tab`, `Enter`/`Return`, `Space`, `Backspace`, `Delete`/`Del`, `ArrowUp`/`Up`, `ArrowDown`/`Down`, `ArrowLeft`/`Left`, `ArrowRight`/`Right`, `Home`, `End`, `PageUp`, `PageDown`, `Insert`, `Plus`, `Minus` (or the literal `-`), `Equal` (or the literal `=`).
 
 **Resolution strategy**: `event.code` for alphanumerics (layout-independent, e.g. `KeyA` = physical A key), `event.key` for named keys.
+
+**Punctuation keys** (`Plus`, `Minus`, `Equal`) match on `event.key` — the character the layout produced, numpad included — and ignore the Shift modifier (`+` is Shift+`=` on most layouts); `Shift+Plus` is refused at parse time. `+` itself is the separator: write `Plus`.
 
 Throws `TypeError` if the combo is empty or not a string, `Error` if the syntax is invalid or the key is unknown.
 
@@ -123,9 +125,22 @@ const all = kb.list();
 console.table(all.map(({ combo, context, priority }) => ({ combo, context, priority })));
 ```
 
+### Zoom keys
+
+```js
+// '+' is Shift+'=' on most layouts and a plain key on the numpad: the bindings
+// below fire on all of them. Ctrl+Plus does not match these bindings, so the
+// browser's own zoom keeps working.
+kb.bind('Plus', zoomIn, { preventDefault: false });
+kb.bind('Equal', zoomIn, { preventDefault: false });
+kb.bind('Minus', zoomOut, { preventDefault: false });
+kb.bind('0', reset, { preventDefault: false });
+```
+
 ## Notes
 
 - The `event.code` strategy makes alphanumeric shortcuts independent of the keyboard layout (AZERTY/QWERTY). Named keys (`Escape`, `F1`, etc.) use `event.key`.
+- Punctuation keys ignore Shift on the event side and refuse it on the binding side: the shifted character is already the key (`+` = Shift+`=`), so `Shift+Plus` and `Shift+=` throw at parse time. Ctrl, Alt and Meta still qualify them (`Ctrl+Plus`).
 - Chord: if the first keystroke matches a chord prefix, a `chordTimeout` timer starts. If the second keystroke does not match, the chord is cancelled and processing resumes with simple bindings on the next keystroke.
 - When a context is active (non-empty stack), only bindings for that context trigger. Bindings without a context are suspended until `popContext()`.
 - Each trigger emits `keybindings:matched` on the instance's internal `eventBus` — consumed by the command palette to display active shortcuts.

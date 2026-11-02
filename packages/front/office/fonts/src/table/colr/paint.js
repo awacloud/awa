@@ -292,20 +292,17 @@ export const tableColrPaint = {
          * `bytes`. Child paint offsets are relative to their parent paint record.
          * Walks up to `maxDepth` levels then returns `{ truncated: true }`.
          *
-         * Tracks visited offsets to break accidental cycles (treats them as
-         * `{ cycle: true }`).
+         * A cycle cannot occur: child offsets are unsigned Offset24 values
+         * relative to their parent, followed only when non-zero, so the
+         * absolute offset strictly increases along any path.
          *
          * @param {Uint8Array} bytes
          * @param {number} rootOffset
          * @param {number} [maxDepth=16]
          */
         function decodePaintGraph(bytes, rootOffset, maxDepth = 16) {
-            const visited = new Set();
             function walk(absoluteOffset, depth) {
                 if (depth > maxDepth) return { truncated: true, offset: absoluteOffset };
-                if (visited.has(absoluteOffset))
-                    return { cycle: true, offset: absoluteOffset };
-                visited.add(absoluteOffset);
                 const node = decodePaint(bytes, absoluteOffset);
                 node.offset = absoluteOffset;
                 // resolve children
@@ -315,7 +312,6 @@ export const tableColrPaint = {
                     node.paintSrc = walk(absoluteOffset + node.paintOffsetSrc, depth + 1);
                 if (node.paintOffsetDst)
                     node.paintDst = walk(absoluteOffset + node.paintOffsetDst, depth + 1);
-                visited.delete(absoluteOffset);
                 return node;
             }
             return walk(rootOffset, 0);

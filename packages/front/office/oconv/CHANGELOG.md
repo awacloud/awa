@@ -9,6 +9,321 @@ See [`README.md`](./README.md) for the usage guide.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- **A docx table of contents, opt-in.** `oconvDocxToIr.docxToIr(read, {
+  include: ['toc'] })` reads a table of contents control (`w:docPartObj`
+  gallery `Table of Contents`) in place as one paragraph per entry, the
+  text the document shows (page numbers included, links not), as the odt
+  reader's `include: ['toc']`; the facade forwards `docxInclude` (another
+  format: `oconv: docx include needs format docx`; a bad value: `oconv:
+  bad docx include`). Without it nothing changes. Measured on the 1,491
+  wild docx: the 28 `block/dropped` `toc` losses (27 files) go to 0 with
+  the option, 26 files gaining their entries (the 27th's table of
+  contents is a tracked deletion, which shows nothing); without it no
+  output moves.
+- **An ODT table of contents, opt-in.** `toMd`'s new `odtInclude` input
+  (`odt` only; `oconvOdtToIr.odtToIr`'s `opts.include`): `['toc']` reads
+  a table of contents' entries and title as paragraphs at its place, as
+  the document shows them (page numbers kept, links not). Without it the
+  table of contents is dropped as before (`block/dropped`). On the ODF
+  1.4 specification ODTs the words missing against their HTML text fall
+  from 357 / 16,214 / 5,212 (parts 2 / 3 / 4) to 42 / 1,306 / 2,995. New
+  errors on the new input only: `oconv: bad odt include`,
+  `oconv: odt include needs format odt`.
+- **Inference on an untagged PDF, opt-in.** `toMd`'s new `pdfInfer`
+  input (`pdf` only; `oconvPdfToIr.pdfToIr`'s `opts.infer`) turns on, by
+  name, what the text-first read does not do on the untagged path:
+  `['headings']` makes a short line set larger than the body text, or a
+  short line set wholly in bold, a heading, its level ranked by size;
+  `['tables']` reads a table drawn with rules (a grid of crossing lines)
+  and a block of lines whose short pieces align in columns;
+  `['running']` leaves out running headers and footers: on a PDF of 3
+  pages or more, a line in the top or bottom 12 % of the page whose
+  text, each run of digits read as `#`, recurs within 2 pt of one height
+  on half the pages (and 3) is left out of every page, recorded by the
+  new loss `text/running-dropped` (its pattern; pypdf-benchmarks: 0.9287
+  → 0.9300). Without the input the read is unchanged (tier 1,
+  text-first); a tagged PDF keeps its own structure. New errors on the
+  new input only: `oconv: bad pdf infer`, `oconv: pdf infer needs format
+  pdf`. The pdf font decoder and the extracted text pieces gain `bold`;
+  the page extraction collects, on request (`opts.rules`), the page's
+  rules (stroked straight segments, thin filled rectangles) as items
+  `{ kind: 'rule', x0, y0, x1, y1 }`.
+- **The untagged pdf structure declared, opt-in.** `toMd`'s new
+  `pdfDeclare` input (`pdf` only; `oconvPdfToIr.pdfToIr`'s
+  `opts.declare`): `['positional']` records one `struct/positional` loss
+  when the untagged path built the structure from positioning (the detail
+  names what: `paragraphs`, `headings`, `tables`). Without it, every
+  result is unchanged. New errors on the new input only:
+  `oconv: bad pdf declare`, `oconv: pdf declare needs format pdf`.
+- **Pictures from a PDF, opt-in.** `toMd`'s new `pdfInclude` input (`pdf`
+  only; `oconvPdfToIr.pdfToIr`'s `opts.include`, `oconvPdfTextExtract`'s
+  `opts.images`): `['images']` places each JPEG or JPEG 2000 (JP2) image
+  XObject, and each DeviceGray, DeviceRGB, ICCBased or Indexed raw-pixel
+  one written as a PNG by the new `oconvPdfImagePng` (1–16 bits, a
+  same-size soft mask or a colour-key mask as alpha, the ICC profile in
+  `iCCP`), a page's or a form's, as an IR `image` where it is drawn (on a
+  tagged PDF, with the struct element that lists it), its bytes in
+  `escapes.pdf` and in `toMd`'s `assets`; a mask not applied is recorded
+  as the new `image/mask-dropped`; every other picture keeps
+  `image/dropped`. The default read is unchanged. The docx, odt, md and
+  pdf writers read `escapes.pdf` after `escapes.docx` and `escapes.odt`.
+  New errors on the new input only: `oconv: bad pdf include`,
+  `oconv: pdf include needs format pdf`.
+- **Line-end hyphens in a PDF, opt-in.** `toMd` takes `pdfLineHyphens`
+  (`pdf` only; `oconvPdfToIr.pdfToIr`'s `opts.lineHyphens`): `'drop'`
+  joins a word a hyphen cuts at a line end without the hyphen
+  (`information`), `'keep'` with it (`infor-mation`); by default it stays
+  `infor- mation`, which opendataloader-bench's ground truth prefers. New
+  errors on the new input only: `oconv: bad pdf line hyphens`,
+  `oconv: pdf line hyphens needs format pdf`.
+- **Encrypted and damaged PDFs, opt-in.** `toMd` takes `pdfPassword` (a
+  string or bytes, the user or owner password, `''` for an empty user
+  password) and `pdfRecoverXref` (`true` rebuilds an unusable
+  cross-reference chain), both `pdf` only and forwarded to `pdf.read`,
+  which already supported them; an encrypted PDF could not be converted
+  before. With a password, oconv also passes pdf's read-only
+  `pdfLegacyRc4Read` (the `legacyRc4` read option), so an RC4-encrypted
+  PDF (V1 / V2, 40- or 128-bit) opens as well; oconv now composes that
+  module (`@awacloud/pdf/extra/legacy-rc4-read.js`). New errors on the
+  new inputs only: `oconv: pdf password needs format pdf`,
+  `oconv: pdf recover xref needs format pdf`,
+  `oconv: bad pdf recover xref`. Without `pdfPassword` an encrypted PDF
+  still throws `pdf/document/encrypted`; without either input the read is
+  unchanged.
+- **Spreadsheet sheets as CSV or TSV, opt-in.** `toMd`'s new `sheets`
+  input (`xlsx` and `ods`; the readers' `opts.sheets`): `'csv'` or `'tsv'`
+  writes each sheet as one fenced `csv` / `tsv` block under its heading
+  instead of a GFM table (RFC 4180 quoting; tsv escapes recorded as the new
+  `sheet/tsv-escaped`). `'table'`, the default, leaves every result
+  unchanged. New errors on the new input only: `oconv: bad sheets`,
+  `oconv: sheets needs format xlsx or ods`.
+- **A cell budget for wide sheets, opt-in.** `toMd` takes
+  `sheetCellBudget` (`xlsx` / `ods` only; the readers'
+  `opts.cellBudget`): a sheet whose padded table would hold more cells
+  — one very wide row pads every other row to its width — is written
+  unpadded instead, one `<A1 address>: <text>` paragraph per value (its
+  rows unpadded under `sheets` `'csv'` / `'tsv'`), recorded by the new
+  loss `sheet/sparse-form`; every value is kept and the memory follows
+  the values, not the padding. Without the input no budget applies and
+  every sheet is padded as before. New errors on the new input only:
+  `oconv: bad cell budget`, `oconv: sheet cell budget needs format xlsx
+  or ods`.
+- **Archive limits per call, opt-in.** `toMd` takes `archiveLimits`
+  (office sources only): `{ maxParts, maxUncompressed, maxRatio,
+  maxDepth }`, any of them, passed to the docx, xlsx, pptx, odt, ods or
+  odp reader, so a caller can read a large deck or a workbook that
+  inflates past the readers' defaults; the ODF readers take the first
+  three. Without the input each reader keeps its own defaults. New errors
+  on the new input only: `oconv: bad archive limits`,
+  `oconv: archive limits need an office source`.
+- **An output budget, opt-in.** `toMd` takes `outputBudget: { bytes,
+  overflow }` (every source): after the read and before the render, the
+  UTF-8 size of the IR's text is compared with `bytes`, with an early
+  stop, so a caller can refuse, or cut, a small file that expands to
+  gigabytes of text before the render runs out of memory. Past the
+  budget, `overflow` `'throw'` (when absent) throws `oconv: output too
+  large`; `'truncate'` keeps the top-level blocks and a crossing table's
+  leading rows that fit, recorded by the new loss `doc/truncated`.
+  Without the input no budget applies and the output is unchanged. New
+  error on the new input only: `oconv: bad output budget`.
+- **A compact front matter, opt-in.** `toMd`'s `opts` (forwarded to
+  `irToMd`) takes `frontMatter`: `'compact'` writes the loss ledger with
+  one entry per distinct `(code, detail)` and its `count`; `'none'`
+  writes the body alone. The default (`'full'`) is unchanged. New error
+  on the new option only: `oconv: bad front matter`.
+
+### Changed
+
+- **`toMd` states the source's own title in the front matter.** When a
+  source states a non-empty title, `toMd` writes `title:` right after
+  `sourceName`, trimmed: for a pdf its XMP `dc:title` (`x-default`
+  first), else its Info `/Title`, decoded (`pdfInfo.decodeTextString`,
+  `pdfXmpExtended.dcTitle` and `pdfFilterDispatch`, which oconv now
+  composes, the XMP module from `@awacloud/pdf/extra/xmp-extended.js`);
+  for a docx, xlsx or pptx from its core properties
+  (`opcCoreProperties`, new in `@awacloud/ooxml`); for an odt, ods or odp
+  from its `meta.xml`. `oconvIrToMd` writes it from `meta.title`. The
+  profile stays `v1` and no other byte of the output moves: a consumer
+  that compares front matter byte for byte sees one more key where a
+  title is stated. Measured on 1,119 public PDFs: 334 state a title; on
+  the 2,972 wild office files: 654 outputs gain the key (207 docx, 395
+  pptx — about 300 of them an application placeholder such as
+  `PowerPoint Presentation` —, 6 xlsx, 21 odt, 25 ods).
+- **A dropped PDF picture is named by its object and size.** The
+  `image/dropped` detail of a PDF read was the resource name alone, a
+  label local to one page's resources: two different pictures both called
+  `Im1` counted as one in `frontMatter: 'compact'` (and convert's
+  `lossSummary`), and nothing told a decorative glyph from a figure. It
+  is now `<name> (<num> <gen> R, <w>x<h>)` (`Im1 (12 0 R, 1103x599)`),
+  `inline (<w>x<h>)` for an inline image; the ledger still holds one
+  entry per draw. Measured on 1,119 public PDFs: 496 entries, unchanged in
+  number, now naming 323 pictures by their object, none under two names.
+- **odt emphasis and nested numbering read.** `toMd` and `convert` read odt
+  with `@awacloud/odf`'s `semanticStyles`: the bold, italic, strike or
+  monospace a style states reaches the output even when the style holds
+  more (an rsid, a size, a colour, Asian variants) or inherits it, and a
+  nested unstyled list takes its ancestor's numbering — fewer
+  `run/format-unresolved`, no `list/numbering-unresolved` for such lists.
+- **pptx pictures carried.** `toMd` of a pptx (`oconvPptxToIr`) now places
+  each slide picture as a Markdown image at its place among the slide's
+  body paragraphs, its bytes in `assets` (named `image<k>.<ext>` per
+  distinct picture of the deck, alt text from the picture's description)
+  instead of recording `slides/media-dropped`; a linked picture records
+  `image/bytes-unavailable`. A deck of pictures no longer converts to an
+  empty body. Tables, charts and other graphic frames are still dropped.
+  The writers read the new `escapes.pptx` after `escapes.docx`, `.odt` and
+  `.pdf`.
+
+### Fixed
+
+- **A body-level content control is read, not dropped.** The docx
+  reader recorded `block/dropped` (detail `blockSdt`) for a block-level
+  content control and dropped its content: cover pages, form and date
+  fields, bibliographies, repeating sections (100 controls in 75 wild
+  docx). Its paragraphs, tables and nested controls are now read in
+  place, in the body and in a cell. A table of contents control is
+  still dropped, as the odt reader drops one by default, its loss now
+  naming it (`block/dropped`, detail `toc`).
+- **Range markup between blocks is not a dropped block.** The docx reader
+  skips the bookmarks, comment ranges, revision range markers and other
+  range markup `@awacloud/ooxml` now reads between blocks without a
+  `block/dropped` loss and without closing an open list; the Markdown of
+  the 1,491 wild docx is unchanged.
+- **Tracked moves and links inside insertions reach the Markdown.** The
+  docx reader reads a move destination (`moveTo`) as accepted, like an
+  insertion, and drops a move source (`moveFrom`) like a deletion; with
+  `@awacloud/ooxml` now typing every child of a tracked change, a
+  hyperlink inside an insertion keeps its link.
+- **Nested docx lists keep their levels.** The docx reader flattened
+  every list paragraph at `ilvl > 0` into its group's single-level list
+  (`list/nesting-flattened`). It now builds the list tree by level, each
+  list ordered by its own level's numbering format, a deeper paragraph of
+  another `numId` nesting in the open list (as the docx writer and Word
+  lay it out); `list/nesting-flattened` is no longer emitted. Over the
+  wild docx, 21 outputs change, each gaining its levels.
+- **Distinct docx pictures no longer share an asset.** The docx reader
+  named an image after its drawing name, which a document may repeat:
+  the `toMd` asset list, keyed by name, then kept the first picture's
+  bytes only, and the odt writer's unique frame names renamed the others.
+  The first image of a name now keeps it, a later one takes the first free
+  `<name> (k)`. Over the wild docx, 8 outputs change, 3 of them regaining
+  pictures the asset list lost.
+- **A docx table without a row is skipped, and an odt one is not
+  written.** The odt writer wrote a table of one empty cell for a table
+  without a row (ODF needs a row), which the return reading showed as an
+  empty table; it now writes nothing, and the docx reader skips such a
+  table without a loss, as it skips an empty paragraph (the Markdown
+  writer left two blank lines for it). With `@awacloud/ooxml` reading the
+  cells of a content control in place, a docx table whose cells sit in
+  content controls now reads its text.
+- **An empty odt paragraph is a spacer, as in docx.** The odt reader kept
+  an empty paragraph as an empty IR paragraph, which the Markdown writer
+  wrote as extra blank lines (and, in a table cell, as an empty `; `
+  segment); the docx reader skips it. It now skips it too, without a
+  loss, wherever blocks are walked, and a paragraph of only an empty text
+  run or span (which the odt reader used to map to an empty IR run, so
+  that `odt → docx` wrote a blank line) is skipped the same way. Over the
+  319 wild odt, 168 bodies change: 164 by blank lines or spaces only, 4 by
+  an empty cell segment less.
+- **A heading alone in an odt list item reads as a heading.** LibreOffice
+  writes a numbered heading as a heading in a list item; the odt reader
+  kept a list item holding the heading (`1. # Title`), while the docx
+  reader reads a numbered heading as a heading. The list now gives such
+  headings up at their place, split around them, without a loss (7 wild
+  odt change).
+- **A docx list item that does not open with a paragraph keeps its
+  marker.** The docx writer wrote nothing for a list item with no block
+  and only the nested list of an item opening with one, which the return
+  reading folded into the previous item; every docx write, `fromMd`
+  included, now writes an empty numbered paragraph first for such an
+  item.
+- **An image without bytes survives the docx and odt writers.** Both
+  writers dropped an image they had no bytes for (`image/dropped`): a
+  docx chart, shape, group or SmartArt (an image reference without bytes
+  on read), or a Markdown image with no asset. The odt writer now keeps
+  its place as a frame with no content child, in the default 2 in ×
+  1.5 in box, with its name and alt text; the docx writer, as a
+  placeholder picture named after it (a drawing in a box of the same
+  size, with no media part). Each records the new loss
+  `image/placeholder`, and the reader reads the placeholder back as the
+  image reference (`image/bytes-unavailable`), so `md → odt → md`,
+  `docx → odt → md` and `md → docx → md` keep it. Any other odt frame
+  without an image (a text box, an object, a plugin) is unchanged.
+- **An image's name survives an odt write.** The odt writer now writes
+  the IR image name as the frame's `draw:name`, unique per document (a
+  later frame of a name already used takes `<name> (2)`, `(3)` …; an
+  empty name writes none), so docx / md → odt → md keeps the asset
+  name instead of renaming it after its picture path (`image1.gif`).
+- **Task markers survive md → docx / odt → md.** The docx and odt
+  writers draw a GFM task item as a leading `☐ ` / `☒ ` run; the docx
+  and odt readers now read a list item whose first run leads with that
+  marker as `escapes.md.task` (`'unchecked'` / `'checked'`), the marker
+  stripped, so `- [x] done` comes back as itself instead of `- ☒ done`.
+  The glyph with no space, after other text, outside a list, or `☑`
+  stays text.
+- **A list or a table inside a table cell is written.** The Markdown writer
+  dropped it (`block/dropped` `table cell list` / `table cell table`): a
+  GFM cell holds no block. Its text is now written inline, its pieces
+  joined by `; ` (recorded `inline/flattened`); other blocks a cell cannot
+  hold are still dropped.
+- **A CFF caller face no longer makes the pdf writer throw.** A face given
+  in `opts.pdf.fonts` or `defaultFaces` that has no TrueType outlines (a
+  CFF / CFF2 OpenType face, which `subsetForPdf` cannot subset) used to make
+  `fromMd` / `convert` to pdf throw `fonts/subset-bad-font`; its style class
+  now falls back to Standard 14 and records `layout/font-fallback` with
+  `reason: 'no TrueType outlines'`. The measurer lists such classes in
+  `unembeddable`.
+- **An ODT heading shows its outline number.** A heading numbered by the
+  document's outline style (`1.3 Normative References`) was written
+  without its number, while a cross-reference to it (kept, see below)
+  shows it. The odt read now writes the number an office suite shows
+  (formats `1`, `a`, `A`, `i`, `I`, prefix, suffix, displayed levels,
+  restarts, list headers) before the heading text, so the heading's text
+  and anchor change (`1-3-normative-references`). On the ODF 1.4
+  specification ODTs the words missing against their HTML text fall from
+  492 / 23,003 / 6,772 (parts 2 / 3 / 4) to 357 / 16,214 / 5,212.
+- **An ODT cross-reference or field keeps its text.** Outside a span, an
+  inline element of a paragraph, heading or link (`text:reference-ref`,
+  `text:user-field-get`, `text:sequence` …) was dropped with its text
+  (`inline/dropped`): a cross-reference lost the section number it shows.
+  The odt read now asks `@awacloud/odf` for these elements in place
+  (`elementsInRuns`), and one holding text keeps that text
+  (`inline/flattened`), as inside a span. On the ODF 1.4 specification
+  ODTs the words missing against their HTML text fall from 810 / 63,512 /
+  11,393 (parts 2 / 3 / 4) to 492 / 23,003 / 6,772.
+- **An ODT section's content is read.** The odt reader mapped a
+  `text:section` to nothing (`block/dropped` `text:section`); its blocks
+  are now read in place, nested sections too (its name and style are not
+  carried: the IR has no section node).
+- **A soft hyphen ending a PDF line joins the word.** A soft hyphen
+  (U+00AD) marks where a word was hyphenated; at a line end the reader
+  kept it, invisible, followed by a space. It is now dropped and the
+  word joined (`infor` + `mation` → `information`), on both paths.
+- **Tagged PDFs read in structure order, with their lists and tables.**
+  The tagged path walks the structure tree in `/K` order (the new `tree`
+  of `oconvPdfStruct.readStructure`, its tags mapped through the
+  `/RoleMap`): an inline `Span`, `Link` or `Note` stays in place in its
+  paragraph (it used to come out as a paragraph of its own after it, a
+  word split across two ids cut by a space), a list's lead-in stays
+  before it, an `L` becomes a list (marker labels dropped, a numeric one
+  ordering it) and a `Table` with `TR` rows a table with its header rows,
+  where both used to be flattened into paragraphs with `struct/dropped`.
+  A `Table` without a `TR` row keeps that flattening. Measured on the 336
+  tagged veraPDF-corpus files: 49 tables, 56 lists, `struct/dropped` 106
+  → 0, no file failing, no text lost but the dropped list numbers and
+  one id referenced twice, no longer repeated.
+- **A tagged PDF's lines no longer glue their words.** The tagged path
+  concatenated the pieces of one marked-content sequence, so the last word
+  of a line and the first of the next stuck together (`programmesthat`) at
+  every line wrap inside a paragraph. The pieces are now joined like the
+  untagged path's: a line wrap is one space, a same-line gap over 0.15 em
+  too. The text of tagged documents changes; untagged documents are
+  unchanged.
+
 ## [1.1.0] - 2026-10-21
 
 ### Added

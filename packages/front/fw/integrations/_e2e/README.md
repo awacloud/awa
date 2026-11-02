@@ -167,8 +167,9 @@ Browser binaries live **inside the monorepo**, at `third_party/ms-playwright`
 `browsers-path.mjs` resolves it and `preview.mjs` applies it *before* the
 dynamic playwright import, so provisioning and `chromium.launch()` agree on one
 cache. An explicit non-empty `PLAYWRIGHT_BROWSERS_PATH` wins — that is the
-documented operator override, and the cheap escape when running from a worktree
-whose own `third_party/` is empty.
+documented operator override. Otherwise the default is the MAIN checkout's
+cache: from a linked worktree, `mainTreeRoot()` reads the worktree's `.git`
+file and `commondir` and lands on the main tree.
 
 ### Provisioning (`preview-provision.mjs`)
 
@@ -204,11 +205,10 @@ a `.bin`/`.cmd` shim. On an unresolvable playwright it prints the exact
 - **blocked** — no network or an unresolvable playwright: the failure is
   reported honestly, never faked as a pass.
 
-**Worktree note**: a linked worktree resolves `<repoRoot>/third_party` to
-its OWN empty directory (see Browser location above and the repo's
-third-party binary install convention) — pre-set
-`PLAYWRIGHT_BROWSERS_PATH` to the main tree's warm cache to skip the
-re-download.
+**Worktree note**: a linked worktree resolves the MAIN checkout's
+`third_party/ms-playwright` (see Browser location above and the repo's
+third-party binary install convention), so it reuses the warm cache with no
+junction and no re-download.
 
 ### Shared browser infrastructure with `services/acvp`
 
@@ -222,7 +222,7 @@ assessment rather than a silent parallel implementation.
 **What `services/acvp` adopts now**: the
 `browsers-path` mechanism — its own `src/runtimes/browsers-path.ts` mirrors
 this directory's `browsers-path.mjs` (same precedence: explicit
-`PLAYWRIGHT_BROWSERS_PATH` wins, else the repo-root-derived
+`PLAYWRIGHT_BROWSERS_PATH` wins, else the main-checkout-derived
 `third_party/ms-playwright`) — and the one-pin rule, so `playwright` is
 pinned identically (currently in `dependencies`, deliberately not
 `devDependencies` — acvp ships it as a runtime prerequisite of its browser

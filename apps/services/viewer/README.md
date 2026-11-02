@@ -5,7 +5,10 @@ document viewer for PDF, Word (DOCX), Excel (XLSX), PowerPoint (PPTX),
 OpenDocument (ODT, ODS, ODP), Markdown and plain text — an installable PWA on
 its own, or a component inside any page of a site. Nothing is uploaded.
 
-Design and architecture: [`docs/design.md`](docs/design.md).
+This package is the standalone application: the installable, offline PWA
+shell. The viewer itself — the component, the painters and the stylesheets —
+is [`@awacloud/oview`](https://github.com/awacloud/awa/tree/main/packages/front/office/oview). Design and architecture:
+[`docs/design.md`](https://github.com/awacloud/awa/blob/main/packages/front/office/oview/docs/design.md) of that package.
 
 ## Install
 
@@ -16,50 +19,26 @@ bun install
 ```
 
 Runtime dependencies are monorepo packages only (`workspace:*`): `@awacloud/fw`,
-`pdf`, `ooxml`, `odf`, `md`, `fonts`, `oconv`. No npm package runs in the page.
+`oview` (the viewer core), `pdf`, `ooxml`, `odf`, `md`, `fonts`, `oconv`. No npm
+package runs in the page.
 
 Not published to the npm registry: AWA Viewer is published as source only, in
 the public repository ([`apps/services/viewer`](https://github.com/awacloud/awa/tree/main/apps/services/viewer)).
-To embed it today, serve those sources with the monorepo packages it imports
-and map them with an import map, as [`examples/embed.html`](examples/embed.html)
-does. An embeddable library package is planned.
+To embed the viewer in your own page, use
+[`@awacloud/oview`](https://github.com/awacloud/awa/tree/main/packages/front/office/oview), not this application.
 
 ## Quick start
 
-In a page:
+Embedding: [`@awacloud/oview`](https://github.com/awacloud/awa/tree/main/packages/front/office/oview) (`mountViewer`, `<awa-viewer>`).
 
 ```js
-import { mountViewer } from '@awacloud/viewer';
+import { mountViewer } from '@awacloud/oview';
 
-const viewer = mountViewer(document.querySelector('#doc'), { locale: 'fr', headingOffset: 2 });
+const viewer = mountViewer(document.querySelector('#doc'), { locale: 'fr' });
 await viewer.open(file);          // File | Blob | { name, bytes }
-viewer.setLocale('en');
-viewer.destroy();                 // removes everything it added
 ```
 
-or as markup:
-
-```html
-<link rel="stylesheet" href="…/src/styles/viewer.css">
-<awa-viewer src="/docs/report.pdf" locale="fr" style="height: 80vh"></awa-viewer>
-<script type="module">
-    import { defineViewerElement } from '@awacloud/viewer/element.js';
-    defineViewerElement();
-</script>
-```
-
-The host gives the viewer a height and links `viewer.css` (plus
-`tokens.css` when the site does not already carry the awaforge tokens). The
-viewer owns no route, never touches `location` / `history`, binds its keys on
-its own element, and uses light DOM so the host's tokens apply. `src` opens a
-same-origin document only.
-
-| Option | Default | Meaning |
-|---|---|---|
-| `locale` | host `lang`, then the browser | `en` or `fr` |
-| `headingOffset` | `1` | levels a document's headings move down under the page outline |
-| `runtime` | a new `ModuleRuntime` | an fw runtime to share with a host that runs fw |
-| `onOpen`, `onError`, `onClose` | — | callbacks (`<awa-viewer>` dispatches `awa-viewer-open` / `awa-viewer-error`) |
+The options, the markup form and the embedding notes are in the package README.
 
 Serve the **repository root** while developing: the browser resolves
 `@awacloud/*` through an import map against `/packages/…`, with no bundler.
@@ -69,32 +48,17 @@ bun cli.ts local_web --dir . --port 8793 --no-cert
 ```
 
 - standalone PWA: `http://localhost:8793/apps/services/viewer/public/`
-- embedding demo: `http://localhost:8793/apps/services/viewer/examples/embed.html`
 
 ## What it shows
 
-| Family | Formats | View |
-|---|---|---|
-| Portable | PDF | one canvas per page, drawn when it nears the screen — vector paths, colour spaces, images, shadings, embedded TrueType outlines, annotation appearances — with a selectable text layer read by screen readers and clickable web links; files encrypted without a reading password open |
-| Word processing | DOCX, ODT | paper sheets: style cascade, lists with real counters, tables (widths, merged cells, borders, shading), images, links, footnotes (DOCX), cut at explicit page breaks |
-| Spreadsheet | XLSX, ODS | one grid per visible sheet, sticky row / column headers, column widths, row heights, hidden rows and columns left out, merged cells, cell styles, values as last saved (XLSX number formats in the reader's locale) |
-| Presentation | PPTX, ODP | one page per slide, real DOM text scaled per zoom: layout / master inheritance, theme colours, backgrounds, pictures, tables (PPTX) |
-| Text | Markdown, `.txt` / `.csv` / `.log`… | a paper sheet; Markdown through `@awacloud/md` in safe mode, remote images not loaded |
-| Legacy | DOC, XLS, PPT (97–2003) | detected and explained — no parser exists in the repository yet (`packages/front/office/msoff`) |
-
-Whatever a view cannot draw is counted and listed under **Document details →
-What this view leaves out** (honest reporting: an empty list says "no
-omission recorded", never "nothing lost").
+PDF, Word, Excel, PowerPoint, OpenDocument, Markdown and text, with an honest
+list of whatever a view cannot draw: see "What it shows" in the
+[`@awacloud/oview` README](https://github.com/awacloud/awa/tree/main/packages/front/office/oview#what-it-shows).
 
 ## Keyboard
 
-| Keys | Action |
-|---|---|
-| `Tab` | toolbar (one stop; `←` `→` `Home` `End` inside), then the document |
-| `PageDown` / `PageUp`, `Ctrl+Home` / `Ctrl+End` | next / previous / first / last page or slide (documents and sheets scroll natively) |
-| `+` / `-` / `0`, `Ctrl` + wheel | zoom in / out / 100 % (`Ctrl` + `+` stays the browser's own zoom) |
-| `Ctrl+O` | open a file |
-| `←` `→` on the sheet tabs | change sheet |
+The viewer's keys (toolbar, pages, zoom, open, sheet tabs) are listed in the
+[`@awacloud/oview` README](https://github.com/awacloud/awa/tree/main/packages/front/office/oview#keyboard).
 
 ## Standalone PWA
 
@@ -108,8 +72,12 @@ cd apps/services/viewer && bun run build
 licence pair and vendored licence notices from the import map), the demos'
 `bundle-js` folds the module graph into one minified `src/main.js` (~2 MB;
 the import map stays as the licensing manifest), `tools/build-csp.js` adds
-the page's CSP, and `tools/build-sw.js` bundles the service worker with a
-content version and the app-shell pre-cache list.
+the page's CSP, `tools/build-sw.js` bundles the service worker with a
+content version and the app-shell pre-cache list, and the demos'
+`gzip-dist` writes a gzip-9 `.gz` twin for every file of 512 B or more that is not already compressed (`src/main.js` ~2.2 MB → ~0.63 MB), which
+`services/site-host` serves to a client that accepts gzip. It runs last,
+so no twin is older than the file it compresses; the pre-cache list names
+no `.gz` (the browser decodes).
 The build and the test suite run from the full awa monorepo toolchain: they
 read `tools/site-kit`, `apps/demo/_build/`, `apps/services/tools/`,
 `services/site-host/` and `apps/awaforge/assets/`, which the public
@@ -138,11 +106,11 @@ navigate-new`). Files chosen or dropped together inside the page: the
 first opens, the others wait on a "more files" line and each "Open … in a
 new window" click opens one in a new window, the file handed over through
 IndexedDB (`src/core/handoff.js`; fw sanity blocks `window.open`, and a
-browser allows one new window per click). The embeddable component hands
-the extra files to its host (`onMore`), or says how many it left.
-`public/sw.js` pre-caches a release at install — every file the page needs
-and the licence texts, the list and the content version the build injects —
-and serves it cache-first, so a built viewer works offline from its first
+browser allows one new window per click). The component hands the extra
+files to its host (`onMore`).
+`public/sw.js` is a fw `precache` worker: it pre-caches a release at install —
+every file the page needs and the licence texts, the list and the content
+version the build injects — and serves it cache-first, so a built viewer works offline from its first
 visit and always runs one release whole; the page shows "Works offline once
 visited." only once the worker controls it. Documents never pass through the
 worker.
@@ -150,11 +118,28 @@ worker.
 Updates never break a running page: a new release installs beside the old
 one and waits; the page shows "A new version of the viewer is ready" with
 **Update now** / **Later**, and only **Update now** lets it take over and
-reloads (then the old release's cache is deleted). `src/core/pwa.js` also
-checks on demand (`checkForUpdates()`: current, ready or offline) and asks
-the worker which release it serves (`version()`). From the sources (no
+reloads (then the old release's cache is deleted). `src/core/pwa.js` wires
+fw's `installPrompt` (the install button, the launch queue) and `swUpdate`
+(the worker's updates); the About panel checks on demand (`checkForUpdates()`:
+current, ready or offline) and asks the worker which release it serves
+(`version()`). From the sources (no
 build) the worker stays network-first, so development runs the code on
 disk. Host `sw.js` uncached (`Cache-Control: no-cache`) at a stable URL.
+
+### Icons on Windows
+
+Chrome on Windows does not use a site's `.ico` for an installed app: at
+install it writes its own `.ico` into the profile
+(`…\User Data\<profile>\Web Applications\…`) from the manifest's icons,
+and the shortcut runs `chrome_proxy.exe` with that icon. So the manifest
+lists the exact Windows sizes — 16, 32, 48 and 256 px PNGs beside 192 and
+512 — and Chrome no longer downsamples the 192 px tile for them;
+`public/favicon.ico` (the same four tiles, PNG images in an ICO, drawn by
+`bun run icons`) serves the tab, the bookmark and the shortcut fallbacks.
+Whether this ends the reported loss of an installed app's icon is **not
+proved**. When it recurs, look for Chrome's `.ico` in that folder: present,
+the Windows icon cache lost it; absent, Chrome removed it. Either way,
+`chrome://apps` → right-click AWA Viewer → **Create shortcuts** repairs it.
 
 ### Help
 
@@ -205,88 +190,45 @@ screenshots.
 ## Tests
 
 ```bash
-bun test apps/services/viewer/
+bun test ./apps/services/viewer/
 ```
 
-Unit and Happy-DOM tests co-located in `src/`: format detection, catalogs,
-number formats, every painter on real files (the office corpus plus this
-app's fixtures), the PDF interpreter against a recording 2D context, the
-controller end to end, and source gates (no network, no HTML injection,
-import-map targets, the token copy). Canvas rendering and layout are checked
-in a browser.
+Unit and Happy-DOM tests co-located in `src/` and `tests/`: the page boot
+(`app.test.js`), the panels (About, Help, more files, handoff), the PWA
+adapter over the real fw `installPrompt` and `swUpdate` modules, the shell
+translator and catalogs, the service worker in a fake worker scope, the
+samples opened through the component, the build's CSP step, and source gates
+(no network, no HTML injection, import-map targets, the derived stylesheets).
+The component's own tests (format detection, every painter on real files, the
+PDF interpreter, the controller) run in `@awacloud/oview`. Canvas rendering
+and layout are checked in a browser.
 
 ```bash
 cd apps/services/viewer && bunx eslint --no-warn-ignored .
 ```
 
-Fixtures: `tests/fixtures/rich.{odt,ods,odp}` are built by
-`tests/fixtures/build-odf.js` (fw `zip`), `rich.xlsx` by
-`tests/fixtures/build-ooxml.js` (the `@awacloud/ooxml` writer), `rich.docx`
-by `tests/fixtures/build-docx.js` (hand-written WordprocessingML: Word 2013+
-defaults, lists, table styles with conditional formats, header and footer),
-the encrypted PDFs by `tests/fixtures/build-pdf.js` (`pdfEncryptedWriter`,
-deterministic randomness), and the image fixtures `images.{pdf,docx,pptx,odt,odp}`
-by `tests/fixtures/build-images.js` — every picture path of every painter
-(JPEG RGB / grey / CMYK, Flate 1–16 bits, Indexed, `/Decode`, every mask
-kind, inline images, transforms, resampling, the memory guard; PNG, JPEG,
-GIF, SVG, EMF / WMF, crops, floating pictures, alternative text), with
-first-party PNG / GIF / baseline-JPEG encoders (`image-encoders.js`). The
-outputs are committed.
-
 ## Layout
 
 | Path | Role |
 |---|---|
-| `src/viewer.js` | `mountViewer()` — the public API and controller |
-| `src/element.js` | `defineViewerElement()` — `<awa-viewer>` |
-| `src/app.js`, `src/main.js`, `src/sanity.js` | the standalone page (language menu, PWA, realm hardening) |
-| `src/core/` | `detect` (magic bytes), `runtime` (lazy engines on one fw runtime), `i18n` (fw `i18n` + negotiation), `pwa` |
-| `src/i18n/` | `en` (reference) and `fr` catalogs |
-| `src/ui/` | `stage` (zoom, lazy pages, sheets), `toolbar` (WAI-ARIA), `intake` (drop / picker), `info` (details and omissions) |
-| `src/render/` | the painters: `text`, `markdown`, `docx`, `odt`, `sheet` (+ `numfmt`), `slides`, `pdf/` (`pdf`, `paint`, `colour`, `image`, `glyphs`, `decrypt`, `objects`), shared `dom`, `view`, `html`, `flow`, `odf-style`, `odf-text`, `clock` (time slicing) |
+| `src/app.js`, `src/main.js`, `src/sanity.js` | the standalone page (language menu, PWA, realm hardening) over `@awacloud/oview` |
+| `src/core/` | `about`, `help`, `more` and `handoff` (the page's panels), `i18n` (the page's translator), `pwa` (adapter over fw `installPrompt` and `swUpdate`) |
+| `src/i18n/` | `en` (reference) and `fr` catalogs of the page shell |
+| `src/styles/` | `app.css` (standalone page); `tokens.css`, `viewer.css` — derived copies of the package's, pinned by the guards test |
+| `public/` | `index.html`, manifest, service worker (fw `precache`), icons, help pages, samples |
 | `tools/build-csp.js`, `tools/build-sw.js` | build steps: the page's CSP; the bundled, versioned, pre-caching service worker |
-| `tools/build-icons.js` | `bun run icons`: draws `public/icons/*.png` (`any` and `maskable`, 192 and 512 px, the 180 px Apple touch icon) from the shapes of `icon.svg`, through the shared `../tools/icons.js`; a guard test redraws and compares |
-| `src/styles/` | `tokens.css` (awaforge copy), `viewer.css` (component), `app.css` (standalone page) |
-| `public/` | `index.html`, manifest, service worker, icons |
-| `examples/embed.html` | the viewer inside a host page (element + script call) |
+| `tools/build-icons.js` | `bun run icons`: draws `public/icons/*.png` (`any` 16, 32, 48, 192, 256 and 512 px, `maskable` 192 and 512 px, the 180 px Apple touch icon) and `public/favicon.ico` from the shapes of `icon.svg`, through the shared `../tools/icons.js`; a guard test redraws and compares |
+| `tools/build-samples.js`, `tools/designs.js` | `bun run samples`: the showcase documents |
 
 ## Known limits
 
-- Size: a document over 256 MiB is refused before it is read (a tab would
-  not survive it); a text file shows its first 5 million characters and
-  reports the rest. PDF pages are drawn as they near the screen, so the
-  browser's own Find (Ctrl+F) and a screen reader reach the drawn pages
-  only; there is no search inside the viewer yet.
-- A page whose drawing fails says so on the page and is counted under
-  "What this view leaves out".
-- PDF: embedded TrueType programs are drawn from their own outlines; CFF and
-  Type 1 programs are not parsed yet (text drawn glyph by glyph with a
-  matching system face, at the PDF's own positions, and reported). Encrypted
-  PDFs open when no password is needed to read them (AES-128/256, RC4) unless
-  their objects sit in object streams; a file that needs a password is
-  refused with an explanation (no password prompt yet). JPEG 2000 / JBIG2
-  images, mesh shadings, tiling patterns and soft masks are reported, not
-  drawn.
-- DOCX / ODT: no automatic pagination (sheets end at explicit page breaks);
-  charts, drawn shapes and equations are reported. A picture anchored to the
-  page (not its paragraph) stays at its paragraph.
-- XLSX / ODS: a sheet paints at most 2,000 rows, 200 columns and 100,000
-  cells (rows past the first 250 arrive in later slices).
-- Pictures in EMF / WMF (vector metafiles) are shown as a labelled
-  placeholder and reported.
-- PPTX / ODP: preset geometries other than rectangles, rounded rectangles and
-  ellipses are drawn as their box; charts, media and animations are
-  reported, and so are ODP tables (PPTX tables are drawn).
-- DOC / XLS / PPT: not supported until `packages/front/office/msoff` exists.
+What the viewer cannot draw yet (PDF fonts and shadings, pagination, charts,
+legacy Office files, size limits) is listed in the
+[`@awacloud/oview` README](https://github.com/awacloud/awa/tree/main/packages/front/office/oview#known-limits).
 
 ## Exposed sub-paths
 
-| Sub-path | Target | Usage |
-|---|---|---|
-| `@awacloud/viewer` | `src/viewer.js` | `mountViewer()`, `detect`, `negotiateLocale`, `LOCALES` |
-| `@awacloud/viewer/element.js` | `src/element.js` | `defineViewerElement()` |
-| `@awacloud/viewer/viewer.css` | `src/styles/viewer.css` | component sheet |
-| `@awacloud/viewer/tokens.css` | `src/styles/tokens.css` | awaforge token layer, when the host has none |
+This package exposes no library surface; embed `@awacloud/oview`.
 
 ## Maturity
 
@@ -309,5 +251,5 @@ Copyright (c) 2026 AwaCloud SAS
 - Source: [`apps/services/viewer`](https://github.com/awacloud/awa/tree/main/apps/services/viewer)
 - Issues: https://github.com/awacloud/awa/issues
 - Security policy: https://github.com/awacloud/awa/blob/main/SECURITY.md
-- Documentation: [design and architecture](./docs/design.md)
+- Documentation: [design and architecture](https://github.com/awacloud/awa/blob/main/packages/front/office/oview/docs/design.md) (`@awacloud/oview`)
 - Offers: https://awacloud.com/offers/convert (AWA Convert)

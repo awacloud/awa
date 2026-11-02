@@ -49,6 +49,14 @@ describe('tableRow module', () => {
             expect(out).toContain('<table:table-cell/>');
         });
 
+        test('a row without cells is written with one empty cell (the schema needs one); the model is not changed', () => {
+            const { xml, r } = build();
+            const row = { type: 'row', styleName: 'r1', cells: [] };
+            expect(xml.serialize(r.renderRow(row))).toContain('<table:table-row table:style-name="r1"><table:table-cell/></table:table-row>');
+            expect(xml.serialize(r.renderRow({ type: 'row' }))).toContain('<table:table-row><table:table-cell/></table:table-row>');
+            expect(row.cells).toEqual([]);
+        });
+
         test('maxRepeat throws ParseError when rows-repeated overflows', () => {
             const { xml, r } = build();
             const el = xml.parse('<table:table-row table:number-rows-repeated="1000000"/>');

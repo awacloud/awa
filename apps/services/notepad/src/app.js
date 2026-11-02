@@ -16,6 +16,8 @@
  */
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 import { serviceWorker } from '@awacloud/fw/dom/sw/serviceWorker.js';
+import { installPrompt } from '@awacloud/fw/dom/sw/installPrompt.js';
+import { swUpdate } from '@awacloud/fw/dom/sw/swUpdate.js';
 import { storage } from '@awacloud/fw/dom/fs/storage.js';
 import { indexedDB } from '@awacloud/fw/dom/fs/indexedDB.js';
 import { i18n } from '@awacloud/fw/io/i18n/i18n.js';
@@ -113,7 +115,7 @@ function webLocks(win) {
  */
 export function boot({ doc = document, win = window, journal: journalKv, handoff: handoffKv, loadHelp } = {}) {
     const runtime = new ModuleRuntime();
-    runtime.registerAllDeep([serviceWorker, storage, indexedDB, i18n]);
+    runtime.registerAllDeep([serviceWorker, storage, indexedDB, i18n, installPrompt, swUpdate]);
     const local = runtime.resolve('storage').local;
     /** @param {string} key */
     const load = (key) => { try { return local ? local.get(key) : null; } catch { return null; } };
@@ -220,7 +222,8 @@ export function boot({ doc = document, win = window, journal: journalKv, handoff
 
     const banner = /** @type {HTMLElement} */ (doc.getElementById('app-update'));
     const pwa = mountPwa({
-        serviceWorker: runtime.resolve('serviceWorker'),
+        installPrompt: runtime.resolve('installPrompt'),
+        swUpdate: runtime.resolve('swUpdate'),
         // The worker sits next to the page, in development (public/) as in a dist.
         swUrl: new URL('sw.js', doc.baseURI).href,
         installButton: /** @type {HTMLButtonElement} */ (doc.getElementById('app-install')),

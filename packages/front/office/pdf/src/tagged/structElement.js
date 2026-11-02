@@ -29,7 +29,7 @@ export const pdfStructElement = {
 
         const KNOWN = new Set([
             'Type', 'S', 'P', 'ID', 'Pg', 'K', 'A', 'C', 'R', 'T', 'Lang',
-            'Alt', 'E', 'ActualText', 'AF', 'NS', 'PhoneticAlphabet', 'Phoneme'
+            'Alt', 'E', 'ActualText', 'AF', 'NS', 'PhoneticAlphabet', 'Phoneme', 'Ref'
         ]);
 
         function typeStructElement(dict) {
@@ -74,6 +74,7 @@ export const pdfStructElement = {
                 out.phoneticAlphabet = e.PhoneticAlphabet.value;
             }
             if (e.Phoneme && e.Phoneme.type === 'string') out.phoneme = e.Phoneme.value;
+            if (e.Ref && (e.Ref.type === 'array' || e.Ref.type === 'ref')) out.ref = e.Ref;
 
             if (e.K !== undefined) out.k = readKids(e.K);
 

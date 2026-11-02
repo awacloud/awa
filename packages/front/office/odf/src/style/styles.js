@@ -162,7 +162,10 @@ export const odfStyles = {
         }
 
         /**
-         * Render a styles model to `styles.xml` text (with prolog). The root
+         * Render a styles model to `styles.xml` text (with prolog). The
+         * root's children follow the schema: the kept
+         * `office:font-face-decls` first, the three containers, then the
+         * other kept root children. The root
          * declares every namespace prefix the output uses: its own six, then
          * `opts.namespaces` (the source part's declarations), then the known
          * table; a prefix none of them resolves throws
@@ -174,14 +177,17 @@ export const odfStyles = {
          */
         function serialize(styles, opts) {
             const s = styles || { styles: [], automaticStyles: [], masterStyles: [] };
+            // Schema order: font-face-decls?, styles?, automatic-styles?,
+            // master-styles?; the root's other kept children follow.
+            const extras = (s._extras && s._extras.children) || [];
+            const isDecls = (c) => c && c.type === 'element' && c.name === 'office:font-face-decls';
             const children = [
+                ...extras.filter(isDecls),
                 xml.el('office:styles', {}, bucketEntries(s.styles)),
                 xml.el('office:automatic-styles', {}, bucketEntries(s.automaticStyles)),
-                xml.el('office:master-styles', {}, bucketEntries(s.masterStyles))
+                xml.el('office:master-styles', {}, bucketEntries(s.masterStyles)),
+                ...extras.filter((c) => !isDecls(c))
             ];
-            if (s._extras && s._extras.children) {
-                for (const c of s._extras.children) children.push(c);
-            }
             const root = xml.el('office:document-styles', {
                 'xmlns:office': OFFICE_NS,
                 'xmlns:style': STYLE_NS,
@@ -189,8 +195,10 @@ export const odfStyles = {
                 'xmlns:fo': FO_NS,
                 'xmlns:svg': SVG_NS,
                 'xmlns:table': TABLE_NS,
-                'office:version': ODF_VERSION
+                'office:version': (opts && opts.version !== undefined) ? opts.version : ODF_VERSION
             }, children);
+            // keepVersion: a source part without a version is written without one.
+            if (root.attrs['office:version'] === null) delete root.attrs['office:version'];
             declareNamespaces(root, { carried: (opts && opts.namespaces) || {},
                 part: 'styles.xml', module: 'styles' });
             return xml.serialize(root);

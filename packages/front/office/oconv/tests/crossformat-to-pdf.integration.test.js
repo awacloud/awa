@@ -195,11 +195,9 @@ describe('crossformat → pdf — leg 1: exact ledger + page count per fixture',
         expect(r.losses.map((l) => l.code)).not.toContain('layout/table-scaled');
     });
 
-    test('poi-numbering.docx → pdf: 1 page, one reader nesting-flattened loss', async () => {
+    test('poi-numbering.docx → pdf: 1 page, zero loss (nesting is read by level)', async () => {
         const r = await toPdf(FIXTURES[3]);
-        expect(r.losses).toEqual([
-            { code: 'list/nesting-flattened', detail: 'numId 1 ilvl 1' }
-        ]);
+        expect(r.losses).toEqual([]);
         expect(pdfApi.read(r.bytes).pages.length).toBe(1);
     });
 
@@ -483,15 +481,16 @@ describe('crossformat → pdf — leg 3: word-stream return leg (MEASURED, not a
         const numberingMd = bodyOf((await oconv.toMd({
             name: 'x.pdf', bytes: numbering.bytes, convertedAt: FIXED_AT
         })).markdown);
-        // Re-measured 2026-10-02 (office/BATCH_49/02, BL-1598): the paragraph
-        // starts a line with `1.`, which `@awacloud/md`'s renderer now
-        // escapes (`1\.`) so the Markdown re-parses as a paragraph, not an
-        // ordered list; the mid-line `2.` / `3.` are not line starts.
-        expect(numberingMd).toContain('1\\. Level1 2. Level2 3. Level3');
+        // Re-measured 2026-11-01 (T32 (b3b)): the docx reading keeps the
+        // list levels, so each level is its own line, indented with its own
+        // marker. A line starting with `1.` is escaped (`1\.`) by
+        // `@awacloud/md`'s renderer so the Markdown re-parses as a
+        // paragraph, not an ordered list.
+        expect(numberingMd).toContain('1\\. Level1\n\na. Level2\n\ni. Level3');
         expect(numberingMd).not.toContain('1.Level1');
         // The writer places them apart — two `Tj` at two different `x`.
-        expect(latin1(numbering.bytes)).toContain('1 0 0 1 61.519 697.747 Tm (1.) Tj');
-        expect(latin1(numbering.bytes)).toContain('1 0 0 1 74.693 697.747 Tm (Level1) Tj');
+        expect(latin1(numbering.bytes)).toContain('1 0 0 1 61.519 686.197 Tm (1.) Tj');
+        expect(latin1(numbering.bytes)).toContain('1 0 0 1 74.693 686.197 Tm (Level1) Tj');
 
         const table = await toPdf(FIXTURES[4]);
         const tableMd = bodyOf((await oconv.toMd({

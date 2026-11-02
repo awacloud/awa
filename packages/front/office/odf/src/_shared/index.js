@@ -63,7 +63,7 @@ export const odfShared = {
     deps: [odfErrors, xml],
 
     factory(errors, xml) {
-        const { ParseError, RenderError } = errors;
+        const { ParseError, RenderError, ContractError } = errors;
 
         // --- Namespaces ----------------------------------------------
         const ODF_NS = Object.freeze({
@@ -192,8 +192,24 @@ export const odfShared = {
          * @returns {Readonly<Object<string, string>>}
          */
         function sourceNamespaces(sourcePkg, partPath) {
+            const out = {};
+            const attrs = sourceRootAttrs(sourcePkg, partPath);
+            for (const k of Object.keys(attrs)) {
+                if (k.startsWith('xmlns:') && k.length > 6) out[k.slice(6)] = attrs[k];
+            }
+            return Object.freeze(out);
+        }
+
+        /**
+         * The attributes of a source part's root start tag (`{}` for a
+         * missing package, part or tag, or an unparsable tag; never throws).
+         *
+         * @param {object} [sourcePkg] — a read package model `{ parts }`
+         * @param {string} partPath
+         * @returns {Readonly<Object<string, string>>}
+         */
+        function sourceRootAttrs(sourcePkg, partPath) {
             try {
-                const out = {};
                 const src = sourcePkg && sourcePkg.parts && sourcePkg.parts[partPath];
                 let tag = null;
                 if (typeof src === 'string') tag = firstStartTag(src);
@@ -204,20 +220,64 @@ export const odfShared = {
                         if (tag !== null || whole) break;
                     }
                 }
-                if (tag) {
-                    const el = xml.parse('<' + tag + '/>');
-                    for (const k of Object.keys(el.attrs)) {
-                        if (k.startsWith('xmlns:') && k.length > 6) out[k.slice(6)] = el.attrs[k];
-                    }
-                }
-                return Object.freeze(out);
+                return Object.freeze(tag ? { ...xml.parse('<' + tag + '/>').attrs } : {});
             } catch {
                 return Object.freeze({});
             }
         }
 
+        /**
+         * The write option `keepVersion`: null when off; else the version
+         * each part is written with (`of(part)`: the source part's
+         * `office:version`, `null` — none written — when the source part
+         * has none; a part the source lacks takes the source
+         * `content.xml`'s; `ODF_VERSION` without a source package) and the
+         * manifest's (`manifest`: the source `content.xml` version from ODF
+         * 1.2 on — the attribute is 1.2's — `null` for an older one; the
+         * source manifest's when `content.xml` has none; `ODF_VERSION`
+         * without a source).
+         * A value other than a boolean throws the module's ContractError.
+         *
+         * @param {object} doc — the document written (its `package`)
+         * @param {object} opts — the write options
+         * @param {string} module — `odt`, `ods`, `odp`
+         * @returns {{ of: function(string): string, manifest: string|null }|null}
+         */
+        function keptVersion(doc, opts, module) {
+            const v = opts && opts.keepVersion;
+            if (v !== undefined && typeof v !== 'boolean') {
+                throw new ContractError(`odf/contract-error/${module}`,
+                    `${module}: write opts.keepVersion must be true or false`,
+                    { context: { module, argument: 'opts.keepVersion' } });
+            }
+            if (!v) return null;
+            const pkg = doc && doc.package;
+            if (!pkg || !pkg.parts) return { of: () => ODF_VERSION, manifest: ODF_VERSION };
+            const versionOf = (part) => sourceRootAttrs(pkg, part)['office:version'] || null;
+            const content = versionOf('content.xml');
+            const manifest = content === null
+                ? (pkg.manifest && pkg.manifest.version) || ODF_VERSION
+                : (parseFloat(content) >= 1.2 ? content : null);
+            return {
+                of: (part) => (pkg.parts[part] ? versionOf(part) : content),
+                manifest
+            };
+        }
+
+        /** The written manifest's version (root and `/` entry) under `keepVersion`. */
+        function applyManifestVersion(p, kept) {
+            if (!kept) return;
+            p.manifest.version = kept.manifest;
+            for (const e of p.manifest.entries || []) if (e.fullPath === '/') e.version = kept.manifest;
+        }
+
         /** Attributes whose VALUE may start with a namespace prefix. */
-        const FORMULA_ATTRS = new Set(['table:formula', 'text:formula', 'text:condition']);
+        // Attributes whose value starts with a namespace prefix: the
+        // formulas, and the five the ODF 1.4 schema types `namespacedToken`
+        // (a QName).
+        const VALUE_PREFIX_ATTRS = new Set(['table:formula', 'text:formula', 'text:condition',
+            'chart:class', 'db:type', 'draw:engine', 'draw:extrusion-metal-type',
+            'form:control-implementation']);
 
         /**
          * Declare on `rootEl` every namespace prefix used by an element or
@@ -225,9 +285,11 @@ export const odfShared = {
          * implicit; `xmlns` attributes are declarations, not uses; a
          * declaration on a descendant covers that descendant's subtree only.
          * A formula attribute (`table:formula`, `text:formula`,
-         * `text:condition`) whose value starts with a resolvable prefix
-         * declares that prefix too; an unresolvable value prefix is left
-         * alone.
+         * `text:condition`) or a namespaced-token one (`chart:class`,
+         * `db:type`, `draw:engine`, `draw:extrusion-metal-type`,
+         * `form:control-implementation`) whose value starts with a
+         * resolvable prefix declares that prefix too; an unresolvable value
+         * prefix is left alone.
          *
          * Resolution order: the root's own declarations, then
          * `opts.carried`, then `ODF_PREFIXES`. The missing declarations are
@@ -267,7 +329,7 @@ export const odfShared = {
                 for (const k of Object.keys(attrs)) {
                     if (k === 'xmlns' || k.startsWith('xmlns:')) continue;
                     use(k);
-                    if (FORMULA_ATTRS.has(k) && typeof attrs[k] === 'string') {
+                    if (VALUE_PREFIX_ATTRS.has(k) && typeof attrs[k] === 'string') {
                         const m = /^([A-Za-z_][\w.-]*):/.exec(attrs[k]);
                         if (m && !inScope(m[1]) && resolvable(m[1])) missing.add(m[1]);
                     }
@@ -336,8 +398,11 @@ export const odfShared = {
             const { pkg: pkgM, metaMod, settingsMod, stylesMod } = sideMods;
             const ct = ctXml || CT.XML;
             const ours = metaMod.empty().generator;
-            // The source part's own declarations travel with its markup.
-            const ns = part => ({ namespaces: sourceNamespaces(doc.package, part) });
+            // The source part's own declarations travel with its markup;
+            // under `keepVersion`, its version too.
+            const kept = keptVersion(doc, opts, 'odf');
+            const ns = part => ({ namespaces: sourceNamespaces(doc.package, part),
+                ...(kept ? { version: kept.of(part) } : {}) });
             // opts.meta is the caller's explicit choice; doc.meta is the READ model,
             // whose generator names the previous application — this write replaces it.
             let meta = opts.meta
@@ -446,7 +511,8 @@ export const odfShared = {
             ODF_NS, ODF_PREFIXES, ODF_VERSION, XML_DECL, XML_DECL_STANDALONE, CT,
             encodeText, decodeText,
             parseXmlOrThrow,
-            sourceNamespaces, declareNamespaces,
+            sourceNamespaces, sourceRootAttrs, declareNamespaces,
+            keptVersion, applyManifestVersion,
             readSidecars, writeSidecars,
             carryParts, REGENERATED_PARTS,
             findDeep,

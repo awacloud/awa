@@ -428,6 +428,21 @@ describe('odfShared — namespace declarations', () => {
         expect(root.attrs['xmlns:of']).toBeUndefined();
     });
 
+    // A34a: the five namespacedToken (QName) attributes of the ODF 1.4 schema.
+    test('namespaced-token values: the value prefix is declared as a formula\'s', () => {
+        const root = declareNamespaces(xmlMod.el('office:x', {}, [
+            xmlMod.el('form:form', { 'form:control-implementation': 'ooo:com.sun.star.form.component.Form' }, []),
+            xmlMod.el('chart:chart', { 'chart:class': 'acme:bar' }, []),
+            xmlMod.el('draw:enhanced-geometry', { 'draw:engine': 'eng:shapes', 'draw:extrusion-metal-type': 'mt:x' }, []),
+            xmlMod.el('db:x', { 'db:type': 'zz:unknown' }, [])
+        ]), { carried: { ooo: 'http://openoffice.org/2004/office', acme: 'urn:acme', eng: 'urn:eng', mt: 'urn:mt' } });
+        expect(root.attrs['xmlns:ooo']).toBe('http://openoffice.org/2004/office');
+        expect(root.attrs['xmlns:acme']).toBe('urn:acme');
+        expect(root.attrs['xmlns:eng']).toBe('urn:eng');
+        expect(root.attrs['xmlns:mt']).toBe('urn:mt');
+        expect(root.attrs['xmlns:zz']).toBeUndefined();
+    });
+
     test('sourceNamespaces reads the root xmlns:* declarations only', () => {
         const text = '﻿<?xml version="1.0"?>\n<!-- c -->\n'
             + '<office:document-content xmlns="urn:default" xmlns:office="u-office" xmlns:acme=\'urn:a&amp;b\''

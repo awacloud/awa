@@ -9,8 +9,8 @@
         "version": "bun 1.3.13",
         "source": null
       },
-      "date": "2026-10-17",
-      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "date": "2026-10-26",
+      "commit": "976d3b35efd5d87c67c83958937799f1b57be319",
       "command": "bun cli.ts office-scorecard axis-a --pkg oconv-fonts",
       "result": {
         "kind": "percent",
@@ -26,7 +26,7 @@
           "src/**"
         ],
         "tests": {
-          "pass": 80,
+          "pass": 101,
           "fail": 0,
           "skip": 0
         }

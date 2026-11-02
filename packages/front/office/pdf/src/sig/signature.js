@@ -137,6 +137,10 @@ export const pdfSignature = {
                 propAuthTime: e.Prop_AuthTime && e.Prop_AuthTime.type === 'int'
                               ? e.Prop_AuthTime.value : undefined,
                 propAuthType: str('Prop_AuthType'),
+                type:        e.Type && e.Type.type === 'name' ? e.Type.value : undefined,
+                changes:     e.Changes && e.Changes.type === 'array' ? e.Changes : undefined,
+                r:           e.R && e.R.type === 'int' ? e.R.value : undefined,
+                adbeBuild:   e.ADBE_Build && e.ADBE_Build.type === 'string' ? e.ADBE_Build.value : undefined,
                 raw: dict
             };
         }
@@ -361,12 +365,8 @@ export const pdfSignature = {
         // ── SignerInfo dissection helpers ────────────────────────────
         function _dissectSignerInfo(si) {
             // si is the parsed children of the first SignerInfo SEQUENCE.
-            // Walk positionally with safeguards.
-            if (!si || si.length < 5) {
-                return { ok: false,
-                         code: 'pdf/sig/signer-info-short',
-                         message: 'SignerInfo has fewer than 5 fields' };
-            }
+            // Walk positionally. The caller's signatureAlgorithm scan has
+            // already required at least 5 fields.
             // [0] version, [1] sid, [2] digestAlg, [3]? signedAttrs,
             // [n-2] sigAlg, [n-1] signature, [n]? unsignedAttrs.
             const version = si[0];
@@ -585,8 +585,6 @@ export const pdfSignature = {
                          message: 'SPKI structure malformed' };
             }
             const algKids = a1.parseChildren(spkiKids[0].value);
-            const keyAlgOid = algKids && algKids[0]
-                ? a1.readOid(algKids[0]) : null;
             // bit string : first byte = unused-bits count.
             const bsVal = spkiKids[1].value;
             if (bsVal.length < 1) {
@@ -631,16 +629,13 @@ export const pdfSignature = {
                          pubKey: { curve,
                                    point: keyBytes.subarray(1) } };
             }
-            if (signatureAlg === 'ed25519') {
-                if (keyBytes.length !== 32) {
-                    return { ok: false, code: 'pdf/sig/spki-ed25519-bad-len',
-                             message: 'Ed25519 pubkey must be 32 bytes',
-                             actual: keyBytes.length };
-                }
-                return { ok: true, pubKey: keyBytes };
+            // 'ed25519', the last value SIG_OIDS can give.
+            if (keyBytes.length !== 32) {
+                return { ok: false, code: 'pdf/sig/spki-ed25519-bad-len',
+                         message: 'Ed25519 pubkey must be 32 bytes',
+                         actual: keyBytes.length };
             }
-            return { ok: false, code: 'pdf/sig/spki-unsupported-alg',
-                     message: 'unsupported keyAlgorithm: ' + keyAlgOid };
+            return { ok: true, pubKey: keyBytes };
         }
 
         function _trimIntLeadZero(bytes) {

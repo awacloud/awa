@@ -149,9 +149,9 @@ tree before vendoring:
 
 - **`poi-numbering.docx`** — a genuine multi-level (`ilvl` 0-3), multi-`numId`
   numbered-list document (`w:pStyle="ListParagraph"` + `w:numPr`), no
-  `Heading*` styles. Real-world confirmation of the docx→md
-  `list/nesting-flattened` behaviour (harness-asserted): **lossy**, one
-  `list/nesting-flattened` (`numId 1 ilvl 1`).
+  `Heading*` styles. Real-world confirmation that the docx→md reading
+  keeps the list levels (harness-asserted): **zero loss**, four levels
+  nested (it once recorded `list/nesting-flattened`).
 - **`poi-table-alignment.docx`** — 6 `<w:tbl>` tables, no headings.
   Converts with **zero loss** (harness-asserted).
 - **`poi-with-gif.docx`** — one `<w:drawing>` referencing an embedded

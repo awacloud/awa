@@ -125,12 +125,31 @@ export const standard14Helvetica = {
         })();
         // END-GENERATED-WIDTHS:HELVETICA_BOLD_WIDTHS
 
+        // The widths, by glyph name, of the glyphs MacRomanEncoding and
+        // StandardEncoding name that the WinAnsi tables cannot hold.
+        // GENERATED-WIDTHS:HELVETICA_EXTRA_WIDTHS
+        const HELVETICA_EXTRA_WIDTHS = Object.freeze({
+            Delta: 612, Lslash: 556, breve: 333, caron: 333, dotaccent: 333, dotlessi: 278, fi: 500, fl: 500,
+            fraction: 167, greaterequal: 549, hungarumlaut: 333, infinity: 756, lessequal: 549, lozenge: 471, lslash: 222, notequal: 549,
+            ogonek: 333, partialdiff: 476, radical: 453, ring: 333, summation: 600
+        });
+        // END-GENERATED-WIDTHS:HELVETICA_EXTRA_WIDTHS
+
+        // GENERATED-WIDTHS:HELVETICA_BOLD_EXTRA_WIDTHS
+        const HELVETICA_BOLD_EXTRA_WIDTHS = Object.freeze({
+            Delta: 612, Lslash: 611, breve: 333, caron: 333, dotaccent: 333, dotlessi: 278, fi: 611, fl: 611,
+            fraction: 167, greaterequal: 549, hungarumlaut: 333, infinity: 871, lessequal: 549, lozenge: 494, lslash: 278, notequal: 549,
+            ogonek: 333, partialdiff: 494, radical: 549, ring: 333, summation: 600
+        });
+        // END-GENERATED-WIDTHS:HELVETICA_BOLD_EXTRA_WIDTHS
+
         const helveticaRegular = Object.freeze({
             ...COMMON,
             fontName:    'Helvetica',
             italicAngle: 0,
             weight:      'Medium',
-            widths:      HELVETICA_WIDTHS
+            widths:      HELVETICA_WIDTHS,
+            extraWidths: HELVETICA_EXTRA_WIDTHS
         });
 
         const helveticaBold = Object.freeze({
@@ -139,7 +158,8 @@ export const standard14Helvetica = {
             italicAngle: 0,
             weight:      'Bold',
             stemV:       140,
-            widths:      HELVETICA_BOLD_WIDTHS
+            widths:      HELVETICA_BOLD_WIDTHS,
+            extraWidths: HELVETICA_BOLD_EXTRA_WIDTHS
         });
 
         const helveticaOblique = Object.freeze({
@@ -147,7 +167,8 @@ export const standard14Helvetica = {
             fontName:    'Helvetica-Oblique',
             italicAngle: -12,
             weight:      'Medium',
-            widths:      HELVETICA_WIDTHS
+            widths:      HELVETICA_WIDTHS,
+            extraWidths: HELVETICA_EXTRA_WIDTHS
         });
 
         const helveticaBoldOblique = Object.freeze({
@@ -156,11 +177,13 @@ export const standard14Helvetica = {
             italicAngle: -12,
             weight:      'Bold',
             stemV:       140,
-            widths:      HELVETICA_BOLD_WIDTHS
+            widths:      HELVETICA_BOLD_WIDTHS,
+            extraWidths: HELVETICA_BOLD_EXTRA_WIDTHS
         });
 
         return {
             HELVETICA_WIDTHS, HELVETICA_BOLD_WIDTHS,
+            HELVETICA_EXTRA_WIDTHS, HELVETICA_BOLD_EXTRA_WIDTHS,
             helveticaRegular, helveticaBold, helveticaOblique, helveticaBoldOblique
         };
     }

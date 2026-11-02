@@ -156,3 +156,60 @@ describe('EXTENDED_ACTION_SUBTYPES', () => {
         expect(EXTENDED_ACTION_SUBTYPES.has('JavaScript')).toBe(true);
     });
 });
+
+describe('A38d: the remaining action subtypes and the additional actions', () => {
+    const { typeAdditionalActions } = pdfFormActionsExtended.factory(_errors, _parserObj);
+    const { ContractError } = _errors;
+    const u8 = (s) => new TextEncoder().encode(s);
+    const act = (s, entries) => typeExtendedAction(obj.dict({ S: obj.name(s), ...entries }));
+
+    test('Thread, Sound, Movie, RichMediaExecute, GoToDp', () => {
+        expect(act('Thread', { F: obj.string(u8('a.pdf')), D: obj.int(2), B: obj.dict({}) })).toMatchObject({ kind: 'Thread', f: u8('a.pdf'), d: 2, b: { type: 'dict' } });
+        expect(act('Thread', { D: obj.string(u8('Chapter 1')) }).d).toEqual(u8('Chapter 1'));
+        expect(act('Sound', { Sound: obj.ref(5, 0), Volume: obj.real(0.5), Synchronous: obj.bool(true), Repeat: obj.bool(false), Mix: obj.bool(true) }))
+            .toMatchObject({ sound: { type: 'ref' }, volume: 0.5, synchronous: true, repeat: false, mix: true });
+        expect(act('Movie', { Annotation: obj.dict({}), T: obj.string(u8('m')), Operation: obj.name('Play') })).toMatchObject({ t: u8('m'), operation: 'Play' });
+        expect(act('RichMediaExecute', { TA: obj.dict({}), TI: obj.dict({}), CMD: obj.dict({}) })).toMatchObject({ ta: { type: 'dict' }, cmd: { type: 'dict' } });
+        const dp = act('GoToDp', { Dp: obj.ref(9, 0), Foo: obj.int(1) });
+        expect([dp.dp.type, dp._extras]).toEqual(['ref', { Foo: obj.int(1) }]);
+    });
+
+    test('the PDF 1.2 SetState and NOP', () => {
+        expect(act('SetState', { T: obj.array([]), AS: obj.name('On') })).toMatchObject({ kind: 'SetState', t: { type: 'array' }, as: 'On' });
+        const nop = act('NOP', { Next: obj.dict({}) });
+        expect([nop.kind, nop._extras]).toEqual(['NOP', {}]);
+        expect(EXTENDED_ACTION_SUBTYPES.has('Thread') && EXTENDED_ACTION_SUBTYPES.has('NOP')).toBe(true);
+    });
+
+    test('typeAdditionalActions: each trigger as read, by kind', () => {
+        const w = typeAdditionalActions(obj.dict({ E: obj.dict({}), Fo: obj.ref(2, 0), Bl: obj.dict({}), PI: obj.dict({}), K: obj.dict({}) }), 'widgetAnnotation');
+        expect([w.e.type, w.fo.type, w.bl.type, w.pi.type]).toEqual(['dict', 'ref', 'dict', 'dict']);
+        expect(Object.keys(w._extras)).toEqual(['K']);
+        const c = typeAdditionalActions(obj.dict({ WS: obj.dict({}), DP: obj.dict({}) }), 'catalog');
+        expect([c.ws.type, c.dp.type]).toEqual(['dict', 'dict']);
+        expect(typeAdditionalActions(obj.dict({ K: obj.dict({}), V: obj.name('x') }), 'formField')).toMatchObject({ k: { type: 'dict' }, v: null });
+        expect(typeAdditionalActions(obj.dict({ O: obj.dict({}) }), 'pageObject').o.type).toBe('dict');
+        expect(typeAdditionalActions(obj.dict({ PV: obj.dict({}) }), 'screenAnnotation').pv.type).toBe('dict');
+        const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+        expect(code(() => typeAdditionalActions(obj.array([]), 'catalog'))).toEqual([ParseError.name, 'pdf/extra/action-ext/aa-not-dict']);
+        expect(code(() => typeAdditionalActions(obj.dict({}), 'page'))).toEqual([ContractError.name, 'pdf/extra/action-ext/aa-kind']);
+    });
+});
+
+describe('typeFieldEntries (A39d)', () => {
+    const { typeFieldEntries } = pdfFormActionsExtended.factory(_errors, _parserObj);
+    const u8 = (s) => new TextEncoder().encode(s);
+
+    test('the shared field keys and the rich text, by value or as read', () => {
+        const d = obj.dict({ Parent: obj.ref(2, 0), Kids: obj.array([]), T: obj.string(u8('name')), TU: obj.string(u8('Name')),
+            TM: obj.string(u8('n')), Ff: obj.int(4096), AA: obj.dict({}), DS: obj.string(u8('font: 12pt')), RV: obj.stream(obj.dict({}), new Uint8Array()), FT: obj.name('Tx') });
+        const r = typeFieldEntries(d);
+        expect([r.parent.type, r.kids.type, r.ff, r.aa.type, r.rv.type]).toEqual(['ref', 'array', 4096, 'dict', 'stream']);
+        expect([r.t, r.tu, r.tm, r.ds]).toEqual([u8('name'), u8('Name'), u8('n'), u8('font: 12pt')]);
+        expect('ft' in r || '_extras' in r).toBe(false);
+        expect(typeFieldEntries(obj.dict({ RV: obj.string(u8('<p/>')), Ff: obj.real(1.5) }))).toMatchObject({ rv: u8('<p/>'), ff: null });
+        let err = null;
+        try { typeFieldEntries(obj.array([])); } catch (e) { err = e; }
+        expect([err instanceof ParseError, err.code]).toEqual([true, 'pdf/extra/action-ext/field-not-dict']);
+    });
+});

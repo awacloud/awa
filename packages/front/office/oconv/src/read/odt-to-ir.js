@@ -22,15 +22,47 @@
  *
  * | odt `type` | IR node | Notes |
  * |---|---|---|
- * | `heading` | `heading{level}` | `outlineLevel` is odt's own semantic field (`<text:h>`) — never a style-name heuristic. Clamped to 1–6, loss `heading/level-clamped` above 6. |
- * | `paragraph` | `paragraph` | Runs mapped 1:1 (see below). |
+ * | `heading` | `heading{level}` | `outlineLevel` is odt's own semantic field (`<text:h>`) — never a style-name heuristic. Clamped to 1–6, loss `heading/level-clamped` above 6. Its outline number (`1.3`), from the document's outline style, leads its text (see "Heading outline numbers"). |
+ * | `paragraph` | `paragraph` | Runs mapped 1:1 (see below; an empty `text` run or span maps to no inline). An empty one — its runs map to no inline — is a spacer, skipped without a loss wherever blocks are walked (the body, sections, cells, list items), as the docx reader skips it. |
  * | `paragraph` styled `Preformatted_20_Text` (LibreOffice's "Preformatted Text"; or an automatic style whose parent it is) | `codeBlock{info:''}` | CONSECUTIVE such paragraphs form ONE code block, one line each (an empty paragraph is a blank line; a group of empty lines only is skipped); text, `space`, `tab`, `line-break`, spans and links are kept as characters; a raw element or a frame inside records `inline/dropped`. |
  * | `paragraph` styled `Quotations` (or via its automatic style) | `blockquote` of `paragraph`s | CONSECUTIVE such paragraphs form ONE quote (an empty one is skipped); quote nesting is not recoverable. |
  * | `paragraph` styled `Horizontal_20_Line` (or via its automatic style) | `hr` when EMPTY | With content it stays a paragraph. |
- * | `list` | `list{ordered}` | `node.ordered !== undefined` → `{ordered: node.ordered}`, NO loss (a named style's binding is kept and its resolved flag is added — a resolvable content-automatic OR styles.xml named list style, `styleName` present or not). `ordered` absent (foreign/unprovable style) → the legacy bullet fallback, loss `list/numbering-unresolved`. Nesting is real (a `list` inside a `listItem`), not flattened — odt's parser preserves it natively. |
+ * | `list` | `list{ordered}` | `node.ordered !== undefined` → `{ordered: node.ordered}`, NO loss (a named style's binding is kept and its resolved flag is added — a resolvable content-automatic OR styles.xml named list style, `styleName` present or not). `ordered` absent (foreign/unprovable style) → the legacy bullet fallback, loss `list/numbering-unresolved`. Nesting is real (a `list` inside a `listItem`), not flattened — odt's parser preserves it natively. An item whose first run leads with `☐ ` / `☒ ` (the GFM task marker as oconv's odt writer draws it) reads as `escapes.md.task` `'unchecked'` / `'checked'`, the marker stripped. |
  * | `table` | `table` | Rows/cells mapped 1:1 (see below) — `odt.read()` types a text-body `<table:table>`, so a table is mapped, never dropped. |
  * | `unknown` (any other odt/draw element `odt.read()` didn't type) | — (dropped) | loss `block/dropped`, detail = the raw odf element name. `image/unresolved` instead when the element is `draw:frame`/`draw:image`. |
- * | any other recognised-by-odf type with no IR equivalent (`section`, `soft-page-break`) | — (dropped) | loss `block/dropped`, detail = the corresponding odf element name. |
+ * | `unknown` `text:table-of-content`, under `opts.include: ['toc']` | its entries' `paragraph`s, in place | See "Table of contents". NO loss. Without the option, `block/dropped` as any other `unknown`. |
+ * | `section` (`text:section`) | its `children`, in place | Mapped as if the section were not there, nested sections too; its name and style are not carried (the IR has no section node). NO loss. |
+ * | any other recognised-by-odf type with no IR equivalent (`soft-page-break`) | — (dropped) | loss `block/dropped`, detail = the corresponding odf element name. |
+ *
+ * ## Table of contents (`opts.include: ['toc']`)
+ *
+ * A `text:table-of-content` (a raw `unknown` node of the core read) maps,
+ * in place, to the paragraphs of its `text:index-body` in document order —
+ * its `text:p` / `text:h` children, those of a `text:index-title` too —
+ * one IR paragraph each of the text the document shows: text nodes kept,
+ * `text:s` its count of spaces, `text:tab` and `text:line-break` a space,
+ * any other element walked; whitespace runs collapsed, trimmed; an empty
+ * entry skipped. The page numbers are kept; the entry links (to heading
+ * bookmarks the IR does not carry) are not. Other indexes stay dropped.
+ *
+ * ## Heading outline numbers
+ *
+ * The outline style is the `text:outline-style` raw element of
+ * `styles.styles` (else a typed `outline-style` entry of
+ * `styles.listStyles`, the large bundle); per level it gives
+ * `style:num-format`, `style:num-prefix`, `style:num-suffix`,
+ * `text:display-levels` (default 1) and `text:start-value` (default 1). In
+ * document order, a heading outside any list whose level has a non-empty
+ * format, and which is not `text:is-list-header="true"`, advances its
+ * level's counter (from the start value; `text:restart-numbering="true"`
+ * restarts it at the heading's `text:start-value`, else the level's) and
+ * resets the deeper ones. Its label — the prefix, the counters of its last
+ * `display-levels` levels in their formats (`1`, `a`, `A`, `i`, `I`;
+ * another format is written as `1`) joined by `.`, the suffix — trimmed,
+ * is the heading's first IR run, followed by one space
+ * (`1.3 Normative References`), so the Markdown anchor follows it. Any
+ * other heading gets no label and leaves the counters as they are; no
+ * outline style, no label. NO loss.
  *
  * ## Paragraph / heading run mapping
  *
@@ -85,6 +117,21 @@
  * `inline/flattened` (detail = the element name: the text is kept, the
  * element's meaning — field, reference, note — is not).
  *
+ * A result read with `odt.read(bytes, { elementsInRuns: true })` (what
+ * `oconv` itself does, with `framesInRuns`) carries each such untyped
+ * element of a paragraph, heading or link body as a raw
+ * `{ type: 'element' }` run at its place instead of an `_extras.children`
+ * entry; it is mapped by the span field-text rule above — a cross-reference
+ * or field showing `4.3` keeps that text in place (`inline/flattened`), an
+ * element with no text is handled as in `_extras` (A45a).
+ *
+ * A list item that holds headings alone (directly, or through nested
+ * lists whose items hold headings alone) — how LibreOffice writes a
+ * numbered heading, `text:h` in a list item — gives those headings up at
+ * their place, the list split around them, without a loss: the docx
+ * reader reads a numbered heading as a heading too. Such a heading takes
+ * no outline number (it is in a list).
+ *
  * A result read with `odt.read(bytes, { framesInRuns: true })` (what
  * `oconv` itself does) carries each frame as a `{ type: 'frame' }` run at
  * its place instead. An IMAGE frame becomes an IR `image` there: `name` =
@@ -95,6 +142,10 @@
  * missing or external part records `image/bytes-unavailable` (the image
  * reference is kept). Span flags never apply to an image, and an image
  * inside a link keeps no target (`inline/dropped`, detail `link-target`).
+ * A frame with no content child at all (nothing but its `svg:title` /
+ * `svg:desc`: how oconv's odt writer keeps an image it has no bytes for)
+ * is an IR `image` without bytes: `name` = its `draw:name`, else `image`,
+ * `alt` as above, loss `image/bytes-unavailable`.
  * Any other frame maps like the raw frame above — loss `image/unresolved`
  * (detail `draw:frame`), no IR node, except inside a span where a frame
  * holding text (a text box, a title) keeps that text as one plain IR run.
@@ -153,9 +204,18 @@ export const oconvOdtToIr = {
 
         /** odf `textContent` type → its source element name, for loss detail. */
         const TYPE_TO_ELEMENT = {
-            section: 'text:section',
             'soft-page-break': 'text:soft-page-break'
         };
+
+        /** `nodes` with every `section` replaced by its children, nested ones too. */
+        function withoutSections(nodes) {
+            const out = [];
+            for (const n of nodes || []) {
+                if (n && n.type === 'section') out.push(...withoutSections(n.children));
+                else out.push(n);
+            }
+            return out;
+        }
 
         /**
          * @param {string} name odf element name
@@ -320,9 +380,14 @@ export const oconvOdtToIr = {
          * an empty paragraph a blank line; a group of empty lines only is
          * skipped), consecutive quote paragraphs ONE `blockquote` (an
          * empty one skipped), an EMPTY rule paragraph an `hr`; every other
-         * node goes through {@link mapBlock}.
+         * node goes through {@link mapBlock}. Outside a list item, a list
+         * gives up the headings its items hold alone ({@link liftHeadings}).
+         *
+         * @param {object[]} nodes
+         * @param {{code:string, detail:string}[]} losses
+         * @param {boolean} [inItem] The nodes are a list item's content.
          */
-        function mapBlocks(nodes, losses) {
+        function mapBlocks(nodes, losses, inItem) {
             const out = [];
             let code = null;
             let quote = null;
@@ -336,7 +401,7 @@ export const oconvOdtToIr = {
                 if (quote && quote.length) out.push(oconvIr.node('blockquote', {}, quote));
                 quote = null;
             };
-            for (const n of nodes || []) {
+            for (const n of withoutSections(nodes)) {
                 const kind = blockStyleOf(n, losses);
                 if (kind !== 'code') flushCode();
                 if (kind !== 'quote') flushQuote();
@@ -355,8 +420,17 @@ export const oconvOdtToIr = {
                     }
                     continue;
                 }
+                const inc = includeOf.get(losses);
+                if (inc && inc.has('toc') && n && n.type === 'unknown' && n.element
+                        && n.element.name === 'text:table-of-content') {
+                    out.push(...mapToc(n.element));
+                    continue;
+                }
                 const b = mapBlock(n, losses);
-                if (b) out.push(b);
+                // An empty plain paragraph is a spacer, skipped without a
+                // loss, as the docx reader skips it.
+                if (b && b.kind === 'list' && !inItem) out.push(...liftHeadings(b));
+                else if (b && !(b.kind === 'paragraph' && b.children.length === 0)) out.push(b);
             }
             flushCode();
             flushQuote();
@@ -371,6 +445,16 @@ export const oconvOdtToIr = {
                 if (el) return rawText(el);
             }
             return '';
+        }
+
+        /**
+         * Whether a frame without a typed child holds nothing but its
+         * `svg:title` / `svg:desc` (no plugin, applet, floating frame or
+         * table among its other children).
+         */
+        function isEmptyFrame(f) {
+            const extras = (f._extras && f._extras.children) || [];
+            return extras.every((c) => !c || c.type !== 'element' || c.name === 'svg:title' || c.name === 'svg:desc');
         }
 
         /**
@@ -403,8 +487,9 @@ export const oconvOdtToIr = {
         }
 
         /**
-         * Map a typed frame run: an image frame becomes an IR `image`; any
-         * other frame records `image/unresolved`, and inside a span a frame
+         * Map a typed frame run: an image frame becomes an IR `image`, and
+         * so does a frame with no content child (without bytes); any other
+         * frame records `image/unresolved`, and inside a span a frame
          * holding text keeps it as one plain IR run.
          *
          * @param {object} f odt frame run
@@ -414,6 +499,13 @@ export const oconvOdtToIr = {
          */
         function mapFrameRun(f, losses, inSpan) {
             if (f.child && f.child.kind === 'image') return [imageFromFrame(f, losses)];
+            if (!f.child && isEmptyFrame(f)) {
+                // A frame without a content child: an image whose bytes the
+                // writer did not have (oconv's odt writer writes one so).
+                const name = f.name || 'image';
+                losses.push({ code: 'image/bytes-unavailable', detail: name });
+                return [oconvIr.node('image', { name, alt: frameAlt(f) })];
+            }
             losses.push({ code: 'image/unresolved', detail: 'draw:frame' });
             const t = inSpan ? frameText(f) : '';
             return t === '' ? [] : [oconvIr.node('run', { text: t })];
@@ -474,11 +566,14 @@ export const oconvOdtToIr = {
          */
         function mapRun(r, losses) {
             switch (r.type) {
-                case 'text': return [oconvIr.node('run', { text: r.value || '' })];
+                // An empty text maps to no inline (as in the docx reader), so
+                // a paragraph of empty runs stays a skipped spacer.
+                case 'text': return r.value ? [oconvIr.node('run', { text: r.value })] : [];
                 case 'span': {
                     if (Array.isArray(r.runs)) return mapSpanRuns(r, losses);
                     const hasFlags = !!(r.bold || r.italic || r.strike || r.monospace);
                     if (hasFlags) {
+                        if (!r.value) return [];
                         return [oconvIr.node('run', {
                             text: r.value || '',
                             bold: !!r.bold,
@@ -491,7 +586,7 @@ export const oconvOdtToIr = {
                         code: 'run/format-unresolved',
                         detail: r.styleName || '(unnamed)'
                     });
-                    return [oconvIr.node('run', { text: r.value || '' })];
+                    return r.value ? [oconvIr.node('run', { text: r.value })] : [];
                 }
                 case 'space': return [oconvIr.node('run', { text: ' '.repeat(r.count || 1) })];
                 case 'tab': return [oconvIr.node('run', { text: '\t' })];
@@ -522,6 +617,7 @@ export const oconvOdtToIr = {
                     return out;
                 }
                 case 'frame': return mapFrameRun(r, losses, false);
+                case 'element': return mapSpanElement(r, losses);
                 default: return [];
             }
         }
@@ -542,7 +638,92 @@ export const oconvOdtToIr = {
             return out;
         }
 
+        /**
+         * The outline numbering state of the call a `losses` array belongs
+         * to, keyed like {@link packageOf}: `levels[L]` the attributes of
+         * the outline style's level L, `counters[L]` the last number given
+         * at level L, `listDepth` how many lists enclose the node mapped.
+         */
+        const outlineOf = new WeakMap();
+
+        /**
+         * Per-level attributes of the document's outline style: a raw
+         * `text:outline-style` of `styles.styles`, else a typed
+         * `outline-style` entry of `styles.listStyles` (the large bundle).
+         *
+         * @param {object} [styles] the read result's `styles`
+         * @returns {object[]|null} attributes by `text:level`, or `null`
+         */
+        function outlineLevels(styles) {
+            if (!styles) return null;
+            const raw = (styles.styles || []).find((e) => e && e.type === 'element' && e.name === 'text:outline-style');
+            const typed = (styles.listStyles || []).find((e) => e && e.type === 'outline-style');
+            const entries = raw
+                ? (raw.children || []).filter((c) => c && c.type === 'element' && c.name === 'text:outline-level-style')
+                : typed ? typed.levels || [] : null;
+            if (!entries) return null;
+            const levels = [];
+            for (const e of entries) {
+                const n = Number(e.attrs && e.attrs['text:level']);
+                if (Number.isInteger(n) && n > 0) levels[n] = e.attrs;
+            }
+            return levels;
+        }
+
+        /** A positive integer of a numeric attribute, else `dflt`. */
+        function positive(v, dflt) {
+            const n = Number(v);
+            return Number.isInteger(n) && n > 0 ? n : dflt;
+        }
+
+        const ROMAN = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'],
+            [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
+
+        /** `n` in an ODF `style:num-format`; a format other than these five is `1`. */
+        function formatNumber(n, format) {
+            if (format === 'a' || format === 'A') {
+                let s = '';
+                for (let k = n; k > 0; k = Math.floor((k - 1) / 26)) s = String.fromCharCode(97 + ((k - 1) % 26)) + s;
+                return format === 'A' ? s.toUpperCase() : s;
+            }
+            if (format === 'i' || format === 'I') {
+                let s = '';
+                let k = n;
+                for (const [v, r] of ROMAN) while (k >= v) { s += r; k -= v; }
+                return format === 'I' ? s.toUpperCase() : s;
+            }
+            return String(n);
+        }
+
+        /**
+         * The outline number of a heading of level `level` (`1.3`), or `''`:
+         * no outline style, inside a list, a list header, or no format at
+         * its level. A numbered heading advances its level's counter (or
+         * restarts it) and resets the deeper ones.
+         */
+        function outlineLabel(node, level, losses) {
+            const st = outlineOf.get(losses);
+            if (!st || st.listDepth > 0) return '';
+            const attrs = (node._extras && node._extras.attrs) || {};
+            const own = st.levels[level] || {};
+            const format = own['style:num-format'] || '';
+            if (format === '' || attrs['text:is-list-header'] === 'true') return '';
+            const start = positive(own['text:start-value'], 1);
+            st.counters[level] = attrs['text:restart-numbering'] === 'true'
+                ? positive(attrs['text:start-value'], start)
+                : st.counters[level] === undefined ? start : st.counters[level] + 1;
+            st.counters.length = level + 1;
+            const shown = Math.min(positive(own['text:display-levels'], 1), level);
+            const parts = [];
+            for (let k = level - shown + 1; k <= level; k++) {
+                const at = st.levels[k] || {};
+                parts.push(formatNumber(st.counters[k] ?? positive(at['text:start-value'], 1), at['style:num-format'] || '1'));
+            }
+            return ((own['style:num-prefix'] || '') + parts.join('.') + (own['style:num-suffix'] || '')).trim();
+        }
+
         function mapHeading(node, losses) {
+            const label = outlineLabel(node, node.outlineLevel || 1, losses);
             let level = node.outlineLevel || 1;
             if (level > 6) {
                 losses.push({ code: 'heading/level-clamped', detail: String(level) });
@@ -550,23 +731,95 @@ export const oconvOdtToIr = {
             } else if (level < 1) {
                 level = 1;
             }
-            return oconvIr.node('heading', { level }, mapRuns(node, losses));
+            const runs = mapRuns(node, losses);
+            if (label) runs.unshift(oconvIr.node('run', { text: label + ' ' }));
+            return oconvIr.node('heading', { level }, runs);
         }
 
         function mapParagraph(node, losses) {
             return oconvIr.node('paragraph', {}, mapRuns(node, losses));
         }
 
+        /**
+         * The headings a list item holds alone — headings, or nested lists
+         * each of whose items holds only headings — else `null`.
+         */
+        function headingsOf(item) {
+            const hs = [];
+            for (const c of item.children || []) {
+                if (c.kind === 'heading') { hs.push(c); continue; }
+                if (c.kind !== 'list') return null;
+                for (const it of c.children) {
+                    const h = headingsOf(it);
+                    if (!h) return null;
+                    hs.push(...h);
+                }
+            }
+            return hs.length ? hs : null;
+        }
+
+        /**
+         * A list whose items hold a heading alone (LibreOffice's numbered
+         * heading, `text:h` in a list item) gives those headings up at
+         * their place, the list split around them, without a loss: the
+         * docx reader reads a numbered heading as a heading too.
+         */
+        function liftHeadings(list) {
+            if (!list.children.some((it) => headingsOf(it))) return [list];
+            const out = [];
+            let items = [];
+            const flush = () => {
+                if (items.length) out.push({ ...list, children: items });
+                items = [];
+            };
+            for (const it of list.children) {
+                const hs = headingsOf(it);
+                if (hs) { flush(); out.push(...hs); } else items.push(it);
+            }
+            flush();
+            return out;
+        }
+
         function mapListItem(item, losses) {
-            const children = mapBlocks(item.children, losses);
+            const children = mapBlocks(item.children, losses, true);
             const extras = item._extras && item._extras.children;
             if (extras) {
                 for (const el of extras) pushDropLoss((el && el.name) || 'unknown', losses);
             }
-            return oconvIr.node('listItem', {}, children);
+            return listItemNode(children);
+        }
+
+        /**
+         * IR `listItem` of `children`. A first paragraph whose first run is
+         * a text run (no link, no code) leading with a GFM task marker as
+         * oconv's writers draw it — `☐ ` (U+2610) / `☒ ` (U+2612), the glyph
+         * then one space — reads as `escapes.md.task`, the marker stripped
+         * (the run dropped when nothing is left). Anything else stays text.
+         */
+        function listItemNode(children) {
+            const markers = { '☐ ': 'unchecked', '☒ ': 'checked' };
+            const first = children[0];
+            const run = first && first.kind === 'paragraph' && first.children ? first.children[0] : null;
+            const lead = run && run.kind === 'run' && typeof run.text === 'string' && !run.link && !run.code
+                ? run.text.slice(0, 2) : '';
+            if (!Object.hasOwn(markers, lead)) return oconvIr.node('listItem', {}, children);
+            const rest = run.text.slice(2);
+            const runs = rest ? [{ ...run, text: rest }, ...first.children.slice(1)] : first.children.slice(1);
+            return oconvIr.node('listItem', { escapes: { md: { task: markers[lead] } } },
+                [{ ...first, children: runs }, ...children.slice(1)]);
         }
 
         function mapList(node, losses) {
+            const st = outlineOf.get(losses);
+            if (st) st.listDepth++;
+            try {
+                return mapListItems(node, losses);
+            } finally {
+                if (st) st.listDepth--;
+            }
+        }
+
+        function mapListItems(node, losses) {
             if (node.ordered !== undefined) {
                 const items = (node.items || []).map((it) => mapListItem(it, losses));
                 return oconvIr.node('list', { ordered: node.ordered }, items);
@@ -616,6 +869,70 @@ export const oconvOdtToIr = {
             return oconvIr.node('table', {}, rows);
         }
 
+        /** The parts `opts.include` may bring back (A45b). */
+        const INCLUDE_NAMES = new Set(['toc']);
+
+        /**
+         * `undefined` reads as nothing included; otherwise an array of
+         * distinct names of `INCLUDE_NAMES`, else throws `oconv: bad odt
+         * include`.
+         *
+         * @param {*} v
+         * @returns {Set<string>}
+         * @throws {Error} `oconv: bad odt include`
+         */
+        function includeSet(v) {
+            if (v === undefined) return new Set();
+            if (!Array.isArray(v) || new Set(v).size !== v.length
+                    || !v.every((n) => typeof n === 'string' && INCLUDE_NAMES.has(n))) {
+                throw new Error('oconv: bad odt include');
+            }
+            return new Set(v);
+        }
+
+        /** The `opts.include` set of the call, keyed like {@link packageOf}. */
+        const includeOf = new WeakMap();
+
+        /**
+         * Text of one index-body entry as the document shows it: text kept,
+         * `text:s` its count of spaces, `text:tab` and `text:line-break` a
+         * space, any other element walked; whitespace runs collapsed, trimmed.
+         */
+        function entryText(el) {
+            const walk = (n) => {
+                if (!n) return '';
+                if (n.type === 'text') return n.value || '';
+                if (n.type !== 'element') return '';
+                if (n.name === 'text:s') return ' '.repeat(Math.max(1, Number((n.attrs && n.attrs['text:c']) || 1) || 1));
+                if (n.name === 'text:tab' || n.name === 'text:line-break') return ' ';
+                return (n.children || []).map(walk).join('');
+            };
+            return walk(el).replace(/\s+/g, ' ').trim();
+        }
+
+        /**
+         * The paragraphs of a `text:table-of-content`'s `text:index-body`, in
+         * document order (an index title's too), one IR paragraph each; an
+         * empty entry skipped; the entry links are not kept.
+         */
+        function mapToc(el) {
+            const out = [];
+            const body = (el.children || []).find((c) => c && c.type === 'element' && c.name === 'text:index-body');
+            const walk = (n) => {
+                for (const c of (n && n.children) || []) {
+                    if (!c || c.type !== 'element') continue;
+                    if (c.name === 'text:p' || c.name === 'text:h') {
+                        const t = entryText(c);
+                        if (t) out.push(oconvIr.node('paragraph', {}, [oconvIr.node('run', { text: t })]));
+                    } else if (c.name === 'text:index-title') {
+                        walk(c);
+                    }
+                }
+            };
+            walk(body);
+            return out;
+        }
+
         /** Map one odt body/cell/item node to an IR block, or `null` when dropped. */
         function mapBlock(node, losses) {
             if (!node) return null;
@@ -639,12 +956,17 @@ export const oconvOdtToIr = {
          * Convert an `odt.read(bytes)` result into `oconv-ir/v1`.
          *
          * @param {object} readResult the value of `odt.read(bytes)`
-         * @param {object} [_opts] reserved, unused (mirrors `oconvDocxToIr`'s
-         *   factory shape for a future shared caller)
+         * @param {{include?: string[]}} [opts] `include` — the opt-in parts
+         *   read back: `'toc'` (a table of contents' entries as paragraphs,
+         *   see "Table of contents"); an array of distinct known names, else
+         *   `oconv: bad odt include`; absent or `[]`, every result unchanged
          * @returns {{ir: object, losses: {code:string, detail:string}[]}}
+         * @throws {Error} `oconv: bad odt include`
          */
-        function odtToIr(readResult, _opts) {
+        function odtToIr(readResult, opts) {
+            const include = includeSet(opts && opts.include);
             const losses = [];
+            if (include.size) includeOf.set(losses, include);
             if (readResult && readResult.package) packageOf.set(losses, readResult.package);
             const autoStyles = readResult && readResult.autoStyles && readResult.autoStyles.styles;
             if (Array.isArray(autoStyles)) {
@@ -654,6 +976,8 @@ export const oconvOdtToIr = {
                 }
                 autoParentOf.set(losses, parents);
             }
+            const levels = outlineLevels(readResult && readResult.styles);
+            if (levels) outlineOf.set(losses, { levels, counters: [], listDepth: 0 });
             const body = (readResult && readResult.body) || [];
             return { ir: oconvIr.doc(mapBlocks(body, losses)), losses };
         }

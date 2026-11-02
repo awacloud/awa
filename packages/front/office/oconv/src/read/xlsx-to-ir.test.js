@@ -8,7 +8,7 @@ import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 import { modules as ooxmlModules, fw_require as ooxmlFwRequire } from '@awacloud/ooxml';
 import { oconvIr } from '../ir/ir.js';
 import { oconvXlsxToIr } from './xlsx-to-ir.js';
-import { normalizeGrid } from './sheet-grid.js';
+import { normalizeGrid, paddedSize, sparseLines } from './sheet-grid.js';
 
 // Same pattern as docx-to-ir.test.js (W1 precedent): hand-register the
 // needed descriptors on a local `ModuleRuntime` rather than going through
@@ -260,6 +260,62 @@ describe('oconvXlsxToIr — sheet-grid mirror drift', () => {
             const actual = table ? tableTexts(table) : [];
 
             expect(actual).toEqual(expected);
+        }
+    });
+});
+
+describe('oconvXlsxToIr — cellBudget: a sheet past the budget is not padded (T46, D9)', () => {
+    const str = (value) => ({ type: 'cell', value, t: 's' });
+    /** Three rows; the second holds a value in column A and in column XFD (16,384). */
+    function wideWorkbook() {
+        const wide = Array.from({ length: 16384 }, (_, c) => (c === 0 ? str('x') : c === 16383 ? str('y') : null));
+        return { workbook: { sheets: [{ name: 'Wide', rows: [[str('a'), str('b')], wide, [str('c')]] }] } };
+    }
+    const count = (n) => 1 + (n.children || []).reduce((s, c) => s + count(c), 0);
+
+    test('past the budget: one paragraph per value with its address, no table, the loss', () => {
+        const { ir, losses } = xlsxToIr(wideWorkbook(), { cellBudget: 1000 });
+        expect(validate(ir).ok).toBe(true);
+        expect(ir.children.some((n) => n.kind === 'table')).toBe(false);
+        const lines = ir.children.filter((n) => n.kind === 'paragraph').map((p) => p.children[0].text);
+        expect(lines).toEqual(['A1: a', 'B1: b', 'A2: x', 'XFD2: y', 'A3: c']);
+        expect(losses).toEqual([{ code: 'sheet/sparse-form', detail: 'Wide: 49152 padded cells, 5 kept' }]);
+        expect(count(ir)).toBeLessThan(30);
+    });
+
+    test('under csv the rows are written unpadded', () => {
+        const { ir, losses } = xlsxToIr(wideWorkbook(), { cellBudget: 1000, sheets: 'csv' });
+        const block = ir.children.find((n) => n.kind === 'codeBlock');
+        expect(block.text).toBe('a,b\nx' + ','.repeat(16383) + 'y\nc');
+        expect(losses.map((l) => l.code)).toEqual(['sheet/sparse-form']);
+    });
+
+    test('within the budget, or without one, the padded table as before', () => {
+        for (const opts of [undefined, { cellBudget: 49152 }]) {
+            const { ir, losses } = xlsxToIr(wideWorkbook(), opts);
+            const table = ir.children.find((n) => n.kind === 'table');
+            expect(table.children.map((r) => r.children.length)).toEqual([16384, 16384, 16384]);
+            expect(losses).toEqual([]);
+        }
+    });
+
+    test('a bad budget is refused', () => {
+        for (const cellBudget of [0, -1, 1.5, '10', null]) {
+            expect(() => xlsxToIr(wideWorkbook(), { cellBudget })).toThrow('oconv: bad cell budget');
+        }
+    });
+
+    test('the factory-internal size and sparse lines agree with ./sheet-grid.js', () => {
+        const shapes = [[['a']], [['a', 'b'], ['', '']], [['', 'x', ''], ['', 'y', ''], ['', '', '']], [['a'], ['', '', 'c'], ['d', '']]];
+        for (const shape of shapes) {
+            const rows = shape.map((r) => r.map((text) => (text ? str(text) : { type: 'cell', value: null, t: 'n' })));
+            const size = paddedSize(shape);
+            const sheet = (budget) => xlsxToIr({ workbook: { sheets: [{ name: 'G', rows }] } }, { cellBudget: budget });
+            expect(sheet(size).ir.children.some((n) => n.kind === 'table')).toBe(true);
+            if (size > 1) {
+                const lines = sheet(size - 1).ir.children.filter((n) => n.kind === 'paragraph').map((p) => p.children[0].text);
+                expect(lines).toEqual(sparseLines(shape));
+            }
         }
     });
 });

@@ -1,0 +1,3251 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "odfvalidator-tracked-changes",
+    "version": "odfvalidator@0.13.0",
+    "source": "https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff"
+  },
+  "oracle": {
+    "image": "awa-oracle-odfvalidator:0.13.0",
+    "imageId": "sha256:5ff3e30dc5452962a772e9b5669844dfd2d0925ab5d518eec160ba7b4bbd2de0",
+    "version": "odfvalidator v0.13.0\nb926a6134a2fee782076500dfc02c47c2d651cff"
+  },
+  "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 11 (0 written, 11 round trips)",
+  "documents": [
+    {
+      "file": "tracked-changes--lo-odfexport--redlineTextFrame.odt",
+      "kind": "round-trip",
+      "sha256": "df3f87c39fccbfd514b1cb130483f38de2524f5485b88b24b9d844abe4660f6f",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4060,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4907,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 5491,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6453,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1858,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2059,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--redlineTextFrame.source.odt",
+      "kind": "source",
+      "sha256": "3ce0420b863a0a3b07071b5c9bb49db0c5f3fe7fa2d7785a8483018dc4377f76",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 5278,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6145,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6729,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 7691,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 15,
+          "column": 93,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 18,
+          "column": 93,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--tdf107292.odt",
+      "kind": "round-trip",
+      "sha256": "accc8095eea41edf2165e74423cf881022925d4b68ed995a088bf4679048e8ad",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 2350,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 3236,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6134,
+          "text": "unexpected attribute \"loext:num-list-format\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 10182,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1537,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1726,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--tdf107292.source.odt",
+      "kind": "source",
+      "sha256": "24369c799445fcaea49e191fa6a0cf031bd334712e80799e883bbe119ef215b8",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 3637,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4523,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 7441,
+          "text": "unexpected attribute \"loext:num-list-format\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 11489,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3010,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3199,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--tdf115815.odt",
+      "kind": "round-trip",
+      "sha256": "9a8f20a552fa46c85ea886037a9fe79ddf790f25850061ab7f211dcb7fec700e",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 2372,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 3275,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 10399,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1686,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1849,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2347,
+          "text": "unexpected attribute \"loext:hyphenation-no-caps\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2460,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3722,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6900,
+          "text": "unexpected attribute \"loext:resolved\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7274,
+          "text": "unexpected attribute \"loext:resolved\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7633,
+          "text": "unexpected attribute \"loext:resolved\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7992,
+          "text": "unexpected attribute \"loext:resolved\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--tdf115815.source.odt",
+      "kind": "source",
+      "sha256": "045d7bcfdfdd9231942795efa45dc1c9c058da9c3585daa32917307ace9abfa5",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 3669,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4572,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 11786,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3026,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3189,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3687,
+          "text": "unexpected attribute \"loext:hyphenation-no-caps\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3800,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 5062,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8342,
+          "text": "unexpected attribute \"loext:resolved\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8716,
+          "text": "unexpected attribute \"loext:resolved\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 9295,
+          "text": "unexpected attribute \"loext:resolved\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 9874,
+          "text": "unexpected attribute \"loext:resolved\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--tdf152710.odt",
+      "kind": "round-trip",
+      "sha256": "f7107a54daf9279193e4d9ade8868e01c43b0a951413d76f05f08d86ef1765d9",
+      "errors": [
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Pictures/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/images/Bitmaps/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/toolbar/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Thumbnails/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/floater/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/images/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/menubar/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/accelerator/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/popupmenu/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/statusbar/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/progressbar/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "mimetype",
+          "line": null,
+          "column": null,
+          "text": "For more information on ODF package conformance see https://docs.oasis-open.org/office/OpenDocument/v1.4/OpenDocument-v1.4-part2-packages.html#a_2_2_Package_Conformance"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 7089,
+          "text": "element \"text:outline-style\" is missing \"name\" attribute"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 9162,
+          "text": "unexpected attribute \"style:layout-grid-square-mode\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 9953,
+          "text": "unexpected attribute \"style:layout-grid-snap-to-characters\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 5985,
+          "text": "attribute \"fo:clip\" has a bad value. Possible values are: auto, and more"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 9948,
+          "text": "element \"text:changed-region\" is missing \"id\" attribute"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 22719,
+          "text": "\"ct156578832\" is referenced by an IDREF, but not defined."
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--tdf152710.source.odt",
+      "kind": "source",
+      "sha256": "977ed669557df35973fac702393034abfa7727b09098b40b5755b1ee38f871b0",
+      "errors": [
+        {
+          "severity": "Warning",
+          "part": "mimetype",
+          "line": null,
+          "column": null,
+          "text": "The file 'mimetype' is not the first zip entry in the ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Thumbnails/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Pictures/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/images/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/accelerator/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/images/Bitmaps/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/toolbar/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/floater/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/menubar/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/popupmenu/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/progressbar/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Configurations2/statusbar/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The file 'Pictures/100002010000032800000273CCB5A04C.png' shall not be listed in the 'META-INF/manifest.xml' file as it does not exist in the ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The file 'Pictures/10000201000003280000022273FC89F8.png' shall not be listed in the 'META-INF/manifest.xml' file as it does not exist in the ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The file 'Pictures/1000000000000320000002588DF067D3.png' shall not be listed in the 'META-INF/manifest.xml' file as it does not exist in the ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The file 'Thumbnails/thumbnail.png' shall not be listed in the 'META-INF/manifest.xml' file as it does not exist in the ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The file 'Pictures/10000000000000CC000004004480A2A4.png' shall not be listed in the 'META-INF/manifest.xml' file as it does not exist in the ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The file 'Pictures/100000000000032600000174FBA9A86F.png' shall not be listed in the 'META-INF/manifest.xml' file as it does not exist in the ODF package 'file:///in/tracked-changes--lo-odfexport--tdf152710.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "mimetype",
+          "line": null,
+          "column": null,
+          "text": "For more information on ODF package conformance see https://docs.oasis-open.org/office/v1.0/OpenDocument-v1.0-os.pdf"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 9758,
+          "text": "tag name \"style:default-page-layout\" is not allowed. Possible tag names are: <bibliography-configuration>,<boolean-style>,<currency-style>,<date-style>,<default-style>,<fill-image>,<gradient>,<hatch>,<linearGradient>,<list-style>,<marker>,<notes-configuration>,<number-style>,<opacity>,<percentage-style>,<presentation-page-layout>,<radialGradient>,<stroke-dash>,<style>,<text-style>,<time-style>"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 9797,
+          "text": "unexpected attribute \"text:use-soft-page-breaks\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 19215,
+          "text": "tag name \"text:soft-page-break\" is not allowed. Possible tag names are: <a>,<alphabetical-index-mark-end>,<alphabetical-index-mark-start>,<alphabetical-index-mark>,<annotation>,<author-initials>,<author-name>,<bibliography-mark>,<bookmark-end>,<bookmark-start>,<bookmark>,<caption>,<change-end>,<change-start>,<change>,<chapter>,<circle>,<conditional-text>,<connector>,<control>,<creation-date>,<creation-time>,<creator>,<custom-shape>,<database-display>,<database-name>,<database-next>,<database-row-number>,<database-row-select>,<date-time>,<date>,<dde-connection>,<description>,<editing-cycles>,<editing-duration>,<ellipse>,<execute-macro>,<expression>,<file-name>,<footer>,<frame>,<g>,<header>,<hidden-paragraph>,<hidden-text>,<initial-creator>,<keywords>,<line-break>,<line>,<measure>,<modification-date>,<modification-time>,<note-ref>,<note>,<page-continuation>,<page-number>,<page-thumbnail>,<page-variable-get>,<page-variable-set>,<path>,<placeholder>,<polygon>,<polyline>,<print-date>,<print-time>,<printed-by>,<rect>,<reference-mark-end>,<reference-mark-start>,<reference-mark>,<regular-polygon>,<ruby>,<s>,<scene>,<script>,<sender-city>,<sender-company>,<sender-country>,<sender-email>,<sender-fax>,<sender-firstname>,<sender-initials>,<sender-lastname>,<sender-phone-private>,<sender-phone-work>,<sender-position>,<sender-postal-code>,<sender-state-or-province>,<sender-street>,<sender-title>,<sequence-ref>,<sequence>,<sheet-name>,<span>,<subject>,<tab>,<table-formula>,<template-name>,<text-input>,<time>,<title>,<toc-mark-end>,<toc-mark-start>,<toc-mark>,<user-defined>,<user-field-get>,<user-field-input>,<user-index-mark-end>,<user-index-mark-start>,<user-index-mark>,<variable-get>,<variable-input>,<variable-set>, and more"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--whitespace.odt",
+      "kind": "round-trip",
+      "sha256": "612b45dc15037e9414fc4e01ca277deb2445fc60abcaa0b847a3fcb95df4627b",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 22,
+          "column": 144,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 25,
+          "column": 135,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 29,
+          "column": 164,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1640,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1829,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2018,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-odfexport--whitespace.source.odt",
+      "kind": "source",
+      "sha256": "7ffa23d8fceae14d1497084a9c67c6403171607558acdfb64c525f15cc51dd0a",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 31,
+          "column": 144,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 35,
+          "column": 135,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 41,
+          "column": 164,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 14,
+          "column": 90,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 17,
+          "column": 90,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 20,
+          "column": 90,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--cp1000015.odt",
+      "kind": "round-trip",
+      "sha256": "f24dd4cb82f6ceb7857b522a2bb02d568ce18f3253240c84308680674bd0dd98",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--cp1000015.source.odt",
+      "kind": "source",
+      "sha256": "09e5b173ae5d30b499f803457ae3bb827d8d42a1157996c507c4c9688097cffd",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4584,
+          "text": "unexpected attribute \"style:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 5353,
+          "text": "unexpected attribute \"style:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 5822,
+          "text": "unexpected attribute \"style:contextual-spacing\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--ooo96040-2.odt",
+      "kind": "round-trip",
+      "sha256": "43024fcc116675ac8ab09bcc22b49023e3f7985a14191212ebb8fdc004f3254b",
+      "errors": [
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Pictures/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Versions/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Thumbnails/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "mimetype",
+          "line": null,
+          "column": null,
+          "text": "For more information on ODF package conformance see https://docs.oasis-open.org/office/OpenDocument/v1.4/OpenDocument-v1.4-part2-packages.html#a_2_2_Package_Conformance"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 54615,
+          "text": "attribute \"fo:hyphenation-push-char-count\" has a bad value: \"0\" does not satisfy the \"positiveInteger\" type"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 55451,
+          "text": "attribute \"fo:hyphenation-push-char-count\" has a bad value: \"0\" does not satisfy the \"positiveInteger\" type"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 56064,
+          "text": "attribute \"fo:hyphenation-push-char-count\" has a bad value: \"0\" does not satisfy the \"positiveInteger\" type"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 56607,
+          "text": "attribute \"fo:hyphenation-push-char-count\" has a bad value: \"0\" does not satisfy the \"positiveInteger\" type"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 57925,
+          "text": "attribute \"fo:hyphenation-push-char-count\" has a bad value: \"0\" does not satisfy the \"positiveInteger\" type"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 72433,
+          "text": "element \"text:outline-style\" is missing \"name\" attribute"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 113222,
+          "text": "unexpected attribute \"text:enable-numbering\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 114101,
+          "text": "unexpected attribute \"text:enable-numbering\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 114358,
+          "text": "unexpected attribute \"text:enable-numbering\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 115234,
+          "text": "unexpected attribute \"text:enable-numbering\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 124490,
+          "text": "attribute \"fo:clip\" has a bad value. Possible values are: auto, and more"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 124982,
+          "text": "attribute \"fo:clip\" has a bad value. Possible values are: auto, and more"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 125625,
+          "text": "attribute \"fo:clip\" has a bad value. Possible values are: auto, and more"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 126322,
+          "text": "attribute \"fo:clip\" has a bad value. Possible values are: auto, and more"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 140866,
+          "text": "element \"form:form\" is missing \"type\" attribute"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 141675,
+          "text": "element \"form:listbox\" is missing \"id\" attribute"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 145261,
+          "text": "element \"text:changed-region\" is missing \"id\" attribute"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 293110,
+          "text": "\"control2\" is referenced by an IDREF, but not defined."
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--ooo96040-2.source.odt",
+      "kind": "source",
+      "sha256": "11f12cf53ff37ec929c58ac232e441ac50305dd7f798fcbe4919bb080ac5af7f",
+      "errors": [
+        {
+          "severity": "Warning",
+          "part": "mimetype",
+          "line": null,
+          "column": null,
+          "text": "The file 'mimetype' is not the first zip entry in the ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Pictures/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Versions/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.source.odt'!"
+        },
+        {
+          "severity": "Warning",
+          "part": "META-INF/manifest.xml",
+          "line": null,
+          "column": null,
+          "text": "The directory 'Thumbnails/' is not a sub-document and should not be listed in the 'META-INF/manifest.xml' file of ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "mimetype",
+          "line": null,
+          "column": null,
+          "text": "There shall be no extra field for the 'mimetype' zip entry of ODF package 'file:///in/tracked-changes--lo-ooxmlexport--ooo96040-2.source.odt'!"
+        },
+        {
+          "severity": "Error",
+          "part": "mimetype",
+          "line": null,
+          "column": null,
+          "text": "For more information on ODF package conformance see https://docs.oasis-open.org/office/v1.1/OpenDocument-v1.1.html#Ref_Package"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--sectionprot2.odt",
+      "kind": "round-trip",
+      "sha256": "04eb1c361ca8037e9400b649035f750edaa904773067fc5134dc1f3713130a30",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 3483,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4611,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 5434,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6153,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--sectionprot2.source.odt",
+      "kind": "source",
+      "sha256": "6682348bbc6675c3ec6e99eb679de3fbc506ad61fd95b9b3bbebbd7ad0a2721e",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4750,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 5898,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6741,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 7470,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf121597.odt",
+      "kind": "round-trip",
+      "sha256": "7308ec0d6e15d809990bde1db7384c4b3b211bd3488f80fe5870ae73bde679f1",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 3934,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4791,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 5462,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6658,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1678,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 1841,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2030,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2219,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2332,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf121597.source.odt",
+      "kind": "source",
+      "sha256": "b57f7ddcf8a7991cff4d3ab29bbe34b1bf18bb484c8449a6d6ab72f252117258",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 5221,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6098,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6779,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 7995,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3151,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3314,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3503,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3692,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3805,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf136929_framesOfParagraph.odt",
+      "kind": "round-trip",
+      "sha256": "8bdfcac4d619184d8dcc04184e7142f37df9943768eb2e60ff2a229b820ee18c",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 6215,
+          "text": "unexpected attribute \"loext:hyphenation-no-caps\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 7081,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 7943,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 8836,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 9940,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 10568,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 11351,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 13050,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 13920,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 14998,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 16544,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 17445,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 18007,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 18959,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 19551,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 20395,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 21456,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 22092,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 22535,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 23029,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 23984,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 24767,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 25528,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 25946,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 28059,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 28867,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 29417,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 30174,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 31857,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 33213,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 33765,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 34329,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 34999,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 35930,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 36351,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 37049,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 37626,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 38310,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 38871,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 39758,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 40362,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 40740,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 41291,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 41633,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 42014,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 43076,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 43408,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 44074,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 44578,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 45539,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 46168,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 46779,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 47414,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 48304,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 48680,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 49068,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 49699,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 51369,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 51669,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 52010,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 53195,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 53674,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 54031,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 54483,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 55167,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 55769,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 56486,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 56870,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 57447,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 59729,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 60279,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 60758,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 61200,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 61561,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 61995,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 68047,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 148244,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 148491,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 148653,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 148955,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 149069,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 149183,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 149722,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 149836,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 151102,
+          "text": "unexpected attribute \"draw:fill\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 159149,
+          "text": "unexpected attribute \"draw:fill\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 161198,
+          "text": "Probably namespace URI of tag \"footer-first\" is wrong (correct one is \"urn:oasis:names:tc:opendocument:xmlns:style:1.0\")"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 4590,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 4836,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 4997,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 5541,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 5763,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6024,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6191,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6358,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6526,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6749,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7026,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7139,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7252,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7365,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7901,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8014,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8160,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8306,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 12872,
+          "text": "unexpected attribute \"loext:mime-type\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf136929_framesOfParagraph.source.odt",
+      "kind": "source",
+      "sha256": "1391a952225dcc63a52e64600b3353dede76ce63174f137efead7bd6e045c1ba",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 7527,
+          "text": "unexpected attribute \"loext:hyphenation-no-caps\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 8403,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 9295,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 10198,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 11312,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 11950,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 12743,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 14462,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 15342,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 16430,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 17986,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 18897,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 19469,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 20421,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 21023,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 21877,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 22948,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 23594,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 24037,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 24531,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 25486,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 26269,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 27040,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 27458,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 29591,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 30409,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 30959,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 31726,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 33429,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 34785,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 35337,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 35911,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 36591,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 37532,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 37953,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 38661,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 39248,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 39942,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 40513,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 41400,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 42014,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 42392,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 42953,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 43295,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 43676,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 44748,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 45080,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 45756,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 46270,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 47241,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 47880,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 48501,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 49146,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 50046,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 50422,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 50810,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 51451,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 53151,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 53451,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 53792,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 54977,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 55456,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 55813,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 56265,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 56959,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 57571,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 58298,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 58682,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 59269,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 61571,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 62131,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 62610,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 63052,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 63413,
+          "text": "unexpected attribute \"loext:contextual-spacing\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 63857,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 70039,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 150376,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 150623,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 150785,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 151087,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 151201,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 151315,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 151854,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 151968,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 153234,
+          "text": "unexpected attribute \"draw:fill\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 161281,
+          "text": "unexpected attribute \"draw:fill\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 163330,
+          "text": "tag name \"loext:footer-first\" is not allowed. Possible tag names are: <a>,<animate>,<animateColor>,<animateMotion>,<animateTransform>,<audio>,<caption>,<circle>,<command>,<connector>,<control>,<custom-shape>,<ellipse>,<forms>,<frame>,<g>,<iterate>,<layer-set>,<line>,<measure>,<notes>,<page-thumbnail>,<par>,<path>,<polygon>,<polyline>,<rect>,<regular-polygon>,<scene>,<seq>,<set>,<transitionFilter>"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 5993,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6239,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6400,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 6944,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7166,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7427,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7594,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7761,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7929,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8152,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8429,
+          "text": "unexpected attribute \"officeooo:paragraph-rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8542,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8655,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 8768,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 9304,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 9417,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 9563,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 9709,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 14373,
+          "text": "unexpected attribute \"loext:mime-type\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf170908_delText_sdt.odt",
+      "kind": "round-trip",
+      "sha256": "c0d5f3de925365dc7ea9b5dd9b84a5b187270c7b9bbf9129150c4f03c59dcd52",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 2808,
+          "text": "unexpected attribute \"loext:tab-stop-distance\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 3681,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 8639,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 31024,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 33320,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 33840,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 39905,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 45954,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 57763,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 58739,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 59878,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 60838,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 61853,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 63384,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 66172,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 70276,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 70472,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 74677,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 74981,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 75315,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 75851,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 79774,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 80109,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 80530,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 82793,
+          "text": "unexpected attribute \"loext:num-list-format\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 84627,
+          "text": "unexpected attribute \"loext:num-list-format\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 87432,
+          "text": "unexpected attribute \"loext:num-list-format\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 90665,
+          "text": "tag name \"loext:theme\" is not allowed. Possible tag names are: <bibliography-configuration>,<boolean-style>,<currency-style>,<date-style>,<default-page-layout>,<default-style>,<fill-image>,<gradient>,<hatch>,<linearGradient>,<list-style>,<marker>,<notes-configuration>,<num-list-format>,<number-style>,<opacity>,<percentage-style>,<presentation-page-layout>,<radialGradient>,<stroke-dash>,<style>,<table-template>,<text-style>,<time-style>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 92097,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 93046,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 93966,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 94887,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 95808,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 3473,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf170908_delText_sdt.source.odt",
+      "kind": "source",
+      "sha256": "1d626883f4398e9dc4a22f442b235e56448e28be22a6142aad3c3684ae0a5d11",
+      "errors": [
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4085,
+          "text": "unexpected attribute \"loext:tab-stop-distance\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 4958,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 9926,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 32311,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 34607,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 35127,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 41192,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 47241,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 59050,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 60026,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 61165,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 62125,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 63140,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 64671,
+          "text": "unexpected attribute \"loext:hyphenation-keep-type\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 67489,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 71593,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 71789,
+          "text": "tag name \"loext:graphic-properties\" is not allowed. Possible tag names are: <map>,<paragraph-properties>,<text-properties>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 75994,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 76298,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 76632,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 77168,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 81091,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 81426,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 81847,
+          "text": "unexpected attribute \"loext:opacity\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 84110,
+          "text": "unexpected attribute \"loext:num-list-format\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 85944,
+          "text": "unexpected attribute \"loext:num-list-format\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 88749,
+          "text": "unexpected attribute \"loext:num-list-format\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 91982,
+          "text": "tag name \"loext:theme\" is not allowed. Possible tag names are: <bibliography-configuration>,<boolean-style>,<currency-style>,<date-style>,<default-page-layout>,<default-style>,<fill-image>,<gradient>,<hatch>,<linearGradient>,<list-style>,<marker>,<notes-configuration>,<num-list-format>,<number-style>,<opacity>,<percentage-style>,<presentation-page-layout>,<radialGradient>,<stroke-dash>,<style>,<table-template>,<text-style>,<time-style>"
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 93414,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 94363,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 95283,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 96204,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "styles.xml",
+          "line": 2,
+          "column": 97125,
+          "text": "unexpected attribute \"loext:margin-gutter\""
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2183,
+          "text": "at least one of the following attributes is required for element \"script:event-listener\": macro-name,type"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2569,
+          "text": "at least one of the following attributes is required for element \"script:event-listener\": macro-name,type"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 2864,
+          "text": "at least one of the following attributes is required for element \"script:event-listener\": macro-name,type"
+        },
+        {
+          "severity": "Error",
+          "part": "content.xml",
+          "line": 2,
+          "column": 7148,
+          "text": "unexpected attribute \"officeooo:rsid\""
+        }
+      ]
+    }
+  ],
+  "date": "2026-10-28",
+  "commit": "c9cecc9f09185e553dc43e6be642194a82f2b252"
+}

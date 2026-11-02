@@ -274,7 +274,20 @@ export const xlsx = {
 
         // --- Write ---
 
-        function write(workbook) {
+        /**
+         * Write a workbook to `.xlsx` bytes.
+         *
+         * @param {object} workbook — `{ sheets, … }`
+         * @param {object} [opts] — `preserveInput` (default `false`): `true`
+         *        writes from a structured clone of `workbook`, so the given
+         *        model is left exactly as it was (the extensions' dehydrate
+         *        hooks and the writer's own patches — the authors of threaded
+         *        comments added to `persons` — reach the clone); the bytes are
+         *        the same. Another value throws
+         *        `ContractError('xlsx/invalid-preserve-input')`.
+         * @returns {Uint8Array}
+         */
+        function write(workbook, opts) {
             if (workbook == null || typeof workbook !== 'object'
                 || Array.isArray(workbook)) {
                 throw new ContractError('xlsx/invalid-workbook',
@@ -286,6 +299,13 @@ export const xlsx = {
                     'xlsx.write: workbook.sheets must be an array',
                     { context: { path: 'sheets', received: typeof workbook.sheets } });
             }
+            opts = opts || {};
+            if (opts.preserveInput !== undefined && typeof opts.preserveInput !== 'boolean') {
+                throw new ContractError('xlsx/invalid-preserve-input',
+                    'xlsx.write: opts.preserveInput must be true or false',
+                    { context: { received: opts.preserveInput === null ? 'null' : typeof opts.preserveInput } });
+            }
+            if (opts.preserveInput) workbook = structuredClone(workbook);
             if (walker.hasExtensions) walker.applyDehydrate(workbook);
             const pkg = opc.empty();
             const sheets = workbook.sheets || [];
@@ -870,7 +890,7 @@ export const xlsx = {
          *        (`maxSheets`, `maxRowsPerSheet`, `maxCellsPerSheet`) and
          *        the archive limits below.
          * @param {number} [readOpts.maxParts] archive limit forwarded to
-         *        `opc.read` (default 1024 entries; `0` disables).
+         *        `opc.read` (default 8192 entries; `0` disables).
          * @param {number} [readOpts.maxUncompressed] archive limit forwarded
          *        to `opc.read` (default 256 MiB in total; `0` disables).
          * @param {number} [readOpts.maxRatio] archive limit forwarded to

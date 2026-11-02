@@ -1,7 +1,7 @@
 ---
 module: docxLargeBundle
 category: bundles
-dependencies: [docx, wmlRunFormatting, wmlParagraphFormatting, wmlTableProperties, wmlNumberingDetails, wmlSettings, wmlFields, wmlTrackedChanges, mathAdvanced, dmlWpPositioning, dmlEffects, dmlFillsAdvanced]
+dependencies: [docx, wmlRunFormatting, wmlParagraphFormatting, wmlTableProperties, wmlNumberingDetails, wmlSettings, wmlFields, wmlTrackedChanges, mathAdvanced, dmlWpPositioning, dmlEffects, dmlFillsAdvanced, dmlWpDrawing]
 returns: object
 worker-safe: true
 status: complete
@@ -9,19 +9,25 @@ status: complete
 
 # docxLargeBundle
 
-> Pre-wired bundle: docx core + P0 + P1 extras (~95% real-world docx coverage).
+> Pre-wired bundle: docx core + five extras that type a read (run, paragraph and table properties, settings, drawings) + toolkits.
 
-**Module** `docxLargeBundle` | **Source** `packages/front/office/ooxml/src/bundles/docx-large.js` | **Deps** `docx` + 11 extras | **Worker-safe** yes
+**Module** `docxLargeBundle` | **Source** `packages/front/office/ooxml/src/bundles/docx-large.js` | **Deps** `docx` + 12 extras | **Worker-safe** yes
 
-Returns the core `docx` surface enriched with the **P0 + P1 opt-in extras** that matter for WordprocessingML. Use this when you want typed access to most modern docx features without paying for the full ECMA-376 long tail.
+Returns the core `docx` surface enriched with the **P0 + P1 opt-in extras** that matter for WordprocessingML: five of them type a read (run, paragraph and table properties, settings, drawings), the others are toolkits you call on the raw nodes the read keeps.
 
 ## Included
 
+**Type a read** — their walker hooks run on every `read()` (hydrate) and `write()` (dehydrate):
+
+- [`dmlWpDrawing`](../extra/dml-wp-drawing.md) — every drawing's DrawingML typed (`frame`, `layout`, `picture`, `shape`, `group`, `canvas`), edits written into its kept source
 - [`wmlRunFormatting`](../extra/wml-run-formatting.md) — `<w:rPr>` (caps, kern, position, lang, …)
 - [`wmlParagraphFormatting`](../extra/wml-paragraph-formatting.md) — `<w:pPr>` (tabs, framePr, kinsoku, outlineLvl, …)
 - [`wmlTableProperties`](../extra/wml-table-properties.md) — `tblPr` / `trPr` / `tcPr`
-- [`wmlNumberingDetails`](../extra/wml-numbering-details.md) — advanced numbering.xml
 - [`wmlSettings`](../extra/wml-settings.md) — advanced settings.xml
+
+**Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
+
+- [`wmlNumberingDetails`](../extra/wml-numbering-details.md) — advanced numbering.xml
 - [`wmlFields`](../extra/wml-fields.md) — field instruction tokenizer
 - [`wmlTrackedChanges`](../extra/wml-tracked-changes.md) — moveFrom / rPrChange / cellIns / …
 - [`mathAdvanced`](../extra/math-advanced.md) — eqArr / groupChr / mathPr / phant

@@ -55,7 +55,7 @@ add new codes; removals are documented in `CHANGELOG.md`.
 |------|-------|---------|
 | `opc/invalid-input` | ContractError | `bytes` is not a `Uint8Array`, or `pkg` is not an object |
 | `opc/invalid-zip` | ParseError | `unzipSync` failed (`cause` preserved) |
-| `opc/zip-bomb` | ParseError | `maxParts` / `maxUncompressed` / `maxRatio` exceeded — see `context.limit` |
+| `opc/zip-bomb` | ParseError | `maxParts` (default 8,192) / `maxUncompressed` / `maxRatio` exceeded — see `context.limit` |
 | `opc/xml-too-deep` | ParseError | an XML part nests elements deeper than `maxDepth` (default 1000; `0` disables) — `context.limit` (`'maxDepth'`), `context.max`, `context.partName` |
 | `opc/missing-content-types` | ParseError | archive has no `[Content_Types].xml` |
 | `opc/invalid-content-types` | ParseError | `[Content_Types].xml` failed to parse |
@@ -65,6 +65,8 @@ add new codes; removals are documented in `CHANGELOG.md`.
 | `opc/render-content-types` | RenderError | serializing `[Content_Types].xml` failed |
 | `opc/render-rels` | RenderError | serializing a `.rels` part failed |
 | `opc/zip-failed` | RenderError | `zipSync` failed (`cause` preserved) |
+| `opc/core-properties-invalid` | ParseError | `opcCoreProperties.read`: the core-properties part is not XML or its root is not `coreProperties` (`context.partName`, `cause` when the XML failed to parse) |
+| `opc/extended-properties-invalid` | ParseError | `opcExtendedProperties.read`: the extended-properties part is not XML or its root is not `Properties` (`context.partName`, `cause` when the XML failed to parse) |
 
 ### `docx/*` — WordprocessingML
 
@@ -72,6 +74,12 @@ add new codes; removals are documented in `CHANGELOG.md`.
 |------|-------|---------|
 | `docx/invalid-document` | ContractError | `docx.write(doc)` received a non-object |
 | `docx/invalid-body` | ContractError | `doc.body` is not an array |
+| `docx/invalid-preserve-input` | ContractError | `docx.write`: `opts.preserveInput` is neither `true` nor `false` |
+| `docx/invalid-dangling-numbering` | ContractError | `docx.write`: `opts.danglingNumbering` is neither `'throw'` nor `'keep'` |
+| `docx/invalid-carry` | ContractError | `docx.write`: `opts.carry` is not the `{ package, unmodelledParts }` envelope `docx.read` returns (`package.parts`, `package.rels`, `package.contentTypes` objects, `unmodelledParts` an array) |
+| `docx/invalid-alternate-content` | ContractError | `docx.read`: `opts.alternateContent` is neither `'fallback'` nor `'keep'` |
+| `docx/invalid-extensions` | ContractError | `docx.read`: `opts.extensions` is neither `'drop'` nor `'keep'` |
+| `docx/invalid-cleanup` | ContractError | `docx.write`: `opts.cleanup` is not an array of distinct names among the known cleanups (`'emptyProperties'`) |
 | `docx/hyperlink-missing-rid` | ContractError | `docx.write`: a hyperlink with a non-empty `target`, in the body or any story part (header, footer, footnotes, endnotes, comments), has neither an `rId` nor an `anchor`, so its target would be lost (`context.target`) |
 | `docx/hyperlink-unresolved-rid` | ContractError | `docx.write`: a hyperlink's `rId` has no relationship in the table written for its part (`context.rId`, `context.story`, `context.key?`) |
 | `docx/numbering-missing` | ContractError | `docx.write`: a `pPr.numPr` (body, any story part, or a style / the docDefaults of `opts.styles`) references a non-zero `numId` but `opts.numbering` is missing (`context.numId`, `context.story`, plus `context.key` / `context.styleId`) |
@@ -99,6 +107,7 @@ add new codes; removals are documented in `CHANGELOG.md`.
 |------|-------|---------|
 | `xlsx/invalid-workbook` | ContractError | `xlsx.write(wb)` received a non-object |
 | `xlsx/invalid-sheets` | ContractError | `workbook.sheets` is not an array |
+| `xlsx/invalid-preserve-input` | ContractError | `xlsx.write`: `opts.preserveInput` is neither `true` nor `false` |
 | `xlsx/no-random-source` | RenderError | `generateId` (and `xlsx.write` for a threaded comment or person without an `id`): `crypto.getRandomValues` is unavailable; pass the comment / person id explicitly |
 | `xlsx/missing-officeDocument-rel` | ParseError | package has no officeDocument relationship |
 | `xlsx/missing-workbook-part` | ParseError | declared workbook XML missing from archive |
@@ -124,6 +133,7 @@ add new codes; removals are documented in `CHANGELOG.md`.
 |------|-------|---------|
 | `pptx/invalid-presentation` | ContractError | `pptx.write(pres)` received a non-object |
 | `pptx/invalid-slides` | ContractError | `presentation.slides` is not an array |
+| `pptx/invalid-preserve-input` | ContractError | `pptx.write`: `opts.preserveInput` is neither `true` nor `false` |
 | `pptx/missing-officeDocument-rel` | ParseError | package has no officeDocument relationship |
 | `pptx/missing-presentation-part` | ParseError | declared presentation XML missing from archive |
 | `pptx/invalid-presentation-xml` | ParseError | presentation XML failed to parse (`cause`) |
@@ -154,4 +164,4 @@ add new codes; removals are documented in `CHANGELOG.md`.
 
 - [`errors.js`](../../src/errors.js) — class definitions
 - [`README.md`](../../README.md#security) — security policy
-- [`tests/fuzz.test.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/office/ooxml/tests/fuzz.test.js) — regression fence
+- [`tests/fuzz.test.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/packages/front/office/ooxml/tests/fuzz.test.js) — regression fence

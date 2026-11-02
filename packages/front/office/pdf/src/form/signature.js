@@ -89,6 +89,19 @@ export const pdfSignatureField = {
                 raw:    dict,
                 _extras: {}
             };
+            // Field-dictionary entries (ISO 32000-2 Table 226) the record
+            // had left out, each only when present (a PDF null is the
+            // entry's absence): a string by its bytes, the rest as read.
+            const has = (x) => !!x && x.type !== 'null';
+            if (has(e.Parent)) out.parent = e.Parent;
+            if (has(e.Kids))   out.kids   = e.Kids;
+            if (isType(e.TU, 'string')) out.tu = e.TU.value;
+            if (isType(e.TM, 'string')) out.tm = e.TM.value;
+            if (has(e.AA))     out.aa     = e.AA;
+            if (isType(e.DA, 'string')) out.da = e.DA.value;
+            if (isType(e.Q, 'int'))     out.q  = e.Q.value;
+            if (has(e.DV)) out.dv = e.DV;
+
             for (const k of Object.keys(e)) {
                 if (!KNOWN.has(k)) out._extras[k] = e[k];
             }

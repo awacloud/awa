@@ -37,6 +37,7 @@
     "dmlWpPositioning",
     "dmlEffects",
     "dmlFillsAdvanced",
+    "dmlWpDrawing",
     "wmlVmlLegacy",
     "dmlShapesAdvanced",
     "transitional",
@@ -55,8 +56,8 @@
     "crc32"
   ],
   "bytes": {
-    "dev": 561673,
-    "min": 337502
+    "dev": 663692,
+    "min": 397657
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

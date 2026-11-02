@@ -88,8 +88,8 @@ export const textMetaExtended = {
                     : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
                 for (const n of out.metaNodes) extras.push(renderMeta(n));
                 delete out.metaNodes;
-                if (Array.isArray(p._extras) || !p._extras) out._extras = extras;
-                else out._extras = { ...p._extras, children: extras };
+                if (Array.isArray(p._extras)) out._extras = extras;
+                else out._extras = { ...(p._extras || {}), children: extras };
             }
             return out;
         }

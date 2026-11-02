@@ -126,3 +126,32 @@ describe('factory', () => {
         expect(COLOR_SPACE_FAMILIES.has('Lab')).toBe(true);
     });
 });
+
+describe('typeColorPart (A41b)', () => {
+    const { typeColorPart, COLOR_PART_KEYS } = pdfColorSpacesExtended.factory(_errors, _parserObj);
+    const { ContractError } = _errors;
+    const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+    test('DeviceN attributes, mixing hints, process, solidities, default colour spaces, functions', () => {
+        const d = typeColorPart(obj.dict({ Subtype: obj.name('NChannel'), Colorants: obj.dict({}), Process: obj.ref(3, 0), MixingHints: obj.dict({}), Foo: obj.int(1) }), 'deviceN');
+        expect([d.subtype, d.colorants.type, d.process, d.mixinghints.type, d._extras]).toEqual(['NChannel', 'dict', obj.ref(3, 0), 'dict', { Foo: obj.int(1) }]);
+        const h = typeColorPart(obj.dict({ Solidities: obj.dict({}), PrintingOrder: obj.array([]), DotGain: obj.dict({}) }), 'mixingHints');
+        expect([h.solidities.type, h.printingorder.type, h.dotgain.type]).toEqual(['dict', 'array', 'dict']);
+        expect(typeColorPart(obj.dict({ ColorSpace: obj.name('DeviceCMYK'), Components: obj.array([]) }), 'process')).toMatchObject({ colorspace: 'DeviceCMYK' });
+        expect(typeColorPart(obj.dict({ ColorSpace: obj.array([]) }), 'process').colorspace.type).toBe('array');
+        expect(typeColorPart(obj.dict({ Default: obj.real(0.5), Cyan: obj.real(1) }), 'solidities')).toMatchObject({ default: 0.5, _extras: { Cyan: obj.real(1) } });
+        const m = typeColorPart(obj.dict({ DefaultRGB: obj.array([]), DefaultCMYK: obj.array([]), DefaultGray: obj.array([]) }), 'colorSpaceMap');
+        expect([m.defaultrgb.type, m.defaultcmyk.type, m.defaultgray.type]).toEqual(['array', 'array', 'array']);
+        expect(typeColorPart(obj.dict({ Default: obj.dict({}) }), 'functions').default.type).toBe('dict');
+        expect(typeColorPart(obj.dict({ Subtype: obj.int(1) }), 'deviceN').subtype).toBe(null);
+    });
+    test('every kind of COLOR_PART_KEYS types every key of its list; errors', () => {
+        expect(Object.keys(COLOR_PART_KEYS).sort()).toEqual(['colorSpaceMap', 'deviceN', 'functions', 'mixingHints', 'process', 'solidities']);
+        for (const [kind, keys] of Object.entries(COLOR_PART_KEYS)) {
+            const entries = {};
+            for (const k of keys) entries[k] = obj.ref(1, 0);
+            expect(typeColorPart(obj.dict(entries), kind)._extras).toEqual({});
+        }
+        expect(code(() => typeColorPart(obj.array([]), 'deviceN'))).toEqual([ParseError.name, 'pdf/extra/color-part/not-dict']);
+        expect(code(() => typeColorPart(obj.dict({}), 'DeviceN'))).toEqual([ContractError.name, 'pdf/extra/color-part/kind']);
+    });
+});

@@ -102,10 +102,65 @@ describe('tableTable module', () => {
             expect(columnsOf(none).map((c) => c.attrs)).toEqual([{}]);
         });
 
+        test('a table without rows is written with one row of one empty cell (the schema needs a row); the model is not changed', () => {
+            const { xml, t } = build();
+            const m = { type: 'table', name: 'Empty', columns: [], rows: [] };
+            const before = JSON.stringify(m);
+            expect(xml.serialize(t.renderTable(m))).toContain('<table:table table:name="Empty"><table:table-column/><table:table-row><table:table-cell/></table:table-row></table:table>');
+            expect(JSON.stringify(m)).toBe(before);
+            expect(t.renderTable({ type: 'table' }).children.map((c) => c.name)).toEqual(['table:table-column', 'table:table-row']);
+        });
+
+        test('a row group among the extras holds the rows: no row is added', () => {
+            const { xml, t } = build();
+            const group = xml.parse('<table:table-row-group><table:table-row><table:table-cell/></table:table-row></table:table-row-group>');
+            const node = t.renderTable({ type: 'table', rows: [], _extras: { children: [group] } });
+            expect(node.children.map((c) => c.name)).toEqual(['table:table-column', 'table:table-row-group']);
+        });
+
+        test('header rows beyond the rows: no empty header-rows wrapper', () => {
+            const { t } = build();
+            const none = t.renderTable({ type: 'table', headerRows: 2, rows: [] });
+            expect(none.children.map((c) => c.name)).toEqual(['table:table-column', 'table:table-row']);
+            const one = t.renderTable({ type: 'table', headerRows: 2, rows: [{ type: 'row', cells: cellsOf({}) }] });
+            expect(one.children.map((c) => c.name)).toEqual(['table:table-column', 'table:table-header-rows']);
+        });
+
         test('columns in the model are written as given', () => {
             const { xml, t } = build();
             const m = { type: 'table', columns: [{ styleName: 'co1' }, { repeated: 2 }], rows: [{ type: 'row', cells: cellsOf({ repeated: 9 }) }] };
             expect(xml.serialize(t.renderTable(m))).toContain('<table:table><table:table-column table:style-name="co1"/><table:table-column table:number-columns-repeated="2"/><table:table-row>');
+        });
+    });
+
+    // A34c: the schema allows a text:soft-page-break before a row only.
+    describe('soft page breaks between rows', () => {
+        const ROW = (v) => `<table:table-row><table:table-cell><text:p>${v}</text:p></table:table-cell></table:table-row>`;
+        const BR = '<text:soft-page-break/>';
+        const tags = (xml, el) => el.children.filter((c) => c.type === 'element').map((c) => c.name === 'table:table-row'
+            ? 'row:' + xml.serialize(c).replace(/<[^>]+>/g, '').trim() : c.name);
+
+        test('a break read before a row is written back before that row', () => {
+            const { xml, t } = build();
+            const m = t.parseTable(xml.parse(`<table:table><table:table-column/>${ROW('a')}${BR}${ROW('b')}${BR}${ROW('c')}</table:table>`));
+            expect(m.rows).toHaveLength(3);
+            expect(m._extras).toBeUndefined();
+            expect(tags(xml, t.renderTable(m))).toEqual(['table:table-column', 'row:a', 'text:soft-page-break', 'row:b', 'text:soft-page-break', 'row:c']);
+        });
+
+        test('a break before the first row and one before the second', () => {
+            const { xml, t } = build();
+            const m = t.parseTable(xml.parse(`<table:table><table:table-column/>${BR}${ROW('h')}${BR}${ROW('a')}</table:table>`));
+            expect(tags(xml, t.renderTable(m))).toEqual(['table:table-column', 'text:soft-page-break', 'row:h', 'text:soft-page-break', 'row:a']);
+        });
+
+        test('a break whose row is gone is not written; one after the last row stays last, as read', () => {
+            const { xml, t } = build();
+            const m = t.parseTable(xml.parse(`<table:table><table:table-column/>${ROW('a')}${BR}${ROW('b')}</table:table>`));
+            m.rows.pop();
+            expect(tags(xml, t.renderTable(m))).toEqual(['table:table-column', 'row:a']);
+            const last = t.parseTable(xml.parse(`<table:table><table:table-column/>${ROW('a')}${BR}</table:table>`));
+            expect(tags(xml, t.renderTable(last))).toEqual(['table:table-column', 'row:a', 'text:soft-page-break']);
         });
     });
 });

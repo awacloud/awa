@@ -40,8 +40,9 @@ const bp = runtime.resolve('blockParser');
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `inlineParser` | `(blockNode, refmap) => void` | none | Hook called on each paragraph / heading / table-cell to parse inlines |
+| `maxDepth` | `number` | `Infinity` (no limit) | Deepest block nesting allowed (the document is depth 0, its direct blocks depth 1). A container (list, item, quote) that would open deeper throws `md/limit-exceeded` with `context: { kind: 'maxDepth', limit, depth }` as it opens, before the deeper tree is built. `md.parse` passes its own `maxDepth` here (default `1000`) |
 
-`parse` reads no other option: every block node carries a `sourcepos` already, and the inline `sourcepos` / `smart` / `extendedAutolinks` options belong to the [inline parser](../inline/parser.md) (bound through `md.createMd(opts)`).
+`parse` reads no other option: every block node carries a `sourcepos` already, and the inline `sourcepos` / `smart` / `smartDashes` / `extendedAutolinks` options belong to the [inline parser](../inline/parser.md) (bound through `md.createMd(opts)`). A `maxDepth` that is not a number `>= 0` is ignored (no limit).
 
 ## Examples
 

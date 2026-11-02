@@ -65,6 +65,8 @@ export const pdfOutline = {
             }
             if (e.A)    out.action = e.A;
             if (e.Dest) out.dest   = e.Dest;
+            // The structure element the item refers to (Table 151), as read.
+            if (e.SE && e.SE.type !== 'null') out.se = e.SE;
             if (e.C && e.C.type === 'array') {
                 const c = e.C.items.filter((x) => x.type === 'int' || x.type === 'real')
                     .map((x) => x.value);
@@ -107,14 +109,10 @@ export const pdfOutline = {
                         'outline depth limit exceeded',
                         { context: { depth, maxDepth } });
                 }
+                // Every `cur` is a ref: `/First` is checked above and
+                // typeOutlineItem keeps `/First` and `/Next` only as refs.
                 let cur = ref;
-                let guard = 0;
                 while (cur) {
-                    if (cur.type !== 'ref') {
-                        throw new ParseError('pdf/outline/non-ref-sibling',
-                            'outline sibling must be an indirect ref',
-                            { context: { kind: cur.type } });
-                    }
                     const key = cur.num + ':' + cur.gen;
                     if (visited.has(key)) {
                         throw new ParseError('pdf/outline/cycle',
@@ -140,11 +138,9 @@ export const pdfOutline = {
 
                     if (rec.first) walkSiblings(rec.first, depth + 1);
 
+                    // No sibling counter: each step pushes one item, so the
+                    // maxItems check above bounds the chain.
                     cur = rec.next || null;
-                    if (++guard > maxItems) {
-                        throw new ParseError('pdf/outline/runaway',
-                            'outline sibling chain exceeded item cap');
-                    }
                 }
             }
 

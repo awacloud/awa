@@ -9,24 +9,24 @@
         "version": "bun 1.3.13",
         "source": null
       },
-      "date": "2026-10-17",
-      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "date": "2026-10-26",
+      "commit": "976d3b35efd5d87c67c83958937799f1b57be319",
       "command": "bun cli.ts office-scorecard axis-a --pkg oconv",
       "result": {
         "kind": "percent",
-        "lines": 98.24,
-        "functions": 99.15,
-        "rows": 34,
+        "lines": 98.33,
+        "functions": 99.18,
+        "rows": 35,
         "model": "mean-of-rows",
         "pooled": {
-          "lines": 97.57,
-          "functions": 98.61
+          "lines": 97.84,
+          "functions": 98.97
         },
         "basis": [
           "src/**"
         ],
         "tests": {
-          "pass": 1160,
+          "pass": 1287,
           "fail": 0,
           "skip": 1
         }
@@ -173,6 +173,59 @@
         "kind": "score",
         "value": 0.5753,
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the benchmark's own scorers ported, on the Markdown body of oconv toMd (no OCR; the profile-v1 front matter removed)"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "opendataloader-bench-layout",
+        "version": "opendataloader-bench@7af1d8f4d",
+        "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
+      },
+      "date": "2026-10-25",
+      "commit": "f2bdbee3b1e0b29b62030ed523eeb7f6e33c530e",
+      "command": "bun cli.ts office-scorecard axis-e --suite opendataloader-bench-layout",
+      "result": {
+        "kind": "score",
+        "value": 0.7949,
+        "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the benchmark's own scorers ported, on the Markdown body of oconv toMd read with pdfInfer: ['headings', 'tables'] (the opt-in inference of the untagged pdf path; no OCR; the profile-v1 front matter removed)"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "crossformat-docx-odt",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-01",
+      "commit": "bb708e2c3b180c9863a4ab8d30c0ce1b1fb0fbd0",
+      "command": "bun cli.ts office-scorecard axis-b --suite crossformat-docx-odt",
+      "result": {
+        "kind": "pass-total",
+        "pass": 1469,
+        "total": 1469,
+        "criterion": "every wild docx (poi, lo-ooxmlexport, lo-odfexport) whose oconv toMd reads is converted to odt with oconv convert and read back with toMd; it passes when the Markdown body of the return reading equals the direct one (the front matter removed: the cross-format harness's model equivalence); a throw of convert or of the return toMd fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "crossformat-odt-docx",
+        "version": "libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-01",
+      "commit": "bb708e2c3b180c9863a4ab8d30c0ce1b1fb0fbd0",
+      "command": "bun cli.ts office-scorecard axis-b --suite crossformat-odt-docx",
+      "result": {
+        "kind": "pass-total",
+        "pass": 316,
+        "total": 316,
+        "criterion": "every wild odt (lo-odfexport, lo-ooxmlexport) whose oconv toMd reads is converted to docx with oconv convert and read back with toMd; it passes when the Markdown body of the return reading equals the direct one (the front matter removed: the cross-format harness's model equivalence); a throw of convert or of the return toMd fails it"
       },
       "skipped": []
     }

@@ -72,7 +72,7 @@ pages.walkPageTree(rootRef, resolve, { maxDepth: 16 });
 | `pdf/pages/cycle` | `ParseError` | Reference already visited during the walk. |
 | `pdf/pages/not-dict` | `ParseError` | A resolved node is not a dictionary. |
 | `pdf/pages/too-many` | `ParseError` | More than `maxPages` leaves found. |
-| `pdf/pages/missing-kids` | `ParseError` | Intermediate node without `/Kids`. |
+| `pdf/pages/missing-kids` | `ParseError` | Intermediate node without a `/Kids` array (a `/Kids` given by reference is resolved first, ISO 32000-2 § 7.3.10). |
 | `pdf/pages/non-ref-kid` | `ParseError` | `/Kids` holds something other than a reference. |
 
 ## See also

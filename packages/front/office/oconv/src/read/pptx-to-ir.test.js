@@ -137,8 +137,8 @@ describe('oconvPptxToIr — untitled slide (no title placeholder)', () => {
     });
 });
 
-describe('oconvPptxToIr — dropped media (picture/table), explicit loss entries', () => {
-    test('records slides/media-dropped per non-text shape, keeps sibling text', () => {
+describe('oconvPptxToIr — dropped media (table), explicit loss entries; a picture placed', () => {
+    test('records slides/media-dropped per table, places the picture, keeps sibling text', () => {
         const bytes = pptxApi.write({
             slides: [{ shapes: [
                 { type: 'shape', id: 2, placeholder: { type: 'title' },
@@ -151,11 +151,9 @@ describe('oconvPptxToIr — dropped media (picture/table), explicit loss entries
         const { ir, losses } = pptxToIr(pptxApi.read(bytes));
 
         expect(validate(ir).ok).toBe(true);
-        expect(ir.children).toEqual([
-            node('heading', { level: 2 }, [node('run', { text: 'With media' })])
-        ]);
+        expect(ir.children.map((n) => n.kind)).toEqual(['heading', 'image']);
+        expect(ir.children[1]).toMatchObject({ kind: 'image', name: 'image1.png', alt: '' });
         expect(losses).toEqual([
-            { code: 'slides/media-dropped', detail: 'picture' },
             { code: 'slides/media-dropped', detail: 'table' }
         ]);
     });

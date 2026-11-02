@@ -17,6 +17,11 @@
  *   - /Subtype /Screen (ISO 32000-1 §12.5.6.18): /MK appearance, /A
  *     rendition action, /AA additional actions for media playback.
  *
+ * and the dictionaries those annotations and the rendition actions point
+ * at (`typeMediaDict`): renditions, media clips, play and screen
+ * parameters, media criteria, offsets, players, software identifiers
+ * (ISO 32000-2 §13.2), and the movie and movie-activation dictionaries.
+ *
  * @module pdf/extra/legacy-deprecated-annots
  */
 
@@ -28,7 +33,7 @@ export const pdfLegacyDeprecatedAnnots = {
     deps: [pdfErrors],
 
     factory(errors) {
-        const { ParseError } = errors;
+        const { ParseError, ContractError } = errors;
         const SOUND_MODES = new Set(['Mono', 'Stereo']);
         const MOVIE_OP_MODES = new Set(['Once', 'Open', 'Repeat', 'Palindrome']);
 
@@ -99,6 +104,15 @@ export const pdfLegacyDeprecatedAnnots = {
                         '/Mode must be Mono or Stereo');
                 }
                 out.mode = e.Mode.value;
+            }
+            // The stream entries (Table 5), each only when present: a
+            // number or a name by its value, an array or a dictionary as read.
+            if (isName(e.Type)) out.type = e.Type.value;
+            if (isNum(e.Length)) out.length = e.Length.value;
+            if (isName(e.Filter)) out.filter = e.Filter.value;
+            else if (e.Filter && e.Filter.type === 'array') out.filter = e.Filter;
+            if (isDict(e.DecodeParms) || (e.DecodeParms && e.DecodeParms.type === 'array')) {
+                out.decodeParms = e.DecodeParms;
             }
             const KNOWN = new Set(['Type','R','C','B','E','CO','Mode','Length','Filter','DecodeParms']);
             for (const k of Object.keys(e)) {
@@ -186,9 +200,83 @@ export const pdfLegacyDeprecatedAnnots = {
             return out;
         }
 
+        // The multimedia dictionaries (ISO 32000-2 § 13.2)
+        // and the deprecated movie ones (ISO 32000-1 § 13.4): per kind, each
+        // key → [field, how the value is read]. `name`, `text`, `int`,
+        // `num` and `bool` keep the value of that type (else `null`);
+        // `raw` keeps a dictionary, array, stream or reference as read.
+        // The MH and BE dictionaries of one object share a kind.
+        const TYPE = ['type', 'name'], SUB = ['subtype', 'name'];
+        const MH = ['mustHonor', 'raw'], BE = ['bestEffort', 'raw'];
+        const MEDIA_KINDS = Object.freeze({
+            Rendition: { Type: TYPE, S: SUB, N: ['name', 'text'], MH, BE, C: ['clip', 'raw'],
+                P: ['playParameters', 'raw'], SP: ['screenParameters', 'raw'], R: ['renditions', 'raw'] },
+            RenditionMHBE: { C: ['criteria', 'raw'] },
+            MediaClipData: { Type: TYPE, S: SUB, N: ['name', 'text'], D: ['data', 'raw'], CT: ['contentType', 'text'],
+                P: ['permissions', 'raw'], Alt: ['alt', 'raw'], PL: ['players', 'raw'], MH, BE },
+            MediaClipDataMHBE: { BU: ['baseUrl', 'text'] },
+            MediaClipSection: { Type: TYPE, S: SUB, N: ['name', 'text'], D: ['clip', 'raw'], Alt: ['alt', 'raw'], MH, BE },
+            MediaClipSectionMHBE: { B: ['begin', 'raw'], E: ['end', 'raw'] },
+            MediaCriteria: { Type: TYPE, A: ['audioDescriptions', 'bool'], C: ['captions', 'bool'], O: ['overdubs', 'bool'],
+                S: ['subtitles', 'bool'], R: ['bitrate', 'int'], D: ['bitDepth', 'raw'], Z: ['screenSize', 'raw'],
+                V: ['viewers', 'raw'], P: ['pdfVersions', 'raw'], L: ['languages', 'raw'] },
+            MediaDuration: { Type: TYPE, S: SUB, T: ['timespan', 'raw'] },
+            MediaOffset: { Type: TYPE, S: SUB, T: ['timespan', 'raw'], F: ['frame', 'int'], M: ['marker', 'text'] },
+            MediaPermissions: { Type: TYPE, TF: ['tempFile', 'text'] },
+            MediaPlayParameters: { Type: TYPE, PL: ['players', 'raw'], MH, BE },
+            MediaPlayParametersMHBE: { V: ['volume', 'int'], C: ['showControls', 'bool'], F: ['fit', 'int'],
+                D: ['duration', 'raw'], A: ['autoPlay', 'bool'], RC: ['repeatCount', 'num'] },
+            MediaPlayerInfo: { Type: TYPE, PID: ['softwareIdentifier', 'raw'], MH, BE },
+            MediaPlayers: { Type: TYPE, MU: ['mustUse', 'raw'], A: ['available', 'raw'], NU: ['notUsed', 'raw'] },
+            MediaScreenParameters: { Type: TYPE, MH, BE },
+            MediaScreenParametersMHBE: { W: ['windowType', 'int'], B: ['background', 'raw'], O: ['opacity', 'num'],
+                M: ['monitor', 'int'], F: ['floatingWindow', 'raw'] },
+            MinimumScreenSize: { Type: TYPE, V: ['size', 'raw'], M: ['monitor', 'int'] },
+            SoftwareIdentifier: { Type: TYPE, U: ['uri', 'text'], L: ['lowVersion', 'raw'], LI: ['lowInclusive', 'bool'],
+                H: ['highVersion', 'raw'], HI: ['highInclusive', 'bool'], OS: ['os', 'raw'] },
+            Movie: { F: ['file', 'raw'], Aspect: ['aspect', 'raw'], Rotate: ['rotate', 'int'], Poster: ['poster', 'raw'] },
+            MovieActivation: { Start: ['start', 'raw'], Duration: ['duration', 'raw'], Rate: ['rate', 'num'],
+                Volume: ['volume', 'num'], ShowControls: ['showControls', 'bool'], Mode: ['mode', 'name'],
+                Synchronous: ['synchronous', 'bool'], FWScale: ['fwScale', 'raw'], FWPosition: ['fwPosition', 'raw'] }
+        });
+        const READ = {
+            name: (v) => (isName(v) ? v.value : null),
+            text: (v) => (isStr(v) ? v.value : null),
+            int: (v) => (v && v.type === 'int' ? v.value : null),
+            num: (v) => (isNum(v) ? v.value : null),
+            bool: (v) => (isBool(v) ? v.value : null),
+            raw: (v) => v
+        };
+
+        /**
+         * Type one multimedia dictionary of the given kind (a key of
+         * `MEDIA_KINDS`): one field per key of its table, present only
+         * when the key is; `_extras` the other keys, `raw` the dictionary.
+         */
+        function typeMediaDict(dict, kind) {
+            const table = Object.prototype.hasOwnProperty.call(MEDIA_KINDS, kind) ? MEDIA_KINDS[kind] : null;
+            if (!table) {
+                throw new ContractError('pdf/legacy-annot/media-kind',
+                    'typeMediaDict: unknown kind', { context: { kind } });
+            }
+            if (!isDict(dict)) {
+                throw new ParseError('pdf/legacy-annot/media-not-dict',
+                    'a multimedia object must be a dictionary', { context: { kind, type: dict && dict.type } });
+            }
+            const out = { raw: dict, _extras: {} };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                const spec = table[k];
+                if (spec) out[spec[0]] = READ[spec[1]](v);
+                else out._extras[k] = v;
+            }
+            return out;
+        }
+
         return {
             typeSoundAnnot,
             typeSoundStream,
+            typeMediaDict,
+            MEDIA_KINDS,
             typeMovieAnnot,
             typeScreenAnnot,
             SOUND_MODES,

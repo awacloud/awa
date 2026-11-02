@@ -9,13 +9,17 @@ status: complete
 
 # pptxFullBundle
 
-> Pre-wired bundle: `pptx-large` + remaining pptx-touching extras (every PresentationML schema element typed or preserved).
+> Pre-wired bundle: `pptx-large` + further toolkits; none of them types a read.
 
 **Module** `pptxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/pptx-full.js` | **Deps** `pptxLargeBundle` + 7 extras | **Worker-safe** yes
 
 ## Included
 
-Everything in [`pptx-large`](./pptx-large.md), plus:
+Everything in [`pptx-large`](./pptx-large.md) — its extras that type a read and its toolkits — plus:
+
+None of the extras below types a read.
+
+**Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
 
 - [`dmlShapesAdvanced`](../extra/dml-shapes-advanced.md) — custom-geometry shapes
 - [`transitional`](../extra/transitional.md) — part 4 namespace mapping

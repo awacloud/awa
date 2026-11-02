@@ -137,3 +137,42 @@ describe('pdfTaggedPdfTyped factory', () => {
         expect(typeof api.typeStructAttribute).toBe('function');
     });
 });
+
+describe('A38b: the NSO owner, the Layout keys typed, Short and Checked', () => {
+    const { ATTRIBUTE_OWNERS } = pdfTaggedPdfTyped.factory(_errors, _parserObj);
+    const u8 = (s) => new TextEncoder().encode(s);
+
+    test('an NSO attribute object: NS and every standard attribute read', () => {
+        const d = obj.dict({
+            O: obj.name('NSO'), NS: obj.ref(9, 0), Placement: obj.name('Block'), SpaceBefore: obj.real(6),
+            ListNumbering: obj.name('Decimal'), RowSpan: obj.int(2), Short: obj.string(u8('Q1')), Role: obj.name('cb'),
+            Checked: obj.name('on'), Type: obj.name('Pagination'), P: obj.array([]), Foo: obj.int(1)
+        });
+        const r = typeStructAttribute(d);
+        expect([r.owner, r.ns.type, r.placement, r.spaceBefore, r.listNumbering, r.rowSpan]).toEqual(['NSO', 'ref', 'Block', 6, 'Decimal', 2]);
+        expect([r.short, r.role, r.checked, r.artifactType, r.p.type]).toEqual([u8('Q1'), 'cb', 'on', 'Pagination', 'array']);
+        expect(r.vendor).toBeUndefined();
+        expect(r._extras).toEqual({ Foo: obj.int(1) });
+        expect(ATTRIBUTE_OWNERS.has('NSO')).toBe(true);
+    });
+
+    test('Layout: the five keys typed; Width, Height, LineHeight a name or a number', () => {
+        const r = typeStructAttribute(obj.dict({
+            O: obj.name('Layout'), TBorderStyle: obj.name('Solid'), TPadding: obj.int(2), RubyAlign: obj.name('Center'),
+            RubyPosition: obj.name('Before'), GlyphOrientationVertical: obj.int(90), Width: obj.name('Auto'),
+            Height: obj.real(12), LineHeight: obj.name('Normal')
+        }));
+        expect([r.tBorderStyle, r.tPadding, r.rubyAlign, r.rubyPosition, r.glyphOrientationVertical])
+            .toEqual(['Solid', 2, 'Center', 'Before', 90]);
+        expect([r.width, r.height, r.lineHeight]).toEqual(['Auto', 12, 'Normal']);
+        expect(r._extras).toEqual({});
+        expect(typeStructAttribute(obj.dict({ O: obj.name('Layout'), TBorderStyle: obj.array([]), GlyphOrientationVertical: obj.name('Auto') })))
+            .toMatchObject({ tBorderStyle: { type: 'array' }, glyphOrientationVertical: 'Auto' });
+    });
+
+    test('Table: Short; PrintField: Checked not an extra', () => {
+        expect(typeStructAttribute(obj.dict({ O: obj.name('Table'), Short: obj.string(u8('Q')) })).short).toEqual(u8('Q'));
+        const pf = typeStructAttribute(obj.dict({ O: obj.name('PrintField'), Checked: obj.name('off') }));
+        expect([pf.checked, pf._extras]).toEqual(['off', {}]);
+    });
+});

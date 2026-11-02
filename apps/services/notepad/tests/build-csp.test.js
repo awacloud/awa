@@ -53,6 +53,8 @@ describe('build-csp emits the header rules', () => {
         expect(rules.defaults.get('x-content-type-options')).toBe('nosniff');
         expect(rules.defaults.get('referrer-policy')).toBe('no-referrer');
         expect(rules.defaults.get('cross-origin-opener-policy')).toBe('same-origin');
+        // apps/LIGHT_19/02 (BL-2813, OP-HSTS): the first-step HSTS, no includeSubDomains, no preload.
+        expect(rules.defaults.get('strict-transport-security')).toBe('max-age=2592000');
         for (const feature of ['camera', 'microphone', 'geolocation', 'payment', 'usb']) {
             expect(rules.defaults.get('permissions-policy')).toContain(`${feature}=()`);
         }

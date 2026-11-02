@@ -13,7 +13,7 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { mkdtemp, readFile, readdir, rm, lstat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, lstat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import {
     ACCEPT_UNPINNED_ENV,
@@ -25,6 +25,7 @@ import {
     downloadWasiSdk,
     enforcePinPolicy,
     extractTarGzFile,
+    mainCheckoutSdkDir,
     resolveAsset,
     toolchainAssetUrl,
     verifyAndUnpack,
@@ -474,16 +475,118 @@ describe("discoverWasiSdk", () => {
     });
 });
 
+// ─── The main checkout's SDK from a linked worktree (tools/LIGHT_58/02) ──────
+//
+// Owner ruling 2026-10-22 (pilot recos 1-5): `build-env/sdk` (~1.6 GB) is no
+// longer a worktree asset row, so a linked worktree has no `sdk/` of its own.
+// Discovery then falls back to the MAIN checkout's `build-env/sdk/`, derived
+// from the git common dir (`.git` file → `gitdir` → `commondir`). Every
+// fixture below is a scratch fake repo under the OS temp dir.
+
+/** The clang binary name `discoverWasiSdk` looks for on this platform. */
+const CLANG_NAME = process.platform === "win32" ? "clang.exe" : "clang";
+
+/** Plant `<sdkDir>/<name>/bin/<clang>` and return the SDK root. */
+async function plantSdk(sdkDir: string, name: string): Promise<string> {
+    const root = join(sdkDir, name);
+    await mkdir(join(root, "bin"), { recursive: true });
+    await writeFile(join(root, "bin", CLANG_NAME), "fake clang");
+    return root;
+}
+
+/** `<tree>/tools/wasm-crypto/build-env/sdk` — the layout DEFAULT_SDK_DIR has. */
+function sdkDirOf(tree: string): string {
+    return join(tree, "tools", "wasm-crypto", "build-env", "sdk");
+}
+
+/**
+ * A fake main checkout (`<base>/main`, `.git` a directory) and a fake linked
+ * worktree (`<base>/wt`, `.git` a FILE naming `main/.git/worktrees/wt`, whose
+ * `commondir` is `../..`) — the shape `git worktree add` writes.
+ */
+async function fakeRepoPair(): Promise<{ base: string; main: string; wt: string }> {
+    const base = await mkdtemp(join(tmpdir(), "toolchain-main-sdk-"));
+    const main = join(base, "main");
+    const wt = join(base, "wt");
+    const linkedGitDir = join(main, ".git", "worktrees", "wt");
+    await mkdir(linkedGitDir, { recursive: true });
+    await writeFile(join(linkedGitDir, "commondir"), "../..\n");
+    await writeFile(join(linkedGitDir, "gitdir"), `${join(wt, ".git")}\n`);
+    await mkdir(join(wt, "tools", "wasm-crypto", "build-env"), { recursive: true });
+    await writeFile(join(wt, ".git"), `gitdir: ${linkedGitDir}\n`);
+    return { base, main, wt };
+}
+
+describe("discoverWasiSdk — the main checkout's SDK from a linked worktree", () => {
+    test("a worktree with no sdk/ finds the main checkout's SDK", async () => {
+        const { base, main, wt } = await fakeRepoPair();
+        try {
+            const mainSdk = await plantSdk(sdkDirOf(main), "wasi-sdk-main");
+            expect(mainCheckoutSdkDir(sdkDirOf(wt))).toBe(sdkDirOf(main));
+            expect(await discoverWasiSdk(undefined, { sdkDir: sdkDirOf(wt) })).toBe(mainSdk);
+        } finally {
+            await rm(base, { recursive: true, force: true });
+        }
+    });
+
+    test("explicit roots still win: the main checkout is never searched", async () => {
+        const { base, main, wt } = await fakeRepoPair();
+        try {
+            await plantSdk(sdkDirOf(main), "wasi-sdk-main");
+            expect(await discoverWasiSdk([FAKE_INSTALL], { sdkDir: sdkDirOf(wt) })).toBe(FAKE_INSTALL);
+            // A miss in the caller's explicit scope stays a miss.
+            expect(await discoverWasiSdk([join(FIXTURES, "nonexistent-dir")], { sdkDir: sdkDirOf(wt) })).toBeNull();
+        } finally {
+            await rm(base, { recursive: true, force: true });
+        }
+    });
+
+    test("a worktree with its own sdk/ uses its own", async () => {
+        const { base, main, wt } = await fakeRepoPair();
+        try {
+            await plantSdk(sdkDirOf(main), "wasi-sdk-main");
+            const ownSdk = await plantSdk(sdkDirOf(wt), "wasi-sdk-own");
+            expect(await discoverWasiSdk(undefined, { sdkDir: sdkDirOf(wt) })).toBe(ownSdk);
+        } finally {
+            await rm(base, { recursive: true, force: true });
+        }
+    });
+
+    test("the main checkout itself has no other tree to fall back to", async () => {
+        const { base, main } = await fakeRepoPair();
+        try {
+            expect(mainCheckoutSdkDir(sdkDirOf(main))).toBeNull();
+            expect(await discoverWasiSdk(undefined, { sdkDir: sdkDirOf(main) })).toBeNull();
+        } finally {
+            await rm(base, { recursive: true, force: true });
+        }
+    });
+
+    test("a tree with no .git at all degrades to the tree's own dir only", async () => {
+        const base = await mkdtemp(join(tmpdir(), "toolchain-no-git-"));
+        try {
+            expect(mainCheckoutSdkDir(sdkDirOf(base))).toBeNull();
+            expect(await discoverWasiSdk(undefined, { sdkDir: sdkDirOf(base) })).toBeNull();
+        } finally {
+            await rm(base, { recursive: true, force: true });
+        }
+    });
+});
+
 // ─── Installed-SDK sanity (gated on a real SDK being present) ────────────────
 
 describe("installed wasi-sdk", () => {
-    test("if an SDK is installed under the default dir, it exposes bin/clang", async () => {
+    test("if an SDK is installed (this tree or the main checkout), it exposes bin/clang", async () => {
         const root = await discoverWasiSdk();
         if (!root) return; // SDK absent — nothing to assert (standing memory rule).
         const isWin = process.platform === "win32";
         const clang = join(root, "bin", isWin ? "clang.exe" : "clang");
         expect(await Bun.file(clang).exists()).toBe(true);
-        expect(root.startsWith(DEFAULT_SDK_DIR)).toBe(true);
+        // Found in one of the two documented install dirs: this tree's own
+        // DEFAULT_SDK_DIR, else (a linked worktree, tools/LIGHT_58/02) the
+        // main checkout's.
+        const mainDir = mainCheckoutSdkDir();
+        expect(root.startsWith(DEFAULT_SDK_DIR) || (mainDir !== null && root.startsWith(mainDir))).toBe(true);
     });
 });
 

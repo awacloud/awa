@@ -65,3 +65,31 @@ describe('pdfInfo module', () => {
         expect(typeof m.typeInfo).toBe('function');
     });
 });
+
+describe('decodeTextString (T34 d)', () => {
+    const { decodeTextString } = _pdfInfo_m;
+    const b = (...xs) => new Uint8Array(xs);
+
+    test('UTF-16BE after its BOM: surrogate pairs joined, a language escape removed', () => {
+        expect(decodeTextString(b(0xfe, 0xff, 0x00, 0x41, 0x00, 0xe9))).toBe('Aé');
+        expect(decodeTextString(b(0xfe, 0xff, 0xd8, 0x3d, 0xde, 0x00))).toBe('\u{1f600}');
+        expect(decodeTextString(b(0xfe, 0xff, 0x00, 0x1b, 0x00, 0x66, 0x00, 0x72, 0x00, 0x1b, 0x00, 0x4f, 0x00, 0x75, 0x00, 0x69))).toBe('Oui');
+    });
+
+    test('UTF-8 after its BOM', () => {
+        expect(decodeTextString(b(0xef, 0xbb, 0xbf, 0x43, 0x61, 0x66, 0xc3, 0xa9))).toBe('Café');
+    });
+
+    test('PDFDocEncoding otherwise: Latin-1 but for its own codes, an undefined code U+FFFD', () => {
+        expect(decodeTextString(u8('Plain title'))).toBe('Plain title');
+        expect(decodeTextString(b(0xe9, 0x80, 0x93, 0xa0, 0x18, 0x9f))).toBe('é•ﬁ€˘�');
+        expect(decodeTextString(new Uint8Array(0))).toBe('');
+    });
+
+    test('anything but bytes is a ContractError', () => {
+        let err;
+        try { decodeTextString('x'); } catch (e) { err = e; }
+        expect(err instanceof _pdfErrors_TD1.ContractError).toBe(true);
+        expect(err.code).toBe('pdf/info/bad-text-string');
+    });
+});

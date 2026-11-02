@@ -102,7 +102,10 @@ export const mdMod = {
                     math: extensions.some(e => Array.isArray(e.inlineSyntax) && e.inlineSyntax.includes('math'))
                 };
                 const { document, refmap } = bp.parse(text, {
-                    inlineParser: (block, map) => ip.parse(block, map, flags)
+                    inlineParser: (block, map) => ip.parse(block, map, flags),
+                    // The block parser refuses a too-deep container itself,
+                    // before building it; inline nesting is checked below.
+                    maxDepth
                 });
                 document.data = { refmap };
                 if (maxDepth !== Infinity || maxNodes !== Infinity || maxUrlLength !== Infinity) {

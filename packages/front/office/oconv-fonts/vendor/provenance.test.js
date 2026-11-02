@@ -192,3 +192,104 @@ describe('liberation — falsification (never touches a tracked file)', () => {
         expect(() => expect(badSha).toBe(goodSha)).toThrow();
     });
 });
+
+// ---------------------------------------------------------------------------
+// 7. THE METRIC TWINS OF CALIBRI AND CAMBRIA — Carlito (OFL-1.1) and
+//    Caladea (Apache-2.0): the same file-set, integrity, flavour, record and
+//    notice checks, per tree, against the tracked bytes
+// ---------------------------------------------------------------------------
+
+const TWINS = [
+    {
+        id: 'carlito',
+        family: 'Carlito',
+        license: 'OFL-1.1',
+        ref: '20130920',
+        payloadBytes: 2766644,
+        licenceFile: 'OFL-carlito.txt',
+        licenceHeader: 'SIL OPEN FONT LICENSE Version 1.1',
+        noticeFile: 'NOTICE-carlito',
+        noticeNames: ['Carlito', 'tyPoland Lukasz Dziedzic', 'Reserved Font Name']
+    },
+    {
+        id: 'caladea',
+        family: 'Caladea',
+        license: 'Apache-2.0',
+        ref: '20130214',
+        payloadBytes: 241544,
+        licenceFile: 'LICENSE-apache-2.0.txt',
+        licenceHeader: 'Apache License\n                           Version 2.0, January 2004',
+        noticeFile: 'NOTICE-caladea',
+        noticeNames: ['Caladea', 'Huerta Tipografia', 'Apache License, Version 2.0']
+    }
+];
+
+const STYLES = ['Regular', 'Bold', 'Italic', 'BoldItalic'];
+
+for (const twin of TWINS) {
+    const dir = join(VENDOR, twin.id);
+    const names = STYLES.map((s) => `${twin.family}-${s}.ttf`).sort();
+
+    describe(`${twin.id} — file set, integrity, flavour`, () => {
+        const raw = JSON.parse(readFileSync(PROVENANCE_PATH, 'utf8'));
+        const tree = raw.trees.find((/** @type {{id: string}} */ t) => t.id === twin.id);
+
+        it(`vendor/${twin.id}/ contains exactly the four ${twin.family} TrueType faces`, () => {
+            expect(existsSync(dir)).toBe(true);
+            expect(readdirSync(dir).sort()).toEqual(names);
+        });
+
+        it('PROVENANCE.json carries one record per face, whose sha256 and bytes are re-derived from the tracked bytes', () => {
+            expect(tree).toBeDefined();
+            const faces = tree.files.filter((/** @type {{path: string}} */ f) => f.path.endsWith('.ttf'));
+            expect(faces.map((/** @type {{path: string}} */ f) => f.path).sort()).toEqual(names.map((n) => `${twin.id}/${n}`));
+            for (const record of faces) {
+                const bytes = readFileSync(join(VENDOR, record.path));
+                expect(sha256File(join(VENDOR, record.path))).toBe(record.sha256);
+                expect(bytes.length).toBe(record.bytes);
+            }
+        });
+
+        it(`the four faces sum to ${twin.payloadBytes} bytes, the tree's payloadBytes`, () => {
+            let total = 0;
+            for (const name of names) total += readFileSync(join(dir, name)).length;
+            expect(total).toBe(twin.payloadBytes);
+            expect(tree.payloadBytes).toBe(twin.payloadBytes);
+        });
+
+        it('every face is a TrueType sfnt (00 01 00 00)', () => {
+            for (const name of names) {
+                expect(Array.from(readFileSync(join(dir, name)).subarray(0, 4))).toEqual([0x00, 0x01, 0x00, 0x00]);
+            }
+        });
+
+        it(`the record: licence ${twin.license}, ref ${twin.ref}, unmodified, the licence and notice files listed with their sha256`, () => {
+            expect(tree.license).toBe(twin.license);
+            expect(tree.ref).toBe(twin.ref);
+            expect(tree.upstream.modifications).toMatch(/^none\b/i);
+            for (const file of [twin.licenceFile, twin.noticeFile]) {
+                const record = tree.files.find((/** @type {{path: string}} */ f) => f.path === file);
+                expect(record).toBeDefined();
+                expect(sha256File(join(VENDOR, file))).toBe(record.sha256);
+            }
+        });
+    });
+
+    describe(`${twin.id} — licence notices`, () => {
+        it(`vendor/${twin.licenceFile} holds the licence text`, () => {
+            expect(readFileSync(join(VENDOR, twin.licenceFile), 'utf8')).toContain(twin.licenceHeader);
+        });
+
+        it(`vendor/${twin.noticeFile} names the holder, the font and the licence`, () => {
+            const text = readFileSync(join(VENDOR, twin.noticeFile), 'utf8');
+            for (const n of twin.noticeNames) expect(text).toContain(n);
+        });
+    });
+}
+
+describe('PROVENANCE.json — the three trees', () => {
+    it('trees[] is liberation, carlito, caladea, in that order', () => {
+        const raw = JSON.parse(readFileSync(PROVENANCE_PATH, 'utf8'));
+        expect(raw.trees.map((/** @type {{id: string}} */ t) => t.id)).toEqual(['liberation', 'carlito', 'caladea']);
+    });
+});

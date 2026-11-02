@@ -52,6 +52,10 @@ const cat = runtime.resolve('pdfCatalog');
     markInfo?:    PdfObject,        // /MarkInfo
     ocProperties?: PdfObject,       // /OCProperties
     outputIntents?: PdfObject,      // /OutputIntents
+    threads?, openAction?, aa?, uri?, spiderInfo?, pieceInfo?, perms?,
+    legal?, requirements?, collection?, dss?, af?, dPartRoot?, extensions?: PdfObject,
+                                    // as read, each only when present
+    needsRendering?: boolean,       // /NeedsRendering
     raw:      PdfDict,
     _extras:  Object<string, PdfObject>
 }

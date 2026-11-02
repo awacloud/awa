@@ -43,6 +43,7 @@ const f = runtime.resolve('pdfFont');
     toUnicode:       PdfObject | null,
     descendantFonts: PdfObject[] | null,
     standard14:      object | null,       // set when the fallback triggers
+    name:            string | null,       // PDF 1.0's /Name, optional since
     raw:             object
 }
 ```

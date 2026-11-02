@@ -30,7 +30,7 @@ const p = runtime.resolve('pptx');
 | Method | Signature | Returns |
 |---------|-----------|---------|
 | `read` | `(bytes: Uint8Array, opts?) => { presentation, package, unmodelledParts }` | Typed model + raw package + loss record. See [Result shape](#result-shape). |
-| `write` | `(presentation) => Uint8Array` | `.pptx` bytes. Single argument — no options object. |
+| `write` | `(presentation, opts?) => Uint8Array` | `.pptx` bytes. `opts.preserveInput` (`true` / `false`, default `false`): `true` writes from a structured clone of `presentation`, so the given model is left exactly as it was — the extensions' dehydrate hooks and the writer's own patches (a picture's `embedRef`, a chart's `chartRef`, a master's `layoutIds`) reach the clone; the bytes are the same. Another value throws `pptx/invalid-preserve-input`. |
 | `use` | `(...exts) => api` | Plugs extras in. |
 | `fromTitleBody` | `({ title, body: string[] }) => slide` | Title+body slide builder. Takes ONE object. |
 | `extractTitle` | `(slide) => string \| null` | Text of the title placeholder. |

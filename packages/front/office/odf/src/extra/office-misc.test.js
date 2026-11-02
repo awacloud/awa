@@ -28,6 +28,6 @@ describe('officeMisc', () => {
         ext.hydrateMetadata(m);
         expect(m.officeNodes).toHaveLength(1);
         const back = ext.dehydrateMetadata(m);
-        expect(back._extras[0].name).toBe('office:dde-source');
+        expect(back._extras.children[0].name).toBe('office:dde-source');
     });
 });

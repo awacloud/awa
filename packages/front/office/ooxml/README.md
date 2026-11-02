@@ -1,8 +1,8 @@
 # @awacloud/ooxml
 
-Pure-JavaScript reader and writer for Office Open XML documents (ECMA-376: `.docx`, `.xlsx`, `.pptx`) in the browser. ZIP, XML parsing and serialization, OPC packaging, DrawingML and Office Math are either implemented in the package or consumed from [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.1.0/packages/front/fw); there is no other runtime dependency, and no Node API is used (binaries are `Uint8Array`).
+Pure-JavaScript reader and writer for Office Open XML documents (ECMA-376: `.docx`, `.xlsx`, `.pptx`) in the browser. ZIP, XML parsing and serialization, OPC packaging, DrawingML and Office Math are either implemented in the package or consumed from [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.2.0/packages/front/fw); there is no other runtime dependency, and no Node API is used (binaries are `Uint8Array`).
 
-The core types the structures most documents use and keeps every other element of the parts it models verbatim in `_extras`, so an untouched element inside a modelled part is re-emitted on write. Whole parts outside the model (a theme, document properties, pivot tables, speaker notes, …) are not: `write()` produces the parts its model carries; a part `read()` did not model is not written back — `read()` lists it in `unmodelledParts`. Opt-in `extra/*` modules type the long tail of the schema and are grouped into ergonomic `*-large` and `*-full` bundles. The `*-misc` extras reach the rarest elements as catalogued passthroughs (flagged `_passthrough`, preserved on round trip, not modelled): "full" coverage means every element is either typed or preserved, not that every element has a semantic model. See the [coverage guide](./docs/guide/coverage.md).
+The core types the structures most documents use and keeps every other element of the parts it models verbatim in `_extras`, so an untouched element inside a modelled part is re-emitted on write. Whole parts outside the model (a theme, document properties, pivot tables, speaker notes, …) are not: `write()` produces the parts its model carries; a part `read()` did not model is not written back — `read()` lists it in `unmodelledParts` — unless `docx.write` is given the read result as its `carry` option. Opt-in `extra/*` modules name more of the schema and are grouped into `*-large` and `*-full` bundles. Only five extras (`wmlRunFormatting`, `wmlParagraphFormatting`, `wmlTableProperties`, `wmlSettings` and `dmlWpDrawing`, all wired by `docx-large`) type a read through a walker hook; the others are parse / render toolkits one calls on raw nodes, which a read never calls, and the `*-misc` extras only catalogue the rarest elements (flagged `_passthrough`, not modelled). The measured coverage figures are in the [coverage guide](./docs/guide/coverage.md).
 
 ## Installation
 
@@ -52,7 +52,7 @@ console.log(word.toText(document));                              // First paragr
 - `xlsx.read(bytes, opts?)` → `{ workbook, package, unmodelledParts }`
 - `pptx.read(bytes, opts?)` → `{ presentation, package, unmodelledParts }`
 
-`package` is the plain OPC package (`{ contentTypes, parts, rels }`). `unmodelledParts` is always present: `[{ partName, contentType }]`, sorted by `partName`, listing every part the read did not consume (`contentType` is `null` when `[Content_Types].xml` declares none; `[Content_Types].xml` and the relationship parts are never listed). `write()` takes the model, not the envelope: `word.write(document, { styles, numbering, … })`, `xlsx.write(workbook)`, `pptx.write(presentation)`; the parts listed in `unmodelledParts` are not written back.
+`package` is the plain OPC package (`{ contentTypes, parts, rels }`). `unmodelledParts` is always present: `[{ partName, contentType }]`, sorted by `partName`, listing every part the read did not consume (`contentType` is `null` when `[Content_Types].xml` declares none; `[Content_Types].xml` and the relationship parts are never listed). `write()` takes the model, not the envelope: `word.write(document, { styles, numbering, … })`, `xlsx.write(workbook)`, `pptx.write(presentation)`; the parts listed in `unmodelledParts` are not written back, except by `docx.write` with `carry: result` (the parts with their bytes, relationships and content types; see [`docx`](./docs/api/docx/docx.md)).
 
 ### Read options
 
@@ -62,8 +62,23 @@ Besides the archive limits (`maxParts`, `maxUncompressed`, `maxRatio`, `maxDepth
 |--------|---------|--------------------|
 | `typedRunColors` | `pptx.read`, `xlsx.read` | A text-run fill that a bare `'RRGGBB'` cannot express (a theme colour, or any colour with transforms) is typed as `rPr.color = { rgb \| schemeColor, mods? }` instead of staying verbatim in `rPr._extras`. See [drawingml](./docs/api/drawingml/drawingml.md#text-body-model). |
 | `slideExtrasByPart` | `pptx.read` | The leftovers of each slide, layout and master's `<p:cSld>` are kept in a new `cSldExtras` array and `_extras` holds the root's only; by default both go to `_extras` and the root's replace those of `<p:cSld>`. See [pptx-slide](./docs/api/pptx/slide.md#model). |
+| `extensions: 'keep'` | `docx.read` | The elements and attributes of the Office extension namespaces (`w14`, `w15`, `w16*`, `wp14`) that markup compatibility removes by default stay in the model's `_extras` and are written back; a paragraph's and a row's `w14:paraId` / `w14:textId` read as `paraId` / `textId`. The default is `'drop'`; another value throws `docx/invalid-extensions`. See [docx](./docs/api/docx/docx.md#notes). |
+| `alternateContent: 'keep'` | `docx.read` | Each `mc:AlternateContent` stays in place, verbatim, in the `_extras` of the element that holds it, and `docx.write` writes it back (a DrawingML shape, text box or chart keeps its VML fallback). The default is `'fallback'`; another value throws `docx/invalid-alternate-content`. See [docx](./docs/api/docx/docx.md#notes). |
 
-Model fields that a read now fills without an option (a model that lacks them is written as before): `fonts` on docx run properties (every `<w:rFonts>` attribute, beside `font`), `mods` on DrawingML shape fills (`lumMod`, `tint`, `alpha`, …), `srcRect` on docx drawings and pptx pictures (the picture crop), and `sheet.rowProps` on xlsx sheets (row heights and hidden rows).
+Model fields that a read now fills without an option (a model that lacks them is written as before): `fonts` on docx run properties (every `<w:rFonts>` attribute, beside `font`), `mods` on DrawingML shape fills (`lumMod`, `tint`, `alpha`, …), `srcRect` on docx drawings and pptx pictures (the picture crop), and `sheet.rowProps` on xlsx sheets (row heights and hidden rows). Since 1.2.0 a docx read also fills, without an option: `_relationships` on the document, on each header, footer, notes, comments, numbering, settings and chart model (the relationships of content the model does not type, written back by a write without `carry`); `_source` and `_read` on each drawing (an untouched drawing is written from its source); and typed `rangeMarker`, bookmark and comment-range nodes between blocks, `blockSdt` among a cell's children, `sdt` on cells and rows inside a content control, and `revision` nodes for tracked moves, where those elements used to stay in `_extras` or be dropped. A consumer walking a body, a cell or a paragraph must type-check these nodes (see [structure](./docs/api/docx/structure.md)).
+
+### Write options
+
+`docx.write(model, opts?)` takes the auxiliary parts (`styles`, `numbering`, `settings`, `comments`, `footnotes`, `endnotes`, `headers`, `footers`, `hyperlinks`, `images`, `customXml`) and these options; `xlsx.write(workbook, opts?)` and `pptx.write(presentation, opts?)` take `preserveInput` only. The four options below are off by default.
+
+| Option | Writers | Effect |
+|--------|---------|--------|
+| `carry: readResult` | `docx.write` | Writes back the parts `read()` listed in `unmodelledParts` (theme, font table, document properties, embedded objects, …) with their bytes, content types and relationships, and an unedited chart part as read. Anything but the `read()` envelope throws `docx/invalid-carry`. |
+| `preserveInput: true` | `docx.write`, `xlsx.write`, `pptx.write` | Writes from a structured clone, so the model you pass is left exactly as it was (no field demoted back into `_extras`, no assigned id on it). The default is `false`; another value throws `docx/invalid-preserve-input`, `xlsx/invalid-preserve-input` or `pptx/invalid-preserve-input`. |
+| `cleanup: ['emptyProperties']` | `docx.write` | Drops every empty `rPr` / `pPr` from the body and the story parts (on a clone). The default is none; an unknown or repeated name throws `docx/invalid-cleanup`. |
+| `danglingNumbering: 'keep'` | `docx.write` | Writes a list reference to an undeclared num as given instead of throwing `docx/numbering-unknown-num` / `docx/numbering-missing`. The default is `'throw'`; another value throws `docx/invalid-dangling-numbering`. |
+
+Without `carry`, a docx write also writes back the relationships its models' `_relationships` keep. See [`docx`](./docs/api/docx/docx.md) for the full option tables.
 
 ### With a coverage bundle (auto-wired extras)
 
@@ -115,7 +130,7 @@ See [`docs/api/errors.md`](./docs/api/errors.md) for the catalogue of error code
 
 ## The `.use(...)` hook
 
-The `docx`, `xlsx` and `pptx` instances expose `use(...extensions)`, which registers extras after construction. After `read()` the walker offers each visited node to the matching `hydrate*` hook of every extension (`hydrateRunProperties`, `hydrateParagraphProperties`, `hydrateTable`, `hydrateTcPr`, `hydrateSettings`, and the xlsx / pptx counterparts); before `write()` the symmetrical `dehydrate*` hooks run. Each extension implements only the hooks it needs.
+The `docx`, `xlsx` and `pptx` instances expose `use(...extensions)`, which registers extras after construction. After `read()` the walker offers each visited node to the matching `hydrate*` hook of every extension (`hydrateRunProperties`, `hydrateParagraphProperties`, `hydrateTable`, `hydrateTcPr`, `hydrateDrawing`, `hydrateSettings`, and the xlsx / pptx counterparts), over the docx body, headers, footers, footnotes, endnotes and comments; before `write()` the symmetrical `dehydrate*` hooks run. Each extension implements only the hooks it needs.
 
 ```js
 import fw from '@awacloud/fw';
@@ -172,7 +187,7 @@ The package follows a "**no DTD / no external entity**" policy:
 
 - The XML parser (`@awacloud/fw/io/codec/xml.js`) **skips** every `<!...>` declaration (DOCTYPE, internal ENTITY, NOTATION). No entity is expanded and no external resource is resolved, so classic XXE and billion-laughs payloads are neutralized by construction. This is pinned by regression tests.
 - `opc.read(bytes, opts?)` enforces three default archive limits against *zip-bomb* inputs (`defaultLimits` also carries the fourth, `maxDepth`, below):
-  - `maxParts = 1024`
+  - `maxParts = 8192` (`1024` before 1.2.0: a package of 1,025 to 8,192 parts that was refused is read by default; pass `maxParts: 1024` for the old cap)
   - `maxUncompressed = 256 MiB`
   - `maxRatio = 200` (ratio per entry)
 
@@ -186,7 +201,7 @@ See [`docs/api/errors.md`](./docs/api/errors.md) for the catalogue of emitted er
 ## Design choices
 
 - **Typed document model**: a serializable JSON tree rather than a flat object.
-- **`_extras` mechanism**: inside a part the model reads, elements it does not type are preserved verbatim and re-emitted on write. A part the model does not read is not written back; `read()` lists it in `unmodelledParts`.
+- **`_extras` mechanism**: inside a part the model reads, elements it does not type are preserved verbatim and re-emitted on write. A part the model does not read is not written back (`docx.write` writes it back with `carry`); `read()` lists it in `unmodelledParts`.
 - **Namespaces**: the writers emit the Transitional namespace URIs. The docx reader locates elements by their `w:` prefix and does not consult the namespace URI, so the body of a document whose `w:` prefix is bound to the Strict URI is read the same way, then written back with the Transitional URIs. The `extra/transitional` module converts between the Transitional and Strict forms.
 - **One runtime dependency**: only `@awacloud/fw`.
 - **Worker-safe**: each factory is self-sufficient (serializable through `factory.toString()`).
@@ -216,14 +231,14 @@ bun test packages/front/office/ooxml/
 |----------|--------|-------|
 | `@awacloud/ooxml` | `src/main.js` | Index: the `fw_require`, `modules`, `extras` and `bundle` arrays, and every module descriptor by name |
 | `@awacloud/ooxml/docx` | `src/docx/docx.js` | Core WordprocessingML |
-| `@awacloud/ooxml/docx-large` | `src/bundles/docx-large.js` | `docx` plus the extended-coverage extras |
-| `@awacloud/ooxml/docx-full` | `src/bundles/docx-full.js` | `docx-large` plus the long-tail extras (every WordprocessingML schema element typed or preserved) |
+| `@awacloud/ooxml/docx-large` | `src/bundles/docx-large.js` | `docx` plus the extended-coverage extras: five type a read, the others are toolkits |
+| `@awacloud/ooxml/docx-full` | `src/bundles/docx-full.js` | `docx-large` plus further toolkits (VML, custom geometry, transitional mapping, long-tail catalogues); none types a read |
 | `@awacloud/ooxml/xlsx` | `src/xlsx/xlsx.js` | Core SpreadsheetML |
-| `@awacloud/ooxml/xlsx-large` | `src/bundles/xlsx-large.js` | `xlsx` plus the extended-coverage extras |
-| `@awacloud/ooxml/xlsx-full` | `src/bundles/xlsx-full.js` | `xlsx-large` plus the long-tail extras (every SpreadsheetML schema element typed or preserved) |
+| `@awacloud/ooxml/xlsx-large` | `src/bundles/xlsx-large.js` | `xlsx` plus toolkits (pivot tables, calculation, configuration, charts); none types a read |
+| `@awacloud/ooxml/xlsx-full` | `src/bundles/xlsx-full.js` | `xlsx-large` plus further toolkits (form controls, anchors, long-tail catalogues); none types a read |
 | `@awacloud/ooxml/pptx` | `src/pptx/pptx.js` | Core PresentationML |
-| `@awacloud/ooxml/pptx-large` | `src/bundles/pptx-large.js` | `pptx` plus the extended-coverage extras |
-| `@awacloud/ooxml/pptx-full` | `src/bundles/pptx-full.js` | `pptx-large` plus the long-tail extras (every PresentationML schema element typed or preserved) |
+| `@awacloud/ooxml/pptx-large` | `src/bundles/pptx-large.js` | `pptx` plus toolkits (animations, transitions, notes, layouts, charts); none types a read |
+| `@awacloud/ooxml/pptx-full` | `src/bundles/pptx-full.js` | `pptx-large` plus further toolkits (custom geometry, long-tail catalogues); none types a read |
 | `@awacloud/ooxml/opc` | `src/opc/package.js` | OPC container (ZIP + `[Content_Types].xml` + `.rels`) |
 | `@awacloud/ooxml/drawingml` | `src/drawingml/drawingml.js` | Shared DrawingML helpers |
 | `@awacloud/ooxml/errors` | `src/errors.js` | The `ooxmlErrors` factory descriptor (typed error hierarchy) |
@@ -245,6 +260,6 @@ See [`docs/api/bundles/README.md`](./docs/api/bundles/README.md) for the details
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.1.0/packages/front/office/ooxml)
+- Source: [`packages/front/office/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.2.0/packages/front/office/ooxml)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/SECURITY.md)
+- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/SECURITY.md)

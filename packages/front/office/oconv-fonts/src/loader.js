@@ -18,6 +18,9 @@
  *
  * Face mapping: Sans for the four text classes, Mono for `code` — the
  * Liberation metric twins of Helvetica x4 + Courier.
+ *
+ * `faceUrls` gives the URL of every vendored face (the five families, four
+ * styles each) without reading any, for an application that serves them.
  */
 
 import { createOconvDefaultFaces } from './faces.js';
@@ -29,6 +32,27 @@ const FACE_FILES = Object.freeze({
     italic: 'LiberationSans-Italic.ttf',
     boldItalic: 'LiberationSans-BoldItalic.ttf',
     mono: 'LiberationMono-Regular.ttf'
+});
+
+/**
+ * Every vendored face, by family and style class, as its path under
+ * `vendor/`: the Liberation metric twins of Arial, Times New Roman and
+ * Courier New, and Carlito and Caladea, those of Calibri and Cambria.
+ */
+const VENDORED_FACES = Object.freeze({
+    'Liberation Sans': 'liberation/LiberationSans',
+    'Liberation Serif': 'liberation/LiberationSerif',
+    'Liberation Mono': 'liberation/LiberationMono',
+    Carlito: 'carlito/Carlito',
+    Caladea: 'caladea/Caladea'
+});
+
+/** Style class → file-name suffix. */
+const STYLE_SUFFIXES = Object.freeze({
+    regular: '-Regular.ttf',
+    bold: '-Bold.ttf',
+    italic: '-Italic.ttf',
+    boldItalic: '-BoldItalic.ttf'
 });
 
 /**
@@ -120,6 +144,37 @@ export async function loadDefaultFaces(opts) {
     const loaded = await Promise.all(keys.map((key) => readFace(new URL(FACE_FILES[key], base))));
     const map = {};
     keys.forEach((key, i) => { map[key] = loaded[i]; });
+    return Object.freeze(map);
+}
+
+/**
+ * The URL of every vendored face, for an application that serves the faces
+ * itself (a CSS `@font-face` rule, a fetch of its own). Reads nothing.
+ *
+ * @param {{vendorUrl?: string|URL}} [opts] `vendorUrl` — the directory serving
+ *   this package's `vendor/` tree (resolved against this module's URL, so an
+ *   absolute or a root-relative value is the expected form; a missing
+ *   trailing `/` is added). Default: the package's own `../vendor/`.
+ * @returns {Readonly<Record<string, Readonly<{regular: URL, bold: URL, italic: URL, boldItalic: URL}>>>}
+ *   The frozen map family → style class → `URL`, families `Liberation Sans`,
+ *   `Liberation Serif`, `Liberation Mono`, `Carlito`, `Caladea`.
+ */
+export function faceUrls(opts) {
+    let base;
+    if (!opts || opts.vendorUrl === undefined || opts.vendorUrl === null) {
+        base = new URL('../vendor/', import.meta.url);
+    } else {
+        base = new URL(String(opts.vendorUrl), import.meta.url);
+        if (!base.pathname.endsWith('/')) base.pathname += '/';
+    }
+    const map = {};
+    for (const [family, stem] of Object.entries(VENDORED_FACES)) {
+        const styles = {};
+        for (const [style, suffix] of Object.entries(STYLE_SUFFIXES)) {
+            styles[style] = new URL(stem + suffix, base);
+        }
+        map[family] = Object.freeze(styles);
+    }
     return Object.freeze(map);
 }
 

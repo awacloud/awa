@@ -37,10 +37,10 @@ it directly is for tooling that wants the profile-v1 writer in isolation.
 | `irToMd` | `(ir: object, meta: OconvMeta, opts?: object) => OconvMdResult` | `{markdown, anchors, lossy, losses, assets}` | — (no input validation; a malformed `ir` produces malformed output rather than throwing — the caller-facing facade `oconv.toMd` validates upstream) |
 
 `OconvMeta` (all caller-supplied provenance — this module reads no clock and
-computes no hash): `sourceFormat`, `sourceName`, `sourceBytes`,
+computes no hash): `sourceFormat`, `sourceName`, optional `title` (written right after `sourceName` when it is a non-empty string, trimmed), `sourceBytes`,
 `sourceSha256`, `convertedAt`, `converter`, `converterVersion`, `engine`,
 optional `losses` (reader losses, merged FIRST into the returned ledger).
-`opts` is reserved — v1 defines no key on it.
+`opts.frontMatter` (opt-in): `'full'` (the default) writes the front matter above; `'compact'` writes the same keys, its `losses` one entry per distinct `(code, detail)` in first-occurrence order with a `count` (`- { code: inline/dropped, detail: text:bookmark, count: 3 }`); `'none'` writes no front matter — the body alone, which is not a profile-v1 document, the result's `anchors` / `lossy` / `losses` / `assets` being the caller's sidecar. The result's `losses` is the full ledger in every form. Any other value throws `oconv: bad front matter`; other `opts` keys are ignored.
 
 `OconvMdResult`: `markdown` (front matter + rendered body), `anchors`
 (`{level, anchor}[]`, document order), `lossy` (`losses.length > 0`),
@@ -66,7 +66,7 @@ const ir = doc([
 const meta = {
     sourceFormat: 'docx', sourceName: 'x.docx', sourceBytes: 10,
     sourceSha256: 'abc123', convertedAt: '2026-09-15T00:00:00Z',
-    converter: 'oconv', converterVersion: '1.1.0', engine: 'bun'
+    converter: 'oconv', converterVersion: '1.2.0', engine: 'bun'
 };
 const { markdown, anchors, lossy } = oconvIrToMd.irToMd(ir, meta);
 // markdown starts with the YAML front matter, then "# Title\n\nHello **world**\n"
@@ -91,9 +91,9 @@ and `lossy` is `false`.
   fence widths are `@awacloud/md`'s job (`src/write/ir-to-md.js:8-11`).
 - **The asset manifest's `bytes` field is read from the shape the reader
   really produces.** `imageNode` populates `assets[].bytes` from an IR
-  `image` node's `escapes.docx.bytes`, else its `escapes.odt.bytes` — the
+  `image` node's `escapes.docx.bytes`, else its `escapes.odt.bytes`, else its `escapes.pdf.bytes`, else its `escapes.pptx.bytes` — the
   nested fields `docx-to-ir.js` and `odt-to-ir.js` store for an embedded
-  image. The array is passed through **by
+  image (and `pdf-to-ir.js` for a placed picture, under `include: ['images']`, and `pptx-to-ir.js` for a slide picture). The array is passed through **by
   reference** (the same `Uint8Array`, never copied) and is never serialized
   into the YAML front matter. A flat `escapes.bytes` is not read: no
   shipped reader produces it, so the single nested shape is the contract.
@@ -113,6 +113,11 @@ and `lossy` is `false`.
 - A table cell's block content is flattened to inline text (paragraphs and
   headings joined by a space); a heading flattened inside a cell produces no
   `#`-heading and contributes **no anchor**.
+- A list or a table inside a table cell is written inline, not dropped: its
+  text is kept, the pieces (a list's items, a table's cells row by row,
+  nested ones too) joined by `; `, and the structure is recorded as
+  `inline/flattened` (detail `table cell list` or `table cell table`). Any
+  other block a GFM cell cannot hold is still dropped (`block/dropped`).
 - A `\n` in a run's text is a hard line break (an odt `text:line-break`
   reads as one). In a paragraph it is written as a CommonMark hard break — a
   backslash at the end of the line — and a break that ends the paragraph is
@@ -123,8 +128,8 @@ and `lossy` is `false`.
   algorithm is re-declared inside this module's factory rather than
   imported from `./anchors.js`, and a drift test pins the two copies
   identical.
-- `opts` is accepted but read nowhere (`void opts` in the source) — v1
-  defines no writer option.
+- `opts.frontMatter` is the one writer option; other keys are
+  read nowhere.
 
 ## See also
 

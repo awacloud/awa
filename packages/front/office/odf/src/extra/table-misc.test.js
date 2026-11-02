@@ -28,6 +28,6 @@ describe('tableMisc', () => {
         ext.hydrateTable(t);
         expect(t.tableNodes).toHaveLength(1);
         const back = ext.dehydrateTable(t);
-        expect(back._extras[0].name).toBe('table:named-expression');
+        expect(back._extras.children[0].name).toBe('table:named-expression');
     });
 });

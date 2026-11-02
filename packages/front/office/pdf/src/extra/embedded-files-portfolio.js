@@ -22,7 +22,7 @@ export const pdfEmbeddedFilesPortfolio = {
     deps: [pdfErrors],
 
     factory(errors) {
-        const { ParseError } = errors;
+        const { ParseError, ContractError } = errors;
         const VIEW_MODES = new Set(['D', 'T', 'H', 'C']);
         const SCHEMA_SUBTYPES = new Set([
             'S', 'D', 'N', 'F', 'Desc', 'ModDate', 'CreationDate', 'Size'
@@ -83,7 +83,8 @@ export const pdfEmbeddedFilesPortfolio = {
                 }
                 out.editable = e.E.value;
             }
-            const KNOWN = new Set(['Subtype', 'N', 'O', 'V', 'E']);
+            if (e.Type) out.type = isName(e.Type) ? e.Type.value : null;
+            const KNOWN = new Set(['Type', 'Subtype', 'N', 'O', 'V', 'E']);
             for (const k of Object.keys(e)) {
                 if (!KNOWN.has(k)) out._extras[k] = e[k];
             }
@@ -147,8 +148,103 @@ export const pdfEmbeddedFilesPortfolio = {
                         '/Sort /A must be a bool or array of bools');
                 }
             }
+            if (e.Type) out.type = isName(e.Type) ? e.Type.value : null;
             for (const k of Object.keys(e)) {
-                if (k !== 'S' && k !== 'A') out._extras[k] = e[k];
+                if (k !== 'Type' && k !== 'S' && k !== 'A') out._extras[k] = e[k];
+            }
+            return out;
+        }
+
+        // The other collection dictionaries: per kind, the keys and their
+        // types (the Arlington PDF Model's), as `Key:type` pairs.
+        const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(' ').map((p) => p.split(':'))));
+        const COLLECTION_PART_TYPES = Object.freeze({
+            folder: keyTypes('Type:name ID:int Name:string Parent:dict Child:dict Next:dict CI:dict Desc:string '
+                + 'CreationDate:string ModDate:string Thumb:stream Free:array'),
+            colors: keyTypes('Type:name Background:array CardBackground:array CardBorder:array PrimaryText:array SecondaryText:array'),
+            split: keyTypes('Type:name Direction:name Position:num'),
+            subitem: keyTypes('Type:name D:string|num P:string')
+        });
+        const COLLECTION_PART_KEYS = Object.freeze(Object.fromEntries(
+            Object.entries(COLLECTION_PART_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+        const KEY_READ = Object.freeze({
+            name: (v) => (isName(v) ? v.value : undefined),
+            string: (v) => (isStr(v) ? v.value : undefined),
+            num: (v) => (v && (v.type === 'int' || v.type === 'real') ? v.value : undefined),
+            int: (v) => (isInt(v) ? v.value : undefined),
+            array: (v) => (isArr(v) ? v : undefined),
+            dict: (v) => (isDict(v) ? v : undefined),
+            stream: (v) => (v && v.type === 'stream' ? v : undefined)
+        });
+        function keyValue(type, v) {
+            if (v && v.type === 'ref') return v;
+            for (const t of type.split('|')) {
+                const r = KEY_READ[t](v);
+                if (r !== undefined) return r;
+            }
+            return null;
+        }
+
+        /**
+         * Type a collection folder, colours, split or sub-item dictionary
+         * (`kind` a key of `COLLECTION_PART_KEYS`): one field per key of
+         * its list, named after the key in lower case, present only when
+         * the key is; the other keys in `_extras`.
+         */
+        function typeCollectionPart(dict, kind) {
+            if (typeof kind !== 'string' || !Object.prototype.hasOwnProperty.call(COLLECTION_PART_TYPES, kind)) {
+                throw new ContractError('pdf/portfolio/part/kind',
+                    `kind must be one of ${Object.keys(COLLECTION_PART_TYPES).join(', ')}`,
+                    { context: { kind } });
+            }
+            if (!isDict(dict)) {
+                throw new ParseError('pdf/portfolio/part/not-dict',
+                    'a collection dictionary must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
+            const types = COLLECTION_PART_TYPES[kind];
+            const out = { raw: dict, _extras: {} };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                if (Object.prototype.hasOwnProperty.call(types, k)) out[k.toLowerCase()] = keyValue(types[k], v);
+                else out._extras[k] = v;
+            }
+            return out;
+        }
+
+        // The parts of a file specification and the go-to-embedded
+        // targets: per kind, the keys and their types.
+        const FILE_PART_TYPES = Object.freeze({
+            ef: keyTypes('F:stream UF:stream'),
+            rf: keyTypes('F:array UF:array'),
+            mac: keyTypes('Subtype:int Creator:int ResFork:stream'),
+            target: keyTypes('R:name N:string P:int|string A:int|string T:dict')
+        });
+        const FILE_PART_KEYS = Object.freeze(Object.fromEntries(
+            Object.entries(FILE_PART_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+
+        /**
+         * Type a file specification's `/EF` (`kind` `ef`) or `/RF` (`rf`),
+         * a Mac OS file information dictionary (`mac`) or a go-to-embedded
+         * target (`target`): one field per key of its list, named after the
+         * key in lower case, present only when the key is; the other keys in
+         * `_extras`.
+         */
+        function typeFilePart(dict, kind) {
+            if (typeof kind !== 'string' || !Object.prototype.hasOwnProperty.call(FILE_PART_TYPES, kind)) {
+                throw new ContractError('pdf/portfolio/file-part/kind',
+                    `kind must be one of ${Object.keys(FILE_PART_TYPES).join(', ')}`,
+                    { context: { kind } });
+            }
+            if (!isDict(dict)) {
+                throw new ParseError('pdf/portfolio/file-part/not-dict',
+                    'a file part must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
+            const types = FILE_PART_TYPES[kind];
+            const out = { raw: dict, _extras: {} };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                if (Object.prototype.hasOwnProperty.call(types, k)) out[k.toLowerCase()] = keyValue(types[k], v);
+                else out._extras[k] = v;
             }
             return out;
         }
@@ -159,7 +255,13 @@ export const pdfEmbeddedFilesPortfolio = {
                 throw new ParseError('pdf/portfolio/bad-navigator',
                     '/Navigator must be a dict or ref');
             }
-            return { raw: nav, entries: nav.entries };
+            const out = { raw: nav, entries: nav.entries };
+            const e = nav.entries;
+            if (e.Type !== undefined) out.type = isName(e.Type) ? e.Type.value : null;
+            if (e.Layout !== undefined) {
+                out.layout = isName(e.Layout) ? e.Layout.value : (e.Layout && e.Layout.type === 'array' ? e.Layout : null);
+            }
+            return out;
         }
 
         function typeCustomIcon(ci) {
@@ -214,6 +316,8 @@ export const pdfEmbeddedFilesPortfolio = {
                     '/CI item must be a dict');
             }
             const out = { raw: ciDict, fields: {}, _extras: {} };
+            const t = ciDict.entries.Type;
+            if (t && t.type === 'name') out.type = t.value;
             for (const [k, v] of Object.entries(ciDict.entries)) {
                 if (k === 'Type') continue;
                 if (k === 'CI') out.customIcon = typeCustomIcon(v);
@@ -230,6 +334,10 @@ export const pdfEmbeddedFilesPortfolio = {
             typeNavigator,
             typeCustomIcon,
             typeCollectionItem,
+            typeCollectionPart,
+            COLLECTION_PART_KEYS,
+            typeFilePart,
+            FILE_PART_KEYS,
             VIEW_MODES,
             SCHEMA_SUBTYPES
         };

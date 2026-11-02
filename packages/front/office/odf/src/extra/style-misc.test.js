@@ -29,6 +29,6 @@ describe('styleMisc — factory + roundtrip', () => {
         ext.hydrateStyles(s);
         expect(s.styleNodes).toHaveLength(1);
         const back = ext.dehydrateStyles(s);
-        expect(back._extras[0].name).toBe('style:font-face');
+        expect(back._extras.children[0].name).toBe('style:font-face');
     });
 });

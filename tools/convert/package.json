@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/tool-convert",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "license": "AGPL-3.0-only",
   "description": "Document conversion (@awacloud/oconv) at the command line and over MCP: to-md, from-md, convert and to-html, on Bun, Node and Deno",
   "keywords": [

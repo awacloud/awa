@@ -331,6 +331,12 @@ export const textContent = {
         function inlineBoxes(n, lines) {
             const extras = n._extras && n._extras.children;
             if (extras) for (const el of extras) boxes(el, lines);
+            // Raw element runs (`elementsInRuns`) are visited where the
+            // `_extras` entries they replace were: first, in their order.
+            const elementRuns = (runs) => {
+                for (const r of runs || []) if (r && r.type === 'element') boxes(r, lines);
+            };
+            elementRuns(n.runs);
             // Links — including links nested in a span's `runs` — are visited
             // for the boxes of their untyped children. A span's raw element
             // entries are not: their text is already inline through `textOf`.
@@ -344,6 +350,7 @@ export const textContent = {
                     } else if (r.type === 'link') {
                         const ex = r._extras && r._extras.children;
                         if (ex) for (const el of ex) boxes(el, lines);
+                        elementRuns(r.runs);
                         visitRuns(r.runs, false);
                     } else if (r.type === 'frame' && !inSpan) {
                         frameBoxes(r, lines);
@@ -362,7 +369,10 @@ export const textContent = {
          */
         function frameBoxes(f, lines) {
             const c = f.child;
-            if (c && c.kind === 'text-box') {
+            // A box typed by the read option `textBoxes` gives its content
+            // (edited or not); a raw one is typed here.
+            if (c && c.kind === 'text-box' && Array.isArray(c.content)) walk(c.content, lines);
+            else if (c && c.kind === 'text-box') {
                 boxes(xml.el('draw:text-box', { ...(c.attrs || {}) }, c.children || []), lines);
             }
             for (const el of (f._extras && f._extras.children) || []) boxes(el, lines);

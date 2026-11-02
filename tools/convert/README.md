@@ -6,7 +6,7 @@ an installed copy (see "Running it" below); the MCP server runs on
 **bun**.
 
 ```bash
-bun src/index.ts to-md <file> [--format <fmt>] [--at <iso>] [--out <file>]
+bun src/index.ts to-md <file> [--format <fmt>] [--at <iso>] [--out <file>] [to-md options]
 bun src/index.ts from-md <file.md> --target <fmt> [--out <file>]
 bun src/index.ts convert <file> --target <fmt> [--format <fmt>] [--out <file>]
 bun src/index.ts to-html <file.md> [--out <file>]
@@ -79,7 +79,8 @@ node src/index.ts to-md file.docx --out file.md
 
 # deno — two permissions, each because of a concrete call this CLI makes:
 #   --allow-read   readFileSync() on the input file and on ../package.json
-#   --allow-write  writeFileSync() when --out is given
+#   --allow-write  writeFileSync() when --out is given, mkdirSync() and
+#                  writeFileSync() when --assets-dir is
 # (measured: all four verbs run under --no-prompt with only these two)
 deno run --allow-read --allow-write src/index.ts to-md file.docx --out file.md
 ```
@@ -160,6 +161,53 @@ for the current instant. It must be a strict RFC 3339 `date-time` (e.g.
 second); anything else is a usage error (exit `2`), checked before any
 file is opened. A valid value is kept verbatim, never normalised.
 
+### `to-md` options
+
+Every option below is `@awacloud/oconv`'s `toMd` input of the same name,
+forwarded as given and validated by oconv (`--help` and
+[`docs/api/cli.md`](./docs/api/cli.md#flags) list them too). None is set
+unless it is given: an absent flag leaves oconv's own behaviour, so
+no default below changes what a plain `to-md` run produces. Lists are
+comma-separated.
+
+| Flag | Source formats | Default | Meaning |
+|---|---|---|---|
+| `--sheets <mode>` | `xlsx`, `ods` | `table` | `table` (GFM tables), `csv` or `tsv`: each sheet a fenced `csv` / `tsv` block, much smaller than a table on a dense sheet |
+| `--pdf-infer <list>` | `pdf` | none | inference on an untagged pdf: `headings`, `tables`, `running` (running headers and footers left out) |
+| `--pdf-declare <list>` | `pdf` | none | `positional` records one `struct/positional` loss when the structure was built from positions |
+| `--pdf-include <list>` | `pdf` | none | `images` places each JPEG, JPEG 2000 and raw-pixel picture as a Markdown image (write them with `--assets-dir`) |
+| `--pdf-recover-xref` | `pdf` | off | rebuild an unusable cross-reference chain |
+| `--pdf-line-hyphens <mode>` | `pdf` | `infor- mation` (kept, with a space) | `drop` joins a word a hyphen cuts at a line end without the hyphen, `keep` with it |
+| `--password-file <file>` | `pdf` | none | the user or owner password of an encrypted pdf, read from this file; one trailing line break is dropped. A password is never taken on the command line, where the process list would show it |
+| `--form-op-budget <n>` | `pdf` | `1000000` | per-page Form XObject operator budget |
+| `--odt-include <list>` | `odt` | none | `toc` reads a table of contents' entries as paragraphs |
+| `--docx-include <list>` | `docx` | none | `toc` reads a table of contents control's entries as paragraphs |
+| `--include-notes` | `pptx`, `odp` | off | render speaker notes; on another source format it is ignored (no error) |
+| `--sheet-cell-budget <n>` | `xlsx`, `ods` | none | a sheet whose padded table would hold more cells is written unpadded, one `<A1 address>: <text>` line per value (`sheet/sparse-form`) |
+| `--max-parts <n>` | `docx`, `xlsx`, `pptx`, `odt`, `ods`, `odp` | 8192 (docx, xlsx, pptx), 4096 (odt, ods, odp) | the reader's archive limit on entries |
+| `--max-uncompressed <bytes>` | the same six | 256 MiB | archive limit on total inflated bytes |
+| `--max-ratio <n>` | the same six | 200 | archive limit on the inflated / compressed ratio per entry |
+| `--max-depth <n>` | `docx`, `xlsx`, `pptx` | 1000 | archive limit on the element depth of an XML part |
+| `--output-budget <bytes>` | every format | none | a bound on the document's text (UTF-8 bytes), checked before the markdown is built |
+| `--output-overflow <mode>` | every format | `throw` | with `--output-budget`: `throw` fails the conversion, `truncate` keeps what fits and records `doc/truncated` |
+| `--front-matter <mode>` | every format | `full` | `full`, `compact` (the loss ledger counted per code and detail) or `none` (the body alone) |
+| `--assets-dir <dir>` | every format | none | write each image whose bytes the conversion returned (a pdf's under `--pdf-include images`, a docx's, odt's or pptx's) under `<dir>`, at the relative path the markdown names, so pass the directory the markdown is written to; an image without bytes or with an unsafe name gets a stderr line and is not written ([`assetFiles`](./docs/api/assetFiles.md)) |
+
+Every option of the table is `to-md` only.
+
+**Error rules.** Exit **2** (usage): an option on another verb; an option
+on a source format its row does not list (`--include-notes` excepted,
+above); a value oconv refuses (a list entry it does not know, a
+non-integer or negative number, `--output-overflow` without
+`--output-budget`); a value that starts with `-`, which is read as a
+missing value (`--max-parts -1`); `--sheets` outside `table|csv|tsv`.
+Exit **1** (conversion error): a limit the document actually exceeds
+(`--max-parts`, `--max-uncompressed`, `--max-ratio`, `--max-depth`: the
+reader's own message, e.g. `OPC: too many parts in archive`), a document
+whose text passes `--output-budget` under `throw`
+(`oconv: output too large`), an unreadable `--password-file`, and an
+encrypted pdf without or with a wrong password.
+
 ## stdout / stderr discipline
 
 With no `--out`, the converted bytes go to **stdout** so the tool composes
@@ -175,8 +223,8 @@ byte-identical to what stdout would have carried for the same input and
 | Code | Meaning |
 |---|---|
 | 0 | success (including a lossy conversion); `--help` and `--version` always exit 0 |
-| 1 | generic error (unknown command, a non-usage runtime failure such as an unreadable input file) |
-| 2 | usage/config error (missing command, missing file argument, missing `--target`, an unknown flag or a flag without its value, an invalid `--at`, an unsupported format/target/pair) |
+| 1 | generic error (unknown command, a non-usage runtime failure such as an unreadable input file, an archive limit the document exceeds, an output past `--output-budget` under `throw`) |
+| 2 | usage/config error (missing command, missing file argument, missing `--target`, an unknown flag or a flag without its value, an invalid `--at`, an unsupported format/target/pair, a `to-md` option on another verb, on another source format (`--include-notes` is ignored there) or with a value oconv refuses) |
 | 130 | SIGINT |
 | 143 | SIGTERM |
 
@@ -206,9 +254,9 @@ gating a request. The mirror is exported as `TO_MD_FORMATS`,
 This tool advertises no conversion pair `@awacloud/oconv` does not
 measurably deliver, and lossy pairs say so (via the stderr loss count) —
 see `@awacloud/oconv`'s
-[loss matrix](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.1.0/packages/front/office/oconv/docs/loss-matrix.md)
+[loss matrix](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.2.0/packages/front/office/oconv/docs/loss-matrix.md)
 for the fidelity table per pair, and its
-[convert guide](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.1.0/packages/front/office/oconv/docs/convert.md)
+[convert guide](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.2.0/packages/front/office/oconv/docs/convert.md)
 for the cross-format pairs.
 
 ## MCP server
@@ -237,10 +285,39 @@ error and a generic one.
 
 | Tool | Needs | Loses |
 |---|---|---|
-| `to_md` | `path` **or** (`bytesBase64` + `name`); optional `format`, `includeNotes`, `at`, `outPath`, `lossView` | presentation/layout formatting and most inline styling beyond basic emphasis/headings — see the result's `losses` array |
+| `to_md` | `path` **or** (`bytesBase64` + `name`); optional `format`, `includeNotes`, `sheets`, `pdfInfer`, `pdfDeclare`, `pdfInclude`, `pdfRecoverXref`, `pdfLineHyphens`, `pdfPasswordPath`, `formOpBudget`, `odtInclude`, `docxInclude`, `sheetCellBudget`, `archiveLimits`, `outputBudget`, `frontMatter`, `assetsDir`, `at`, `outPath`, `lossView` | presentation/layout formatting and most inline styling beyond basic emphasis/headings — see the result's `losses` array |
 | `from_md` | `markdown` **or** `path`; required `target`; optional `name`, `outPath`, `lossView` | nothing this step introduces on its own — only as rich as the input Markdown; see `losses` |
 | `convert` | `path` **or** (`bytesBase64` + `name`); required `target`; optional `format`, `outPath`, `lossView` | whatever the docx/odt/pdf loss matrix records for that pair — see `losses`; a `pdf` target is one-way |
 | `to_html` | `markdown` **or** `path`; optional `outPath` | raw HTML (a block with its content; inline tags keep their text); `javascript:`, `vbscript:`, `file:` and `data:` URLs (images included) become an empty `href`/`src`; anything outside the sanitiser allowlist (task-list checkboxes stay, as disabled inputs); no embedded CSS, no table of contents, no footnotes, front matter or math; no `losses` field — the renderer does not itemise its drops |
+
+`to_md`'s options are the CLI's, under oconv's own names (the table under
+"`to-md` options" above gives the formats, the defaults and what each does;
+an option left out leaves oconv's behaviour):
+
+| Argument | Type | CLI flag | Notes |
+|---|---|---|---|
+| `sheets` | string | `--sheets` | `table` (default), `csv`, `tsv` |
+| `pdfInfer`, `pdfDeclare`, `pdfInclude` | array of string | `--pdf-infer`, `--pdf-declare`, `--pdf-include` | a list, not a comma-separated string |
+| `pdfRecoverXref` | boolean | `--pdf-recover-xref` | |
+| `pdfLineHyphens` | string | `--pdf-line-hyphens` | `drop` or `keep` |
+| `pdfPasswordPath` | string | `--password-file` | a path to a file holding the password; no argument carries the password itself. An unreadable file is a usage error (`cannot read pdfPasswordPath: …`) |
+| `formOpBudget` | integer | `--form-op-budget` | default `1000000` |
+| `odtInclude`, `docxInclude` | array of string | `--odt-include`, `--docx-include` | `["toc"]` |
+| `sheetCellBudget` | integer | `--sheet-cell-budget` | |
+| `archiveLimits` | object | `--max-parts`, `--max-uncompressed`, `--max-ratio`, `--max-depth` | `{ maxParts, maxUncompressed, maxRatio, maxDepth }`, any of them; `0` disables a check |
+| `outputBudget` | object | `--output-budget`, `--output-overflow` | `{ bytes, overflow }`, `overflow` `throw` (default) or `truncate` |
+| `frontMatter` | string | `--front-matter` | `full` (default), `compact`, `none` |
+| `assetsDir` | string | `--assets-dir` | the result lists `assets` (`{ name, path, bytesLength }`) and `assetsSkipped` (`{ name, reason }`) |
+
+The server checks each argument against its schema type before any
+conversion: a `string`, `boolean`, `object`, `integer` (a whole number: `1.5`
+fails) or `array` of the `items` type (`["headings"]` passes, `"headings"`
+fails) that does not match is a usage error
+(`argument <name>: expected <type>, got <type>`). It does not check
+`enum` members or the keys of an object: oconv does, and its refusal comes
+back as `{ "error": "…", "usage": true }`, the CLI's exit 2. A limit the
+document exceeds or an output past its budget is `usage: false`, the CLI's
+exit 1.
 
 The tool names are the MCP tool registry of `src/mcp.ts` (`TOOLS`), not
 functions of `src/core.ts`: each tool calls the matching core function
@@ -337,7 +414,7 @@ path, not exports.
 
 | Sub-path | Target | Usage |
 |---|---|---|
-| `@awacloud/tool-convert` | `src/core.ts` (bun), `dist/core.js` (node, deno and any other resolver) | the programmatic API: `toMd`, `fromMd`, `convert`, `toHtml`, `isCoreError`, the format-hint constants `TO_MD_FORMATS`, `FROM_MD_TARGETS`, `CONVERT_PAIRS` and the exported types — see [`docs/api/`](./docs/api/README.md) |
+| `@awacloud/tool-convert` | `src/core.ts` (bun), `dist/core.js` (node, deno and any other resolver) | the programmatic API: `toMd`, `fromMd`, `convert`, `toHtml`, `isCoreError`, `assetFiles`, the format-hint constants `TO_MD_FORMATS`, `FROM_MD_TARGETS`, `CONVERT_PAIRS` and the exported types — see [`docs/api/`](./docs/api/README.md) |
 
 Command entry points (files you run, never imported through the package
 name):
@@ -355,7 +432,8 @@ creates no `convert` command, and the two files above are the whole command
 surface. Its `main` field names `src/index.ts`, but `exports` takes
 precedence, so `import '@awacloud/tool-convert'` resolves to `src/core.ts`
 on bun and to `dist/core.js` elsewhere. `src/runtime.ts`,
-`src/descriptors.ts` and `src/timestamp.ts` (and their `dist/` transpiles)
+`src/descriptors.ts`, `src/loss-summary.ts`, `src/password.ts` and
+`src/timestamp.ts` (and their `dist/` transpiles)
 are internal modules of the two entry points, not part of the surface.
 
 ## Maturity
@@ -374,8 +452,8 @@ Copyright (c) 2026 AwaCloud SAS
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`tools/convert`](https://github.com/awacloud/awa/tree/@awacloud/tool-convert@1.1.0/tools/convert)
+- Source: [`tools/convert`](https://github.com/awacloud/awa/tree/@awacloud/tool-convert@1.2.0/tools/convert)
 - Issues: https://github.com/awacloud/awa/issues (the package declares no
   `bugs` URL of its own)
 - Security policy and release verification:
-  https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.1.0/SECURITY.md
+  https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.2.0/SECURITY.md

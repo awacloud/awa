@@ -79,13 +79,21 @@ Generated from `coverage/scorecard.json` (format `office-scorecard/v1`) in the r
 
 | Suite | Result | What is measured | Measured | Replay |
 |---|---|---|---|---|
-| `bun-coverage-src` bun 1.3.13 | lines 94.87 %, functions 95.57 % (mean of 81 source files) | the coverage gate's model over the declared basis (src/**) | 2026-10-17, `cf58af11f` | `bun cli.ts office-scorecard axis-a --pkg odf` |
+| `bun-coverage-src` bun 1.3.13 | lines 95.80 %, functions 96.06 % (mean of 81 source files) | the coverage gate's model over the declared basis (src/**) | 2026-10-26, `976d3b35e` | `bun cli.ts office-scorecard axis-a --pkg odf` |
+
+### Conformance suites
+
+| Suite | Result | What is measured | Measured | Replay |
+|---|---|---|---|---|
+| `tracked-changes-odt` poi@REL_5_5_1+libreoffice@26.8.0.3 | 6 / 11 | every wild odt whose content.xml holds a text:changed-region is read, written with the odfvalidator round trip and read again; it passes when the count of every change element (text:changed-region, text:insertion, text:deletion, text:format-change, text:change, text:change-start, text:change-end) of content.xml is unchanged and the second read's body deep-equals the first's (a model fixed point); a throw fails it | 2026-10-27, `9d987140e` | `bun cli.ts office-scorecard axis-b --suite tracked-changes-odt` |
+| `tracked-changes-odt-elements-in-runs` poi@REL_5_5_1+libreoffice@26.8.0.3 | 11 / 11 | every wild odt whose content.xml holds a text:changed-region is read with odt.read(bytes, { framesInRuns: true, elementsInRuns: true }) (the opt-in that keeps every untyped inline element, a change mark among them, at its place), written from that model as the odfvalidator round trip writes, and read again with the same options; it passes when the count of every change element (text:changed-region, text:insertion, text:deletion, text:format-change, text:change, text:change-start, text:change-end) of content.xml is unchanged and the second read's body deep-equals the first's (a model fixed point); a throw fails it | 2026-10-27, `d443b1fc5` | `bun cli.ts office-scorecard axis-b --suite tracked-changes-odt-elements-in-runs` |
 
 ### Output validity, judged by an external validator
 
 | Suite | Result | What is measured | Measured | Replay |
 |---|---|---|---|---|
-| [`odfvalidator`](https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff) odfvalidator@0.13.0 | 15 / 15 | odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 16 (11 written, 5 round trips); 1 case not run, each with its reason in the scorecard | 2026-10-15, `31604fbdb` | `bun cli.ts office-scorecard axis-c --suite odfvalidator` |
+| [`odfvalidator`](https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff) odfvalidator@0.13.0 | 16 / 16 | odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 17 (12 written, 5 round trips); 1 case not run, each with its reason in the scorecard | 2026-10-24, `c98070672` | `bun cli.ts office-scorecard axis-c --suite odfvalidator` |
+| [`odfvalidator-tracked-changes`](https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff) odfvalidator@0.13.0 | 0 / 0 | odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 11 (0 written, 11 round trips); 11 cases not run, each with its reason in the scorecard | 2026-10-28, `c9cecc9f0` | `bun cli.ts office-scorecard axis-c --suite odfvalidator-tracked-changes` |
 
 ### Robustness on wild and pathological inputs
 

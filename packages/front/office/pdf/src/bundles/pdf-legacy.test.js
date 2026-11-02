@@ -45,11 +45,14 @@ describe('pdf-legacy bundle', () => {
         const stubs = deps.map((n, i) => i === 0 ? pdfStub : { __ext: n });
         const result = bundle.pdfLegacyBundle.factory(...stubs);
         expect(result).toBe(pdfStub);
-        expect(used.length).toBe(deps.length - 1);
+        // One extension per extra, then the read path that hands the
+        // password reads its pdfLegacyRc4Read.
+        expect(used.length).toBe(deps.length);
         for (let i = 1; i < deps.length; i++) {
             expect(used[i - 1].name).toBe(deps[i]);
             expect(typeof used[i - 1].register).toBe('function');
         }
+        expect(used[deps.length - 1].name).toBe('pdfLegacyRc4ReadPath');
     });
 
     test('does NOT re-export extras / buildPdfLegacy / helper symbols', () => {

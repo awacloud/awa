@@ -197,6 +197,33 @@ export const pdfLegacyRc4Read = {
             return ok ? { ok: true, fileKey: fk } : { ok: false };
         }
 
+        // §7.6.3.4 Algorithm 7 — the owner password: recover the padded
+        // user password from /O (Algorithm 3's key, RC4 once for R2, twenty
+        // passes with the key XOR 19..0 for R3), then check it as the user's.
+        function validateOwnerPassword(pw, params) {
+            const n = params.keyLength / 8;
+            let h = md5(padPassword(pw));
+            if (params.revision >= 3) {
+                for (let i = 0; i < 50; i++) h = md5(h.subarray(0, n));
+            }
+            const key = h.subarray(0, n);
+            let user = params.O;
+            if (!(user instanceof Uint8Array) || user.length !== 32) {
+                throw new EncryptionError('pdf/rc4/bad-O',
+                    '/O must be a 32-byte Uint8Array');
+            }
+            if (params.revision === 2) {
+                user = rc4(key, user);
+            } else {
+                for (let i = 19; i >= 0; i--) {
+                    const xk = new Uint8Array(n);
+                    for (let k = 0; k < n; k++) xk[k] = key[k] ^ i;
+                    user = rc4(xk, user);
+                }
+            }
+            return validateUserPassword(user, params);
+        }
+
         // Per-object key for V <= 2, R 2/3: append the object id and gen
         // (low 3 + low 2 bytes LE) to the file key, MD5, truncate.
         function objectKey(fileKey, objNum, gen) {
@@ -226,6 +253,7 @@ export const pdfLegacyRc4Read = {
             computeFileKey,
             computeU,
             validateUserPassword,
+            validateOwnerPassword,
             objectKey,
             decryptString,
             decryptStream,

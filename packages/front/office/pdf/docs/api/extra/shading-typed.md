@@ -19,7 +19,7 @@ Shadings 1–7 (Function-based, Axial, Radial, Free-form Gouraud, Lattice-form G
 
 ```js
 const ext = runtime.resolve('pdfShadingTyped');
-// Returns: { typeShading, typeFunction }
+// Returns: { typeShading, typeFunction, typePattern, PATTERN_KEYS }
 ```
 
 ## API
@@ -28,6 +28,8 @@ const ext = runtime.resolve('pdfShadingTyped');
 |--------|-----------|---------|
 | `typeShading` | `(dict\|stream) => Shading` | Record shaped by `/ShadingType`. |
 | `typeFunction` | `(dict\|stream) => Function` | Record shaped by `/FunctionType`. |
+| `typePattern` | `(dict\|stream) => Pattern` | A pattern dictionary or stream (its dictionary read) of `/PatternType` 1 (tiling) or 2 (shading): one field per key of its type's list, named after the key in lower case (`PaintType` → `painttype`, `XStep` → `xstep`), present only when the key is — a name, a number, an integer by its value, an array (a rectangle or matrix included), a dictionary or a stream as read (a reference as read), `null` for a value of none of the key's types; a stream's Table 5 keys (`Length`, `Filter` …) left to `typeStreamEntries`; plus `raw` and `_extras` (the other keys). |
+| `PATTERN_KEYS` | frozen object | Pattern type → its keys (the Arlington PDF Model's lists). |
 
 ## Examples
 
@@ -57,6 +59,8 @@ fn.bounds;        // [...]
 | `pdf/extra/shading/not-dict-or-stream` | `ParseError` | Invalid input. |
 | `pdf/extra/shading/missing-type` | `ParseError` | `/ShadingType` absent. |
 | `pdf/extra/shading/bad-type` | `ParseError` | `/ShadingType` outside 1..7. |
+| `pdf/extra/shading/pattern/not-dict` | `ParseError` | `typePattern`: neither a dictionary nor a stream. |
+| `pdf/extra/shading/pattern/bad-type` | `ParseError` | `typePattern`: `/PatternType` missing or not 1, 2. |
 | `pdf/extra/shading/lattice-missing-vpr` | `ParseError` | Type 5 without `/VerticesPerRow`. |
 | `pdf/extra/shading/mesh-missing-bits` | `ParseError` | Type 4/6/7 without `/BitsPerCoordinate`/`/BitsPerComponent`. |
 | `pdf/extra/shading/mesh-missing-decode` | `ParseError` | `/Decode` absent. |

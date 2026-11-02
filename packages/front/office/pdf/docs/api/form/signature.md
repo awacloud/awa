@@ -39,6 +39,10 @@ const sf = runtime.resolve('pdfSignatureField');
     sv:     object | null,   // ref|dict — seed value
     t:      Uint8Array | null,
     signed: boolean,
+    // each only when present (Table 226)
+    parent?: PdfObject, kids?: PdfObject, aa?: PdfObject,
+    tu?: Uint8Array, tm?: Uint8Array, da?: Uint8Array, q?: number,
+    dv?: PdfObject,                // /DV, the default signature value, as read
     raw:    object,
     _extras:{ [key]: PdfObject }
 }

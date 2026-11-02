@@ -32,7 +32,7 @@ export const pdfTaggedPdfTyped = {
         const { isType } = parserObj;
 
         const OWNERS = new Set([
-            'Layout', 'List', 'Table', 'PrintField', 'Artifact', 'UserProperties'
+            'Layout', 'List', 'Table', 'PrintField', 'Artifact', 'UserProperties', 'NSO'
         ]);
 
         const KNOWN_BY_OWNER = {
@@ -46,11 +46,14 @@ export const pdfTaggedPdfTyped = {
                 'RubyAlign', 'RubyPosition', 'GlyphOrientationVertical',
                 'ColumnCount', 'ColumnGap', 'ColumnWidths']),
             List: new Set(['O', 'ListNumbering', 'ContinuedList', 'ContinuedFrom']),
-            Table: new Set(['O', 'RowSpan', 'ColSpan', 'Headers', 'Scope', 'Summary']),
-            PrintField: new Set(['O', 'Role', 'checked', 'Desc']),
+            Table: new Set(['O', 'RowSpan', 'ColSpan', 'Headers', 'Scope', 'Summary', 'Short']),
+            PrintField: new Set(['O', 'Role', 'checked', 'Checked', 'Desc']),
             Artifact: new Set(['O', 'Type', 'BBox', 'Attached', 'Subtype']),
             UserProperties: new Set(['O', 'P'])
         };
+        // ISO 32000-2's NSO owner: the attributes of the namespace NS names;
+        // in the standard structure namespace, every standard attribute.
+        KNOWN_BY_OWNER.NSO = new Set(['NS', ...Object.values(KNOWN_BY_OWNER).flatMap((set) => [...set])]);
 
         function knownFor(owner) {
             return KNOWN_BY_OWNER[owner] || new Set(['O']);
@@ -77,6 +80,7 @@ export const pdfTaggedPdfTyped = {
                 case 'PrintField':     typed = readPrintField(e); break;
                 case 'Artifact':       typed = readArtifact(e); break;
                 case 'UserProperties': typed = readUserProperties(e); break;
+                case 'NSO':            typed = readNso(e); break;
                 default:
                     typed = { owner, vendor: true };
             }
@@ -103,11 +107,11 @@ export const pdfTaggedPdfTyped = {
                 textIndent:              numVal(e.TextIndent, null),
                 textAlign:               nameVal(e.TextAlign),
                 bbox:                    numArr(e.BBox),
-                width:                   numVal(e.Width, null),
-                height:                  numVal(e.Height, null),
+                width:                   numOrName(e.Width),
+                height:                  numOrName(e.Height),
                 blockAlign:              nameVal(e.BlockAlign),
                 inlineAlign:             nameVal(e.InlineAlign),
-                lineHeight:              numVal(e.LineHeight, null),
+                lineHeight:              numOrName(e.LineHeight),
                 baselineShift:           numVal(e.BaselineShift, null),
                 textPosition:            nameVal(e.TextPosition),
                 textDecorationType:      nameVal(e.TextDecorationType),
@@ -115,7 +119,22 @@ export const pdfTaggedPdfTyped = {
                 textDecorationThickness: numVal(e.TextDecorationThickness, null),
                 columnCount:             numVal(e.ColumnCount, null),
                 columnGap:               e.ColumnGap || null,
-                columnWidths:            e.ColumnWidths || null
+                columnWidths:            e.ColumnWidths || null,
+                tBorderStyle:            nameOrAsRead(e.TBorderStyle),
+                tPadding:                numVal(e.TPadding, null) ?? (isType(e.TPadding, 'array') ? e.TPadding : null),
+                rubyAlign:               nameVal(e.RubyAlign),
+                rubyPosition:            nameVal(e.RubyPosition),
+                glyphOrientationVertical: isType(e.GlyphOrientationVertical, 'int')
+                    ? e.GlyphOrientationVertical.value : nameVal(e.GlyphOrientationVertical)
+            };
+        }
+
+        // NSO: the namespace and every standard owner's attributes.
+        function readNso(e) {
+            return {
+                ns: isType(e.NS, 'dict') || isType(e.NS, 'ref') ? e.NS : null,
+                ...readLayout(e), ...readList(e), ...readTable(e), ...readPrintField(e), ...readArtifact(e),
+                p: isType(e.P, 'array') || isType(e.P, 'ref') ? e.P : null
             };
         }
 
@@ -133,7 +152,8 @@ export const pdfTaggedPdfTyped = {
                 colSpan:    numVal(e.ColSpan, null),
                 headers:    e.Headers || null,
                 scope:      nameVal(e.Scope),
-                summary:    isType(e.Summary, 'string') ? e.Summary.value : null
+                summary:    isType(e.Summary, 'string') ? e.Summary.value : null,
+                short:      isType(e.Short, 'string') ? e.Short.value : null
             };
         }
 
@@ -175,6 +195,9 @@ export const pdfTaggedPdfTyped = {
         }
 
         function nameVal(v) { return isType(v, 'name') ? v.value : null; }
+        function numOrName(v) { return numVal(v, null) ?? nameVal(v); }
+        // A name by its value, any other value as read.
+        function nameOrAsRead(v) { return v ? (isType(v, 'name') ? v.value : v) : null; }
         function numVal(v, dflt) {
             if (!v) return dflt;
             return (v.type === 'int' || v.type === 'real') ? v.value : dflt;

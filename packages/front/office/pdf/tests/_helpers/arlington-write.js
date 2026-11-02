@@ -475,9 +475,11 @@ const codePoints = (s) => [...new Set([...s].map((c) => c.codePointAt(0)))];
  * The documents the pdf package's writers emit for this measure, each
  * `{ id, writer, bytes }`: `pdfBuilder` from scratch, and `pdf.write` of
  * what `pdf.read` gives back for two of them. Reproducible: fixed `/ID`,
- * no clock.
+ * no clock. `metrics: true` registers every Standard 14 face of
+ * `builder-standard-14` (so of `write-standard-14`) through the opt-in
+ * metrics (`standard14` and `encodings`) — the sibling suite's documents.
  */
-export function pdfDocuments(rt = pdfRuntime()) {
+export function pdfDocuments(rt = pdfRuntime(), { metrics = false } = {}) {
     const pdf = rt.resolve('pdf');
     const { builder } = rt.resolve('pdfBuilder');
     const embed = rt.resolve('pdfFontEmbed');
@@ -486,13 +488,15 @@ export function pdfDocuments(rt = pdfRuntime()) {
 
     const blank = builder().addPage().build();
 
+    const lookup14 = rt.resolve('standard14Lookup');
+    const opt = metrics ? { standard14: lookup14, encodings: rt.resolve('encodingLookup') } : {};
     const standard14 = builder()
         .addPage({ mediaBox: [0, 0, 595, 842], cropBox: [10, 10, 585, 832], rotate: 90 })
-        .addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding' })
-        .addFont({ name: 'F2', baseFont: 'Times-Roman' })
+        .addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', ...opt })
+        .addFont({ name: 'F2', baseFont: 'Times-Roman', ...opt })
         .addContent('BT /F1 12 Tf 72 700 Td (Page one) Tj /F2 10 Tf 0 -14 Td (Times) Tj ET')
         .addPage()
-        .addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding' })
+        .addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', ...opt })
         .addContent('BT /F1 12 Tf 72 700 Td (Page two) Tj ET')
         .addMetadata({
             Title: 'Writer conformance', Author: 'awa', Subject: 'Arlington', Keywords: 'pdf, 2.0',
@@ -503,7 +507,6 @@ export function pdfDocuments(rt = pdfRuntime()) {
         .build();
 
     // Standard 14 faces with the opt-in metrics, a symbolic face among them
-    const lookup14 = rt.resolve('standard14Lookup');
     const standard14Metrics = builder()
         .addPage()
         .addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14: lookup14 })

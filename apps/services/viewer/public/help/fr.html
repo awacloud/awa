@@ -11,6 +11,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Aide — AWA Viewer</title>
+    <link rel="icon" href="../favicon.ico" sizes="16x16 32x32 48x48 256x256">
     <link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
     <link rel="stylesheet" href="help.css">
 </head>
@@ -46,6 +47,7 @@
             <li>Pages PDF et diapositives&#8239;: <strong>Précédente</strong> et <strong>Suivante</strong>, ou tapez un numéro de page.</li>
             <li>Zoom&#8239;: les boutons et le menu de zoom, ou <strong>Ajuster à la largeur</strong>. Un classeur a un onglet par feuille sous la grille.</li>
             <li><strong>Plein écran</strong>, et <strong>Télécharger</strong> pour enregistrer le fichier d’origine.</li>
+            <li><strong>Copier avec la mise en forme</strong> place le document dans le presse-papiers pour le coller dans un traitement de texte avec ses titres, ses mises en valeur, ses listes, ses tableaux, ses liens et (pour Word et le texte OpenDocument) ses images. Les polices, les couleurs et la mise en page ne sont pas reprises, et un PDF ne reprend aucune image. Collé dans un champ de texte, vous obtenez du Markdown. Le bouton est masqué quand le navigateur n’offre pas de presse-papiers.</li>
             <li><strong>Détails</strong> (le bouton <em>i</em>) montre les informations du fichier et <em>ce que cet affichage laisse de côté</em>&#8239;: ce que la visionneuse n’a pas pu dessiner y est listé, jamais caché.</li>
         </ul>
 
@@ -54,6 +56,7 @@
             <thead><tr><th>Touches</th><th>Action</th></tr></thead>
             <tbody>
                 <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Ouvrir un fichier</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>C</kbd> (<kbd>Cmd</kbd>+<kbd>Maj</kbd>+<kbd>C</kbd> sur macOS)</td><td>Copier avec la mise en forme (certains navigateurs gardent ce raccourci pour leurs outils de développement&#8239;: utilisez alors le bouton)</td></tr>
                 <tr><td><kbd>Page suiv.</kbd> / <kbd>Page préc.</kbd></td><td>Page ou diapositive suivante / précédente</td></tr>
                 <tr><td><kbd>Ctrl</kbd>+<kbd>Origine</kbd> / <kbd>Ctrl</kbd>+<kbd>Fin</kbd></td><td>Première / dernière page ou diapositive</td></tr>
                 <tr><td><kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd>, <kbd>Ctrl</kbd>+molette</td><td>Zoom avant / arrière / 100&#8239;%</td></tr>

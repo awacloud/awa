@@ -140,6 +140,7 @@ function buildMinimalFont(opts) {
 
     const tables = { head, hhea, maxp, hmtx: hmtxEnc.bytes, cmap: cmapBytes, name, loca: loca.bytes, glyf };
     if (opts && opts.gvarGlyphCount != null) tables.gvar = buildGvarBytes(opts.gvarGlyphCount);
+    if (opts && opts.drop) for (const tag of opts.drop) delete tables[tag];
     return packSfnt({
         flavor: SFNT_FLAVOR.TRUETYPE,
         tables
@@ -196,6 +197,35 @@ describe('fonts top-level', () => {
     test('accepts gvar whose glyphCount matches numGlyphs', () => {
         const bytes = buildMinimalFont({ gvarGlyphCount: 2 });
         expect(() => api.read(bytes)).not.toThrow();
+    });
+
+    test('a font without a name table: refused by default, read with allowMissingName', () => {
+        const bytes = buildMinimalFont({ drop: ['name'] });
+        let caught;
+        try { api.read(bytes); } catch (e) { caught = e; }
+        expect(caught).toBeInstanceOf(ParseError);
+        expect(caught.code).toBe('fonts/missing-name');
+        expect(() => api.read(bytes, { allowMissingName: false })).toThrow(ParseError);
+        const font = api.read(bytes, { allowMissingName: true });
+        expect(font.name).toBe(null);
+        expect(Object.values(font.names).every((v) => v === undefined)).toBe(true);
+        expect(Object.keys(font.names)).toEqual(Object.keys(api.read(buildMinimalFont()).names));
+        expect(font.numGlyphs).toBe(2);
+        expect(font.advanceWidth(1)).toBe(700);
+        expect(font.glyphIndexForCodePoint(0x41)).toBe(1);
+        expect(font.getGlyphByCodePoint(0x41).path.commands.length).toBeGreaterThan(0);
+    });
+
+    test('allowMissingName touches nothing else: other missing tables still throw, a named font reads the same', () => {
+        for (const tag of ['head', 'maxp', 'hhea', 'hmtx', 'cmap']) {
+            let caught;
+            try { api.read(buildMinimalFont({ drop: [tag, 'name'] }), { allowMissingName: true }); } catch (e) { caught = e; }
+            expect(caught.code).toBe(`fonts/missing-${tag}`);
+        }
+        const plain = api.read(buildMinimalFont());
+        const opted = api.read(buildMinimalFont(), { allowMissingName: true });
+        expect(opted.names).toEqual(plain.names);
+        expect(opted.name).toEqual(plain.name);
     });
 
     test('rejects gvar whose glyphCount diverges from numGlyphs', () => {

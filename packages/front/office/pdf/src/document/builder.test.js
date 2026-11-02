@@ -1361,3 +1361,68 @@ describe('pdfBuilder — addFont standard14: the metrics PDF 2.0 requires (ISO 3
         expect(Array.from(undef)).toEqual(Array.from(plain));
     });
 });
+
+describe('pdfBuilder — addFont standard14 in MacRoman, Standard or no encoding, with encodings', () => {
+    const fontsRt = new ModuleRuntime();
+    for (const m of [...fontsPkg.fw_require, ...fontsPkg.modules]) fontsRt.register(m);
+    const standard14 = fontsRt.resolve('standard14Lookup');
+    const encodings = fontsRt.resolve('encodingLookup');
+    const fontDictOf = (bytes, name = 'F1') => {
+        const doc = readDocument(bytes);
+        const res = deref(doc, doc.pages[0].resources);
+        return { doc, font: deref(doc, res.entries.Font.entries[name]) };
+    };
+    const widthsOf = (spec) => {
+        const { font } = fontDictOf(builder().addPage().addFont({ name: 'F1', standard14, encodings, ...spec }).build());
+        expect([font.entries.FirstChar.value, font.entries.LastChar.value]).toEqual([32, 255]);
+        return { font, at: (code) => font.entries.Widths.items[code - 32].value };
+    };
+
+    test('StandardEncoding: each code takes its glyph\'s width, fi and Lslash from extraWidths', () => {
+        const helv = standard14.lookupStandard14('Helvetica');
+        const { font, at } = widthsOf({ baseFont: 'Helvetica', encoding: 'StandardEncoding' });
+        expect(font.entries.Encoding.value).toBe('StandardEncoding');
+        expect(at(0xAE)).toBe(500);                     // fi
+        expect(at(0xE8)).toBe(556);                     // Lslash
+        expect(at(0x27)).toBe(helv.widths[0x92]);       // quoteright, WinAnsi 0x92
+        expect(at(0x41)).toBe(667);                     // A
+        expect(at(0x80)).toBe(0);                       // no glyph
+    });
+
+    test('MacRomanEncoding: a WinAnsi glyph at its Mac code, an extra glyph, a glyph the face lacks', () => {
+        const times = standard14.lookupStandard14('Times-Bold');
+        const { at } = widthsOf({ baseFont: 'Times-Bold', encoding: 'MacRomanEncoding' });
+        expect(at(0xAE)).toBe(times.widths[0xC6]);      // AE
+        expect(at(0xDE)).toBe(times.extraWidths.fi);    // fi
+        expect(at(0x27)).toBe(times.widths[0x27]);      // quotesingle
+        expect(at(0xF0)).toBe(0);                       // apple
+    });
+
+    test('no encoding: the built-in StandardEncoding, no /Encoding written', () => {
+        const std = widthsOf({ baseFont: 'Times-Roman', encoding: 'StandardEncoding' });
+        const none = widthsOf({ baseFont: 'Times-Roman' });
+        expect(none.font.entries.Encoding).toBeUndefined();
+        expect(none.font.entries.Widths.items.map((x) => x.value)).toEqual(std.font.entries.Widths.items.map((x) => x.value));
+        expect(none.at(0xAE)).toBe(standard14.lookupStandard14('Times-Roman').extraWidths.fi);
+    });
+
+    test('Courier: 600 wherever the encoding names a glyph', () => {
+        const { at } = widthsOf({ baseFont: 'Courier', encoding: 'StandardEncoding' });
+        expect([at(0x41), at(0xAE), at(0xE8)]).toEqual([600, 600, 600]);
+        expect(at(0x80)).toBe(0);
+    });
+
+    test('WinAnsi with encodings given writes what it writes without them', () => {
+        const a = builder().addPage().addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14 }).build();
+        const b = builder().addPage().addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', standard14, encodings }).build();
+        expect(Array.from(b)).toEqual(Array.from(a));
+    });
+
+    test('refused: encodings that are not an encodingLookup API', () => {
+        for (const bad of [{}, null, 1]) {
+            let err = null;
+            try { builder().addPage().addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'StandardEncoding', standard14, encodings: bad }); } catch (e) { err = e; }
+            expect(err && err.code).toBe('pdf/builder/bad-font');
+        }
+    });
+});

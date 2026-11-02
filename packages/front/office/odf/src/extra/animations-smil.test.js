@@ -29,6 +29,6 @@ describe('animationsSmil', () => {
         ext.hydrateSlide(slide);
         expect(slide.animations).toHaveLength(1);
         const back = ext.dehydrateSlide(slide);
-        expect(back._extras[0].name).toBe('anim:seq');
+        expect(back._extras.children[0].name).toBe('anim:seq');
     });
 });

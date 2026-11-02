@@ -13,9 +13,11 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
+import { fw_require as oconvFwRequire, modules as oconvModules } from '@awacloud/oconv';
 import { extras as mdExtras, fw_require as mdFwRequire, modules as mdModules } from '@awacloud/md';
-import { convert, fromMd, isCoreError, toHtml, toMd } from './core.ts';
+import { assetFiles, convert, fromMd, isCoreError, toHtml, toMd, type ToMdInput } from './core.ts';
 import { toModuleDefinitions } from './descriptors.ts';
+import { brokenXrefPdf, encryptedPdf, jpegPdf, JPEG_BYTES, PAGE_TEXT, plainOdt, plainPdf } from '../tests/pdf-fixtures.ts';
 
 const FIXTURES = join(import.meta.dir, '..', 'tests', 'fixtures');
 const SAMPLE_DOCX = readFileSync(join(FIXTURES, 'sample.docx'));
@@ -337,5 +339,153 @@ describe('buildMd registration', () => {
         full.registerAll(toModuleDefinitions('md modules', mdModules));
         full.registerAll(toModuleDefinitions('md extras', mdExtras));
         expect(full.resolve('mdHtmlDocument')).toBeDefined();
+    });
+});
+
+/** A small xlsx written through oconv's own runtime (its `xlsx` module). */
+function sheetXlsx(): Uint8Array {
+    const rt = new ModuleRuntime();
+    rt.registerAll(toModuleDefinitions('@awacloud/oconv fw_require', oconvFwRequire));
+    rt.registerAll(toModuleDefinitions('@awacloud/oconv modules', oconvModules));
+    const xlsx = rt.resolve('xlsx') as { write(m: object): Uint8Array };
+    return xlsx.write({ sheets: [{ name: 'Atlas', rows: [['Species', 'Count, 2024'], ['Alcedo', '12']] }] });
+}
+
+describe('toMd — sheets (A58)', () => {
+    test("'csv' writes each sheet as a fenced csv block; absent, a table", async () => {
+        const bytes = sheetXlsx();
+        const csv = await toMd({ name: 'atlas.xlsx', bytes, convertedAt: CONVERTED_AT, sheets: 'csv' });
+        if (isCoreError(csv)) throw new Error(csv.error);
+        expect(csv.markdown).toContain('```csv\nSpecies,"Count, 2024"\nAlcedo,12\n```');
+        const table = await toMd({ name: 'atlas.xlsx', bytes, convertedAt: CONVERTED_AT });
+        if (isCoreError(table)) throw new Error(table.error);
+        expect(table.markdown).toContain('| Species |');
+    });
+
+    test('a bad value and another format are usage errors', async () => {
+        const bad = await toMd({ name: 'atlas.xlsx', bytes: sheetXlsx(), convertedAt: CONVERTED_AT, sheets: 'json' });
+        expect(isCoreError(bad) && [bad.error, bad.usage]).toEqual(['oconv: bad sheets', true]);
+        const docx = await toMd({ name: 'sample.docx', bytes: new Uint8Array(SAMPLE_DOCX), convertedAt: CONVERTED_AT, sheets: 'csv' });
+        expect(isCoreError(docx) && [docx.error, docx.usage]).toEqual(['oconv: sheets needs format xlsx or ods', true]);
+    });
+});
+
+describe('toMd — every oconv opt-in (T35)', () => {
+    const DOCX = { name: 'sample.docx', bytes: new Uint8Array(SAMPLE_DOCX), convertedAt: CONVERTED_AT };
+
+    test('each pdf / odt option reaches oconv: on a docx, its needs-format refusal is a usage error', async () => {
+        const cases: [Partial<ToMdInput>, string][] = [
+            [{ formOpBudget: 10 }, 'oconv: form op budget needs format pdf'],
+            [{ pdfInfer: ['headings'] }, 'oconv: pdf infer needs format pdf'],
+            [{ pdfDeclare: ['positional'] }, 'oconv: pdf declare needs format pdf'],
+            [{ pdfInclude: ['images'] }, 'oconv: pdf include needs format pdf'],
+            [{ pdfPassword: 'user' }, 'oconv: pdf password needs format pdf'],
+            [{ pdfRecoverXref: true }, 'oconv: pdf recover xref needs format pdf'],
+            [{ odtInclude: ['toc'] }, 'oconv: odt include needs format odt'],
+            [{ pdfLineHyphens: 'drop' }, 'oconv: pdf line hyphens needs format pdf'],
+        ];
+        for (const [option, message] of cases) {
+            const r = await toMd({ ...DOCX, ...option });
+            expect(isCoreError(r) && [r.error, r.usage]).toEqual([message, true]);
+        }
+    });
+
+    test('a bad option value is a usage error; a pdf error is not', async () => {
+        const pdf = { name: 'a.pdf', bytes: plainPdf(), convertedAt: CONVERTED_AT };
+        const cases: [Partial<ToMdInput>, string][] = [
+            [{ pdfInfer: ['x'] }, 'oconv: bad pdf infer'],
+            [{ pdfDeclare: ['x'] }, 'oconv: bad pdf declare'],
+            [{ pdfInclude: ['x'] }, 'oconv: bad pdf include'],
+            [{ formOpBudget: 0 }, 'oconv: bad form op budget'],
+            [{ pdfLineHyphens: 'join' }, 'oconv: bad pdf line hyphens'],
+            [{ opts: { frontMatter: 'x' } }, 'oconv: bad front matter'],
+        ];
+        for (const [option, message] of cases) {
+            const r = await toMd({ ...pdf, ...option });
+            expect(isCoreError(r) && [r.error, r.usage]).toEqual([message, true]);
+        }
+        const odt = await toMd({ name: 'a.odt', bytes: await plainOdt(), convertedAt: CONVERTED_AT, odtInclude: ['x'] });
+        expect(isCoreError(odt) && [odt.error, odt.usage]).toEqual(['oconv: bad odt include', true]);
+        const docx = await toMd({ ...DOCX, docxInclude: ['x'] });
+        expect(isCoreError(docx) && [docx.error, docx.usage]).toEqual(['oconv: bad docx include', true]);
+        const docxOnOdt = await toMd({ name: 'a.odt', bytes: await plainOdt(), convertedAt: CONVERTED_AT, docxInclude: ['toc'] });
+        expect(isCoreError(docxOnOdt) && [docxOnOdt.error, docxOnOdt.usage]).toEqual(['oconv: docx include needs format docx', true]);
+        expect(isCoreError(await toMd({ ...DOCX, docxInclude: ['toc'] }))).toBe(false);
+        const locked = await toMd({ name: 'a.pdf', bytes: encryptedPdf(), convertedAt: CONVERTED_AT });
+        expect(isCoreError(locked) && locked.usage).toBe(false);
+    });
+
+    test('the opt-ins convert: a password, a rebuilt xref, the front matter dropped', async () => {
+        const open = await toMd({ name: 'a.pdf', bytes: encryptedPdf(), convertedAt: CONVERTED_AT, pdfPassword: 'user' });
+        if (isCoreError(open)) throw new Error(open.error);
+        expect(open.markdown).toContain(PAGE_TEXT);
+        const rebuilt = await toMd({ name: 'a.pdf', bytes: brokenXrefPdf(), convertedAt: CONVERTED_AT, pdfRecoverXref: true });
+        if (isCoreError(rebuilt)) throw new Error(rebuilt.error);
+        expect(rebuilt.markdown).toContain(PAGE_TEXT);
+        const bare = await toMd({ name: 'a.pdf', bytes: plainPdf(), convertedAt: CONVERTED_AT, opts: { frontMatter: 'none' } });
+        if (isCoreError(bare)) throw new Error(bare.error);
+        expect(bare.markdown.startsWith('---')).toBe(false);
+    });
+
+    test('the result carries the asset manifest, bytes included', async () => {
+        const r = await toMd({ name: 'a.pdf', bytes: jpegPdf(), convertedAt: CONVERTED_AT, pdfInclude: ['images'] });
+        if (isCoreError(r)) throw new Error(r.error);
+        expect(r.assets.map((a) => a.name)).toEqual(['image-7.jpg']);
+        expect(Bun.deepEquals(r.assets[0]!.bytes, JPEG_BYTES)).toBe(true);
+        const none = await toMd({ name: 'a.pdf', bytes: jpegPdf(), convertedAt: CONVERTED_AT });
+        if (isCoreError(none)) throw new Error(none.error);
+        expect(none.assets).toEqual([]);
+    });
+});
+
+describe('assetFiles (T35)', () => {
+    const b = new Uint8Array([1]);
+    test('a safe relative name with bytes is written, sub-directories included', () => {
+        const r = assetFiles([
+            { kind: 'image', name: 'image-7.jpg', bytes: b },
+            { kind: 'image', name: 'media/image1.png', bytes: b },
+        ]);
+        expect(r.files.map((f) => f.name)).toEqual(['image-7.jpg', 'media/image1.png']);
+        expect(r.skipped).toEqual([]);
+    });
+
+    test('an unsafe name or an asset without bytes is skipped with its reason', () => {
+        const unsafe = ['', '../up.png', 'a/../b.png', './a.png', '/abs.png', '\\abs.png', 'C:x.png', 'a//b.png', 'a\\..\\b.png'];
+        const r = assetFiles([
+            ...unsafe.map((name) => ({ kind: 'image', name, bytes: b })),
+            { kind: 'image', name: 'Grafik 1' },
+        ]);
+        expect(r.files).toEqual([]);
+        expect(r.skipped.map((s) => s.name)).toEqual([...unsafe, 'Grafik 1']);
+        expect(r.skipped.slice(0, -1).every((s) => s.reason === 'unsafe name')).toBe(true);
+        expect(r.skipped.at(-1)!.reason).toBe('no bytes');
+    });
+});
+
+describe('toMd — the sheet, archive and output budgets (T46-T48)', () => {
+    const DOCX = { name: 'sample.docx', bytes: new Uint8Array(SAMPLE_DOCX), convertedAt: CONVERTED_AT };
+
+    test('each refusal of a bad value or a wrong format is a usage error', async () => {
+        const pdf = { name: 'a.pdf', bytes: plainPdf(), convertedAt: CONVERTED_AT };
+        const cases: [object, Partial<ToMdInput>, string][] = [
+            [DOCX, { sheetCellBudget: 10 }, 'oconv: sheet cell budget needs format xlsx or ods'],
+            [DOCX, { archiveLimits: { other: 1 } as never }, 'oconv: bad archive limits'],
+            [pdf, { archiveLimits: { maxParts: 5 } }, 'oconv: archive limits need an office source'],
+            [DOCX, { outputBudget: { bytes: 0 } }, 'oconv: bad output budget'],
+        ];
+        for (const [input, option, message] of cases) {
+            const r = await toMd({ ...(input as typeof DOCX), ...option });
+            expect(isCoreError(r) && [r.error, r.usage]).toEqual([message, true]);
+        }
+    });
+
+    test('an output past its budget is not a usage error; truncate converts with the loss', async () => {
+        const over = await toMd({ ...DOCX, outputBudget: { bytes: 1 } });
+        expect(isCoreError(over) && [over.error, over.usage]).toEqual(['oconv: output too large', false]);
+        const cut = await toMd({ ...DOCX, outputBudget: { bytes: 1, overflow: 'truncate' } });
+        expect(isCoreError(cut)).toBe(false);
+        expect(!isCoreError(cut) && cut.losses.some((l) => l.code === 'doc/truncated')).toBe(true);
+        const limited = await toMd({ ...DOCX, archiveLimits: { maxParts: 2 } });
+        expect(isCoreError(limited) && limited.usage).toBe(false);
     });
 });

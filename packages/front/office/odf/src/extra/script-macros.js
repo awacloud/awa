@@ -79,8 +79,8 @@ export const scriptMacros = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const s of out.scripts) extras.push(renderScript(s));
             delete out.scripts;
-            if (Array.isArray(meta._extras) || !meta._extras) out._extras = extras;
-            else out._extras = { ...meta._extras, children: extras };
+            if (Array.isArray(meta._extras)) out._extras = extras;
+            else out._extras = { ...(meta._extras || {}), children: extras };
             return out;
         }
 

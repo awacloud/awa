@@ -19,7 +19,7 @@ Reference pages for the `@awacloud/fonts` modules, organised like `src/`. Each p
 - [sfnt/sfnt](./sfnt/sfnt.md) — `parseSfnt` / `packSfnt`
 - [sfnt/ttc](./sfnt/ttc.md) — TTC/OTC collections
 - [sfnt/woff](./sfnt/woff.md) — WOFF1 (zlib)
-- [sfnt/woff2](./sfnt/woff2.md) — WOFF2 (Brotli, no inverse transform)
+- [sfnt/woff2](./sfnt/woff2.md) — WOFF2 (Brotli; `decode` keeps the transforms, `toSfnt` reverses them)
 - [_shared/](./_shared/README.md) — `fontsShared`, container constants and helpers shared by the SFNT, TTC, WOFF and WOFF2 modules
 
 ## OpenType tables (required)

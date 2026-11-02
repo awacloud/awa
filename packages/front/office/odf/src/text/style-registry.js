@@ -101,6 +101,11 @@ export const textStyleRegistry = {
             '4.445cm', '5.08cm', '5.715cm', '6.35cm', '6.985cm'
         ];
         const LIST_LABEL_INDENT = '-0.635cm';
+        /**
+         * A number format usable as is in a style name: XML 1.0 name
+         * characters (`NameChar`) without `:`.
+         */
+        const NAME_PART = /^[-.0-9A-Z_a-z\u00B7\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037D\u037F-\u1FFF\u200C-\u200D\u203F-\u2040\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\u{10000}-\u{EFFFF}]+$/u;
 
         /** Grid-seam property bags (bordered table cell, margins table). */
         const CELL_BORDER = '0.5pt solid #000000';
@@ -117,6 +122,63 @@ export const textStyleRegistry = {
             if (!v) return new Set();
             if (v instanceof Set) return v;
             return new Set(v);
+        }
+
+        /**
+         * The label-alignment `style:list-level-properties` child every
+         * generated list level carries (level is 1-based).
+         */
+        function levelPropsEl(level) {
+            const ml = LIST_LEVEL_MARGINS[level - 1];
+            return xml.el('style:list-level-properties', {
+                'text:list-level-position-and-space-mode': 'label-alignment'
+            }, [
+                xml.el('style:list-level-label-alignment', {
+                    'text:label-followed-by': 'listtab',
+                    'text:list-tab-stop-position': ml,
+                    'fo:text-indent': LIST_LABEL_INDENT,
+                    'fo:margin-left': ml
+                }, [])
+            ]);
+        }
+
+        /**
+         * The list style the write generates for `{ name, ordered,
+         * numFormat? }`: ten levels of that numbering. The read consumes
+         * an automatic list style only when it is this one (`sameStyleEl`).
+         */
+        function listStyleEl(entry) {
+            const levels = [];
+            for (let level = 1; level <= 10; level++) {
+                levels.push(entry.ordered
+                    ? xml.el('text:list-level-style-number', {
+                        'text:level': String(level),
+                        'style:num-format': entry.numFormat,
+                        'style:num-suffix': '.'
+                    }, [levelPropsEl(level)])
+                    : xml.el('text:list-level-style-bullet', {
+                        'text:level': String(level),
+                        'text:bullet-char': '•'
+                    }, [levelPropsEl(level)]));
+            }
+            return xml.el('text:list-style', { 'style:name': entry.name }, levels);
+        }
+
+        /**
+         * Two elements are the same style: same name, same attributes in
+         * any order (the root's `ignore` attribute aside — its name), and
+         * the same element children in order; whitespace text is no child.
+         */
+        function sameStyleEl(a, b, ignore) {
+            if (!a || !b || a.name !== b.name) return false;
+            const attrs = (el) => Object.entries(el.attrs || {}).filter(([k]) => k !== ignore && !k.startsWith('xmlns'));
+            const aa = attrs(a), ba = attrs(b);
+            if (aa.length !== ba.length || aa.some(([k, v]) => (b.attrs || {})[k] !== v)) return false;
+            const kids = (el) => (el.children || []).filter(c => c.type === 'element' || (c.type === 'text' && /\S/.test(c.value || '')));
+            const ak = kids(a), bk = kids(b);
+            if (ak.length !== bk.length) return false;
+            return ak.every((c, i) => (c.type === 'text' ? bk[i].type === 'text' && bk[i].value === c.value
+                : sameStyleEl(c, bk[i], null)));
         }
 
         // =================================================================
@@ -139,6 +201,7 @@ export const textStyleRegistry = {
 
             const textByKey = new Map();   // 'bism' subset  → allocated name
             const listByKey = new Map();   // 'b' | 'n<fmt>' → { name, ordered, numFormat }
+            let otherFormats = 0;          // list formats named awa-l-x<k>
             const used = new Set();        // names this registry handed out
             let cellName = null;           // 'awa-c-b' once requested
             let tableName = null;          // 'awa-tb-m' once requested
@@ -194,7 +257,11 @@ export const textStyleRegistry = {
             }
 
             /**
-             * Name of the `text:list-style` carrying the given numbering.
+             * Name of the `text:list-style` carrying the given numbering:
+             * `awa-l-b` (bullets), `awa-l-n<format>` for a format made of
+             * name characters (`1`, `a`, `I` …), `awa-l-x<k>` for any other
+             * (a style name is an NCName: LibreOffice's `0001, 0002, …`
+             * is not), `k` counting such formats in the order first met.
              *
              * @param {{ordered: boolean, numFormat?: string}} spec
              * @returns {string}
@@ -205,7 +272,8 @@ export const textStyleRegistry = {
                 const key = ordered ? `n${numFormat}` : 'b';
                 const seen = listByKey.get(key);
                 if (seen) return seen.name;
-                const name = alloc(`awa-l-${key}`);
+                const name = alloc(!ordered || NAME_PART.test(numFormat)
+                    ? `awa-l-${key}` : `awa-l-x${++otherFormats}`);
                 listByKey.set(key, { name, ordered, numFormat });
                 return name;
             }
@@ -237,41 +305,6 @@ export const textStyleRegistry = {
                 void spec;
                 if (!tableName) tableName = alloc('awa-tb-m');
                 return tableName;
-            }
-
-            /**
-             * The label-alignment `style:list-level-properties` child every
-             * generated list level carries (level is 1-based).
-             */
-            function levelPropsEl(level) {
-                const ml = LIST_LEVEL_MARGINS[level - 1];
-                return xml.el('style:list-level-properties', {
-                    'text:list-level-position-and-space-mode': 'label-alignment'
-                }, [
-                    xml.el('style:list-level-label-alignment', {
-                        'text:label-followed-by': 'listtab',
-                        'text:list-tab-stop-position': ml,
-                        'fo:text-indent': LIST_LABEL_INDENT,
-                        'fo:margin-left': ml
-                    }, [])
-                ]);
-            }
-
-            function listStyleEl(entry) {
-                const levels = [];
-                for (let level = 1; level <= 10; level++) {
-                    levels.push(entry.ordered
-                        ? xml.el('text:list-level-style-number', {
-                            'text:level': String(level),
-                            'style:num-format': entry.numFormat,
-                            'style:num-suffix': '.'
-                        }, [levelPropsEl(level)])
-                        : xml.el('text:list-level-style-bullet', {
-                            'text:level': String(level),
-                            'text:bullet-char': '•'
-                        }, [levelPropsEl(level)]));
-                }
-                return xml.el('text:list-style', { 'style:name': entry.name }, levels);
             }
 
             /**
@@ -390,10 +423,16 @@ export const textStyleRegistry = {
          * @param {Array<object>|null} namedStyles — raw elements of the
          *   `styles.xml` `<office:styles>` bucket. `styles.xml`'s own
          *   automatic-styles bucket is excluded by design.
-         * @returns {object} `{ textFlags, listNumbering, cellBorders,
-         *   tableAlign, consumed }`
+         * @param {{semantic?: boolean}} [opts] `semantic` (the read's
+         *   opt-in `semanticStyles`): `textFlags` falls back to the
+         *   emphasis a style states when the fully-mapped rule cannot
+         *   resolve it (keep-and-gain, never consumed), and `listLevel`
+         *   is used for a nested list with no style.
+         * @returns {object} `{ textFlags, listNumbering, listLevel,
+         *   cellBorders, tableAlign, consumed }`
          */
-        function createResolver(contentAutoStyles, fontFaces, namedStyles) {
+        function createResolver(contentAutoStyles, fontFaces, namedStyles, opts) {
+            const semantic = !!(opts && opts.semantic === true);
             const consumed = new Set();
             const autoStyleByName = new Map();
             const autoListByName = new Map();
@@ -538,14 +577,59 @@ export const textStyleRegistry = {
                 return null;
             }
 
+            /** Deepest `style:parent-style-name` chain walked. */
+            const PARENT_DEPTH_MAX = 16;
+
             /**
-             * Semantic emphasis flags behind a `text:style-name` reference.
+             * The emphasis a text style states, whatever else it holds:
+             * the style (content automatic, else `styles.xml` named) and
+             * its named parents, their text properties merged child over
+             * parent. `bold` from `fo:font-weight` `bold` or ≥ 700,
+             * `italic` from `fo:font-style` `italic` / `oblique`, `strike`
+             * from a `style:text-line-through-style` other than `none`,
+             * `monospace` from a mono `style:font-name`. Keep-and-gain
+             * (`source: 'named'`): the span keeps its style name and the
+             * style is not consumed. `null` when it states none.
+             */
+            function looseTextFlags(styleName) {
+                const named = (n) => {
+                    const els = namedStyleByName.get(n);
+                    return els && els.length ? typeRawStyle(els[0]) : null;
+                };
+                let s = autoStyleByName.get(styleName) || named(styleName);
+                if (!s || s.family !== 'text') return null;
+                const chain = [];
+                const seen = new Set();
+                while (s && chain.length < PARENT_DEPTH_MAX && !seen.has(s.name)) {
+                    seen.add(s.name);
+                    chain.unshift(s);
+                    s = s.parentStyleName ? named(s.parentStyleName) : null;
+                }
+                const bag = {};
+                for (const st of chain) Object.assign(bag, (st.properties && st.properties.text) || {});
+                const out = {};
+                const w = bag['fo:font-weight'];
+                if (w === 'bold' || Number(w) >= 700) out.bold = true;
+                const fs = bag['fo:font-style'];
+                if (fs === 'italic' || fs === 'oblique') out.italic = true;
+                const lt = bag['style:text-line-through-style'];
+                if (lt && lt !== 'none') out.strike = true;
+                if (bag['style:font-name'] && isMonoFace(bag['style:font-name'])) out.monospace = true;
+                return Object.keys(out).length ? { ...out, source: 'named' } : null;
+            }
+
+            /**
+             * Semantic emphasis flags behind a `text:style-name` reference:
+             * the fully-mapped rule, then (`semantic`) the emphasis the style
+             * states.
              *
              * @param {string} styleName
              * @returns {object|null}
              */
             function textFlags(styleName) {
-                return resolveStyle(styleName, mapTypedStyle);
+                const strict = resolveStyle(styleName, mapTypedStyle);
+                if (strict || !semantic || !styleName) return strict;
+                return looseTextFlags(styleName);
             }
 
             /**
@@ -598,10 +682,14 @@ export const textStyleRegistry = {
                 const auto = autoListByName.get(styleName);
                 if (auto) {
                     const num = mapListEl(auto);
-                    if (num) {
+                    // Consumed only when the write regenerates it as it is
+                    // (the honesty rule); any other is kept as read, its
+                    // numbering still derived (`source: 'kept'`).
+                    if (num && sameStyleEl(auto, listStyleEl({ name: styleName, ...num }), 'style:name')) {
                         consumed.add(styleName);
                         return { ...num, source: 'auto' };
                     }
+                    if (num) return { ...num, source: 'kept' };
                 }
                 for (const el of namedListByName.get(styleName) || []) {
                     const num = mapListEl(el);
@@ -610,15 +698,234 @@ export const textStyleRegistry = {
                 return null;
             }
 
+            /**
+             * Numbering of one level of a list style (content automatic,
+             * else `styles.xml`): its `text:list-level-style-number` or
+             * `-bullet` whose `text:level` is `level`; `null` otherwise. A
+             * nested list with no style takes its ancestor's (`semantic`).
+             *
+             * @param {string} styleName
+             * @param {number} level 1-based nesting depth
+             * @returns {{ordered: boolean, numFormat?: string}|null}
+             */
+            function listLevel(styleName, level) {
+                const el = autoListByName.get(styleName) || (namedListByName.get(styleName) || [])[0];
+                for (const c of (el && el.children) || []) {
+                    if (c.type !== 'element' || (c.attrs && c.attrs['text:level']) !== String(level)) continue;
+                    if (c.name === 'text:list-level-style-number') {
+                        return { ordered: true, numFormat: (c.attrs && c.attrs['style:num-format']) || '1' };
+                    }
+                    if (c.name === 'text:list-level-style-bullet') return { ordered: false };
+                    return null;
+                }
+                return null;
+            }
+
             return {
                 textFlags,
                 listNumbering,
+                listLevel,
                 cellBorders,
                 tableAlign,
                 get consumed() { return consumed; }
             };
         }
 
-        return { createRegistry, createResolver };
+        // =================================================================
+        // List styles typed (the odt read's opt-in `listStyles`)
+        // =================================================================
+
+        const LEVEL_KINDS = {
+            'text:list-level-style-number': 'number',
+            'text:list-level-style-bullet': 'bullet',
+            'text:list-level-style-image': 'image',
+            'text:outline-level-style': 'number'
+        };
+        // A level element's attributes typed: attribute, field, codec.
+        const LEVEL_ATTRS = [
+            ['style:num-format', 'numFormat', 'str'], ['style:num-prefix', 'prefix', 'str'],
+            ['style:num-suffix', 'suffix', 'str'], ['text:start-value', 'startValue', 'num'],
+            ['text:display-levels', 'displayLevels', 'num'], ['text:bullet-char', 'bulletChar', 'str'],
+            ['text:style-name', 'textStyleName', 'str'], ['style:num-letter-sync', 'numLetterSync', 'bool']
+        ];
+        const ALIGNMENT_ATTRS = [
+            ['text:label-followed-by', 'labelFollowedBy'], ['text:list-tab-stop-position', 'tabStopPosition'],
+            ['fo:text-indent', 'textIndent'], ['fo:margin-left', 'marginLeft']
+        ];
+        const WIDTH_ATTRS = [
+            ['text:space-before', 'spaceBefore'], ['text:min-label-width', 'minLabelWidth'],
+            ['text:min-label-distance', 'minLabelDistance'], ['fo:text-align', 'textAlign']
+        ];
+        const decodeLevelAttr = (codec, v) => (codec === 'num' ? (/^\d+$/.test(v) ? Number(v) : v)
+            : codec === 'bool' ? v === 'true' : v);
+
+        // `fields` of `el`'s attributes into `out`; the others (but `skip`
+        // and namespace declarations) returned, or null.
+        function typedAttrs(el, fields, out, skip) {
+            const known = new Set(fields.map(f => f[0]));
+            const rest = {};
+            for (const [k, v] of Object.entries((el && el.attrs) || {})) {
+                if (known.has(k)) {
+                    const f = fields.find(x => x[0] === k);
+                    out[f[1]] = f[2] ? decodeLevelAttr(f[2], v) : v;
+                } else if (!k.startsWith('xmlns') && k !== skip) rest[k] = v;
+            }
+            return Object.keys(rest).length ? rest : null;
+        }
+
+        // The position of a level: its `style:list-level-properties`.
+        function levelPosition(props) {
+            const mode = props.attrs && props.attrs['text:list-level-position-and-space-mode'];
+            const pos = { mode: mode === 'label-alignment' ? 'label-alignment' : 'label-width-and-position' };
+            const rest = typedAttrs(props, WIDTH_ATTRS, pos, 'text:list-level-position-and-space-mode');
+            const align = xml.findChild(props, 'style:list-level-label-alignment');
+            if (align) {
+                const alignRest = typedAttrs(align, ALIGNMENT_ATTRS, pos, null);
+                if (alignRest) pos.alignmentExtraAttrs = alignRest;
+            }
+            if (rest) pos.extraAttrs = rest;
+            return pos;
+        }
+
+        /**
+         * A list or outline style element typed: `{ source, levels }`, each
+         * level `{ level, kind, numFormat?, prefix?, suffix?, startValue?,
+         * displayLevels?, bulletChar?, textStyleName?, numLetterSync?,
+         * position?, textProperties?, extraAttrs? }` (fields present only
+         * when the style states them; lengths as written).
+         *
+         * @param {object} el `text:list-style` / `text:outline-style`
+         * @param {string} source
+         * @returns {{source: string, levels: Array<object>}}
+         */
+        function typeListStyle(el, source) {
+            const levels = [];
+            for (const c of (el && el.children) || []) {
+                if (c.type !== 'element' || !LEVEL_KINDS[c.name]) continue;
+                const level = { level: Number(c.attrs && c.attrs['text:level']), kind: LEVEL_KINDS[c.name] };
+                const rest = typedAttrs(c, LEVEL_ATTRS, level, 'text:level');
+                const props = xml.findChild(c, 'style:list-level-properties');
+                if (props) level.position = levelPosition(props);
+                const text = xml.findChild(c, 'style:text-properties');
+                if (text) level.textProperties = { ...text.attrs };
+                if (rest) level.extraAttrs = rest;
+                levels.push(level);
+            }
+            return { source, levels };
+        }
+
+        /**
+         * The list styles of a document by name: content.xml's automatic
+         * ones (`'auto'`), styles.xml's named ones (`'named'`), its
+         * automatic ones (`'styles-auto'`, a name already taken left out)
+         * and its outline style (`'outline'`, under its `style:name`).
+         *
+         * @param {{content?: Array<object>, styles?: Array<object>, stylesAuto?: Array<object>}} raw
+         *   the raw elements of each container
+         * @returns {object}
+         */
+        function listStylesOf(raw) {
+            const out = {};
+            const add = (els, source, isOutline) => {
+                for (const el of els || []) {
+                    if (!el || el.type !== 'element') continue;
+                    const outline = el.name === 'text:outline-style';
+                    if (el.name !== 'text:list-style' && !(isOutline && outline)) continue;
+                    const name = el.attrs && el.attrs['style:name'];
+                    if (!name || Object.prototype.hasOwnProperty.call(out, name)) continue;
+                    out[name] = typeListStyle(el, outline ? 'outline' : source);
+                }
+            };
+            add(raw.content, 'auto', false);
+            add(raw.styles, 'named', true);
+            add(raw.stylesAuto, 'styles-auto', false);
+            return out;
+        }
+
+        // =================================================================
+        // Section styles typed (the odt read's opt-in `sectionStyles`)
+        // =================================================================
+
+        const SECTION_ATTRS = [
+            ['fo:background-color', 'backgroundColor'], ['style:editable', 'editable', 'bool'],
+            ['style:writing-mode', 'writingMode']
+        ];
+        const COLUMN_ATTRS = [
+            ['style:rel-width', 'relWidth'], ['fo:start-indent', 'startIndent'], ['fo:end-indent', 'endIndent']
+        ];
+        const SEPARATOR_ATTRS = [
+            ['style:width', 'width'], ['style:height', 'height'], ['style:color', 'color'],
+            ['style:style', 'style'], ['style:vertical-align', 'verticalAlign']
+        ];
+
+        /**
+         * A `section`-family `style:style` typed: `{ source, columns?,
+         * balance?, backgroundColor?, editable?, writingMode?, extraAttrs? }`
+         * from its `style:section-properties` (fields present only when the
+         * style states them; lengths as written).
+         *
+         * @param {object} el
+         * @param {string} source
+         * @returns {object}
+         */
+        function typeSectionStyle(el, source) {
+            const out = { source };
+            const props = xml.findChild(el, 'style:section-properties');
+            if (!props) return out;
+            const dontBalance = props.attrs && props.attrs['text:dont-balance-text-columns'];
+            if (dontBalance != null) out.balance = dontBalance !== 'true';
+            const rest = typedAttrs(props, SECTION_ATTRS, out, 'text:dont-balance-text-columns');
+            if (rest) out.extraAttrs = rest;
+            const cols = xml.findChild(props, 'style:columns');
+            if (cols) {
+                const c = {};
+                const count = cols.attrs && cols.attrs['fo:column-count'];
+                if (count != null) c.count = /^\d+$/.test(count) ? Number(count) : count;
+                if (cols.attrs && cols.attrs['fo:column-gap'] != null) c.gap = cols.attrs['fo:column-gap'];
+                const list = xml.findAll(cols, 'style:column').map(col => {
+                    const one = {};
+                    const extra = typedAttrs(col, COLUMN_ATTRS, one, null);
+                    if (extra) one.extraAttrs = extra;
+                    return one;
+                });
+                if (list.length) c.columns = list;
+                const sep = xml.findChild(cols, 'style:column-sep');
+                if (sep) {
+                    c.separator = {};
+                    const extra = typedAttrs(sep, SEPARATOR_ATTRS, c.separator, null);
+                    if (extra) c.separator.extraAttrs = extra;
+                }
+                out.columns = c;
+            }
+            return out;
+        }
+
+        /**
+         * The `section`-family styles of a document by name, as
+         * `listStylesOf` gathers the list styles: content.xml's automatic
+         * ones (`'auto'`), styles.xml's named (`'named'`) and automatic ones
+         * (`'styles-auto'`, a name already taken left out).
+         *
+         * @param {{content?: Array<object>, styles?: Array<object>, stylesAuto?: Array<object>}} raw
+         * @returns {object}
+         */
+        function sectionStylesOf(raw) {
+            const out = {};
+            const add = (els, source) => {
+                for (const el of els || []) {
+                    if (!el || el.type !== 'element' || el.name !== 'style:style') continue;
+                    if (!el.attrs || el.attrs['style:family'] !== 'section') continue;
+                    const name = el.attrs['style:name'];
+                    if (!name || Object.prototype.hasOwnProperty.call(out, name)) continue;
+                    out[name] = typeSectionStyle(el, source);
+                }
+            };
+            add(raw.content, 'auto');
+            add(raw.styles, 'named');
+            add(raw.stylesAuto, 'styles-auto');
+            return out;
+        }
+
+        return { createRegistry, createResolver, typeListStyle, listStylesOf, typeSectionStyle, sectionStylesOf };
     }
 };

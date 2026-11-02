@@ -7,6 +7,7 @@ Modules for local persistence and file download.
 | Module | Returns | Deps | Description |
 |--------|----------|------|-------------|
 | [download](./download.md) | `object` | none | Client-side file download |
+| [fileIntake](./fileIntake.md) | `object` | none | File intake: picker, OS file drop, keyboard-operable dropzone → `File[]` |
 | [fsAccess](./fsAccess.md) | `object` | none | File System Access API + OPFS — pick, read, write, list (partial worker-safe) |
 | [indexedDB](./indexedDB.md) | `object` | `broadcastChannel` | Local key-value database with cross-tab notifications (`namespace`, `crossTab`) |
 | [remoteStore](./remoteStore.md) | `object` | `ajax`, `ws`, `eventBus` | Remote key-value store — HTTP/WS transport, WS watch, batch, auto-reconnect |

@@ -19,7 +19,7 @@ Types the stream pointed at by a file spec's `/EF` entry. The stream dict carrie
 
 ```js
 const ef = runtime.resolve('pdfEmbeddedFile');
-// Returns: { typeEmbeddedFile }
+// Returns: { typeEmbeddedFile, typeEmbeddedFileParams }
 ```
 
 ## API
@@ -27,6 +27,7 @@ const ef = runtime.resolve('pdfEmbeddedFile');
 | Method | Signature | Returns |
 |---------|-----------|----------|
 | `typeEmbeddedFile` | `(stream) => EmbeddedFile` | Typing. |
+| `typeEmbeddedFileParams` | `(dict) => Params` | An embedded file parameter dictionary on its own (ISO 32000-2 Table 45), typed as `typeEmbeddedFile` types `/Params`. |
 
 ### Shape `EmbeddedFile`
 
@@ -35,6 +36,8 @@ const ef = runtime.resolve('pdfEmbeddedFile');
     subtype: string | undefined,     // MIME, e.g. 'application/pdf'
     params: Params | undefined,
     bytes: Uint8Array,                // raw stream (pre-filter)
+    // the stream entries `bytes` is encoded with, each only when present
+    length?: number, filter?: string | PdfArray, decodeParms?: PdfObject, dl?: number,
     raw: PdfStream,
     _extras
 }
@@ -48,6 +51,7 @@ const ef = runtime.resolve('pdfEmbeddedFile');
     creationDate: string | undefined,  // raw PDF date string, not parsed
     modDate: string | undefined,       // raw PDF date string, not parsed
     checkSum: string | undefined,      // 16-byte MD5, as the string bytes
+    mac?: PdfDict | PdfRef | null,     // /Mac, as read, when present
     raw, _extras
 }
 ```
@@ -78,7 +82,7 @@ ef.params?.checkSum;       // MD5, as raw string bytes
 | `pdf/embedded/no-dict` | `ParseError` | Stream has no dict. |
 | `pdf/embedded/bad-type` | `ParseError` | `/Type` is not `/EmbeddedFile`. |
 | `pdf/embedded/bad-subtype` | `ParseError` | `/Subtype` is not a name. |
-| `pdf/embedded/bad-params` | `ParseError` | `/Params` is not a dict. |
+| `pdf/embedded/bad-params` | `ParseError` | `/Params` is not a dict (`typeEmbeddedFileParams`: its argument). |
 
 ## See also
 

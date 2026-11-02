@@ -22,14 +22,19 @@
     "pdfAscii85",
     "pdfRunLength",
     "pdfFilterDispatch",
+    "pdfSecurity",
+    "pdfStandardV4",
+    "pdfAesGcm",
+    "pdfStandardV5",
+    "pdfStandardV6",
     "pdfDocument",
     "pdfWriter",
     "pdf"
   ],
   "fwDependencies": [],
   "bytes": {
-    "dev": 312865,
-    "min": 168758
+    "dev": 377385,
+    "min": 203559
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

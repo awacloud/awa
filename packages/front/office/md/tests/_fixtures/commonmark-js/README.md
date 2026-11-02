@@ -38,4 +38,6 @@ HTML byte for byte.
 Every example of `regression.txt` passes. The examples that differ are
 pinned by number: `smart_punct.txt` 11, 12 and 14 — dashes (`--`, `---`)
 and ellipses (`...`). The `smart` option of `@awacloud/md` is documented
-as typographic quotes only; these cases are outside what it claims.
+as typographic quotes only; these cases are outside what it claims. The
+test runs the file a second time with `smart` and `smartDashes` on (the
+option that adds the dashes and ellipses): every example passes.

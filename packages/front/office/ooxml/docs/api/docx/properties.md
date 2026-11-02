@@ -13,7 +13,7 @@ status: complete
 
 **Module** `docxProperties` | **Source** `packages/front/office/ooxml/src/docx/properties.js` | **Deps** `xml` | **Worker-safe** yes
 
-Maps the most common children of `<w:rPr>` (§17.3.2), `<w:pPr>` (§17.3.1) and `<w:tblPr>` (§17.4.59) onto a flat object. Children that are not modelled are preserved in `_extras` and re-emitted on write. Toggle elements (`<w:b/>`, `<w:i/>`, `<w:strike/>`) follow the ECMA semantics: present without `w:val` = on, `w:val="0"|"false"|"off"` = off.
+Maps the most common children of `<w:rPr>` (§17.3.2), `<w:pPr>` (§17.3.1) and `<w:tblPr>` (§17.4.59) onto a flat object. Children that are not modelled are preserved in `_extras` and re-emitted on write; the three bags read their `_extras` in the schema order their writer emits (`CT_RPr` / `CT_PPr` / `CT_TblPr`, by `orderBySequence`), so a source listing them out of order reads as its written form does. Toggle elements (`<w:b/>`, `<w:i/>`, `<w:strike/>`) follow the ECMA semantics: present without `w:val` = on, `w:val="0"|"false"|"off"` = off.
 
 ## Resolve
 
@@ -46,7 +46,11 @@ const props = runtime.resolve('docxProperties');
 RunProperties := {
     bold?, italic?, strike?,           // boolean
     underline?: 'single'|'double'|…,
+    underlineColor?: 'RRGGBB',         // <w:u w:color>
+    underlineTheme?: ThemeLink,        // <w:u>'s theme link
     color?: 'RRGGBB',                  // hex without '#'
+    colorTheme?: ThemeLink,            // <w:color>'s theme link, which Word applies
+                                       // before `color`: drop it when `color` changes
     size?: number,                     // half-points (24 = 12pt)
     font?: string,                     // <w:rFonts>: ascii, else hAnsi, else cs
     fonts?: { hint?, ascii?, hAnsi?, eastAsia?, cs?,
@@ -58,10 +62,12 @@ RunProperties := {
     _extras?: [xmlNode]
 }
 
+ThemeLink := { themeColor?, themeTint?, themeShade? }   // the attributes, verbatim
+
 ParagraphProperties := {
     align?: 'left'|'center'|'right'|'both'|'distribute',
-    indent?: { left?, right?, firstLine?, hanging? },   // twips
-    spacing?: { before?, after?, line?, lineRule? },
+    indent?: { left?, right?, firstLine?, hanging?, extraAttrs? },   // twips
+    spacing?: { before?, after?, line?, lineRule?, extraAttrs? },   // lineRule: 'auto' | 'exact' | 'atLeast', as read
     pStyle?: string,                  // styleId
     numPr?: { ilvl, numId },
     rPr?: RunProperties,
@@ -74,7 +80,7 @@ TableProperties := {                  // <w:tblPr>  (§17.4.59)
               type: 'auto'|'dxa'|'pct'|'nil' },   // default 'auto'
     borders?: TableBorders,           // <w:tblBorders>
     cellMargins?: TableCellMargins,   // <w:tblCellMar>  (§17.4.42)
-    _extras?: [xmlNode]               // every other child, verbatim, source order
+    _extras?: [xmlNode]               // every other child, verbatim, in CT_TblPr order
 }
 
 TableCellMargins := {                 // edges render in schema order
@@ -151,8 +157,9 @@ props.renderTableProperties({
 ## Coverage
 
 - **Typed**: bold/italic/strike/underline/color/size/font/fonts/vertAlign/highlight/rStyle (run); align/indent/spacing/pStyle/numPr/rPr (paragraph).
+- **`w:spacing` and `w:ind` attributes**: `before`, `after`, `line`, `lineRule` and `left`, `right`, `firstLine`, `hanging` are typed; every other attribute of the two elements (`beforeAutospacing`, `afterAutospacing`, `beforeLines`, `afterLines`, `start`, `end`, `leftChars`, `firstLineChars`, …) is kept verbatim in `spacing.extraAttrs` / `indent.extraAttrs`, source order, and written back after the typed ones, which it never overrides; an element holding only such attributes is kept. Editing a typed field leaves `extraAttrs` as read (for instance a `w:start` next to an edited `left`).
 - **Run fonts**: `font` is one name (`w:ascii`, else `w:hAnsi`, else `w:cs`); a model without `fonts` writes it to the three as `<w:rFonts w:ascii w:hAnsi w:cs>`. A read also gives `fonts`, every attribute of `<w:rFonts>` by its local name (a `<w:rFonts>` holding only `w:hint` gives `fonts` and no `font`), and the writer writes `fonts` back as it is while `font` still equals the name it derives. A changed `font` is written to `ascii`, `hAnsi` and `cs`, and their theme attributes (`asciiTheme`, `hAnsiTheme`, `cstheme`) are left out — Word would otherwise apply the theme font over the edit; a removed `font` removes those six. `eastAsia`, `eastAsiaTheme` and `hint` are always kept; with no attribute left, no `<w:rFonts>` is written.
-- **Typed (table)**: `tblStyle` (`style`), `tblW` (`width`), `tblBorders` (`borders`, six edges), `tblCellMar` (`cellMargins`, six edges: `top`, `start`, `left`, `bottom`, `end`, `right`). `w:tblGrid`, `w:trPr`, `w:tcBorders`, `w:tblLook` and `w:tblStylePr` are not modelled; they stay verbatim in `_extras` (`tblLook` in `tblPr._extras`); a table written with no grid gets one derived from its rows (see [structure](./structure.md)).
+- **Typed (table)**: `tblStyle` (`style`), `tblW` (`width`), `tblBorders` (`borders`, six edges; an empty `<w:tblBorders/>` has nothing to type and stays verbatim in `tblPr._extras`, so `borders` is absent for it), `tblCellMar` (`cellMargins`, six edges: `top`, `start`, `left`, `bottom`, `end`, `right`). `w:tblGrid`, `w:trPr`, `w:tcBorders`, `w:tblLook` and `w:tblStylePr` are not modelled; they stay verbatim in `_extras` (`tblLook` in `tblPr._extras`); a table written with no grid gets one derived from its rows (see [structure](./structure.md)).
 - **`_extras`**: everything else (kern, `w:lang`, `w:shd`, `w:tabs`, `w:keepNext`, …) — modelled by the `wmlRunFormatting` / `wmlParagraphFormatting` extras.
 
 ## Notes

@@ -4,50 +4,39 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview Source-level gates:
- * - no network: the viewer reads files from the device and sends nothing —
- *   no `fetch`, XHR, WebSocket, beacon or absolute URL in the painters, the
- *   UI or the controller. The only network code is same-origin and opt-in:
- *   the PWA adapter and service worker, and `element.js`'s `src` attribute
- *   (which refuses any other origin);
- * - no HTML injection: no `innerHTML` / `outerHTML` / `insertAdjacentHTML` /
- *   `document.write` in shipped sources;
- * - nothing fw sanity `base` blocks on the standalone page (it throws there,
- *   while Happy-DOM tests pass): no `performance.now` / `mark` / `measure` /
- *   `getEntries`, no `eval` / `Function` constructor;
- * - the import map's targets exist (the page dies on one 404);
- * - `tokens.css` is a byte-exact copy of the awaforge token layer.
+ * @fileoverview Source-level gates of the standalone shell (the component's
+ * own gates live in `@awacloud/oview`):
+ * - no network, no HTML injection, nothing sanity blocks in the shell's
+ *   sources (panels, PWA adapter, translator, catalogs). `app.js` is not
+ *   scanned: it fetches the showcase samples by design;
+ * - the import map's targets exist (the page dies on one 404) and every
+ *   stylesheet the page links resolves;
+ * - the two stylesheets the page links are byte-pinned DERIVED COPIES of the
+ *   package's, and the package's token layer is a copy of the awaforge one.
  *
  * @module viewer/guards.test
  */
 import { describe, test, expect } from 'bun:test';
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { drawIconSet, ICON_FILES } from '../../tools/icons.js';
+import { drawIconSet, drawIco, ICON_FILES, ICO_SIZES } from '../../tools/icons.js';
 import { ICON } from '../tools/build-icons.js';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const repo = here('../../../../');
-
-/** Shipped JS sources under a directory (tests excluded). */
-function sources(dir) {
-    const out = [];
-    for (const f of readdirSync(dir)) {
-        const p = join(dir, f);
-        if (statSync(p).isDirectory()) out.push(...sources(p));
-        else if (p.endsWith('.js') && !p.endsWith('.test.js')) out.push(p);
-    }
-    return out;
-}
 
 /** Source text with comments removed (JSDoc may mention any API). */
 function code(file) {
     return readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
 }
 
-describe('no network, no HTML injection, nothing sanity blocks', () => {
-    const files = [...sources(here('./render')), ...sources(here('./ui')), here('./viewer.js'), here('./core/detect.js'), here('./core/i18n.js'), here('./core/runtime.js')];
+describe('shell sources: no network, no HTML injection, nothing sanity blocks', () => {
+    // `core/help.js` is not in the list: it fetches the help page of the
+    // reader's language from this site (same origin, by design). It is
+    // scanned apart below, without the network leg.
+    const files = ['about', 'more', 'handoff', 'pwa', 'i18n'].map((n) => here(`./core/${n}.js`))
+        .concat(readdirSync(here('./i18n')).filter((f) => f.endsWith('.js')).map((f) => here(`./i18n/${f}`)));
     const NETWORK = /\b(fetch|XMLHttpRequest|WebSocket|EventSource|importScripts)\s*\(|new\s+(WebSocket|EventSource|XMLHttpRequest)\b|navigator\.sendBeacon/;
     const INJECTION = /\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML|document\.write/;
     const SANITY_BLOCKED = /\bperformance\s*\.\s*(now|mark|measure|getEntries)\b|\beval\s*\(|\bnew\s+Function\s*\(/;
@@ -63,6 +52,19 @@ describe('no network, no HTML injection, nothing sanity blocks', () => {
             expect(src).not.toMatch(SANITY_BLOCKED);
         });
     }
+    test('the list covers the panels, the adapter, the translator and both catalogs', () => {
+        const names = files.map((f) => f.slice(repo.length).replace(/\\/g, '/'));
+        for (const n of ['core/about.js', 'core/more.js', 'core/handoff.js', 'core/pwa.js', 'core/i18n.js', 'i18n/en.js', 'i18n/fr.js']) {
+            expect(names.some((x) => x.endsWith(`/src/${n}`)), n).toBe(true);
+        }
+        expect(names.some((x) => x.endsWith('/core/help.js'))).toBe(false);
+    });
+    test('core/help.js: no injection, no absolute URL, nothing sanity blocks (its fetch is same-origin)', () => {
+        const src = code(here('./core/help.js'));
+        expect(src).not.toMatch(INJECTION);
+        expect(src).not.toMatch(URLS);
+        expect(src).not.toMatch(SANITY_BLOCKED);
+    });
 });
 
 describe('the standalone page', () => {
@@ -78,6 +80,16 @@ describe('the standalone page', () => {
             expect(existsSync(target), `${key} → ${value}`).toBe(true);
         }
     });
+    test('every stylesheet the page links resolves from public/', () => {
+        const hrefs = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((m) => m[1]);
+        expect(hrefs).toEqual(['../src/styles/tokens.css', '../src/styles/viewer.css', '../src/styles/app.css']);
+        for (const href of hrefs) expect(existsSync(here(`../public/${href}`)), href).toBe(true);
+    });
+    test('the import map maps @awacloud/oview, its entry and its source folder', () => {
+        const map = JSON.parse(/** @type {string} */ (/<script type="importmap">([\s\S]*?)<\/script>/.exec(html)?.[1]));
+        expect(map.imports['@awacloud/oview']).toBe('/packages/front/office/oview/src/main.js');
+        expect(map.imports['@awacloud/oview/']).toBe('/packages/front/office/oview/src/');
+    });
     test('the manifest names icons that exist', () => {
         const manifest = JSON.parse(readFileSync(here('../public/manifest.webmanifest'), 'utf8'));
         for (const icon of manifest.icons) expect(existsSync(here(`../public/${icon.src}`))).toBe(true);
@@ -90,6 +102,32 @@ describe('the standalone page', () => {
             const [size] = ICON_FILES[name];
             expect(committed.readUInt32BE(16)).toBe(size);
             expect(committed.readUInt32BE(20)).toBe(size);
+        }
+    });
+    test('the Windows sizes: the manifest names the 16, 32, 48 and 256 px tiles, the pages link favicon.ico (the drawIco bytes) before the SVG', () => {
+        const manifest = JSON.parse(readFileSync(here('../public/manifest.webmanifest'), 'utf8'));
+        for (const size of ICO_SIZES) {
+            expect(manifest.icons.some((i) => i.src === `icons/icon-${size}.png` && i.sizes === `${size}x${size}`
+                && i.type === 'image/png' && i.purpose === 'any'), `${size} px`).toBe(true);
+        }
+        // Chrome builds its own .ico from the PNGs: the manifest never lists one.
+        expect(manifest.icons.some((i) => i.src.endsWith('.ico'))).toBe(false);
+        for (const [page, prefix] of [['index.html', ''], ['help/en.html', '../'], ['help/fr.html', '../']]) {
+            const text = readFileSync(here(`../public/${page}`), 'utf8');
+            const ico = text.indexOf(`<link rel="icon" href="${prefix}favicon.ico" sizes="16x16 32x32 48x48 256x256">`);
+            expect(ico, page).toBeGreaterThan(0);
+            expect(text.indexOf(`<link rel="icon" type="image/svg+xml" href="${prefix}icons/icon.svg">`), page).toBeGreaterThan(ico);
+        }
+        const committed = readFileSync(here('../public/favicon.ico'));
+        expect(committed.equals(drawIco(ICON)), 'favicon.ico: run bun run icons').toBe(true);
+    });
+    test('every text file under public/ is UTF-8', () => {
+        const decoder = new TextDecoder('utf-8', { fatal: true });
+        const files = readdirSync(here('../public'), { recursive: true }).map(String)
+            .filter((f) => /\.(js|html|css|webmanifest|json|md)$/.test(f));
+        expect(files).toContain('sw.js');
+        for (const file of files) {
+            expect(() => decoder.decode(readFileSync(join(here('../public'), file))), file).not.toThrow();
         }
     });
     test('the manifest: a stable id, one window per file, install screenshots Chrome accepts', () => {
@@ -170,16 +208,24 @@ describe('the standalone page', () => {
     });
 });
 
-describe('tokens.css', () => {
-    test('is a byte-exact copy of apps/awaforge/assets/tokens.css below its header', () => {
-        const copy = readFileSync(here('./styles/tokens.css'), 'utf8');
-        const source = readFileSync(join(repo, 'apps/awaforge/assets/tokens.css'), 'utf8');
-        expect(copy.endsWith(source)).toBe(true);
+// The package's sheets are read by their repository path (the workspace layout
+// the import map also uses), not through `import.meta.resolve`.
+const OVIEW_STYLES = 'packages/front/office/oview/src/styles';
+
+describe('derived stylesheets', () => {
+    test('src/styles/viewer.css is a byte-exact copy of the package sheet', () => {
+        const copy = readFileSync(here('./styles/viewer.css'));
+        const source = readFileSync(join(repo, OVIEW_STYLES, 'viewer.css'));
+        expect(copy.equals(source), 'run: cp the package viewer.css here').toBe(true);
     });
-    test('the component sheet paints only tokens (the paper palette aside)', () => {
-        const sheet = readFileSync(here('./styles/viewer.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-        const literals = [...sheet.matchAll(/#[0-9a-f]{3,8}\b/gi)].map((m) => m[0].toLowerCase());
-        expect([...new Set(literals)].sort()).toEqual(['#003462', '#00263d', '#0078b3', '#212529', '#d5e6ee', '#eef6fa', '#ffffff'].sort());
-        expect(sheet).not.toMatch(/url\(|@import/);
+    test('src/styles/tokens.css is a byte-exact copy of the package token layer', () => {
+        const copy = readFileSync(here('./styles/tokens.css'));
+        const source = readFileSync(join(repo, OVIEW_STYLES, 'tokens.css'));
+        expect(copy.equals(source), 'run: cp the package tokens.css here').toBe(true);
+    });
+    test('the package token layer is the awaforge one below its header', () => {
+        const pkg = readFileSync(join(repo, OVIEW_STYLES, 'tokens.css'), 'utf8');
+        const source = readFileSync(join(repo, 'apps/awaforge/assets/tokens.css'), 'utf8');
+        expect(pkg.endsWith(source)).toBe(true);
     });
 });

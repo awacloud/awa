@@ -13,6 +13,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { brokenXrefPdf, encryptedPdf, jpegPdf, JPEG_BYTES, PAGE_TEXT, plainPdf } from './pdf-fixtures.ts';
 
 const ROOT = join(import.meta.dir, '..', '..', '..');
 const CLI_ENTRY = join(ROOT, 'tools', 'convert', 'src', 'index.ts');
@@ -184,5 +185,167 @@ describe('convert CLI — --at validation (BL-1639)', () => {
         const r = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT]);
         expect(r.code).toBe(0);
         expect(r.stdout.toString('utf8')).toContain(`convertedAt: ${AT}`);
+    });
+});
+
+describe('convert CLI — --sheets (A58)', () => {
+    test('--sheets on another verb, or on a docx, is a usage error (exit 2)', () => {
+        const verb = spawnCli(['from-md', SAMPLE_DOCX, '--target', 'docx', '--sheets', 'csv']);
+        expect(verb.code).toBe(2);
+        expect(verb.stderr).toContain('--sheets is a to-md flag');
+        const docx = spawnCli(['to-md', SAMPLE_DOCX, '--sheets', 'csv']);
+        expect(docx.code).toBe(2);
+        expect(docx.stderr).toContain('sheets needs format xlsx or ods');
+    });
+
+    test('--sheets tsv writes each sheet as a fenced tsv block', async () => {
+        const { ModuleRuntime } = await import('@awacloud/fw/core/runtime.js');
+        const oconv = await import('@awacloud/oconv');
+        const { toModuleDefinitions } = await import('../src/descriptors.ts');
+        const rt = new ModuleRuntime();
+        rt.registerAll(toModuleDefinitions('@awacloud/oconv fw_require', oconv.fw_require));
+        rt.registerAll(toModuleDefinitions('@awacloud/oconv modules', oconv.modules));
+        const xlsx = rt.resolve('xlsx') as { write(m: object): Uint8Array };
+        const path = freshOutFile('atlas.xlsx');
+        writeFileSync(path, xlsx.write({ sheets: [{ name: 'Atlas', rows: [['Species', 'Count'], ['Alcedo', '12']] }] }));
+        const r = spawnCli(['to-md', path, '--sheets', 'tsv', '--at', '2026-01-01T00:00:00.000Z']);
+        expect(r.code).toBe(0);
+        expect(r.stdout.toString('utf8')).toContain('```tsv\nSpecies\tCount\nAlcedo\t12\n```');
+    });
+});
+
+describe('convert CLI — every toMd opt-in (T35)', () => {
+    const AT = '2026-01-01T00:00:00.000Z';
+    const NEW_FLAGS: string[][] = [
+        ['--pdf-infer', 'headings'],
+        ['--pdf-declare', 'positional'],
+        ['--pdf-include', 'images'],
+        ['--odt-include', 'toc'],
+        ['--docx-include', 'toc'],
+        ['--form-op-budget', '10'],
+        ['--front-matter', 'none'],
+        ['--include-notes'],
+        ['--pdf-recover-xref'],
+        ['--password-file', SAMPLE_DOCX],
+        ['--assets-dir', 'assets'],
+        ['--sheet-cell-budget', '10'],
+        ['--max-parts', '10'],
+        ['--max-uncompressed', '10'],
+        ['--max-ratio', '10'],
+        ['--max-depth', '10'],
+        ['--output-budget', '10'],
+        ['--output-overflow', 'truncate'],
+        ['--pdf-line-hyphens', 'drop'],
+    ];
+
+    test('each new flag on another verb is a usage error (exit 2)', () => {
+        for (const flag of NEW_FLAGS) {
+            const r = spawnCli(['from-md', SAMPLE_DOCX, '--target', 'docx', ...flag]);
+            expect([flag[0], r.code]).toEqual([flag[0], 2]);
+            expect(r.stderr).toContain(`${flag[0]} is a to-md flag`);
+        }
+    });
+
+    test('each pdf / odt flag on a docx is a usage error naming the format it needs', () => {
+        const cases: [string[], string][] = [
+            [['--pdf-infer', 'headings'], 'pdf infer needs format pdf'],
+            [['--pdf-declare', 'positional'], 'pdf declare needs format pdf'],
+            [['--pdf-include', 'images'], 'pdf include needs format pdf'],
+            [['--form-op-budget', '10'], 'form op budget needs format pdf'],
+            [['--pdf-recover-xref'], 'pdf recover xref needs format pdf'],
+            [['--password-file', SAMPLE_DOCX], 'pdf password needs format pdf'],
+            [['--odt-include', 'toc'], 'odt include needs format odt'],
+            [['--sheet-cell-budget', '10'], 'sheet cell budget needs format xlsx or ods'],
+            [['--pdf-line-hyphens', 'drop'], 'pdf line hyphens needs format pdf'],
+        ];
+        for (const [flag, message] of cases) {
+            const r = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, ...flag]);
+            expect([flag[0], r.code]).toEqual([flag[0], 2]);
+            expect(r.stderr).toContain(message);
+        }
+    });
+
+    test('--docx-include reaches the docx reader; an unknown name or another format is a usage error', () => {
+        expect(spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--docx-include', 'toc']).code).toBe(0);
+        const bad = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--docx-include', 'x']);
+        expect(bad.code).toBe(2);
+        expect(bad.stderr).toContain('bad docx include');
+        const path = freshOutFile('plain.pdf');
+        writeFileSync(path, plainPdf());
+        const other = spawnCli(['to-md', path, '--at', AT, '--docx-include', 'toc']);
+        expect(other.code).toBe(2);
+        expect(other.stderr).toContain('docx include needs format docx');
+    });
+
+    test('--pdf-infer takes a comma-separated list; an unknown name is a usage error', () => {
+        const path = freshOutFile('plain.pdf');
+        writeFileSync(path, plainPdf());
+        const ok = spawnCli(['to-md', path, '--at', AT, '--pdf-infer', 'headings,tables']);
+        expect(ok.code).toBe(0);
+        const bad = spawnCli(['to-md', path, '--at', AT, '--pdf-infer', 'headings,x']);
+        expect(bad.code).toBe(2);
+        expect(bad.stderr).toContain('bad pdf infer');
+    });
+
+    test('--password-file opens an encrypted pdf, its trailing line break stripped', () => {
+        const path = freshOutFile('locked.pdf');
+        writeFileSync(path, encryptedPdf());
+        const lf = freshOutFile('password-lf.txt');
+        writeFileSync(lf, 'user\n');
+        const crlf = freshOutFile('password-crlf.txt');
+        writeFileSync(crlf, 'owner\r\n');
+        for (const file of [lf, crlf]) {
+            const r = spawnCli(['to-md', path, '--at', AT, '--password-file', file]);
+            expect(r.code).toBe(0);
+            expect(r.stdout.toString('utf8')).toContain(PAGE_TEXT);
+        }
+        const locked = spawnCli(['to-md', path, '--at', AT]);
+        expect(locked.code).toBe(1);
+    });
+
+    test('--pdf-include images --assets-dir writes the picture next to the markdown', () => {
+        const path = freshOutFile('picture.pdf');
+        writeFileSync(path, jpegPdf());
+        const dir = join(freshOutFile('x'), '..', 'assets');
+        const r = spawnCli(['to-md', path, '--at', AT, '--pdf-include', 'images', '--assets-dir', dir]);
+        expect(r.code).toBe(0);
+        expect(r.stdout.toString('utf8')).toContain('![](image-7.jpg)');
+        expect(Buffer.compare(readFileSync(join(dir, 'image-7.jpg')), Buffer.from(JPEG_BYTES))).toBe(0);
+        const without = spawnCli(['to-md', path, '--at', AT, '--pdf-include', 'images']);
+        expect(without.code).toBe(0);
+    });
+
+    test('--output-budget and --output-overflow bound the output; the archive limits reach the reader', () => {
+        const over = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--output-budget', '1']);
+        expect(over.code).toBe(1);
+        expect(over.stderr).toContain('output too large');
+        const cut = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--output-budget', '1', '--output-overflow', 'truncate']);
+        expect(cut.code).toBe(0);
+        expect(cut.stdout.toString('utf8')).toContain('doc/truncated');
+        const alone = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--output-overflow', 'truncate']);
+        expect(alone.code).toBe(2);
+        expect(alone.stderr).toContain('bad output budget');
+        const parts = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--max-parts', '2']);
+        expect(parts.code).toBe(1);
+        expect(parts.stderr).toContain('too many parts');
+        expect(spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--max-parts', 'x']).code).toBe(2);
+    });
+
+    test('--pdf-recover-xref converts a pdf whose startxref points nowhere', () => {
+        const path = freshOutFile('broken.pdf');
+        writeFileSync(path, brokenXrefPdf());
+        expect(spawnCli(['to-md', path, '--at', AT]).code).toBe(1);
+        const r = spawnCli(['to-md', path, '--at', AT, '--pdf-recover-xref']);
+        expect(r.code).toBe(0);
+        expect(r.stdout.toString('utf8')).toContain(PAGE_TEXT);
+    });
+
+    test('--front-matter none drops the front matter; a bad value is a usage error', () => {
+        const r = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--front-matter', 'none']);
+        expect(r.code).toBe(0);
+        expect(r.stdout.toString('utf8').startsWith('---')).toBe(false);
+        const bad = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--front-matter', 'x']);
+        expect(bad.code).toBe(2);
+        expect(bad.stderr).toContain('bad front matter');
     });
 });

@@ -485,5 +485,41 @@ awa-viewer { display: block; }
 .awv-tab:hover { border-color: var(--awv-border); }
 .awv-tab[aria-selected="true"] { color: var(--awv-btn-fg); background: var(--awv-btn-bg); font-weight: 600; }
 
+/* ── 8b. Toast: the short-lived card of an action with no visible result ──── */
+.awv-toast {
+    position: absolute;
+    inset-block-end: var(--fw-space-8);
+    inset-inline-start: 50%;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--fw-space-3);
+    max-width: min(28rem, calc(100% - 2 * var(--fw-space-4)));
+    padding: var(--fw-space-3) var(--fw-space-4);
+    color: var(--awv-fg);
+    background: var(--awv-surface);
+    border: 1px solid var(--awv-rule);
+    border-inline-start: 3px solid var(--awv-accent);
+    border-radius: var(--awv-radius);
+    box-shadow: 0 4px 16px var(--awv-shadow);
+    transform: translateX(-50%);
+    pointer-events: none;                     /* never in the way of the page */
+}
+.awv-toast[data-tone="error"] { border-inline-start-color: var(--awv-fg); font-weight: 600; }
+.awv-toast-text { margin: 0; }
+.awv-toast[data-tone="busy"]::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 1rem; height: 1rem;
+    border: 2px solid var(--awv-rule);
+    border-top-color: var(--awv-accent);
+    border-radius: 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .awv-toast { animation: awv-toast-in 0.18s ease-out; }
+    .awv-toast[data-tone="busy"]::before { animation: awv-spin 0.9s linear infinite; }
+    @keyframes awv-toast-in { from { opacity: 0; transform: translate(-50%, 0.5rem); } }
+}
+
 /* ── 9. Last: [hidden] beats every component `display` ─────────────────────── */
 .awv [hidden], .awv[hidden] { display: none !important; }

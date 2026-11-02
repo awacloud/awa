@@ -15,7 +15,10 @@
  *   ordered?: boolean,
  *   numFormat?: '1'|'a'|'A'|'i'|'I',
  *   continueNumbering?: boolean,
- *   items: [ { children: [...nodes], _extras? } ],
+ *   id?: string,                // xml:id
+ *   continueList?: string,      // text:continue-list (the xml:id of the list it goes on)
+ *   extraAttrs?: object,        // any other attribute, verbatim
+ *   items: [ { children: [...nodes], startValue?, id?, extraAttrs?, header?, _extras? } ],
  *   _extras?
  * }
  * ```
@@ -87,25 +90,70 @@ export const textList = {
                     if (num.source === 'auto') delete out.styleName;
                 }
             }
+            // The read's opt-in `semanticStyles`: `ctx.listStack` holds the
+            // style names of the enclosing lists (null for an unstyled
+            // one); a nested list with no style takes its nearest styled
+            // ancestor's numbering at its own level (its nesting depth).
+            const stack = ctx && Array.isArray(ctx.listStack) ? ctx.listStack : null;
+            if (stack && !styleName && out.ordered === undefined && typeof ctx.listLevel === 'function') {
+                for (let k = stack.length - 1; k >= 0; k--) {
+                    if (!stack[k]) continue;
+                    const num = ctx.listLevel(stack[k], stack.length + 1);
+                    if (num) {
+                        out.ordered = num.ordered;
+                        if (num.ordered && num.numFormat) out.numFormat = num.numFormat;
+                    }
+                    break;
+                }
+            }
             const cont = el.attrs && el.attrs['text:continue-numbering'];
             if (cont === 'true') out.continueNumbering = true;
+            const attrs = (el && el.attrs) || {};
+            if (attrs['xml:id'] != null) out.id = attrs['xml:id'];
+            if (attrs['text:continue-list'] != null) out.continueList = attrs['text:continue-list'];
+            const extraAttrs = otherAttrs(attrs, LIST_ATTRS, cont === 'true' ? null : 'text:continue-numbering');
+            if (extraAttrs) out.extraAttrs = extraAttrs;
             const extras = [];
-            for (const c of el.children || []) {
-                if (c.type !== 'element') continue;
-                if (c.name === 'text:list-item') {
-                    out.items.push(parseItem(c, hooks, ctx));
-                } else if (c.name === 'text:list-header') {
-                    out.items.push({ ...parseItem(c, hooks, ctx), header: true });
-                } else {
-                    extras.push(c);
+            if (stack) stack.push(styleName || null);
+            try {
+                for (const c of el.children || []) {
+                    if (c.type !== 'element') continue;
+                    if (c.name === 'text:list-item') {
+                        out.items.push(parseItem(c, hooks, ctx));
+                    } else if (c.name === 'text:list-header') {
+                        out.items.push({ ...parseItem(c, hooks, ctx), header: true });
+                    } else {
+                        extras.push(c);
+                    }
                 }
+            } finally {
+                if (stack) stack.pop();
             }
             if (extras.length) out._extras = { children: extras };
             return out;
         }
 
+        // The attributes a list / an item types; any other is kept in
+        // `extraAttrs`, verbatim (a `continue-numbering` other than `true`
+        // included: `keep`).
+        const LIST_ATTRS = new Set(['text:style-name', 'text:continue-numbering', 'xml:id', 'text:continue-list']);
+        const ITEM_ATTRS = new Set(['text:start-value', 'xml:id']);
+        function otherAttrs(attrs, typed, keep) {
+            const out = {};
+            for (const [k, v] of Object.entries(attrs)) {
+                if ((!typed.has(k) || k === keep) && !k.startsWith('xmlns')) out[k] = v;
+            }
+            return Object.keys(out).length ? out : null;
+        }
+
         function parseItem(el, hooks, ctx) {
             const item = { children: [] };
+            const attrs = (el && el.attrs) || {};
+            const start = attrs['text:start-value'];
+            if (start != null) item.startValue = /^\d+$/.test(start) ? Number(start) : start;
+            if (attrs['xml:id'] != null) item.id = attrs['xml:id'];
+            const extraAttrs = otherAttrs(attrs, ITEM_ATTRS, null);
+            if (extraAttrs) item.extraAttrs = extraAttrs;
             const xtra = [];
             for (const c of el.children || []) {
                 if (c.type !== 'element') continue;
@@ -136,6 +184,7 @@ export const textList = {
          */
         function renderList(list, hooks, ctx) {
             const attrs = {};
+            if (list.id != null) attrs['xml:id'] = String(list.id);
             if (list.styleName) {
                 attrs['text:style-name'] = list.styleName;
             } else if (list.ordered !== undefined && ctx && typeof ctx.listStyle === 'function') {
@@ -145,6 +194,8 @@ export const textList = {
                 });
             }
             if (list.continueNumbering) attrs['text:continue-numbering'] = 'true';
+            if (list.continueList != null) attrs['text:continue-list'] = String(list.continueList);
+            Object.assign(attrs, list.extraAttrs || {});
             const items = (list.items || []).map(it => renderItem(it, hooks, ctx));
             if (list._extras && list._extras.children) {
                 for (const c of list._extras.children) items.push(c);
@@ -171,7 +222,11 @@ export const textList = {
                 for (const c of item._extras.children) children.push(c);
             }
             const tag = item.header ? 'text:list-header' : 'text:list-item';
-            return xml.el(tag, {}, children);
+            const attrs = {};
+            if (item.startValue != null) attrs['text:start-value'] = String(item.startValue);
+            if (item.id != null) attrs['xml:id'] = String(item.id);
+            Object.assign(attrs, item.extraAttrs || {});
+            return xml.el(tag, attrs, children);
         }
 
         return { parseList, renderList };

@@ -22,7 +22,7 @@ const shared = runtime.resolve('ooxmlShared');
 //     toEmu, inchesToEmu, cmToEmu, ptToEmu,
 //     readBoolAttr, writeBoolAttr,
 //     partExt, lookupCT, trackUnmodelledParts,
-//     wordRootAttrs,
+//     wordRootAttrs, WORD_EXTENSION_PREFIXES,
 //     encodeText, decodeText,
 //     createRidAllocator,
 //     createTypedColorCodec, parseSrcRect, srcRectAttrs,
@@ -46,6 +46,7 @@ const shared = runtime.resolve('ooxmlShared');
 | `lookupCT(pkg, partName)` | `(pkg, string) => string\|null` | Content-type of a part from a whole `pkg`: overrides first, then per-extension defaults. `null` when nothing matches. |
 | `trackUnmodelledParts(pkg, consume)` | `(pkg, (pkg) => T) => { value: T, unmodelledParts: Array<{ partName, contentType }> }` | Runs `consume(pkg)` while recording which entries of `pkg.parts` it looks up; returns its value plus every part never looked up, sorted by `partName`, with its declared content type (`null` when undeclared). The original parts map is restored before it returns or throws. Used by the `docx` / `xlsx` / `pptx` readers to fill `unmodelledParts`. |
 | `wordRootAttrs(nodes, opts?)` | `(nodes: XmlNode[], opts?: { r?: boolean }) => object` | The root namespace attributes of a WordprocessingML part whose root holds `nodes`: `w` and `r` always; then each known prefix (`wp`, `a`, `pic`, `wps`, `wpg`, `wpc`, `c`, `m`, `v`, `o`, `w10`, `wp14`, `w14`, `w15`, `w16`, `w16cex`, `w16cid`, `w16se`, `w16sdtdh`, in that order) that an element or attribute name of `nodes` uses outside the scope of its own `xmlns:` declaration (searched at any depth; non-element entries ignored). A `w15:` element always declares `w15`. When an Office extension prefix (`wp14`, `w14`, `w15`, `w16*`) is declared, `xmlns:mc` comes right after `r` and `mc:Ignorable` lists the extensions last; an undeclared `mc:` name declares `mc` too. The prefixes an `mc:Choice` lists in `Requires` count as used (ECMA-376 Part 3 §10.2.1). A prefix with no known namespace is left undeclared. `opts.r: false` declares `r` only when a name uses it (the `w:styles` and `w:numbering` roots). Returns a new object, keys in the order `xmlns:w`, `xmlns:r`, `xmlns:mc`, the other declarations in table order, `mc:Ignorable`. Used by the `w:document`, header, footer, footnotes, endnotes, comments, styles and numbering writers. |
+| `WORD_EXTENSION_PREFIXES` | `readonly string[]` | The Office extension prefixes of that table, in its order (`wp14`, `w14`, `w15`, `w16`, `w16cex`, `w16cid`, `w16se`, `w16sdtdh`): the ones `wordRootAttrs` lists in `mc:Ignorable`. `docx.read` passes them to `markupCompatibility.process` as `ignorablePrefixes`, so a part reads as if it declared what the write will declare. Frozen. |
 | `encodeText(s)` | `(string) => Uint8Array` | UTF-8 encode through the instance's shared `TextEncoder`. |
 | `decodeText(bytes)` | `(Uint8Array) => string` | UTF-8 decode through the instance's shared `TextDecoder`. |
 | `createRidAllocator(opts?)` | `({prefix?, start?, existing?}) => allocator` | Fresh relationship-id allocator; returns `{ next, peek, reset, usedIds, claim, register }`. |
@@ -75,9 +76,9 @@ id produced plus every pre-registered one, and `reset()` re-arms the counter to
 
 `parseColor(el, opts)` accepts `{ withMods: true }` to preserve the child
 colour transforms (`lumMod`, `lumOff`, `tint`, `shade`, `alphaMod`, `lum`,
-`grayscl`, `duotone`, `clrChange`, `clrRepl`, `biLevel`, …) on `mods`; without
-the flag they are dropped, which is the flat-reference semantics used by fill
-handling. Both modes round-trip identically.
+`grayscl`, `duotone`, `clrChange`, `clrRepl`, `biLevel`, …) on `mods`; a
+transform the codec does not list (`satMod`, `alpha`, `hueMod`, `red` …) is
+kept as `{ kind, attrs }` and written back. Without the flag they are dropped.
 
 ## Examples
 

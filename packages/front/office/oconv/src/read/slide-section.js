@@ -31,8 +31,9 @@
  * @typedef {Object} SlideModel
  * @property {string|null} title Detected slide title text, or `null`/`''`
  *   when no title was detected (empty title text counts as "no title").
- * @property {string[]} bodyParagraphs One entry per body-frame paragraph,
- *   already flattened to plain text, in frame-then-paragraph order.
+ * @property {Array<string|object>} bodyParagraphs One entry per body-frame
+ *   paragraph, already flattened to plain text, in frame-then-paragraph
+ *   order — or an IR block node (a picture's `image`), pushed as is.
  * @property {string|null} notes Flattened speaker-notes text, or `null`/
  *   `''` when the slide carries no notes.
  */
@@ -61,7 +62,8 @@ export function slideToBlocks(slide, opts, node) {
     }
 
     for (const para of (slide && slide.bodyParagraphs) || []) {
-        if (para) blocks.push(node('paragraph', {}, [node('run', { text: para })]));
+        if (para && typeof para === 'object') blocks.push(para);
+        else if (para) blocks.push(node('paragraph', {}, [node('run', { text: para })]));
     }
 
     const notes = slide && slide.notes;

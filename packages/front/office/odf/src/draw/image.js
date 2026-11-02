@@ -72,12 +72,18 @@ export const drawImage = {
             const attrs = el.attrs || {};
             const href = attrs['xlink:href'] || '';
             const out = { type: 'image', href };
-            const mt = attrs['loext:mime-type'] || attrs['draw:mime-type'];
-            if (mt) out.mimeType = mt;
+            // The mime type: draw:mime-type, else LibreOffice's
+            // loext:mime-type, whose name is kept (`_mimeTypeAttr`) so it
+            // is written back as read; with both, the loext one stays an
+            // extra attribute.
+            const draw = attrs['draw:mime-type'];
+            const lo = attrs['loext:mime-type'];
+            if (draw) out.mimeType = draw;
+            else if (lo) { out.mimeType = lo; out._mimeTypeAttr = 'loext:mime-type'; }
             // Preserve unknown attrs / children
             const known = new Set([
                 'xlink:href', 'xlink:type', 'xlink:show', 'xlink:actuate',
-                'loext:mime-type', 'draw:mime-type'
+                'draw:mime-type', ...(draw ? [] : ['loext:mime-type'])
             ]);
             const xa = {};
             let any = false;
@@ -91,15 +97,21 @@ export const drawImage = {
         /**
          * Render an image model.
          *
-         * @param {object} img — `{ href, mimeType? }`.
+         * @param {object} img — `{ href, mimeType?, _mimeTypeAttr? }`.
+         * @param {object} [opts] — `{ mimeTypeAsRead? }`: `true` writes the
+         *   mime type under the attribute it was read from
+         *   (`_mimeTypeAttr`, e.g. LibreOffice's `loext:mime-type`, for a
+         *   version before ODF 1.3, which has no `draw:mime-type` on
+         *   images); by default it is written as `draw:mime-type`.
          * @returns {object}
          */
-        function renderImage(img) {
+        function renderImage(img, opts) {
             const attrs = { 'xlink:href': img.href || '' };
             attrs['xlink:type']    = XLINK_DEFAULTS['xlink:type'];
             attrs['xlink:show']    = XLINK_DEFAULTS['xlink:show'];
             attrs['xlink:actuate'] = XLINK_DEFAULTS['xlink:actuate'];
-            if (img.mimeType) attrs['draw:mime-type'] = img.mimeType;
+            const name = (opts && opts.mimeTypeAsRead && img._mimeTypeAttr) || 'draw:mime-type';
+            if (img.mimeType) attrs[name] = img.mimeType;
             if (img._extras && img._extras.attrs) {
                 for (const k of Object.keys(img._extras.attrs)) attrs[k] = img._extras.attrs[k];
             }

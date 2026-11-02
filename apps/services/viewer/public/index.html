@@ -13,6 +13,7 @@
     <title>AWA Viewer</title>
     <meta name="description" content="Open PDF, Word, Excel, PowerPoint, OpenDocument, Markdown and text files in your browser. Nothing is uploaded.">
     <meta name="theme-color" content="#00263D">
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48 256x256">
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link rel="manifest" href="manifest.webmanifest">
@@ -36,6 +37,8 @@
     </script>
     <script type="importmap">
     { "imports": {
+        "@awacloud/oview":   "/packages/front/office/oview/src/main.js",
+        "@awacloud/oview/":  "/packages/front/office/oview/src/",
         "@awacloud/fw":      "/packages/front/fw/src/main.js",
         "@awacloud/fw/":     "/packages/front/fw/src/",
         "@awacloud/pdf":     "/packages/front/office/pdf/src/main.js",

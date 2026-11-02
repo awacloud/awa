@@ -10,78 +10,84 @@
     "imageId": "sha256:5ff3e30dc5452962a772e9b5669844dfd2d0925ab5d518eec160ba7b4bbd2de0",
     "version": "odfvalidator v0.13.0\nb926a6134a2fee782076500dfc02c47c2d651cff"
   },
-  "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 16 (11 written, 5 round trips)",
+  "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 17 (12 written, 5 round trips)",
   "documents": [
     {
       "file": "odt-text-styles-meta.odt",
       "kind": "written",
-      "sha256": "5158d16d045b873ead86fdb8a5b543d22d07428855968663a241fb8074e9778c",
+      "sha256": "f6db08af7804d9b9aad88fa94f2eb8d890f7bcdef89bf88f155081bd5de79b48",
       "errors": []
     },
     {
       "file": "odt-headings-lists-section.odt",
       "kind": "written",
-      "sha256": "af17026e226b5b4660eaf48d84a8ae55d0d969a959263937333a4b547cf721f9",
+      "sha256": "e3e9cdbdbae0dc37c03a631f37d9d67898a62dd7da6f1af90a5ce364d2083f67",
       "errors": []
     },
     {
       "file": "odt-table.odt",
       "kind": "written",
-      "sha256": "40d1b53c504dd514915ebb89ed4cd34c09e6888faa7562f7bbe0c8dcfe660439",
+      "sha256": "500e3888e50c6b839b0005ca991c47794e60c3bb0ef5c0df70ce2372f44c0495",
       "errors": []
     },
     {
       "file": "odt-fields-bookmarks.odt",
       "kind": "written",
-      "sha256": "449897cac937bd7bfac02c3dae4f62044fdbafe240c2f22760f35b124c295733",
+      "sha256": "8056f5a6994728c24299713da85c676d130b80e55c479144bee77959d00d5dbd",
       "errors": []
     },
     {
       "file": "odt-tracked-changes.odt",
       "kind": "written",
-      "sha256": "4284298abf21701ab928729fa97f4259296b4c253734ab35f316aa155dcfca55",
+      "sha256": "a6e2094a6cae0ef28e22d3631a36d5ce41f2c57264f92760a4a493ee32bae52b",
       "errors": []
     },
     {
       "file": "odt-image-frames-shapes.odt",
       "kind": "written",
-      "sha256": "26bf812a3e2571007534bd1ba055245a1451f82c201195069c58ba56464c31df",
+      "sha256": "1102ce3c10721422c06ed606b59927800275cb4566232334c04c82e1507c79e2",
       "errors": []
     },
     {
       "file": "ods-from-arrays.ods",
       "kind": "written",
-      "sha256": "7e717cc9b68442765ec840cf5a528af9280ad73a3e76fb93a23729efd8a0b592",
+      "sha256": "1056c20f309605bb5b4c5eb7d20066cba94e3cc0db80cd2253759e5d33089a72",
       "errors": []
     },
     {
       "file": "ods-value-types.ods",
       "kind": "written",
-      "sha256": "49032340e1ea56747e06b622109c6be051f1019b14633bf2f7d13384966af030",
+      "sha256": "fcc4d193c72b6072ec92ff7751d1856f2110f2d1552a2c44d1f647b093a3dd3e",
       "errors": []
     },
     {
       "file": "ods-formulas-merges-styles.ods",
       "kind": "written",
-      "sha256": "1aee5bd8b66be6a059057398d191c44ef82e87a6dc1f3ef8c17fb07f98f40555",
+      "sha256": "e6d010cdef25fed29d43de1527fbd3eb658e8130521f612bc8a6f4e36ec0f285",
+      "errors": []
+    },
+    {
+      "file": "ods-empty-sheet-and-row.ods",
+      "kind": "written",
+      "sha256": "dfe06c70b3386e94e8c0c5583ec4ad92f25ff5df61b52ccc75b506917317e72a",
       "errors": []
     },
     {
       "file": "odp-text-slides.odp",
       "kind": "written",
-      "sha256": "5afe0cdda6300bec263344e8348f8c6d180c96b87c67b47de7ebd0b3c2d507be",
+      "sha256": "554c2968a9be4e94bc0cec887b9ec41add09ff0411ff1616ce49723180747a39",
       "errors": []
     },
     {
       "file": "odp-shapes-picture-table.odp",
       "kind": "written",
-      "sha256": "66b26b26779f79303950af3870edcab1650af7957c9f7a297ab675da7f0bd1fb",
+      "sha256": "f75cbf91a7d3ceee296bc6b41972d7828fbdfa75cb2a488b3af1bdfaf5f3f942",
       "errors": []
     },
     {
       "file": "round-trip--odp-media.odp",
       "kind": "round-trip",
-      "sha256": "8d838edb6450981b33098825f9d9e785f385b70728a2012152772e629c51910b",
+      "sha256": "9f95ab84bb9efaee6dd7e0ace01b562bad8223ca48f317d536213732b16abd93",
       "errors": []
     },
     {
@@ -93,7 +99,7 @@
     {
       "file": "round-trip--odp-structured.odp",
       "kind": "round-trip",
-      "sha256": "25ed94c567858652dbc2721d870f0922e746db1f0b4f0950386ad6d3fd07708a",
+      "sha256": "d79388cc892e9b4b595a472f57c54bd9249f6c8151ae3cd1fecbe839a95cf095",
       "errors": []
     },
     {
@@ -105,16 +111,8 @@
     {
       "file": "round-trip--ods-structured.ods",
       "kind": "round-trip",
-      "sha256": "96a188a697d25072d35fc586aeade6ad46b9d01cca9bbd632d5c7422e04ecf0b",
-      "errors": [
-        {
-          "severity": "Error",
-          "part": "content.xml",
-          "line": 2,
-          "column": 2632,
-          "text": "uncompleted content model. expecting: <soft-page-break>,<table-column-group>,<table-column>,<table-columns>,<table-header-columns>,<table-header-rows>,<table-row-group>,<table-row>,<table-rows>"
-        }
-      ]
+      "sha256": "7f55d06ac5d9a177a98ba8bf31d3fc48d3e8eb1009f1f963f8a1ed19f78fd93d",
+      "errors": []
     },
     {
       "file": "round-trip--ods-structured.source.ods",
@@ -133,7 +131,7 @@
     {
       "file": "round-trip--odt-structured.odt",
       "kind": "round-trip",
-      "sha256": "37203cc77ec201045e6efea3ec6b8291a5b6ffe456bea846abd45ca8cc0d1cbe",
+      "sha256": "977c2d867171b917fc3fbd8dded98ee4fc2c6fcbd8ed69163d19138b8d4e3227",
       "errors": []
     },
     {
@@ -145,7 +143,7 @@
     {
       "file": "round-trip--odt-table.odt",
       "kind": "round-trip",
-      "sha256": "dd8c874ff69cffed3a32e69b70f27784fbd0540712586e2e85f864da27e5a944",
+      "sha256": "000f028c244dd068aecb4f3d50649b525b919b6550eb10bd5fdc503df0c8de46",
       "errors": []
     },
     {
@@ -155,6 +153,6 @@
       "errors": []
     }
   ],
-  "date": "2026-10-15",
-  "commit": "31604fbdb8296b32912776b65d1ba8fe07a87af7"
+  "date": "2026-10-24",
+  "commit": "c980706727a3adba03e807f4aa20d24a7e1f48d8"
 }

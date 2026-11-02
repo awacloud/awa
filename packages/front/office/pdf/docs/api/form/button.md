@@ -47,6 +47,9 @@ const bf = runtime.resolve('pdfButtonField');
     dv:  string | null,
     opt: Array<string|Uint8Array>,
     t:   Uint8Array | null,   // /T partial name
+    // each only when present (Table 226)
+    parent?: PdfObject, kids?: PdfObject, aa?: PdfObject,
+    tu?: Uint8Array, tm?: Uint8Array, da?: Uint8Array, q?: number,
     raw: object,
     _extras: { [key]: PdfObject }
 }

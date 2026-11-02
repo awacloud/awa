@@ -19,6 +19,8 @@
  *   pdfaid  → http://www.aiim.org/pdfa/ns/id/
  *   pdfuaid → http://www.aiim.org/pdfua/ns/id/
  *
+ * `dcTitle(input)` reads the `dc:title` alternatives (`rdf:Alt` /
+ * `rdf:li`), which the leaf harvest above does not reach.
  * @module pdf/extra/xmp-extended
  */
 
@@ -175,6 +177,31 @@ export const pdfXmpExtended = {
             return out;
         }
 
+        /**
+         * The `dc:title` of a packet: its `rdf:li` whose `xml:lang` is
+         * `x-default`, else its first `rdf:li`, else a leaf value — entities
+         * decoded, trimmed; `null` when none is left. The Dublin Core
+         * prefix is the one the packet binds to its namespace (`dc` when
+         * none does).
+         *
+         * @param {string|Uint8Array} input
+         * @returns {string|null}
+         * @throws {ParseError} `pdf/xmp2/bad-input` as `parsePacket`.
+         */
+        function dcTitle(input) {
+            const text = toText(input);
+            const bound = /xmlns:([\w-]+)\s*=\s*["']http:\/\/purl\.org\/dc\/elements\/1\.1\/["']/.exec(text);
+            const p = bound ? bound[1] : 'dc';
+            const el = new RegExp('<' + p + ':title\\b[^>]*?(?:/>|>([\\s\\S]*?)</' + p + ':title>)').exec(text);
+            if (!el || el[1] === undefined) return null;
+            const items = [...el[1].matchAll(/<([\w-]+):li\b([^>]*)>([^<]*)<\/\1:li>/g)]
+                .map((m) => ({ lang: (/xml:lang\s*=\s*["']([^"']*)["']/.exec(m[2]) || [])[1], value: decodeEntities(m[3]).trim() }));
+            const pick = items.length
+                ? (items.find((it) => it.lang === 'x-default') || items[0]).value
+                : (/<[\w]/.test(el[1]) ? '' : decodeEntities(el[1]).trim());
+            return pick ? pick : null;
+        }
+
         function parsePacket(input) {
             const pairs = extract(input);
             return { pairs, grouped: group(pairs) };
@@ -182,6 +209,7 @@ export const pdfXmpExtended = {
 
         return {
             parsePacket,
+            dcTitle,
             extract,
             group,
             KNOWN_NAMESPACES

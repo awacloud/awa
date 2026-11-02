@@ -1,0 +1,55 @@
+Carlito — SIL Open Font License 1.1
+===================================
+
+Vendored payload: the 4 Carlito faces (Regular / Bold / Italic /
+BoldItalic), TrueType flavour, unmodified. Carlito is metric-compatible
+with Calibri: a document set in Calibri keeps its line and page breaks
+when Carlito takes its place.
+Upstream: the Chrome OS font archive crosextrafonts-carlito-20130920
+(Carlito 1.103, the build LibreOffice ships).
+
+Copyright notice, verbatim from the upstream LICENSE header
+-----------------------------------------------------------
+
+    Copyright (c) 2010-2013 by tyPoland Lukasz Dziedzic with Reserved Font
+    Name "Carlito".
+
+    This Font Software is licensed under the SIL Open Font License,
+    Version 1.1 as shown below.
+
+Trademark, verbatim from the faces' name table: "Carlito is a trademark
+of tyPoland Lukasz Dziedzic."
+
+The full licence text, with the copyright header above, is vendored
+verbatim beside this file as `OFL-carlito.txt` (the archive's LICENSE).
+
+Obligation surface
+------------------
+
+Reserved Font Name: **Carlito**. Under OFL 1.1 condition 3, no Modified
+Version of this Font Software may be distributed under that name without
+written permission from the copyright holder. "Modified Version" is
+defined by the licence as any addition, deletion or substitution of any
+part of the Font Software, or any change to its format — which includes
+**subsetting**. This is why the faces are vendored whole and unmodified.
+
+Notice retention (OFL 1.1 condition 2): each copy of the Font Software,
+whether distributed on its own or bundled, must carry the copyright
+notice above and the licence text. `OFL-carlito.txt` and this file must
+therefore travel with `carlito/*.ttf` in any redistribution, and must not
+be removed from this directory.
+
+What a downstream redistributor owes:
+
+  - retain the copyright notice above and the full `OFL-carlito.txt`;
+  - not sell the Font Software on its own (OFL 1.1 condition 1 — bundling
+    it inside a larger work, sold or not, is permitted);
+  - not use the Reserved Font Name for a modified version;
+  - keep any derivative under the OFL as well (condition 5), which binds
+    only the Font Software, not the software that uses it.
+
+The licence covers the vendored faces only. This package's own source is
+licensed separately; see the package LICENSE.
+
+Provenance, per-file sha256 and the upstream archive digest are locked in
+`PROVENANCE.json` beside this file.

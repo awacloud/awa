@@ -228,12 +228,15 @@ describe('extra/wml-table-properties — parity with the pre-BL-1766 shape', () 
         cellMargins: { top: { w: '10', type: 'dxa' }, left: { w: '20', type: 'dxa' } },
         tblLook: { 'w:val': '04A0', 'w:firstRow': '1' }
     };
-    // Bytes measured from HEAD's extension: hydrate then dehydrate then render.
+    // Bytes measured from HEAD's extension: hydrate then dehydrate then render,
+    // with w:tblLayout before w:tblCellMar as CT_TblPr orders them (the
+    // measured bytes had them the other way, which the schema refuses).
     const PRE_BATCH_BYTES = '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/>'
         + '<w:jc w:val="center"/><w:tblInd w:w="108" w:type="dxa"/><w:tblBorders>'
         + '<w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:insideV w:val="dotted"/></w:tblBorders>'
+        + '<w:tblLayout w:type="fixed"/>'
         + '<w:tblCellMar><w:top w:w="10" w:type="dxa"/><w:left w:w="20" w:type="dxa"/></w:tblCellMar>'
-        + '<w:tblLayout w:type="fixed"/><w:tblLook w:val="04A0" w:firstRow="1"/></w:tblPr>'
+        + '<w:tblLook w:val="04A0" w:firstRow="1"/></w:tblPr>'
         + '<w:tblGrid><w:gridCol w:w="1"/></w:tblGrid></w:tbl>';
     const readTable = () => {
         const t = struct.parseTable(xml.parse(TBL));

@@ -2,7 +2,7 @@
 
 Pure JavaScript library to read, write and subset **OpenType** and
 **TrueType** fonts in the browser. No runtime dependency beyond
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.1.0/packages/front/fw):
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.2.0/packages/front/fw):
 SFNT container and table directory, table parsing and serialization,
 quadratic TrueType outlines, composite glyphs, WOFF/WOFF2/TTC containers and a
 TrueType subsetter for PDF embedding.
@@ -22,8 +22,10 @@ Known limits, so they are not a surprise:
   the parsers return the decoded records (paint graphs, palettes, SVG
   documents, embedded bitmap bytes with their metrics); rasterising
   and compositing them is left to the caller.
-- WOFF2 decoding returns the table directory and the Brotli body; a
-  transformed `glyf` / `loca` table is not reversed.
+- `fontWoff2.decode` returns the tables as stored, the Brotli body
+  decoded but a transformed `glyf` / `loca` / `hmtx` table not reversed;
+  `fontWoff2.toSfnt` reassembles one SFNT with those transforms reversed
+  (a WOFF2 collection is not reassembled).
 - `subsetForPdf` subsets TrueType (`glyf`) outlines only; CFF fonts are
   rejected.
 - An `avar` version 2 table is read (its segment maps, and the offsets of
@@ -141,6 +143,11 @@ try {
 }
 ```
 
+A font without a `name` table throws `fonts/missing-name`, because OpenType
+requires the table. A subset embedded in a PDF file may omit it: pass
+`{ allowMissingName: true }` (`api.read(bytes, opts)`) to read it with
+`name: null` and every `names` field `undefined`.
+
 ### WOFF2: load the Brotli dictionary first
 
 A WOFF2 body is Brotli-compressed, and most bodies use Brotli's static
@@ -161,6 +168,8 @@ words.setBlob(new Uint8Array(readFileSync(new URL(import.meta.resolve('@awacloud
 // Browser: await words.load('/node_modules/@awacloud/fw/src/io/compress/brotli_dict.bin');
 
 const { tables } = fw.runtime.resolve('fontWoff2').decode(woff2Bytes);
+// One SFNT, the glyf / loca and hmtx transforms reversed, for fonts.read:
+const font = fw.runtime.resolve('fonts').read(fw.runtime.resolve('fontWoff2').toSfnt(woff2Bytes));
 ```
 
 A WOFF or WOFF2 body that does not decompress throws the typed
@@ -342,6 +351,6 @@ Copyright (c) 2026 AwaCloud SAS
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/fonts`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.1.0/packages/front/office/fonts)
+- Source: [`packages/front/office/fonts`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.2.0/packages/front/office/fonts)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/fonts@1.1.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/fonts@1.2.0/SECURITY.md

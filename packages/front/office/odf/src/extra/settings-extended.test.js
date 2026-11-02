@@ -43,6 +43,6 @@ describe('settingsExtended', () => {
         ext.hydrateSettings(s);
         expect(s.config).toHaveLength(1);
         const out = ext.dehydrateSettings(s);
-        expect(out._extras[0].name).toBe('config:config-item-set');
+        expect(out._extras.children[0].name).toBe('config:config-item-set');
     });
 });

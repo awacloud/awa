@@ -13,7 +13,7 @@ status: complete
 
 **Module** `dmlFillsAdvanced` | **Source** `packages/front/office/ooxml/src/extra/dml-fills-advanced.js` | **Deps** `xml`, `ooxmlShared` | **Worker-safe** yes
 
-Provides typed parse/render for the three DrawingML fill kinds beyond the simple `solidFill` / `noFill` already handled by core. The color codec is delegated to `ooxmlShared.createDmlColorCodec` with `withMods: false` (flat `<a:gs>` / `<a:fgClr>` / `<a:bgClr>` colors keep no color-transform children — those are tracked by [dml-effects](./dml-effects.md) when needed).
+Provides typed parse/render for the three DrawingML fill kinds beyond the simple `solidFill` / `noFill` already handled by core. The color codec is delegated to `ooxmlShared.createDmlColorCodec` with `withMods: true`: a gradient stop's or a pattern's colour keeps its transforms (`tint`, `satMod`, `alpha` …) on `mods`, written back as read.
 
 ## Resolve
 
@@ -29,7 +29,7 @@ const ext = dmlFillsAdvanced.factory(xml, ooxmlShared);
 | `parseGradFill` / `renderGradFill` | — | `<a:gradFill>` with stops + path/lin |
 | `parseBlipFill` / `renderBlipFill` | — | `<a:blipFill>` with embed rId, tile/stretch |
 | `parsePattFill` / `renderPattFill` | — | `<a:pattFill>` with fg/bg |
-| `parseColor` / `renderColor` | — | typed color tree (srgb / scheme / sys / hsl / scrgb / prst), no mods |
+| `parseColor` / `renderColor` | — | typed color tree (srgb / scheme / sys / hsl / scrgb / prst), with its transforms on `mods` |
 | `COLOR_TAGS` | — | tag list re-exported from the shared color codec |
 
 There is no `grpFill` support in this module — `<a:grpFill>` (inherit-from-group) is not typed by any `extra/` module today.

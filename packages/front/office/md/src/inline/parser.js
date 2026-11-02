@@ -38,7 +38,7 @@
  * by the caller (typically `main.js`'s `ModuleRuntime`). No top-level
  * imports, no top-level materialisation. The trailing `options`
  * positional argument carries per-call parser options
- * (`extendedAutolinks`, `sourcepos`, `smart`).
+ * (`extendedAutolinks`, `sourcepos`, `smart`, `smartDashes`).
  *
  * Worker-safe : **full**. The factory body closes only over its
  * declared parameters.
@@ -105,8 +105,27 @@ export const inlineParser = {
         const { installDelimiterStack } = delimiterStack;
         const { installLink }           = link;
         const { installLineBreak }      = lineBreak;
-        const { processExtendedAutolinks } = autolinkExt;
+        const { processExtendedAutolinks, scanExtAutolinks } = autolinkExt;
         const { backfillSourcepos }     = sourcepos;
+
+        // commonmark.js's smart rule: a run of hyphens becomes em dashes
+        // when its length is a multiple of 3, else en dashes when a
+        // multiple of 2, else em dashes first and as few en dashes as
+        // possible; `...` becomes an ellipsis, left to right.
+        const reDashes = /--+/g;
+        const reEllipses = /\.\.\./g;
+        function dashRun(chars) {
+            const n = chars.length;
+            let em = 0, en = 0;
+            if (n % 3 === 0) em = n / 3;
+            else if (n % 2 === 0) en = n / 2;
+            else if (n % 3 === 2) { en = 1; em = (n - 2) / 3; }
+            else { en = 2; em = (n - 4) / 3; }
+            return '—'.repeat(em) + '–'.repeat(en);
+        }
+        function smartText(s) {
+            return s.replace(reEllipses, '…').replace(reDashes, dashRun);
+        }
 
         function createInlineParser(opts) {
             const ip = {
@@ -173,6 +192,34 @@ export const inlineParser = {
                 }
                 return true;
             };
+            // Smart dashes and ellipses (`smartDashes`), on plain string
+            // runs only: an escape, an entity or a code span keeps its
+            // characters. A word holding an extended-autolink candidate is
+            // left as written, so the autolink post-pass still finds it.
+            if (ip.options.smartDashes) {
+                const parseStringMath = ip.parseString;
+                ip.parseString = function(block) {
+                    if (!parseStringMath.call(this, block)) return false;
+                    const node = block.lastChild;
+                    const s = node.literal;
+                    if (s.indexOf('--') < 0 && s.indexOf('...') < 0) return true;
+                    if (this.options.extendedAutolinks === false) {
+                        node.literal = smartText(s);
+                        return true;
+                    }
+                    let out = '', pos = 0;
+                    for (const m of scanExtAutolinks(s)) {
+                        if (m.end <= pos) continue;
+                        let a = Math.max(m.start, pos), b = m.end;
+                        while (a > pos && !isSpace(s.charCodeAt(a - 1))) a--;
+                        while (b < s.length && !isSpace(s.charCodeAt(b))) b++;
+                        out += smartText(s.slice(pos, a)) + s.slice(a, b);
+                        pos = b;
+                    }
+                    node.literal = out + smartText(s.slice(pos));
+                    return true;
+                };
+            }
 
             ip.parseInline = function(block) {
                 let res;

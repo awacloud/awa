@@ -250,3 +250,94 @@ describe('pdfFilterDispatch module', () => {
         expect(Array.from(m.decodeChain(src, ['JPXDecode'], null))).toEqual([1, 2, 3]);
     });
 });
+
+describe('typeStreamEntries', () => {
+    const { typeStreamEntries } = pdfFilterDispatch.factory(_err, passthrough, hex, a85, rl);
+    const bytes = (s) => te.encode(s);
+    const ABSENT = { length: null, filter: [], decodeParms: null, f: null, fFilter: [], fDecodeParms: null, dl: null };
+
+    test('every Table 5 entry, from a stream', () => {
+        const parms = obj.dict({ Predictor: obj.int(12), Columns: obj.int(4) });
+        const fparms = obj.dict({ K: obj.int(-1) });
+        const s = obj.stream(obj.dict({
+            Length: obj.int(42), Filter: obj.array([obj.name('ASCII85Decode'), obj.name('FlateDecode')]),
+            DecodeParms: obj.array([obj.nul(), parms]), F: obj.string(bytes('data.bin')),
+            FFilter: obj.name('CCITTFaxDecode'), FDecodeParms: fparms, DL: obj.int(1000)
+        }), new Uint8Array(0));
+        expect(typeStreamEntries(s)).toEqual({
+            length: 42, filter: ['ASCII85Decode', 'FlateDecode'], decodeParms: [null, parms],
+            f: bytes('data.bin'), fFilter: ['CCITTFaxDecode'], fDecodeParms: [fparms], dl: 1000
+        });
+    });
+
+    test('a bare stream dictionary is read the same way; references for Length and F', () => {
+        const fs = obj.dict({ Type: obj.name('Filespec') });
+        expect(typeStreamEntries(obj.dict({ Length: obj.ref(9, 0), F: fs }))).toEqual({ ...ABSENT, length: { num: 9, gen: 0 }, f: fs });
+        expect(typeStreamEntries(obj.dict({ F: obj.ref(4, 2) })).f).toEqual({ num: 4, gen: 2 });
+    });
+
+    test('a name filter gives a one-name list, abbreviations kept as read', () => {
+        const r = typeStreamEntries(obj.dict({ Filter: obj.name('Fl'), DecodeParms: obj.dict({}) }));
+        expect(r.filter).toEqual(['Fl']);
+        expect(r.decodeParms).toEqual([obj.dict({})]);
+    });
+
+    test('absent entries: empty filter lists, the others null', () => {
+        expect(typeStreamEntries(obj.stream(obj.dict({}), new Uint8Array(0)))).toEqual(ABSENT);
+    });
+
+    test('a value of another type gives null', () => {
+        const wrong = obj.bool(true);
+        expect(typeStreamEntries(obj.dict({
+            Length: obj.real(4.5), Filter: wrong, DecodeParms: wrong, F: obj.int(3),
+            FFilter: obj.array([obj.name('A'), obj.int(1)]), FDecodeParms: obj.array([obj.int(1)]), DL: obj.int(-1)
+        }))).toEqual({ length: null, filter: null, decodeParms: null, f: null, fFilter: null, fDecodeParms: null, dl: null });
+    });
+
+    test('neither a stream nor a dictionary throws pdf/filter/not-stream', () => {
+        let err = null;
+        try { typeStreamEntries(obj.array([])); } catch (e) { err = e; }
+        expect(err).toBeInstanceOf(ParseError);
+        expect(err.code).toBe('pdf/filter/not-stream');
+        expect(() => typeStreamEntries(null)).toThrow(ParseError);
+    });
+});
+
+describe('typeDecodeParms (A40d)', () => {
+    const { typeDecodeParms, DECODE_PARMS_KEYS } = pdfFilterDispatch.factory(_err, passthrough, hex, a85, rl);
+    const { ContractError } = _err;
+    const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+
+    test('Flate and LZW predictor parameters, an abbreviation resolved', () => {
+        const d = obj.dict({ Predictor: obj.int(12), Colors: obj.int(3), BitsPerComponent: obj.int(8), Columns: obj.int(4), Foo: obj.int(1) });
+        const r = typeDecodeParms(d, 'FlateDecode');
+        expect([r.predictor, r.colors, r.bitspercomponent, r.columns, r._extras, r.raw]).toEqual([12, 3, 8, 4, { Foo: obj.int(1) }, d]);
+        const l = typeDecodeParms(obj.dict({ EarlyChange: obj.int(0), Predictor: obj.int(2) }), 'LZW');
+        expect([l.earlychange, l.predictor]).toEqual([0, 2]);
+        expect(typeDecodeParms(obj.dict({ EarlyChange: obj.int(0) }), 'Fl')._extras).toEqual({ EarlyChange: obj.int(0) });
+    });
+
+    test('CCITT fax, DCT, JBIG2 and Crypt parameters; a wrong type null', () => {
+        const c = typeDecodeParms(obj.dict({ K: obj.int(-1), EndOfLine: obj.bool(true), EncodedByteAlign: obj.bool(false), Columns: obj.int(1728),
+            Rows: obj.int(10), EndOfBlock: obj.bool(true), BlackIs1: obj.bool(false), DamagedRowsBeforeError: obj.int(0) }), 'CCF');
+        expect([c.k, c.endofline, c.encodedbytealign, c.columns, c.rows, c.endofblock, c.blackis1, c.damagedrowsbeforeerror])
+            .toEqual([-1, true, false, 1728, 10, true, false, 0]);
+        expect(typeDecodeParms(obj.dict({ ColorTransform: obj.int(1) }), 'DCTDecode').colortransform).toBe(1);
+        const g = obj.ref(8, 0);
+        expect(typeDecodeParms(obj.dict({ JBIG2Globals: g }), 'JBIG2Decode').jbig2globals).toBe(g);
+        const cr = typeDecodeParms(obj.dict({ Type: obj.name('CryptFilterDecodeParms'), Name: obj.name('StdCF') }), 'Crypt');
+        expect([cr.type, cr.name]).toEqual(['CryptFilterDecodeParms', 'StdCF']);
+        expect(typeDecodeParms(obj.dict({ K: obj.name('x') }), 'CCITTFaxDecode').k).toBe(null);
+    });
+
+    test('every filter of DECODE_PARMS_KEYS types every key of its list; errors', () => {
+        expect(Object.keys(DECODE_PARMS_KEYS).sort()).toEqual(['CCITTFaxDecode', 'Crypt', 'DCTDecode', 'FlateDecode', 'JBIG2Decode', 'LZWDecode']);
+        for (const [filter, keys] of Object.entries(DECODE_PARMS_KEYS)) {
+            const entries = {};
+            for (const k of keys) entries[k] = obj.ref(1, 0);
+            expect(typeDecodeParms(obj.dict(entries), filter)._extras).toEqual({});
+        }
+        expect(code(() => typeDecodeParms(obj.array([]), 'FlateDecode'))).toEqual([ParseError.name, 'pdf/filter/decodeparms/not-dict']);
+        expect(code(() => typeDecodeParms(obj.dict({}), 'ASCIIHexDecode'))).toEqual([ContractError.name, 'pdf/filter/decodeparms/filter']);
+    });
+});

@@ -129,3 +129,12 @@ describe('pdfStructElement module', () => {
         expect(typeof m.typeStructElement).toBe('function');
     });
 });
+
+describe('typeStructElement: Ref (A38b)', () => {
+    test('Ref read as is, not an extra', () => {
+        const r = typeStructElement(obj.dict({ S: obj.name('P'), Ref: obj.array([obj.ref(4, 0)]) }));
+        expect(r.ref.type).toBe('array');
+        expect('Ref' in r._extras).toBe(false);
+        expect('ref' in typeStructElement(obj.dict({ S: obj.name('P') }))).toBe(false);
+    });
+});

@@ -27,7 +27,7 @@ const settings = runtime.resolve('odfSettings');
 | Method | Description |
 |--------|-------------|
 | `parse(xmlString)` | Throws `ParseError` if the root is not `<office:document-settings>`. |
-| `serialize(settings, opts?)` | XML with prolog + office/config namespaces. The root also declares every other namespace prefix the output uses, resolved from `opts.namespaces` (a prefix → URI map — the orchestrators pass the source `settings.xml` root's declarations), then from `odfShared.ODF_PREFIXES`. A prefix none of them declares throws `RenderError('odf/render-error/namespace')`, `context: { module: 'settings', part: 'settings.xml', prefix }`. |
+| `serialize(settings, opts?)` | XML with prolog + office/config namespaces. `opts.version` is the `office:version` written (default `1.4`; `null` writes no attribute — the `keepVersion` write passes the source part's). The root also declares every other namespace prefix the output uses, resolved from `opts.namespaces` (a prefix → URI map — the orchestrators pass the source `settings.xml` root's declarations), then from `odfShared.ODF_PREFIXES`. A prefix none of them declares throws `RenderError('odf/render-error/namespace')`, `context: { module: 'settings', part: 'settings.xml', prefix }`. |
 | `empty()` | `{ itemSets: [] }`. |
 
 ## Notes

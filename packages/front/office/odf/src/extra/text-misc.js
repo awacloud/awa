@@ -96,8 +96,8 @@ export const textMisc = {
                 if (t && t._passthrough) extras.push(h.renderElement(t));
             }
             delete out.text;
-            if (Array.isArray(p._extras) || !p._extras) out._extras = extras;
-            else out._extras = { ...p._extras, children: extras };
+            if (Array.isArray(p._extras)) out._extras = extras;
+            else out._extras = { ...(p._extras || {}), children: extras };
             return out;
         }
 

@@ -10,6 +10,76 @@ Reference specs:
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- **Standard 14 widths for MacRoman and StandardEncoding.** Each of the 12
+  Latin Standard 14 records gains `extraWidths`: the widths, by glyph name,
+  of the 21 glyphs MacRomanEncoding and StandardEncoding name that the
+  WinAnsi table cannot hold (`fi`, `fl`, `Lslash`, `dotlessi`, `fraction`,
+  the accents, the Mac Roman math glyphs the face carries), parsed from the
+  vendored AFMs by `tools/gen-standard14-widths.mjs` (Courier 600 each);
+  exported per face as `*_EXTRA_WIDTHS`. Symbol and ZapfDingbats unchanged.
+- **A WOFF2 reassembled into an SFNT.** `fontWoff2` gains `toSfnt(bytes)`
+  and `woff2ToSfnt(bytes, deps)`: the WOFF2 decoded, its `glyf` / `loca`
+  transform and its `hmtx` transform reversed (W3C WOFF2 § 5), the tables
+  packed into one SFNT with their checksums, ready for `fonts.read`. A
+  WOFF2 with a transformed `glyf` (most of them) can now be read. New
+  errors on the new functions only: `fonts/woff2-bad-transform`,
+  `fonts/woff2-collection` (a collection is not reassembled). `decode` is
+  unchanged.
+- **`allowMissingName` read option.** `fonts.read(bytes, opts)` and
+  `fonts.buildFont(sfnt, opts)` take an optional `opts`; with
+  `allowMissingName: true` a font without a `name` table (a subset
+  embedded in a PDF file may omit it) is read with `name: null` and every
+  `names` field `undefined` instead of throwing `fonts/missing-name`.
+  Without the option the table stays required.
+- **CID-keyed CFF: per-glyph Font DICTs.** `parseCff` gives each font
+  `fdArray` (the FDArray's Font DICTs, each with its Private DICT and
+  local subroutines) and `fdSelect` (the Font DICT index of every glyph,
+  FDSelect formats 0 and 3), `null` for a name-keyed font or malformed
+  data; the new `privateForGlyph(font, gid)` returns the Private DICT and
+  local subroutines a glyph's charstring runs with. A CID-keyed glyph that
+  calls a local subroutine now decodes (it used to fail with "references
+  missing subr" when decoded with the Top DICT's subroutines).
+- **CFF glyph names.** `parseCff` now fills each font's `charset` (the SID,
+  or CID, of every glyph: formats 0, 1, 2 and the predefined ISOAdobe
+  charset; it was always `null`) and gives the new `glyphNames` of a
+  name-keyed font; `CFF_STANDARD_STRINGS` lists the 391 standard strings.
+- **`seac` accents.** `decodeCharstring` reports an `endchar` with four or
+  five operands as `seac` and, given `ctx.seacGlyph(code)`, composes the
+  base glyph and the accent moved by `(adx, ady)`.
+
+### Fixed
+
+- **MacRomanEncoding's last 19 codes.** `encodingMacRoman` held a stray
+  `Eacute` at 0xED, so each code from 0xED to 0xFF named the glyph of the
+  code after it (0xED read as `Eacute` for `Igrave`, 0xF0 as `Ocircumflex`
+  for `apple`) and `caron` (0xFF) was not mapped; the table now follows
+  ISO 32000-2 Annex D there. A simple font in MacRomanEncoding decodes
+  those codes to their right glyphs.
+- **`subsetForPdf` of a font without a `name` table.** The subset copied
+  the source's `name` table unconditionally; a font read with
+  `allowMissingName` now subsets without one (`postScriptName`
+  `<prefix>+Font`).
+- **The width before a `seac`.** `decodeCharstring` took the first operand of
+  an `endchar` that carries `seac` operands as the glyph's width; a width is
+  now read only from a fifth operand.
+- **Macintosh Roman-script `cmap` subtables read as Unicode.**
+  `pickUnicodeMap` (and so `unicodeMap` and `glyphIndexForCodePoint` of
+  `fonts.read`) took a platform 1 / encoding 0 subtable's byte codes as
+  code points, so a font with only such a subtable mapped every character
+  above 0x7F to the wrong glyph; the codes are now read through the Mac OS
+  code page its `language` names (Roman, Icelandic, Turkish, Croatian,
+  Romanian). The subtable selection order is unchanged.
+- **`decodePaintGraph` documented a result no input produces.** The page
+  listed `{ cycle: true, offset }` for a cycle in the paint graph; a child
+  paint offset is unsigned and relative to its parent, so a path cannot
+  revisit a paint and the result never occurred. The page now says so and
+  the unreachable branch is gone from the code; `maxDepth` still bounds the
+  walk (`{ truncated: true, offset }`) and every result is unchanged.
+
 ## [1.1.0] - 2026-10-21
 
 ### Added

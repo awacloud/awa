@@ -133,3 +133,25 @@ describe('pdfPages module', () => {
         expect(typeof m.readPageCount).toBe('function');
     });
 });
+
+describe('walkPageTree — /Kids given by reference (T42)', () => {
+    function tree(kids) {
+        const map = new Map();
+        map.set('2:0', obj.dict({ Type: obj.name('Pages'), Kids: obj.ref(9, 0), Count: obj.int(2) }));
+        map.set('9:0', kids);
+        map.set('3:0', obj.dict({ Type: obj.name('Page'), Parent: obj.ref(2, 0) }));
+        map.set('4:0', obj.dict({ Type: obj.name('Page'), Parent: obj.ref(2, 0) }));
+        return makeResolver(map);
+    }
+
+    test('a reference to an array is resolved (ISO 32000-2 § 7.3.10: any value may be indirect)', () => {
+        const refs = walkPageTree({ num: 2, gen: 0 }, tree(obj.array([obj.ref(3, 0), obj.ref(4, 0)])));
+        expect(refs).toEqual([{ num: 3, gen: 0 }, { num: 4, gen: 0 }]);
+    });
+
+    test('a reference to something else than an array still throws pdf/pages/missing-kids', () => {
+        let code = null;
+        try { walkPageTree({ num: 2, gen: 0 }, tree(obj.dict({}))); } catch (e) { code = e.code; }
+        expect(code).toBe('pdf/pages/missing-kids');
+    });
+});

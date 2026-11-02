@@ -13,7 +13,7 @@ status: complete
 
 **Module** `pdfTaggedPdfTyped` | **Source** `packages/front/office/pdf/src/extra/tagged-pdf-typed.js` | **Deps** `pdfErrors`, `pdfParserObj` | **Worker-safe** yes
 
-Covers the standard attribute owners: Layout (§14.8.5.4), List (§14.8.5.5), Table (§14.8.5.7), PrintField (§14.8.5.6), Artifact (§14.8.2.2), UserProperties (§14.8.5.10). Dispatches on `/O`; unknown keys are preserved under `_extras`.
+Covers the standard attribute owners: Layout (§14.8.5.4), List (§14.8.5.5), Table (§14.8.5.7), PrintField (§14.8.5.6), Artifact (§14.8.2.2), UserProperties (§14.8.5.10), and ISO 32000-2's `NSO` (the attributes of the namespace `NS` names: `ns` and every standard owner's fields, `p` the user properties array as read). Dispatches on `/O`; unknown keys are preserved under `_extras`.
 
 ## Resolve
 
@@ -27,15 +27,21 @@ const ext = runtime.resolve('pdfTaggedPdfTyped');
 | Member | Signature | Returns |
 |--------|-----------|---------|
 | `typeStructAttribute` | `(dict) => StructAttr` | Record `{ owner, ...typed, raw, _extras }`. |
-| `ATTRIBUTE_OWNERS` | `Set<string>` | `Layout`, `List`, `Table`, `PrintField`, `Artifact`, `UserProperties`. |
+| `ATTRIBUTE_OWNERS` | `Set<string>` | `Layout`, `List`, `Table`, `PrintField`, `Artifact`, `UserProperties`, `NSO`. |
 
 ### Shape `StructAttr` (Layout)
 
 ```js
 { owner: 'Layout', placement, writingMode, backgroundColor,
   borderColor, borderStyle, borderThickness, padding,
-  color, spaceBefore, spaceAfter, …, raw, _extras }
+  color, spaceBefore, spaceAfter, …, tBorderStyle, tPadding, rubyAlign,
+  rubyPosition, glyphOrientationVertical, raw, _extras }
 ```
+
+`width`, `height` and `lineHeight` are a number or a name (`Auto`, `Normal`)
+by its value; `tBorderStyle` a name by its value or the array as read. A
+Table attribute also carries `short` (ISO 32000-2); a PrintField's
+`checked` reads `checked` or `Checked`.
 
 ## Examples
 

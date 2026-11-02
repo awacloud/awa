@@ -30,6 +30,6 @@ describe('drawImageExtended', () => {
         ext.hydrateFrame(fr);
         expect(fr.drawExtras).toHaveLength(1);
         const out = ext.dehydrateFrame(fr);
-        expect(out._extras[0].name).toBe('draw:gradient');
+        expect(out._extras.children[0].name).toBe('draw:gradient');
     });
 });

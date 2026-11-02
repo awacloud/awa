@@ -22,6 +22,11 @@
     "pdfAscii85",
     "pdfRunLength",
     "pdfFilterDispatch",
+    "pdfSecurity",
+    "pdfStandardV4",
+    "pdfAesGcm",
+    "pdfStandardV5",
+    "pdfStandardV6",
     "pdfDocument",
     "pdfWriter",
     "pdf",
@@ -56,23 +61,18 @@
     "pdfBuilder",
     "pdfIncrementalWriter",
     "pdfXrefStreamWriter",
-    "pdfAesGcm",
-    "pdfStandardV5",
-    "pdfStandardV6",
-    "pdfStandardV4",
     "pdfEncryptedWriter",
     "pdfSigOids",
     "pdfByteRange",
     "pdfSha1",
     "pdfDssBuilder",
-    "pdfSecurity",
     "pdfSign",
     "pdfSignature"
   ],
   "fwDependencies": [],
   "bytes": {
-    "dev": 645045,
-    "min": 357743
+    "dev": 725002,
+    "min": 408860
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

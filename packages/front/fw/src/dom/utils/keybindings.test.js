@@ -595,4 +595,137 @@ describe('keybindings module', () => {
             expect(parentCount).toBe(1);
         });
     });
+
+    // ── punctuation keys ──────────────────────────────────────────────────────
+
+    describe('punctuation keys', () => {
+        let api, kb, target;
+
+        /** Raw KeyboardEvent with an explicit key / code (punctuation depends on event.key). */
+        function keyEv(key, code, mods = {}) {
+            return new KeyboardEvent('keydown', {
+                key,
+                code,
+                ctrlKey:  mods.ctrl  || false,
+                shiftKey: mods.shift || false,
+                altKey:   mods.alt   || false,
+                metaKey:  mods.meta  || false,
+                bubbles:  true,
+                cancelable: true,
+            });
+        }
+
+        const NO_MODS = { ctrl: false, shift: false, alt: false, meta: false };
+
+        beforeEach(() => {
+            api = keybindings.factory(eventsStub, eventBusStub);
+            target = new EventTarget();
+            kb = api.create({ target });
+            kb.attach();
+        });
+
+        test('parse Plus / plus', () => {
+            expect(api.parse('Plus')).toEqual({ modifiers: NO_MODS, key: 'Plus' });
+            expect(api.parse('plus').key).toBe('Plus');
+        });
+
+        test('parse Ctrl+Minus', () => {
+            const r = api.parse('Ctrl+Minus');
+            expect(r.modifiers).toEqual({ ...NO_MODS, ctrl: true });
+            expect(r.key).toBe('Minus');
+        });
+
+        test('parse literal - and = tokens', () => {
+            expect(api.parse('-').key).toBe('Minus');
+            expect(api.parse('=').key).toBe('Equal');
+            expect(api.parse('Ctrl+-').key).toBe('Minus');
+        });
+
+        test('parse Equal / equals', () => {
+            expect(api.parse('Equal').key).toBe('Equal');
+            expect(api.parse('equals').key).toBe('Equal');
+        });
+
+        test('Ctrl++ still throws invalid combo segment', () => {
+            expect(() => api.parse('Ctrl++')).toThrow(/invalid combo segment/);
+        });
+
+        test('Shift+Plus / Shift+= / Shift+Minus are refused at parse time', () => {
+            expect(() => api.parse('Shift+Plus')).toThrow(/Shift cannot qualify/);
+            expect(() => api.parse('Shift+=')).toThrow(/Shift cannot qualify/);
+            expect(() => api.parse('Plus+Shift')).toThrow(/Shift cannot qualify/);
+            expect(() => api.parse('Ctrl+Shift+Minus')).toThrow(/Shift cannot qualify/);
+        });
+
+        test('Plus fires on Shift+Equal (event.key "+") and on NumpadAdd', () => {
+            let n = 0;
+            kb.bind('Plus', () => { n++; });
+            target.dispatchEvent(keyEv('+', 'Equal', { shift: true }));
+            expect(n).toBe(1);
+            target.dispatchEvent(keyEv('+', 'NumpadAdd'));
+            expect(n).toBe(2);
+        });
+
+        test('Minus fires on "-" (main row and numpad)', () => {
+            let n = 0;
+            kb.bind('Minus', () => { n++; });
+            target.dispatchEvent(keyEv('-', 'Minus'));
+            target.dispatchEvent(keyEv('-', 'NumpadSubtract'));
+            expect(n).toBe(2);
+        });
+
+        test('Equal fires on "=" and a literal "=" binding is the same key', () => {
+            let n = 0;
+            kb.bind('Equal', () => { n++; });
+            kb.bind('=', () => { n++; });
+            target.dispatchEvent(keyEv('=', 'Equal'));
+            expect(n).toBe(2);
+        });
+
+        test('shift state does not matter for a punctuation binding', () => {
+            let n = 0;
+            kb.bind('Minus', () => { n++; });
+            target.dispatchEvent(keyEv('-', 'Minus', { shift: true }));
+            expect(n).toBe(1);
+        });
+
+        test('a bound Plus does NOT fire with Ctrl held', () => {
+            let n = 0;
+            kb.bind('Plus', () => { n++; });
+            target.dispatchEvent(keyEv('+', 'Equal', { ctrl: true, shift: true }));
+            expect(n).toBe(0);
+        });
+
+        test('Ctrl+Plus fires with Ctrl and not on the plain "+"', () => {
+            let n = 0;
+            kb.bind('Ctrl+Plus', () => { n++; });
+            target.dispatchEvent(keyEv('+', 'Equal', { ctrl: true, shift: true }));
+            expect(n).toBe(1);
+            target.dispatchEvent(keyEv('+', 'Equal', { shift: true }));
+            expect(n).toBe(1);
+        });
+
+        test('match(event) lists the punctuation binding; list() keeps the combo string', () => {
+            const fn = () => {};
+            kb.bind('Ctrl+Minus', fn);
+            const hit = kb.match(keyEv('-', 'Minus', { ctrl: true }));
+            expect(hit.map(b => b.combo)).toEqual(['Ctrl+Minus']);
+            expect(hit[0].fn).toBe(fn);
+            expect(kb.match(keyEv('-', 'Minus')).length).toBe(0);
+            expect(kb.list().map(b => b.combo)).toEqual(['Ctrl+Minus']);
+        });
+
+        test('unmapped punctuation still throws unknown key', () => {
+            expect(() => api.parse(',')).toThrow(/unknown key/);
+        });
+
+        test('regression: digit 0 and Ctrl+S unchanged', () => {
+            const called = [];
+            kb.bind('0', () => called.push('zero'));
+            kb.bind('Ctrl+S', () => called.push('save'));
+            target.dispatchEvent(keyEv('0', 'Digit0'));
+            target.dispatchEvent(keyEv('s', 'KeyS', { ctrl: true }));
+            expect(called).toEqual(['zero', 'save']);
+        });
+    });
 });

@@ -44,12 +44,14 @@ export const pdfActionLaunch = {
             };
             if (e.F)   out.file = e.F;
             if (e.Win && e.Win.type === 'dict') out.win = e.Win;
-            if (e.Mac && e.Mac.type === 'dict') out.mac = e.Mac;
-            if (e.Unix && e.Unix.type === 'dict') out.unix = e.Unix;
+            // Mac and Unix: content left undefined by ISO 32000-2, kept as read.
+            if (e.Mac) out.mac = e.Mac;
+            if (e.Unix) out.unix = e.Unix;
             if (e.NewWindow && e.NewWindow.type === 'bool') {
                 out.newWindow = e.NewWindow.value;
             }
-            if (!out.file && !out.win && !out.mac && !out.unix) {
+            const target = (v) => !!v && v.type === 'dict';
+            if (!out.file && !out.win && !target(out.mac) && !target(out.unix)) {
                 throw new ParseError('pdf/action/launch/empty',
                     'Launch action has no /F, /Win, /Mac, or /Unix target');
             }

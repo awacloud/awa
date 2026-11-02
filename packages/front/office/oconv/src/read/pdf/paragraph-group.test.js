@@ -187,3 +187,25 @@ describe('groupParagraphs — an exact duplicate of the previous piece is droppe
         expect(count(out[0], 'ab')).toBe(2);
     });
 });
+
+describe('groupParagraphs — line-end hyphens (T34 c)', () => {
+    const wrap = (a, b) => [piece(a, 700), piece(b, 686)];
+
+    test('a soft hyphen ending a line joins the word, by default', () => {
+        expect(groupParagraphs(wrap('infor­', 'mation here'))).toEqual(['information here']);
+        expect(groupParagraphs(wrap('end­', '2 more'))).toEqual(['end­ 2 more']);
+    });
+
+    test('a hyphen is left as today unless lineHyphens asks', () => {
+        expect(groupParagraphs(wrap('infor-', 'mation'))).toEqual(['infor- mation']);
+        expect(groupParagraphs(wrap('infor-', 'mation'), { lineHyphens: 'drop' })).toEqual(['information']);
+        expect(groupParagraphs(wrap('well-', 'known'), { lineHyphens: 'keep' })).toEqual(['well-known']);
+        expect(groupParagraphs(wrap('infor‐', 'mation'), { lineHyphens: 'drop' })).toEqual(['information']);
+    });
+
+    test('an uppercase next line, a digit before the hyphen or a paragraph break is left alone', () => {
+        expect(groupParagraphs(wrap('North-', 'East'), { lineHyphens: 'drop' })).toEqual(['North- East']);
+        expect(groupParagraphs(wrap('pages 1-', 'ten'), { lineHyphens: 'drop' })).toEqual(['pages 1- ten']);
+        expect(groupParagraphs([piece('infor-', 700), piece('mation', 640)], { lineHyphens: 'drop' })).toEqual(['infor-', 'mation']);
+    });
+});

@@ -37,13 +37,13 @@ const opc = runtime.resolve('opcPackage');
 | `bytesToString` / `stringToBytes` | `(u8)` / `(s)` | UTF-8 helpers. |
 | `isRelsPath` | `(zipPath: string) => boolean` | True for `_rels/.rels` and `<dir>/_rels/<file>.rels`. |
 | `ownerPartFromRels` | `(zipPath: string) => string` | Absolute name of the part a `.rels` file belongs to. |
-| `defaultLimits` | frozen object | `{ maxParts: 1024, maxUncompressed: 268435456, maxRatio: 200, maxDepth: 1000 }`. |
+| `defaultLimits` | frozen object | `{ maxParts: 8192, maxUncompressed: 268435456, maxRatio: 200, maxDepth: 1000 }`. |
 
 ### `read` limits
 
 | Option | Default | Guards against |
 |--------|---------|----------------|
-| `maxParts` | `1024` | Archives with an absurd number of entries. |
+| `maxParts` | `8192` (`1024` before 1.2.0) | Archives with an absurd number of entries (real decks reach about 5,000 parts, most of them media; the payload stays bounded by the two limits below). |
 | `maxUncompressed` | `256 * 1024 * 1024` | Total inflated size. |
 | `maxRatio` | `200` | Compression-ratio zip bombs. |
 | `maxDepth` | `1000` | An XML part (`.xml`, `.rels`, `.vml`) nesting elements deeper: the readers walk trees recursively. Checked by a linear scan of each part before any is parsed. |

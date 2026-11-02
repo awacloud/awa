@@ -52,7 +52,7 @@ describe('tableAdvanced — hooks', () => {
             { kind: 'table:scenario', attrs: {}, children: [] }
         ] };
         const out = ext.dehydrateTable(t);
-        expect(out._extras).toHaveLength(1);
-        expect(out._extras[0].name).toBe('table:scenario');
+        expect(out._extras.children).toHaveLength(1);
+        expect(out._extras.children[0].name).toBe('table:scenario');
     });
 });

@@ -56,3 +56,11 @@ describe('pdfActionLaunch module', () => {
         expect(typeof m.typeLaunch).toBe('function');
     });
 });
+
+describe('Mac and Unix as read (A38d)', () => {
+    test('a value of any type is kept; only a dictionary counts as a target', () => {
+        const r = typeLaunch(obj.dict({ F: obj.string(new Uint8Array([97])), Mac: obj.nul(), Unix: obj.string(new Uint8Array([98])) }));
+        expect([r.mac.type, r.unix.type]).toEqual(['null', 'string']);
+        expect(() => typeLaunch(obj.dict({ Mac: obj.nul() }))).toThrow(ParseError);
+    });
+});

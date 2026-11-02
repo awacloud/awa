@@ -45,10 +45,11 @@ const md = runtime.resolve('md');
 |--------|------|---------|-------------|
 | `sourcepos` | `boolean` | `false` | Inline nodes carry `sourcepos` too (block nodes always do) |
 | `smart` | `boolean` | `false` | Typographic (curly) quotes for `"` and `'` |
+| `smartDashes` | `boolean` | `false` | En and em dashes for runs of `-`, and `…` for `...`, by commonmark.js's `smart` rule (`--` en dash, `---` em dash, longer runs em dashes first). Plain text only: escapes (`\-`, `\.`), entities, code spans, raw HTML, autolinks and link destinations keep their characters, and so does a whitespace-delimited word holding a GFM extended autolink. Independent of `smart`: both together give commonmark.js's full `smart` |
 | `extendedAutolinks` | `boolean` | `true` | GFM extended autolink (`www.example.com`) |
 | `sanitize` | `boolean` | `false` | Pipes the rendered HTML through `@awacloud/fw/dom/rendering/sanitize.js` |
 | `sanitizeOpts` | `object` | `{}` | Options passed to the fw `sanitizeHtml`: `allowedTags`, `allowedAttributes`, `urlSchemes`, `dropDangerousContent` |
-| `maxDepth` | `number` | `1000` | Maximum node nesting depth before `md/limit-exceeded` (`Infinity` opts out) |
+| `maxDepth` | `number` | `1000` | Maximum node nesting depth before `md/limit-exceeded` (`Infinity` opts out). A block container (a list, an item, a quote) deeper than it is refused while the text is parsed, before the deeper tree is built; inline nesting is checked after the parse |
 | `maxNodes` | `number` | `100000` | Maximum AST node count before `md/limit-exceeded` (`Infinity` opts out) |
 | `maxUrlLength` | `number` | `8192` | Maximum URL length allowed in a link / image (`Infinity` opts out) |
 

@@ -168,10 +168,10 @@ export const textTrackedChanges = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const m of out.changeMarkers) extras.push(renderChangeMarker(m));
             delete out.changeMarkers;
-            if (Array.isArray(p._extras) || !p._extras) {
+            if (Array.isArray(p._extras)) {
                 out._extras = extras;
             } else {
-                out._extras = { ...p._extras, children: extras };
+                out._extras = { ...(p._extras || {}), children: extras };
             }
             return out;
         }

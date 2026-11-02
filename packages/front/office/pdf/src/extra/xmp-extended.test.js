@@ -89,3 +89,25 @@ describe('extra/xmp-extended', () => {
         expect(pdfXmpExtended.factory.toString()).toContain('function');
     });
 });
+
+describe('extra/xmp-extended — dcTitle (T34 d)', () => {
+    const pkt = (inner, dc = 'dc') => '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+        + `<rdf:Description rdf:about="" xmlns:${dc}="http://purl.org/dc/elements/1.1/">${inner}</rdf:Description></rdf:RDF></x:xmpmeta>`;
+
+    test('the x-default alternative first, else the first one; entities decoded, trimmed', () => {
+        expect(m.dcTitle(pkt('<dc:title><rdf:Alt><rdf:li xml:lang="fr-FR">Rapport</rdf:li><rdf:li xml:lang="x-default"> Report &amp; notes </rdf:li></rdf:Alt></dc:title>')))
+            .toBe('Report & notes');
+        expect(m.dcTitle(pkt('<dc:title><rdf:Alt><rdf:li xml:lang="fr-FR">Rapport</rdf:li></rdf:Alt></dc:title>'))).toBe('Rapport');
+        expect(m.dcTitle(new TextEncoder().encode(pkt('<t:title><rdf:Alt><rdf:li xml:lang="x-default">Bound</rdf:li></rdf:Alt></t:title>', 't')))).toBe('Bound');
+    });
+
+    test('a leaf dc:title; no title, null', () => {
+        expect(m.dcTitle(SAMPLE)).toBe('Hello');
+        expect(m.dcTitle(pkt('<dc:creator>A</dc:creator>'))).toBe(null);
+        expect(m.dcTitle(pkt('<dc:title><rdf:Alt><rdf:li xml:lang="x-default">  </rdf:li></rdf:Alt></dc:title>'))).toBe(null);
+    });
+
+    test('a bad input throws as parsePacket does', () => {
+        expect(() => m.dcTitle(42)).toThrow(ParseError);
+    });
+});

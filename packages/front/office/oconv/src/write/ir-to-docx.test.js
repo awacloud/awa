@@ -456,7 +456,8 @@ describe('oconvIrToDocx — lists and numbering', () => {
         const body = docxApi.read(bytes).document.body;
 
         expect(losses).toEqual([{ code: 'list/task-marker-dropped', detail: '[x]' }]);
-        expect(body.map(paraText)).toEqual(['nested']);
+        // the item's empty marker paragraph (T32 b3c), then the nested item
+        expect(body.map(paraText)).toEqual(['', 'nested']);
     });
 
     test('two adjacent bullet lists get numId 1 and 2 and re-read as TWO lists', () => {
@@ -937,15 +938,27 @@ describe('oconvIrToDocx — code blocks, quotes and rules', () => {
 
 describe('oconvIrToDocx — degrades', () => {
 
-    test('a block image is dropped, named by its manifest name', () => {
+    // T32 (b3c): a byteless image keeps its place as a placeholder picture,
+    // as ir-to-odt keeps it as an empty frame.
+    test('a byteless block image is a placeholder picture, named by its manifest name', () => {
         const ir = doc([n('image', { name: 'figure.png', alt: 'A figure' })]);
         const { bytes, losses } = irToDocx(ir);
 
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'figure.png' }]);
-        expect(docxApi.read(bytes).document.body).toHaveLength(0);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'figure.png' }]);
+        const read = docxApi.read(bytes);
+        expect(read.document.body).toHaveLength(1);
+        const d = read.document.body[0].children[0].children[0];
+        expect(d).toMatchObject({ type: 'drawing', mode: 'inline', cx: 1828800, cy: 1371600,
+            docName: 'figure.png', description: 'A figure' });
+        expect(d.embedRef).toBeUndefined();
+        // no media part, no image relationship
+        expect(Object.keys(read.images)).toHaveLength(0);
+        const pkg = opcApi.read(bytes);
+        expect(Object.keys(pkg.parts).filter((k) => k.startsWith('/word/media/'))).toEqual([]);
+        expect((pkg.rels['/word/document.xml'] || []).filter((r) => r.Type.endsWith('/image'))).toEqual([]);
     });
 
-    test('an inline image is dropped but the surrounding text flow survives', () => {
+    test('a byteless inline image is a placeholder between the surrounding runs', () => {
         const ir = doc([n('paragraph', {}, [
             run('before '),
             n('image', { name: 'inline.png', alt: 'inline' }),
@@ -954,8 +967,20 @@ describe('oconvIrToDocx — degrades', () => {
         const { bytes, losses } = irToDocx(ir);
         const runs = docxApi.read(bytes).document.body[0].children;
 
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'inline.png' }]);
-        expect(runs.map(r => r.children[0].value)).toEqual(['before ', ' after']);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'inline.png' }]);
+        expect(runs.map(r => r.children[0].type === 'text' ? r.children[0].value : r.children[0].type))
+            .toEqual(['before ', 'drawing', ' after']);
+    });
+
+    test('a byteless image reads back as its reference, in a heading too', () => {
+        const ir = doc([n('heading', { level: 1 }, [n('image', { name: 'Graphic5', alt: '' })]),
+            n('paragraph', {}, [n('image', { name: 'pic', alt: 'Alt' }), run('.')])]);
+        const back = docxToIr(docxApi.read(irToDocx(ir).bytes));
+        expect(back.ir.children).toEqual([
+            n('heading', { level: 1 }, [n('image', { name: 'Graphic5', alt: '' })]),
+            n('paragraph', {}, [n('image', { name: 'pic', alt: 'Alt' }), run('.')])
+        ]);
+        expect(back.losses.map((l) => l.code)).toEqual(['image/bytes-unavailable', 'image/bytes-unavailable']);
     });
 
     test('a loss-free fixture reports no losses at all (non-vacuity)', () => {
@@ -1144,18 +1169,18 @@ describe('oconvIrToDocx — opts.assets', () => {
         expect([...read.images[id].data]).not.toEqual([...PNG]);
     });
 
-    test('no bytes anywhere → the unchanged image/dropped loss', () => {
+    test('no bytes anywhere → the image/placeholder loss', () => {
         const { losses } = irToDocx(doc([n('image', { name: 'x.png', alt: '' })]),
             { assets: { 'somethingelse.png': PNG } });
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'x.png' }]);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'x.png' }]);
     });
 
-    test('omitting `opts` entirely reproduces the pre-BL-980 ledger exactly', () => {
+    test('omitting `opts` entirely gives the same ledger as an empty `opts`', () => {
         const ir = doc([n('image', { name: 'x.png', alt: '' })]);
-        expect(irToDocx(ir).losses).toEqual([{ code: 'image/dropped', detail: 'x.png' }]);
-        expect(irToDocx(ir, {}).losses).toEqual([{ code: 'image/dropped', detail: 'x.png' }]);
+        expect(irToDocx(ir).losses).toEqual([{ code: 'image/placeholder', detail: 'x.png' }]);
+        expect(irToDocx(ir, {}).losses).toEqual([{ code: 'image/placeholder', detail: 'x.png' }]);
         expect(irToDocx(ir, { assets: undefined }).losses)
-            .toEqual([{ code: 'image/dropped', detail: 'x.png' }]);
+            .toEqual([{ code: 'image/placeholder', detail: 'x.png' }]);
     });
 
     // MEASURED, not assumed. This writer never sniffs the bytes — it hands
@@ -1307,5 +1332,37 @@ describe('oconvIrToDocx — image intrinsic size and alt text', () => {
 
         expect(losses).toEqual([]);
         expect(drawing).toMatchObject({ cx: EMU / 2, cy: EMU, description: 'gif' });
+    });
+});
+
+// T32 (b3c): a list item that does not open with a paragraph keeps its
+// marker, so the return leg does not fold it into the previous item.
+describe('oconvIrToDocx — a list item without a leading paragraph', () => {
+    const item = (...children) => n('listItem', {}, children);
+    const para = (t) => n('paragraph', {}, [run(t)]);
+    const numbered = (bytes) => docxApi.read(bytes).document.body
+        .map((p) => [p.pPr && p.pPr.numPr ? p.pPr.numPr.ilvl : null, (p.children || []).map((r) => r.children[0].value).join('')]);
+
+    test('an empty item writes one numbered paragraph with no content', () => {
+        const ir = doc([n('list', { ordered: true }, [item()]), para('1')]);
+        const { bytes, losses } = irToDocx(ir);
+        expect(losses).toEqual([]);
+        expect(numbered(bytes)).toEqual([[0, ''], [null, '1']]);
+        expect(docxToIr(docxApi.read(bytes)).ir.children).toEqual(ir.children);
+    });
+
+    test('an item opening with a nested list writes its marker first', () => {
+        const ir = doc([n('list', { ordered: true }, [
+            item(para('Question')),
+            item(n('list', { ordered: true }, [item(para('5')), item(para('9'))]))
+        ])]);
+        const { bytes } = irToDocx(ir);
+        expect(numbered(bytes)).toEqual([[0, 'Question'], [0, ''], [1, '5'], [1, '9']]);
+        expect(docxToIr(docxApi.read(bytes)).ir.children).toEqual(ir.children);
+    });
+
+    test('an item opening with a paragraph is unchanged', () => {
+        const ir = doc([n('list', { ordered: false }, [item(para('a'), n('list', { ordered: false }, [item(para('b'))]))])]);
+        expect(numbered(irToDocx(ir).bytes)).toEqual([[0, 'a'], [1, 'b']]);
     });
 });

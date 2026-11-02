@@ -38,6 +38,7 @@
  * @property {Record<string, Set<string>>} [allowedAttributes]
  * @property {string[]} [urlSchemes]
  * @property {boolean} [dropDangerousContent=true]
+ * @property {boolean} [allowDataImage=false] - keep `data:image/*` on `<img src>` only.
  */
 
 import { secPolicy } from './secPolicy.js';
@@ -212,9 +213,11 @@ export const sanitize = {
                 if (!isAttrAllowed(name, tag, al)) continue;
                 let value = attrs[name];
                 // URL attributes: enforce scheme allowlist.
-                // data: image URLs are blocked by default; caller can opt-in via opts.allowDataImage.
+                // A data:image/* URL passes only on <img src> under opts.allowDataImage
+                // (an image element runs no script); href and any other src never take data:.
                 if (name === 'href' || name === 'src') {
-                    if (!isSafeUrl(value, schemes, false)) continue;
+                    const dataImage = al.allowDataImage && tag === 'img' && name === 'src';
+                    if (!isSafeUrl(value, schemes, dataImage)) continue;
                 }
                 // Sanitize value: strip angle brackets and quotes to prevent injection.
                 value = String(value).replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim();
@@ -268,6 +271,9 @@ export const sanitize = {
          * @param {string[]} [opts.urlSchemes] - override allowed URL schemes.
          * @param {boolean} [opts.dropDangerousContent=true] - strip inner content of
          *        dangerous tags (script, iframe, style…).
+         * @param {boolean} [opts.allowDataImage=false] - keep a `data:image/*` URL
+         *        (`secPolicy.DATA_IMAGE_RE` types) on `<img src>` only; `href` and
+         *        every other element's `src` still drop any `data:` URL.
          * @returns {string}
          */
         function sanitizeHtml(html, opts) {
@@ -290,7 +296,8 @@ export const sanitize = {
                 attributes: (opts && opts.allowedAttributes !== undefined)
                     ? opts.allowedAttributes
                     : DEFAULT_ATTRIBUTES,
-                urlSchemes: (opts && opts.urlSchemes) ? opts.urlSchemes : DEFAULT_URL_SCHEMES
+                urlSchemes: (opts && opts.urlSchemes) ? opts.urlSchemes : DEFAULT_URL_SCHEMES,
+                allowDataImage: opts ? opts.allowDataImage === true : false
             };
             const dropDangerous = !(opts && opts.dropDangerousContent === false);
 

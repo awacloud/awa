@@ -42,7 +42,7 @@ export const pdfCatalog = {
             'Threads', 'OpenAction', 'AA', 'URI', 'AcroForm', 'Metadata',
             'StructTreeRoot', 'MarkInfo', 'Lang', 'SpiderInfo', 'OutputIntents',
             'PieceInfo', 'OCProperties', 'Perms', 'Legal', 'Requirements',
-            'Collection', 'NeedsRendering', 'DSS', 'AF', 'DPartRoot'
+            'Collection', 'NeedsRendering', 'DSS', 'AF', 'DPartRoot', 'Extensions'
         ]);
 
         function typeCatalog(dict) {
@@ -87,6 +87,25 @@ export const pdfCatalog = {
             if (e.MarkInfo)   out.markInfo   = e.MarkInfo;
             if (e.OCProperties) out.ocProperties = e.OCProperties;
             if (e.OutputIntents) out.outputIntents = e.OutputIntents;
+            // The other entries of Table 29, each only when present (a PDF
+            // null is the entry's absence): a boolean by its value,
+            // anything else as read.
+            const has = (v) => !!v && v.type !== 'null';
+            if (has(e.Threads))      out.threads      = e.Threads;
+            if (has(e.OpenAction))   out.openAction   = e.OpenAction;
+            if (has(e.AA))           out.aa           = e.AA;
+            if (has(e.URI))          out.uri          = e.URI;
+            if (has(e.Extensions))   out.extensions   = e.Extensions;
+            if (has(e.SpiderInfo))   out.spiderInfo   = e.SpiderInfo;
+            if (has(e.PieceInfo))    out.pieceInfo    = e.PieceInfo;
+            if (has(e.Perms))        out.perms        = e.Perms;
+            if (has(e.Legal))        out.legal        = e.Legal;
+            if (has(e.Requirements)) out.requirements = e.Requirements;
+            if (has(e.Collection))   out.collection   = e.Collection;
+            if (isType(e.NeedsRendering, 'bool')) out.needsRendering = e.NeedsRendering.value;
+            if (has(e.DSS))          out.dss          = e.DSS;
+            if (has(e.AF))           out.af           = e.AF;
+            if (has(e.DPartRoot))    out.dPartRoot    = e.DPartRoot;
 
             for (const k of Object.keys(e)) {
                 if (!KNOWN.has(k)) out._extras[k] = e[k];

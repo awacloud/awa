@@ -4,34 +4,21 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview The viewer's translator: fw `i18n` over the two catalogs,
- * plus the locale negotiation fw leaves to its callers (no detection there).
+ * @fileoverview The standalone page's translator: fw `i18n` over the shell
+ * catalogs (page title, language menu, more files, PWA, help, about). The
+ * component translates its own strings (`@awacloud/oview`); locale
+ * negotiation is the component's, re-exported so the page and the viewer
+ * pick the same locale.
  *
  * @module viewer/core/i18n
  */
 import { en } from '../i18n/en.js';
 import { fr } from '../i18n/fr.js';
 
-/** Catalogs by primary language subtag; `en` is the fallback and the reference. */
+export { negotiateLocale, LOCALES } from '@awacloud/oview';
+
+/** Shell catalogs by primary language subtag; `en` is the fallback and the reference. */
 export const CATALOGS = Object.freeze({ en, fr });
-
-/** The locales the UI can be shown in, in menu order. */
-export const LOCALES = Object.freeze(Object.keys(CATALOGS));
-
-/**
- * The first supported locale among the candidates, by primary subtag
- * (`fr-CA` → `fr`); `en` when none matches.
- *
- * @param {...(string|readonly string[]|null|undefined)} candidates
- * @returns {string}
- */
-export function negotiateLocale(...candidates) {
-    for (const c of candidates.flat()) {
-        const primary = String(c || '').trim().toLowerCase().split(/[-_]/)[0];
-        if (primary && Object.hasOwn(CATALOGS, primary)) return primary;
-    }
-    return 'en';
-}
 
 /**
  * Build a translator on an fw runtime.

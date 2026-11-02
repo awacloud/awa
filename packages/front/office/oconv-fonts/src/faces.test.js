@@ -148,9 +148,9 @@ describe('oconvDefaultFaces module', () => {
             }
         });
 
-        test('main.js re-exports exactly the three public functions', async () => {
+        test('main.js re-exports exactly the four public functions', async () => {
             const main = await import('./main.js');
-            expect(Object.keys(main).sort()).toEqual(['createOconvDefaultFaces', 'loadDefaultFaces', 'registerDefaultFaces']);
+            expect(Object.keys(main).sort()).toEqual(['createOconvDefaultFaces', 'faceUrls', 'loadDefaultFaces', 'registerDefaultFaces']);
             for (const fn of Object.values(main)) expect(typeof fn).toBe('function');
         });
     });

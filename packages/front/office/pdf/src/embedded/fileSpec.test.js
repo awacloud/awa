@@ -131,3 +131,13 @@ describe('typeFileSpec — malformed entries', () => {
             .toBeInstanceOf(Uint8Array);
     });
 });
+
+describe('the encrypted payload (A40e)', () => {
+    test('EP as read, present only when the key is', () => {
+        const ep = obj.dict({ Type: obj.name('EncryptedPayload'), Subtype: obj.name('x') });
+        const r = typeFileSpec(obj.dict({ F: obj.string(u8('a.pdf')), EP: ep }));
+        expect([r.ep, r._extras]).toEqual([ep, {}]);
+        expect('ep' in typeFileSpec(obj.dict({ F: obj.string(u8('a.pdf')) }))).toBe(false);
+        expect(typeFileSpec(obj.dict({ F: obj.string(u8('a.pdf')), EP: obj.int(1) })).ep).toBe(null);
+    });
+});

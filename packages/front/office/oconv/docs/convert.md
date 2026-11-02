@@ -126,11 +126,10 @@ Preserved/Degraded/Dropped facts of its own, it only wires the two
 halves. One writer fact is measured on the `odt → docx` pair:
 `ir-to-docx.js` gives every top-level list its own numbering instance, so
 two adjacent same-kind lists from the odt source stay two lists on re-read
-and nothing merges; only the nested item flattens, and the return leg
-records that as `list/nesting-flattened`
-(`tests/crossformat-ooxml-odf.integration.test.js` §
-"odt-structured.odt -> docx — MEASURED DIFFERENT: the two bullet lists stay
-distinct; only the nested item flattens (exact difference pinned)"). The
+and nothing merges, and the docx return reads the nested item back at
+its level (`tests/crossformat-ooxml-odf.integration.test.js` §
+"odt-structured.odt -> docx — MEASURED EQUAL: the two bullet lists stay
+distinct and the nested item keeps its level"). The
 `→ docx` target inherits the same writer's fixed built-in
 `word/styles.xml` (`Normal`, `Heading1`–`Heading6`, `Table Grid`, and
 `SourceCode`, `BlockText`, `HorizontalRule` for code blocks, quotes and

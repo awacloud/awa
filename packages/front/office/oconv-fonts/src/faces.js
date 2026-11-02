@@ -71,7 +71,7 @@ export function createOconvDefaultFaces(faces) {
     const frozenFaces = freezeFaces(faces);
     return {
         name: 'oconvDefaultFaces',
-        version: '1.0.0',
+        version: '1.1.0',
         dependencies: [],
         deps: [],
         factory() {

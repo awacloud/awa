@@ -229,7 +229,12 @@ export const pdfBuilder = {
              * and `FontDescriptor` for every simple font, the Standard 14
              * included (ISO 32000-2 Table 109). The record's width table is
              * per WinAnsi code for the 12 Latin faces and per built-in code
-             * for Symbol and ZapfDingbats, so those are the encodings taken.
+             * for Symbol and ZapfDingbats. A Latin face in
+             * `MacRomanEncoding`, `StandardEncoding` or with no encoding (its
+             * built-in StandardEncoding) also needs `spec.encodings`, the
+             * `@awacloud/fonts` `encodingLookup` API: each code takes the
+             * width of its glyph — the WinAnsi table's (through WinAnsi's
+             * own glyph names), else the record's `extraWidths`, else 0.
              * @returns {object} the entries to add to the font dictionary
              */
             function standard14Entries(spec, subtype) {
@@ -240,10 +245,16 @@ export const pdfBuilder = {
                 if (!isApi || subtype !== 'Type1' || !lookup.isStandard14(baseFont)) {
                     throw badFont({ name: spec.name, baseFont, subtype, standard14: isApi ? 'not a Standard 14 Type1 face' : 'not a standard14Lookup API' });
                 }
+                const encodings = spec.encodings;
+                const hasEncodings = !!(encodings && typeof encodings.lookupEncoding === 'function');
+                if (encodings !== undefined && !hasEncodings) {
+                    throw badFont({ name: spec.name, baseFont, standard14: 'encodings is not an encodingLookup API' });
+                }
                 const symbolic = SYMBOLIC14.includes(baseFont);
-                if (symbolic ? spec.encoding !== undefined : spec.encoding !== 'WinAnsiEncoding') {
+                const byGlyph = !symbolic && spec.encoding !== 'WinAnsiEncoding';
+                if (symbolic ? spec.encoding !== undefined : (byGlyph && !hasEncodings)) {
                     throw badFont({ name: spec.name, baseFont, encoding: spec.encoding,
-                        standard14: symbolic ? 'no /Encoding (built-in)' : 'WinAnsiEncoding only' });
+                        standard14: symbolic ? 'no /Encoding (built-in)' : 'WinAnsiEncoding, or an encodingLookup API in encodings' });
                 }
                 const rec = lookup.lookupStandard14(baseFont);
                 let descNum = stdDescNums.get(baseFont);
@@ -266,7 +277,23 @@ export const pdfBuilder = {
                     stdDescNums.set(baseFont, descNum);
                 }
                 const widths = [];
-                for (let code = 32; code <= 255; code++) widths.push(numObj(rec.widths[code] || 0));
+                if (byGlyph) {
+                    const glyphs = encodings.lookupEncoding(spec.encoding ?? 'StandardEncoding');
+                    const winCode = new Map();
+                    encodings.lookupEncoding('WinAnsiEncoding').forEach((n, c) => {
+                        if (n && n !== '.notdef' && !winCode.has(n)) winCode.set(n, c);
+                    });
+                    const extra = rec.extraWidths || {};
+                    for (let code = 32; code <= 255; code++) {
+                        const n = glyphs[code];
+                        const w = !n || n === '.notdef' ? 0
+                            : winCode.has(n) ? rec.widths[winCode.get(n)]
+                                : Object.prototype.hasOwnProperty.call(extra, n) ? extra[n] : 0;
+                        widths.push(numObj(w || 0));
+                    }
+                } else {
+                    for (let code = 32; code <= 255; code++) widths.push(numObj(rec.widths[code] || 0));
+                }
                 return {
                     FirstChar:      obj.int(32),
                     LastChar:       obj.int(255),
@@ -341,7 +368,9 @@ export const pdfBuilder = {
              * An embedded font is allocated once per embed result object.
              *
              * @param {{ name: string, baseFont?: string, subtype?: string,
-             *           encoding?: string, embedded?: object }} spec
+             *           encoding?: string, embedded?: object, standard14?: object,
+             *           encodings?: object }} spec `standard14` / `encodings`:
+             *   the opt-in Standard 14 metrics (`standard14Entries`).
              * @returns {object} the builder api (chainable)
              */
             function addFont(spec) {

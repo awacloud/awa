@@ -20,12 +20,12 @@ const byId = Object.fromEntries(docs.map((d) => [d.id, d]));
 const read = (id) => rt.resolve(byId[id].ext).read(byId[id].bytes);
 
 describe('written documents for the output-validity measure', () => {
-    test('21 documents, unique ids, each one a ZIP of its own extension', () => {
-        expect(docs).toHaveLength(21);
-        expect(new Set(docs.map((d) => d.id)).size).toBe(21);
+    test('22 documents, unique ids, each one a ZIP of its own extension', () => {
+        expect(docs).toHaveLength(22);
+        expect(new Set(docs.map((d) => d.id)).size).toBe(22);
         expect(docs.filter((d) => d.ext === 'docx')).toHaveLength(10);
         expect(docs.filter((d) => d.ext === 'xlsx')).toHaveLength(7);
-        expect(docs.filter((d) => d.ext === 'pptx')).toHaveLength(4);
+        expect(docs.filter((d) => d.ext === 'pptx')).toHaveLength(5);
         for (const d of docs) {
             expect(d.id.startsWith(`${d.ext}-`)).toBe(true);
             expect([...d.bytes.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);
@@ -82,6 +82,15 @@ describe('written documents for the output-validity measure', () => {
         expect(read('pptx-shapes').presentation.slides[0].shapes).toHaveLength(4);
         expect(read('pptx-picture-table').presentation.slides[0].shapes.map((s) => s.type)).toEqual(['shape', 'picture', 'table']);
         expect(read('pptx-chart').presentation.slides[0].shapes[0].type).toBe('chart');
+    });
+
+    test('pptx: a kept line (theme colour, join, arrow heads) and a custom geometry with a gradient read back', () => {
+        const [, arrow, free] = read('pptx-kept-line-geometry').presentation.slides[0].shapes;
+        expect(arrow.shapeProps.line.extraAttrs).toEqual({ algn: 'ctr' });
+        expect(arrow.shapeProps.line._extras.map((c) => c.name)).toEqual(['a:solidFill', 'a:round', 'a:headEnd', 'a:tailEnd']);
+        expect(arrow.shapeProps.line.dash).toBe('dash');
+        expect(free.shapeProps._extras.map((c) => c.name)).toEqual(['a:custGeom', 'a:gradFill']);
+        expect(free.shapeProps.line.color).toBe('000000');
     });
 
     test('roundTrip writes a read document back through the same package', () => {

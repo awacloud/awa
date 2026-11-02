@@ -64,6 +64,15 @@ const { parseCmap, pickUnicodeMap } = runtime.resolve('tableCmap');
 4. Unicode platform / any
 5. Any subtable exposing `.map`
 
+A Macintosh Roman-script subtable (platform 1, encoding 0) holds byte
+codes, not code points: when it is the one selected, its codes are read
+through the Mac OS code page its `language` names (the Mac language ID
++ 1) — 16 Icelandic, 18 Turkish, 19 Croatian, 38 Romanian, any other
+value Mac OS Roman — codes below 0x80 mapping to themselves. The tables
+are Apple's mapping files (VENDORS/APPLE/*.TXT), including Apple's
+private-use assignments. Every other selected subtable is returned as
+read.
+
 ### Shape of a record
 
 ```js

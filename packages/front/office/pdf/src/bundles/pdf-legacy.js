@@ -102,6 +102,21 @@ export const pdfLegacyBundle = {
                 register() { return { [name]: inst }; }
             });
         }
+        // A read given a password decrypts RC4 V=1 / V=2 through this
+        // bundle's own `pdfLegacyRc4Read` unless the call names one.
+        const rc4 = instances[names.indexOf('pdfLegacyRc4Read')];
+        const read = pdf.read;
+        pdf.use({
+            name: 'pdfLegacyRc4ReadPath',
+            register() {
+                return {
+                    read(bytes, opts) {
+                        return read(bytes, opts && opts.password !== undefined && opts.legacyRc4 === undefined
+                            ? { ...opts, legacyRc4: rc4 } : opts);
+                    }
+                };
+            }
+        });
         return pdf;
     }
 };

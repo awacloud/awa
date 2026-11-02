@@ -83,8 +83,10 @@ export const pdfDocumentParts = {
             const out = {
                 parent:       e.Parent || null,
                 dParts:       toRefArray(e.DParts),
-                start:        isType(e.Start, 'int') ? e.Start.value : null,
-                end:          isType(e.End,   'int') ? e.End.value   : null,
+                // The first and last page of the part (Table 408): page
+                // objects by reference; an integer is kept as before.
+                start:        pageRef(e.Start),
+                end:          pageRef(e.End),
                 dpm:          isType(e.DPM, 'dict') ? typeDPM(e.DPM) : null,
                 nodeNameTree: e.NodeNameTree || null,
                 raw:          dict,
@@ -99,6 +101,11 @@ export const pdfDocumentParts = {
                 if (!DPART_KNOWN.has(k)) out._extras[k] = e[k];
             }
             return out;
+        }
+
+        function pageRef(v) {
+            if (isType(v, 'ref')) return { num: v.num, gen: v.gen };
+            return isType(v, 'int') ? v.value : null;
         }
 
         function typeDPM(dict) {

@@ -138,3 +138,53 @@ describe('tableCmap', () => {
         expect(() => parseCmap(w.finalize())).toThrow(ParseError);
     });
 });
+
+describe('pickUnicodeMap — Macintosh Roman-script subtables through their code page', () => {
+    /** A cmap of format-0 subtables, `records` = [{ platformID, encodingID, language, glyphs: { byte: gid } }]. */
+    function cmapOf(records) {
+        const subs = records.map(({ language, glyphs }) => {
+            const out = new Uint8Array(262);
+            out[1] = 0; out[2] = 1; out[3] = 6; out[4] = language >> 8; out[5] = language & 0xff;
+            for (const [b, gid] of Object.entries(glyphs)) out[6 + Number(b)] = gid;
+            return out;
+        });
+        const head = 4 + 8 * records.length;
+        const bytes = new Uint8Array(head + 262 * records.length);
+        bytes[3] = records.length;
+        records.forEach((r, i) => {
+            const at = 4 + 8 * i;
+            const off = head + 262 * i;
+            bytes.set([0, r.platformID, 0, r.encodingID, off >>> 24, (off >>> 16) & 0xff, (off >>> 8) & 0xff, off & 0xff], at);
+            bytes.set(subs[i], off);
+        });
+        return parseCmap(bytes);
+    }
+    const TURKISH = { 0x41: 34, 0xD2: 200, 0xDA: 176, 0xDB: 177, 0xDC: 178, 0xDD: 179, 0xDE: 180, 0xDF: 181, 0xF5: 182 };
+
+    test('language 18: the Mac OS Turkish code page', () => {
+        const m = pickUnicodeMap(cmapOf([{ platformID: 1, encodingID: 0, language: 18, glyphs: TURKISH }]));
+        expect([0x41, 0x201C, 0x011E, 0x011F, 0x0130, 0x0131, 0x015E, 0x015F].map((cp) => m.get(cp)))
+            .toEqual([34, 200, 176, 177, 178, 179, 180, 181]);
+        expect(m.get(0xDA)).toBe(undefined); // not read as U+00DA any more
+        expect(m.get(0xF8A0)).toBe(182);     // Apple's private assignment of Turkish 0xF5, kept
+    });
+
+    test('language 0: Mac OS Roman (ı at 0xF5, € at 0xDB); ASCII unchanged', () => {
+        const m = pickUnicodeMap(cmapOf([{ platformID: 1, encodingID: 0, language: 0, glyphs: TURKISH }]));
+        expect([m.get(0x41), m.get(0x0131), m.get(0x20AC), m.get(0x201C)]).toEqual([34, 182, 177, 200]);
+    });
+
+    test('Icelandic, Croatian, Romanian: their own code pages', () => {
+        const page = (language) => pickUnicodeMap(cmapOf([{ platformID: 1, encodingID: 0, language, glyphs: { 0xA0: 5, 0xD0: 8, 0xDE: 6 } }]));
+        expect([page(16).get(0x00DD), page(16).get(0x00DE)]).toEqual([5, 6]); // Icelandic: Ý at 0xA0, Þ at 0xDE
+        expect(page(19).get(0x0110)).toBe(8);                                  // Croatian: Đ at 0xD0
+        expect(page(38).get(0x021A)).toBe(6);                                  // Romanian: Ț at 0xDE
+    });
+
+    test('a Unicode subtable is still preferred; another Mac script stays raw', () => {
+        const both = cmapOf([{ platformID: 1, encodingID: 0, language: 18, glyphs: TURKISH }, { platformID: 3, encodingID: 1, language: 0, glyphs: { 0xDA: 9 } }]);
+        expect(pickUnicodeMap(both).get(0xDA)).toBe(9);
+        const japanese = cmapOf([{ platformID: 1, encodingID: 1, language: 0, glyphs: { 0xDA: 7 } }]);
+        expect(pickUnicodeMap(japanese).get(0xDA)).toBe(7);
+    });
+});

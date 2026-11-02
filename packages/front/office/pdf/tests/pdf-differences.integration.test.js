@@ -261,6 +261,28 @@ describe('pdf-differences — expected returns of the run files', () => {
     });
 });
 
+describe('pdf-differences — the two known misses with recoverXref', () => {
+    test('UnknownFilter-xrefstm, refused by default, reads its page with the table rebuilt', () => {
+        const doc = api.read(bytesOf('UnknownFilter/UnknownFilter-xrefstm.pdf'), { recoverXref: true });
+        expect(doc.pages.length).toBe(1);
+        expect(doc.losses.filter((l) => l.code === 'pdf/document/xref-rebuilt').map((l) => l.context.cause))
+            .toEqual(['pdf/filter/unsupported']);
+    });
+
+    for (const miss of KNOWN_MISSES) {
+        test(`${miss.path}: the rebuilt table reads the page; every object resolves or fails typed`, () => {
+            const doc = api.read(bytesOf(miss.path), { recoverXref: true });
+            expect(doc.pages.length).toBe(1);
+            expect(doc.losses.filter((l) => l.code === 'pdf/document/xref-rebuilt').map((l) => l.context.cause))
+                .toEqual([miss.detail]);
+            const failures = objectFailures(doc);
+            // the unknown filter: on the first-page xref stream (14), on the outline object stream (12)
+            expect(failures.length).toBeGreaterThan(0);
+            expect(failures.filter((f) => typeof f.code !== 'string' || !f.code.startsWith('pdf/'))).toEqual([]);
+        });
+    }
+});
+
 describe('pdf-differences — every other file reads', () => {
     const refusedOnPurpose = new Set(['UnknownFilter/UnknownFilter-xrefstm.pdf', ...KNOWN_MISSES.map((m) => m.path)]);
 

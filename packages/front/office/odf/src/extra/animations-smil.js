@@ -67,8 +67,8 @@ export const animationsSmil = {
                 if (a && a.type === 'anim-node') extras.push(renderAnim(a));
             }
             delete out.animations;
-            if (Array.isArray(slide._extras) || !slide._extras) out._extras = extras;
-            else out._extras = { ...slide._extras, children: extras };
+            if (Array.isArray(slide._extras)) out._extras = extras;
+            else out._extras = { ...(slide._extras || {}), children: extras };
             return out;
         }
 

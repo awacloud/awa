@@ -113,8 +113,8 @@ export const textFieldsExtended = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const f of out.fields) extras.push(renderField(f));
             delete out.fields;
-            if (Array.isArray(p._extras) || !p._extras) out._extras = extras;
-            else out._extras = { ...p._extras, children: extras };
+            if (Array.isArray(p._extras)) out._extras = extras;
+            else out._extras = { ...(p._extras || {}), children: extras };
             return out;
         }
 

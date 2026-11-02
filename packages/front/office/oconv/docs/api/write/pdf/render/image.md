@@ -37,7 +37,7 @@ both supplied only by the real facade.
 | `render` | `(node: object, ctx: object) => {items: object[], losses: object[], height: number}` | block-local laid-out items (the renderer contract) | `Error` `oconv: pdf image renderer needs ctx.builder` — only on the placement path, when the facade supplied no image sink/counter |
 
 `node` is an `oconv-ir/v1` `image` node (`{name, alt}`, optionally carrying
-`escapes.docx.bytes` / `escapes.odt.bytes`). `ctx` additionally reads `ctx.assets` (the caller's
+`escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`). `ctx` additionally reads `ctx.assets` (the caller's
 image-bytes map).
 
 ## Examples

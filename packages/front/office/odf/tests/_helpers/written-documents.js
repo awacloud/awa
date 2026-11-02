@@ -388,6 +388,12 @@ function odsDocuments(rt) {
         meta: { title: 'Sales', creator: 'Alice' }
     }));
 
+    // A sheet with no row and a row with no cell: the schema needs one
+    // row in a table and one cell in a row, so the writer adds them.
+    const gap = o.sheet('Gap', [['before'], ['after']]);
+    gap.rows.splice(1, 0, { type: 'row', cells: [] });
+    add('ods-empty-sheet-and-row', o.write({ spreadsheet: { tables: [o.sheet('Empty', []), gap] } }));
+
     return out;
 }
 

@@ -7,7 +7,7 @@
  * @fileoverview Synthetic descriptor : a per-call inline parser builder.
  *
  * `mdMod` depends on this so `createMd(opts)` can bind opts
- * (extendedAutolinks, sourcepos, smart) on the inline parser instance it
+ * (extendedAutolinks, sourcepos, smart, smartDashes) on the inline parser instance it
  * builds. Strict factory-only : declares every inline sub-module as a
  * dependency and forwards them to `inlineParser.factory(...)` together
  * with the caller-supplied options.

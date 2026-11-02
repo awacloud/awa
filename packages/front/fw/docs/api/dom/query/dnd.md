@@ -135,3 +135,4 @@ dnd.draggable(row, { data: () => ({ row: row.dataset.index }), axis: 'y' });
 - [gesture](./gesture.md) — touch/pointer gestures (tap, swipe, pinch)
 - [events](./events.md) — named listeners with lifecycle
 - [fsAccess](../fs/fsAccess.md) — file drag from the OS
+- [fileIntake](../fs/fileIntake.md) — OS file drop and the `<input type=file>` picker

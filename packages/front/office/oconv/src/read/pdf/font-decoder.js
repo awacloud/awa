@@ -305,6 +305,38 @@ export const oconvPdfFontDecoder = {
             return { ...e, entries };
         }
 
+        // A bold weight in a font name (after a subset tag `ABCDEF+`).
+        const BOLD_NAME = /(bold|black|heavy|semibold|demibold|demi\b|extrabold|ultrabold)/i;
+        // `/Flags` ForceBold (ISO 32000-2 Table 121, bit 19).
+        const FORCE_BOLD = 1 << 18;
+
+        /**
+         * Whether a font is bold: its name (the descendant's too for a
+         * Type 0 font) names a bold weight, or its font descriptor says so
+         * (`/FontWeight` >= 600, or the ForceBold flag).
+         */
+        function isBold(fontDict, resolve) {
+            const deref = (v) => (v && v.type === 'ref' ? resolve(v) : v);
+            const dicts = [fontDict];
+            const desc = deref(fontDict.entries.DescendantFonts);
+            if (desc && desc.type === 'array' && desc.items.length) {
+                const d0 = deref(desc.items[0]);
+                if (d0 && d0.type === 'dict') dicts.push(d0);
+            }
+            for (const d of dicts) {
+                const base = deref(d.entries.BaseFont);
+                if (base && base.type === 'name' && BOLD_NAME.test(base.value.replace(/^[A-Z]{6}\+/, ''))) return true;
+                const fd = deref(d.entries.FontDescriptor);
+                if (fd && fd.type === 'dict') {
+                    const fw = deref(fd.entries.FontWeight);
+                    if (fw && (fw.type === 'int' || fw.type === 'real') && fw.value >= 600) return true;
+                    const fl = deref(fd.entries.Flags);
+                    if (fl && fl.type === 'int' && (fl.value & FORCE_BOLD) !== 0) return true;
+                }
+            }
+            return false;
+        }
+
         function buildDecoder(fontDict, resolve) {
             const f = pdfFontMod.typeFont(fontDict);
             const cidBytes = f.subtype === 'Type0' ? 2 : 1;
@@ -362,7 +394,8 @@ export const oconvPdfFontDecoder = {
                 subtype: f.subtype, cidBytes, decode,
                 width: widths.width,
                 vertical: widths.vertical,
-                widthApproximated: widths.approximated
+                widthApproximated: widths.approximated,
+                bold: isBold(fontDict, resolve)
             };
         }
 

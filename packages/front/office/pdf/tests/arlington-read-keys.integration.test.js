@@ -29,7 +29,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-    BINDINGS, OVERRIDES, createBuilder, keyExclusion, loadModel, measure, runBinding, splitTop, unwrap
+    BINDINGS, OVERRIDES, STREAM_OBJECTS, createBuilder, isStreamObject, keyExclusion, loadModel, measure, runBinding,
+    splitTop, unwrap
 } from './_helpers/arlington.js';
 
 const DIR = fileURLToPath(new URL('_fixtures/arlington/', import.meta.url));
@@ -162,16 +163,17 @@ describe('the handled test on stand-in typers', () => {
     });
 
     test('several typers for one object: a key counts when one of them handles it', () => {
-        const m = new Map([['Catalog', model.get('Catalog')]]);
+        const m = new Map([['Catalog', model.get('Catalog')], ['PageObject', model.get('PageObject')]]);
         for (const name of ['FontMap', 'ArrayOfFields']) m.set(name, model.get(name));
-        const r = measure(m, { Catalog: [{ typer: 'pdfCatalog.typeCatalog', call: (f, v) => f(v) },
-            { typer: 'pdfInfo.typeInfo', call: (f, v) => f(v) }] });
-        expect(r.bound).toEqual(['Catalog']);
+        const info = { typer: 'pdfInfo.typeInfo', call: (f, v) => f(v) };
+        const r = measure(m, { Catalog: [{ typer: 'pdfCatalog.typeCatalog', call: (f, v) => f(v) }, info],
+            PageObject: [{ typer: 'pdfPage.typePage', call: (f, v) => f(v) }, info] });
+        expect(r.bound).toEqual(['Catalog', 'PageObject']);
         // in the info typer's _extras, handled by the catalog typer
         expect(r.cases.find((c) => c.case === 'Catalog/Pages')).toEqual({ case: 'Catalog/Pages', ok: true });
         // in both: each typer's reason, in binding order
-        expect(r.cases.find((c) => c.case === 'Catalog/Extensions')).toEqual({
-            case: 'Catalog/Extensions', ok: false, detail: 'in _extras; in _extras'
+        expect(r.cases.find((c) => c.case === 'PageObject/Hid')).toEqual({
+            case: 'PageObject/Hid', ok: false, detail: 'in _extras; in _extras'
         });
         expect(r.skipped.map((s) => s.case)).toEqual(['FontMap', 'ArrayOfFields']); // model order
     });
@@ -183,8 +185,8 @@ describe('the measure over the package typers (pinned)', () => {
 
     test('score: handled keys over included keys; bound and unbound objects', () => {
         expect(r.cases.length).toBe(3357);
-        expect(r.cases.filter((c) => c.ok).length).toBe(1445);
-        expect([r.bound.length, r.unbound.length, r.skipped.length]).toEqual([166, 198, 308]);
+        expect(r.cases.filter((c) => c.ok).length).toBe(3289);
+        expect([r.bound.length, r.unbound.length, r.skipped.length]).toEqual([345, 19, 308]);
     });
 
     test('every typer that throws on its dictionary, with the reason', () => {
@@ -204,14 +206,52 @@ describe('the measure over the package typers (pinned)', () => {
         expect(r.cases.find((c) => c.case === 'ActionECMAScript/JS')).toEqual({ case: 'ActionECMAScript/JS', ok: true });
     });
 
-    test('the catalog and the page: one key each left in _extras', () => {
-        expect(fails('Catalog/').map((c) => c.case)).toEqual(['Catalog/Extensions']);
+    test('the catalog: every key handled; the page: one key left in _extras', () => {
+        expect(fails('Catalog/').map((c) => c.case)).toEqual([]);
         expect(fails('PageObject/').map((c) => c.case)).toEqual(['PageObject/Hid']);
     });
 
+    test('annotations: the markup and PDF 2.0 entries reach typeMarkupEntries; a widget /T, the field name, the field companion', () => {
+        const ENTRIES = new Set(['T', 'Popup', 'RC', 'CreationDate', 'IRT', 'Subj', 'RT', 'IT', 'ExData', 'ca', 'BM', 'Lang']);
+        const left = r.cases.filter((c) => c.case.startsWith('Annot') && ENTRIES.has(c.case.split('/')[1]) && !c.ok)
+            .map((c) => c.case);
+        expect(left).toEqual([]);
+        const handled = r.cases.filter((c) => c.case.startsWith('Annot') && ENTRIES.has(c.case.split('/')[1]) && c.ok);
+        // 18 markup objects × 9 entries, 28 annotation objects × 3, the Movie and Screen /T, the widget /T
+        expect(handled.length).toBe(18 * 9 + 28 * 3 + 2 + 1);
+    });
+
+    test('font descriptors: every included key of the six descriptor objects reaches typeFontDescriptor', () => {
+        const SIX = ['FontDescriptorType1', 'FontDescriptorTrueType', 'FontDescriptorType3',
+            'FontDescriptorCIDType0', 'FontDescriptorCIDType2', 'CIDFontDescriptorMetrics'];
+        const included = SIX.flatMap((o) => model.get(o).rows.filter((row) => keyExclusion(row) === null)
+            .map((row) => `${o}/${row.Key}`));
+        const cases = r.cases.filter((c) => SIX.includes(c.case.split('/')[0]));
+        expect(cases.map((c) => c.case).sort()).toEqual(included.sort());
+        expect(cases.filter((c) => !c.ok)).toEqual([]);
+        // 21 + 21 + 18 + 24 + 25 + 16 rows in the vendored model, none excluded
+        expect(cases.length).toBe(125);
+    });
+
+    test('streams: every stream object carries typeStreamEntries, and every Table 5 entry of them is handled', () => {
+        const streams = [...model.values()].filter((o) => o.kind === 'dict' && isStreamObject(o)).map((o) => o.name);
+        expect([...STREAM_OBJECTS]).toEqual(streams);
+        for (const o of streams) expect(BINDINGS[o].map((x) => x.typer)).toContain('pdfFilterDispatch.typeStreamEntries');
+        const TABLE5 = new Set(['Length', 'Filter', 'DecodeParms', 'F', 'FFilter', 'FDecodeParms', 'DL']);
+        const cases = r.cases.filter((c) => streams.includes(c.case.split('/')[0]) && TABLE5.has(c.case.split('/')[1]));
+        expect(cases.filter((c) => !c.ok)).toEqual([]);
+        expect([streams.length, cases.length]).toEqual([36, 250]);
+    });
+
+    test('viewer preferences: every key handled by typeViewerPreferences', () => {
+        expect(r.bound).toContain('ViewerPreferences');
+        expect(r.cases.filter((c) => c.case.startsWith('ViewerPreferences/')).map((c) => c.ok)).toEqual(Array(18).fill(true));
+    });
+
     test('an unbound object counts every included key as not handled', () => {
-        expect(r.unbound).toContain('ViewerPreferences');
-        expect(fails('ViewerPreferences/').every((c) => c.detail === 'no typer')).toBe(true);
+        const o = r.unbound[0];
+        expect(fails(`${o}/`).length).toBeGreaterThan(0);
+        expect(fails(`${o}/`).every((c) => c.detail === 'no typer')).toBe(true);
     });
 });
 
@@ -224,17 +264,24 @@ describe('the surfaced measure: keys that reach the typed record (pinned)', () =
     test('same keys, objects and skips as the ruled measure; its own score', () => {
         expect(s.cases.map((c) => c.case)).toEqual(ruled.cases.map((c) => c.case));
         expect([s.bound, s.unbound, s.skipped]).toEqual([ruled.bound, ruled.unbound, ruled.skipped]);
-        expect(okSurfaced.size).toBe(1335);
+        expect(okSurfaced.size).toBe(3280);
     });
 
-    test('every surfaced key is handled; 110 handled keys never reach the record', () => {
+    test('every surfaced key is handled; 9 handled keys never reach the record, each for a stated reason', () => {
         expect([...okSurfaced].filter((k) => !okRuled.has(k))).toEqual([]);
-        const knownOnly = [...okRuled].filter((k) => !okSurfaced.has(k));
-        expect(knownOnly.length).toBe(110);
-        expect(knownOnly.filter((k) => k.startsWith('Catalog/'))).toEqual([
-            'Catalog/Threads', 'Catalog/OpenAction', 'Catalog/AA', 'Catalog/URI', 'Catalog/SpiderInfo',
-            'Catalog/PieceInfo', 'Catalog/Perms', 'Catalog/Legal', 'Catalog/Requirements', 'Catalog/Collection',
-            'Catalog/NeedsRendering', 'Catalog/DSS', 'Catalog/AF', 'Catalog/DPartRoot'
+        const knownOnly = [...okRuled].filter((k) => !okSurfaced.has(k)).sort();
+        expect(knownOnly).toEqual([
+            // a direct dictionary cannot name the parent annotation: only the reference form is typed
+            // (a widget's /Parent, its field, reaches the field companion's record)
+            'AnnotPopup/Parent',
+            // the public-key security handler is not claimed (Standard handler only)
+            'EncryptionPublicKey/EncryptMetadata', 'EncryptionPublicKey/Filter',
+            'EncryptionPublicKey/P', 'EncryptionPublicKey/SubFilter',
+            // the stream form would widen the values of the existing v and dv fields (a major change)
+            'FieldTx/DV', 'FieldTx/V',
+            // one attribute, two spellings (PDF 1.7 checked, ISO 32000-2 Checked) read into one field:
+            // the measure's dictionary holds both, so removing either leaves the field as it was
+            'StructureAttributesDict/Checked', 'StructureAttributesDict/checked'
         ]);
     });
 });

@@ -1,15 +1,15 @@
 # API `@awacloud/oconv-fonts`
 
 Per-module reference, mirroring `src/`. `@awacloud/oconv-fonts` exposes
-exactly **3 public functions**, re-exported from a single entry point
+exactly **4 public functions**, re-exported from a single entry point
 (`src/main.js`): the `oconvDefaultFaces` fw descriptor builder
-(`createOconvDefaultFaces`) and the two loader-side functions
-(`loadDefaultFaces`, `registerDefaultFaces`).
+(`createOconvDefaultFaces`) and the three loader-side functions
+(`loadDefaultFaces`, `registerDefaultFaces`, `faceUrls`).
 
 ## Boundary note
 
 The package's `exports` map declares four keys: `"."` → `./src/main.js` (the
-entry point, re-exporting all three functions — no fw descriptor/manifest
+entry point, re-exporting all four functions — no fw descriptor/manifest
 arrays of its own, unlike `@awacloud/oconv`'s `src/main.js`), `"./faces.js"`
 → `./src/faces.js`, `"./loader.js"` → `./src/loader.js` (both also directly
 resolvable, matching the browser
@@ -26,25 +26,26 @@ as documented in [`../descriptor.md`](../descriptor.md).
 
 | Page | Member | Source | Summary |
 |---|---|---|---|
+| [`face-urls`](./face-urls.md) | `faceUrls` | `src/loader.js` | The URL of every vendored face (Liberation Sans, Serif, Mono, Carlito, Caladea; four styles each), read by nothing — for an application that serves the faces itself. |
 | [`create-oconv-default-faces`](./create-oconv-default-faces.md) | `createOconvDefaultFaces` | `src/faces.js` | Builds the frozen `oconvDefaultFaces` fw descriptor around a validated face map. |
 | [`load-default-faces`](./load-default-faces.md) | `loadDefaultFaces` | `src/loader.js` | The explicit async byte path — fetches the five vendored Liberation faces the default route uses. |
 | [`register-default-faces`](./register-default-faces.md) | `registerDefaultFaces` | `src/loader.js` | Loads the default faces and registers the `oconvDefaultFaces` descriptor on an `@awacloud/fw` `ModuleRuntime`. |
 
 ## Row-count derivation
 
-3 rows above = the package's entire public surface, re-derived against
+4 rows above = the package's entire public surface, re-derived against
 `src/main.js`'s re-exports (`export { createOconvDefaultFaces } from
-'./faces.js';` + `export { loadDefaultFaces, registerDefaultFaces } from
-'./loader.js';` — 2 statements, 3 bindings). No fw descriptor other than the
+'./faces.js';` + `export { faceUrls, loadDefaultFaces, registerDefaultFaces }
+from './loader.js';` — 2 statements, 4 bindings). No fw descriptor other than the
 one `createOconvDefaultFaces` builds is registered by this package; internal
 helpers (`freezeFaces` in `src/faces.js`, `baseUrlOf`/`readFace`/
-`FACE_FILES`/`FACE_KEYS` in `src/faces.js`/`src/loader.js`) are not exported
+`FACE_FILES`/`VENDORED_FACES`/`STYLE_SUFFIXES`/`FACE_KEYS` in `src/faces.js`/`src/loader.js`) are not exported
 and have no page.
 
 ## Licence preservation
 
-**Never pre-subset or otherwise modify the vendored faces.** OFL 1.1
-condition 3 forbids distributing a Modified Version under a Reserved Font
+**Never pre-subset or otherwise modify the vendored faces.** For the OFL
+faces (Liberation, Carlito), OFL 1.1 condition 3 forbids distributing a Modified Version under a Reserved Font
 Name, and the licence defines "Modified Version" to include any change to
 the font's format — which includes subsetting. See the [package
 README](../../README.md#licence) for the full reasoning and the licence

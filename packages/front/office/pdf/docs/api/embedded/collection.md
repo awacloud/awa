@@ -37,6 +37,7 @@ const coll = runtime.resolve('pdfCollection');
     view: 'D' | 'T' | 'H' | 'C' | undefined,
     sort: PdfDict | undefined,         // /Sort, untyped
     navigator: PdfDict | PdfRef | undefined,
+    colors?, folders?, split?: PdfObject,   // as read, each only when present
     raw, _extras
 }
 ```

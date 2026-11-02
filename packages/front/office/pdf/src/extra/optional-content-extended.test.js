@@ -115,3 +115,35 @@ describe('pdfOptionalContentExtended module', () => {
         expect(typeof m.classifyOcgIntent).toBe('function');
     });
 });
+
+describe('typeOptionalContent (A39e)', () => {
+    const { typeOptionalContent, OPTIONAL_CONTENT_KEYS } = pdfOptionalContentExtended.factory(_errors, _parserObj);
+    const { ContractError } = _errors;
+    const u8 = (s) => new TextEncoder().encode(s);
+
+    test('properties and membership: each key by its value or as read', () => {
+        const p = typeOptionalContent(obj.dict({ OCGs: obj.array([]), D: obj.dict({}), Configs: obj.array([]), Foo: obj.int(1) }), 'properties');
+        expect([p.ocgs.type, p.d.type, p.configs.type, p._extras]).toEqual(['array', 'dict', 'array', { Foo: obj.int(1) }]);
+        const m = typeOptionalContent(obj.dict({ Type: obj.name('OCMD'), OCGs: obj.dict({}), P: obj.name('AnyOn'), VE: obj.array([]) }), 'membership');
+        expect([m.type, m.ocgs.type, m.p, m.ve.type]).toEqual(['OCMD', 'dict', 'AnyOn', 'array']);
+    });
+
+    test('the usage sub-dictionaries', () => {
+        expect(typeOptionalContent(obj.dict({ Creator: obj.string(u8('App')), Subtype: obj.name('Artwork') }), 'creatorInfo')).toMatchObject({ creator: u8('App'), subtype: 'Artwork' });
+        expect(typeOptionalContent(obj.dict({ Lang: obj.string(u8('fr-FR')), Preferred: obj.name('ON') }), 'language')).toMatchObject({ lang: u8('fr-FR'), preferred: 'ON' });
+        expect(typeOptionalContent(obj.dict({ min: obj.real(0.5), max: obj.name('x') }), 'zoom')).toMatchObject({ min: 0.5, max: null });
+        expect(typeOptionalContent(obj.dict({ Subtype: obj.name('Trapping'), PrintState: obj.name('OFF') }), 'print')).toMatchObject({ subtype: 'Trapping', printstate: 'OFF' });
+        expect(typeOptionalContent(obj.dict({ ExportState: obj.name('ON') }), 'export').exportstate).toBe('ON');
+        expect(typeOptionalContent(obj.dict({ ViewState: obj.name('OFF') }), 'view').viewstate).toBe('OFF');
+        expect(typeOptionalContent(obj.dict({ Type: obj.name('Ind'), Name: obj.string(u8('Ann')) }), 'user')).toMatchObject({ type: 'Ind', name: u8('Ann') });
+        expect(typeOptionalContent(obj.dict({ Name: obj.array([]) }), 'user').name.type).toBe('array');
+        expect(typeOptionalContent(obj.dict({ Subtype: obj.name('HF') }), 'pageElement').subtype).toBe('HF');
+        expect(Object.keys(OPTIONAL_CONTENT_KEYS).length).toBe(10);
+    });
+
+    test('a non-dictionary throws ParseError, an unknown kind ContractError', () => {
+        const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+        expect(code(() => typeOptionalContent(obj.array([]), 'view'))).toEqual([ParseError.name, 'pdf/extra/oc/not-dict']);
+        expect(code(() => typeOptionalContent(obj.dict({}), 'group'))).toEqual([ContractError.name, 'pdf/extra/oc/kind']);
+    });
+});

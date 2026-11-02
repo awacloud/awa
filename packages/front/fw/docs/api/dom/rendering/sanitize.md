@@ -38,6 +38,7 @@ const sanitizer = runtime.resolve('sanitize');
 | `allowedAttributes` | `object` | default list | Map `tag → Set<attr>`, key `'*'` for all tags |
 | `urlSchemes` | `string[]` | `['http','https','mailto','tel','ftp']` | Allowed URL schemes |
 | `dropDangerousContent` | `boolean` | `true` | Strips the inner content of `<script>`, `<style>`, `<iframe>`, etc. |
+| `allowDataImage` | `boolean` | `false` | Keeps a `data:image/*` URL on `<img src>` only (see Notes) |
 
 ## Examples
 
@@ -60,6 +61,12 @@ s.sanitizeHtml('<custom-tag>x</custom-tag>', {
     allowedAttributes: {}
 });
 // → '<custom-tag>x</custom-tag>'
+
+// Pasted image kept as a data: URL (img src only)
+s.sanitizeHtml('<img src="data:image/png;base64,iVBOR==" alt="x">', { allowDataImage: true });
+// → '<img src="data:image/png;base64,iVBOR==" alt="x" />'
+s.sanitizeHtml('<a href="data:image/png;base64,iVBOR==">x</a>', { allowDataImage: true });
+// → '<a>x</a>'
 
 // URL check
 s.isSafeUrl('https://example.com');     // true
@@ -87,7 +94,8 @@ const worker = fw.createWorker(
 - Dangerous tags (`<script>`, `<iframe>`, `<style>`, `<svg>`, `<math>`, etc.) have their entire content stripped (not just the wrapper tag), preventing bypasses via incomplete tags.
 - Event handlers (`on*`) and risky attributes (`style`, `srcdoc`, `formaction`) are stripped unconditionally, even if the parent tag is in the allowlist.
 - External links (`https://`, `http://`) with `target="_blank"` (or any other named target) automatically receive `rel="noopener noreferrer"`. In-place links (without `target` or `target="_self"`) do **not** receive this `rel` — the `window.opener` relationship only exists for new navigation contexts.
-- `javascript:`, `vbscript:`, and `data:text/html` URLs are blocked in `href` and `src`; image data-URIs are only allowed if `allowDataImage: true` is passed to `isSafeUrl`.
+- `javascript:`, `vbscript:`, and `data:text/html` URLs are blocked in `href` and `src`.
+- **`data:` images** — by default every `data:` URL is dropped. `sanitizeHtml(html, { allowDataImage: true })` keeps a `data:image/*` URL (the [`secPolicy.DATA_IMAGE_RE`](./secPolicy.md) types: png, jpeg, gif, webp, svg+xml, bmp, ico, avif, apng) **on `<img src>` only** — an image element runs no script. `href` never accepts `data:` (a navigable `data:` link is an injection vector), no other element's `src` does either (even when a custom allowlist lets `iframe`, `embed`, `source`… through), and non-image `data:` URLs (`data:text/html`, `data:application/…`) are dropped with or without the option. Mixed-case and whitespace/control-obfuscated forms are judged like the canonical form. The standalone `isSafeUrl(url, schemes, true)` stays the element-agnostic predicate.
 - This sanitiser is a defence-in-depth layer suited to Markdown → HTML, docx → HTML pipelines, etc. For stricter requirements (arbitrary HTML from untrusted users), combine with server-side validation.
 
 ## See also

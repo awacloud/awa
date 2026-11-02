@@ -112,17 +112,14 @@ Items 1-27 are [`pdf-full`](./pdf-full.md)'s extras, re-listed here so every mem
 
 ### Reading an RC4-encrypted PDF 1.7 file
 
-`read` refuses an encrypted file (`pdf/document/encrypted`); opt in to the raw
-container, then decrypt with the extra's helpers (see
-[`pdfLegacyRc4Read`](../extra/legacy-rc4-read.md) for the `params` shape):
+`read` refuses an encrypted file (`pdf/document/encrypted`) unless it is given
+the password; this bundle's `read` then decrypts RC4 V=1 / V=2 through its own
+[`pdfLegacyRc4Read`](../extra/legacy-rc4-read.md) (the core reader's
+`legacyRc4` option), and AES like the core bundles:
 
 ```js
 const api = rt.resolve('pdfLegacyBundle');
-const doc = api.read(pdf17Bytes, { allowEncrypted: true });   // strings and streams still ciphertext
-const r = api.pdfLegacyRc4Read.validateUserPassword('', params);
-if (r.ok) {
-    const plain = api.pdfLegacyRc4Read.decryptStream(r.fileKey, objNum, gen, streamBytes);
-}
+const doc = api.read(pdf17Bytes, { password: '' });   // the empty user password, or the owner's
 ```
 
 ### Reading an XFA form

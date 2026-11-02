@@ -41,10 +41,22 @@
  *   contributes nothing — a documented, permanently out-of-scope drop, not
  *   a per-node loss, mirroring docx-to-ir's own `code` field precedent).
  *   An empty paragraph is skipped without a loss, same as docx-to-ir.
- * - **Media** — any other shape kind found on a slide (`picture`, `table`,
- *   `chart`, `graphicFrame`) is a real, point-to-able per-slide node this
- *   reader chooses not to map at tier 1: `slides/media-dropped`, detail =
- *   the shape's own `type`.
+ * - **Pictures** — a `picture` shape becomes a block IR `image` among the
+ *   body paragraphs, at its place in shape order: `alt` its `description`
+ *   (else `''`), `name` `image<k>.<ext>` — `k` counting the deck's distinct
+ *   pictures (by their bytes) from 1 in reading order (one picture used on
+ *   several slides is one name, two different pictures never share one),
+ *   `ext` from the media type (`png`, `jpg`, `gif`, `wmf`, `emf`, else
+ *   `bin`) — and its bytes in `escapes.pptx = { bytes, contentType }`,
+ *   which every writer reads after `escapes.docx`, `.odt` and `.pdf`. A
+ *   picture without bytes (a linked one) is an image without escapes,
+ *   named after its shape, recorded as `image/bytes-unavailable`.
+ * - **Media** — any other shape kind found on a slide (`table`, `chart`,
+ *   `graphicFrame`) is a real, point-to-able per-slide node this reader
+ *   chooses not to map at tier 1: `slides/media-dropped`, detail = the
+ *   shape's own `type`. A group shape is not typed by `pptx.read` (it stays
+ *   in the slide's raw `_extras`), so nothing inside one reaches this
+ *   reader.
  * - **Layout / animations** — permanently out of scope and NEVER reach a
  *   per-node loss (same "documented, not per-node" treatment docx-to-ir
  *   gives page layout/sections/headers/footers): a slide's `layoutRef` is
@@ -92,6 +104,11 @@ export const oconvPptxToIr = {
         // shape as `oconvDocxToIr`/`oconvOdtToIr`.
         const { node, doc } = oconvIrMod;
         const TITLE_PLACEHOLDER_TYPES = new Set(['title', 'ctrTitle']);
+        /** A picture asset's extension by media type, `bin` otherwise. */
+        const PICTURE_EXT = {
+            'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif',
+            'image/x-wmf': 'wmf', 'image/wmf': 'wmf', 'image/x-emf': 'emf', 'image/emf': 'emf'
+        };
 
         /* ── slide-section.js mirror (see that file's header) ──────────── */
 
@@ -107,7 +124,8 @@ export const oconvPptxToIr = {
             }
 
             for (const para of (slide && slide.bodyParagraphs) || []) {
-                if (para) blocks.push(node('paragraph', {}, [node('run', { text: para })]));
+                if (para && typeof para === 'object') blocks.push(para);
+                else if (para) blocks.push(node('paragraph', {}, [node('run', { text: para })]));
             }
 
             const notes = slide && slide.notes;
@@ -142,16 +160,53 @@ export const oconvPptxToIr = {
             return out;
         }
 
+        /** The name of a picture already seen in the deck with these bytes, or undefined. */
+        function seenName(deck, data) {
+            for (const e of deck.pictures) {
+                if (e.data === data) return e.name;
+                if (e.data.length !== data.length) continue;
+                let same = true;
+                for (let i = 0; i < data.length && same; i++) same = e.data[i] === data[i];
+                if (same) return e.name;
+            }
+            return undefined;
+        }
+
+        /**
+         * One picture shape's IR `image`; `deck` names the deck's distinct
+         * pictures, by content (`pictures`, `next`).
+         */
+        function pictureNode(shape, deck, losses) {
+            const data = shape.image && shape.image.data;
+            const alt = typeof shape.description === 'string' ? shape.description : '';
+            if (!(data instanceof Uint8Array)) {
+                const name = shape.name || 'image';
+                losses.push({ code: 'image/bytes-unavailable', detail: name });
+                return node('image', { name, alt });
+            }
+            const contentType = shape.image.contentType || null;
+            let name = seenName(deck, data);
+            if (name === undefined) {
+                name = `image${deck.next++}.${PICTURE_EXT[contentType] || 'bin'}`;
+                deck.pictures.push({ data, name });
+            }
+            return node('image', { name, alt, escapes: { pptx: { bytes: data, contentType } } });
+        }
+
         /** Normalise one pptx slide's shapes into a format-agnostic SlideModel. */
-        function normalizeSlide(slide, losses) {
+        function normalizeSlide(slide, losses, deck) {
             let title = null;
             const bodyParagraphs = [];
             let titleTaken = false;
 
             for (const shape of (slide && slide.shapes) || []) {
+                if (shape.type === 'picture') {
+                    bodyParagraphs.push(pictureNode(shape, deck, losses));
+                    continue;
+                }
                 if (shape.type !== 'shape') {
-                    // picture / table / chart / graphicFrame — real,
-                    // point-to-able media this reader drops at tier 1.
+                    // table / chart / graphicFrame — real, point-to-able
+                    // media this reader drops at tier 1.
                     losses.push({ code: 'slides/media-dropped', detail: shape.type || 'unknown' });
                     continue;
                 }
@@ -190,8 +245,9 @@ export const oconvPptxToIr = {
 
             const slides = (readResult && readResult.presentation
                 && readResult.presentation.slides) || [];
+            const deck = { pictures: [], next: 1 };
             for (const slide of slides) {
-                const model = normalizeSlide(slide, losses);
+                const model = normalizeSlide(slide, losses, deck);
                 const { blocks: slideBlocks, losses: slideLosses } =
                     slideToBlocks(model, { includeNotes });
                 blocks.push(...slideBlocks);

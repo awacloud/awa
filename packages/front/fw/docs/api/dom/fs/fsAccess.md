@@ -197,4 +197,5 @@ For OPFS from a dedicated worker, `FileSystemSyncAccessHandle` (synchronous API)
 - [indexedDB](./indexedDB.md) — structured key-value persistence (IndexedDB)
 - [storage](./storage.md) — localStorage / sessionStorage cross-tab
 - [download](./download.md) — file export without a picker
+- [fileIntake](./fileIntake.md) — OS file drop and the `<input type=file>` picker
 - [mutex](../../io/sync/mutex.md) — async lock for concurrent OPFS writers

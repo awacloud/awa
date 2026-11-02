@@ -32,6 +32,8 @@ import { ooxmlMath } from './math/math.js';
 import { markupCompatibility } from './mc/markupCompatibility.js';
 import { opcContentTypes } from './opc/contentTypes.js';
 import { opcRelationships } from './opc/relationships.js';
+import { opcCoreProperties } from './opc/coreProperties.js';
+import { opcExtendedProperties } from './opc/extendedProperties.js';
 import { opcPackage } from './opc/package.js';
 
 import { docxProperties } from './docx/properties.js';
@@ -73,7 +75,7 @@ import { pptx } from './pptx/pptx.js';
  */
 export const modules = [
     ooxmlErrors, ooxmlShared, ooxmlMath, markupCompatibility,
-    opcContentTypes, opcRelationships, opcPackage,
+    opcContentTypes, opcRelationships, opcPackage, opcCoreProperties, opcExtendedProperties,
     drawingml, drawingmlChart, drawingmlShape,
     docxProperties, docxDrawing, docxStructure,
     docxStyles, docxNumbering, docxSettings,
@@ -118,6 +120,7 @@ import { dmlFillsAdvanced }       from './extra/dml-fills-advanced.js';
 import { dmlShapesAdvanced }      from './extra/dml-shapes-advanced.js';
 import { dmlWpPositioning }       from './extra/dml-wp-positioning.js';
 import { dmlXdrAdvanced }         from './extra/dml-xdr-advanced.js';
+import { dmlWpDrawing }           from './extra/dml-wp-drawing.js';
 import { transitional }           from './extra/transitional.js';
 import { legacyVml }              from './extra/legacy-vml.js';
 import { wmlMisc }                from './extra/wml-misc.js';
@@ -135,7 +138,7 @@ export const extras = [
     pmlNotes, pmlLayoutsTyped, dmlChartDataLabels, dmlChartTrendlines,
     dmlChartAxesAdvanced, dmlChart3d, dmlChartOtherTypes, mathAdvanced,
     dmlEffects, dmlFillsAdvanced, dmlShapesAdvanced, dmlWpPositioning,
-    dmlXdrAdvanced, transitional, legacyVml,
+    dmlXdrAdvanced, dmlWpDrawing, transitional, legacyVml,
     wmlMisc, smlMisc, pmlMisc, dmlMainMisc, dmlChartMisc, mathMisc
 ];
 
@@ -167,7 +170,7 @@ export const bundle = [
 // generated `dist/build/index.js` barrel re-exports this whole namespace.
 export {
     ooxmlErrors, ooxmlShared, ooxmlMath, markupCompatibility,
-    opcContentTypes, opcRelationships, opcPackage,
+    opcContentTypes, opcRelationships, opcPackage, opcCoreProperties, opcExtendedProperties,
     drawingml, drawingmlChart, drawingmlShape,
     docxProperties, docxDrawing, docxStructure,
     docxStyles, docxNumbering, docxSettings,

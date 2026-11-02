@@ -30,7 +30,7 @@ export const pdfXref = {
         const tokenize = tokenizerMod.tokenize;
         const lastIndexOfBytes = tokenizerMod.lastIndexOfBytes;
         const parseObject = parserMod.parseObject;
-        const LF = 0x0A, CR = 0x0D, SP = 0x20;
+        const LF = 0x0A, CR = 0x0D, SP = 0x20, TAB = 0x09;
 
         function locateStartXref(bytes) {
             const tail = Math.max(0, bytes.length - 8192);
@@ -72,6 +72,13 @@ export const pdfXref = {
             return n;
         }
 
+        // Two shapes real producers write are read, each named in the
+        // result's `tolerated`: a subsection header ending with spaces or
+        // tabs before its EOL ('subsection-header-space'), and entries
+        // whose 18 field bytes end with a one-byte EOL and no second EOL
+        // or space byte, a 19-byte stride ('entry-eol-one-byte'). Every
+        // other entry keeps the 20-byte stride, its last two bytes
+        // unchecked as before.
         function parseXrefTable(bytes, at) {
             const tok = tokenize(bytes, { start: at });
             const kw = tok.next();
@@ -81,6 +88,7 @@ export const pdfXref = {
                     { context: { offset: at } });
             }
             const entries = {};
+            const tolerated = new Set();
             for (;;) {
                 const first = tok.peek();
                 if (!first || first.kind !== 'int') {
@@ -95,10 +103,16 @@ export const pdfXref = {
                         { context: { offset: first.offset } });
                 }
                 let p = tok.pos();
+                let q = p;
+                while (q < bytes.length && (bytes[q] === SP || bytes[q] === TAB)) q++;
+                if (q > p && q < bytes.length && (bytes[q] === CR || bytes[q] === LF)) {
+                    tolerated.add('subsection-header-space');
+                    p = q;
+                }
                 if (p < bytes.length && bytes[p] === CR) p++;
                 if (p < bytes.length && bytes[p] === LF) p++;
                 for (let k = 0; k < cnt.value; k++) {
-                    if (p + 20 > bytes.length) {
+                    if (p + 19 > bytes.length) {
                         throw new ParseError('pdf/xref/truncated-entry',
                             'truncated xref entry',
                             { context: { offset: p, expected: 20 } });
@@ -126,11 +140,17 @@ export const pdfXref = {
                         gen,
                         free: tag === 0x66
                     };
-                    p += 20;
+                    const e1 = bytes[p + 18], e2 = bytes[p + 19];
+                    if ((e1 === CR || e1 === LF) && e2 !== CR && e2 !== LF && e2 !== SP) {
+                        tolerated.add('entry-eol-one-byte');
+                        p += 19;
+                    } else p += 20;
                 }
                 tok.seek(p);
             }
-            return { entries, end: tok.pos() };
+            return tolerated.size
+                ? { entries, end: tok.pos(), tolerated: [...tolerated] }
+                : { entries, end: tok.pos() };
         }
 
         function parseTrailerDict(bytes, at) {

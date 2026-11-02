@@ -9,8 +9,11 @@
  * Pure fw factory descriptor. Declares the core `docx` orchestrator and
  * the P0/P1 opt-in extras (run/paragraph/table formatting, numbering
  * details, settings, fields, tracked changes, advanced math, wp
- * positioning, shared DrawingML effects + advanced fills) as
- * dependencies. The runtime resolves every dependency transitively and
+ * positioning, shared DrawingML effects + advanced fills, the docx
+ * drawing extension) as dependencies. Five of them type a read through
+ * walker hooks (run, paragraph and table properties, settings,
+ * `dmlWpDrawing`); the others are parse / render toolkits a read never
+ * calls. The runtime resolves every dependency transitively and
  * passes the already-constructed instances to the factory, which wires
  * them into the `docx` core via `docx.use(...)` and returns the
  * enriched instance.
@@ -35,6 +38,7 @@ import { mathAdvanced } from '../extra/math-advanced.js';
 import { dmlWpPositioning } from '../extra/dml-wp-positioning.js';
 import { dmlEffects } from '../extra/dml-effects.js';
 import { dmlFillsAdvanced } from '../extra/dml-fills-advanced.js';
+import { dmlWpDrawing } from '../extra/dml-wp-drawing.js';
 
 export const docxLargeBundle = {
     name: 'docxLargeBundle',
@@ -43,19 +47,19 @@ export const docxLargeBundle = {
         'wmlRunFormatting', 'wmlParagraphFormatting', 'wmlTableProperties',
         'wmlNumberingDetails', 'wmlSettings', 'wmlFields', 'wmlTrackedChanges',
         'mathAdvanced', 'dmlWpPositioning',
-        'dmlEffects', 'dmlFillsAdvanced'
+        'dmlEffects', 'dmlFillsAdvanced', 'dmlWpDrawing'
     ],
-    deps: [docx, wmlRunFormatting, wmlParagraphFormatting, wmlTableProperties, wmlNumberingDetails, wmlSettings, wmlFields, wmlTrackedChanges, mathAdvanced, dmlWpPositioning, dmlEffects, dmlFillsAdvanced],
+    deps: [docx, wmlRunFormatting, wmlParagraphFormatting, wmlTableProperties, wmlNumberingDetails, wmlSettings, wmlFields, wmlTrackedChanges, mathAdvanced, dmlWpPositioning, dmlEffects, dmlFillsAdvanced, dmlWpDrawing],
     factory(docx,
             wmlRunFormatting, wmlParagraphFormatting, wmlTableProperties,
             wmlNumberingDetails, wmlSettings, wmlFields, wmlTrackedChanges,
             mathAdvanced, dmlWpPositioning,
-            dmlEffects, dmlFillsAdvanced) {
+            dmlEffects, dmlFillsAdvanced, dmlWpDrawing) {
         docx.use(
             wmlRunFormatting, wmlParagraphFormatting, wmlTableProperties,
             wmlNumberingDetails, wmlSettings, wmlFields, wmlTrackedChanges,
             mathAdvanced, dmlWpPositioning,
-            dmlEffects, dmlFillsAdvanced
+            dmlEffects, dmlFillsAdvanced, dmlWpDrawing
         );
         return docx;
     }

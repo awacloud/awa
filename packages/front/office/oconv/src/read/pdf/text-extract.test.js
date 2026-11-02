@@ -20,7 +20,9 @@ import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 // Relative import of the sibling @awacloud/pdf manifest — see font-decoder.test.js
 // for why the bare specifier is not used here (task 06 adds the package dep).
 import { fw_require, pkg_require, modules } from '../../../../pdf/src/main.js';
+import { crc32 } from '@awacloud/fw/io/calc/crc32.js';
 import { oconvPdfFontDecoder } from './font-decoder.js';
+import { oconvPdfImagePng } from './image-png.js';
 import { oconvPdfTextExtract } from './text-extract.js';
 import { groupParagraphs } from './paragraph-group.js';
 
@@ -35,7 +37,9 @@ beforeAll(() => {
     rt.registerAll(fw_require);
     rt.registerAll(pkg_require);
     rt.registerAll(modules);
+    rt.register(crc32);
     rt.register(oconvPdfFontDecoder);
+    rt.register(oconvPdfImagePng);
     rt.register(oconvPdfTextExtract);
 
     pdf = rt.resolve('pdf');
@@ -209,6 +213,18 @@ describe('oconvPdfTextExtract — text/font-unresolved (C29)', () => {
         expect(counts.decoded).toBe(0);
     });
 
+    test('a TJ whose wide kern makes a space with no current font does not throw (T43): a space item, not bold, the loss recorded', () => {
+        for (const content of ['BT [(abc) -500 (def)] TJ ET\n', 'BT /F9 12 Tf [(abc) -500 (def)] TJ ET\n']) {
+            const { losses, items, counts } = extract({ contentBytes: enc(content), resourcesEntries: {} });
+            // The two losses of any TJ with no current font (a kern-free one
+            // records the same), and the kern's space as the one item.
+            expect(losses.map((l) => l.code)).toEqual(['text/font-unresolved', 'text/undecodable']);
+            expect(items.map((i) => [i.text, i.bold])).toEqual([[' ', false]]);
+            expect(counts.undecodable).toBe(6);
+            expect(counts.decoded).toBe(0);
+        }
+    });
+
     test('non-vacuity: the SAME content with a resolvable font records neither loss', () => {
         const uMap = new Map();
         for (let c = 0x20; c <= 0x7e; c++) uMap.set(c, String.fromCharCode(c));
@@ -233,7 +249,7 @@ describe('oconvPdfTextExtract — text/font-unresolved (C29)', () => {
         expect(losses.map((l) => l.code)).not.toContain('content/undecodable');
         expect(items).toHaveLength(1);
         const { xEnd, ...rest } = items[0];
-        expect(rest).toEqual({ kind: 'text', x: 0, y: 0, fontSize: 12, text: 'Hello', mcid: null });
+        expect(rest).toEqual({ kind: 'text', x: 0, y: 0, fontSize: 12, text: 'Hello', mcid: null, bold: false });
         // Standard 14 Helvetica, no /Widths: the AFM widths H e l l o =
         // 722 + 556 + 222 + 222 + 556 = 2278 thousandths → 2.278 × 12 pt.
         expect(xEnd).toBeCloseTo(27.336, 9);
@@ -697,7 +713,7 @@ describe('oconvPdfTextExtract — Form XObject execution', () => {
                 }), new Uint8Array([0])) }
             ]
         });
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'Im1' }]);
+        expect(losses).toEqual([{ code: 'image/dropped', detail: 'Im1 (12 0 R, 1x1)' }]);
         expect(items).toEqual([{ kind: 'image', mcid: null }]);
     });
 
@@ -795,5 +811,39 @@ describe('oconvPdfTextExtract — Form XObject execution', () => {
         });
         expect(items).toEqual([]);
         expect(losses).toEqual([{ code: 'xobject/form-dropped', detail: 'Fm1: not a stream' }]);
+    });
+});
+
+describe('oconvPdfTextExtract — rules on request (A14b1)', () => {
+    const rules = (content, opts = { rules: true }) => extract({ contentBytes: enc(content) }, opts)
+        .items.filter((it) => it.kind === 'rule')
+        .map(({ x0, y0, x1, y1 }) => [x0, y0, x1, y1].map((v) => Math.round(v * 100) / 100));
+
+    test('a stroked horizontal or vertical segment, a stroked rectangle\'s four sides', () => {
+        expect(rules('10 20 m 110 20 l S\n')).toEqual([[10, 20, 110, 20]]);
+        expect(rules('10 20 m 10 120 l S\n')).toEqual([[10, 20, 10, 120]]);
+        expect(rules('0 0 100 50 re S\n')).toEqual([[0, 0, 100, 0], [100, 0, 100, 50], [0, 50, 100, 50], [0, 0, 0, 50]]);
+    });
+
+    test('a thin filled rectangle is a rule along its centre line; a large fill, a diagonal, a curve are none', () => {
+        expect(rules('10 10 100 1 re f\n')).toEqual([[10, 10.5, 110, 10.5]]);
+        expect(rules('10 10 1 80 re f\n')).toEqual([[10.5, 10, 10.5, 90]]);
+        expect(rules('0 0 100 50 re f\n')).toEqual([]);
+        expect(rules('0 0 m 100 100 l S\n')).toEqual([]);
+        expect(rules('0 0 m 50 10 90 10 100 0 c S\n')).toEqual([]);
+        expect(rules('0 0 m 3 0 l S\n')).toEqual([]);
+    });
+
+    test('n discards the path; the CTM takes points to device space; without the option no rule', () => {
+        expect(rules('0 0 m 100 0 l n\n')).toEqual([]);
+        expect(rules('0 0 m 100 0 l W n\n')).toEqual([]);
+        expect(rules('q 2 0 0 2 10 10 cm 0 0 m 50 0 l S Q\n')).toEqual([[10, 10, 110, 10]]);
+        expect(extract({ contentBytes: enc('0 0 m 100 0 l S\n') }).items.filter((it) => it.kind === 'rule')).toEqual([]);
+        expect(rules('0 0 m 100 0 l S\n', { rules: false })).toEqual([]);
+    });
+
+    test('a closed path with h, a fill-and-stroke B: each side once', () => {
+        expect(rules('0 0 m 100 0 l 100 40 l 0 40 l h S\n')).toEqual([[0, 0, 100, 0], [100, 0, 100, 40], [0, 40, 100, 40], [0, 0, 0, 40]]);
+        expect(rules('0 0 100 40 re B\n').length).toBe(4);
     });
 });

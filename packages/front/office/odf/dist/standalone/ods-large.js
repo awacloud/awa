@@ -2101,7 +2101,7 @@ export const odsLargeBundled = {
     };
   } });
     __register({ name: "odfShared", dependencies: ["odfErrors","xml"], factory: function(errors, xml) {
-    const { ParseError, RenderError } = errors, ODF_NS = Object.freeze({
+    const { ParseError, RenderError, ContractError } = errors, ODF_NS = Object.freeze({
       OFFICE: "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
       TEXT: "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
       STYLE: "urn:oasis:names:tc:opendocument:xmlns:style:1.0",
@@ -2202,8 +2202,15 @@ export const odsLargeBundled = {
       }
     }
     function sourceNamespaces(sourcePkg, partPath) {
+      const out = {}, attrs = sourceRootAttrs(sourcePkg, partPath);
+      for (const k of Object.keys(attrs))
+        if (k.startsWith("xmlns:") && k.length > 6)
+          out[k.slice(6)] = attrs[k];
+      return Object.freeze(out);
+    }
+    function sourceRootAttrs(sourcePkg, partPath) {
       try {
-        const out = {}, src = sourcePkg && sourcePkg.parts && sourcePkg.parts[partPath];
+        const src = sourcePkg && sourcePkg.parts && sourcePkg.parts[partPath];
         let tag = null;
         if (typeof src === "string")
           tag = firstStartTag(src);
@@ -2214,18 +2221,44 @@ export const odsLargeBundled = {
             if (tag !== null || whole)
               break;
           }
-        if (tag) {
-          const el = xml.parse("<" + tag + "/>");
-          for (const k of Object.keys(el.attrs))
-            if (k.startsWith("xmlns:") && k.length > 6)
-              out[k.slice(6)] = el.attrs[k];
-        }
-        return Object.freeze(out);
+        return Object.freeze(tag ? { ...xml.parse("<" + tag + "/>").attrs } : {});
       } catch {
         return Object.freeze({});
       }
     }
-    const FORMULA_ATTRS = new Set(["table:formula", "text:formula", "text:condition"]);
+    function keptVersion(doc, opts, module) {
+      const v = opts && opts.keepVersion;
+      if (v !== void 0 && typeof v !== "boolean")
+        throw new ContractError(`odf/contract-error/${module}`, `${module}: write opts.keepVersion must be true or false`, { context: { module, argument: "opts.keepVersion" } });
+      if (!v)
+        return null;
+      const pkg = doc && doc.package;
+      if (!pkg || !pkg.parts)
+        return { of: () => "1.4", manifest: "1.4" };
+      const versionOf = (part) => sourceRootAttrs(pkg, part)["office:version"] || null, content = versionOf("content.xml"), manifest = content === null ? pkg.manifest && pkg.manifest.version || "1.4" : parseFloat(content) >= 1.2 ? content : null;
+      return {
+        of: (part) => pkg.parts[part] ? versionOf(part) : content,
+        manifest
+      };
+    }
+    function applyManifestVersion(p, kept) {
+      if (!kept)
+        return;
+      p.manifest.version = kept.manifest;
+      for (const e of p.manifest.entries || [])
+        if (e.fullPath === "/")
+          e.version = kept.manifest;
+    }
+    const VALUE_PREFIX_ATTRS = new Set([
+      "table:formula",
+      "text:formula",
+      "text:condition",
+      "chart:class",
+      "db:type",
+      "draw:engine",
+      "draw:extrusion-metal-type",
+      "form:control-implementation"
+    ]);
     function declareNamespaces(rootEl, opts) {
       const o = opts || {}, carried = o.carried || {}, resolvable = (p) => hasOwn(carried, p) || hasOwn(ODF_PREFIXES, p), missing = new Set, scope = [], inScope = (p) => {
         if (p === "xml")
@@ -2251,7 +2284,7 @@ export const odsLargeBundled = {
           if (k === "xmlns" || k.startsWith("xmlns:"))
             continue;
           use(k);
-          if (FORMULA_ATTRS.has(k) && typeof attrs[k] === "string") {
+          if (VALUE_PREFIX_ATTRS.has(k) && typeof attrs[k] === "string") {
             const m = /^([A-Za-z_][\w.-]*):/.exec(attrs[k]);
             if (m && !inScope(m[1]) && resolvable(m[1]))
               missing.add(m[1]);
@@ -2303,7 +2336,10 @@ export const odsLargeBundled = {
       return target;
     }
     function writeSidecars(p, doc, opts, sideMods, ctXml) {
-      const { pkg: pkgM, metaMod, settingsMod, stylesMod } = sideMods, ct = ctXml || CT.XML, ours = metaMod.empty().generator, ns = (part) => ({ namespaces: sourceNamespaces(doc.package, part) });
+      const { pkg: pkgM, metaMod, settingsMod, stylesMod } = sideMods, ct = ctXml || CT.XML, ours = metaMod.empty().generator, kept = keptVersion(doc, opts, "odf"), ns = (part) => ({
+        namespaces: sourceNamespaces(doc.package, part),
+        ...kept ? { version: kept.of(part) } : {}
+      });
       let meta = opts.meta ? opts.meta.generator == null ? { ...opts.meta, generator: ours } : opts.meta : { ...doc.meta || metaMod.empty(), generator: ours };
       pkgM.setPart(p, "meta.xml", _te.encode(metaMod.serialize(meta, ns("meta.xml"))), ct);
       const settings = opts.settings || doc.settings || settingsMod.empty();
@@ -2375,7 +2411,10 @@ export const odsLargeBundled = {
       decodeText,
       parseXmlOrThrow,
       sourceNamespaces,
+      sourceRootAttrs,
       declareNamespaces,
+      keptVersion,
+      applyManifestVersion,
       readSidecars,
       writeSidecars,
       carryParts,
@@ -2467,10 +2506,9 @@ export const odsLargeBundled = {
       return e;
     }
     function serialize(manifest) {
-      const m = manifest || { version: ODF_VERSION, entries: [] }, attrs = {
-        "xmlns:manifest": MANIFEST_NS,
-        "manifest:version": m.version || ODF_VERSION
-      };
+      const m = manifest || { version: ODF_VERSION, entries: [] }, attrs = { "xmlns:manifest": MANIFEST_NS };
+      if (m.version !== null)
+        attrs["manifest:version"] = m.version || ODF_VERSION;
       if (m._extras && m._extras.attrs)
         for (const k of Object.keys(m._extras.attrs))
           attrs[k] = m._extras.attrs[k];
@@ -2679,8 +2717,10 @@ export const odsLargeBundled = {
         "xmlns:office": OFFICE_NS,
         "xmlns:meta": META_NS,
         "xmlns:dc": DC_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, [metaEl]);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "meta.xml",
@@ -2722,8 +2762,10 @@ export const odsLargeBundled = {
       const root = xml.el("office:document-settings", {
         "xmlns:office": OFFICE_NS,
         "xmlns:config": CONFIG_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, children.length ? [xml.el("office:settings", {}, children)] : []);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "settings.xml",
@@ -2823,23 +2865,23 @@ export const odsLargeBundled = {
       return out;
     }
     function serialize(styles, opts) {
-      const s = styles || { styles: [], automaticStyles: [], masterStyles: [] }, children = [
+      const s = styles || { styles: [], automaticStyles: [], masterStyles: [] }, extras = s._extras && s._extras.children || [], isDecls = (c) => c && c.type === "element" && c.name === "office:font-face-decls", children = [
+        ...extras.filter(isDecls),
         xml.el("office:styles", {}, bucketEntries(s.styles)),
         xml.el("office:automatic-styles", {}, bucketEntries(s.automaticStyles)),
-        xml.el("office:master-styles", {}, bucketEntries(s.masterStyles))
-      ];
-      if (s._extras && s._extras.children)
-        for (const c of s._extras.children)
-          children.push(c);
-      const root = xml.el("office:document-styles", {
+        xml.el("office:master-styles", {}, bucketEntries(s.masterStyles)),
+        ...extras.filter((c) => !isDecls(c))
+      ], root = xml.el("office:document-styles", {
         "xmlns:office": OFFICE_NS,
         "xmlns:style": STYLE_NS,
         "xmlns:text": TEXT_NS,
         "xmlns:fo": FO_NS,
         "xmlns:svg": SVG_NS,
         "xmlns:table": TABLE_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, children);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "styles.xml",
@@ -3005,12 +3047,13 @@ export const odsLargeBundled = {
         attrs["table:number-rows-repeated"] = String(row.repeated);
       if (row.visibility)
         attrs["table:visibility"] = row.visibility;
-      const children = (row.cells || []).map((c) => cellMod.renderCell(c));
+      const children = (row.cells && row.cells.length ? row.cells : [{ type: "cell", children: [] }]).map((c) => cellMod.renderCell(c));
       return xml.el("table:table-row", attrs, children);
     }
     return { parseRow, renderRow };
   } });
     __register({ name: "tableTable", dependencies: ["xml","tableRow"], factory: function(xml, rowMod) {
+    const ROW_GROUPS = new Set(["table:table-row-group", "table:table-rows"]);
     function parseColumn(el) {
       const out = {}, a = el.attrs || {};
       if (a["table:style-name"])
@@ -3044,29 +3087,52 @@ export const odsLargeBundled = {
         out.styleName = a["table:style-name"];
       const extras = [];
       let headerRows = 0;
+      const breaks = [];
+      let pending = [];
+      const pushRow = (rowEl) => {
+        for (const b of pending) {
+          if (b.inExtras)
+            extras.splice(extras.indexOf(b.el), 1);
+          breaks.push(out.rows.length);
+        }
+        pending = [];
+        out.rows.push(rowMod.parseRow(rowEl));
+      };
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
         switch (c.name) {
           case "table:table-column":
             out.columns.push(parseColumn(c));
+            pending = [];
             break;
           case "table:table-row":
-            out.rows.push(rowMod.parseRow(c));
+            pushRow(c);
             break;
           case "table:table-header-rows":
-            for (const k of c.children || [])
-              if (k.type === "element" && k.name === "table:table-row") {
-                out.rows.push(rowMod.parseRow(k));
+            for (const k of c.children || []) {
+              if (k.type !== "element")
+                continue;
+              if (k.name === "table:table-row") {
+                pushRow(k);
                 headerRows++;
-              }
+              } else if (k.name === "text:soft-page-break")
+                pending.push({ el: k, inExtras: !1 });
+            }
+            break;
+          case "text:soft-page-break":
+            extras.push(c);
+            pending.push({ el: c, inExtras: !0 });
             break;
           default:
             extras.push(c);
+            pending = [];
         }
       }
       if (headerRows > 0)
         out.headerRows = headerRows;
+      if (breaks.length)
+        out._softPageBreaks = breaks;
       if (extras.length)
         out._extras = { children: extras };
       return out;
@@ -3089,17 +3155,30 @@ export const odsLargeBundled = {
         attrs["table:name"] = t.name;
       if (t.styleName)
         attrs["table:style-name"] = t.styleName;
-      const children = [], headerN = t.headerRows || 0, rows = t.rows || [], columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
+      const children = [], extras = t._extras && t._extras.children || [];
+      let rows = t.rows || [];
+      const headerN = Math.min(t.headerRows || 0, rows.length);
+      if (!rows.length && !extras.some((c) => c && ROW_GROUPS.has(c.name)))
+        rows = [{ type: "row", cells: [] }];
+      const columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
       for (const col of columns)
         children.push(renderColumn(col));
+      const breaksBefore = new Map;
+      for (const i of t._softPageBreaks || [])
+        breaksBefore.set(i, (breaksBefore.get(i) || 0) + 1);
+      const pushRows = (into, from, to) => {
+        for (let i = from;i < to; i++) {
+          for (let n = breaksBefore.get(i) || 0;n > 0; n--)
+            into.push(xml.el("text:soft-page-break", {}, []));
+          into.push(rowMod.renderRow(rows[i]));
+        }
+      };
       if (headerN > 0) {
-        const headerKids = rows.slice(0, headerN).map((r) => rowMod.renderRow(r));
+        const headerKids = [];
+        pushRows(headerKids, 0, headerN);
         children.push(xml.el("table:table-header-rows", {}, headerKids));
-        for (const r of rows.slice(headerN))
-          children.push(rowMod.renderRow(r));
-      } else
-        for (const r of rows)
-          children.push(rowMod.renderRow(r));
+      }
+      pushRows(children, headerN, rows.length);
       if (t._extras && t._extras.children)
         for (const c of t._extras.children)
           children.push(c);
@@ -3184,22 +3263,28 @@ export const odsLargeBundled = {
           xa[k] = a[k];
           anyAttr = !0;
         }
-      const xtraChildren = [];
+      const xtraChildren = [], propertyChildren = {};
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
         const key = PROP_TAGS[c.name];
-        if (key)
+        if (key) {
           out.properties[key] = { ...c.attrs || {} };
-        else
+          const kids = (c.children || []).filter((k) => k.type === "element");
+          if (kids.length)
+            propertyChildren[key] = kids;
+        } else
           xtraChildren.push(c);
       }
-      if (anyAttr || xtraChildren.length) {
+      const anyPropertyChild = Object.keys(propertyChildren).length > 0;
+      if (anyAttr || xtraChildren.length || anyPropertyChild) {
         out._extras = {};
         if (anyAttr)
           out._extras.attrs = xa;
         if (xtraChildren.length)
           out._extras.children = xtraChildren;
+        if (anyPropertyChild)
+          out._extras.propertyChildren = propertyChildren;
       }
       return out;
     }
@@ -3210,12 +3295,16 @@ export const odsLargeBundled = {
       if (s._extras && s._extras.attrs)
         for (const k of Object.keys(s._extras.attrs))
           attrs[k] = s._extras.attrs[k];
-      const children = [];
-      for (const key of Object.keys(s.properties || {})) {
+      const children = [], kept = s._extras && s._extras.propertyChildren || {}, keys = Object.keys(s.properties || {});
+      for (const key of Object.keys(kept))
+        if (!keys.includes(key))
+          keys.push(key);
+      for (const key of keys) {
         const tag = TAG_BY_PROP[key];
         if (!tag)
           continue;
-        children.push(xml.el(tag, { ...s.properties[key] || {} }, []));
+        const attrs = s.properties && s.properties[key] || {};
+        children.push(xml.el(tag, { ...attrs }, [...kept[key] || []]));
       }
       if (s._extras && s._extras.children)
         for (const c of s._extras.children)
@@ -3302,7 +3391,7 @@ export const odsLargeBundled = {
       return r;
     }
     function parseInline(children, ctx, insideLink, positional) {
-      const runs = [], extras = [];
+      const runs = [], extras = [], inPlace = positional || !!(ctx && ctx.elementsInRuns);
       for (const c of children || [])
         if (c.type === "text")
           runs.push({ type: "text", value: c.value });
@@ -3320,7 +3409,7 @@ export const odsLargeBundled = {
             runs.push(parseLink(c, ctx));
           else if (c.name === "draw:frame" && ctx && typeof ctx.parseFrame === "function")
             runs.push(ctx.parseFrame(c));
-          else if (positional)
+          else if (inPlace)
             runs.push(c);
           else
             extras.push(c);
@@ -3452,7 +3541,8 @@ export const odsLargeBundled = {
             out.push(textOfRuns(r.runs));
             break;
           case "element":
-            out.push(xml.textContent(r));
+            if (inSpan)
+              out.push(xml.textContent(r));
             break;
           case "frame":
             if (inSpan)
@@ -3601,7 +3691,9 @@ export const odsLargeBundled = {
       writeSidecars,
       carryParts,
       sourceNamespaces,
-      declareNamespaces
+      declareNamespaces,
+      keptVersion,
+      applyManifestVersion
     } = shared, CT_ODS = CT.ODS, CT_XML = CT.XML, walker = walkerMod.createWalker();
     function read(bytes, opts) {
       const p = pkg.read(bytes, opts);
@@ -3637,6 +3729,13 @@ export const odsLargeBundled = {
       if (!doc)
         throw new ContractError("odf/contract-error/ods", "ods: write needs a document", { context: { module: "ods", argument: "doc" } });
       opts = opts || {};
+      if (opts.preserveInput !== void 0 && typeof opts.preserveInput !== "boolean")
+        throw new ContractError("odf/contract-error/ods", "ods: write opts.preserveInput must be true or false", { context: { module: "ods", argument: "opts.preserveInput" } });
+      if (opts.preserveInput) {
+        const { package: envelope, ...rest } = doc, copy = structuredClone({ doc: rest, opts });
+        doc = envelope === void 0 ? copy.doc : { ...copy.doc, package: envelope };
+        opts = copy.opts;
+      }
       if (walker.hasExtensions) {
         const dehydrated = {
           spreadsheet: doc.spreadsheet,
@@ -3654,13 +3753,14 @@ export const odsLargeBundled = {
         if (dehydrated.styles !== void 0)
           opts = { ...opts, styles: dehydrated.styles };
       }
-      const p = pkg.empty(CT_ODS), contentXml = renderContent(doc);
+      const kept = keptVersion(doc, opts, "ods"), p = pkg.empty(CT_ODS), contentXml = renderContent(doc, kept ? kept.of("content.xml") : void 0);
       pkg.setPart(p, "content.xml", encodeText(contentXml), CT_XML);
       writeSidecars(p, doc, opts, { pkg, metaMod, settingsMod, stylesMod }, CT_XML);
       carryParts(p, doc.package, { pkg, manifestMod });
+      applyManifestVersion(p, kept);
       return pkg.write(p, { mtime: opts.mtime });
     }
-    function renderContent(doc) {
+    function renderContent(doc, version) {
       const sheet = doc.spreadsheet || { tables: doc.tables || [] }, ssEl = spreadsheetMod.renderSpreadsheet(sheet), bodyEl = xml.el("office:body", {}, [ssEl]), children = [];
       if (doc.automaticStyles)
         children.push(automaticMod.render(doc.automaticStyles));
@@ -3676,8 +3776,10 @@ export const odsLargeBundled = {
         "xmlns:number": ODF_NS.NUMBER,
         "xmlns:of": ODF_NS.OF,
         "xmlns:xlink": ODF_NS.XLINK,
-        "office:version": ODF_VERSION
+        "office:version": version !== void 0 ? version : ODF_VERSION
       }, children);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: sourceNamespaces(doc.package, "content.xml"),
         part: "content.xml",
@@ -3850,10 +3952,10 @@ export const odsLargeBundled = {
       for (const a of out.advanced)
         extras.push(renderNode(a));
       delete out.advanced;
-      if (Array.isArray(t._extras) || !t._extras)
+      if (Array.isArray(t._extras))
         out._extras = extras;
       else
-        out._extras = { ...t._extras, children: extras };
+        out._extras = { ...t._extras || {}, children: extras };
       return out;
     }
     return {
@@ -3892,19 +3994,23 @@ export const odsLargeBundled = {
         attrs: { ...el.attrs || {} },
         children: []
       };
-      for (const c of el.children || []) {
-        if (c.type !== "element")
-          continue;
-        out.children.push(parseNode(c));
-      }
+      for (const c of el.children || [])
+        out.children.push(c && c.type === "element" ? parseNode(c) : c);
       return out;
     }
     function renderNode(n) {
-      const kids = (n.children || []).map(renderNode);
+      const kids = (n.children || []).map((c) => c && c.kind ? renderNode(c) : c);
       return xml.el(n.kind, { ...n.attrs || {} }, kids);
     }
     function isPageName(name) {
       return PAGE_NAMES.has(name) || PAGE_CHILDREN.has(name);
+    }
+    const HOME = { "style:page-layout": "automaticStyles", "style:master-page": "masterStyles" };
+    function bag(el, container) {
+      const n = parseNode(el);
+      if (container !== HOME[el.name])
+        n.container = container;
+      return n;
     }
     function hydrateStyles(styles) {
       if (!styles)
@@ -3920,9 +4026,9 @@ export const odsLargeBundled = {
             continue;
           }
           if (s.name === "style:page-layout")
-            pages.push(parseNode(s));
+            pages.push(bag(s, k));
           else if (s.name === "style:master-page")
-            masters.push(parseNode(s));
+            masters.push(bag(s, k));
           else
             remaining.push(s);
         }
@@ -3940,9 +4046,9 @@ export const odsLargeBundled = {
             continue;
           }
           if (s.name === "style:page-layout")
-            pages.push(parseNode(s));
+            pages.push(bag(s, "_extras"));
           else if (s.name === "style:master-page")
-            masters.push(parseNode(s));
+            masters.push(bag(s, "_extras"));
           else
             remaining.push(s);
         }
@@ -3962,15 +4068,18 @@ export const odsLargeBundled = {
         return styles;
       if ((!styles.pageLayouts || !styles.pageLayouts.length) && (!styles.masterPages || !styles.masterPages.length))
         return styles;
-      const out = { ...styles }, extras = Array.isArray(out._extras) ? [...out._extras] : [];
+      const out = { ...styles }, put = (n) => {
+        const k = n.container || HOME[n.kind];
+        if (out[k] === styles[k])
+          out[k] = Array.isArray(styles[k]) ? [...styles[k]] : [];
+        out[k].push(renderNode(n));
+      };
       for (const p of out.pageLayouts || [])
-        extras.push(renderNode(p));
+        put(p);
       for (const m of out.masterPages || [])
-        extras.push(renderNode(m));
+        put(m);
       delete out.pageLayouts;
       delete out.masterPages;
-      if (extras.length)
-        out._extras = extras;
       return out;
     }
     return {
@@ -4220,10 +4329,10 @@ export const odsLargeBundled = {
       for (const s of out.shapes)
         extras.push(renderShape(s));
       delete out.shapes;
-      if (Array.isArray(f._extras) || !f._extras)
+      if (Array.isArray(f._extras))
         out._extras = extras;
       else
-        out._extras = { ...f._extras, children: extras };
+        out._extras = { ...f._extras || {}, children: extras };
       return out;
     }
     return {
@@ -4321,10 +4430,10 @@ export const odsLargeBundled = {
       for (const f of out.fields)
         extras.push(renderField(f));
       delete out.fields;
-      if (Array.isArray(p._extras) || !p._extras)
+      if (Array.isArray(p._extras))
         out._extras = extras;
       else
-        out._extras = { ...p._extras, children: extras };
+        out._extras = { ...p._extras || {}, children: extras };
       return out;
     }
     return {
@@ -4398,6 +4507,7 @@ export const odsLargeBundled = {
     function renderListHeader(h) {
       return xml.el("text:list-header", { ...h.attrs || {} }, h.children || []);
     }
+    const HOME = "styles";
     function hydrateStyles(styles) {
       if (!styles)
         return styles;
@@ -4407,9 +4517,12 @@ export const odsLargeBundled = {
           continue;
         const remaining = [], listStyles = styles.listStyles || [];
         for (const s of styles[k])
-          if (s && s.type === "element" && LIST_STYLE_NAMES.has(s.name))
-            listStyles.push(parseListStyle(s));
-          else
+          if (s && s.type === "element" && LIST_STYLE_NAMES.has(s.name)) {
+            const ls = parseListStyle(s);
+            if (k !== HOME)
+              ls.container = k;
+            listStyles.push(ls);
+          } else
             remaining.push(s);
         if (listStyles.length)
           styles.listStyles = listStyles;
@@ -4418,9 +4531,11 @@ export const odsLargeBundled = {
       if (Array.isArray(styles._extras)) {
         const remaining = [], listStyles = styles.listStyles || [];
         for (const s of styles._extras)
-          if (s && s.type === "element" && LIST_STYLE_NAMES.has(s.name))
-            listStyles.push(parseListStyle(s));
-          else
+          if (s && s.type === "element" && LIST_STYLE_NAMES.has(s.name)) {
+            const ls = parseListStyle(s);
+            ls.container = "_extras";
+            listStyles.push(ls);
+          } else
             remaining.push(s);
         if (listStyles.length)
           styles.listStyles = listStyles;
@@ -4434,12 +4549,14 @@ export const odsLargeBundled = {
     function dehydrateStyles(styles) {
       if (!styles || !styles.listStyles || !styles.listStyles.length)
         return styles;
-      const out = { ...styles }, extras = Array.isArray(out._extras) ? [...out._extras] : [];
-      for (const ls of out.listStyles)
-        extras.push(renderListStyle(ls));
+      const out = { ...styles };
+      for (const ls of out.listStyles) {
+        const k = ls.container || HOME;
+        if (out[k] === styles[k])
+          out[k] = Array.isArray(styles[k]) ? [...styles[k]] : [];
+        out[k].push(renderListStyle(ls));
+      }
       delete out.listStyles;
-      if (extras.length)
-        out._extras = extras;
       return out;
     }
     function hydrateList(list) {
@@ -4461,16 +4578,27 @@ export const odsLargeBundled = {
           list._extras = remaining;
         else
           delete list._extras;
+      else if (remaining.length !== extras.length) {
+        if (remaining.length)
+          list._extras.children = remaining;
+        else
+          delete list._extras.children;
+        if (!Object.keys(list._extras).length)
+          delete list._extras;
+      }
       return list;
     }
     function dehydrateList(list) {
       if (!list || !list.headers || !list.headers.length)
         return list;
-      const out = { ...list }, extras = Array.isArray(out._extras) ? [...out._extras] : [];
+      const out = { ...list }, extras = Array.isArray(out._extras) ? [...out._extras] : out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : [];
       for (const h of out.headers)
         extras.push(renderListHeader(h));
       delete out.headers;
-      out._extras = extras;
+      if (Array.isArray(list._extras))
+        out._extras = extras;
+      else
+        out._extras = { ...list._extras || {}, children: extras };
       return out;
     }
     return {

@@ -27,7 +27,7 @@ const ext = runtime.resolve('pdfSigAesGcm');
 | Member | Signature | Returns |
 |--------|-----------|---------|
 | `typeEncryptForGcm` | `(encryptDict) => { v, r, length, stmF, strF, eff, cf, hasAesGcm, raw, _extras }` | GCM-focused view. |
-| `typeCfEntry` | `(dict) => { cfm, authEvent, length, catalog, raw, _extras }` | A single `/CF` entry. |
+| `typeCfEntry` | `(dict) => { cfm, authEvent, length, catalog, type?, raw, _extras }` | A single `/CF` entry. |
 | `validateGcmFraming` | `(Uint8Array) => { iv, ciphertext, tag }` | Splits the TS 32003 framing. |
 | `CFM_CATALOG` | frozen catalog | CFM name → `{ cipher, keyBits, mode?, notes }`. |
 

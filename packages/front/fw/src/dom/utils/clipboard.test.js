@@ -5,7 +5,7 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 try { GlobalRegistrator.register(); } catch { /* already registered */ }
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { clipboard } from './clipboard.js';
 
 describe('clipboard module', () => {
@@ -117,6 +117,104 @@ describe('clipboard module', () => {
                     configurable: true,
                 });
                 expect(clipboard.factory().get()).toBe(sentinel);
+            });
+        });
+
+        // ── setRich ───────────────────────────────────────────────────────────────
+
+        describe('setRich', () => {
+            /** Stand-in for the browser's ClipboardItem: keeps the entries it was built with. */
+            class FakeItem {
+                constructor(items) { this.items = items; this.types = Object.keys(items); }
+            }
+            let savedItem;
+
+            beforeEach(() => { savedItem = globalThis.ClipboardItem; });
+            afterEach(() => {
+                if (savedItem === undefined) delete globalThis.ClipboardItem;
+                else globalThis.ClipboardItem = savedItem;
+            });
+
+            /** Install a clipboard whose `write` records its argument and resolves. */
+            function mockWrite(calls) {
+                Object.defineProperty(navigator, 'clipboard', {
+                    value: {
+                        writeText: () => Promise.resolve(),
+                        readText:  () => Promise.resolve(''),
+                        write:     (data) => { calls.push(data); return Promise.resolve(); },
+                    },
+                    configurable: true,
+                });
+            }
+
+            test('richWrite is true only when clipboard.write and ClipboardItem both exist', () => {
+                mockWrite([]);
+                globalThis.ClipboardItem = FakeItem;
+                expect(clipboard.factory().isSupported().richWrite).toBe(true);
+
+                delete globalThis.ClipboardItem;
+                expect(clipboard.factory().isSupported().richWrite).toBe(false);
+
+                globalThis.ClipboardItem = FakeItem;
+                Object.defineProperty(navigator, 'clipboard', {
+                    value: { writeText: () => Promise.resolve(), readText: () => Promise.resolve('') },
+                    configurable: true,
+                });
+                expect(clipboard.factory().isSupported().richWrite).toBe(false);
+            });
+
+            test('writes exactly one item carrying text/html and text/plain', async () => {
+                const calls = [];
+                mockWrite(calls);
+                globalThis.ClipboardItem = FakeItem;
+                await clipboard.factory().setRich({ html: '<p><b>Hi</b></p>', text: 'Hi' });
+
+                expect(calls).toHaveLength(1);
+                expect(calls[0]).toHaveLength(1);
+                const item = calls[0][0];
+                expect(item).toBeInstanceOf(FakeItem);
+                expect(item.types.sort()).toEqual(['text/html', 'text/plain']);
+                const html = await item.items['text/html'];
+                const text = await item.items['text/plain'];
+                expect(html.type).toBe('text/html');
+                expect(await html.text()).toBe('<p><b>Hi</b></p>');
+                expect(text.type).toBe('text/plain');
+                expect(await text.text()).toBe('Hi');
+            });
+
+            test('accepts promised values', async () => {
+                const calls = [];
+                mockWrite(calls);
+                globalThis.ClipboardItem = FakeItem;
+                await clipboard.factory().setRich({ html: Promise.resolve('<i>a</i>'), text: Promise.resolve('a') });
+                expect(await (await calls[0][0].items['text/html']).text()).toBe('<i>a</i>');
+                expect(await (await calls[0][0].items['text/plain']).text()).toBe('a');
+            });
+
+            test('calls write synchronously, before any value settles', () => {
+                const calls = [];
+                mockWrite(calls);
+                globalThis.ClipboardItem = FakeItem;
+                const never = new Promise(() => {});
+                clipboard.factory().setRich({ html: never, text: never });
+                expect(calls).toHaveLength(1);
+                expect(calls[0][0].types.sort()).toEqual(['text/html', 'text/plain']);
+            });
+
+            test('a rejected html value rejects the returned promise', async () => {
+                mockWrite([]);
+                globalThis.ClipboardItem = FakeItem;
+                const failure = new Error('conversion failed');
+                await expect(clipboard.factory().setRich({ html: Promise.reject(failure), text: 'x' }))
+                    .rejects.toBe(failure);
+            });
+
+            test('rejects with the documented message when rich write is unsupported', async () => {
+                mockWrite([]);
+                delete globalThis.ClipboardItem;
+                const p = clipboard.factory().setRich({ html: '<p>x</p>', text: 'x' });
+                expect(p).toBeInstanceOf(Promise);
+                await expect(p).rejects.toThrow(/^clipboard: rich write unsupported/);
             });
         });
 

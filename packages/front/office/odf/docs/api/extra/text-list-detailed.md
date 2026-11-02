@@ -23,6 +23,13 @@ status: complete
 ## Hooks
 
 `hydrateStyles` / `dehydrateStyles` (promotes list / outline styles
-from the styles bag into `styles.listStyles`), and
+from the styles bag into `styles.listStyles`, and puts each back on
+write into the container it came from, after the elements left there:
+`styles` by default; a style met in another container records it in an
+optional `container` field — `automaticStyles`, `masterStyles`, or
+`_extras` for an array carrier; the root's other children are left as
+read), and
 `hydrateList` / `dehydrateList` (promotes `text:list-header` children
-from a list `_extras` into `list.headers`).
+from a list `_extras` — an array carrier, or the `children` of the usual
+`_extras` object, which they leave — into `list.headers`, and puts them
+back on write).

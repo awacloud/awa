@@ -49,7 +49,7 @@ describe('importing the package has no side effect', () => {
             expect(r.stderr).toBe('');
             expect(r.status).toBe(0);
             expect(JSON.parse(r.stdout)).toEqual({
-                exports: ['CONVERT_PAIRS', 'FROM_MD_TARGETS', 'TO_MD_FORMATS', 'convert', 'fromMd', 'isCoreError', 'toHtml', 'toMd'],
+                exports: ['CONVERT_PAIRS', 'FROM_MD_TARGETS', 'TO_MD_FORMATS', 'assetFiles', 'convert', 'fromMd', 'isCoreError', 'toHtml', 'toMd'],
                 added: [],
             });
         }, 30_000);

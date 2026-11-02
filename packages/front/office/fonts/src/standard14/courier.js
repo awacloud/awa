@@ -28,20 +28,31 @@ export const standard14Courier = {
             stemH:      51
         });
         const COURIER_WIDTHS = Object.freeze(new Array(256).fill(600));
+        // The glyphs MacRomanEncoding and StandardEncoding name that the
+        // WinAnsi table cannot hold (the list the generator composes for
+        // Helvetica and Times), monospaced too.
+        const COURIER_EXTRA_WIDTHS = Object.freeze(Object.fromEntries([
+            'Delta', 'Lslash', 'breve', 'caron', 'dotaccent', 'dotlessi', 'fi',
+            'fl', 'fraction', 'greaterequal', 'hungarumlaut', 'infinity', 'lessequal',
+            'lozenge', 'lslash', 'notequal', 'ogonek', 'partialdiff', 'radical',
+            'ring', 'summation'
+        ].map((name) => [name, 600])));
         const courier = Object.freeze({
-            ...COMMON, fontName: 'Courier',           italicAngle: 0,   weight: 'Medium', widths: COURIER_WIDTHS
+            ...COMMON, fontName: 'Courier',           italicAngle: 0,   weight: 'Medium', widths: COURIER_WIDTHS,
+            extraWidths: COURIER_EXTRA_WIDTHS
         });
         const courierBold = Object.freeze({
-            ...COMMON, fontName: 'Courier-Bold',      italicAngle: 0,   weight: 'Bold', stemV: 106, widths: COURIER_WIDTHS
+            ...COMMON, fontName: 'Courier-Bold',      italicAngle: 0,   weight: 'Bold', stemV: 106, widths: COURIER_WIDTHS,
+            extraWidths: COURIER_EXTRA_WIDTHS
         });
         const courierOblique = Object.freeze({
             ...COMMON, fontName: 'Courier-Oblique',   italicAngle: -12, weight: 'Medium',
-            flags: 0x23 | 0x40, widths: COURIER_WIDTHS
+            flags: 0x23 | 0x40, widths: COURIER_WIDTHS, extraWidths: COURIER_EXTRA_WIDTHS
         });
         const courierBoldOblique = Object.freeze({
             ...COMMON, fontName: 'Courier-BoldOblique', italicAngle: -12, weight: 'Bold', stemV: 106,
-            flags: 0x23 | 0x40, widths: COURIER_WIDTHS
+            flags: 0x23 | 0x40, widths: COURIER_WIDTHS, extraWidths: COURIER_EXTRA_WIDTHS
         });
-        return { COURIER_WIDTHS, courier, courierBold, courierOblique, courierBoldOblique };
+        return { COURIER_WIDTHS, COURIER_EXTRA_WIDTHS, courier, courierBold, courierOblique, courierBoldOblique };
     }
 };

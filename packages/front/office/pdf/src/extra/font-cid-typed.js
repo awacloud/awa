@@ -120,6 +120,25 @@ export const pdfFontCidTyped = {
             };
         }
 
+        /**
+         * Type a CIDFont's `/Style` dictionary: `panose` (the string's bytes,
+         * `null` for another value), present only when the key is; the
+         * other keys in `_extras`.
+         */
+        function typeStyleDict(dict) {
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/extra/cid-font/style-not-dict',
+                    '/Style must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
+            const out = { raw: dict, _extras: {} };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                if (k === 'Panose') out.panose = isType(v, 'string') ? v.value : null;
+                else out._extras[k] = v;
+            }
+            return out;
+        }
+
         function decodeWidthsW(arr) {
             if (!isType(arr, 'array')) {
                 throw new ParseError('pdf/extra/cid-font/bad-w',
@@ -179,7 +198,7 @@ export const pdfFontCidTyped = {
             return out;
         }
 
-        return { typeCIDFont, typeCIDSystemInfo, decodeWidthsW, PREDEFINED_CMAPS };
+        return { typeCIDFont, typeCIDSystemInfo, typeStyleDict, decodeWidthsW, PREDEFINED_CMAPS };
     }
 };
 

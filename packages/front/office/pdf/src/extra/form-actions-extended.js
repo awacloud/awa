@@ -8,7 +8,12 @@
  * ISO 32000-2:2020 §12.6.4 — GoTo3DView (§12.6.4.15),
  * SetOCGState (§12.6.4.12), Trans (§12.6.4.13), Rendition (§12.6.4.14),
  * Hide (§12.6.4.10), SubmitForm (§12.6.4.4), ResetForm (§12.6.4.5),
- * ImportData (§12.6.4.6), JavaScript (§12.6.4.7, sandboxed flag only).
+ * ImportData (§12.6.4.6), JavaScript (§12.6.4.7, sandboxed flag only);
+ * Thread, Sound, Movie, RichMediaExecute, GoToDp and the PDF 1.2 SetState
+ * and NOP (their keys typed as `Key:type` tables); the
+ * additional-actions dictionaries (`typeAdditionalActions`); and, beside
+ * the core field typers, the field dictionary's shared and rich-text keys
+ * (`typeFieldEntries`).
  *
  * Each typer returns a typed record ; unknowns are preserved in
  * `_extras`. The orchestrator returns `{ kind, ...typed, raw, _extras }`.
@@ -27,12 +32,54 @@ export const pdfFormActionsExtended = {
     dependencies: ['pdfErrors', 'pdfParserObj'],
     deps: [pdfErrors, pdfParserObj],
     factory(errors, parserObj) {
-        const { ParseError } = errors;
+        const { ParseError, ContractError } = errors;
         const { isType } = parserObj;
+
+        // The subtypes typed from their tables: per /S, the keys and their
+        // types (the Arlington PDF Model's), as `Key:type` pairs.
+        const keyTypes = (text) => Object.freeze(Object.fromEntries(
+            text ? text.split(' ').map((p) => p.split(':')) : []));
+        const TABLE_TYPES = Object.freeze({
+            Thread: keyTypes('F:dict|string D:dict|int|string B:dict|int'),
+            Sound: keyTypes('Sound:stream Volume:num Synchronous:bool Repeat:bool Mix:bool'),
+            Movie: keyTypes('Annotation:dict T:string Operation:name'),
+            RichMediaExecute: keyTypes('TA:dict TI:dict CMD:dict'),
+            GoToDp: keyTypes('Dp:dict'),
+            SetState: keyTypes('T:array|dict AS:name'),
+            NOP: keyTypes('')
+        });
+        const KEY_READ = Object.freeze({
+            name: (v) => (isType(v, 'name') ? v.value : undefined),
+            string: (v) => (isType(v, 'string') ? v.value : undefined),
+            num: (v) => (isType(v, 'int') || isType(v, 'real') ? v.value : undefined),
+            int: (v) => (isType(v, 'int') ? v.value : undefined),
+            bool: (v) => (isType(v, 'bool') ? v.value : undefined),
+            array: (v) => (isType(v, 'array') ? v : undefined),
+            dict: (v) => (isType(v, 'dict') ? v : undefined),
+            stream: (v) => (isType(v, 'stream') ? v : undefined)
+        });
+        // A key's value by the first of its types that fits; a reference
+        // as read; null when none fits.
+        function keyValue(type, v) {
+            if (isType(v, 'ref')) return v;
+            for (const t of type.split('|')) {
+                const r = KEY_READ[t](v);
+                if (r !== undefined) return r;
+            }
+            return null;
+        }
+        function readTable(s, e) {
+            const out = {};
+            for (const [k, type] of Object.entries(TABLE_TYPES[s])) {
+                if (e[k] !== undefined) out[k.toLowerCase()] = keyValue(type, e[k]);
+            }
+            return out;
+        }
 
         const EXTENDED_ACTION_SUBTYPES = new Set([
             'GoTo3DView', 'SetOCGState', 'Trans', 'Rendition', 'Hide',
-            'SubmitForm', 'ResetForm', 'ImportData', 'JavaScript'
+            'SubmitForm', 'ResetForm', 'ImportData', 'JavaScript',
+            ...Object.keys(TABLE_TYPES)
         ]);
 
         const KNOWN = {
@@ -44,7 +91,9 @@ export const pdfFormActionsExtended = {
             SubmitForm:  new Set(['Type', 'S', 'Next', 'F', 'Fields', 'Flags', 'CharSet']),
             ResetForm:   new Set(['Type', 'S', 'Next', 'Fields', 'Flags']),
             ImportData:  new Set(['Type', 'S', 'Next', 'F']),
-            JavaScript:  new Set(['Type', 'S', 'Next', 'JS'])
+            JavaScript:  new Set(['Type', 'S', 'Next', 'JS']),
+            ...Object.fromEntries(Object.entries(TABLE_TYPES).map(([s, types]) =>
+                [s, new Set(['Type', 'S', 'Next', ...Object.keys(types)])]))
         };
 
         function knownFor(s) { return KNOWN[s] || new Set(['Type', 'S', 'Next']); }
@@ -77,6 +126,7 @@ export const pdfFormActionsExtended = {
                 case 'ResetForm':   rec = readResetForm(e); break;
                 case 'ImportData':  rec = readImportData(e); break;
                 case 'JavaScript':  rec = readJavaScript(e); break;
+                default:            rec = readTable(e.S.value, e);
             }
             rec.kind = e.S.value;
             rec.raw = dict;
@@ -195,7 +245,67 @@ export const pdfFormActionsExtended = {
             return out;
         }
 
-        return { typeExtendedAction, EXTENDED_ACTION_SUBTYPES };
+        // The additional-actions dictionaries: per kind, the trigger keys.
+        const TRIGGERS = Object.freeze({
+            catalog: Object.freeze(['DC', 'WS', 'DS', 'WP', 'DP']),
+            formField: Object.freeze(['K', 'F', 'V', 'C']),
+            pageObject: Object.freeze(['O', 'C']),
+            screenAnnotation: Object.freeze(['E', 'X', 'D', 'U', 'PO', 'PC', 'PV', 'PI']),
+            widgetAnnotation: Object.freeze(['E', 'X', 'D', 'U', 'Fo', 'Bl', 'PO', 'PC', 'PV', 'PI'])
+        });
+
+        /**
+         * Type an additional-actions dictionary (`/AA`) of the given kind
+         * (a key of `ADDITIONAL_ACTION_TRIGGERS`): one field per trigger
+         * key, named after the key in lower case, the action dictionary or
+         * reference as read (`null` for a value of another type); the
+         * other keys in `_extras`.
+         */
+        function typeAdditionalActions(dict, kind) {
+            if (typeof kind !== 'string' || !Object.prototype.hasOwnProperty.call(TRIGGERS, kind)) {
+                throw new ContractError('pdf/extra/action-ext/aa-kind',
+                    `kind must be one of ${Object.keys(TRIGGERS).join(', ')}`,
+                    { context: { kind } });
+            }
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/extra/action-ext/aa-not-dict',
+                    'an additional-actions dictionary must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
+            const keys = TRIGGERS[kind];
+            const out = { raw: dict, _extras: {} };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                if (keys.includes(k)) out[k.toLowerCase()] = keyValue('dict', v);
+                else out._extras[k] = v;
+            }
+            return out;
+        }
+
+        // The field dictionary's shared keys and its rich text.
+        const FIELD_ENTRY_TYPES = keyTypes('Parent:dict Kids:array T:string TU:string TM:string Ff:int AA:dict DS:string RV:string|stream');
+
+        /**
+         * The companion of the core field typers: the field dictionary's
+         * shared keys (`parent`, `kids`, `t`, `tu`, `tm`, `ff`, `aa`) and its
+         * rich text (`ds`, `rv`), present only when the key is, `null` for
+         * a value of another type; no `_extras` (the other keys are the
+         * core typers').
+         */
+        function typeFieldEntries(dict) {
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/extra/action-ext/field-not-dict',
+                    'a field must be a dictionary',
+                    { context: { type: dict && dict.type } });
+            }
+            const out = { raw: dict };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                if (Object.prototype.hasOwnProperty.call(FIELD_ENTRY_TYPES, k)) out[k.toLowerCase()] = keyValue(FIELD_ENTRY_TYPES[k], v);
+            }
+            return out;
+        }
+
+        return { typeExtendedAction, EXTENDED_ACTION_SUBTYPES, typeFieldEntries,
+                 typeAdditionalActions, ADDITIONAL_ACTION_TRIGGERS: TRIGGERS };
     }
 };
 

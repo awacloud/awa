@@ -2101,7 +2101,7 @@ export const odtBundled = {
     };
   } });
     __register({ name: "odfShared", dependencies: ["odfErrors","xml"], factory: function(errors, xml) {
-    const { ParseError, RenderError } = errors, ODF_NS = Object.freeze({
+    const { ParseError, RenderError, ContractError } = errors, ODF_NS = Object.freeze({
       OFFICE: "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
       TEXT: "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
       STYLE: "urn:oasis:names:tc:opendocument:xmlns:style:1.0",
@@ -2202,8 +2202,15 @@ export const odtBundled = {
       }
     }
     function sourceNamespaces(sourcePkg, partPath) {
+      const out = {}, attrs = sourceRootAttrs(sourcePkg, partPath);
+      for (const k of Object.keys(attrs))
+        if (k.startsWith("xmlns:") && k.length > 6)
+          out[k.slice(6)] = attrs[k];
+      return Object.freeze(out);
+    }
+    function sourceRootAttrs(sourcePkg, partPath) {
       try {
-        const out = {}, src = sourcePkg && sourcePkg.parts && sourcePkg.parts[partPath];
+        const src = sourcePkg && sourcePkg.parts && sourcePkg.parts[partPath];
         let tag = null;
         if (typeof src === "string")
           tag = firstStartTag(src);
@@ -2214,18 +2221,44 @@ export const odtBundled = {
             if (tag !== null || whole)
               break;
           }
-        if (tag) {
-          const el = xml.parse("<" + tag + "/>");
-          for (const k of Object.keys(el.attrs))
-            if (k.startsWith("xmlns:") && k.length > 6)
-              out[k.slice(6)] = el.attrs[k];
-        }
-        return Object.freeze(out);
+        return Object.freeze(tag ? { ...xml.parse("<" + tag + "/>").attrs } : {});
       } catch {
         return Object.freeze({});
       }
     }
-    const FORMULA_ATTRS = new Set(["table:formula", "text:formula", "text:condition"]);
+    function keptVersion(doc, opts, module) {
+      const v = opts && opts.keepVersion;
+      if (v !== void 0 && typeof v !== "boolean")
+        throw new ContractError(`odf/contract-error/${module}`, `${module}: write opts.keepVersion must be true or false`, { context: { module, argument: "opts.keepVersion" } });
+      if (!v)
+        return null;
+      const pkg = doc && doc.package;
+      if (!pkg || !pkg.parts)
+        return { of: () => "1.4", manifest: "1.4" };
+      const versionOf = (part) => sourceRootAttrs(pkg, part)["office:version"] || null, content = versionOf("content.xml"), manifest = content === null ? pkg.manifest && pkg.manifest.version || "1.4" : parseFloat(content) >= 1.2 ? content : null;
+      return {
+        of: (part) => pkg.parts[part] ? versionOf(part) : content,
+        manifest
+      };
+    }
+    function applyManifestVersion(p, kept) {
+      if (!kept)
+        return;
+      p.manifest.version = kept.manifest;
+      for (const e of p.manifest.entries || [])
+        if (e.fullPath === "/")
+          e.version = kept.manifest;
+    }
+    const VALUE_PREFIX_ATTRS = new Set([
+      "table:formula",
+      "text:formula",
+      "text:condition",
+      "chart:class",
+      "db:type",
+      "draw:engine",
+      "draw:extrusion-metal-type",
+      "form:control-implementation"
+    ]);
     function declareNamespaces(rootEl, opts) {
       const o = opts || {}, carried = o.carried || {}, resolvable = (p) => hasOwn(carried, p) || hasOwn(ODF_PREFIXES, p), missing = new Set, scope = [], inScope = (p) => {
         if (p === "xml")
@@ -2251,7 +2284,7 @@ export const odtBundled = {
           if (k === "xmlns" || k.startsWith("xmlns:"))
             continue;
           use(k);
-          if (FORMULA_ATTRS.has(k) && typeof attrs[k] === "string") {
+          if (VALUE_PREFIX_ATTRS.has(k) && typeof attrs[k] === "string") {
             const m = /^([A-Za-z_][\w.-]*):/.exec(attrs[k]);
             if (m && !inScope(m[1]) && resolvable(m[1]))
               missing.add(m[1]);
@@ -2303,7 +2336,10 @@ export const odtBundled = {
       return target;
     }
     function writeSidecars(p, doc, opts, sideMods, ctXml) {
-      const { pkg: pkgM, metaMod, settingsMod, stylesMod } = sideMods, ct = ctXml || CT.XML, ours = metaMod.empty().generator, ns = (part) => ({ namespaces: sourceNamespaces(doc.package, part) });
+      const { pkg: pkgM, metaMod, settingsMod, stylesMod } = sideMods, ct = ctXml || CT.XML, ours = metaMod.empty().generator, kept = keptVersion(doc, opts, "odf"), ns = (part) => ({
+        namespaces: sourceNamespaces(doc.package, part),
+        ...kept ? { version: kept.of(part) } : {}
+      });
       let meta = opts.meta ? opts.meta.generator == null ? { ...opts.meta, generator: ours } : opts.meta : { ...doc.meta || metaMod.empty(), generator: ours };
       pkgM.setPart(p, "meta.xml", _te.encode(metaMod.serialize(meta, ns("meta.xml"))), ct);
       const settings = opts.settings || doc.settings || settingsMod.empty();
@@ -2375,7 +2411,10 @@ export const odtBundled = {
       decodeText,
       parseXmlOrThrow,
       sourceNamespaces,
+      sourceRootAttrs,
       declareNamespaces,
+      keptVersion,
+      applyManifestVersion,
       readSidecars,
       writeSidecars,
       carryParts,
@@ -2467,10 +2506,9 @@ export const odtBundled = {
       return e;
     }
     function serialize(manifest) {
-      const m = manifest || { version: ODF_VERSION, entries: [] }, attrs = {
-        "xmlns:manifest": MANIFEST_NS,
-        "manifest:version": m.version || ODF_VERSION
-      };
+      const m = manifest || { version: ODF_VERSION, entries: [] }, attrs = { "xmlns:manifest": MANIFEST_NS };
+      if (m.version !== null)
+        attrs["manifest:version"] = m.version || ODF_VERSION;
       if (m._extras && m._extras.attrs)
         for (const k of Object.keys(m._extras.attrs))
           attrs[k] = m._extras.attrs[k];
@@ -2679,8 +2717,10 @@ export const odtBundled = {
         "xmlns:office": OFFICE_NS,
         "xmlns:meta": META_NS,
         "xmlns:dc": DC_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, [metaEl]);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "meta.xml",
@@ -2722,8 +2762,10 @@ export const odtBundled = {
       const root = xml.el("office:document-settings", {
         "xmlns:office": OFFICE_NS,
         "xmlns:config": CONFIG_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, children.length ? [xml.el("office:settings", {}, children)] : []);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "settings.xml",
@@ -2823,23 +2865,23 @@ export const odtBundled = {
       return out;
     }
     function serialize(styles, opts) {
-      const s = styles || { styles: [], automaticStyles: [], masterStyles: [] }, children = [
+      const s = styles || { styles: [], automaticStyles: [], masterStyles: [] }, extras = s._extras && s._extras.children || [], isDecls = (c) => c && c.type === "element" && c.name === "office:font-face-decls", children = [
+        ...extras.filter(isDecls),
         xml.el("office:styles", {}, bucketEntries(s.styles)),
         xml.el("office:automatic-styles", {}, bucketEntries(s.automaticStyles)),
-        xml.el("office:master-styles", {}, bucketEntries(s.masterStyles))
-      ];
-      if (s._extras && s._extras.children)
-        for (const c of s._extras.children)
-          children.push(c);
-      const root = xml.el("office:document-styles", {
+        xml.el("office:master-styles", {}, bucketEntries(s.masterStyles)),
+        ...extras.filter((c) => !isDecls(c))
+      ], root = xml.el("office:document-styles", {
         "xmlns:office": OFFICE_NS,
         "xmlns:style": STYLE_NS,
         "xmlns:text": TEXT_NS,
         "xmlns:fo": FO_NS,
         "xmlns:svg": SVG_NS,
         "xmlns:table": TABLE_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, children);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "styles.xml",
@@ -2917,7 +2959,7 @@ export const odtBundled = {
       return r;
     }
     function parseInline(children, ctx, insideLink, positional) {
-      const runs = [], extras = [];
+      const runs = [], extras = [], inPlace = positional || !!(ctx && ctx.elementsInRuns);
       for (const c of children || [])
         if (c.type === "text")
           runs.push({ type: "text", value: c.value });
@@ -2935,7 +2977,7 @@ export const odtBundled = {
             runs.push(parseLink(c, ctx));
           else if (c.name === "draw:frame" && ctx && typeof ctx.parseFrame === "function")
             runs.push(ctx.parseFrame(c));
-          else if (positional)
+          else if (inPlace)
             runs.push(c);
           else
             extras.push(c);
@@ -3067,7 +3109,8 @@ export const odtBundled = {
             out.push(textOfRuns(r.runs));
             break;
           case "element":
-            out.push(xml.textContent(r));
+            if (inSpan)
+              out.push(xml.textContent(r));
             break;
           case "frame":
             if (inSpan)
@@ -3150,25 +3193,70 @@ export const odtBundled = {
             delete out.styleName;
         }
       }
-      if ((el.attrs && el.attrs["text:continue-numbering"]) === "true")
+      const stack = ctx && Array.isArray(ctx.listStack) ? ctx.listStack : null;
+      if (stack && !styleName && out.ordered === void 0 && typeof ctx.listLevel === "function")
+        for (let k = stack.length - 1;k >= 0; k--) {
+          if (!stack[k])
+            continue;
+          const num = ctx.listLevel(stack[k], stack.length + 1);
+          if (num) {
+            out.ordered = num.ordered;
+            if (num.ordered && num.numFormat)
+              out.numFormat = num.numFormat;
+          }
+          break;
+        }
+      const cont = el.attrs && el.attrs["text:continue-numbering"];
+      if (cont === "true")
         out.continueNumbering = !0;
+      const attrs = el && el.attrs || {};
+      if (attrs["xml:id"] != null)
+        out.id = attrs["xml:id"];
+      if (attrs["text:continue-list"] != null)
+        out.continueList = attrs["text:continue-list"];
+      const extraAttrs = otherAttrs(attrs, LIST_ATTRS, cont === "true" ? null : "text:continue-numbering");
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
-      for (const c of el.children || []) {
-        if (c.type !== "element")
-          continue;
-        if (c.name === "text:list-item")
-          out.items.push(parseItem(c, hooks, ctx));
-        else if (c.name === "text:list-header")
-          out.items.push({ ...parseItem(c, hooks, ctx), header: !0 });
-        else
-          extras.push(c);
+      if (stack)
+        stack.push(styleName || null);
+      try {
+        for (const c of el.children || []) {
+          if (c.type !== "element")
+            continue;
+          if (c.name === "text:list-item")
+            out.items.push(parseItem(c, hooks, ctx));
+          else if (c.name === "text:list-header")
+            out.items.push({ ...parseItem(c, hooks, ctx), header: !0 });
+          else
+            extras.push(c);
+        }
+      } finally {
+        if (stack)
+          stack.pop();
       }
       if (extras.length)
         out._extras = { children: extras };
       return out;
     }
+    const LIST_ATTRS = new Set(["text:style-name", "text:continue-numbering", "xml:id", "text:continue-list"]), ITEM_ATTRS = new Set(["text:start-value", "xml:id"]);
+    function otherAttrs(attrs, typed, keep) {
+      const out = {};
+      for (const [k, v] of Object.entries(attrs))
+        if ((!typed.has(k) || k === keep) && !k.startsWith("xmlns"))
+          out[k] = v;
+      return Object.keys(out).length ? out : null;
+    }
     function parseItem(el, hooks, ctx) {
-      const item = { children: [] }, xtra = [];
+      const item = { children: [] }, attrs = el && el.attrs || {}, start = attrs["text:start-value"];
+      if (start != null)
+        item.startValue = /^\d+$/.test(start) ? Number(start) : start;
+      if (attrs["xml:id"] != null)
+        item.id = attrs["xml:id"];
+      const extraAttrs = otherAttrs(attrs, ITEM_ATTRS, null);
+      if (extraAttrs)
+        item.extraAttrs = extraAttrs;
+      const xtra = [];
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
@@ -3190,6 +3278,8 @@ export const odtBundled = {
     }
     function renderList(list, hooks, ctx) {
       const attrs = {};
+      if (list.id != null)
+        attrs["xml:id"] = String(list.id);
       if (list.styleName)
         attrs["text:style-name"] = list.styleName;
       else if (list.ordered !== void 0 && ctx && typeof ctx.listStyle === "function")
@@ -3199,6 +3289,9 @@ export const odtBundled = {
         });
       if (list.continueNumbering)
         attrs["text:continue-numbering"] = "true";
+      if (list.continueList != null)
+        attrs["text:continue-list"] = String(list.continueList);
+      Object.assign(attrs, list.extraAttrs || {});
       const items = (list.items || []).map((it) => renderItem(it, hooks, ctx));
       if (list._extras && list._extras.children)
         for (const c of list._extras.children)
@@ -3223,8 +3316,13 @@ export const odtBundled = {
       if (item._extras && item._extras.children)
         for (const c of item._extras.children)
           children.push(c);
-      const tag = item.header ? "text:list-header" : "text:list-item";
-      return xml.el(tag, {}, children);
+      const tag = item.header ? "text:list-header" : "text:list-item", attrs = {};
+      if (item.startValue != null)
+        attrs["text:start-value"] = String(item.startValue);
+      if (item.id != null)
+        attrs["xml:id"] = String(item.id);
+      Object.assign(attrs, item.extraAttrs || {});
+      return xml.el(tag, attrs, children);
     }
     return { parseList, renderList };
   } });
@@ -3433,12 +3531,13 @@ export const odtBundled = {
         attrs["table:number-rows-repeated"] = String(row.repeated);
       if (row.visibility)
         attrs["table:visibility"] = row.visibility;
-      const children = (row.cells || []).map((c) => cellMod.renderCell(c));
+      const children = (row.cells && row.cells.length ? row.cells : [{ type: "cell", children: [] }]).map((c) => cellMod.renderCell(c));
       return xml.el("table:table-row", attrs, children);
     }
     return { parseRow, renderRow };
   } });
     __register({ name: "tableTable", dependencies: ["xml","tableRow"], factory: function(xml, rowMod) {
+    const ROW_GROUPS = new Set(["table:table-row-group", "table:table-rows"]);
     function parseColumn(el) {
       const out = {}, a = el.attrs || {};
       if (a["table:style-name"])
@@ -3472,29 +3571,52 @@ export const odtBundled = {
         out.styleName = a["table:style-name"];
       const extras = [];
       let headerRows = 0;
+      const breaks = [];
+      let pending = [];
+      const pushRow = (rowEl) => {
+        for (const b of pending) {
+          if (b.inExtras)
+            extras.splice(extras.indexOf(b.el), 1);
+          breaks.push(out.rows.length);
+        }
+        pending = [];
+        out.rows.push(rowMod.parseRow(rowEl));
+      };
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
         switch (c.name) {
           case "table:table-column":
             out.columns.push(parseColumn(c));
+            pending = [];
             break;
           case "table:table-row":
-            out.rows.push(rowMod.parseRow(c));
+            pushRow(c);
             break;
           case "table:table-header-rows":
-            for (const k of c.children || [])
-              if (k.type === "element" && k.name === "table:table-row") {
-                out.rows.push(rowMod.parseRow(k));
+            for (const k of c.children || []) {
+              if (k.type !== "element")
+                continue;
+              if (k.name === "table:table-row") {
+                pushRow(k);
                 headerRows++;
-              }
+              } else if (k.name === "text:soft-page-break")
+                pending.push({ el: k, inExtras: !1 });
+            }
+            break;
+          case "text:soft-page-break":
+            extras.push(c);
+            pending.push({ el: c, inExtras: !0 });
             break;
           default:
             extras.push(c);
+            pending = [];
         }
       }
       if (headerRows > 0)
         out.headerRows = headerRows;
+      if (breaks.length)
+        out._softPageBreaks = breaks;
       if (extras.length)
         out._extras = { children: extras };
       return out;
@@ -3517,17 +3639,30 @@ export const odtBundled = {
         attrs["table:name"] = t.name;
       if (t.styleName)
         attrs["table:style-name"] = t.styleName;
-      const children = [], headerN = t.headerRows || 0, rows = t.rows || [], columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
+      const children = [], extras = t._extras && t._extras.children || [];
+      let rows = t.rows || [];
+      const headerN = Math.min(t.headerRows || 0, rows.length);
+      if (!rows.length && !extras.some((c) => c && ROW_GROUPS.has(c.name)))
+        rows = [{ type: "row", cells: [] }];
+      const columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
       for (const col of columns)
         children.push(renderColumn(col));
+      const breaksBefore = new Map;
+      for (const i of t._softPageBreaks || [])
+        breaksBefore.set(i, (breaksBefore.get(i) || 0) + 1);
+      const pushRows = (into, from, to) => {
+        for (let i = from;i < to; i++) {
+          for (let n = breaksBefore.get(i) || 0;n > 0; n--)
+            into.push(xml.el("text:soft-page-break", {}, []));
+          into.push(rowMod.renderRow(rows[i]));
+        }
+      };
       if (headerN > 0) {
-        const headerKids = rows.slice(0, headerN).map((r) => rowMod.renderRow(r));
+        const headerKids = [];
+        pushRows(headerKids, 0, headerN);
         children.push(xml.el("table:table-header-rows", {}, headerKids));
-        for (const r of rows.slice(headerN))
-          children.push(rowMod.renderRow(r));
-      } else
-        for (const r of rows)
-          children.push(rowMod.renderRow(r));
+      }
+      pushRows(children, headerN, rows.length);
       if (t._extras && t._extras.children)
         for (const c of t._extras.children)
           children.push(c);
@@ -3700,6 +3835,12 @@ export const odtBundled = {
       if (extras)
         for (const el of extras)
           boxes(el, lines);
+      const elementRuns = (runs) => {
+        for (const r of runs || [])
+          if (r && r.type === "element")
+            boxes(r, lines);
+      };
+      elementRuns(n.runs);
       const visitRuns = (runs, inSpan) => {
         for (const r of runs || []) {
           if (!r)
@@ -3711,6 +3852,7 @@ export const odtBundled = {
             if (ex)
               for (const el of ex)
                 boxes(el, lines);
+            elementRuns(r.runs);
             visitRuns(r.runs, !1);
           } else if (r.type === "frame" && !inSpan)
             frameBoxes(r, lines);
@@ -3720,7 +3862,9 @@ export const odtBundled = {
     }
     function frameBoxes(f, lines) {
       const c = f.child;
-      if (c && c.kind === "text-box")
+      if (c && c.kind === "text-box" && Array.isArray(c.content))
+        walk(c.content, lines);
+      else if (c && c.kind === "text-box")
         boxes(xml.el("draw:text-box", { ...c.attrs || {} }, c.children || []), lines);
       for (const el of f._extras && f._extras.children || [])
         boxes(el, lines);
@@ -3884,22 +4028,28 @@ export const odtBundled = {
           xa[k] = a[k];
           anyAttr = !0;
         }
-      const xtraChildren = [];
+      const xtraChildren = [], propertyChildren = {};
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
         const key = PROP_TAGS[c.name];
-        if (key)
+        if (key) {
           out.properties[key] = { ...c.attrs || {} };
-        else
+          const kids = (c.children || []).filter((k) => k.type === "element");
+          if (kids.length)
+            propertyChildren[key] = kids;
+        } else
           xtraChildren.push(c);
       }
-      if (anyAttr || xtraChildren.length) {
+      const anyPropertyChild = Object.keys(propertyChildren).length > 0;
+      if (anyAttr || xtraChildren.length || anyPropertyChild) {
         out._extras = {};
         if (anyAttr)
           out._extras.attrs = xa;
         if (xtraChildren.length)
           out._extras.children = xtraChildren;
+        if (anyPropertyChild)
+          out._extras.propertyChildren = propertyChildren;
       }
       return out;
     }
@@ -3910,12 +4060,16 @@ export const odtBundled = {
       if (s._extras && s._extras.attrs)
         for (const k of Object.keys(s._extras.attrs))
           attrs[k] = s._extras.attrs[k];
-      const children = [];
-      for (const key of Object.keys(s.properties || {})) {
+      const children = [], kept = s._extras && s._extras.propertyChildren || {}, keys = Object.keys(s.properties || {});
+      for (const key of Object.keys(kept))
+        if (!keys.includes(key))
+          keys.push(key);
+      for (const key of keys) {
         const tag = TAG_BY_PROP[key];
         if (!tag)
           continue;
-        children.push(xml.el(tag, { ...s.properties[key] || {} }, []));
+        const attrs = s.properties && s.properties[key] || {};
+        children.push(xml.el(tag, { ...attrs }, [...kept[key] || []]));
       }
       if (s._extras && s._extras.children)
         for (const c of s._extras.children)
@@ -3968,7 +4122,7 @@ export const odtBundled = {
       "5.715cm",
       "6.35cm",
       "6.985cm"
-    ], CELL_KEYS = new Set(["fo:border", "fo:padding"]), FLAG_ORDER = [
+    ], NAME_PART = /^[-.0-9A-Z_a-z\u00B7\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037D\u037F-\u1FFF\u200C-\u200D\u203F-\u2040\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\u{10000}-\u{EFFFF}]+$/u, CELL_KEYS = new Set(["fo:border", "fo:padding"]), FLAG_ORDER = [
       ["bold", "b"],
       ["italic", "i"],
       ["strike", "s"],
@@ -3981,8 +4135,47 @@ export const odtBundled = {
         return v;
       return new Set(v);
     }
+    function levelPropsEl(level) {
+      const ml = LIST_LEVEL_MARGINS[level - 1];
+      return xml.el("style:list-level-properties", {
+        "text:list-level-position-and-space-mode": "label-alignment"
+      }, [
+        xml.el("style:list-level-label-alignment", {
+          "text:label-followed-by": "listtab",
+          "text:list-tab-stop-position": ml,
+          "fo:text-indent": "-0.635cm",
+          "fo:margin-left": ml
+        }, [])
+      ]);
+    }
+    function listStyleEl(entry) {
+      const levels = [];
+      for (let level = 1;level <= 10; level++)
+        levels.push(entry.ordered ? xml.el("text:list-level-style-number", {
+          "text:level": String(level),
+          "style:num-format": entry.numFormat,
+          "style:num-suffix": "."
+        }, [levelPropsEl(level)]) : xml.el("text:list-level-style-bullet", {
+          "text:level": String(level),
+          "text:bullet-char": "\u2022"
+        }, [levelPropsEl(level)]));
+      return xml.el("text:list-style", { "style:name": entry.name }, levels);
+    }
+    function sameStyleEl(a, b, ignore) {
+      if (!a || !b || a.name !== b.name)
+        return !1;
+      const attrs = (el) => Object.entries(el.attrs || {}).filter(([k]) => k !== ignore && !k.startsWith("xmlns")), aa = attrs(a), ba = attrs(b);
+      if (aa.length !== ba.length || aa.some(([k, v]) => (b.attrs || {})[k] !== v))
+        return !1;
+      const kids = (el) => (el.children || []).filter((c) => c.type === "element" || c.type === "text" && /\S/.test(c.value || "")), ak = kids(a), bk = kids(b);
+      if (ak.length !== bk.length)
+        return !1;
+      return ak.every((c, i) => c.type === "text" ? bk[i].type === "text" && bk[i].value === c.value : sameStyleEl(c, bk[i], null));
+    }
     function createRegistry(reserved) {
-      const reservedStyles = toSet(reserved && reserved.styles), reservedFaces = toSet(reserved && reserved.fontFaces), textByKey = new Map, listByKey = new Map, used = new Set;
+      const reservedStyles = toSet(reserved && reserved.styles), reservedFaces = toSet(reserved && reserved.fontFaces), textByKey = new Map, listByKey = new Map;
+      let otherFormats = 0;
+      const used = new Set;
       let cellName = null, tableName = null, monoFace = null;
       function alloc(base) {
         if (!reservedStyles.has(base) && !used.has(base)) {
@@ -4031,7 +4224,7 @@ export const odtBundled = {
         const ordered = !!(spec && spec.ordered), numFormat = ordered ? spec && spec.numFormat || "1" : null, key = ordered ? `n${numFormat}` : "b", seen = listByKey.get(key);
         if (seen)
           return seen.name;
-        const name = alloc(`awa-l-${key}`);
+        const name = alloc(!ordered || NAME_PART.test(numFormat) ? `awa-l-${key}` : `awa-l-x${++otherFormats}`);
         listByKey.set(key, { name, ordered, numFormat });
         return name;
       }
@@ -4044,32 +4237,6 @@ export const odtBundled = {
         if (!tableName)
           tableName = alloc("awa-tb-m");
         return tableName;
-      }
-      function levelPropsEl(level) {
-        const ml = LIST_LEVEL_MARGINS[level - 1];
-        return xml.el("style:list-level-properties", {
-          "text:list-level-position-and-space-mode": "label-alignment"
-        }, [
-          xml.el("style:list-level-label-alignment", {
-            "text:label-followed-by": "listtab",
-            "text:list-tab-stop-position": ml,
-            "fo:text-indent": "-0.635cm",
-            "fo:margin-left": ml
-          }, [])
-        ]);
-      }
-      function listStyleEl(entry) {
-        const levels = [];
-        for (let level = 1;level <= 10; level++)
-          levels.push(entry.ordered ? xml.el("text:list-level-style-number", {
-            "text:level": String(level),
-            "style:num-format": entry.numFormat,
-            "style:num-suffix": "."
-          }, [levelPropsEl(level)]) : xml.el("text:list-level-style-bullet", {
-            "text:level": String(level),
-            "text:bullet-char": "\u2022"
-          }, [levelPropsEl(level)]));
-        return xml.el("text:list-style", { "style:name": entry.name }, levels);
       }
       function toAutomaticStyles() {
         if (!textByKey.size && !listByKey.size && !cellName && !tableName)
@@ -4159,8 +4326,8 @@ export const odtBundled = {
       }
       return out;
     }
-    function createResolver(contentAutoStyles, fontFaces, namedStyles) {
-      const consumed = new Set, autoStyleByName = new Map, autoListByName = new Map, namedStyleByName = new Map, namedListByName = new Map, faceByName = new Map;
+    function createResolver(contentAutoStyles, fontFaces, namedStyles, opts) {
+      const semantic = !!(opts && opts.semantic === !0), consumed = new Set, autoStyleByName = new Map, autoListByName = new Map, namedStyleByName = new Map, namedListByName = new Map, faceByName = new Map;
       for (const s of contentAutoStyles && contentAutoStyles.styles || [])
         if (s && s.name)
           autoStyleByName.set(s.name, s);
@@ -4280,8 +4447,42 @@ export const odtBundled = {
         }
         return null;
       }
+      const PARENT_DEPTH_MAX = 16;
+      function looseTextFlags(styleName) {
+        const named = (n) => {
+          const els = namedStyleByName.get(n);
+          return els && els.length ? typeRawStyle(els[0]) : null;
+        };
+        let s = autoStyleByName.get(styleName) || named(styleName);
+        if (!s || s.family !== "text")
+          return null;
+        const chain = [], seen = new Set;
+        while (s && chain.length < PARENT_DEPTH_MAX && !seen.has(s.name)) {
+          seen.add(s.name);
+          chain.unshift(s);
+          s = s.parentStyleName ? named(s.parentStyleName) : null;
+        }
+        const bag = {};
+        for (const st of chain)
+          Object.assign(bag, st.properties && st.properties.text || {});
+        const out = {}, w = bag["fo:font-weight"];
+        if (w === "bold" || Number(w) >= 700)
+          out.bold = !0;
+        const fs = bag["fo:font-style"];
+        if (fs === "italic" || fs === "oblique")
+          out.italic = !0;
+        const lt = bag["style:text-line-through-style"];
+        if (lt && lt !== "none")
+          out.strike = !0;
+        if (bag["style:font-name"] && isMonoFace(bag["style:font-name"]))
+          out.monospace = !0;
+        return Object.keys(out).length ? { ...out, source: "named" } : null;
+      }
       function textFlags(styleName) {
-        return resolveStyle(styleName, mapTypedStyle);
+        const strict = resolveStyle(styleName, mapTypedStyle);
+        if (strict || !semantic || !styleName)
+          return strict;
+        return looseTextFlags(styleName);
       }
       function cellBorders(styleName) {
         return resolveStyle(styleName, mapCellStyle);
@@ -4307,10 +4508,12 @@ export const odtBundled = {
         const auto = autoListByName.get(styleName);
         if (auto) {
           const num = mapListEl(auto);
-          if (num) {
+          if (num && sameStyleEl(auto, listStyleEl({ name: styleName, ...num }), "style:name")) {
             consumed.add(styleName);
             return { ...num, source: "auto" };
           }
+          if (num)
+            return { ...num, source: "kept" };
         }
         for (const el of namedListByName.get(styleName) || []) {
           const num = mapListEl(el);
@@ -4319,9 +4522,23 @@ export const odtBundled = {
         }
         return null;
       }
+      function listLevel(styleName, level) {
+        const el = autoListByName.get(styleName) || (namedListByName.get(styleName) || [])[0];
+        for (const c of el && el.children || []) {
+          if (c.type !== "element" || (c.attrs && c.attrs["text:level"]) !== String(level))
+            continue;
+          if (c.name === "text:list-level-style-number")
+            return { ordered: !0, numFormat: c.attrs && c.attrs["style:num-format"] || "1" };
+          if (c.name === "text:list-level-style-bullet")
+            return { ordered: !1 };
+          return null;
+        }
+        return null;
+      }
       return {
         textFlags,
         listNumbering,
+        listLevel,
         cellBorders,
         tableAlign,
         get consumed() {
@@ -4329,7 +4546,158 @@ export const odtBundled = {
         }
       };
     }
-    return { createRegistry, createResolver };
+    const LEVEL_KINDS = {
+      "text:list-level-style-number": "number",
+      "text:list-level-style-bullet": "bullet",
+      "text:list-level-style-image": "image",
+      "text:outline-level-style": "number"
+    }, LEVEL_ATTRS = [
+      ["style:num-format", "numFormat", "str"],
+      ["style:num-prefix", "prefix", "str"],
+      ["style:num-suffix", "suffix", "str"],
+      ["text:start-value", "startValue", "num"],
+      ["text:display-levels", "displayLevels", "num"],
+      ["text:bullet-char", "bulletChar", "str"],
+      ["text:style-name", "textStyleName", "str"],
+      ["style:num-letter-sync", "numLetterSync", "bool"]
+    ], ALIGNMENT_ATTRS = [
+      ["text:label-followed-by", "labelFollowedBy"],
+      ["text:list-tab-stop-position", "tabStopPosition"],
+      ["fo:text-indent", "textIndent"],
+      ["fo:margin-left", "marginLeft"]
+    ], WIDTH_ATTRS = [
+      ["text:space-before", "spaceBefore"],
+      ["text:min-label-width", "minLabelWidth"],
+      ["text:min-label-distance", "minLabelDistance"],
+      ["fo:text-align", "textAlign"]
+    ], decodeLevelAttr = (codec, v) => codec === "num" ? /^\d+$/.test(v) ? Number(v) : v : codec === "bool" ? v === "true" : v;
+    function typedAttrs(el, fields, out, skip) {
+      const known = new Set(fields.map((f) => f[0])), rest = {};
+      for (const [k, v] of Object.entries(el && el.attrs || {}))
+        if (known.has(k)) {
+          const f = fields.find((x) => x[0] === k);
+          out[f[1]] = f[2] ? decodeLevelAttr(f[2], v) : v;
+        } else if (!k.startsWith("xmlns") && k !== skip)
+          rest[k] = v;
+      return Object.keys(rest).length ? rest : null;
+    }
+    function levelPosition(props) {
+      const pos = { mode: (props.attrs && props.attrs["text:list-level-position-and-space-mode"]) === "label-alignment" ? "label-alignment" : "label-width-and-position" }, rest = typedAttrs(props, WIDTH_ATTRS, pos, "text:list-level-position-and-space-mode"), align = xml.findChild(props, "style:list-level-label-alignment");
+      if (align) {
+        const alignRest = typedAttrs(align, ALIGNMENT_ATTRS, pos, null);
+        if (alignRest)
+          pos.alignmentExtraAttrs = alignRest;
+      }
+      if (rest)
+        pos.extraAttrs = rest;
+      return pos;
+    }
+    function typeListStyle(el, source) {
+      const levels = [];
+      for (const c of el && el.children || []) {
+        if (c.type !== "element" || !LEVEL_KINDS[c.name])
+          continue;
+        const level = { level: Number(c.attrs && c.attrs["text:level"]), kind: LEVEL_KINDS[c.name] }, rest = typedAttrs(c, LEVEL_ATTRS, level, "text:level"), props = xml.findChild(c, "style:list-level-properties");
+        if (props)
+          level.position = levelPosition(props);
+        const text = xml.findChild(c, "style:text-properties");
+        if (text)
+          level.textProperties = { ...text.attrs };
+        if (rest)
+          level.extraAttrs = rest;
+        levels.push(level);
+      }
+      return { source, levels };
+    }
+    function listStylesOf(raw) {
+      const out = {}, add = (els, source, isOutline) => {
+        for (const el of els || []) {
+          if (!el || el.type !== "element")
+            continue;
+          const outline = el.name === "text:outline-style";
+          if (el.name !== "text:list-style" && !(isOutline && outline))
+            continue;
+          const name = el.attrs && el.attrs["style:name"];
+          if (!name || Object.prototype.hasOwnProperty.call(out, name))
+            continue;
+          out[name] = typeListStyle(el, outline ? "outline" : source);
+        }
+      };
+      add(raw.content, "auto", !1);
+      add(raw.styles, "named", !0);
+      add(raw.stylesAuto, "styles-auto", !1);
+      return out;
+    }
+    const SECTION_ATTRS = [
+      ["fo:background-color", "backgroundColor"],
+      ["style:editable", "editable", "bool"],
+      ["style:writing-mode", "writingMode"]
+    ], COLUMN_ATTRS = [
+      ["style:rel-width", "relWidth"],
+      ["fo:start-indent", "startIndent"],
+      ["fo:end-indent", "endIndent"]
+    ], SEPARATOR_ATTRS = [
+      ["style:width", "width"],
+      ["style:height", "height"],
+      ["style:color", "color"],
+      ["style:style", "style"],
+      ["style:vertical-align", "verticalAlign"]
+    ];
+    function typeSectionStyle(el, source) {
+      const out = { source }, props = xml.findChild(el, "style:section-properties");
+      if (!props)
+        return out;
+      const dontBalance = props.attrs && props.attrs["text:dont-balance-text-columns"];
+      if (dontBalance != null)
+        out.balance = dontBalance !== "true";
+      const rest = typedAttrs(props, SECTION_ATTRS, out, "text:dont-balance-text-columns");
+      if (rest)
+        out.extraAttrs = rest;
+      const cols = xml.findChild(props, "style:columns");
+      if (cols) {
+        const c = {}, count = cols.attrs && cols.attrs["fo:column-count"];
+        if (count != null)
+          c.count = /^\d+$/.test(count) ? Number(count) : count;
+        if (cols.attrs && cols.attrs["fo:column-gap"] != null)
+          c.gap = cols.attrs["fo:column-gap"];
+        const list = xml.findAll(cols, "style:column").map((col) => {
+          const one = {}, extra = typedAttrs(col, COLUMN_ATTRS, one, null);
+          if (extra)
+            one.extraAttrs = extra;
+          return one;
+        });
+        if (list.length)
+          c.columns = list;
+        const sep = xml.findChild(cols, "style:column-sep");
+        if (sep) {
+          c.separator = {};
+          const extra = typedAttrs(sep, SEPARATOR_ATTRS, c.separator, null);
+          if (extra)
+            c.separator.extraAttrs = extra;
+        }
+        out.columns = c;
+      }
+      return out;
+    }
+    function sectionStylesOf(raw) {
+      const out = {}, add = (els, source) => {
+        for (const el of els || []) {
+          if (!el || el.type !== "element" || el.name !== "style:style")
+            continue;
+          if (!el.attrs || el.attrs["style:family"] !== "section")
+            continue;
+          const name = el.attrs["style:name"];
+          if (!name || Object.prototype.hasOwnProperty.call(out, name))
+            continue;
+          out[name] = typeSectionStyle(el, source);
+        }
+      };
+      add(raw.content, "auto");
+      add(raw.styles, "named");
+      add(raw.stylesAuto, "styles-auto");
+      return out;
+    }
+    return { createRegistry, createResolver, typeListStyle, listStylesOf, typeSectionStyle, sectionStylesOf };
   } });
     __register({ name: "drawImage", dependencies: ["xml"], factory: function(xml) {
     const XLINK_DEFAULTS = {
@@ -4362,16 +4730,20 @@ export const odtBundled = {
       "image/svg+xml": "svg"
     };
     function parseImage(el) {
-      const attrs = el.attrs || {}, out = { type: "image", href: attrs["xlink:href"] || "" }, mt = attrs["loext:mime-type"] || attrs["draw:mime-type"];
-      if (mt)
-        out.mimeType = mt;
+      const attrs = el.attrs || {}, out = { type: "image", href: attrs["xlink:href"] || "" }, draw = attrs["draw:mime-type"], lo = attrs["loext:mime-type"];
+      if (draw)
+        out.mimeType = draw;
+      else if (lo) {
+        out.mimeType = lo;
+        out._mimeTypeAttr = "loext:mime-type";
+      }
       const known = new Set([
         "xlink:href",
         "xlink:type",
         "xlink:show",
         "xlink:actuate",
-        "loext:mime-type",
-        "draw:mime-type"
+        "draw:mime-type",
+        ...draw ? [] : ["loext:mime-type"]
       ]), xa = {};
       let any = !1;
       for (const k of Object.keys(attrs))
@@ -4383,13 +4755,14 @@ export const odtBundled = {
         out._extras = { attrs: xa };
       return out;
     }
-    function renderImage(img) {
+    function renderImage(img, opts) {
       const attrs = { "xlink:href": img.href || "" };
       attrs["xlink:type"] = XLINK_DEFAULTS["xlink:type"];
       attrs["xlink:show"] = XLINK_DEFAULTS["xlink:show"];
       attrs["xlink:actuate"] = XLINK_DEFAULTS["xlink:actuate"];
+      const name = opts && opts.mimeTypeAsRead && img._mimeTypeAttr || "draw:mime-type";
       if (img.mimeType)
-        attrs["draw:mime-type"] = img.mimeType;
+        attrs[name] = img.mimeType;
       if (img._extras && img._extras.attrs)
         for (const k of Object.keys(img._extras.attrs))
           attrs[k] = img._extras.attrs[k];
@@ -4485,7 +4858,7 @@ export const odtBundled = {
       const { type: _type, ...rest } = node;
       return rest;
     }
-    function renderFrame(f) {
+    function renderFrame(f, opts) {
       const attrs = {};
       if (f.anchorType)
         attrs["text:anchor-type"] = f.anchorType;
@@ -4506,17 +4879,22 @@ export const odtBundled = {
           attrs[k] = f._extras.attrs[k];
       const children = [];
       if (f.child)
-        children.push(renderChild(f.child));
+        children.push(renderChild(f.child, opts));
       if (f._extras && f._extras.children)
         for (const c of f._extras.children)
           children.push(c);
       return xml.el("draw:frame", attrs, children);
     }
-    function renderChild(child) {
+    function renderChild(child, opts) {
       if (!child)
         return null;
       if (child.kind === "image")
-        return imageMod.renderImage({ href: child.href, mimeType: child.mimeType, _extras: child._extras });
+        return imageMod.renderImage({
+          href: child.href,
+          mimeType: child.mimeType,
+          _mimeTypeAttr: child._mimeTypeAttr,
+          _extras: child._extras
+        }, opts);
       if (child.kind === "text-box")
         return xml.el("draw:text-box", { ...child.attrs || {} }, (child.children || []).slice());
       if (child.kind === "object") {
@@ -4542,9 +4920,24 @@ export const odtBundled = {
       writeSidecars,
       carryParts,
       sourceNamespaces,
-      declareNamespaces
+      declareNamespaces,
+      keptVersion,
+      applyManifestVersion
     } = shared, CT_ODT = CT.ODT, CT_XML = CT.XML, RESERVED_PARTS = new Set(["content.xml", "styles.xml", "meta.xml", "settings.xml"]), walker = walkerMod.createWalker();
     function read(bytes, opts) {
+      if (opts && opts.semanticStyles !== void 0 && typeof opts.semanticStyles !== "boolean")
+        throw new ContractError("odf/contract-error/odt", "odt: read opts.semanticStyles must be true or false", { context: { module: "odt", argument: "opts.semanticStyles" } });
+      const semanticStyles = !!(opts && opts.semanticStyles);
+      if (opts && opts.headerFooterContent !== void 0 && typeof opts.headerFooterContent !== "boolean")
+        throw new ContractError("odf/contract-error/odt", "odt: read opts.headerFooterContent must be true or false", { context: { module: "odt", argument: "opts.headerFooterContent" } });
+      if (opts && opts.textBoxes !== void 0 && typeof opts.textBoxes !== "boolean")
+        throw new ContractError("odf/contract-error/odt", "odt: read opts.textBoxes must be true or false", { context: { module: "odt", argument: "opts.textBoxes" } });
+      for (const key of ["listStyles", "sectionStyles"])
+        if (opts && opts[key] !== void 0 && typeof opts[key] !== "boolean")
+          throw new ContractError("odf/contract-error/odt", `odt: read opts.${key} must be true or false`, { context: { module: "odt", argument: `opts.${key}` } });
+      const textBoxes = !!(opts && opts.textBoxes);
+      if (textBoxes && !(opts && opts.framesInRuns))
+        throw new ContractError("odf/contract-error/odt", "odt: read opts.textBoxes needs opts.framesInRuns", { context: { module: "odt", argument: "opts.textBoxes" } });
       const p = pkg.read(bytes, opts);
       if (p.mimetype !== CT_ODT)
         throw new ParseError("odf/parse-error/odt", `odt: unexpected mimetype "${p.mimetype}"`, { context: { expected: CT_ODT, module: "odt" } });
@@ -4553,14 +4946,170 @@ export const odtBundled = {
         throw new ParseError("odf/parse-error/odt", "odt: missing content.xml", { context: { part: "content.xml", module: "odt" } });
       const result = { mimetype: p.mimetype, body: [], package: p };
       readSidecars(result, p, { metaMod, settingsMod, stylesMod });
-      const parsed = parseContent(shared.decodeText(contentBytes), result.styles, !!(opts && opts.framesInRuns));
+      const parsed = parseContent(shared.decodeText(contentBytes), result.styles, !!(opts && opts.framesInRuns), !!(opts && opts.elementsInRuns), semanticStyles, textBoxes);
       result.body = parsed.body;
       if (parsed.autoStyles)
         result.autoStyles = parsed.autoStyles;
       if (parsed.fontFaces)
         result.fontFaces = parsed.fontFaces;
+      if (opts && (opts.listStyles || opts.sectionStyles) && styleRegMod) {
+        const st = result.styles || {}, raw = (content) => ({
+          content,
+          styles: (st.styles || []).map(asElement),
+          stylesAuto: (st.automaticStyles || []).map(asElement)
+        });
+        if (opts.listStyles)
+          result.listStyles = styleRegMod.listStylesOf(raw(parsed.listStyleEls));
+        if (opts.sectionStyles)
+          result.sectionStyles = styleRegMod.sectionStylesOf(raw(parsed.sectionStyleEls));
+      }
       walker.applyHydrate(result);
+      if (opts && opts.headerFooterContent)
+        typeHeaderFooters(result.styles, !!opts.framesInRuns, !!opts.elementsInRuns, semanticStyles, textBoxes);
       return result;
+    }
+    const HEADER_FOOTER = new Set([
+      "style:header",
+      "style:header-left",
+      "style:header-first",
+      "style:footer",
+      "style:footer-left",
+      "style:footer-first"
+    ]);
+    function asElement(n) {
+      if (!n || typeof n !== "object")
+        return n;
+      if (n.type === "element")
+        return structuredClone(n);
+      if (typeof n.kind === "string")
+        return {
+          type: "element",
+          name: n.kind,
+          attrs: { ...n.attrs || {} },
+          children: (n.children || []).map(asElement)
+        };
+      return structuredClone(n);
+    }
+    function writtenStyles(styles) {
+      if (!styles || !walker.hasExtensions)
+        return styles;
+      const env = { styles: structuredClone(styles) };
+      walker.applyDehydrate(env);
+      return env.styles || styles;
+    }
+    function headerReadCtx(styles, framesInRuns, elementsInRuns, semanticStyles, textBoxes) {
+      const autoEls = (styles.automaticStyles || []).filter((c) => c && c.type === "element"), autoModel = styleAutoMod ? styleAutoMod.parse(xml.el("office:automatic-styles", {}, autoEls)) : null, resolver = styleRegMod ? styleRegMod.createResolver(autoModel, stylesSidecarFaces(styles), styles.styles || null, semanticStyles ? { semantic: !0 } : void 0) : void 0, ctx = framesInRuns || elementsInRuns || semanticStyles ? {
+        ...resolver || {},
+        ...framesInRuns ? { parseFrame: frameMod.parseFrame } : {},
+        ...elementsInRuns ? { elementsInRuns: !0 } : {},
+        ...semanticStyles ? { listStack: [] } : {}
+      } : resolver;
+      if (textBoxes)
+        ctx.parseFrame = (el) => typeBox(frameMod.parseFrame(el), ctx);
+      return ctx;
+    }
+    function typeBox(frame, ctx) {
+      const c = frame && frame.child;
+      if (c && c.kind === "text-box") {
+        c.content = contentMod.parseBody(xml.el("draw:text-box", {}, c.children || []), ctx);
+        c._contentRead = structuredClone(c.content);
+      }
+      return frame;
+    }
+    function boxAsWritten(frame, ctx) {
+      const c = frame && frame.child;
+      if (!c || c.kind !== "text-box" || !Array.isArray(c.content) || sameModel(c.content, c._contentRead))
+        return frame;
+      return { ...frame, child: { ...c, children: contentMod.renderBody(c.content, ctx) } };
+    }
+    function sameModel(a, b) {
+      if (Object.is(a, b))
+        return !0;
+      if (!a || !b || typeof a !== "object" || typeof b !== "object")
+        return !1;
+      if (Array.isArray(a) !== Array.isArray(b))
+        return !1;
+      const ka = Object.keys(a), kb = Object.keys(b);
+      if (ka.length !== kb.length)
+        return !1;
+      for (const k of ka)
+        if (!Object.prototype.hasOwnProperty.call(b, k) || !sameModel(a[k], b[k]))
+          return !1;
+      return !0;
+    }
+    function asBag(n) {
+      if (!n || n.type !== "element")
+        return n;
+      return { kind: n.name, attrs: { ...n.attrs || {} }, children: (n.children || []).map(asBag) };
+    }
+    function writeHeaderFooters(styles, doc) {
+      if (!styles)
+        return null;
+      let flat = null;
+      const edited = [];
+      for (const mp of [...styles.masterStyles || [], ...styles.masterPages || []]) {
+        if (!mp || (mp.name || mp.kind) !== "style:master-page")
+          continue;
+        for (const c of mp.children || []) {
+          if (!c || !HEADER_FOOTER.has(c.name || c.kind) || !Array.isArray(c.content))
+            continue;
+          const f = c._contentFlags || {};
+          flat = flat || writtenStyles(styles);
+          const read = contentMod.parseBody(asElement(c), headerReadCtx(flat, !!f.framesInRuns, !!f.elementsInRuns, !!f.semanticStyles, !!f.textBoxes));
+          if (!sameModel(read, c.content))
+            edited.push(c);
+        }
+      }
+      if (!edited.length || !styleRegMod)
+        return null;
+      const taken = reservedStyleNamesOf(doc.autoStyles), nameOf = (n) => n && n.attrs && n.attrs["style:name"];
+      for (const n of [
+        ...flat.styles || [],
+        ...flat.automaticStyles || [],
+        ...flat.pageLayouts || [],
+        ...flat.masterPages || []
+      ])
+        if (nameOf(n))
+          taken.add(nameOf(n));
+      const faces = stylesSidecarFaces(flat), registry = styleRegMod.createRegistry({ styles: taken, fontFaces: faces.map(nameOf).filter(Boolean) }), ctx = writeCtx(registry);
+      for (const c of edited) {
+        const els = contentMod.renderBody(c.content, ctx);
+        c.children = c.type === "element" ? els : els.map(asBag);
+      }
+      const out = new Set, gen = registry.toAutomaticStyles();
+      if (gen && styleAutoMod) {
+        const rendered = (styleAutoMod.render(gen).children || []).filter((n) => n && n.type === "element");
+        styles.automaticStyles = [...styles.automaticStyles || [], ...rendered];
+        for (const n of rendered)
+          if (nameOf(n))
+            out.add(nameOf(n));
+      }
+      const genFaces = registry.toFontFaceDecls();
+      if (genFaces) {
+        const kids = styles._extras && styles._extras.children || [], decls = kids.find((n) => n && n.type === "element" && n.name === "office:font-face-decls");
+        if (decls)
+          decls.children = [...decls.children || [], ...genFaces.children];
+        else
+          styles._extras = { ...styles._extras || {}, children: [genFaces, ...kids] };
+      }
+      return out;
+    }
+    function typeHeaderFooters(styles, framesInRuns, elementsInRuns, semanticStyles, textBoxes) {
+      if (!styles)
+        return;
+      const ctx = headerReadCtx(writtenStyles(styles), framesInRuns, elementsInRuns, semanticStyles, textBoxes);
+      for (const mp of [...styles.masterStyles || [], ...styles.masterPages || []]) {
+        if (!mp || (mp.name || mp.kind) !== "style:master-page")
+          continue;
+        for (const c of mp.children || []) {
+          if (!c || !HEADER_FOOTER.has(c.name || c.kind))
+            continue;
+          c.content = contentMod.parseBody(asElement(c), ctx);
+          c._contentFlags = semanticStyles ? { framesInRuns, elementsInRuns, semanticStyles } : { framesInRuns, elementsInRuns };
+          if (textBoxes)
+            c._contentFlags.textBoxes = !0;
+        }
+      }
     }
     function stylesSidecarFaces(stylesModel) {
       const out = [], extras = stylesModel && stylesModel._extras && stylesModel._extras.children;
@@ -4575,14 +5124,32 @@ export const odtBundled = {
     function textFontName(style) {
       return style && style.properties && style.properties.text && style.properties.text["style:font-name"];
     }
-    function parseContent(xmlString, stylesModel, framesInRuns) {
+    function parseContent(xmlString, stylesModel, framesInRuns, elementsInRuns, semanticStyles, textBoxes) {
       const root = parseXmlOrThrow(xmlString, "odt", { part: "content.xml", module: "odt" });
       if (root.name !== "office:document-content")
         throw new ParseError("odf/parse-error/odt", `odt: unexpected content root <${root.name}>`, { context: { part: "content.xml", module: "odt" } });
       const bodyEl = xml.findChild(root, "office:body");
       if (!bodyEl)
         throw new ParseError("odf/parse-error/odt", "odt: missing <office:body> in content.xml", { context: { part: "content.xml", module: "odt" } });
-      const declsEl = xml.findChild(root, "office:font-face-decls"), autoEl = xml.findChild(root, "office:automatic-styles"), contentFaces = declsEl ? xml.findAll(declsEl, "style:font-face") : [], autoModel = autoEl && styleAutoMod ? styleAutoMod.parse(autoEl) : null, resolver = styleRegMod ? styleRegMod.createResolver(autoModel, contentFaces.concat(stylesSidecarFaces(stylesModel)), stylesModel && stylesModel.styles || null) : void 0, textEl = xml.findChild(bodyEl, "office:text"), readCtx = framesInRuns ? { ...resolver || {}, parseFrame: frameMod.parseFrame } : resolver, out = { body: textEl ? contentMod.parseBody(textEl, readCtx) : [] }, consumed = resolver ? resolver.consumed : new Set;
+      const declsEl = xml.findChild(root, "office:font-face-decls"), autoEl = xml.findChild(root, "office:automatic-styles"), contentFaces = declsEl ? xml.findAll(declsEl, "style:font-face") : [], autoModel = autoEl && styleAutoMod ? styleAutoMod.parse(autoEl) : null, resolver = styleRegMod ? styleRegMod.createResolver(autoModel, contentFaces.concat(stylesSidecarFaces(stylesModel)), stylesModel && stylesModel.styles || null, semanticStyles ? { semantic: !0 } : void 0) : void 0, textEl = xml.findChild(bodyEl, "office:text"), readCtx = framesInRuns || elementsInRuns || semanticStyles ? {
+        ...resolver || {},
+        ...framesInRuns ? { parseFrame: frameMod.parseFrame } : {},
+        ...elementsInRuns ? { elementsInRuns: !0 } : {},
+        ...semanticStyles ? { listStack: [] } : {}
+      } : resolver;
+      if (textBoxes) {
+        const boxCtx = {
+          ...(styleRegMod ? styleRegMod.createResolver(autoModel, contentFaces.concat(stylesSidecarFaces(stylesModel)), stylesModel && stylesModel.styles || null, semanticStyles ? { semantic: !0 } : void 0) : void 0) || {},
+          ...elementsInRuns ? { elementsInRuns: !0 } : {},
+          ...semanticStyles ? { listStack: [] } : {}
+        };
+        boxCtx.parseFrame = (el) => typeBox(frameMod.parseFrame(el), boxCtx);
+        readCtx.parseFrame = boxCtx.parseFrame;
+      }
+      const out = { body: textEl ? contentMod.parseBody(textEl, readCtx) : [] };
+      out.listStyleEls = autoEl ? xml.findAll(autoEl, "text:list-style") : [];
+      out.sectionStyleEls = autoEl ? xml.findAll(autoEl, "style:style") : [];
+      const consumed = resolver ? resolver.consumed : new Set;
       let surfaced = null;
       if (autoModel) {
         const styles = (autoModel.styles || []).filter((s) => !consumed.has(s.name)), extras = (autoModel._extras && autoModel._extras.children || []).filter((c) => !(c.type === "element" && c.name === "text:list-style" && consumed.has(c.attrs && c.attrs["style:name"])));
@@ -4620,6 +5187,19 @@ export const odtBundled = {
       if (!doc)
         throw new ContractError("odf/contract-error/odt", "odt: write needs a document", { context: { module: "odt", argument: "doc" } });
       opts = opts || {};
+      if (opts.preserveInput !== void 0 && typeof opts.preserveInput !== "boolean")
+        throw new ContractError("odf/contract-error/odt", "odt: write opts.preserveInput must be true or false", { context: { module: "odt", argument: "opts.preserveInput" } });
+      const cleanup = cleanupSpec(opts.cleanup);
+      if (opts.preserveInput || cleanup.size) {
+        const { package: envelope, ...rest } = doc, copy = structuredClone({ doc: rest, opts });
+        doc = envelope === void 0 ? copy.doc : { ...copy.doc, package: envelope };
+        opts = copy.opts;
+      }
+      if (cleanup.has("emptyProperties")) {
+        dropEmptyAutoProperties(doc.autoStyles);
+        dropEmptyPropertyNodes(opts.styles || doc.styles);
+      }
+      const headerNames = writeHeaderFooters(opts.styles || doc.styles, doc);
       if (walker.hasExtensions) {
         const dehydrated = {
           body: doc.body,
@@ -4637,12 +5217,44 @@ export const odtBundled = {
         if (dehydrated.styles !== void 0)
           opts = { ...opts, styles: dehydrated.styles };
       }
-      const p = pkg.empty(CT_ODT), contentXml = renderContent(doc);
+      const kept = keptVersion(doc, opts, "odt"), p = pkg.empty(CT_ODT), contentXml = renderContent(doc, headerNames, kept ? kept.of("content.xml") : void 0);
       pkg.setPart(p, "content.xml", encodeText(contentXml), CT_XML);
       writeSidecars(p, doc, opts, { pkg, metaMod, settingsMod, stylesMod }, CT_XML);
       writePictures(p, doc.pictures);
       carryParts(p, doc.package, { pkg, manifestMod });
+      applyManifestVersion(p, kept);
       return pkg.write(p, { mtime: opts.mtime });
+    }
+    const CLEANUPS = new Set(["emptyProperties"]), PROPERTY_ELEMENT = /^style:[a-z-]+-properties$/;
+    function cleanupSpec(value) {
+      if (value === void 0)
+        return new Set;
+      if (!(Array.isArray(value) && value.every((n) => CLEANUPS.has(n)) && new Set(value).size === value.length))
+        throw new ContractError("odf/contract-error/odt", "odt: write opts.cleanup must be an array of distinct names among: " + [...CLEANUPS].join(", "), { context: { module: "odt", argument: "opts.cleanup" } });
+      return new Set(value);
+    }
+    function dropEmptyAutoProperties(autoStyles) {
+      for (const st of autoStyles && autoStyles.styles || []) {
+        const kept = st._extras && st._extras.propertyChildren || {};
+        for (const key of Object.keys(st.properties || {})) {
+          const bag = st.properties[key] || {};
+          if (!Object.keys(bag).length && !(kept[key] && kept[key].length))
+            delete st.properties[key];
+        }
+      }
+    }
+    function dropEmptyPropertyNodes(node) {
+      if (!node || typeof node !== "object" || ArrayBuffer.isView(node))
+        return;
+      if (Array.isArray(node)) {
+        for (const n of node)
+          dropEmptyPropertyNodes(n);
+        return;
+      }
+      if (Array.isArray(node.children))
+        node.children = node.children.filter((c) => !(c && c.type === "element" && PROPERTY_ELEMENT.test(c.name) && !Object.keys(c.attrs || {}).some((k) => k !== "xmlns" && !k.startsWith("xmlns:")) && !(c.children || []).some((k) => k.type === "element" || k.type === "text" && k.value.trim())));
+      for (const key of Object.keys(node))
+        dropEmptyPropertyNodes(node[key]);
     }
     function writePictures(p, pictures) {
       for (const path of Object.keys(pictures || {})) {
@@ -4668,8 +5280,10 @@ export const odtBundled = {
         frame.child.mimeType = r.mimeType;
       return frameMod.renderFrame(frame);
     }
-    function writeCtx(registry) {
-      return { ...registry || {}, renderImage: renderImageRun, renderFrame: frameMod.renderFrame };
+    function writeCtx(registry, version) {
+      const asRead = typeof version === "string" && parseFloat(version) < 1.3, ctx = { ...registry || {}, renderImage: renderImageRun };
+      ctx.renderFrame = asRead ? (f) => frameMod.renderFrame(boxAsWritten(f, ctx), { mimeTypeAsRead: !0 }) : (f) => frameMod.renderFrame(boxAsWritten(f, ctx));
+      return ctx;
     }
     function reservedStyleNamesOf(autoStyles) {
       const out = new Set;
@@ -4709,11 +5323,14 @@ export const odtBundled = {
         model._extras = { children: extras };
       return model;
     }
-    function renderContent(doc) {
+    function renderContent(doc, headerNames, version) {
+      const reserved = reservedStyleNamesOf(doc.autoStyles);
+      for (const n of headerNames || [])
+        reserved.add(n);
       const registry = styleRegMod ? styleRegMod.createRegistry({
-        styles: reservedStyleNamesOf(doc.autoStyles),
+        styles: reserved,
         fontFaces: reservedFaceNamesOf(doc.fontFaces)
-      }) : void 0, ctx = writeCtx(registry), body = contentMod.renderBody(doc.body || [], ctx), textEl = xml.el("office:text", {}, body), bodyEl = xml.el("office:body", {}, [textEl]), rootChildren = [], faces = [];
+      }) : void 0, ctx = writeCtx(registry, version), body = contentMod.renderBody(doc.body || [], ctx), textEl = xml.el("office:text", {}, body), bodyEl = xml.el("office:body", {}, [textEl]), rootChildren = [], faces = [];
       for (const f of doc.fontFaces || [])
         faces.push(f);
       const genFaces = registry ? registry.toFontFaceDecls() : null;
@@ -4734,8 +5351,10 @@ export const odtBundled = {
         "xmlns:fo": ODF_NS.FO,
         "xmlns:svg": ODF_NS.SVG,
         "xmlns:xlink": ODF_NS.XLINK,
-        "office:version": ODF_VERSION
+        "office:version": version !== void 0 ? version : ODF_VERSION
       }, rootChildren);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: sourceNamespaces(doc.package, "content.xml"),
         part: "content.xml",

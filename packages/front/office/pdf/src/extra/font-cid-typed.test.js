@@ -117,3 +117,17 @@ describe('pdfFontCidTyped factory', () => {
         expect(typeof api.typeCIDFont).toBe('function');
     });
 });
+
+describe('typeStyleDict (A41b)', () => {
+    const { typeStyleDict } = pdfFontCidTyped.factory(_errors, _parserObj);
+    test('Panose, the string bytes; the rest in _extras; a non-dictionary throws', () => {
+        const pan = new Uint8Array([0, 1, 2]);
+        const d = obj.dict({ Panose: obj.string(pan), Foo: obj.int(1) });
+        expect(typeStyleDict(d)).toEqual({ panose: pan, raw: d, _extras: { Foo: obj.int(1) } });
+        expect(typeStyleDict(obj.dict({ Panose: obj.int(1) })).panose).toBe(null);
+        expect('panose' in typeStyleDict(obj.dict({}))).toBe(false);
+        let code = null;
+        try { typeStyleDict(obj.array([])); } catch (e) { code = [e.constructor.name, e.code]; }
+        expect(code).toEqual([ParseError.name, 'pdf/extra/cid-font/style-not-dict']);
+    });
+});

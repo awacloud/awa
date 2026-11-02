@@ -32,9 +32,9 @@
 
 import { createHash } from "node:crypto";
 import { createGunzip, inflateRawSync } from "node:zlib";
-import { createReadStream, createWriteStream, existsSync } from "node:fs";
+import { createReadStream, createWriteStream, existsSync, readFileSync, statSync } from "node:fs";
 import { pipeline } from "node:stream/promises";
-import { dirname, isAbsolute, join } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { chmod, copyFile, link, mkdir, open, rm, symlink, writeFile } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import {
@@ -81,16 +81,94 @@ function warn(message: string): void {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
+ * The MAIN checkout's SDK install dir, seen from the tree that holds `sdkDir`
+ * (default {@link DEFAULT_SDK_DIR}), or `null` when that tree IS the main
+ * checkout or is not a linked git worktree.
+ *
+ * Owner ruling 2026-10-22 (tools/LIGHT_58/02): the ~1.6 GB SDK is no longer a
+ * worktree asset, so a linked worktree has no `build-env/sdk/` of its own and
+ * discovery falls back to the main checkout's. The tree root is four levels
+ * above `sdkDir` (`<tree>/tools/wasm-crypto/build-env/sdk`); the main
+ * checkout comes from the git COMMON dir: a linked worktree's `<tree>/.git` is
+ * a FILE `gitdir: <path>`, and `<gitdir>/commondir` names the shared
+ * `<main>/.git`.
+ *
+ * DUPLICATED ON PURPOSE from `mainTreeRoot` in
+ * `services/acvp/src/runtimes/browsers-path.ts` (the same derivation as
+ * `mainCheckoutFromRepo` in `tools/awf/src/hooks/lib/worktree-root.ts`):
+ * `build-env/` is self-contained and imports nothing outside itself, so the
+ * dozen lines are copied rather than imported across a package boundary.
+ * No git spawn; any read or parse failure is `null` (fail-open to this tree).
+ *
+ * @param sdkDir - The tree-local install dir to derive from.
+ * @returns The main checkout's `tools/wasm-crypto/build-env/sdk`, or `null`.
+ */
+export function mainCheckoutSdkDir(sdkDir: string = DEFAULT_SDK_DIR): string | null {
+    const tree = resolve(sdkDir, "..", "..", "..", "..");
+    try {
+        const dotGit = join(tree, ".git");
+        if (!statSync(dotGit).isFile()) return null;
+        const line = /^gitdir:\s*(.+?)\s*$/m.exec(readFileSync(dotGit, "utf8"));
+        if (!line?.[1]) return null;
+        const gitdir = resolve(tree, line[1]);
+        const common = resolve(gitdir, readFileSync(join(gitdir, "commondir"), "utf8").trim());
+        if (basename(common) !== ".git") return null;
+        const main = dirname(common);
+        if (main === tree) return null;
+        return join(main, "tools", "wasm-crypto", "build-env", "sdk");
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * The first `<dir>/<child>/bin/clang[.exe]` SDK root directly under `dir`, or
+ * `null` (absent dir, no candidate, any FS error).
+ */
+async function scanSdkDir(dir: string, clangBin: string, isWin: boolean): Promise<string | null> {
+    if (!existsSync(dir)) return null;
+    try {
+        const glob = new Bun.Glob("*/bin/" + clangBin);
+        for await (const rel of glob.scan({ cwd: dir })) {
+            // rel = "wasi-sdk-33.0-x86_64-linux/bin/clang" → the root is its first segment.
+            const parts = rel.split(/[\\/]/);
+            const top = parts[0];
+            if (parts.length >= 3 && top !== undefined) return join(dir, top);
+        }
+
+        // Also try alt bare name on win32.
+        if (isWin) {
+            const altGlob = new Bun.Glob("*/bin/clang");
+            for await (const rel of altGlob.scan({ cwd: dir })) {
+                const parts = rel.split(/[\\/]/);
+                const top = parts[0];
+                if (parts.length >= 3 && top !== undefined) return join(dir, top);
+            }
+        }
+    } catch {
+        // FS errors — treat as not found.
+    }
+    return null;
+}
+
+/**
  * Find an installed wasi-sdk root on the filesystem (no network).
  *
- * Search order: (1) explicit `roots` arg, (2) subdirectories of `DEFAULT_SDK_DIR`.
+ * Search order: (1) explicit `roots` arg — when given, it is the WHOLE scope;
+ * (2) subdirectories of this tree's install dir (`opts.sdkDir`, default
+ * `DEFAULT_SDK_DIR`); (3) from a linked worktree whose install dir holds no
+ * SDK, subdirectories of the MAIN checkout's install dir
+ * ({@link mainCheckoutSdkDir}, tools/LIGHT_58/02).
  * A "valid" root is a directory containing `bin/clang` (or `bin/clang.exe`
  * on win32). Returns the first matching absolute root, else `null`.
  *
  * @param roots - Optional list of paths to check before the default install dir.
+ * @param opts - Optional seams.
+ * @param opts.sdkDir - This tree's install dir (default `DEFAULT_SDK_DIR`); the
+ *   main checkout is derived from the tree holding it.
  * @returns Absolute path to the SDK root, or `null` if none found.
  */
-export async function discoverWasiSdk(roots?: string[]): Promise<string | null> {
+export async function discoverWasiSdk(roots?: string[], opts?: { sdkDir?: string }): Promise<string | null> {
     const isWin = process.platform === "win32";
     const clangBin = isWin ? "clang.exe" : "clang";
     const altBin = "clang"; // fallback bare name on win32
@@ -118,43 +196,14 @@ export async function discoverWasiSdk(roots?: string[]): Promise<string | null> 
         return null;
     }
 
-    // (2) Scan direct children of DEFAULT_SDK_DIR.
-    if (!existsSync(DEFAULT_SDK_DIR)) return null;
-    try {
-        const glob = new Bun.Glob("*/bin/" + clangBin);
-        // Collect at most a few candidates.
-        const candidates: string[] = [];
-        for await (const rel of glob.scan({ cwd: DEFAULT_SDK_DIR })) {
-            // rel = "wasi-sdk-33.0-x86_64-linux/bin/clang"
-            // We want the root: strip "/bin/<clangBin>"
-            const parts = rel.split(/[\\/]/);
-            const top = parts[0];
-            if (parts.length >= 3 && top !== undefined) {
-                const sdkRoot = join(DEFAULT_SDK_DIR, top);
-                candidates.push(sdkRoot);
-            }
-        }
-        if (candidates.length > 0) {
-            // Return first candidate (already verified via glob).
-            return candidates[0] ?? null;
-        }
+    // (2) Scan direct children of this tree's install dir.
+    const sdkDir = opts?.sdkDir ?? DEFAULT_SDK_DIR;
+    const own = await scanSdkDir(sdkDir, clangBin, isWin);
+    if (own) return own;
 
-        // Also try alt bare name on win32.
-        if (isWin) {
-            const altGlob = new Bun.Glob("*/bin/clang");
-            for await (const rel of altGlob.scan({ cwd: DEFAULT_SDK_DIR })) {
-                const parts = rel.split(/[\\/]/);
-                const top = parts[0];
-                if (parts.length >= 3 && top !== undefined) {
-                    return join(DEFAULT_SDK_DIR, top);
-                }
-            }
-        }
-    } catch {
-        // FS errors — treat as not found.
-    }
-
-    return null;
+    // (3) A linked worktree with no SDK of its own: the main checkout's.
+    const mainDir = mainCheckoutSdkDir(sdkDir);
+    return mainDir ? scanSdkDir(mainDir, clangBin, isWin) : null;
 }
 
 // ─── Pin policy (D4 / F8) ────────────────────────────────────────────────────

@@ -61,7 +61,9 @@ export const tableRow = {
         }
 
         /**
-         * Render a row model to a `<table:table-row>` element node.
+         * Render a row model to a `<table:table-row>` element node. A row
+         * with no cell is written with one empty `<table:table-cell>`: the
+         * schema needs a cell in a row.
          *
          * @param {object} row
          * @returns {object}
@@ -71,7 +73,8 @@ export const tableRow = {
             if (row.styleName) attrs['table:style-name'] = row.styleName;
             if (row.repeated && row.repeated > 1) attrs['table:number-rows-repeated'] = String(row.repeated);
             if (row.visibility) attrs['table:visibility'] = row.visibility;
-            const children = (row.cells || []).map(c => cellMod.renderCell(c));
+            const cells = row.cells && row.cells.length ? row.cells : [{ type: 'cell', children: [] }];
+            const children = cells.map(c => cellMod.renderCell(c));
             return xml.el('table:table-row', attrs, children);
         }
 

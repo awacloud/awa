@@ -22,22 +22,22 @@
     "pdfAscii85",
     "pdfRunLength",
     "pdfFilterDispatch",
+    "pdfSecurity",
+    "pdfStandardV4",
+    "pdfAesGcm",
+    "pdfStandardV5",
+    "pdfStandardV6",
     "pdfDocument",
     "pdfWriter",
     "pdf",
     "pdfBuilder",
     "pdfIncrementalWriter",
     "pdfXrefStreamWriter",
-    "pdfAesGcm",
-    "pdfStandardV5",
-    "pdfStandardV6",
-    "pdfStandardV4",
     "pdfEncryptedWriter",
     "pdfSigOids",
     "pdfByteRange",
     "pdfSha1",
     "pdfDssBuilder",
-    "pdfSecurity",
     "pdfSign",
     "pdfSignature"
   ],
@@ -70,8 +70,8 @@
     "ed25519"
   ],
   "bytes": {
-    "dev": 303803,
-    "min": 164260
+    "dev": 321036,
+    "min": 174199
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

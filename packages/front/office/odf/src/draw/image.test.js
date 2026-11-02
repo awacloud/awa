@@ -135,4 +135,40 @@ describe('drawImage module', () => {
             expect(d.extensionFor('whatever')).toBe('bin');
         });
     });
+
+    // A37: the mime type written under the attribute it was read from.
+    describe('the mime type attribute as read', () => {
+        const parseFrame = (xml, image) => drawFrame.factory(xml, image, odfErrors.factory());
+        test('loext:mime-type read: draw:mime-type by default, loext:mime-type with mimeTypeAsRead', () => {
+            const { xml, d } = build();
+            const lo = d.parseImage(xml.parse('<draw:image xlink:href="Pictures/a.png" loext:mime-type="image/png"/>'));
+            expect(lo.mimeType).toBe('image/png');
+            expect(lo._mimeTypeAttr).toBe('loext:mime-type');
+            expect(d.renderImage(lo).attrs['draw:mime-type']).toBe('image/png');
+            const out = d.renderImage(lo, { mimeTypeAsRead: true });
+            expect(out.attrs['loext:mime-type']).toBe('image/png');
+            expect(out.attrs['draw:mime-type']).toBeUndefined();
+            const dr = d.parseImage(xml.parse('<draw:image xlink:href="Pictures/a.png" draw:mime-type="image/png"/>'));
+            expect('_mimeTypeAttr' in dr).toBe(false);
+            expect(d.renderImage(dr, { mimeTypeAsRead: true }).attrs['draw:mime-type']).toBe('image/png');
+        });
+
+        test('both attributes: mimeType the draw value, the loext one kept as read', () => {
+            const { xml, d } = build();
+            const both = d.parseImage(xml.parse('<draw:image xlink:href="p" draw:mime-type="image/png" loext:mime-type="image/x-svm"/>'));
+            expect(both.mimeType).toBe('image/png');
+            const out = d.renderImage(both);
+            expect([out.attrs['draw:mime-type'], out.attrs['loext:mime-type']]).toEqual(['image/png', 'image/x-svm']);
+        });
+
+        test('a frame passes the option through', () => {
+            const { xml, d } = build();
+            const frame = parseFrame(xml, d);
+            const f = frame.parseFrame(xml.parse('<draw:frame text:anchor-type="as-char"><draw:image xlink:href="Pictures/a.png" loext:mime-type="image/png"/></draw:frame>'));
+            const img = frame.renderFrame(f, { mimeTypeAsRead: true }).children.find((c) => c.name === 'draw:image');
+            expect(img.attrs['loext:mime-type']).toBe('image/png');
+            expect(img.attrs['draw:mime-type']).toBeUndefined();
+            expect(frame.renderFrame(f).children.find((c) => c.name === 'draw:image').attrs['draw:mime-type']).toBe('image/png');
+        });
+    });
 });

@@ -275,6 +275,41 @@ describe('docxStructure module', () => {
 
         test('returns null when nothing to render', () => {
             expect(s.renderSection(null)).toBeNull();
+            expect(s.renderSection(undefined)).toBeNull();
+        });
+
+        test('w:pgSz w:code (the paper code) reads as pageSize.code and is written back', () => {
+            const sect = s.parseSection(xml.parse('<w:sectPr xmlns:w="x"><w:pgSz w:w="11906" w:h="16838" w:code="9"/></w:sectPr>'));
+            expect(sect.pageSize).toEqual({ w: 11906, h: 16838, code: 9 });
+            expect(s.renderSection(sect).children[0].attrs).toEqual({ 'w:w': '11906', 'w:h': '16838', 'w:code': '9' });
+        });
+
+        test('an empty w:sectPr reads as an empty object and is written back empty', () => {
+            const sect = s.parseSection(xml.parse('<w:sectPr xmlns:w="x"/>'));
+            expect(sect).toEqual({});
+            const el = s.renderSection(sect);
+            expect(el.name).toBe('w:sectPr');
+            expect(el.children).toEqual([]);
+        });
+
+        test('strict universal measures read as twips (A49)', () => {
+            const sect = s.parseSection(xml.parse(
+                '<w:sectPr xmlns:w="x"><w:pgSz w:w="612pt" w:h="792pt" w:orient="portrait"/>'
+                + '<w:pgMar w:top="1in" w:right="2.54cm" w:bottom="25.4mm" w:left="6pc"'
+                + ' w:header="0.5in" w:footer="36pt" w:gutter="-1in"/></w:sectPr>'));
+            expect(sect.pageSize).toEqual({ w: 12240, h: 15840, orient: 'portrait' });
+            expect(sect.pageMargin).toEqual({ top: 1440, right: 1440, bottom: 1440, left: 1440, header: 720, footer: 720, gutter: -1440 });
+            const pi = s.parseSection(xml.parse('<w:sectPr xmlns:w="x"><w:pgMar w:top="6pi" w:left="1.5mm"/></w:sectPr>'));
+            expect(pi.pageMargin).toEqual({ top: 1440, left: 85 });
+            const out = s.renderSection(sect);
+            expect(JSON.stringify(out)).not.toContain('NaN');
+            expect(out.children.find((c) => c.name === 'w:pgSz').attrs['w:w']).toBe('12240');
+        });
+
+        test('transitional integers read as before', () => {
+            const sect = s.parseSection(xml.parse('<w:sectPr xmlns:w="x"><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="-720"/></w:sectPr>'));
+            expect(sect.pageSize).toEqual({ w: 11906, h: 16838 });
+            expect(sect.pageMargin).toEqual({ top: -720 });
         });
     });
 
@@ -414,5 +449,292 @@ describe('docx facade - table tblPr round trip (BL-1766)', () => {
         ] });
         expect(documentXml(bytes)).toContain('<w:tbl><w:tblPr/><w:tblGrid><w:gridCol/></w:tblGrid><w:tr>');
         expect('tblPr' in d.read(bytes).document.body[0]).toBe(false);
+    });
+});
+
+describe('docxStructure - content controls around cells and rows', () => {
+    const xml = ooxmlXml.factory();
+    const props = docxProperties.factory(xml);
+    const draw = docxDrawing.factory(xml, drawingmlShape.factory(xml, _shared), _shared);
+    const s = docxStructure.factory(xml, props, draw, ooxmlMath.factory(_errors, xml));
+    const W = 'xmlns:w="x"';
+    const tc = (t) => `<w:tc><w:p><w:r><w:t>${t}</w:t></w:r></w:p></w:tc>`;
+    const tr = (t) => `<w:tr>${tc(t)}</w:tr>`;
+    const pr = (alias) => `<w:sdtPr><w:alias w:val="${alias}"/></w:sdtPr>`;
+    const cellText = (c) => c.children[0].children[0].children[0].value;
+    const names = (el) => el.children.filter((c) => c.type === 'element').map((c) => c.name);
+
+    test('a cell inside a row-level w:sdt is read in place, carrying the control; written back in place', () => {
+        const el = xml.parse(`<w:tr ${W}>${tc('A')}<w:sdt>${pr('Title')}<w:sdtEndPr><w:rPr><w:b/></w:rPr></w:sdtEndPr>`
+            + `<w:sdtContent>${tc('B')}</w:sdtContent></w:sdt>${tc('C')}</w:tr>`);
+        const row = s.parseRow(el);
+
+        expect(row.cells.map(cellText)).toEqual(['A', 'B', 'C']);
+        expect('_extras' in row).toBe(false);
+        expect('sdt' in row.cells[0]).toBe(false);
+        expect(row.cells[1].sdt).toHaveLength(1);
+        const [ctl] = row.cells[1].sdt;
+        expect(ctl.group).toBe(0);
+        expect(ctl.properties).toEqual(s.parseSdtProperties(xml.findChild(xml.findChild(el, 'w:sdt'), 'w:sdtPr')));
+        expect(ctl._extras.map((e) => e.name)).toEqual(['w:sdtEndPr']);
+
+        const back = s.renderRow(row);
+        expect(names(back)).toEqual(['w:tc', 'w:sdt', 'w:tc']);
+        const sdt = back.children.find((c) => c.name === 'w:sdt');
+        expect(names(sdt)).toEqual(['w:sdtPr', 'w:sdtEndPr', 'w:sdtContent']);
+        expect(names(xml.findChild(sdt, 'w:sdtContent'))).toEqual(['w:tc']);
+        expect(s.parseRow(back)).toEqual(row);
+    });
+
+    // T50: a block-level control inside a cell, typed in place as in the body.
+    test('a block-level w:sdt in a cell reads as a blockSdt in place and is written back there', () => {
+        const p = (t) => `<w:p><w:r><w:t>${t}</w:t></w:r></w:p>`;
+        const el = xml.parse(`<w:tr ${W}><w:tc>${p('before')}<w:sdt>${pr('Field')}<w:sdtContent>${p('inside')}</w:sdtContent></w:sdt>`
+            + `${p('after')}</w:tc></w:tr>`);
+        const cell = s.parseRow(el).cells[0];
+
+        expect(cell.children.map((c) => c.type)).toEqual(['paragraph', 'blockSdt', 'paragraph']);
+        expect('_extras' in cell).toBe(false);
+        expect(cell.children[1].properties.alias).toBe('Field');
+        expect(cell.children[1].children[0].children[0].children[0].value).toBe('inside');
+
+        const tcEl = xml.findChild(s.renderRow(s.parseRow(el)), 'w:tc');
+        expect(names(tcEl)).toEqual(['w:p', 'w:sdt', 'w:p']);
+        expect(s.parseRow(s.renderRow(s.parseRow(el)))).toEqual(s.parseRow(el));
+    });
+
+    test('a control holding two cells is one group; two adjacent controls are two', () => {
+        const el = xml.parse(`<w:tr ${W}><w:sdt>${pr('a')}<w:sdtContent>${tc('1')}${tc('2')}</w:sdtContent></w:sdt>`
+            + `<w:sdt>${pr('b')}<w:sdtContent>${tc('3')}</w:sdtContent></w:sdt></w:tr>`);
+        const row = s.parseRow(el);
+        expect(row.cells.map((c) => c.sdt.map((x) => x.group))).toEqual([[0], [0], [1]]);
+        const back = s.renderRow(row);
+        expect(names(back)).toEqual(['w:sdt', 'w:sdt']);
+        expect(back.children.map((c) => names(xml.findChild(c, 'w:sdtContent')))).toEqual([['w:tc', 'w:tc'], ['w:tc']]);
+    });
+
+    test('a nested control adds a level; a content child that is neither a cell nor a control is kept', () => {
+        const el = xml.parse(`<w:tr ${W}><w:sdt>${pr('outer')}<w:sdtContent>${tc('X')}`
+            + `<w:sdt>${pr('inner')}<w:sdtContent>${tc('Y')}</w:sdtContent></w:sdt>`
+            + `<w:customXml w:element="k"/></w:sdtContent></w:sdt></w:tr>`);
+        const row = s.parseRow(el);
+        expect(row.cells.map(cellText)).toEqual(['X', 'Y']);
+        expect(row.cells.map((c) => c.sdt.map((x) => x.group))).toEqual([[0], [0, 1]]);
+        expect(row.cells[0].sdt[0]._contentExtras.map((e) => e.name)).toEqual(['w:customXml']);
+
+        const back = s.renderRow(row);
+        expect(names(back)).toEqual(['w:sdt']);
+        const content = xml.findChild(back.children[0], 'w:sdtContent');
+        expect(names(content)).toEqual(['w:tc', 'w:sdt', 'w:customXml']);
+        expect(s.parseRow(back)).toEqual(row);
+    });
+
+    test('rows inside a table-level w:sdt are read in place and written back in place', () => {
+        const el = xml.parse(`<w:tbl ${W}><w:tblPr/><w:tblGrid><w:gridCol/></w:tblGrid>${tr('r1')}`
+            + `<w:sdt>${pr('rows')}<w:sdtContent>${tr('r2')}${tr('r3')}</w:sdtContent></w:sdt>${tr('r4')}</w:tbl>`);
+        const t = s.parseTable(el);
+        expect(t.rows.map((r) => cellText(r.cells[0]))).toEqual(['r1', 'r2', 'r3', 'r4']);
+        expect(t.rows.map((r) => (r.sdt ? r.sdt.map((x) => x.group) : null))).toEqual([null, [0], [0], null]);
+        expect(t._extras.map((e) => e.name)).toEqual(['w:tblPr', 'w:tblGrid']);
+
+        const back = s.renderTable(t);
+        expect(names(back)).toEqual(['w:tblPr', 'w:tblGrid', 'w:tr', 'w:sdt', 'w:tr']);
+        expect(names(xml.findChild(back.children[3], 'w:sdtContent'))).toEqual(['w:tr', 'w:tr']);
+        expect(s.parseTable(back)).toEqual(t);
+    });
+
+    test('a cell whose only content is a block-level w:sdt gets no extra paragraph; an empty cell still gets one', () => {
+        const cell = s.parseCell(xml.parse(`<w:tc ${W}><w:sdt>${pr('block')}<w:sdtContent>`
+            + '<w:p><w:r><w:t>X</w:t></w:r></w:p></w:sdtContent></w:sdt></w:tc>'));
+        // typed in place since T50 (it was kept raw in _extras)
+        expect(cell.children.map((c) => c.type)).toEqual(['blockSdt']);
+        expect(names(s.renderCell(cell))).toEqual(['w:sdt']);
+        expect(names(s.renderCell({ type: 'cell', children: [] }))).toEqual(['w:p']);
+    });
+
+    test('the derived grid counts the cells inside a control', () => {
+        const row = s.parseRow(xml.parse(`<w:tr ${W}>${tc('A')}<w:sdt>${pr('c')}<w:sdtContent>${tc('B')}</w:sdtContent></w:sdt></w:tr>`));
+        const grid = s.renderTable({ type: 'table', rows: [row] }).children[1];
+        expect(grid.children).toHaveLength(2);
+    });
+});
+
+describe('docx facade - content controls around cells keep their place', () => {
+    const runtime = new ModuleRuntime();
+    for (const m of [...ooxmlMods.fw_require, ...ooxmlMods.modules]) runtime.register(m);
+    const d = runtime.resolve('docx');
+    const opc = runtime.resolve('opcPackage');
+    const decoder = new TextDecoder();
+    const documentXml = (bytes) => decoder.decode(opc.read(bytes).parts['/word/document.xml']);
+
+    test('read -> write -> read keeps a content-control cell before a plain one', () => {
+        const ctl = { group: 0, properties: { alias: 'Title' } };
+        const source = d.write({ type: 'document', body: [{ type: 'table', rows: [{ type: 'row', cells: [
+            { type: 'cell', children: [d.paragraph('first')], sdt: [ctl] },
+            { type: 'cell', children: [d.paragraph('second')] }
+        ] }] }] });
+        const x = documentXml(source);
+        expect(x.indexOf('<w:sdt>')).toBeGreaterThan(-1);
+        expect(x.indexOf('first')).toBeLessThan(x.indexOf('second'));
+
+        const r = d.read(source);
+        const again = d.write(r.document, { carry: r });
+        const y = documentXml(again);
+        expect(y.indexOf('<w:sdt>')).toBeLessThan(y.indexOf('second'));
+        expect(y.indexOf('first')).toBeLessThan(y.indexOf('second'));
+        const cells = d.read(again).document.body[0].rows[0].cells;
+        expect(cells.map((c) => c.children[0].children[0].children[0].value)).toEqual(['first', 'second']);
+        expect(cells[0].sdt[0].properties.alias).toBe('Title');
+    });
+});
+
+describe('docx facade - the page background', () => {
+    const runtime = new ModuleRuntime();
+    for (const m of [...ooxmlMods.fw_require, ...ooxmlMods.modules]) runtime.register(m);
+    const d = runtime.resolve('docx');
+    const opc = runtime.resolve('opcPackage');
+    const decoder = new TextDecoder();
+    const documentXml = (bytes) => decoder.decode(opc.read(bytes).parts['/word/document.xml']);
+    const vml = { type: 'element', name: 'v:background', attrs: { id: '_x0000_s1025', fillcolor: '#ffff00' }, children: [] };
+
+    test('a coloured background and a VML one are read, written before the body and read back equal', () => {
+        for (const background of [{ color: 'FFFF00' }, { color: '1F497D', themeColor: 'text2', themeShade: 'BF', _extras: [vml] }]) {
+            const bytes = d.write({ type: 'document', background, body: [d.paragraph('x')] });
+            const x = documentXml(bytes);
+            expect(x.indexOf('<w:background')).toBeGreaterThan(-1);
+            expect(x.indexOf('<w:background')).toBeLessThan(x.indexOf('<w:body>'));
+            if (background._extras) expect(x).toMatch(/<w:document [^>]*xmlns:v="urn:schemas-microsoft-com:vml"/);
+            const back = d.read(bytes).document;
+            expect(back.background).toEqual(background);
+            expect(documentXml(d.write(back))).toBe(x);
+        }
+    });
+
+    test('no background writes no w:background and reads back without the key', () => {
+        const bytes = d.write({ type: 'document', body: [d.paragraph('x')] });
+        expect(documentXml(bytes)).not.toContain('w:background');
+        expect('background' in d.read(bytes).document).toBe(false);
+    });
+});
+
+describe('docxStructure - hyperlink attributes', () => {
+    const xml = ooxmlXml.factory();
+    const props = docxProperties.factory(xml);
+    const draw = docxDrawing.factory(xml, drawingmlShape.factory(xml, _shared), _shared);
+    const s = docxStructure.factory(xml, props, draw, ooxmlMath.factory(_errors, xml));
+
+    test('w:history, w:tooltip, w:tgtFrame and w:docLocation are read and written back', () => {
+        const el = xml.parse('<w:hyperlink xmlns:w="x" xmlns:r="y" r:id="rId4" w:history="1" w:tooltip="Go"'
+            + ' w:tgtFrame="_blank" w:docLocation="loc"><w:r><w:t>a</w:t></w:r></w:hyperlink>');
+        const h = s.parseHyperlink(el);
+        expect(h).toMatchObject({ rId: 'rId4', history: true, tooltip: 'Go', tgtFrame: '_blank', docLocation: 'loc' });
+        expect(s.renderHyperlink(h).attrs).toEqual({ 'r:id': 'rId4', 'w:tgtFrame': '_blank', 'w:tooltip': 'Go',
+            'w:docLocation': 'loc', 'w:history': '1' });
+    });
+
+    test('w:history="0" stays false; a link without them writes none', () => {
+        const off = s.parseHyperlink(xml.parse('<w:hyperlink xmlns:w="x" w:anchor="b" w:history="0"><w:r><w:t>a</w:t></w:r></w:hyperlink>'));
+        expect(off.history).toBe(false);
+        expect(s.renderHyperlink(off).attrs).toEqual({ 'w:anchor': 'b', 'w:history': '0' });
+        const bare = s.parseHyperlink(xml.parse('<w:hyperlink xmlns:w="x" w:anchor="b"><w:r><w:t>a</w:t></w:r></w:hyperlink>'));
+        expect(Object.keys(bare)).toEqual(['type', 'children', 'anchor']);
+        expect(s.renderHyperlink(bare).attrs).toEqual({ 'w:anchor': 'b' });
+    });
+});
+
+describe('docxStructure - content control fidelity', () => {
+    const xml = ooxmlXml.factory();
+    const props = docxProperties.factory(xml);
+    const draw = docxDrawing.factory(xml, drawingmlShape.factory(xml, _shared), _shared);
+    const s = docxStructure.factory(xml, props, draw, ooxmlMath.factory(_errors, xml));
+    const names = (el) => el.children.filter((c) => c.type === 'element').map((c) => c.name);
+    const END = '<w:sdtEndPr><w:rPr><w:b/></w:rPr></w:sdtEndPr>';
+
+    test('w:sdtEndPr is kept on a block and an inline control, written between sdtPr and sdtContent', () => {
+        const block = s.parseSdt(xml.parse('<w:sdt xmlns:w="x"><w:sdtPr><w:tag w:val="t"/></w:sdtPr>' + END
+            + '<w:sdtContent><w:p/></w:sdtContent></w:sdt>'), true);
+        expect(block._extras.map((e) => e.name)).toEqual(['w:sdtEndPr']);
+        expect(names(s.renderSdt(block))).toEqual(['w:sdtPr', 'w:sdtEndPr', 'w:sdtContent']);
+        const inline = s.parseSdt(xml.parse('<w:sdt xmlns:w="x"><w:sdtPr><w:tag w:val="t"/></w:sdtPr>' + END
+            + '<w:sdtContent><w:r><w:t>a</w:t></w:r></w:sdtContent></w:sdt>'), false);
+        expect(names(s.renderSdt(inline))).toEqual(['w:sdtPr', 'w:sdtEndPr', 'w:sdtContent']);
+    });
+
+    test("an inline control's content is typed as a paragraph's; another child is kept after it", () => {
+        const sdt = s.parseSdt(xml.parse('<w:sdt xmlns:w="x"><w:sdtContent><w:bookmarkStart w:id="1" w:name="b"/>'
+            + '<w:r><w:t>a</w:t></w:r><w:smartTag w:element="place"/><w:bookmarkEnd w:id="1"/></w:sdtContent></w:sdt>'), false);
+        expect(sdt.children.map((c) => c.type)).toEqual(['bookmarkStart', 'run', 'bookmarkEnd']);
+        expect(sdt._contentExtras.map((e) => e.name)).toEqual(['w:smartTag']);
+        const content = s.renderSdt(sdt).children.find((c) => c.name === 'w:sdtContent');
+        expect(names(content)).toEqual(['w:bookmarkStart', 'w:r', 'w:bookmarkEnd', 'w:smartTag']);
+    });
+
+    test('w:showingPlcHdr keeps its value; w:text keeps its attributes', () => {
+        const pr = (inner) => s.parseSdtProperties(xml.parse('<w:sdtPr xmlns:w="x">' + inner + '</w:sdtPr>'));
+        const off = pr('<w:showingPlcHdr w:val="false"/>');
+        expect(off.showingPlcHdr).toBe(false);
+        expect(s.renderSdtProperties(off).children[0].attrs).toEqual({ 'w:val': '0' });
+        const on = pr('<w:showingPlcHdr/>');
+        expect(on.showingPlcHdr).toBe(true);
+        expect(s.renderSdtProperties(on).children[0].attrs).toEqual({});
+        const text = pr('<w:text w:multiLine="1"/>');
+        expect(text.kind).toBe('text');
+        expect(s.renderSdtProperties(text).children[0].attrs).toEqual({ 'w:multiLine': '1' });
+    });
+});
+
+describe('docxStructure - run-level attributes', () => {
+    const xml = ooxmlXml.factory();
+    const props = docxProperties.factory(xml);
+    const draw = docxDrawing.factory(xml, drawingmlShape.factory(xml, _shared), _shared);
+    const s = docxStructure.factory(xml, props, draw, ooxmlMath.factory(_errors, xml));
+
+    test("a break's w:clear and a note reference's w:customMarkFollows are read and written back", () => {
+        const run = s.parseRun(xml.parse('<w:r xmlns:w="x"><w:br w:type="textWrapping" w:clear="all"/>'
+            + '<w:footnoteReference w:customMarkFollows="1" w:id="2"/><w:endnoteReference w:id="3"/></w:r>'));
+        expect(run.children).toEqual([
+            { type: 'break', kind: 'textWrapping', clear: 'all' },
+            { type: 'footnoteReference', id: '2', customMarkFollows: true },
+            { type: 'endnoteReference', id: '3' }
+        ]);
+        expect(s.renderRun(run).children.map((c) => c.attrs)).toEqual([
+            { 'w:type': 'textWrapping', 'w:clear': 'all' },
+            { 'w:customMarkFollows': '1', 'w:id': '2' },
+            { 'w:id': '3' }
+        ]);
+    });
+});
+
+describe('docx facade - the Office extension elements, opt-in', () => {
+    const runtime = new ModuleRuntime();
+    for (const m of [...ooxmlMods.fw_require, ...ooxmlMods.modules]) runtime.register(m);
+    const d = runtime.resolve('docx');
+    const opc = runtime.resolve('opcPackage');
+    const decoder = new TextDecoder();
+    const documentXml = (bytes) => decoder.decode(opc.read(bytes).parts['/word/document.xml']);
+    const el = (name, attrs = {}, children = []) => ({ type: 'element', name, attrs, children });
+    const source = d.write({ type: 'document', body: [{ type: 'paragraph', children: [
+        { type: 'run', rPr: { bold: true, _extras: [el('w14:textOutline', { 'w14:w': '9525' })] },
+          children: [{ type: 'text', value: 'a' }] },
+        { type: 'sdt', properties: { tag: 't', _extras: [el('w14:checkbox', {}, [el('w14:checked', { 'w14:val': '1' })])] },
+          children: [{ type: 'run', children: [{ type: 'text', value: 'b' }] }] }
+    ] }] });
+
+    test('the default read drops them, as before', () => {
+        expect(documentXml(source)).toContain('<w14:textOutline');
+        expect(documentXml(d.write(d.read(source).document))).not.toContain('w14:');
+    });
+
+    test("extensions: 'keep' keeps them through a write, declared and ignorable", () => {
+        const r = d.read(source, { extensions: 'keep' });
+        const x = documentXml(d.write(r.document));
+        expect(x).toContain('<w14:textOutline w14:w="9525"/>');
+        expect(x).toContain('<w14:checkbox><w14:checked w14:val="1"/></w14:checkbox>');
+        expect(x).toMatch(/<w:document [^>]*xmlns:w14="http:\/\/schemas.microsoft.com\/office\/word\/2010\/wordml"/);
+        expect(x).toMatch(/mc:Ignorable="[^"]*\bw14\b/);
+    });
+
+    test('any other value throws a ContractError', () => {
+        expect(() => d.read(source, { extensions: 'yes' })).toThrow(expect.objectContaining({ code: 'docx/invalid-extensions' }));
     });
 });

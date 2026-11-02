@@ -4,15 +4,20 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview The PWA adapter against a fake service-worker container:
- * a waiting release is reported once and only to a controlled page; a check
- * says current, ready or offline; an accepted update takes over and
- * reloads, never before; the worker's release is asked through a channel;
- * the launch queue opens the first file with its handle.
+ * @fileoverview The PWA adapter over real fw `installPrompt` / `swUpdate`
+ * instances against a fake service-worker container: a waiting release is
+ * reported once and only to a controlled page; a check says current, ready
+ * or offline; an accepted update takes over and reloads, never before; the
+ * worker's release is asked through a channel; the install button shows
+ * when the browser offers installation and hides on prompt or install; the
+ * offline note shows only on a controlled page; the launch queue opens the
+ * first file with its handle and hands the others on.
  *
  * @module notepad/core/pwa.test
  */
 import { describe, test, expect } from 'bun:test';
+import { installPrompt } from '@awacloud/fw/dom/sw/installPrompt.js';
+import { swUpdate } from '@awacloud/fw/dom/sw/swUpdate.js';
 import { mountPwa, SW_MESSAGES } from './pwa.js';
 
 /** A minimal EventTarget-like object. */
@@ -49,7 +54,8 @@ function page({ controlled = true, waiting = null, update, online = true, suppor
 }
 
 const base = (p, extra = {}) => mountPwa({
-    serviceWorker: p.serviceWorker, swUrl: 'sw.js', installButton: null, offlineNote: null,
+    installPrompt: installPrompt.factory(), swUpdate: swUpdate.factory(p.serviceWorker),
+    swUrl: 'sw.js', installButton: null, offlineNote: null,
     onFile: () => {}, win: p.win, ...extra
 });
 
@@ -153,5 +159,84 @@ describe('launch queue', () => {
         await base(p, { onFile: (file, h) => opened.push([file.name, h === handle]) });
         await consumer({ files: [handle] });
         expect(opened).toEqual([['a.txt', true]]);
+    });
+});
+
+describe('launch queue — several files', () => {
+    test('the first opens with its handle, the others go to onMore', async () => {
+        const p = page();
+        let consumer = null;
+        p.win.launchQueue = { setConsumer: (fn) => { consumer = fn; } };
+        const handle = (name) => ({ name, getFile: async () => new File(['x'], name) });
+        const [a, b, c] = [handle('a.txt'), handle('b.txt'), handle('c.txt')];
+        const opened = [];
+        const more = [];
+        await base(p, { onFile: (file, h) => opened.push([file.name, h]), onMore: (hs) => more.push(...hs) });
+        await consumer({ files: [a, b, c] });
+        expect(opened).toEqual([['a.txt', a]]);
+        expect(more).toEqual([b, c]);
+    });
+
+    test('a browser without a launch queue is not an error', async () => {
+        const p = page();
+        expect((await base(p)).state).toBe('registered');
+    });
+});
+
+describe('install button', () => {
+    const button = () => {
+        const b = target({ hidden: true });
+        return b;
+    };
+
+    test('shown when the browser offers installation; click hides it and prompts once', async () => {
+        const p = page();
+        const b = button();
+        await base(p, { installButton: b });
+        expect(b.hidden).toBe(true);
+        const prompts = [];
+        const offer = { preventDefault() { this.defaultPrevented = true; }, prompt: async () => { prompts.push(1); }, userChoice: Promise.resolve({ outcome: 'accepted' }) };
+        for (const fn of p.win.listeners.beforeinstallprompt) fn(offer);
+        expect(offer.defaultPrevented).toBe(true);
+        expect(b.hidden).toBe(false);
+        await b.listeners.click[0]();
+        expect(b.hidden).toBe(true);
+        expect(prompts).toEqual([1]);
+        await b.listeners.click[0]();   // nothing deferred any more
+        expect(prompts).toEqual([1]);
+    });
+
+    test('hidden again once the app is installed', async () => {
+        const p = page();
+        const b = button();
+        await base(p, { installButton: b });
+        for (const fn of p.win.listeners.beforeinstallprompt) fn({ preventDefault() {}, prompt: async () => {} });
+        expect(b.hidden).toBe(false);
+        p.win.emit('appinstalled');
+        expect(b.hidden).toBe(true);
+    });
+
+    test('without a button the offer is simply ignored', async () => {
+        const p = page();
+        await base(p);
+        expect(() => { for (const fn of p.win.listeners.beforeinstallprompt) fn({ preventDefault() {}, prompt: async () => {} }); }).not.toThrow();
+        p.win.emit('appinstalled');
+    });
+});
+
+describe('offline note', () => {
+    test('shown only once a worker controls the page', async () => {
+        const free = page({ controlled: false });
+        const note = { hidden: true };
+        await base(free, { offlineNote: note });
+        expect(note.hidden).toBe(true);
+        free.container.controller = worker('activated');
+        free.container.emit('controllerchange');
+        expect(note.hidden).toBe(false);
+
+        const controlled = page();
+        const note2 = { hidden: true };
+        await base(controlled, { offlineNote: note2 });
+        expect(note2.hidden).toBe(false);
     });
 });

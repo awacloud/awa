@@ -73,6 +73,8 @@ export const pdfFont = {
                 descendantFonts: e.DescendantFonts && e.DescendantFonts.type === 'array'
                     ? e.DescendantFonts.items.slice() : null,
                 standard14:     null,
+                // PDF 1.0's /Name, optional since
+                name:           e.Name && e.Name.type === 'name' ? e.Name.value : null,
                 raw:            dict
             };
 

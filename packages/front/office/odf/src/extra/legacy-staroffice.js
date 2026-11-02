@@ -90,8 +90,8 @@ export const legacyStaroffice = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const n of out.legacyNodes) extras.push(renderLegacy(n));
             delete out.legacyNodes;
-            if (Array.isArray(node._extras) || !node._extras) out._extras = extras;
-            else out._extras = { ...node._extras, children: extras };
+            if (Array.isArray(node._extras)) out._extras = extras;
+            else out._extras = { ...(node._extras || {}), children: extras };
             return out;
         }
 

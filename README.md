@@ -9,14 +9,17 @@ libraries — `@awacloud/pdf`, `@awacloud/ooxml`, `@awacloud/odf`,
 converter with its `@awacloud/oconv-fonts` font companion, and the
 `@awacloud/tool-convert` command-line tool. The wider SDE/SDC platform
 (Software Defined Environment / Container) is built on these same
-packages; it is not part of this repository's published subset.
+packages; it is not part of this repository's published subset. The
+repository also carries the sources of two browser apps, AWA Viewer and AWA
+Notepad (see [Apps](#apps)).
 
 ## Published packages
 
 The Apache-2.0 packages were first published at `0.1.0` on 2026-09-29 (lot
-1); the office libraries were published at `1.0.0` on 2026-10-07 (lot 2).
-The `Published` column gives the version on the npm registry and the day it
-was published.
+1); the office libraries were published at `1.0.0` on 2026-10-07 (lot 2),
+and seven of them at `1.1.0` on 2026-10-21 (`@awacloud/oconv-fonts` stays at
+`1.0.0`). The `Published` column gives the latest version on the npm registry
+and the day it was published.
 
 | Package | Directory | Repository | npm | Published | Lot | Licence |
 |---|---|---|---|---|---|---|
@@ -25,14 +28,14 @@ was published.
 | `@awacloud/tool-fw-bundler` | [`tools/fw-bundler`](tools/fw-bundler/) | [`awacloud/tool-fw-bundler`](https://github.com/awacloud/tool-fw-bundler) | [`@awacloud/tool-fw-bundler`](https://www.npmjs.com/package/@awacloud/tool-fw-bundler) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
 | `@awacloud/tool-fw-codegen` | [`tools/fw-codegen`](tools/fw-codegen/) | [`awacloud/tool-fw-codegen`](https://github.com/awacloud/tool-fw-codegen) | [`@awacloud/tool-fw-codegen`](https://www.npmjs.com/package/@awacloud/tool-fw-codegen) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
 | `@awacloud/tool-wasm-crypto` | [`tools/wasm-crypto`](tools/wasm-crypto/) | [`awacloud/tool-wasm-crypto`](https://github.com/awacloud/tool-wasm-crypto) | [`@awacloud/tool-wasm-crypto`](https://www.npmjs.com/package/@awacloud/tool-wasm-crypto) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
-| `@awacloud/pdf` | [`packages/front/office/pdf`](packages/front/office/pdf/) | [`awacloud/pdf`](https://github.com/awacloud/pdf) | [`@awacloud/pdf`](https://www.npmjs.com/package/@awacloud/pdf) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
-| `@awacloud/ooxml` | [`packages/front/office/ooxml`](packages/front/office/ooxml/) | [`awacloud/ooxml`](https://github.com/awacloud/ooxml) | [`@awacloud/ooxml`](https://www.npmjs.com/package/@awacloud/ooxml) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
-| `@awacloud/odf` | [`packages/front/office/odf`](packages/front/office/odf/) | [`awacloud/odf`](https://github.com/awacloud/odf) | [`@awacloud/odf`](https://www.npmjs.com/package/@awacloud/odf) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
-| `@awacloud/md` | [`packages/front/office/md`](packages/front/office/md/) | [`awacloud/md`](https://github.com/awacloud/md) | [`@awacloud/md`](https://www.npmjs.com/package/@awacloud/md) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
-| `@awacloud/fonts` | [`packages/front/office/fonts`](packages/front/office/fonts/) | [`awacloud/fonts`](https://github.com/awacloud/fonts) | [`@awacloud/fonts`](https://www.npmjs.com/package/@awacloud/fonts) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
-| `@awacloud/oconv` | [`packages/front/office/oconv`](packages/front/office/oconv/) | [`awacloud/oconv`](https://github.com/awacloud/oconv) | [`@awacloud/oconv`](https://www.npmjs.com/package/@awacloud/oconv) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
+| `@awacloud/pdf` | [`packages/front/office/pdf`](packages/front/office/pdf/) | [`awacloud/pdf`](https://github.com/awacloud/pdf) | [`@awacloud/pdf`](https://www.npmjs.com/package/@awacloud/pdf) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
+| `@awacloud/ooxml` | [`packages/front/office/ooxml`](packages/front/office/ooxml/) | [`awacloud/ooxml`](https://github.com/awacloud/ooxml) | [`@awacloud/ooxml`](https://www.npmjs.com/package/@awacloud/ooxml) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
+| `@awacloud/odf` | [`packages/front/office/odf`](packages/front/office/odf/) | [`awacloud/odf`](https://github.com/awacloud/odf) | [`@awacloud/odf`](https://www.npmjs.com/package/@awacloud/odf) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
+| `@awacloud/md` | [`packages/front/office/md`](packages/front/office/md/) | [`awacloud/md`](https://github.com/awacloud/md) | [`@awacloud/md`](https://www.npmjs.com/package/@awacloud/md) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
+| `@awacloud/fonts` | [`packages/front/office/fonts`](packages/front/office/fonts/) | [`awacloud/fonts`](https://github.com/awacloud/fonts) | [`@awacloud/fonts`](https://www.npmjs.com/package/@awacloud/fonts) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
+| `@awacloud/oconv` | [`packages/front/office/oconv`](packages/front/office/oconv/) | [`awacloud/oconv`](https://github.com/awacloud/oconv) | [`@awacloud/oconv`](https://www.npmjs.com/package/@awacloud/oconv) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
 | `@awacloud/oconv-fonts` | [`packages/front/office/oconv-fonts`](packages/front/office/oconv-fonts/) | [`awacloud/oconv-fonts`](https://github.com/awacloud/oconv-fonts) | [`@awacloud/oconv-fonts`](https://www.npmjs.com/package/@awacloud/oconv-fonts) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
-| `@awacloud/tool-convert` | [`tools/convert`](tools/convert/) | [`awacloud/tool-convert`](https://github.com/awacloud/tool-convert) | [`@awacloud/tool-convert`](https://www.npmjs.com/package/@awacloud/tool-convert) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
+| `@awacloud/tool-convert` | [`tools/convert`](tools/convert/) | [`awacloud/tool-convert`](https://github.com/awacloud/tool-convert) | [`@awacloud/tool-convert`](https://www.npmjs.com/package/@awacloud/tool-convert) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
 
 ### Install
 
@@ -71,6 +74,21 @@ The `cli.ts` router and this monorepo's other tooling are not published; command
 
 Each derived repository above is a read-only mirror; issues are disabled
 there. Report issues at https://github.com/awacloud/awa/issues.
+
+## Apps
+
+| App | Directory | Live at | Licence |
+|---|---|---|---|
+| AWA Viewer | [`apps/services/viewer`](apps/services/viewer/) | https://viewer.awacloud.com/ | AGPL-3.0-only |
+| AWA Notepad | [`apps/services/notepad`](apps/services/notepad/) | https://notepad.awacloud.com/ | AGPL-3.0-only |
+
+AWA Viewer opens PDF, Word, Excel, PowerPoint, OpenDocument, Markdown and
+plain-text documents in the browser, and AWA Notepad is a plain-text editor;
+both are installable web apps and neither uploads what you open. They are
+not published to npm, so there is no `npm i` line for them. Their sources are
+carried here for reading and audit; their build and tests run from the full
+monorepo, and the viewer's core is a package that is not part of this
+repository's published subset.
 
 ## Project
 

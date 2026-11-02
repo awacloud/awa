@@ -56,10 +56,18 @@ const FILES = [
         // `smart` is documented as typographic quotes only: dashes and ellipses are not claimed.
         differs: [11, 12, 14],
     },
+    {
+        name: 'smart_punct.txt',
+        sha256: '5ba9c2a2c39d8ee3211bb3538e61bb6707554e0eb23ac86f2b5f5c243556da58',
+        opts: { smart: true, smartDashes: true },
+        count: 15,
+        // `smartDashes` adds the dashes and ellipses: commonmark.js's `smart` in full.
+        differs: [],
+    },
 ];
 
 for (const file of FILES) {
-    describe(`commonmark.js 0.31.2 ${file.name}`, () => {
+    describe(`commonmark.js 0.31.2 ${file.name} (${Object.keys(file.opts).join(', ') || 'default'})`, () => {
         const bytes = readFileSync(new URL(`_fixtures/commonmark-js/${file.name}`, import.meta.url));
         const examples = extract(bytes.toString('utf8'));
 

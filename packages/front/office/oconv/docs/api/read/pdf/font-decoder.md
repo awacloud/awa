@@ -31,7 +31,7 @@ const { buildDecoder, decodeShow } = runtime.resolve('oconvPdfFontDecoder');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `buildDecoder` | `(fontDict: object, resolve: (ref) => object) => {subtype, cidBytes, decode, width, vertical, widthApproximated}` | a decoder bound to one resolved Font dict; `decode(code: number) => string\|null`; `width(code: number) => number` (glyph width w0, thousandths of text space); `vertical` (`true` for a `…-V` composite CMap); `widthApproximated() => boolean` | — |
+| `buildDecoder` | `(fontDict: object, resolve: (ref) => object) => {subtype, cidBytes, decode, width, vertical, widthApproximated, bold}` | a decoder bound to one resolved Font dict; `decode(code: number) => string\|null`; `width(code: number) => number` (glyph width w0, thousandths of text space); `vertical` (`true` for a `…-V` composite CMap); `widthApproximated() => boolean` | — |
 | `decodeShow` | `(decoder: {cidBytes, decode}, strBytes: Uint8Array) => {text, decoded, undecodable}` | splits `strBytes` into 1- or 2-byte codes per `decoder.cidBytes` and decodes each | — |
 
 ## Examples
@@ -65,6 +65,7 @@ decodeShow(decoder, new Uint8Array([0x41, 0x42]));
   - simple fonts: `/Widths` indexed from `/FirstChar`. A code outside the array takes the descriptor's `/MissingWidth` (0 when absent, the spec default). A Type 3 font's widths are scaled by its `/FontMatrix`.
   - composite (`Type0`) fonts: the descendant CIDFont's `/W` array, in both forms (`c [w1 w2 …]` and `cFirst cLast w`), with `/DW` (default 1000) for CIDs it does not list. Codes are read as CIDs only under `Identity-H`/`Identity-V`. Under any other CMap the code → CID map is unknown here, so `/DW` is used.
   - Standard 14 fonts with no `/Widths`: the Adobe Core 14 AFM widths shipped by `@awacloud/fonts` (`standard14Lookup`), looked up by the glyph name the font's encoding gives the code. `Symbol` and `ZapfDingbats` are looked up by code.
+- `bold` is true when the font's `BaseFont` (a Type 0 font's descendant's too), its subset tag `ABCDEF+` removed, names a bold weight (`Bold`, `Black`, `Heavy`, `Semibold`, `Demibold`, `Demi`, `Extrabold`, `Ultrabold`, any case), or its font descriptor has `/FontWeight` 600 or more or the ForceBold flag (`/Flags` bit 19); `oconvPdfToIr`'s opt-in heading inference reads it.
 - When a width cannot be read from the font, a declared fallback is used: 500 thousandths for a simple font, 1000 for a composite one. `widthApproximated()` then turns `true`, and `oconvPdfTextExtract` records `text/width-approximated`. The cases are: `/Widths` absent on a font that is not one of the Standard 14, a malformed width array or entry, a missing descendant font, a `/W` table under a non-identity CMap, and a named Standard 14 glyph missing from the AFM table. A malformed width structure never throws.
 - `cidBytes` is `2` for `Type0` fonts, `1` otherwise — `decodeShow` uses it to split `strBytes` into codes.
 

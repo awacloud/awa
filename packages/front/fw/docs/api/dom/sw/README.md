@@ -6,9 +6,12 @@ Service Worker lifecycle + Cache API.
 |--------|----------|------|-------------|
 | [backgroundSync](./backgroundSync.md) | `{register, list, support}` | `serviceWorker` | Background Sync API — offline replay via SyncManager (Chrome only) |
 | [cache](./cache.md) | `{open, delete, has, keys, match}` | none | Cache API wrapper |
+| [installPrompt](./installPrompt.md) | `{install, launchQueue}` | none | PWA install prompt deferral + File Handling launch queue |
+| [precache](./precache.md) | `{create, DEFAULT_MESSAGES}` | `cache` | Worker-side release precache + cache-first / network-first strategies |
 | [serviceWorker](./serviceWorker.md) | `{register, unregister, ready, update, onUpdate, postMessage, onMessage, controller, isSupported}` | none | SW lifecycle (window-side) |
 | [push](./push.md) | `{subscribe, unsubscribe, current, permission, support}` | `serviceWorker`, `b64` | PushManager wrapper — VAPID subscription, subscription, permission |
 | [sharedWorker](./sharedWorker.md) | `{create, support}` | `processRPC` | SharedWorker cross-tab connection + bidirectional RPC |
+| [swUpdate](./swUpdate.md) | `{create, DEFAULT_MESSAGES}` | `serviceWorker` | Waiting-release update flow: report once, check, apply, version |
 
 ## Common pattern
 
@@ -23,6 +26,9 @@ await serviceWorker.register('/sw.js', { scope: '/' });
 serviceWorker.onUpdate((reg) => {
     console.log('New SW waiting:', reg.waiting);
 });
+
+// Or the waiting-release flow: report once, apply on the user's word
+const updates = await runtime.resolve('swUpdate').create({ swUrl: '/sw.js', onUpdateReady: showBanner });
 
 // Use the cache
 const c = await cache.open('v1');

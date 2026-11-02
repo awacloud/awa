@@ -21,7 +21,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
-import { loadDefaultFaces, registerDefaultFaces } from './loader.js';
+import { faceUrls, loadDefaultFaces, registerDefaultFaces } from './loader.js';
 
 const VENDOR = new URL('../vendor/', import.meta.url);
 const PROVENANCE = JSON.parse(readFileSync(new URL('PROVENANCE.json', VENDOR), 'utf8'));
@@ -178,7 +178,7 @@ describe('registerDefaultFaces', () => {
         const returned = await registerDefaultFaces(runtime);
         expect(returned).toBe(runtime);
         expect(runtime.has('oconvDefaultFaces')).toBe(true);
-        expect(runtime.has('oconvDefaultFaces', '1.0.0')).toBe(true);
+        expect(runtime.has('oconvDefaultFaces', '1.1.0')).toBe(true);
 
         const api = runtime.resolve('oconvDefaultFaces');
         expect(api.family).toBe('Liberation');
@@ -270,5 +270,82 @@ describe('registerDefaultFaces — a second call (BL-1268)', () => {
         const r2 = await registerDefaultFaces(runtime);
         expect(runtime.has('oconvDefaultFaces')).toBe(true);
         expect(r2).toBe(runtime);
+    });
+});
+
+/**
+ * The family (name ID 1, Windows Unicode record first) and the bold / italic
+ * bits of `OS/2` `fsSelection` of a TrueType face.
+ * @param {Uint8Array} b
+ * @returns {{ family: string, bold: boolean, italic: boolean }}
+ */
+function faceIdentity(b) {
+    const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    const tables = {};
+    for (let i = 0; i < v.getUint16(4); i++) {
+        const o = 12 + 16 * i;
+        tables[String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3])] = v.getUint32(o + 8);
+    }
+    const n = tables.name;
+    const strings = v.getUint16(n + 4);
+    let family = null;
+    for (let i = 0; i < v.getUint16(n + 2) && family === null; i++) {
+        const r = n + 6 + 12 * i;
+        if (v.getUint16(r) !== 3 || v.getUint16(r + 6) !== 1) continue;
+        const len = v.getUint16(r + 8);
+        const off = n + strings + v.getUint16(r + 10);
+        family = String.fromCharCode(...Array.from({ length: len / 2 }, (_, k) => v.getUint16(off + 2 * k)));
+    }
+    const sel = v.getUint16(tables['OS/2'] + 62);
+    return { family, bold: (sel & 0x20) !== 0, italic: (sel & 0x01) !== 0 };
+}
+
+describe('faceUrls', () => {
+    const FAMILIES = ['Liberation Sans', 'Liberation Serif', 'Liberation Mono', 'Carlito', 'Caladea'];
+    const STYLES = { regular: [false, false], bold: [true, false], italic: [false, true], boldItalic: [true, true] };
+
+    test('a frozen map of the five vendored families, each a frozen map of the four styles', () => {
+        const urls = faceUrls();
+        expect(Object.keys(urls)).toEqual(FAMILIES);
+        expect(Object.isFrozen(urls)).toBe(true);
+        for (const family of FAMILIES) {
+            expect(Object.keys(urls[family])).toEqual(Object.keys(STYLES));
+            expect(Object.isFrozen(urls[family])).toBe(true);
+            for (const url of Object.values(urls[family])) expect(url).toBeInstanceOf(URL);
+        }
+    });
+
+    test('every URL names a vendored file whose sha256 is its PROVENANCE.json record, of that family and style', () => {
+        const records = PROVENANCE.trees.flatMap((t) => t.files);
+        const urls = faceUrls();
+        for (const family of FAMILIES) {
+            for (const [style, [bold, italic]] of Object.entries(STYLES)) {
+                const url = urls[family][style];
+                const path = url.href.slice(VENDOR.href.length);
+                const bytes = new Uint8Array(readFileSync(url));
+                expect(sha256(bytes)).toBe(records.find((r) => r.path === path).sha256);
+                expect(faceIdentity(bytes)).toEqual({ family, bold, italic });
+            }
+        }
+    });
+
+    test('the default directory is the package vendor/, read by nothing at call time', () => {
+        expect(faceUrls().Carlito.regular.href).toBe(new URL('carlito/Carlito-Regular.ttf', VENDOR).href);
+        expect(faceUrls()['Liberation Mono'].boldItalic.href).toBe(new URL('liberation/LiberationMono-BoldItalic.ttf', VENDOR).href);
+    });
+
+    test('opts.vendorUrl moves every URL (absolute, root-relative, without a trailing slash)', () => {
+        expect(faceUrls({ vendorUrl: 'https://cdn.example/fonts/' }).Caladea.bold.href)
+            .toBe('https://cdn.example/fonts/caladea/Caladea-Bold.ttf');
+        expect(faceUrls({ vendorUrl: new URL('https://cdn.example/f') })['Liberation Serif'].italic.href)
+            .toBe('https://cdn.example/f/liberation/LiberationSerif-Italic.ttf');
+        // root-relative: resolved against the module's own URL (its origin; a file: URL keeps its drive)
+        expect(faceUrls({ vendorUrl: '/assets/fonts' }).Carlito.boldItalic.href)
+            .toBe(new URL('/assets/fonts/carlito/Carlito-BoldItalic.ttf', import.meta.url).href);
+    });
+
+    test('vendorUrl null or undefined keeps the default', () => {
+        expect(faceUrls({ vendorUrl: null }).Carlito.bold.href).toBe(faceUrls().Carlito.bold.href);
+        expect(faceUrls({}).Carlito.bold.href).toBe(faceUrls().Carlito.bold.href);
     });
 });

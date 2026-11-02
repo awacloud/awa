@@ -83,6 +83,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { encodingWinAnsi } from '../src/encodings/winAnsi.js';
+import { encodingMacRoman } from '../src/encodings/macRoman.js';
+import { encodingStandard } from '../src/encodings/standard.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(HERE, '..');
@@ -149,6 +151,17 @@ export const WIN_ANSI_HIGH_ENTRIES = (() => {
     return out;
 })();
 
+/**
+ * The glyphs MacRomanEncoding and StandardEncoding name that the WinAnsi
+ * tables cannot hold, sorted — composed from the package's own encoding
+ * tables. Each face's `*_EXTRA_WIDTHS` holds those its AFM carries.
+ */
+export const EXTRA_GLYPHS = (() => {
+    const win = new Set(encodingWinAnsi.factory().WIN_ANSI);
+    const named = [...encodingMacRoman.factory().MAC_ROMAN, ...encodingStandard.factory().STANDARD];
+    return [...new Set(named.filter((n) => n && n !== '.notdef' && !win.has(n)))].sort();
+})();
+
 if (STANDARD_ASCII_ENTRIES.length !== 95) {
     throw new Error(`internal: expected 95 printable-ASCII entries, got ${STANDARD_ASCII_ENTRIES.length}`);
 }
@@ -199,6 +212,33 @@ export function buildWidthsArray(glyphWidths) {
         w[byte] = glyphWidths.get(name);
     }
     return w;
+}
+
+/**
+ * The widths, by glyph name, of the `EXTRA_GLYPHS` an AFM carries.
+ * @param {Map<string, number>} glyphWidths
+ * @returns {Object<string, number>}
+ */
+export function buildExtraWidths(glyphWidths) {
+    const out = {};
+    for (const name of EXTRA_GLYPHS) if (glyphWidths.has(name)) out[name] = glyphWidths.get(name);
+    return out;
+}
+
+/**
+ * Render the factory-local `extraWidths` block: a frozen object literal.
+ * @param {Map<string, number>} glyphWidths
+ * @param {string} constName
+ * @param {number} indent - spaces before each source line.
+ * @returns {string}
+ */
+function renderExtraBlock(glyphWidths, constName, indent) {
+    const pad = ' '.repeat(indent);
+    const entries = Object.entries(buildExtraWidths(glyphWidths)).map(([name, width]) => `${name}: ${width}`);
+    const rows = [];
+    for (let i = 0; i < entries.length; i += 8) rows.push(entries.slice(i, i + 8).join(', '));
+    return `${pad}const ${constName} = Object.freeze({\n` +
+        rows.map((r) => `${pad}    ${r}`).join(',\n') + `\n${pad}});`;
 }
 
 /**
@@ -276,7 +316,7 @@ function extractMarkerBlock(source, constName) {
     return source.slice(startIdx + startMarker.length, endIdx).trim();
 }
 
-function renderGeneratedModule(tables, shas) {
+function renderGeneratedModule(tables, extras, shas) {
     const header = `/**
  * @fileoverview Standard 14 — per-variant width tables for
  * Helvetica-Bold, Times-Bold, Times-Italic, Times-BoldItalic, parsed
@@ -303,6 +343,12 @@ function renderGeneratedModule(tables, shas) {
  * \`grave\` names to match the committed regular tables byte-for-byte.
  * \`.notdef\` and control slots stay 0.
  *
+ * Each \`*_EXTRA_WIDTHS\` object (all six AFM faces, the regular ones
+ * included) holds the widths, by glyph name, of the glyphs
+ * MacRomanEncoding and StandardEncoding name that the WinAnsi tables
+ * cannot hold (\`EXTRA_GLYPHS\`, composed from the package's own encoding
+ * tables), those the face's AFM carries.
+ *
  * Plain data module — NOT an fw module descriptor. \`helvetica.js\`/
  * \`times.js\` do not import it: a factory referencing a module-scope
  * import (even pure data) is disallowed by \`fw/no-factory-capture\` —
@@ -317,7 +363,10 @@ function renderGeneratedModule(tables, shas) {
     const body = Object.entries(tables)
         .map(([name, arr]) => `export const ${name} = Object.freeze(${JSON.stringify(arr)});\n`)
         .join('\n');
-    return header + body;
+    const extraBody = Object.entries(extras)
+        .map(([name, obj]) => `export const ${name} = Object.freeze(${JSON.stringify(obj)});\n`)
+        .join('\n');
+    return header + body + '\n' + extraBody;
 }
 
 /**
@@ -354,7 +403,23 @@ export async function main(opts = {}) {
         timesBoldItalic: timesBoldItalicAfm.sha256
     };
 
-    const generatedModuleSrc = renderGeneratedModule(tables, shas);
+    const extras = {
+        HELVETICA_EXTRA_WIDTHS: buildExtraWidths(helveticaAfm.glyphWidths),
+        TIMES_ROMAN_EXTRA_WIDTHS: buildExtraWidths(timesRomanAfm.glyphWidths),
+        HELVETICA_BOLD_EXTRA_WIDTHS: buildExtraWidths(helveticaBoldAfm.glyphWidths),
+        TIMES_BOLD_EXTRA_WIDTHS: buildExtraWidths(timesBoldAfm.glyphWidths),
+        TIMES_ITALIC_EXTRA_WIDTHS: buildExtraWidths(timesItalicAfm.glyphWidths),
+        TIMES_BOLD_ITALIC_EXTRA_WIDTHS: buildExtraWidths(timesBoldItalicAfm.glyphWidths)
+    };
+    const generatedModuleSrc = renderGeneratedModule(tables, extras, shas);
+    const extraBlocks = [
+        ['HELVETICA_EXTRA_WIDTHS', renderExtraBlock(helveticaAfm.glyphWidths, 'HELVETICA_EXTRA_WIDTHS', 8)],
+        ['HELVETICA_BOLD_EXTRA_WIDTHS', renderExtraBlock(helveticaBoldAfm.glyphWidths, 'HELVETICA_BOLD_EXTRA_WIDTHS', 8)],
+        ['TIMES_ROMAN_EXTRA_WIDTHS', renderExtraBlock(timesRomanAfm.glyphWidths, 'TIMES_ROMAN_EXTRA_WIDTHS', 8)],
+        ['TIMES_BOLD_EXTRA_WIDTHS', renderExtraBlock(timesBoldAfm.glyphWidths, 'TIMES_BOLD_EXTRA_WIDTHS', 8)],
+        ['TIMES_ITALIC_EXTRA_WIDTHS', renderExtraBlock(timesItalicAfm.glyphWidths, 'TIMES_ITALIC_EXTRA_WIDTHS', 8)],
+        ['TIMES_BOLD_ITALIC_EXTRA_WIDTHS', renderExtraBlock(timesBoldItalicAfm.glyphWidths, 'TIMES_BOLD_ITALIC_EXTRA_WIDTHS', 8)]
+    ];
 
     const helveticaRegularBlock = renderAsciiBlock(helveticaAfm.glyphWidths, 'HELVETICA_WIDTHS', 8);
     const timesRomanRegularBlock = renderAsciiBlock(timesRomanAfm.glyphWidths, 'TIMES_ROMAN_WIDTHS', 8);
@@ -365,11 +430,11 @@ export async function main(opts = {}) {
 
     const helveticaJsSrc = readFileSync(HELVETICA_JS, 'utf8');
     const timesJsSrc = readFileSync(TIMES_JS, 'utf8');
-    const newHelveticaJsSrc = patchMarkerBlock(
+    let newHelveticaJsSrc = patchMarkerBlock(
         patchMarkerBlock(helveticaJsSrc, 'HELVETICA_WIDTHS', helveticaRegularBlock),
         'HELVETICA_BOLD_WIDTHS', helveticaBoldBlock
     );
-    const newTimesJsSrc = patchMarkerBlock(
+    let newTimesJsSrc = patchMarkerBlock(
         patchMarkerBlock(
             patchMarkerBlock(
                 patchMarkerBlock(timesJsSrc, 'TIMES_ROMAN_WIDTHS', timesRomanRegularBlock),
@@ -379,6 +444,10 @@ export async function main(opts = {}) {
         ),
         'TIMES_BOLD_ITALIC_WIDTHS', timesBoldItalicBlock
     );
+    for (const [name, block] of extraBlocks) {
+        if (name.startsWith('HELVETICA')) newHelveticaJsSrc = patchMarkerBlock(newHelveticaJsSrc, name, block);
+        else newTimesJsSrc = patchMarkerBlock(newTimesJsSrc, name, block);
+    }
 
     // Cross-check: regenerating the REGULAR tables must reproduce the
     // committed HELVETICA_WIDTHS / TIMES_ROMAN_WIDTHS byte-for-byte.
@@ -431,7 +500,8 @@ export async function main(opts = {}) {
             ['HELVETICA_BOLD_WIDTHS', helveticaBoldBlock],
             ['TIMES_BOLD_WIDTHS', timesBoldBlock],
             ['TIMES_ITALIC_WIDTHS', timesItalicBlock],
-            ['TIMES_BOLD_ITALIC_WIDTHS', timesBoldItalicBlock]
+            ['TIMES_BOLD_ITALIC_WIDTHS', timesBoldItalicBlock],
+            ...extraBlocks
         ]) {
             const src = name.startsWith('HELVETICA') ? helveticaJsSrc : timesJsSrc;
             const file = name.startsWith('HELVETICA') ? 'helvetica.js' : 'times.js';

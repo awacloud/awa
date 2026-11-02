@@ -41,6 +41,6 @@ describe('presentationTyped — hooks', () => {
             { kind: 'presentation:notes', attrs: {} }
         ] };
         const out = ext.dehydrateSlide(slide);
-        expect(out._extras[0].name).toBe('presentation:notes');
+        expect(out._extras.children[0].name).toBe('presentation:notes');
     });
 });

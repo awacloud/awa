@@ -72,8 +72,8 @@ export const dsigSignatures = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             extras.push(renderSignatures(out.signatures));
             delete out.signatures;
-            if (Array.isArray(meta._extras) || !meta._extras) out._extras = extras;
-            else out._extras = { ...meta._extras, children: extras };
+            if (Array.isArray(meta._extras)) out._extras = extras;
+            else out._extras = { ...(meta._extras || {}), children: extras };
             return out;
         }
 

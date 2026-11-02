@@ -408,6 +408,32 @@ function pptxDocuments(rt) {
         }]
     }));
 
+    // Shape properties as a read file holds them: a theme-coloured line
+    // with a join and arrow heads, and a custom geometry with a gradient
+    // fill, all kept verbatim by the reader and written back in place.
+    const dml = rt.resolve('drawingmlShape');
+    const spPr = (inner) => dml.parseShapeProperties(rt.resolve('xml').parse(
+        '<p:spPr xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
+        + ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' + inner + '</p:spPr>'));
+    const xfrm = (x) => `<a:xfrm><a:off x="${x}" y="1828800"/><a:ext cx="2743200" cy="1371600"/></a:xfrm>`;
+    add('pptx-kept-line-geometry', p.write({
+        slides: [{
+            shapes: [
+                title('Kept DrawingML'),
+                { type: 'shape', id: 3, name: 'Arrow line', shapeProps: spPr(xfrm(457200)
+                    + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/>'
+                    + '<a:ln w="19050" algn="ctr"><a:solidFill><a:schemeClr val="accent1"><a:lumMod val="75000"/></a:schemeClr></a:solidFill>'
+                    + '<a:prstDash val="dash"/><a:round/><a:headEnd type="triangle"/><a:tailEnd type="stealth" w="lg" len="lg"/></a:ln>') },
+                { type: 'shape', id: 4, name: 'Freeform', shapeProps: spPr(xfrm(3657600)
+                    + '<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst>'
+                    + '<a:path w="2743200" h="1371600"><a:moveTo><a:pt x="0" y="1371600"/></a:moveTo>'
+                    + '<a:lnTo><a:pt x="1371600" y="0"/></a:lnTo><a:lnTo><a:pt x="2743200" y="1371600"/></a:lnTo><a:close/></a:path></a:pathLst></a:custGeom>'
+                    + '<a:gradFill><a:gsLst><a:gs pos="0"><a:schemeClr val="accent2"/></a:gs><a:gs pos="100000"><a:srgbClr val="FFFFFF"/></a:gs></a:gsLst><a:lin ang="5400000" scaled="0"/></a:gradFill>'
+                    + '<a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>') }
+            ]
+        }]
+    }));
+
     return out;
 }
 

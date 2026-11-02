@@ -1222,15 +1222,28 @@ export const mdFullPackage = {
     function findNextNonspace() {
       const currentLine = this.currentLine;
       let i = this.offset, cols = this.column, c;
-      while ((c = currentLine.charAt(i)) !== "")
-        if (c === " ") {
-          i++;
-          cols++;
-        } else if (c === "\t") {
-          i++;
-          cols += 4 - cols % 4;
-        } else
-          break;
+      if (this.nnLine === this.lineNumber && this.nnFrom <= i && i <= this.nnAt && !this.nnTab) {
+        cols += this.nnAt - i;
+        i = this.nnAt;
+        c = currentLine.charAt(i);
+      } else {
+        const from = i;
+        let tab = !1;
+        while ((c = currentLine.charAt(i)) !== "")
+          if (c === " ") {
+            i++;
+            cols++;
+          } else if (c === "\t") {
+            tab = !0;
+            i++;
+            cols += 4 - cols % 4;
+          } else
+            break;
+        this.nnLine = this.lineNumber;
+        this.nnFrom = from;
+        this.nnAt = i;
+        this.nnTab = tab;
+      }
       this.blank = c === `
 ` || c === "\r" || c === "";
       this.nextNonspace = i;
@@ -1250,12 +1263,16 @@ export const mdFullPackage = {
     function addChild(tag, offset) {
       while (!this.blocks[this.tip.type].canContain(tag))
         this.finalize(this.tip, this.lineNumber - 1);
+      const depth = (this.depthOf.get(this.tip) || 0) + 1;
+      if (depth > this.maxDepth)
+        throw new ContractError("md/limit-exceeded", "md.parse: nesting depth exceeded limit (" + this.maxDepth + ")", { context: { kind: "maxDepth", limit: this.maxDepth, depth } });
       const column_number = offset + 1, newBlock = new Node(tag, [
         [this.lineNumber, column_number],
         [0, 0]
       ]);
       newBlock.stringContent = "";
       this.tip.appendChild(newBlock);
+      this.depthOf.set(newBlock, depth);
       this.tip = newBlock;
       return newBlock;
     }
@@ -1414,6 +1431,12 @@ export const mdFullPackage = {
         lastMatchedContainer: doc,
         refmap: createLinkRefMap(),
         lastLineLength: 0,
+        depthOf: new WeakMap([[doc, 0]]),
+        maxDepth: 1 / 0,
+        nnLine: 0,
+        nnFrom: 0,
+        nnAt: 0,
+        nnTab: !1,
         findNextNonspace,
         advanceOffset,
         advanceNextNonspace,
@@ -1427,7 +1450,10 @@ export const mdFullPackage = {
     function parse(input, opts) {
       if (typeof input !== "string")
         throw new _ContractError("md/parse-not-string", "blockParser.parse: input must be a string, got " + typeof input, { context: { gotType: typeof input } });
-      const p = makeParser(), lines = input.split(reLineEnding);
+      const p = makeParser(), maxDepth = opts && opts.maxDepth;
+      if (typeof maxDepth === "number" && maxDepth >= 0)
+        p.maxDepth = maxDepth;
+      const lines = input.split(reLineEnding);
       let len = lines.length;
       if (input.charCodeAt(input.length - 1) === 10)
         len -= 1;
@@ -2249,7 +2275,26 @@ export const mdFullPackage = {
       C_AMPERSAND,
       C_SINGLEQUOTE,
       C_DOUBLEQUOTE
-    } = common, { C_TILDE, reSpnl } = regex, { makeText, makeMath, mathSpanEnd, fromCodePoint, trim, isSpace } = helpers, C_DOLLAR = 36, { installEscapes } = escapes, { installCodeSpan } = codeSpan, { installAutolink } = autolink, { installDelimiterStack } = delimiterStack, { installLink } = link, { installLineBreak } = lineBreak, { processExtendedAutolinks } = autolinkExt, { backfillSourcepos } = sourcepos;
+    } = common, { C_TILDE, reSpnl } = regex, { makeText, makeMath, mathSpanEnd, fromCodePoint, trim, isSpace } = helpers, C_DOLLAR = 36, { installEscapes } = escapes, { installCodeSpan } = codeSpan, { installAutolink } = autolink, { installDelimiterStack } = delimiterStack, { installLink } = link, { installLineBreak } = lineBreak, { processExtendedAutolinks, scanExtAutolinks } = autolinkExt, { backfillSourcepos } = sourcepos, reDashes = /--+/g, reEllipses = /\.\.\./g;
+    function dashRun(chars) {
+      const n = chars.length;
+      let em = 0, en = 0;
+      if (n % 3 === 0)
+        em = n / 3;
+      else if (n % 2 === 0)
+        en = n / 2;
+      else if (n % 3 === 2) {
+        en = 1;
+        em = (n - 2) / 3;
+      } else {
+        en = 2;
+        em = (n - 4) / 3;
+      }
+      return "\u2014".repeat(em) + "\u2013".repeat(en);
+    }
+    function smartText(s) {
+      return s.replace(reEllipses, "\u2026").replace(reDashes, dashRun);
+    }
     function createInlineParser(opts) {
       const ip = {
         subject: "",
@@ -2307,6 +2352,34 @@ export const mdFullPackage = {
           }
         return !0;
       };
+      if (ip.options.smartDashes) {
+        const parseStringMath = ip.parseString;
+        ip.parseString = function(block) {
+          if (!parseStringMath.call(this, block))
+            return !1;
+          const node = block.lastChild, s = node.literal;
+          if (s.indexOf("--") < 0 && s.indexOf("...") < 0)
+            return !0;
+          if (this.options.extendedAutolinks === !1) {
+            node.literal = smartText(s);
+            return !0;
+          }
+          let out = "", pos = 0;
+          for (const m of scanExtAutolinks(s)) {
+            if (m.end <= pos)
+              continue;
+            let a = Math.max(m.start, pos), b = m.end;
+            while (a > pos && !isSpace(s.charCodeAt(a - 1)))
+              a--;
+            while (b < s.length && !isSpace(s.charCodeAt(b)))
+              b++;
+            out += smartText(s.slice(pos, a)) + s.slice(a, b);
+            pos = b;
+          }
+          node.literal = out + smartText(s.slice(pos));
+          return !0;
+        };
+      }
       ip.parseInline = function(block) {
         let res;
         const c = this.peek();
@@ -3098,7 +3171,8 @@ export const mdFullPackage = {
         const flags = {
           math: extensions.some((e) => Array.isArray(e.inlineSyntax) && e.inlineSyntax.includes("math"))
         }, { document, refmap } = bp.parse(text, {
-          inlineParser: (block, map) => ip.parse(block, map, flags)
+          inlineParser: (block, map) => ip.parse(block, map, flags),
+          maxDepth
         });
         document.data = { refmap };
         if (maxDepth !== 1 / 0 || maxNodes !== 1 / 0 || maxUrlLength !== 1 / 0)

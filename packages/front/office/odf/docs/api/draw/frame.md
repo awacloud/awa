@@ -25,7 +25,7 @@ Model:
 | Method | Description |
 |---------|-------------|
 | `parseFrame(el)` | Converts `<draw:frame>`. |
-| `renderFrame(f)` | Builds the node. A `child` whose `kind` is not `image`, `text-box` or `object` throws `ContractError` `odf/contract-error/frame` (`context.kind`); a frame without `child` renders its attributes and `_extras` only. |
+| `renderFrame(f, opts?)` | Builds the node. `opts` is handed to [`drawImage.renderImage`](./image.md) for an image child (`opts.mimeTypeAsRead`). A `child` whose `kind` is not `image`, `text-box` or `object` throws `ContractError` `odf/contract-error/frame` (`context.kind`); a frame without `child` renders its attributes and `_extras` only. |
 
 `odfErrors` is the third, optional dependency: a factory wired by hand with
 the two-argument call `drawFrame.factory(xml, imageMod)` (the 1.0.0 wiring)

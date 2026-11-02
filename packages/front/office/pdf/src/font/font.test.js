@@ -153,3 +153,10 @@ describe('pdfFont module', () => {
         expect(typeof m.resolveDescendant).toBe('function');
     });
 });
+
+describe('typeFont: /Name (A39a)', () => {
+    test('the name read; null when absent', () => {
+        expect(typeFont(obj.dict({ Subtype: obj.name('Type1'), BaseFont: obj.name('Helvetica'), Name: obj.name('F1') })).name).toBe('F1');
+        expect(typeFont(obj.dict({ Subtype: obj.name('Type1'), BaseFont: obj.name('Helvetica') })).name).toBe(null);
+    });
+});

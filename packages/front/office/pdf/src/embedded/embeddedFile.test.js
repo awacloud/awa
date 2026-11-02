@@ -72,3 +72,25 @@ describe('pdfEmbeddedFile module', () => {
         expect(typeof m.typeEmbeddedFile).toBe('function');
     });
 });
+
+describe('typeEmbeddedFileParams (A40e)', () => {
+    const { typeEmbeddedFileParams } = _pdfEmbeddedFile_m;
+    test('the parameters, Mac as read; a non-dictionary throws', () => {
+        const mac = obj.dict({ Creator: obj.int(1) });
+        const d = obj.dict({ Size: obj.int(12), CreationDate: obj.string(u8('D:2026')), ModDate: obj.string(u8('D:2027')),
+            CheckSum: obj.string(u8('md5')), Mac: mac, Foo: obj.int(1) });
+        const r = typeEmbeddedFileParams(d);
+        expect([r.size, r.creationDate, r.modDate, r.checkSum, r.mac, r._extras, r.raw])
+            .toEqual([12, u8('D:2026'), u8('D:2027'), u8('md5'), mac, { Foo: obj.int(1) }, d]);
+        expect(typeEmbeddedFileParams(obj.dict({ Mac: obj.int(1) })).mac).toBe(null);
+        expect('mac' in typeEmbeddedFileParams(obj.dict({}))).toBe(false);
+        let code = null;
+        try { typeEmbeddedFileParams(obj.array([])); } catch (e) { code = [e.constructor.name, e.code]; }
+        expect(code).toEqual([ParseError.name, 'pdf/embedded/bad-params']);
+    });
+    test('typeEmbeddedFile types its Params the same way', () => {
+        const mac = obj.dict({});
+        const s = obj.stream(obj.dict({ Type: obj.name('EmbeddedFile'), Params: obj.dict({ Mac: mac }) }), new Uint8Array(0));
+        expect(typeEmbeddedFile(s).params.mac).toBe(mac);
+    });
+});

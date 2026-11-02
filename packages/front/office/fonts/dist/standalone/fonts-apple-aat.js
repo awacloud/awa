@@ -6142,6 +6142,16 @@ export const fontsAppleAatBundled = {
       });
       return { version, encodings };
     }
+    const MAC_ROMAN = "\xC4\xC5\xC7\xC9\xD1\xD6\xDC\xE1\xE0\xE2\xE4\xE3\xE5\xE7\xE9\xE8" + "\xEA\xEB\xED\xEC\xEE\xEF\xF1\xF3\xF2\xF4\xF6\xF5\xFA\xF9\xFB\xFC" + "\u2020\xB0\xA2\xA3\xA7\u2022\xB6\xDF\xAE\xA9\u2122\xB4\xA8\u2260\xC6\xD8" + "\u221E\xB1\u2264\u2265\xA5\xB5\u2202\u2211\u220F\u03C0\u222B\xAA\xBA\u03A9\xE6\xF8" + "\xBF\xA1\xAC\u221A\u0192\u2248\u2206\xAB\xBB\u2026\xA0\xC0\xC3\xD5\u0152\u0153" + "\u2013\u2014\u201C\u201D\u2018\u2019\xF7\u25CA\xFF\u0178\u2044\u20AC\u2039\u203A\uFB01\uFB02" + "\u2021\xB7\u201A\u201E\u2030\xC2\xCA\xC1\xCB\xC8\xCD\xCE\xCF\xCC\xD3\xD4" + "\uF8FF\xD2\xDA\xDB\xD9\u0131\u02C6\u02DC\xAF\u02D8\u02D9\u02DA\xB8\u02DD\u02DB\u02C7", MAC_ICELAND = "\xC4\xC5\xC7\xC9\xD1\xD6\xDC\xE1\xE0\xE2\xE4\xE3\xE5\xE7\xE9\xE8" + "\xEA\xEB\xED\xEC\xEE\xEF\xF1\xF3\xF2\xF4\xF6\xF5\xFA\xF9\xFB\xFC" + "\xDD\xB0\xA2\xA3\xA7\u2022\xB6\xDF\xAE\xA9\u2122\xB4\xA8\u2260\xC6\xD8" + "\u221E\xB1\u2264\u2265\xA5\xB5\u2202\u2211\u220F\u03C0\u222B\xAA\xBA\u03A9\xE6\xF8" + "\xBF\xA1\xAC\u221A\u0192\u2248\u2206\xAB\xBB\u2026\xA0\xC0\xC3\xD5\u0152\u0153" + "\u2013\u2014\u201C\u201D\u2018\u2019\xF7\u25CA\xFF\u0178\u2044\u20AC\xD0\xF0\xDE\xFE" + "\xFD\xB7\u201A\u201E\u2030\xC2\xCA\xC1\xCB\xC8\xCD\xCE\xCF\xCC\xD3\xD4" + "\uF8FF\xD2\xDA\xDB\xD9\u0131\u02C6\u02DC\xAF\u02D8\u02D9\u02DA\xB8\u02DD\u02DB\u02C7", MAC_TURKISH = "\xC4\xC5\xC7\xC9\xD1\xD6\xDC\xE1\xE0\xE2\xE4\xE3\xE5\xE7\xE9\xE8" + "\xEA\xEB\xED\xEC\xEE\xEF\xF1\xF3\xF2\xF4\xF6\xF5\xFA\xF9\xFB\xFC" + "\u2020\xB0\xA2\xA3\xA7\u2022\xB6\xDF\xAE\xA9\u2122\xB4\xA8\u2260\xC6\xD8" + "\u221E\xB1\u2264\u2265\xA5\xB5\u2202\u2211\u220F\u03C0\u222B\xAA\xBA\u03A9\xE6\xF8" + "\xBF\xA1\xAC\u221A\u0192\u2248\u2206\xAB\xBB\u2026\xA0\xC0\xC3\xD5\u0152\u0153" + "\u2013\u2014\u201C\u201D\u2018\u2019\xF7\u25CA\xFF\u0178\u011E\u011F\u0130\u0131\u015E\u015F" + "\u2021\xB7\u201A\u201E\u2030\xC2\xCA\xC1\xCB\xC8\xCD\xCE\xCF\xCC\xD3\xD4" + "\uF8FF\xD2\xDA\xDB\xD9\uF8A0\u02C6\u02DC\xAF\u02D8\u02D9\u02DA\xB8\u02DD\u02DB\u02C7", MAC_CROATIAN = "\xC4\xC5\xC7\xC9\xD1\xD6\xDC\xE1\xE0\xE2\xE4\xE3\xE5\xE7\xE9\xE8" + "\xEA\xEB\xED\xEC\xEE\xEF\xF1\xF3\xF2\xF4\xF6\xF5\xFA\xF9\xFB\xFC" + "\u2020\xB0\xA2\xA3\xA7\u2022\xB6\xDF\xAE\u0160\u2122\xB4\xA8\u2260\u017D\xD8" + "\u221E\xB1\u2264\u2265\u2206\xB5\u2202\u2211\u220F\u0161\u222B\xAA\xBA\u03A9\u017E\xF8" + "\xBF\xA1\xAC\u221A\u0192\u2248\u0106\xAB\u010C\u2026\xA0\xC0\xC3\xD5\u0152\u0153" + "\u0110\u2014\u201C\u201D\u2018\u2019\xF7\u25CA\uF8FF\xA9\u2044\u20AC\u2039\u203A\xC6\xBB" + "\u2013\xB7\u201A\u201E\u2030\xC2\u0107\xC1\u010D\xC8\xCD\xCE\xCF\xCC\xD3\xD4" + "\u0111\xD2\xDA\xDB\xD9\u0131\u02C6\u02DC\xAF\u03C0\xCB\u02DA\xB8\xCA\xE6\u02C7", MAC_ROMANIAN = "\xC4\xC5\xC7\xC9\xD1\xD6\xDC\xE1\xE0\xE2\xE4\xE3\xE5\xE7\xE9\xE8" + "\xEA\xEB\xED\xEC\xEE\xEF\xF1\xF3\xF2\xF4\xF6\xF5\xFA\xF9\xFB\xFC" + "\u2020\xB0\xA2\xA3\xA7\u2022\xB6\xDF\xAE\xA9\u2122\xB4\xA8\u2260\u0102\u0218" + "\u221E\xB1\u2264\u2265\xA5\xB5\u2202\u2211\u220F\u03C0\u222B\xAA\xBA\u03A9\u0103\u0219" + "\xBF\xA1\xAC\u221A\u0192\u2248\u2206\xAB\xBB\u2026\xA0\xC0\xC3\xD5\u0152\u0153" + "\u2013\u2014\u201C\u201D\u2018\u2019\xF7\u25CA\xFF\u0178\u2044\u20AC\u2039\u203A\u021A\u021B" + "\u2021\xB7\u201A\u201E\u2030\xC2\xCA\xC1\xCB\xC8\xCD\xCE\xCF\xCC\xD3\xD4" + "\uF8FF\xD2\xDA\xDB\xD9\u0131\u02C6\u02DC\xAF\u02D8\u02D9\u02DA\xB8\u02DD\u02DB\u02C7", MAC_ROMAN_SCRIPT_PAGES = { 16: MAC_ICELAND, 18: MAC_TURKISH, 19: MAC_CROATIAN, 38: MAC_ROMANIAN };
+    function macRomanScriptMap(subtable) {
+      const page = MAC_ROMAN_SCRIPT_PAGES[subtable.language] || MAC_ROMAN, out = new Map;
+      for (const [code, gid] of subtable.map) {
+        if (code > 255)
+          continue;
+        out.set(code < 128 ? code : page.charCodeAt(code - 128), gid);
+      }
+      return out;
+    }
     function pickUnicodeMap(cmap) {
       const prefer = [
         (rec) => rec.platformID === 3 && rec.encodingID === 10,
@@ -6154,8 +6164,9 @@ export const fontsAppleAatBundled = {
         for (const rec of cmap.encodings) {
           if (!rec.subtable || !rec.subtable.map)
             continue;
-          if (pred(rec))
-            return rec.subtable.map;
+          if (!pred(rec))
+            continue;
+          return rec.platformID === 1 && rec.encodingID === 0 ? macRomanScriptMap(rec.subtable) : rec.subtable.map;
         }
       return null;
     }
@@ -7480,7 +7491,7 @@ export const fontsAppleAatBundled = {
       "hydrateName",
       "dehydrateName"
     ], { ContractError, ParseError } = errors, { parseSfnt, SFNT_FLAVOR } = sfntMod, { parseHead } = headMod, { parseHhea } = hheaMod, { parseMaxp } = maxpMod, { parseHmtx } = hmtxMod, { parseCmap, pickUnicodeMap } = cmapMod, { parseName, getNameString, NAME_ID } = nameMod, { parseOs2 } = os2Mod, { parsePost } = postMod, { parseLoca } = locaMod, { parseGlyf } = glyfMod, { parseGvar } = gvarMod, { Glyph } = glyphMod, { resolveGlyphPath } = compositeResolveMod;
-    function buildFont(sfnt) {
+    function buildFont(sfnt, opts) {
       if (!sfnt.tables.head)
         throw new ParseError("fonts/missing-head", "font is missing the required `head` table");
       if (!sfnt.tables.maxp)
@@ -7491,9 +7502,9 @@ export const fontsAppleAatBundled = {
         throw new ParseError("fonts/missing-hmtx", "font is missing the required `hmtx` table");
       if (!sfnt.tables.cmap)
         throw new ParseError("fonts/missing-cmap", "font is missing the required `cmap` table");
-      if (!sfnt.tables.name)
+      if (!sfnt.tables.name && !(opts && opts.allowMissingName))
         throw new ParseError("fonts/missing-name", "font is missing the required `name` table");
-      const head = parseHead(sfnt.tables.head.bytes), maxp = parseMaxp(sfnt.tables.maxp.bytes), hhea = parseHhea(sfnt.tables.hhea.bytes), hmtx = parseHmtx(sfnt.tables.hmtx.bytes, hhea.numberOfHMetrics, maxp.numGlyphs), cmap = parseCmap(sfnt.tables.cmap.bytes), nameTable = parseName(sfnt.tables.name.bytes), os2 = sfnt.tables["OS/2"] ? parseOs2(sfnt.tables["OS/2"].bytes) : null, post = sfnt.tables.post ? parsePost(sfnt.tables.post.bytes, maxp.numGlyphs) : null;
+      const head = parseHead(sfnt.tables.head.bytes), maxp = parseMaxp(sfnt.tables.maxp.bytes), hhea = parseHhea(sfnt.tables.hhea.bytes), hmtx = parseHmtx(sfnt.tables.hmtx.bytes, hhea.numberOfHMetrics, maxp.numGlyphs), cmap = parseCmap(sfnt.tables.cmap.bytes), nameTable = sfnt.tables.name ? parseName(sfnt.tables.name.bytes) : null, os2 = sfnt.tables["OS/2"] ? parseOs2(sfnt.tables["OS/2"].bytes) : null, post = sfnt.tables.post ? parsePost(sfnt.tables.post.bytes, maxp.numGlyphs) : null;
       let loca = null, glyphTable = null;
       if (sfnt.tables.loca && sfnt.tables.glyf) {
         loca = parseLoca(sfnt.tables.loca.bytes, maxp.numGlyphs, head.indexToLocFormat);
@@ -7587,10 +7598,10 @@ export const fontsAppleAatBundled = {
         if (typeof ext[hook] === "function")
           ext[hook](payload);
     }
-    function read(bytes) {
+    function read(bytes, opts) {
       if (!(bytes instanceof Uint8Array))
         throw new ContractError("fonts/read-input", "fonts.read expects Uint8Array", { context: { actual: typeof bytes } });
-      const sfnt = parseSfnt(bytes), font = buildFont(sfnt);
+      const sfnt = parseSfnt(bytes), font = buildFont(sfnt, opts);
       notify("hydrateFont", font);
       return font;
     }

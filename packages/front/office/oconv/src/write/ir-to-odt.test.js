@@ -427,16 +427,17 @@ describe('oconvIrToOdt — irToOdt() — code blocks, quotes and rules', () => {
         expect(stylesXml).toContain('fo:border-bottom=');
     });
 
-    test('block-level image: dropped, exact image/dropped loss', () => {
+    test('block-level image without bytes: an empty frame in its own paragraph, exact image/placeholder loss', () => {
         const ir = doc([node('image', { name: 'logo.png', alt: 'Logo' })]);
         const { bytes, losses } = irToOdt(ir);
-        const read = odt.read(bytes);
+        const read = odt.read(bytes, { framesInRuns: true });
 
-        expect(read.body).toHaveLength(0);
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'logo.png' }]);
+        expect(read.body).toHaveLength(1);
+        expect(read.body[0].runs).toEqual([placeholderFrame('logo.png', 'Logo')]);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'logo.png' }]);
     });
 
-    test('inline image inside a paragraph: dropped, exact image/dropped loss, text flow kept', () => {
+    test('inline image without bytes inside a paragraph: an empty frame at its place, text flow kept', () => {
         const ir = doc([
             node('paragraph', {}, [
                 node('run', { text: 'Photo: ' }),
@@ -444,24 +445,25 @@ describe('oconvIrToOdt — irToOdt() — code blocks, quotes and rules', () => {
             ])
         ]);
         const { bytes, losses } = irToOdt(ir);
-        const read = odt.read(bytes);
+        const read = odt.read(bytes, { framesInRuns: true });
 
-        expect(read.body[0].runs).toEqual([{ type: 'text', value: 'Photo: ' }]);
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'pic.png' }]);
+        expect(read.body[0].runs).toEqual([{ type: 'text', value: 'Photo: ' }, placeholderFrame('pic.png', 'Pic')]);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'pic.png' }]);
     });
 
-    test('image-only paragraph: emits NO odt node, exactly one image/dropped loss', () => {
+    test('image-only paragraph without bytes: one paragraph holding the empty frame, one image/placeholder loss', () => {
         const ir = doc([
             node('paragraph', {}, [node('image', { name: 'only.png', alt: 'Only' })])
         ]);
         const { bytes, losses } = irToOdt(ir);
-        const read = odt.read(bytes);
+        const read = odt.read(bytes, { framesInRuns: true });
 
-        expect(read.body).toHaveLength(0);
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'only.png' }]);
+        expect(read.body).toHaveLength(1);
+        expect(read.body[0].runs).toEqual([placeholderFrame('only.png', 'Only')]);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'only.png' }]);
     });
 
-    test('text + image paragraph: one paragraph, text kept, image/dropped recorded', () => {
+    test('text + image paragraph without bytes: one paragraph, text kept, then the empty frame', () => {
         const ir = doc([
             node('paragraph', {}, [
                 node('run', { text: 'caption' }),
@@ -469,11 +471,24 @@ describe('oconvIrToOdt — irToOdt() — code blocks, quotes and rules', () => {
             ])
         ]);
         const { bytes, losses } = irToOdt(ir);
-        const read = odt.read(bytes);
+        const read = odt.read(bytes, { framesInRuns: true });
 
         expect(read.body).toHaveLength(1);
-        expect(read.body[0].runs).toEqual([{ type: 'text', value: 'caption' }]);
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'mix.png' }]);
+        expect(read.body[0].runs).toEqual([{ type: 'text', value: 'caption' }, placeholderFrame('mix.png', 'Mix')]);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'mix.png' }]);
+    });
+
+    test('an empty frame holds no content child, so no draw:image, and an empty alt writes no title', () => {
+        const ir = doc([node('image', { name: 'a', alt: '' }), node('image', { name: 'a', alt: '' })]);
+        const { bytes, losses } = irToOdt(ir);
+        const frames = framesOf(bytes);
+
+        expect(frames.map(f => f.attrs['draw:name'])).toEqual(['a', 'a (2)']);
+        expect(frames.map(f => f.children.filter(c => c.type === 'element').length)).toEqual([0, 0]);
+        expect(losses).toEqual([
+            { code: 'image/placeholder', detail: 'a' },
+            { code: 'image/placeholder', detail: 'a' }
+        ]);
     });
 
     test('a paragraph with no children emits nothing and no loss', () => {
@@ -574,6 +589,18 @@ function pictureParts(bytes) {
     return Object.keys(files)
         .filter(path => path.startsWith('Pictures/'))
         .map(path => [path, files[path]]);
+}
+
+/**
+ * The frame run `odt.read(bytes, { framesInRuns: true })` gives for an
+ * image without bytes: no content child, the default box, its name, and
+ * its alt as an `svg:title`.
+ */
+function placeholderFrame(name, alt) {
+    return {
+        type: 'frame', anchorType: 'as-char', name, width: '5.08cm', height: '3.81cm',
+        _extras: { children: [{ type: 'element', name: 'svg:title', attrs: {}, children: [{ type: 'text', value: alt }] }] }
+    };
 }
 
 /** Every `draw:frame` of `content.xml`, document order. */
@@ -756,16 +783,16 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
         expect(parts.map(([, b]) => b)).toEqual(Object.values(assets));
     });
 
-    test('no bytes anywhere → the unchanged image/dropped, no Pictures/ entry, `pictures` NOT passed', () => {
+    test('no bytes anywhere → an empty frame and image/placeholder, no Pictures/ entry, `pictures` NOT passed', () => {
         const { irToOdt: spied, calls } = spiedWriter();
         const ir = doc([
             node('paragraph', {}, [node('run', { text: 'x ' }), node('image', { name: 'x.png', alt: '' })])
         ]);
         const { bytes, losses } = spied(ir, { assets: { 'other.png': PNG } });
 
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'x.png' }]);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'x.png' }]);
         expect(pictureParts(bytes)).toEqual([]);
-        expect(framesOf(bytes)).toEqual([]);
+        expect(framesOf(bytes).map(f => descendants(f, 'draw:image').length)).toEqual([0]);
         expect(calls).toHaveLength(1);
         expect(Object.keys(calls[0].doc)).toEqual(['body']);
     });
@@ -786,21 +813,22 @@ describe('oconvIrToOdt — opts.assets: images are placed', () => {
             type: 'paragraph',
             runs: [{
                 type: 'frame', anchorType: 'as-char', width: '0.026cm', height: '0.026cm',
-                child: { kind: 'image', href: 'Pictures/image1.png' }
+                child: { kind: 'image', href: 'Pictures/image1.png' }, name: 'b'
             }]
         });
     });
 
-    test('a paragraph whose images are ALL dropped keeps the zero-node rule (one placed, one dropped elsewhere)', () => {
+    test('an image without bytes beside a placed one: its own empty frame, the placed one alone takes a part', () => {
         const ir = doc([
             node('paragraph', {}, [node('image', { name: 'gone.png', alt: '' })]),
             node('paragraph', {}, [node('image', { name: 'kept.png', alt: '' })])
         ]);
         const { bytes, losses } = irToOdt(ir, { assets: { 'kept.png': PNG } });
 
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'gone.png' }]);
-        expect(odt.read(bytes).body).toHaveLength(1);
-        expect(frameHrefs(bytes)).toEqual(['Pictures/image1.png']);
+        expect(losses).toEqual([{ code: 'image/placeholder', detail: 'gone.png' }]);
+        expect(odt.read(bytes).body).toHaveLength(2);
+        expect(framesOf(bytes).map(f => descendants(f, 'draw:image').length)).toEqual([0, 1]);
+        expect(pictureParts(bytes).map(([path]) => path)).toEqual(['Pictures/image1.png']);
     });
 
     test('an image nested in a table cell and in a list item is placed too — `assets` reaches every path', () => {
@@ -1065,5 +1093,34 @@ describe('oconvIrToOdt — image intrinsic size and alt text', () => {
         expect(para.children.map(c => (c.type === 'text' ? 'text:' + c.value : c.name)))
             .toEqual(['draw:frame', 'text: and ', 'draw:frame']);
         expect(frames[0].attrs['text:anchor-type']).toBe('as-char');
+    });
+});
+
+describe('oconvIrToOdt — image frame names (T29)', () => {
+    test('each frame is named after its IR image, unique per document: a repeated name takes " (2)", an empty one none', () => {
+        const ir = doc([node('paragraph', {}, [
+            node('image', { name: 'logo', alt: '' }),
+            node('image', { name: 'chart', alt: '' }),
+            node('image', { name: 'logo', alt: '' }),
+            node('image', { name: 'logo (2)', alt: '' }),
+            node('image', { name: '', alt: '' })
+        ])]);
+        const png = pngHeader(96, 96);
+        const { bytes, losses } = irToOdt(ir, { assets: { logo: png, chart: png, 'logo (2)': png, '': png } });
+
+        expect(losses).toEqual([]);
+        expect(framesOf(bytes).map(f => f.attrs['draw:name'])).toEqual(['logo', 'chart', 'logo (2)', 'logo (2) (2)', undefined]);
+    });
+});
+
+describe('oconvIrToOdt — a table without a row', () => {
+    test('writes no table (ODF needs a row) and records no loss', () => {
+        const ir = doc([node('paragraph', {}, [node('run', { text: 'before' })]), node('table', {}, []),
+            node('paragraph', {}, [node('run', { text: 'after' })])]);
+        const { bytes, losses } = irToOdt(ir);
+        const body = odt.read(bytes).body;
+
+        expect(losses).toEqual([]);
+        expect(body.map((n) => n.type)).toEqual(['paragraph', 'paragraph']);
     });
 });

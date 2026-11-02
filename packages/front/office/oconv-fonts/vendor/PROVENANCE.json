@@ -86,6 +86,90 @@
         { "file": "README.md", "bytes": 2406, "sha256": "625a61d7e161cde3b1e9dd1ff8b7a86c251be536c34266bf1f1a9bd1c15c19e8" },
         { "file": "TODO", "bytes": 268, "sha256": "0c9333c07734cb936d44c592d4cec039200c50ac2bd41869221dbcb9031559bc" }
       ]
+    },
+    {
+      "id": "carlito",
+      "url": "https://commondatastorage.googleapis.com/chromeos-localmirror/distfiles/crosextrafonts-carlito-20130920.tar.gz",
+      "ref": "20130920",
+      "sha256": "4bd12b6cbc321c1cf16da76e2c585c925ce956a08067ae6f6c64eff6ccfdaf5a",
+      "license": "OFL-1.1",
+      "notice": "Carlito 1.103 (Copyright (c) 2010-2013 by tyPoland Lukasz Dziedzic). SIL OFL 1.1 with Reserved Font Name Carlito. See vendor/NOTICE-carlito and vendor/OFL-carlito.txt.",
+      "upstream": {
+        "project": "Chrome OS extra fonts (crosextrafonts), Google",
+        "release": "Carlito 1.103 (name ID 5: \"Version 1.103; Beta1\")",
+        "released": "2013-09-20",
+        "archive": "crosextrafonts-carlito-20130920.tar.gz",
+        "archiveBytes": 1169488,
+        "archiveSha512": "eb516060487d30353e06de711921c0d54c5844f2be69b1c1d37edac4b27303e9213a6bb306f309dc5827b2a6a2a37c9cb85b62368164eba6dd397dbaab3e3ba0",
+        "mirror": "https://dev-www.libreoffice.org/src/c74b7223abe75949b4af367942d96c7a-crosextrafonts-carlito-20130920.tar.gz",
+        "mirrorVerified": "byte-identical to the upstream URL (cmp clean, 2026-10-24)",
+        "retrievedUtc": "2026-10-24",
+        "flavour": "TrueType (sfnt 0x00010000) — no CFF/OpenType face in the set",
+        "modifications": "none; the faces are vendored byte-identically from the upstream archive (sha256 verified before and after the copy)",
+        "metricTwinOf": "Calibri",
+        "metricCompatibility": "advance widths per mapped code point (scaled to a 2048 em) against C:\\Windows\\Fonts calibri.ttf, calibrib.ttf, calibrii.ttf, calibriz.ttf of the measuring station: 95 / 95 ASCII in each of the four styles, 2,107 to 2,109 of 2,111 shared code points, hhea and OS/2 win vertical metrics equal; measured 2026-10-24 (tmp/a25/metrics.py of the office-coverage-2 lane)"
+      },
+      "corroboration": [
+        {
+          "publisher": "LibreOffice core",
+          "source": "download.lst (FONT_CARLITO_SHA256SUM)",
+          "algorithm": "sha256",
+          "agrees": true
+        }
+      ],
+      "payloadBytes": 2766644,
+      "files": [
+        { "path": "carlito/Carlito-Bold.ttf", "bytes": 690516, "sha256": "0f62ab34ad5d079a0a28fac01bcf7c7a724a4db4d6cb99cab9cabff382fbb80f", "family": "Carlito", "subfamily": "Bold" },
+        { "path": "carlito/Carlito-BoldItalic.ttf", "bytes": 816716, "sha256": "380764b6898d7b73ceae6384b2958b196d2a0428962ef3adf138d27947228666", "family": "Carlito", "subfamily": "Bold Italic" },
+        { "path": "carlito/Carlito-Italic.ttf", "bytes": 623416, "sha256": "718a0663864d37a4868220a19b9668a5fe10a46197f6df367b4c2c30c04c026c", "family": "Carlito", "subfamily": "Italic" },
+        { "path": "carlito/Carlito-Regular.ttf", "bytes": 635996, "sha256": "b4ff23ba370cc95a3c349336b73f9c28514a1371210f89832efc85c4b1ea7131", "family": "Carlito", "subfamily": "Regular" },
+        { "path": "OFL-carlito.txt", "bytes": 4250, "sha256": "bbcf8ce9c8acc91355ab5d263ec9e37d498de2222336e7d42e589f791afe56c4", "role": "SIL OFL 1.1 with the Carlito copyright header, verbatim: the upstream archive LICENSE" },
+        { "path": "NOTICE-carlito", "bytes": 2446, "sha256": "f8dbdc68a1b4e49182d919f5c8a4c5a154a046e05c98c6c13d25d335d759b806", "role": "copyright, Reserved Font Name, trademark and OFL 1.1 obligations" }
+      ],
+      "notVendored": []
+    },
+    {
+      "id": "caladea",
+      "url": "https://commondatastorage.googleapis.com/chromeos-localmirror/distfiles/crosextrafonts-20130214.tar.gz",
+      "ref": "20130214",
+      "sha256": "c48d1c2fd613c9c06c959c34da7b8388059e2408d2bb19845dc3ed35f76e4d09",
+      "license": "Apache-2.0",
+      "notice": "Caladea 1.002 (Copyright (c) 2012 Huerta Tipografia). Apache License 2.0, stated in each face (the archive carries no licence or NOTICE file). See vendor/NOTICE-caladea and vendor/LICENSE-apache-2.0.txt.",
+      "upstream": {
+        "project": "Chrome OS extra fonts (crosextrafonts), Google",
+        "release": "Caladea 1.002 (name ID 5: \"Version 1.002\")",
+        "released": "2013-02-14",
+        "archive": "crosextrafonts-20130214.tar.gz",
+        "archiveBytes": 112756,
+        "archiveSha512": "71f3cfcfbec33d8526184dce32f244f13b29f97aff31c0609487f27135adc0a4d5950e068f8be101e4fd06498cf103be68d781fc611142f060bbc9cb0b81273e",
+        "mirror": "https://dev-www.libreoffice.org/src/368f114c078f94214a308a74c7e991bc-crosextrafonts-20130214.tar.gz",
+        "mirrorVerified": "byte-identical to the upstream URL (cmp clean, 2026-10-24)",
+        "retrievedUtc": "2026-10-24",
+        "flavour": "TrueType (sfnt 0x00010000) — no CFF/OpenType face in the set",
+        "modifications": "none; the faces are vendored byte-identically from the upstream archive (sha256 verified before and after the copy)",
+        "metricTwinOf": "Cambria",
+        "metricCompatibility": "advance widths per mapped code point (scaled to a 2048 em, tolerance one unit of the 1000-unit em) against C:\\Windows\\Fonts cambria.ttc (face 0), cambriab.ttf, cambriai.ttf, cambriaz.ttf of the measuring station: 95 / 95 ASCII in regular, bold and italic, 93 / 95 in bold italic ($ and `), 311 to 326 of 327 shared Latin code points, hhea and OS/2 win vertical metrics equal; measured 2026-10-24 (tmp/a25/metrics.py of the office-coverage-2 lane)",
+        "nameTableQuirk": "Caladea-BoldItalic.ttf names its style \"Italic\" in its name table (name ID 2); its OS/2 usWeightClass 700, fsSelection 0x21 and head macStyle 3 mark it bold italic; vendored as published",
+        "otherBuild": "Huerta Tipografia later published a Caladea under the SIL OFL with different metrics (LibreOffice download.lst: \"There are sadly now two Caladea fonts with different metrics\", citing https://bugzilla.redhat.com/show_bug.cgi?id=2162532 and https://github.com/huertatipografica/Caladea/issues/4); it is NOT this payload, which keeps the Cambria metrics"
+      },
+      "corroboration": [
+        {
+          "publisher": "LibreOffice core",
+          "source": "download.lst (FONT_CALADEA_SHA256SUM)",
+          "algorithm": "sha256",
+          "agrees": true
+        }
+      ],
+      "payloadBytes": 241544,
+      "files": [
+        { "path": "caladea/Caladea-Bold.ttf", "bytes": 58892, "sha256": "74eda4fc5ffba0d8dc4aa76d41499f5ab76168d9ed6141c6417064c6244db9b6", "family": "Caladea", "subfamily": "Bold" },
+        { "path": "caladea/Caladea-BoldItalic.ttf", "bytes": 61828, "sha256": "f47a35ad6cd0efa9914d93f9d03c93e30c55da43674bccfabac73b3c0d522c01", "family": "Caladea", "subfamily": "Bold Italic" },
+        { "path": "caladea/Caladea-Italic.ttf", "bytes": 61860, "sha256": "9c968bf60ba1e851cdfea77c71e3540c57792f77482dd241acc29d1425569c4e", "family": "Caladea", "subfamily": "Italic" },
+        { "path": "caladea/Caladea-Regular.ttf", "bytes": 58964, "sha256": "d2f6cad33f191e65b68bd74e6d4f7708080a41b32db635866109df3090265d91", "family": "Caladea", "subfamily": "Regular" },
+        { "path": "LICENSE-apache-2.0.txt", "bytes": 11358, "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30", "role": "Apache License 2.0, verbatim: https://www.apache.org/licenses/LICENSE-2.0.txt (fetched 2026-10-24; byte-identical to packages/front/office/fonts/tests/_fixtures/fonttools/UPSTREAM-APACHE-2.0.txt)" },
+        { "path": "NOTICE-caladea", "bytes": 2297, "sha256": "63d0563f7c269c11699aa4ad9f53ecf8cdaa76e70208da971cb1988e47ed0269", "role": "copyright, licence statement and trademark quoted from the name table, Apache-2.0 section 4 obligations" }
+      ],
+      "notVendored": []
     }
   ]
 }

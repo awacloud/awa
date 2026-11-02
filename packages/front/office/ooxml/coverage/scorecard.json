@@ -9,24 +9,24 @@
         "version": "bun 1.3.13",
         "source": null
       },
-      "date": "2026-10-17",
-      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "date": "2026-10-26",
+      "commit": "976d3b35efd5d87c67c83958937799f1b57be319",
       "command": "bun cli.ts office-scorecard axis-a --pkg ooxml",
       "result": {
         "kind": "percent",
-        "lines": 96.05,
-        "functions": 95.76,
+        "lines": 96.08,
+        "functions": 95.7,
         "rows": 81,
         "model": "mean-of-rows",
         "pooled": {
-          "lines": 95.54,
-          "functions": 94.71
+          "lines": 95.67,
+          "functions": 94.81
         },
         "basis": [
           "src/**"
         ],
         "tests": {
-          "pass": 1419,
+          "pass": 1511,
           "fail": 0,
           "skip": 0
         }
@@ -40,14 +40,14 @@
         "version": "OOXML-Validator@2.1.6",
         "source": "https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981"
       },
-      "date": "2026-10-15",
-      "commit": "2671672698b60363c63608a8931173ca72b45dcd",
+      "date": "2026-10-24",
+      "commit": "a0b028f8df7a25641a2e116fc943bd06bc1f1de7",
       "command": "bun cli.ts office-scorecard axis-c --suite ooxml-validator",
       "result": {
         "kind": "pass-total",
-        "pass": 31,
-        "total": 31,
-        "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 33 (21 written, 12 round trips)"
+        "pass": 32,
+        "total": 32,
+        "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 34 (22 written, 12 round trips)"
       },
       "skipped": [
         {
@@ -90,8 +90,8 @@
         "version": "libreoffice@26.8.0.3",
         "source": null
       },
-      "date": "2026-10-16",
-      "commit": "5a94d770adebb7e63d069f419977d1af9e5f429c",
+      "date": "2026-11-02",
+      "commit": "286387de3e1377026e73b48986e98fbcba726430",
       "command": "bun cli.ts office-scorecard axis-d --suite libreoffice-ooxml --container",
       "result": {
         "kind": "rate",
@@ -101,6 +101,117 @@
         "criterion": "per file, the ooxml reader of the file kind (docx, xlsx including xlsm, pptx) reads it; ok when it returns or throws an error of the package's own hierarchy (OoxmlError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
       },
       "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "tracked-changes-docx",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-10-28",
+      "commit": "f7d869cb7fefe4f54832856167d8b93e822423a9",
+      "command": "bun cli.ts office-scorecard axis-b --suite tracked-changes-docx",
+      "result": {
+        "kind": "pass-total",
+        "pass": 78,
+        "total": 79,
+        "criterion": "every wild docx whose document, header, footer, footnotes, endnotes or comments part holds a tracked-change element (w:ins, w:del, w:moveFrom, w:moveTo, a *PrChange, w:numberingChange, a move or custom-XML revision range marker, w:cellIns / w:cellDel / w:cellMerge) is read, written with the ooxml-validator round trip and read again; it passes when the count of every such element in those parts is unchanged and the second read's document deep-equals the first's (a model fixed point); a throw fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "tracked-changes-docx-alternate-keep",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-10-28",
+      "commit": "f7d869cb7fefe4f54832856167d8b93e822423a9",
+      "command": "bun cli.ts office-scorecard axis-b --suite tracked-changes-docx-alternate-keep",
+      "result": {
+        "kind": "pass-total",
+        "pass": 79,
+        "total": 79,
+        "criterion": "every wild docx whose document, header, footer, footnotes, endnotes or comments part holds a tracked-change element (w:ins, w:del, w:moveFrom, w:moveTo, a *PrChange, w:numberingChange, a move or custom-XML revision range marker, w:cellIns / w:cellDel / w:cellMerge) is read with docx.read(bytes, { alternateContent: 'keep' }) (the save-back read that keeps every mc:AlternateContent, both branches, in place), written from that model as the ooxml-validator round trip writes, and read again with the same option; it passes when the count of every such element in those parts is unchanged and the second read's document deep-equals the first's (a model fixed point); a throw fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "C",
+      "suite": {
+        "id": "ooxml-validator-tracked-changes",
+        "version": "OOXML-Validator@2.1.6",
+        "source": "https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981"
+      },
+      "date": "2026-10-28",
+      "commit": "c9cecc9f09185e553dc43e6be642194a82f2b252",
+      "command": "bun cli.ts office-scorecard axis-c --suite ooxml-validator-tracked-changes",
+      "result": {
+        "kind": "pass-total",
+        "pass": 62,
+        "total": 65,
+        "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 79 (0 written, 79 round trips)"
+      },
+      "skipped": [
+        {
+          "case": "tracked-changes/lo-ooxmlexport/UnknownStyleInRedline.docx",
+          "reason": "source not valid: 5 error(s): Schema Sch_UnexpectedElementContentExpectingComplex: The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rPr'. (/word/document.xml/w:document[1]/w:body[1]/w:p[3]/w:pPr[1]); Schema Sch_UnexpectedElementContentExpectingComplex: The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rPr'...."
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/rhbz1180114.docx",
+          "reason": "source not valid: 3 error(s): Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed. (/word/fontTable.xml/w:fonts[1]/w:font[4]/w:charset[1]); Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' ..."
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/rprchange_closed.docx",
+          "reason": "source not valid: 3 error(s): Schema Sch_AttributeValueDataTypeDetailed:  The MinInclusive constraint failed. The value must be greater than or equal to 1. (/word/stylesWithEffects.xml/w:styles[1]/w:style[27]/w:rPr[1]/w:w[1]); Schema Sch_AttributeValueDataTypeDetailed:  The MinInclusive constraint failed. The value must be greater than or equal to 1. (/word/styles.xml/w:styles[1]/w:style[27]/w:rPr[1]/w:w[1])"
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf104797.docx",
+          "reason": "source not valid: 2 error(s): Schema Sch_MissRequiredAttribute: The required attribute 'date' is missing. (/word/document.xml/w:document[1]/w:body[1]/w:p[2]/w:moveToRangeStart[1]); Schema Sch_MissRequiredAttribute: The required attribute 'date' is missing. (/word/document.xml/w:document[1]/w:body[1]/w:p[1]/w:moveFromRangeStart[1])"
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf115212.docx",
+          "reason": "source not valid: 10 error(s): Schema Sch_UnexpectedElementContentExpectingComplex: The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rStyle'. (/word/document.xml/w:document[1]/w:body[1]/w:sdt[1]/w:sdtContent[1]/w:p[3]/w:hyperlink[1]/w:del[1]/w:r[4]/w:rPr[1]); Schema Sch_UnexpectedElementContentExpectingComplex: The element has unexpected child element 'http:/..."
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf123705.docx",
+          "reason": "source not valid: 1 error(s): OpenXmlPackageException: Read-only file system : '/in/tracked-changes--lo-ooxmlexport--tdf123705.source.docx'"
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf128913.docx",
+          "reason": "source not valid: 5 error(s): Schema Sch_UnexpectedElementContentExpectingComplex: The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:name'. (/word/styles.xml/w:styles[1]/w:style[3]); Schema Sch_UnexpectedElementContentExpectingComplex: The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:name'. (/word/styles.xm..."
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf136850.docx",
+          "reason": "source not valid: 1 error(s): Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '1900-00-00T28:01:00Z'. The string '1900-00-00T28:01:00Z' is not a valid 'DateTime' value. (/word/document.xml/w:document[1]/w:body[1]/w:tbl[1]/w:tr[1]/w:tc[5]/w:tcPr[1]/w:cellDel[1])"
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf141660.docx",
+          "reason": "source not valid: 1 error(s): Schema Sch_InvalidElementContentExpectingComplex: The element has invalid child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:doNotEmbedSmartTags'. (/word/settings.xml/w:settings[1])"
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf146171.docx",
+          "reason": "source not valid: 8 error(s): Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value. (/word/document.xml/w:document[1]/w:body[1]/w:p[2]/w:ins[5]); Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wor..."
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf149708.docx",
+          "reason": "source not valid: 22 error(s): Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed. (/word/numbering.xml/w:numbering[1]/w:abstractNum[2]/w:lvl[9]/w:lvlJc[1]); Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val'..."
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf157011_ins_del_empty_cols.docx",
+          "reason": "source not valid: 42 error(s): Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed. (/word/document.xml/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:trPr[1]/w:tblHeader[1]); Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/..."
+        },
+        {
+          "case": "tracked-changes/lo-ooxmlexport/tdf165059_broken.docx",
+          "reason": "source not valid: 4 error(s): Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed. (/word/fontTable.xml/w:fonts[1]/w:font[5]/w:charset[1]); Schema Sch_AttributeValueDataTypeDetailed: The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' ..."
+        },
+        {
+          "case": "tracked-changes/poi/test-data/document/Tika-792.docx",
+          "reason": "source not valid: 2 error(s): Schema Sch_MissRequiredAttribute: The required attribute 'date' is missing. (/word/document.xml/w:document[1]/w:body[1]/w:p[2]/w:moveFromRangeStart[1]); Schema Sch_MissRequiredAttribute: The required attribute 'date' is missing. (/word/document.xml/w:document[1]/w:body[1]/w:p[1]/w:moveToRangeStart[1])"
+        }
+      ]
     }
   ],
   "comparators": []

@@ -9,7 +9,7 @@
  * adapter, the About panel and the "more files" line (one window per file:
  * files chosen together beyond the first open, one per click, in new
  * windows, handed over through IndexedDB). Everything the viewer itself
- * does lives in `viewer.js`; this file only owns what is page-level.
+ * does lives in `@awacloud/oview`; this file only owns what is page-level.
  *
  * @module viewer/app
  */
@@ -17,8 +17,10 @@ import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 import { serviceWorker } from '@awacloud/fw/dom/sw/serviceWorker.js';
 import { storage } from '@awacloud/fw/dom/fs/storage.js';
 import { indexedDB } from '@awacloud/fw/dom/fs/indexedDB.js';
+import { installPrompt } from '@awacloud/fw/dom/sw/installPrompt.js';
+import { swUpdate } from '@awacloud/fw/dom/sw/swUpdate.js';
 import { i18n } from '@awacloud/fw/io/i18n/i18n.js';
-import { mountViewer } from './viewer.js';
+import { mountViewer } from '@awacloud/oview';
 import { createTranslator, negotiateLocale } from './core/i18n.js';
 import { mountPwa } from './core/pwa.js';
 import { mountAbout } from './core/about.js';
@@ -75,7 +77,7 @@ function handoffStore(runtime, win) {
 export function boot({ doc = document, win = window, handoff: handoffKv, loadHelp } = {}) {
     const runtime = new ModuleRuntime();
     // The page translates before the viewer mounts (the more-files line): it registers i18n itself.
-    runtime.registerAllDeep([serviceWorker, storage, indexedDB, i18n]);
+    runtime.registerAllDeep([serviceWorker, storage, indexedDB, i18n, installPrompt, swUpdate]);
     const local = runtime.resolve('storage').local;
     let saved = null;
     try { saved = local ? local.get(LOCALE_KEY) : null; } catch { /* storage blocked */ }
@@ -137,7 +139,8 @@ export function boot({ doc = document, win = window, handoff: handoffKv, loadHel
 
     const banner = /** @type {HTMLElement} */ (doc.getElementById('app-update'));
     const pwa = mountPwa({
-        serviceWorker: runtime.resolve('serviceWorker'),
+        installPrompt: runtime.resolve('installPrompt'),
+        swUpdate: runtime.resolve('swUpdate'),
         // The worker sits next to the page, in development (public/) as in a dist.
         swUrl: new URL('sw.js', doc.baseURI).href,
         installButton: /** @type {HTMLButtonElement} */ (doc.getElementById('app-install')),

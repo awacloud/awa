@@ -128,11 +128,14 @@ describe('oconv wiring — manifest is dependency-closed', () => {
         }
         expect(typeof rt.resolve('oconvIrToPdf').irToPdf).toBe('function');
         // The registration ORDER guard: every dependency of a local pdf
-        // descriptor is registered BEFORE it in `modules`.
+        // descriptor is registered BEFORE it in `modules`, or comes from
+        // `fw_require` (every host registers it first).
         const order = new Map(modules.map((m, i) => [m.name, i]));
+        const fw = new Set(fw_require.map((m) => m.name));
         for (const m of modules) {
             if (!m.name.startsWith('oconvPdf') && m.name !== 'oconvIrToPdf') continue;
             for (const dep of m.dependencies || []) {
+                if (!order.has(dep)) { expect(fw.has(dep)).toBe(true); continue; }
                 expect(order.get(dep)).toBeLessThan(order.get(m.name));
             }
         }
@@ -216,7 +219,9 @@ describe('oconv wiring — specifier pin (frozen import surface)', () => {
             '@awacloud/md/extra/frontmatter.js',
             '@awacloud/odf',
             '@awacloud/ooxml',
-            '@awacloud/pdf'
+            '@awacloud/pdf',
+            '@awacloud/pdf/extra/legacy-rc4-read.js', // T45: the RC4 reader's documented sub-path (D8)
+            '@awacloud/pdf/extra/xmp-extended.js' // T34 (d): the XMP reader's sub-path (D14)
         ]);
     });
 });

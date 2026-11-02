@@ -39,7 +39,9 @@ Reached in practice through `oconv.fromMd({ markdown, target: 'odt' })` or
 whose bytes are reachable is **placed** as a `Pictures/` package part at
 its intrinsic size (a default box and `image/size-defaulted` when no size can
 be read from its header), with its alt text as the frame title; an image
-with no reachable bytes is dropped and records `image/dropped` (see Notes).
+with no reachable bytes keeps its place as an empty frame (no content
+child, the default box, its name and alt text) and records
+`image/placeholder` (see Notes).
 
 ## Examples
 
@@ -87,7 +89,7 @@ Object.keys(zip.unzipSync(placed.bytes)).filter((p) => p.startsWith('Pictures/')
 // ['Pictures/image1.png']
 
 oconvIrToOdt.irToOdt(withImage).losses; // no assets, no carried bytes
-// [{ code: 'image/dropped', detail: 'logo' }]
+// [{ code: 'image/placeholder', detail: 'logo' }]
 ```
 
 Executed against the live package (2026-10-12): the 8 signature bytes
@@ -98,7 +100,8 @@ carry no `IHDR`, so no size is read and the placed write's
 svg:width="5.08cm" svg:height="3.81cm">` whose `draw:image` has
 `xlink:href="Pictures/image1.png"` followed by the `svg:title` `Logo`, and
 the write without `assets` records
-`[{ code: 'image/dropped', detail: 'logo' }]`.
+`[{ code: 'image/placeholder', detail: 'logo' }]` (its frame holds no
+`draw:image`, only the `svg:title`; checked 2026-11-01).
 
 ## Notes
 
@@ -143,12 +146,12 @@ the write without `assets` records
   per source line and drops exactly ONE trailing newline first (the text
   of a CommonMark code block ends with one), so there is no trailing empty
   paragraph; an interior empty line is kept (`'a\n\nb\n'` writes `a`, an
-  empty paragraph, `b`). A paragraph whose images are ALL dropped and that
-  has no text run emits no odt node at all — the image loss alone is
-  recorded (`image/dropped`). An empty odt paragraph would collapse on the
+  empty paragraph, `b`). An empty odt paragraph would collapse on the
   next markdown parse, so this is what keeps md → odt → md stable on a
-  second pass. A placed image is a run, so an image-only paragraph whose
-  image is placed does produce a paragraph.
+  second pass. Every image is a frame run, with bytes or without, so an
+  image-only paragraph does produce a paragraph.
+- **A table without a row is not written**: ODF needs one, and there is
+  nothing to keep (no loss); a docx table without a row reads as one.
 - **`code` maps to `monospace`** on a `span` run (`mapRunFlags`); a run with
   no truthy flag is a plain `text` run, never a `span`.
 - **Code blocks, quotes and rules are styled, and read back**: a
@@ -168,7 +171,7 @@ the write without `assets` records
   nesting is preserved structurally through `items[].children`.
 - **Images are placed when their bytes are reachable.** The bytes are
   looked up as in the docx writer: `opts.assets[name]` (or its percent-decoded form) first, then the
-  bytes a reader carried in `escapes.docx.bytes` / `escapes.odt.bytes`. With bytes, the
+  bytes a reader carried in `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`. With bytes, the
   image becomes an odt `frame` run of `@awacloud/odf`'s typed write model
   — `{ type: 'frame', anchorType: 'as-char', width, height, child: { kind:
   'image', href } }`, rendered as `<draw:frame text:anchor-type="as-char">
@@ -176,7 +179,13 @@ the write without `assets` records
   inline in place within its paragraph, or as its own paragraph at block
   position (also inside a table cell or a list item), and the bytes travel
   in `odt.write`'s `doc.pictures` map as a package part. Without bytes, the
-  image is dropped (`image/dropped`).
+  image keeps its place as a frame with no content child — ODF allows a
+  `draw:frame` to hold none — in the default 2 in × 1.5 in box, with its
+  `draw:name` and its alt text as below, and records `image/placeholder`
+  (no picture part is written for it). `../read/odt-to-ir.js` reads such a
+  frame back as an image without bytes, so `md → odt → md` keeps
+  `![alt](name)` and a docx chart, shape or SmartArt (an image reference
+  without bytes) survives `docx → odt`.
   - **Size**: its size is read from the image header (PNG `IHDR` + `pHYs`, JPEG `SOFn` + JFIF density, GIF screen size; 96 dpi when the file states none), scaled down to fit 6 in × 8 in with its aspect kept — the docx writer's rule
     (`src/write/image-extent-drift.test.js` keeps the two copies
     byte-identical), written in centimetres to three decimals. A header
@@ -223,7 +232,7 @@ the write without `assets` records
 | `block/degraded` | `'blockquote:nested'` | a quote nested in a quote was written as more `Quotations` paragraphs — the return leg reads one flat quote (one loss per nested quote) |
 | `block/degraded` | `'blockquote-child:<kind>'` | a non-paragraph, non-quote block inside a quote was written with its own mapping, outside the quote style |
 | `image/size-defaulted` | the image `name` | bytes were reachable and the image is placed, but no size could be read from its header, so it sits in the default 2 in × 1.5 in box |
-| `image/dropped` | the image `name` | no bytes were reachable for the image — neither `opts.assets[name]` (or its percent-decoded form) nor a reader's `escapes.docx.bytes` / `escapes.odt.bytes` |
+| `image/placeholder` | the image `name` | no bytes were reachable for the image — neither `opts.assets[name]` (or its percent-decoded form) nor a reader's `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes` — so it keeps its place as a frame with no content child, in the default 2 in × 1.5 in box, with its name and alt text and no picture part; the odt reader reads it back as the image reference (`image/bytes-unavailable`) |
 
 ## See also
 

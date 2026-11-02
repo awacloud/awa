@@ -88,7 +88,10 @@ delete `doc.package` altogether.
 a frame inside a paragraph — the read side keeps it in the paragraph's
 `_extras`, which a re-write emits after the runs, unless the document is read
 with `odt.read(bytes, { framesInRuns: true })`, which types it as a `frame`
-run at its place in the text. Inside a `text:span` the
+run at its place in the text; likewise every other untyped element of a
+paragraph (a comment, a bookmark, a field …) unless the document is read
+with `elementsInRuns: true`, which keeps it as a raw `element` run at its
+place. Inside a `text:span` the
 markup is kept in place: spacing elements (`text:s`, `text:tab`,
 `text:line-break`), nested spans with their own styles, links, fields and
 frames anchored in the span keep their position (see

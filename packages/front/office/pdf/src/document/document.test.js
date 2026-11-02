@@ -233,7 +233,7 @@ describe('readDocument — encrypted documents (BL-329, fail-loud arm)', () => {
 describe('pdfDocument module', () => {
     test('module shape', () => {
         expect(pdfDocument.name).toBe('pdfDocument');
-        expect(pdfDocument.dependencies).toEqual(['pdfErrors', 'pdfTokenizer', 'pdfParser', 'pdfXref', 'pdfTrailer', 'pdfCatalog', 'pdfPage', 'pdfPages', 'pdfCrossRefStream', 'pdfObjStream', 'pdfFilterDispatch']);
+        expect(pdfDocument.dependencies).toEqual(['pdfErrors', 'pdfTokenizer', 'pdfParser', 'pdfXref', 'pdfTrailer', 'pdfCatalog', 'pdfPage', 'pdfPages', 'pdfCrossRefStream', 'pdfObjStream', 'pdfFilterDispatch', 'pdfSecurity', 'pdfStandardV4', 'pdfStandardV5', 'pdfStandardV6']);
         expect(pdfDocument.factory.toString()).toContain('function');
         const m = pdfDocument.factory(_pdfErrors_TD1, {}, {}, {}, {}, {}, {}, {});
         expect(typeof m.readDocument).toBe('function');

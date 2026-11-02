@@ -25,7 +25,7 @@
  *     makes on the SOURCE.
  *  4. Model-equivalence through the pair, for every fixture whose
  *     WRITER-side ledger is empty: `bodyOf(toMd(convert(X->Y)))` vs
- *     `bodyOf(toMd(X))`. Six of the seven eligible fixtures measure EQUAL
+ *     `bodyOf(toMd(X))`. Seven of the eight eligible fixtures measure EQUAL
  *     and are pinned `toBe`; `odt-structured.odt` measures DIFFERENT and its
  *     exact difference is pinned with its root cause (see that test).
  *  5. Inline code survives `md -> docx -> odt -> md` (task 03's symmetric
@@ -162,7 +162,8 @@ const DOCX_TO_ODT = [
     {
         name: 'poi-numbering.docx',
         path: './_fixtures/corpus/real/poi-numbering.docx',
-        reader: [{ code: 'list/nesting-flattened', detail: 'numId 1 ilvl 1' }],
+        // Nesting is read by level, so nothing is flattened any more.
+        reader: [],
         writer: []
     },
     {
@@ -281,10 +282,18 @@ describe('crossformat docx->odt — exact loss ledgers (6 fixtures)', () => {
 
     // The return leg keeps the image too: the odt reader types the written
     // frame into an IR image carrying the picture part's bytes, and its alt
-    // text from the frame's `svg:title`. What the hop loses is the NAME —
-    // `ir-to-odt` writes no `draw:name`, so the reader names the asset after
-    // the picture path. Pinned so that writer limit stays visible.
-    test('poi-with-gif.docx — the image survives docx->md and docx->odt->md (bytes and alt kept; the odt hop renames the asset after its picture path)', async () => {
+    // text from the frame's `svg:title`, and its NAME from the frame's
+    // `draw:name`, which `ir-to-odt` writes from the IR name (T29).
+    test('md -> odt -> md keeps an image\'s name (the frame\'s draw:name), its bytes and its alt text (T29)', async () => {
+        const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+        const out = await oconv.fromMd({ markdown: '![A chart](chart.png)\n', target: 'odt', assets: { 'chart.png': png } });
+        const back = await oconv.toMd({ name: 'x.odt', bytes: out.bytes, convertedAt: FIXED_AT });
+        expect(back.assets.map((a) => a.name)).toEqual(['chart.png']);
+        expect([...back.assets[0].bytes]).toEqual([...png]);
+        expect(bodyOf(back.markdown)).toContain('![A chart](chart.png)');
+    });
+
+    test('poi-with-gif.docx — the image survives docx->md and docx->odt->md (bytes, alt and name kept)', async () => {
         const bytes = fixtureBytes('./_fixtures/corpus/real/poi-with-gif.docx');
 
         const direct = await oconv.toMd({
@@ -300,15 +309,14 @@ describe('crossformat docx->odt — exact loss ledgers (6 fixtures)', () => {
         expect(via.losses).toEqual([]);
         expect(via.assets).toHaveLength(1);
         expect(via.assets[0].kind).toBe('image');
-        expect(via.assets[0].name).toBe('image1.gif');
+        expect(via.assets[0].name).toBe('Grafik 1');
         expect([...via.assets[0].bytes]).toEqual([...direct.assets[0].bytes]);
         // The alt text (the source's own description, a file path) is the
         // direct leg's, character for character.
         const altOf = md => md.slice(md.indexOf('![') + 2, md.indexOf(']('));
         expect(altOf(bodyOf(direct.markdown))).toContain('Sample.gif');
         expect(altOf(bodyOf(via.markdown))).toBe(altOf(bodyOf(direct.markdown)));
-        expect(bodyOf(via.markdown)).toContain('](image1.gif)');
-        expect(bodyOf(via.markdown)).not.toContain('Grafik');
+        expect(bodyOf(via.markdown)).toBe(bodyOf(direct.markdown));
 
         // The surrounding prose is untouched.
         expect(bodyOf(via.markdown)).toContain('Lorem ipsum dolor sit amet');
@@ -475,17 +483,19 @@ describe('crossformat — model-equivalence through the pair (writer-side ledger
         return bodyOf(read.markdown);
     }
 
-    // Six of the eight writer-empty fixtures measure EQUAL — pinned `toBe`.
-    // (`poi-with-gif.docx` measures different: the odt hop renames the image
-    // asset after its picture path — asserted exactly in leg 1;
-    // `odt-structured.odt` is pinned below.)
+    // All eight writer-empty fixtures measure EQUAL — pinned `toBe`
+    // (`poi-with-gif.docx` since the odt hop keeps the image name, T29;
+    // `odt-structured.odt` since the docx reader reads nesting by level,
+    // T32 (b3b); its exact bodies are pinned below).
     const EQUAL = [
         { name: 'docx-smoke.docx', path: './_fixtures/corpus/docx/docx-smoke.docx', target: 'odt' },
         { name: 'docx-structured.docx', path: './_fixtures/corpus/docx/docx-structured.docx', target: 'odt' },
         { name: 'docx-bulk.docx', path: './_fixtures/corpus/docx/docx-bulk.docx', target: 'odt' },
         { name: 'poi-numbering.docx', path: './_fixtures/corpus/real/poi-numbering.docx', target: 'odt' },
         { name: 'poi-table-alignment.docx', path: './_fixtures/corpus/real/poi-table-alignment.docx', target: 'odt' },
-        { name: 'odt-table.odt', path: './_fixtures/corpus/odt/odt-table.odt', target: 'docx' }
+        { name: 'poi-with-gif.docx', path: './_fixtures/corpus/real/poi-with-gif.docx', target: 'odt' },
+        { name: 'odt-table.odt', path: './_fixtures/corpus/odt/odt-table.odt', target: 'docx' },
+        { name: 'odt-structured.odt', path: './_fixtures/corpus/odt/odt-structured.odt', target: 'docx' }
     ];
 
     for (const fx of EQUAL) {
@@ -495,27 +505,17 @@ describe('crossformat — model-equivalence through the pair (writer-side ledger
         });
     }
 
-    // A writer-empty fixture that measures DIFFERENT. Pinned exactly,
-    // with its root cause, rather than widened or narrowed to force equality
-    // (office memory: assert the true measured relation).
-    //
-    // ROOT CAUSE — one docx degrade, on the RETURN read, neither on the odt
-    // read nor the docx write: `list/nesting-flattened` (GAP-OOXML, the same
-    // degrade `roundtrip.integration.test.js` leg 6 pins). The odt source's
-    // `Nested B.1` is a depth-1 item, `src/write/ir-to-docx.js` writes it as
-    // `pPr.numPr.ilvl = 1`, and `src/read/docx-to-ir.js` flattens every
-    // ilvl > 0 back to depth 0 with that loss. So the two-space indent
-    // `  - Nested B.1` becomes `- Nested B.1`.
-    //
-    // The list MERGE this fixture used to exhibit is FIXED: the docx writer
-    // now allocates one numbering instance per top-level list, so the
-    // fixture's two ADJACENT bullet lists carry distinct `numId`s and stay
-    // two lists on re-read — the blank line that separates them survives.
-    test('odt-structured.odt -> docx — MEASURED DIFFERENT: the two bullet lists stay distinct; only the nested item flattens (exact difference pinned)', async () => {
+    // `odt-structured.odt` used to measure DIFFERENT: the docx reader
+    // flattened its nested item on the return read (`list/nesting-flattened`).
+    // It reads nesting by level now (T32 (b3b)), so the item keeps its
+    // two-space indent. The list MERGE it once exhibited stays fixed: the
+    // docx writer allocates one numbering instance per top-level list, so
+    // its two ADJACENT bullet lists stay two lists on re-read.
+    test('odt-structured.odt -> docx — MEASURED EQUAL: the two bullet lists stay distinct and the nested item keeps its level', async () => {
         const baseline = await direct('odt-structured.odt', './_fixtures/corpus/odt/odt-structured.odt');
         const r = await through('odt-structured.odt', './_fixtures/corpus/odt/odt-structured.odt', 'docx');
 
-        expect(r.body).not.toBe(baseline);
+        expect(r.body).toBe(baseline);
 
         // Exact bodies — the difference is the whole tail, nothing else.
         expect(baseline).toBe(
@@ -525,20 +525,8 @@ describe('crossformat — model-equivalence through the pair (writer-side ledger
             + '- First step\n- Second step\n- Third step\n\n'
             + '- Bullet A\n- Bullet B\n  - Nested B.1\n'
         );
-        expect(r.body).toBe(
-            '# Sovereign RAG Ingestion\n\nPlain paragraph with an \n\n'
-            + 'inline emphasised run.\n\n## Why Air-Gap Matters\n\n'
-            + '[external reference link](https://example.org/rag)\n\n### Chunking\n\n'
-            + '- First step\n- Second step\n- Third step\n\n'
-            + '- Bullet A\n- Bullet B\n- Nested B.1\n'
-        );
-        // The ONLY difference from the baseline is the flattened nested item.
-        expect(r.body).toBe(baseline.replace('  - Nested B.1', '- Nested B.1'));
-
-        // The flattening is reported, not silent.
-        expect(r.losses).toEqual([
-            { code: 'list/nesting-flattened', detail: 'numId 2 ilvl 1' }
-        ]);
+        // Nothing is flattened, so nothing is reported.
+        expect(r.losses).toEqual([]);
         // The two lists stay distinct on the return leg: the blank line
         // between them survives.
         expect(baseline).toContain('- Third step\n\n- Bullet A');

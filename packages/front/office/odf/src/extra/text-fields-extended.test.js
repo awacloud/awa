@@ -49,8 +49,8 @@ describe('textFieldsExtended — hooks', () => {
               attrs: { 'text:formula': '1+2' }, value: '3' }
         ] };
         const out = ext.dehydrateParagraph(p);
-        expect(out._extras).toHaveLength(1);
-        expect(out._extras[0].name).toBe('text:expression');
+        expect(out._extras.children).toHaveLength(1);
+        expect(out._extras.children[0].name).toBe('text:expression');
         expect(out.fields).toBeUndefined();
     });
 });

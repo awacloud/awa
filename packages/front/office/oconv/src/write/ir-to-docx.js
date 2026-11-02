@@ -117,7 +117,7 @@
  * | `block/degraded` | `listItem-child:<kind>` | a non-paragraph, non-list block inside a `listItem` was emitted after the item's paragraph instead of inside it |
  * | `block/degraded` | `blockquote:nested` | a quote nested in a quote was written as more-indented `BlockText` paragraphs — docx has no quote nesting, the return leg reads one flat quote (one loss per nested quote) |
  * | `block/degraded` | `blockquote-child:<kind>` | a non-paragraph, non-quote block inside a quote was written with its own mapping, outside the quote style |
- * | `image/dropped` | the image `name` | NO bytes were reachable for the image — neither `opts.assets[name]` (or its percent-decoded form) nor a reader's `escapes.docx.bytes` / `escapes.odt.bytes` |
+ * | `image/placeholder` | the image `name` | NO bytes were reachable for the image — neither `opts.assets[name]` (or its percent-decoded form) nor a reader's `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes` — so it keeps its place as a placeholder picture: a `wp:inline` drawing in a 2 in × 1.5 in box, named after it (`wp:docPr name`, its alt the `descr`), whose `a:blip` names no relationship (no media part); the docx reader reads it back as the image reference (`image/bytes-unavailable`). Before T32 (b3c) such an image was dropped (`image/dropped`) |
  * | `image/size-defaulted` | the image `name` | bytes WERE reachable and the image is PLACED, but {@link imageExtent} reads no size from them (not a PNG, JPEG or GIF header, or a malformed one), so it sits in `@awacloud/ooxml`'s default 2 in × 4:3 box. A degrade, never a drop |
  *
  * ## Images
@@ -126,7 +126,7 @@
  * destination>: Uint8Array }` map, keyed EXACTLY as the markdown wrote it
  * (`![alt](diagram.png)` → key `diagram.png`; no normalisation, no
  * fetching). {@link assetBytes} resolves an image node against it, falling
- * back to the bytes a reader carried in `escapes.docx.bytes` / `escapes.odt.bytes`, and
+ * back to the bytes a reader carried in `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`, and
  * a resolved image is written through `@awacloud/ooxml`'s public
  * `docx.imageRun` — inline inside its paragraph, or as its own paragraph at
  * block position — with the IR `alt` as the drawing description
@@ -371,7 +371,7 @@ export const oconvIrToDocx = {
          * Image bytes for an IR `image` node: caller `assets[name]` (else its
          * percent-decoded form) first,
          * then a reader's carried bytes (`escapes.docx.bytes`, else
-         * `escapes.odt.bytes` — the escapes bag), else `null`. Mirrored in ir-to-docx / ir-to-odt /
+         * `escapes.odt.bytes`, else `escapes.pdf.bytes`, else `escapes.pptx.bytes` — the escapes bag), else `null`. Mirrored in ir-to-docx / ir-to-odt /
          * pdf/render/image — keep byte-identical (asset-bytes-drift.test.js).
          *
          * @param {object} node
@@ -392,7 +392,7 @@ export const oconvIrToDocx = {
                 return { bytes: assets[decoded], source: 'assets' };
             }
             const bag = node && node.escapes;
-            const esc = bag && (bag.docx || bag.odt);
+            const esc = bag && (bag.docx || bag.odt || bag.pdf || bag.pptx);
             if (esc && esc.bytes instanceof Uint8Array) {
                 return { bytes: esc.bytes, source: 'reader' };
             }
@@ -483,6 +483,22 @@ export const oconvIrToDocx = {
          * @param {Uint8Array} bytes Its resolved bytes.
          * @returns {{opts: Object, sized: boolean}}
          */
+        /**
+         * The run of an image with no bytes reachable: a picture whose blip
+         * names no relationship, in the odt writer's default 2 in × 1.5 in
+         * box, its `wp:docPr` name the image's name and its `descr` the alt
+         * — the docx reader reads it back as the image reference.
+         *
+         * @param {Object} node An IR `image` node.
+         * @returns {Object} A docx `run` node.
+         */
+        function placeholderRun(node) {
+            const drawing = { type: 'drawing', mode: 'inline', cx: 2 * EMU_PER_INCH, cy: 1.5 * EMU_PER_INCH,
+                docName: node.name, prstGeom: 'rect' };
+            if (node.alt) drawing.description = node.alt;
+            return { type: 'run', children: [drawing] };
+        }
+
         function imageOpts(node, bytes) {
             const opts = { name: node.name };
             if (node.alt) opts.description = node.alt;
@@ -525,7 +541,7 @@ export const oconvIrToDocx = {
          *   write options. `assets` maps a markdown image destination
          *   (`![alt](diagram.png)` → key `diagram.png`) to its encoded
          *   bytes; caller bytes win over the reader-carried
-         *   `escapes.docx.bytes` / `escapes.odt.bytes` (see {@link assetBytes}). Omitted or
+         *   `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes` (see {@link assetBytes}). Omitted or
          *   `undefined` reproduces the behaviour from before image
          *   placement exactly.
          * @returns {IrToDocxResult}
@@ -579,7 +595,8 @@ export const oconvIrToDocx = {
                             out.push(docxApi.imageRun(r.bytes, imgOpts));
                             if (!sized) losses.push({ code: 'image/size-defaulted', detail: child.name });
                         } else {
-                            losses.push({ code: 'image/dropped', detail: child.name });
+                            out.push(placeholderRun(child));
+                            losses.push({ code: 'image/placeholder', detail: child.name });
                         }
                         continue;
                     }
@@ -647,7 +664,15 @@ export const oconvIrToDocx = {
                     losses.push({ code: 'list/depth-clamped', detail: 'ilvl>8' });
                 }
                 for (const item of list.children || []) {
-                    for (const block of itemBlocks(item)) {
+                    const blocks = itemBlocks(item);
+                    // An item that does not open with a paragraph (none, a
+                    // nested list, a degraded block) keeps its marker: one
+                    // empty numbered paragraph, as the docx reader reads an
+                    // empty item back.
+                    if (!blocks.length || blocks[0].kind !== 'paragraph') {
+                        out.push({ type: 'paragraph', pPr: { numPr: { numId, ilvl } }, children: [] });
+                    }
+                    for (const block of blocks) {
                         if (block.kind === 'paragraph') {
                             out.push({
                                 type: 'paragraph',
@@ -732,7 +757,8 @@ export const oconvIrToDocx = {
                             });
                             if (!sized) losses.push({ code: 'image/size-defaulted', detail: block.name });
                         } else {
-                            losses.push({ code: 'image/dropped', detail: block.name });
+                            out.push({ type: 'paragraph', children: [placeholderRun(block)] });
+                            losses.push({ code: 'image/placeholder', detail: block.name });
                         }
                         return;
                     }

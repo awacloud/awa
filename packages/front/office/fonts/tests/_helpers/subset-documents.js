@@ -8,9 +8,9 @@
  * `subsetForPdf` output of every `glyf` face the repository vendors with a
  * provenance record, over two code-point sets per face.
  *
- * - **Sources** — the twelve Liberation 2.1.5 faces of
- *   `oconv-fonts/vendor` (reused by path, each checked against that
- *   package's `PROVENANCE.json`) and the faces of the OFL fixture
+ * - **Sources** — every face of `oconv-fonts/vendor` (the twelve
+ *   Liberation 2.1.5 faces, the four Carlito and the four Caladea faces;
+ *   reused by path, each checked against that package's `PROVENANCE.json`) and the faces of the OFL fixture
  *   (`_fixtures/ofl-faces/MANIFEST.json`, checked by `loadFaces`), a face
  *   listed in both taken once.
  * - **Sets** — `text`: the code points of {@link SAMPLE_TEXT} the face

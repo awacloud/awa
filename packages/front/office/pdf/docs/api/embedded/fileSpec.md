@@ -43,6 +43,9 @@ const fs = runtime.resolve('pdfFileSpec');
     afRelationship: string | undefined,
     afRelationshipStandard: boolean,   // true iff afRelationship is one of
                                         // the 8 standard values
+    type?: string,                     // /Type, when present
+    thumb?: PdfObject,                 // /Thumb, as read, when present
+    ep?: PdfDict | PdfRef | null,      // /EP (PDF 2.0 encrypted payload), as read, when present
     raw, _extras
 }
 ```

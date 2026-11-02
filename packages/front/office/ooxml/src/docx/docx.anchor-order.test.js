@@ -115,7 +115,10 @@ describe('docx — wp:anchor children in CT_Anchor order', () => {
             `<w:document ${ns}><w:body><w:p><w:r><w:drawing>${anchor}</w:drawing></w:r></w:p></w:body></w:document>`), d.CT_DOCUMENT);
         opc.setRels(pkg, '/', [{ Id: 'rId1', Type: d.REL_TYPE_DOC, Target: 'word/document.xml' }]);
         const back = d.read(opc.write(pkg));
-        expect(names(anchorOf(d.write(back.document)))).toEqual([...SCHEMA_ORDER.slice(0, 5), 'wp:wrapNone', ...SCHEMA_ORDER.slice(6)]);
+        // wp14 is an Office extension: the read drops it whether the part
+        // lists it in mc:Ignorable (as Word does) or not, as the read of
+        // the written part would (T31 c8); the other children keep the order.
+        expect(names(anchorOf(d.write(back.document)))).toEqual([...SCHEMA_ORDER.slice(0, 5), 'wp:wrapNone', ...SCHEMA_ORDER.slice(6, 9)]);
     });
 
     test('inline drawings are untouched', () => {

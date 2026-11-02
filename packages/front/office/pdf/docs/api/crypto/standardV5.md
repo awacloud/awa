@@ -28,8 +28,8 @@ const v5 = runtime.resolve('pdfStandardV5');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `tryPassword` | `(typedEncrypt: { O, U, OE, UE }, password: string \| Uint8Array, isOwner: boolean) => { fileEncryptionKey: Uint8Array \| null }` | `null` on rejection. |
-| `decryptString` | `(typedEncrypt: { method? }, fek, objNum, gen, ciphertext) => Uint8Array` | AES-256-CBC (or AES-GCM when `typedEncrypt.method === 'AESV4'`), §7.6.4. `objNum`/`gen` are accepted but unused (V5 keys are not per-object). |
+| `tryPassword` | `(typedEncrypt: { O, U, OE, UE }, password: string \| Uint8Array, isOwner: boolean, opts?: { fastCipher?: boolean }) => { fileEncryptionKey: Uint8Array \| null }` | `null` on rejection. |
+| `decryptString` | `(typedEncrypt: { method? }, fek, objNum, gen, ciphertext, opts?: { fastCipher?: boolean }) => Uint8Array` | `opts.fastCipher === true`: fw's T-table `aes.ttable` (not constant-time; the `/UE` / `/OE` unwrap of `tryPassword` too), else `aes`. AES-256-CBC (or AES-GCM when `typedEncrypt.method === 'AESV4'`), §7.6.4. `objNum`/`gen` are accepted but unused (V5 keys are not per-object). |
 | `decryptStream` | same signature as `decryptString` | Alias — identical implementation. |
 | `encryptString` | `(typedEncrypt: { method? }, fek, objNum, gen, plaintext, iv) => Uint8Array` | Encrypts (write side). `iv` must be 16 bytes for AES-CBC or 12 bytes for AESV4. |
 | `encryptStream` | same signature as `encryptString` | Alias — identical implementation. |

@@ -36,15 +36,17 @@ export const tableCffCharstring = {
             return op === 1 || op === 3 || op === 18 || op === 19 || op === 20 || op === 21 || op === 22 || op === 4 || op === 14 || op === 23;
         }
 
-        function expectedOpArgs(op, _stackLen) {
+        function expectedOpArgs(op, stackLen) {
             // For width detection purposes: the canonical number of args these ops consume.
-            if (op === 14) return 0;     // endchar with no args (width-only if 1 on stack)
+            // endchar: no args (width-only if 1 on stack), or the four of seac
+            // (adx ady bchar achar, TN 5177 Appendix C; width-first if 5)
+            if (op === 14) return stackLen >= 4 ? 4 : 0;
             if (op === 21) return 2;     // rmoveto
             if (op === 22 || op === 4) return 1; // hmoveto / vmoveto
             return 0;
         }
 
-        function executeOp(op, stack, cmds, getX, getY, setXY, getHint, setHint, callSubr) {
+        function executeOp(op, stack, cmds, getX, getY, setXY, getHint, setHint, callSubr, onSeac) {
             function moveTo(dx, dy) { const nx = getX() + dx, ny = getY() + dy; cmds.push({ type: 'M', x: nx, y: ny }); setXY(nx, ny); }
             function lineTo(dx, dy) { const nx = getX() + dx, ny = getY() + dy; cmds.push({ type: 'L', x: nx, y: ny }); setXY(nx, ny); }
             function curveTo(dx1, dy1, dx2, dy2, dx3, dy3) {
@@ -204,7 +206,11 @@ export const tableCffCharstring = {
                     stack.length = 0;
                     return;
                 }
-                case 14:  // endchar
+                case 14:  // endchar (seac when four operands are left)
+                    if (stack.length >= 4 && typeof onSeac === 'function') {
+                        const [adx, ady, bchar, achar] = stack.slice(-4);
+                        onSeac({ adx, ady, bchar, achar });
+                    }
                     stack.length = 0;
                     return;
                 case 1:   // hstem
@@ -239,8 +245,14 @@ export const tableCffCharstring = {
          * `advanceWidth` (when the charstring starts with one).
          *
          * @param {Uint8Array} bytes
-         * @param {{ globalSubrs?: Array, localSubrs?: Array, nominalWidthX?: number, defaultWidthX?: number, maxDepth?: number }} [ctx]
-         * @returns {{ commands: Array, hintCount: number, width?: number }}
+         * An `endchar` with four operands (five with a width) is `seac`: the
+         * result gains `seac: { adx, ady, bchar, achar }`; with
+         * `ctx.seacGlyph(code)` (the charstring of the glyph a Standard
+         * Encoding code names, or null) the commands are the base glyph's,
+         * then the accent's translated by (adx, ady), when both resolve.
+         *
+         * @param {{ globalSubrs?: Array, localSubrs?: Array, nominalWidthX?: number, defaultWidthX?: number, maxDepth?: number, seacGlyph?: (code: number) => (Uint8Array|null) }} [ctx]
+         * @returns {{ commands: Array, hintCount: number, width?: number, seac?: { adx: number, ady: number, bchar: number, achar: number } }}
          */
         function decodeCharstring(bytes, ctx) {
             ctx = ctx || {};
@@ -254,6 +266,7 @@ export const tableCffCharstring = {
             let hintCount = 0;
             let width;
             let hadFirstStackOp = false;
+            let seac;
             const stack = [];
 
             function run(stream, depth) {
@@ -305,7 +318,8 @@ export const tableCffCharstring = {
                                               `CFF charstring references missing subr ${idx + bias}`,
                                               { context: { index: idx + bias, isGlobal } });
                                       run(sub, depth + 1);
-                                  });
+                                  },
+                                  (s) => { seac = s; });
                         if (op === 14) return;          // endchar
                         if (op === 11) return;          // return (from subr)
                     }
@@ -313,7 +327,27 @@ export const tableCffCharstring = {
             }
             try { run(bytes, 0); } catch (e) { if (!(e instanceof ParseError)) throw new ParseError('fonts/cff-cs-decode', String(e), { cause: e }); throw e; }
 
-            return { commands: cmds, hintCount, width };
+            const out = { commands: cmds, hintCount, width };
+            if (seac) {
+                out.seac = seac;
+                const base = typeof ctx.seacGlyph === 'function' ? ctx.seacGlyph(seac.bchar) : null;
+                const accent = base ? ctx.seacGlyph(seac.achar) : null;
+                if (base && accent) {
+                    // no seac inside a seac component (TN 5177 Appendix C)
+                    const sub = { ...ctx, seacGlyph: undefined };
+                    cmds.push(...decodeCharstring(base, sub).commands,
+                        ...decodeCharstring(accent, sub).commands.map((c) => shift(c, seac.adx, seac.ady)));
+                }
+            }
+            return out;
+        }
+
+        /** A path command moved by (dx, dy). */
+        function shift(c, dx, dy) {
+            const out = { ...c };
+            for (const k of ['x', 'x1', 'x2']) if (typeof out[k] === 'number') out[k] += dx;
+            for (const k of ['y', 'y1', 'y2']) if (typeof out[k] === 'number') out[k] += dy;
+            return out;
         }
 
         return { subrBias, isWidthOp, executeOp, decodeCharstring };

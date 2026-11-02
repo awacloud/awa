@@ -16,9 +16,11 @@ and `@awacloud/pdf/sig/*`.
 RC4-128 crypt filters), `crypto/standardV5.js` the V=5 R=5 handler (AES-256,
 Algorithm 2.A, no hardening loop) and `crypto/standardV6.js` the PDF 2.0
 V=5 R=6 handler (AES-256 with the Algorithm 2.B hardening loop). `read`
-does not apply them by itself: it refuses an encrypted file unless
-`allowEncrypted: true` is passed, and the caller then decrypts through
-these handlers.
+refuses an encrypted file unless it is given `password` — then it applies
+them itself, object by object, object streams included (RC4 V=1 / V=2
+through the opt-in `pdfLegacyRc4Read`, its `legacyRc4` option) — or
+`allowEncrypted: true`, which returns the ciphertext model for the caller
+to decrypt through these handlers.
 
 ### AES-CBC without a MAC: malleability risk
 
@@ -42,8 +44,9 @@ hardening loop (≥ 64 iterations of SHA-2 + AES-128, conditional
 termination on the ciphertext). In `standardV6.js`:
 
 - The AES-128 key-schedule scratch buffer is reused across rounds.
-- A forced bail-out at 1024 rounds guards against a runaway loop
-  (`pdf/crypto/v6/hardening-runaway`).
+- The loop always ends by round 287: from round 64 on it stops once the
+  last byte of the AES output is at most `round − 32`, and a byte is at
+  most 255.
 
 ## Signatures
 

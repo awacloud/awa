@@ -7,6 +7,31 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- **`smartDashes` option of `createMd`.** Off by default. When on, a run of
+  hyphens in plain text becomes en and em dashes (`--` → `–`, `---` → `—`;
+  longer runs follow commonmark.js: em dashes first, as few en dashes as
+  possible) and `...` becomes `…`. Escapes, entities, code spans, raw HTML,
+  autolinks, link destinations and a word holding a GFM extended autolink
+  keep their characters. It is independent of `smart` (curly quotes); with
+  both on, every example of commonmark.js's `smart_punct.txt` passes.
+
+### Fixed
+
+- **Deep nesting is refused before the work it costs.** `md.parse`
+  checked `maxDepth` only after the whole parse, and the block parser
+  rescanned a line's leading spaces once per open container, so a list
+  nested 2,000 levels deep by indentation (4 MB) was refused after
+  6.4 s. The block parser now refuses a container deeper than `maxDepth`
+  as it opens it (the same `md/limit-exceeded` error) and scans a line's
+  leading spaces once: that list is refused in 7 ms, and a valid list 250
+  levels deep parses in about a third of the time. Parse results are
+  unchanged. `blockParser.parse` takes the same limit as an optional
+  `maxDepth` option (no limit when omitted).
+
 ## [1.1.0] - 2026-10-21
 
 ### Added
@@ -168,7 +193,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   maxUrlLength })` (defaults `1000` / `100000` / `8192`). Exceeding any
   throws `ContractError('md/limit-exceeded', …)` with structured
   `context`. Pass `Infinity` to opt out.
-- **Sanitization** consumed via [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.1.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
+- **Sanitization** consumed via [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
   `createMd({ sanitize: true })` pipes the rendered HTML through the fw
   sanitizer with strict defaults. Override with `sanitizeOpts`
   (`allowedTags`, `allowedAttributes`, `urlSchemes`, `dropDangerousContent`).

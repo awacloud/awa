@@ -20,6 +20,7 @@ Courier is strictly monospace: every glyph occupies exactly 600 advance units. F
 | Symbol | Type | Description |
 |--------|------|-------------|
 | `COURIER_WIDTHS` | const `number[256]` | Array filled with `600`. |
+| `COURIER_EXTRA_WIDTHS` | const `Object<string, number>` | Every record's `extraWidths`: the 21 glyphs MacRomanEncoding and StandardEncoding name that the WinAnsi table cannot hold, `600` each. |
 | `courier` | const | Regular. |
 | `courierBold` | const | Bold. |
 | `courierOblique` | const | Oblique. |

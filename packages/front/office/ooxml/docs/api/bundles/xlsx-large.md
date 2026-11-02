@@ -9,11 +9,13 @@ status: complete
 
 # xlsxLargeBundle
 
-> Pre-wired bundle: xlsx core + P0 + P1 extras (~95% real-world xlsx coverage).
+> Pre-wired bundle: xlsx core + toolkits; none of its extras types a read today (a read through it types what the core types).
 
 **Module** `xlsxLargeBundle` | **Source** `packages/front/office/ooxml/src/bundles/xlsx-large.js` | **Deps** `xlsx` + 11 extras | **Worker-safe** yes
 
 ## Included
+
+**Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
 
 - [`smlPivotTables`](../extra/sml-pivot-tables.md) — pivot tables + cache
 - [`smlCalculation`](../extra/sml-calculation.md) — calcChain + calcPr

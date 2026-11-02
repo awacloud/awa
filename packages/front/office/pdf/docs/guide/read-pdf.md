@@ -82,6 +82,19 @@ if (doc.catalog.outlines) {
 }
 ```
 
+## Read options
+
+`api.read(bytes, opts)` takes five options, each off by default (a read given
+none of them is the five steps above): `password` (decrypts an encrypted
+document; without it the read throws `pdf/document/encrypted`, and the empty
+password is never tried on its own), `legacyRc4` (the opt-in
+`pdfLegacyRc4Read` instance, for an RC4 V=1 / V=2 document), `fastCipher`
+(T-table AES for the decrypting read — not constant-time), `allowEncrypted`
+(the raw ciphertext container) and `recoverXref` (rebuilds an unusable
+cross-reference table from the bytes). The table with each option's effect is
+in the [package README](../../README.md#reading-options); the reference is
+[`pdfDocument`](../api/document/document.md#encrypted-documents).
+
 ## See also
 
 - [Getting started](./getting-started.md)

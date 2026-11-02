@@ -12,8 +12,8 @@
  * `<w:mailMerge>`, `<w:trackChanges>`, `<w:proofState>`, `<w:view>`,
  * `<w:zoom>`, `<w:writeProtection>`, `<w:documentProtection>`,
  * `<w:footnotePr>`, `<w:endnotePr>`, `<w:smartTagPr>`,
- * `<w:clrSchemeMapping>`, `<w:revisionView>`, `<w:attachedTemplate>`,
- * `<w:attachedSchema>`, `<w:stylePaneFormatFilter>`, `<w:stylePaneSortMethod>`,
+ * `<w:clrSchemeMapping>`, `<w:revisionView>`, `<w:attachedSchema>`,
+ * `<w:stylePaneFormatFilter>`, `<w:stylePaneSortMethod>`,
  * `<w:characterSpacingControl>`, `<w:decimalSymbol>`, `<w:listSeparator>`,
  * `<w:defaultTableStyle>`, `<w:clickAndTypeStyle>`,
  * `<w:summaryLength>`, `<w:hyphenationZone>`, `<w:consecutiveHyphenLimit>`,
@@ -59,6 +59,7 @@ export const wmlSettings = {
             'noLineBreaksAfter', 'noLineBreaksBefore'
         ];
         const TOGGLE_SET = new Set(TOGGLES.map(n => 'w:' + n));
+        const KINSOKU = new Set(['w:noLineBreaksAfter', 'w:noLineBreaksBefore']);
 
         // ---- Simple w:val-bearing scalar elements ----
         const VAL_ELEMENTS = [
@@ -69,9 +70,10 @@ export const wmlSettings = {
             'drawingGridHorizontalOrigin', 'drawingGridHorizontalSpacing',
             'drawingGridVerticalOrigin', 'drawingGridVerticalSpacing',
             'pixelsPerInch', 'targetScreenSz',
-            'stylePaneFormatFilter', 'stylePaneSortMethod',
-            'attachedTemplate'
+            'stylePaneFormatFilter', 'stylePaneSortMethod'
         ];
+        // `w:attachedTemplate` names its template by `r:id`, not `w:val`: it
+        // stays verbatim in `_extras` (typed as a val element it was lost).
         const VAL_SET = new Set(VAL_ELEMENTS.map(n => 'w:' + n));
 
         // ---- Complex children with attributes only ----
@@ -110,8 +112,11 @@ export const wmlSettings = {
             }
             return out;
         }
+        // The kept children (the legacy toggles, in their read order) come
+        // before the compatSetting ones (CT_Compat).
         function renderCompat(c) {
             const kids = [];
+            if (c._extras) for (const e of c._extras) kids.push(e);
             for (const s of (c.settings || [])) {
                 const a = {};
                 if (s.name != null) a['w:name'] = String(s.name);
@@ -119,7 +124,6 @@ export const wmlSettings = {
                 if (s.val != null)  a['w:val'] = String(s.val);
                 kids.push(xml.el('w:compatSetting', a));
             }
-            if (c._extras) for (const e of c._extras) kids.push(e);
             return xml.el('w:compat', {}, kids);
         }
 
@@ -241,6 +245,9 @@ export const wmlSettings = {
 
                 if (TOGGLE_SET.has(c.name)) {
                     root[local] = core.readToggle(c);
+                    // A kinsoku element (w:lang, w:val: the characters) is
+                    // kept as read, written back while its toggle stays on.
+                    if (KINSOKU.has(c.name) && !Array.isArray(root)) (root._kinsoku = root._kinsoku || {})[local] = c;
                     continue;
                 }
                 if (VAL_SET.has(c.name)) {
@@ -279,9 +286,11 @@ export const wmlSettings = {
         function dehydrate(root) {
             const out = { ...root };
             const extras = out._extras ? [...out._extras] : [];
+            const kept = out._kinsoku || {};
+            delete out._kinsoku;
             for (const t of TOGGLES) {
                 if (out[t] !== undefined) {
-                    const el = core.writeToggle('w:' + t, out[t]);
+                    const el = out[t] === true && kept[t] ? kept[t] : core.writeToggle('w:' + t, out[t]);
                     if (el) extras.push(el);
                     delete out[t];
                 }

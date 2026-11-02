@@ -176,9 +176,11 @@ export const embedSubsetForPdf = {
                 hmtx: hmtxEnc.bytes,
                 cmap: cmapBytes,
                 loca: locaEnc.bytes,
-                glyf: glyfBytes,
-                name: new Uint8Array(font.rawSfnt.tables.name.bytes)
+                glyf: glyfBytes
             };
+            // A font read with `allowMissingName` has no `name` table to
+            // copy: the PDF embedding needs none.
+            if (font.rawSfnt.tables.name) tables.name = new Uint8Array(font.rawSfnt.tables.name.bytes);
             if (font.rawSfnt.tables['OS/2']) tables['OS/2'] = new Uint8Array(font.rawSfnt.tables['OS/2'].bytes);
             // post : the source table is only safe to copy verbatim when it
             // is already v3.0 (header only, no glyph names). A v1.0/v2.0/v4.0

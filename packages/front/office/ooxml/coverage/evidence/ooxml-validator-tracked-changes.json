@@ -1,0 +1,2282 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "ooxml-validator-tracked-changes",
+    "version": "OOXML-Validator@2.1.6",
+    "source": "https://github.com/mikeebowen/OOXML-Validator/tree/0d58b7bfb0c40a8da2e0ee76005ec17233d77981"
+  },
+  "oracle": {
+    "image": "awa-oracle-ooxml-validator:2.1.6",
+    "imageId": "sha256:bbe729911f1a680a2dc3980b7da1b31b69974aa356938d4cd434ac5a787ed27a",
+    "version": "OOXML-Validator 2.1.6 (DocumentFormat.OpenXml 3.2.0) Microsoft365"
+  },
+  "criterion": "OOXML-Validator 2.1.6 (Open XML SDK DocumentFormat.OpenXml 3.2.0, FileFormatVersions.Microsoft365) reports 0 errors (schema, semantic, package, or a package that does not open) for the written file; a round trip (read, then write with the same package) counts only when the validator reports 0 errors for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 79 (0 written, 79 round trips)",
+  "documents": [
+    {
+      "file": "tracked-changes--lo-ooxmlexport--CT-with-frame.docx",
+      "kind": "round-trip",
+      "sha256": "e57a842996229fb3bf4aa04434448b32ee5a6206ca22eeb072813d96e30a7dd4",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--CT-with-frame.source.docx",
+      "kind": "source",
+      "sha256": "810cd0dffb0895d66e99c3ceb10a577612e279b62894405cd146d604b288c7d7",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--SdtContent.docx",
+      "kind": "round-trip",
+      "sha256": "10cc7ebaeba1eecfda8db464d3363ef37841c08ddcdba33134b7f96de5964dfc",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--SdtContent.source.docx",
+      "kind": "source",
+      "sha256": "294dd44b3b36abd19fd850b3a4bf79713b037f273e95e562db5be9d551aa79f0",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--TC-table-DnD-move.docx",
+      "kind": "round-trip",
+      "sha256": "e0f48fbd0a983d7e066458721bb179415677ebc895d27720726f4675c59e9b97",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--TC-table-DnD-move.source.docx",
+      "kind": "source",
+      "sha256": "32419eb1c66dc5caf9b28c0dde8259c4e156cdeb7989368a8440c4f4aeb44648",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--TC-table-Separate-Move.docx",
+      "kind": "round-trip",
+      "sha256": "39c9f4a1f664761b8ebf97a8689652744373cde87a17ca95d6f453331b454c15",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--TC-table-Separate-Move.source.docx",
+      "kind": "source",
+      "sha256": "772e148f11193bc6cf6d9af7ffca0e643845a4caeca3fe7cc3ab89ede115a2fd",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--TC-table-rowDND-front.docx",
+      "kind": "round-trip",
+      "sha256": "db79d9c7a6f57184272044da200fe089d92a1393c83c9fea7897df6423aa9883",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--TC-table-rowDND-front.source.docx",
+      "kind": "source",
+      "sha256": "277741d373314a393fdaa07d55e51773e048cf5d8768e5edd847d212c90ad40c",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--TC-table-rowDND.docx",
+      "kind": "round-trip",
+      "sha256": "08239b4e37b88f8cc3d7b3ca550a95a33eb12dc8f77652d943688f24a0fb222e",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--TC-table-rowDND.source.docx",
+      "kind": "source",
+      "sha256": "0c29c39f4a259ecd1f3620b808a331018f178461019b2d6344578139c9b51357",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--UnknownStyleInRedline.docx",
+      "kind": "round-trip",
+      "sha256": "0f9dd399b75c984b5bcdab0977ba81181914c49ea387adeeb1dd8d2ef1859630",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_IncompleteContentExpectingComplex",
+          "Description": "The element has incomplete content. List of possible elements expected: <http://schemas.openxmlformats.org/wordprocessingml/2006/main:pPr>.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[1]/w:pPr[1]/w:pPrChange[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[3]/w:pPr[1]/w:pPrChange[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--UnknownStyleInRedline.source.docx",
+      "kind": "source",
+      "sha256": "09bca1e884e683133d59df4e5c7dc6b247d97d627f3a4386ccb795391a73561e",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rPr'.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[3]/w:pPr[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rPr'.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[1]/w:pPr[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_IncompleteContentExpectingComplex",
+          "Description": "The element has incomplete content. List of possible elements expected: <http://schemas.openxmlformats.org/wordprocessingml/2006/main:pPr>.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[1]/w:pPr[1]/w:pPrChange[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[3]/w:pPr[1]/w:pPrChange[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:hyphenationZone'.",
+          "XPath": "/w:settings[1]",
+          "PartUri": "/word/settings.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--bnc837302.docx",
+      "kind": "round-trip",
+      "sha256": "175b7b4899f72be4abd2877ba80c72d0a2de492667732c92c41e7f5f02461d17",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--bnc837302.source.docx",
+      "kind": "source",
+      "sha256": "2b6017c3a1fae75825f14e810fa14b4234e0b6d3d7eff800c38d78454075d612",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--cell-sdt-redline.docx",
+      "kind": "round-trip",
+      "sha256": "af80796cca743fde1ada1d4754c80a175236a6109b538abdcc491d5e8f143204",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--cell-sdt-redline.source.docx",
+      "kind": "source",
+      "sha256": "04bdf9ad34de06c3677fd46bc6549034d326e34bf8eea6832098fdc3daee0d1e",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--del-then-format.docx",
+      "kind": "round-trip",
+      "sha256": "f840159afb169647d8cfa226065fea58bd6187fd437551e39a16055ecf380725",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--del-then-format.source.docx",
+      "kind": "source",
+      "sha256": "7ec9d6428a6b5562aae0fd5c8b4c8f1dd69747c3c601b23a7bc971158a463c1e",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--deleted_pageref.docx",
+      "kind": "round-trip",
+      "sha256": "63cfb088bebefbc05af9ee6bfeb90312b2f37b9a2d1d87599214fe9317838182",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--deleted_pageref.source.docx",
+      "kind": "source",
+      "sha256": "c1f49793d359b676fe92d78ac0980332e5020f258381ee01730ffb5b6bf78fe1",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo64826.docx",
+      "kind": "round-trip",
+      "sha256": "3ca00a1244515d86ab9a533ec33e68cd37c1190cb1b36238c6a9f4b5be7ac38f",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo64826.source.docx",
+      "kind": "source",
+      "sha256": "6af5eb9d3d7c8e3555af1fea5e81973ae30b320d2db938b6250f4e6508680462",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo65265.docx",
+      "kind": "round-trip",
+      "sha256": "9234dcf26a18066a328bcdd80d492fc858830973e110637a91585eef7be29b3f",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo65265.source.docx",
+      "kind": "source",
+      "sha256": "2f6e5a16933cd8a13f0d16d8f1d449cdc786e75d3f269be49472e7e268f40629",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo65632.docx",
+      "kind": "round-trip",
+      "sha256": "13cbcbfe64daf90c77b934ac7cd667da3d8343ba4962c41a882de066f9c1e3fa",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo65632.source.docx",
+      "kind": "source",
+      "sha256": "653f83c1dc16a727d22931fe8e55c8e831d6f3d31b98b8cb5854816100df5395",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo79535.docx",
+      "kind": "round-trip",
+      "sha256": "338a9c7835b25160548a60f0e6b2d33d424d4ea469f0477c6c5af19bc922739c",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo79535.source.docx",
+      "kind": "source",
+      "sha256": "f324e5b7c7adb6ec88f6d7ef05fefa7510694d79a0de6b9e8267f9da2733e6af",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo79668.docx",
+      "kind": "round-trip",
+      "sha256": "14225cb1a2fa2be07d34fde36a7721c08623e359ebf821b4f6dd17cafb5a8ba0",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--fdo79668.source.docx",
+      "kind": "source",
+      "sha256": "ff3aae2c054e751143cdc62a735deab68840d5cc058e44756cf0ec6a920e45f5",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--groupshape-trackedchanges.docx",
+      "kind": "round-trip",
+      "sha256": "191807e8810147e90c6390235ae6e8608b8f65f507a883aab12ec69a0623c7c7",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--groupshape-trackedchanges.source.docx",
+      "kind": "source",
+      "sha256": "f4b2445f98cfa979e339215acc3168ddabe494f73579c985d6138910e388b008",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--n789482.docx",
+      "kind": "round-trip",
+      "sha256": "537877c02b59ead869460ec95d25a1f358b2d7f6c517fe27984b25ef76224301",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--n789482.source.docx",
+      "kind": "source",
+      "sha256": "7f1b578bd011219db5c3ced4aaf830ee3cd60ddb80d15b0f3041c5aca3cba508",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--n830205.docx",
+      "kind": "round-trip",
+      "sha256": "1a37bb6fc83cf56c8ca22c39f2c158c6f34c3676b636aea7484d3ad11976aab2",
+      "errors": [
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_InvalidRelationshipId",
+          "Description": "The relationship 'rId1' referenced by attribute 'http://schemas.openxmlformats.org/officeDocument/2006/relationships:id' does not exist.",
+          "XPath": "/w:settings[1]/w:attachedTemplate[1]",
+          "PartUri": "/word/settings.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--n830205.source.docx",
+      "kind": "source",
+      "sha256": "9f27ef4097b11c6384c637bddaa1096e1b123623362d3acd8852eb9f83185cac",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--redline-range-comment.docx",
+      "kind": "round-trip",
+      "sha256": "1aa1bbb0562aeb0ba8d2c8e855c85bfe4baad870639f9640dc4fbfdf45e64ef0",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--redline-range-comment.source.docx",
+      "kind": "source",
+      "sha256": "27f72a9f8f6f223900682a0627ea28c27923b2ae384cc35a0630a71f1f312d98",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--rhbz1180114.docx",
+      "kind": "round-trip",
+      "sha256": "f395d8b8c8d7839ea6f38d5bd59bfb9658878d5f2f1c2c04a02fdbde2f18b6b8",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--rhbz1180114.source.docx",
+      "kind": "source",
+      "sha256": "3fd89fc2471f9f77250ad5209c180f78d4d20870d461b2e30e57a6be9e8ca256",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[4]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'windows-1252'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[3]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'windows-1252'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[1]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--rprchange_closed.docx",
+      "kind": "round-trip",
+      "sha256": "71aefdc57e7916de4c8b4b4734e49efb2f3868d25b6175c93bacd305412317a4",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": " The MinInclusive constraint failed. The value must be greater than or equal to 1.",
+          "XPath": "/w:styles[1]/w:style[27]/w:rPr[1]/w:w[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": " The MinInclusive constraint failed. The value must be greater than or equal to 1.",
+          "XPath": "/w:numbering[1]/w:abstractNum[3]/w:lvl[1]/w:rPr[1]/w:w[1]",
+          "PartUri": "/word/numbering.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--rprchange_closed.source.docx",
+      "kind": "source",
+      "sha256": "b286e0dc69750e85b4cf8d9be15d7a2454c6df242677ee6e511c6d2cd00436cb",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": " The MinInclusive constraint failed. The value must be greater than or equal to 1.",
+          "XPath": "/w:styles[1]/w:style[27]/w:rPr[1]/w:w[1]",
+          "PartUri": "/word/stylesWithEffects.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": " The MinInclusive constraint failed. The value must be greater than or equal to 1.",
+          "XPath": "/w:styles[1]/w:style[27]/w:rPr[1]/w:w[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": " The MinInclusive constraint failed. The value must be greater than or equal to 1.",
+          "XPath": "/w:numbering[1]/w:abstractNum[3]/w:lvl[1]/w:rPr[1]/w:w[1]",
+          "PartUri": "/word/numbering.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf104797.docx",
+      "kind": "round-trip",
+      "sha256": "9c194ab847caa7e3acfd7e49fef2cc20040be497b444bcc95468229f2a037201",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_MissRequiredAttribute",
+          "Description": "The required attribute 'date' is missing.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:moveToRangeStart[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_MissRequiredAttribute",
+          "Description": "The required attribute 'date' is missing.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[1]/w:moveFromRangeStart[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf104797.source.docx",
+      "kind": "source",
+      "sha256": "2eb00a7323ad38ca7090fa1f45d6bc46b57d773225b63afa657e9dceb49df2b8",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_MissRequiredAttribute",
+          "Description": "The required attribute 'date' is missing.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:moveToRangeStart[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_MissRequiredAttribute",
+          "Description": "The required attribute 'date' is missing.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[1]/w:moveFromRangeStart[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf105485.docx",
+      "kind": "round-trip",
+      "sha256": "bd33cd4d75fc159008c6487bd3748db300e9cf34398621d0681a488e64d72d0c",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf105485.source.docx",
+      "kind": "source",
+      "sha256": "624f496313ce50632465aeb516ad436155c9c4287dc44ec461307e248e50df20",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf107969.docx",
+      "kind": "round-trip",
+      "sha256": "12b4d11a8147a535fc895dbfcd8fe1dac574c7778d8bc72409f9d3322670612b",
+      "errors": [
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_InvalidRelationshipId",
+          "Description": "The relationship 'rId2' referenced by attribute 'http://schemas.openxmlformats.org/officeDocument/2006/relationships:id' does not exist.",
+          "XPath": "/w:footnotes[1]/w:footnote[3]/w:p[3]/w:del[1]/w:r[1]/w:pict[1]/v:shape[1]/v:imagedata[1]",
+          "PartUri": "/word/footnotes.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf107969.source.docx",
+      "kind": "source",
+      "sha256": "1f6644d630ba5f28b0805dd019fd8a01109c4bf679adddbcc84921233408856b",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf115212.docx",
+      "kind": "round-trip",
+      "sha256": "401e4b7eb2120197e05969415e5a91ed26f6388dd4c33ca34d79bd9673006c39",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf115212.source.docx",
+      "kind": "source",
+      "sha256": "a19e8676f674582ab1d73a58a0a04b4351bbedae77428cc70412da69cc45068f",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rStyle'.",
+          "XPath": "/w:document[1]/w:body[1]/w:sdt[1]/w:sdtContent[1]/w:p[3]/w:hyperlink[1]/w:del[1]/w:r[4]/w:rPr[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rStyle'.",
+          "XPath": "/w:document[1]/w:body[1]/w:sdt[1]/w:sdtContent[1]/w:p[2]/w:hyperlink[1]/w:del[1]/w:r[4]/w:rPr[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rStyle'.",
+          "XPath": "/w:document[1]/w:body[1]/w:sdt[1]/w:sdtContent[1]/w:p[2]/w:del[1]/w:r[3]/w:rPr[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:rStyle'.",
+          "XPath": "/w:document[1]/w:body[1]/w:sdt[1]/w:sdtContent[1]/w:p[2]/w:del[1]/w:r[2]/w:rPr[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[7]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[6]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[5]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[4]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'windows-1252'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[3]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'windows-1252'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[1]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf116084.docx",
+      "kind": "round-trip",
+      "sha256": "c8d8b6da676f6df778a9a07b79f262b7935751c31e452c214f38a9c49d3d48bb",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf116084.source.docx",
+      "kind": "source",
+      "sha256": "87b124b8315f4abf4c123317bf4d69a1a2238ce9c2566b301f35e19ce700c411",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf120338.docx",
+      "kind": "round-trip",
+      "sha256": "c9f01797c58d47473dd82510e06afb4c0013a98cb549cd3c96278dc14905163a",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf120338.source.docx",
+      "kind": "source",
+      "sha256": "545bd59c8e056310b47f6711fc129ca74916e13ca7f4a0637a0d0baf0e0d7204",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf121176.docx",
+      "kind": "round-trip",
+      "sha256": "4f9b3515764feed785f8f9c355ec963062d6bf4b3a03e9d5f1d4776c856d2fbf",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf121176.source.docx",
+      "kind": "source",
+      "sha256": "454bfd566cbd8d12540b979d25c37afb028ef5695f674c1d95204223f24df65c",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf121784.docx",
+      "kind": "round-trip",
+      "sha256": "deea8dbd5a5708d5e61fae491e319b4b4df0b571dac947d48795348ecbdf662e",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf121784.source.docx",
+      "kind": "source",
+      "sha256": "37eb47edd4cef10ad9d8881a04c7338dd0c31dccde5cb21bff60ea3ba3fffb69",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf123054.docx",
+      "kind": "round-trip",
+      "sha256": "797323ec0bf1e2a0ff53853af028bd451762d85c8a4d90da3ce6fba30b714545",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf123054.source.docx",
+      "kind": "source",
+      "sha256": "bf1b555eb6e28ad396547de2dd5b05ef003580a8efd8e85bc7e3a07d4b7d1622",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf123460.docx",
+      "kind": "round-trip",
+      "sha256": "9bda7b4995c75ce9a16e482b4eec6bbcc977899f65cd863b94f39b4645ed2e74",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf123460.source.docx",
+      "kind": "source",
+      "sha256": "bde97f3a5fcc24b7062d29cab6feb9446b8656ace813c3a940ebdec7aa494dcf",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf123705.docx",
+      "kind": "round-trip",
+      "sha256": "5a0e018c09e8dd35923be5dbc8b69d845e13f9888554243b76b2dfed7a950db5",
+      "errors": [
+        {
+          "ErrorType": "OpenXmlPackageException",
+          "Id": null,
+          "Description": "Read-only file system : '/in/tracked-changes--lo-ooxmlexport--tdf123705.docx'",
+          "XPath": null,
+          "PartUri": null
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf123705.source.docx",
+      "kind": "source",
+      "sha256": "118b188120d4db3d89157ad4702bc1b0850e55a79e1637b6a5a58d1e44864b28",
+      "errors": [
+        {
+          "ErrorType": "OpenXmlPackageException",
+          "Id": null,
+          "Description": "Read-only file system : '/in/tracked-changes--lo-ooxmlexport--tdf123705.source.docx'",
+          "XPath": null,
+          "PartUri": null
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf124472.docx",
+      "kind": "round-trip",
+      "sha256": "100fa1addeef8e12704faadba1d75fa2914338f51d7076df9fc221f041b3e070",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf124472.source.docx",
+      "kind": "source",
+      "sha256": "46cd50a87f4f9d4853d2615077528a1f54df82f571204eb85c1adb88dc990310",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf124491.docx",
+      "kind": "round-trip",
+      "sha256": "2929286d0544dfd331d30a577d66eae734856f7864142f7818315d274be6407a",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf124491.source.docx",
+      "kind": "source",
+      "sha256": "f2fac02766ebb6179844e7b31e37454a9f932209e1c955f1d98739840717ff4f",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf125546.docx",
+      "kind": "round-trip",
+      "sha256": "016e9e5bc30a966235ac24ad86dde0f92b6f7d6f9c6bf0ca047b4eed2419941d",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf125546.source.docx",
+      "kind": "source",
+      "sha256": "7b43658d715b6ac0757f24ecf1cb43f1fb09c1cc6576e29ac306984e8e45ec19",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf125894.docx",
+      "kind": "round-trip",
+      "sha256": "145529b56f460619a7a3b5ba531f71983533ccb4f316b1e5fd8163317e1c6acb",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf125894.source.docx",
+      "kind": "source",
+      "sha256": "adac36736eb69fe49375363e2a6a08a9fd0fd4287e0fcc216b350670a599a266",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf126206.docx",
+      "kind": "round-trip",
+      "sha256": "76566483535c958acec264ea4e3ef36156f7f280092954b4b808e81be3955982",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf126206.source.docx",
+      "kind": "source",
+      "sha256": "46a104e5a3e12aa674de086e008852563f8617b5f842f656fee6dcc897383597",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf126245.docx",
+      "kind": "round-trip",
+      "sha256": "0ae75e5a7b1df019c7ddfeff70e166f7499de0aa526b7d341e26f36955e33135",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf126245.source.docx",
+      "kind": "source",
+      "sha256": "c11dfd8ab85f1a40ec81e339fb412c25b311edb052ff265c0c5a1476894b0bb3",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf127814.docx",
+      "kind": "round-trip",
+      "sha256": "03bf35f1a14cf21f3431b679e1fed1e09050e4916413278f61ee85090814e333",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf127814.source.docx",
+      "kind": "source",
+      "sha256": "512aa398fedf4a98a7e57f7d81b9c1095088851735f9d24b54acd354ec6f923b",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf128156.docx",
+      "kind": "round-trip",
+      "sha256": "1bd6e256ee54dca79e6eb9db838b5035978b05dbe5060c45805aab66c23d865d",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf128156.source.docx",
+      "kind": "source",
+      "sha256": "b8526552597b0c459ae58172fcee7204a922f1551b9f522b2c110edb42122ea8",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf128913.docx",
+      "kind": "round-trip",
+      "sha256": "eeb5c106f2ff886a61ea55ba8110909609b3ca196843954de7a3380e3a9ebe52",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:hint' has invalid value 'ascii'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[1]/w:rPr[1]/w:rFonts[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UndeclaredAttribute",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:hAscii' attribute is not declared.",
+          "XPath": "/w:styles[1]/w:style[1]/w:rPr[1]/w:rFonts[1]",
+          "PartUri": "/word/styles.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf128913.source.docx",
+      "kind": "source",
+      "sha256": "373842e6e726738ecb31436c30a8593b125f4030f6616793a2871f314888899a",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:name'.",
+          "XPath": "/w:styles[1]/w:style[3]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:name'.",
+          "XPath": "/w:styles[1]/w:style[2]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:name'.",
+          "XPath": "/w:styles[1]/w:style[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:hint' has invalid value 'ascii'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[1]/w:rPr[1]/w:rFonts[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UndeclaredAttribute",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:hAscii' attribute is not declared.",
+          "XPath": "/w:styles[1]/w:style[1]/w:rPr[1]/w:rFonts[1]",
+          "PartUri": "/word/styles.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf132271.docx",
+      "kind": "round-trip",
+      "sha256": "a1409a6a37bc12daa47c8eda5e130e04e2e43af6808c303b4c952719520fb01f",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf132271.source.docx",
+      "kind": "source",
+      "sha256": "9e08e4895c1b1cbf5c3f98e5820187afccd1a269a0c13289de5b2900e2fae57c",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf136667.docx",
+      "kind": "round-trip",
+      "sha256": "ceca8491b84c181068169e33d6dec41f0c9483ebf4c247994bbe113cc182c510",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf136667.source.docx",
+      "kind": "source",
+      "sha256": "f2fd7e5975503f7cb9cb7dc5f46d058af929a4fd472fa8f1bbda7b5ea67aa5f1",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf136850.docx",
+      "kind": "round-trip",
+      "sha256": "c4d8431a27d84494b63a5df9ff3e46a2e17a3534c8ce67ea2f2212b352ba2f86",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '1900-00-00T28:01:00Z'. The string '1900-00-00T28:01:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[1]/w:tc[5]/w:tcPr[1]/w:cellDel[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf136850.source.docx",
+      "kind": "source",
+      "sha256": "db9bda6627275d108f01acacf140587ead9f337b72aa695844cb01a7fcc6ff94",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '1900-00-00T28:01:00Z'. The string '1900-00-00T28:01:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[1]/w:tc[5]/w:tcPr[1]/w:cellDel[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf138899.docx",
+      "kind": "round-trip",
+      "sha256": "5901ddb1d4cb3e3892e70544368c56fefc2161c14529adb872c9e7587bff078d",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf138899.source.docx",
+      "kind": "source",
+      "sha256": "8932303304c433fd5e9753711e220fed8d2b95356bacc85484a792f6490ea39b",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf141660.docx",
+      "kind": "round-trip",
+      "sha256": "0236e5c35d745dc86646833a3e35220b962cb1badbdbf00fbb277054127a903b",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_InvalidElementContentExpectingComplex",
+          "Description": "The element has invalid child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:doNotEmbedSmartTags'.",
+          "XPath": "/w:settings[1]",
+          "PartUri": "/word/settings.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf141660.source.docx",
+      "kind": "source",
+      "sha256": "3f95549c9302cff54d134aceb07f1b5fafcf287b9265d8c147a9a53a6a364f3c",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_InvalidElementContentExpectingComplex",
+          "Description": "The element has invalid child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:doNotEmbedSmartTags'.",
+          "XPath": "/w:settings[1]",
+          "PartUri": "/word/settings.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf142387.docx",
+      "kind": "round-trip",
+      "sha256": "a61015f32e7667315e9351a61c5ec8c9e29e825072e7b5c74eca61ff1262dc52",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf142387.source.docx",
+      "kind": "source",
+      "sha256": "54c52bb1c86e0db12bcd31c80809707540cdf545bdfdeef5bd5907f81ad73da0",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf142700.docx",
+      "kind": "round-trip",
+      "sha256": "d60bfdc1e53d819084f4ab48d1a048c26e240e1491f92b3a14b7bacacbfaab3c",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf142700.source.docx",
+      "kind": "source",
+      "sha256": "2c893cf2665f609b4b0b1e291f732fcedfea6292c7fce0aebdda19483e830092",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf146171.docx",
+      "kind": "round-trip",
+      "sha256": "bf91e104960e65a600985db166ad0870011e4d53a6c3b7cd9031e140ed38fc5a",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[5]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[4]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[3]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[2]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:del[2]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf146171.source.docx",
+      "kind": "source",
+      "sha256": "1e05804326c06ef52b026a31d161082475eb8eb976d2b80191f845f04e870a9d",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[5]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[4]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[3]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[2]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:del[2]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:ins[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:date' has invalid value '0-00-00T00:00:00Z'. The string '0-00-00T00:00:00Z' is not a valid 'DateTime' value.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_UnexpectedElementContentExpectingComplex",
+          "Description": "The element has unexpected child element 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:b'.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[1]/w:pPr[1]/w:rPr[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf149388.docx",
+      "kind": "round-trip",
+      "sha256": "0c21aa72df0acb07ce3ed931bb6383dd0b8dadbb604d54a752899c414bb5f31b",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf149388.source.docx",
+      "kind": "source",
+      "sha256": "c16569997ca5e397630fe794b35b13112914450bec6624f91459f4736c334ed7",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf149388_fly.docx",
+      "kind": "round-trip",
+      "sha256": "a76a4081daf2d9d00e4db21e809f8de3a70b5803071fac7a32384cb4acd79b3e",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf149388_fly.source.docx",
+      "kind": "source",
+      "sha256": "f2b254ac6887d82cd09d9e0d53f68bac26a5c04431d20a31fd07340a7f99d303",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf149708.docx",
+      "kind": "round-trip",
+      "sha256": "da9fd38e92e7ec3050e4dd8656a4727a49d37a001c26ca15c1a1b116f5a56340",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[9]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[8]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[7]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[6]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[5]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[4]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[3]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[2]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[1]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[9]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[8]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[7]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[6]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[5]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[4]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[3]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[2]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[1]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf149708.source.docx",
+      "kind": "source",
+      "sha256": "630f99f81d4054991c7b0fc4ccf422ead6103e650d0891e7580351d4c0c0013d",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[9]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[8]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[7]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[6]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[5]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[4]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[3]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[2]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[2]/w:lvl[1]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[9]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[8]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[7]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[6]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[5]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[4]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[3]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[2]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value 'start'. The Enumeration constraint failed.",
+          "XPath": "/w:numbering[1]/w:abstractNum[1]/w:lvl[1]/w:lvlJc[1]",
+          "PartUri": "/word/numbering.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[5]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[4]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'windows-1252'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[3]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'windows-1252'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[1]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf149711.docx",
+      "kind": "round-trip",
+      "sha256": "430338c77ad2ad9d52099f4c7e81e6f73361fff7bdd182659e9a2e8b0fa05786",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf149711.source.docx",
+      "kind": "source",
+      "sha256": "be40d67a5e6f710991c17dd2bd2be784fa7bc0636e156c1177310ebc2e35edf0",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf150166.docx",
+      "kind": "round-trip",
+      "sha256": "2bb7eb687438de48d96456d4f5a213a1bb9975a6081445456b2307d2bb7231b7",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf150166.source.docx",
+      "kind": "source",
+      "sha256": "500e2d85617c68f39d98baa88c002d2c86fac07a382c6c950e88aeaf498c6352",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf154478.docx",
+      "kind": "round-trip",
+      "sha256": "8a8de8c69f24cc3c4258ba723da40856e2478e5458ce0e181940484f610f14c1",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf154478.source.docx",
+      "kind": "source",
+      "sha256": "2af13d3cd96caefbf45b149bd87cfb44e55a6a548eb3b65608e1387d54be605b",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf154481.docx",
+      "kind": "round-trip",
+      "sha256": "8a8de8c69f24cc3c4258ba723da40856e2478e5458ce0e181940484f610f14c1",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf154481.source.docx",
+      "kind": "source",
+      "sha256": "2af13d3cd96caefbf45b149bd87cfb44e55a6a548eb3b65608e1387d54be605b",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf157011_ins_del_empty_cols.docx",
+      "kind": "round-trip",
+      "sha256": "362bffe5df38612d7208bbb4932573b17ae32c30aa1ae6647ceff12994b47f2b",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:trPr[1]/w:tblHeader[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:trPr[1]/w:cantSplit[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[2]/w:trPr[1]/w:tblHeader[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[2]/w:trPr[1]/w:cantSplit[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[1]/w:trPr[1]/w:tblHeader[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[1]/w:trPr[1]/w:cantSplit[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:tblGridChange[1]/w:tblGrid[1]/w:gridCol[4]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:tblGridChange[1]/w:tblGrid[1]/w:gridCol[3]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:tblGridChange[1]/w:tblGrid[1]/w:gridCol[2]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:tblGridChange[1]/w:tblGrid[1]/w:gridCol[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:gridCol[4]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:gridCol[3]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:gridCol[2]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:gridCol[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '1' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[3]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:sdt[1]/w:sdtContent[1]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '1' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[3]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:pPr[1]/w:rPr[1]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '1' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[3]/w:sdtContent[1]/w:tc[1]/w:tcPr[1]/w:cellDel[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[2]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:sdt[1]/w:sdtContent[1]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[2]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:pPr[1]/w:rPr[1]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[2]/w:sdtContent[1]/w:tc[1]/w:tcPr[1]/w:cellDel[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[1]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:sdt[1]/w:sdtContent[1]/w:ins[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[1]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:pPr[1]/w:rPr[1]/w:ins[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[1]/w:sdtContent[1]/w:tc[1]/w:tcPr[1]/w:cellIns[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[16]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[15]/w:unhideWhenUsed[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[15]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[13]/w:unhideWhenUsed[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[13]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' has invalid value '0.0'. The string '0.0' is not a valid 'Int32' value.",
+          "XPath": "/w:styles[1]/w:style[12]/w:tblPr[1]/w:tblInd[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[12]/w:unhideWhenUsed[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[12]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[11]/w:unhideWhenUsed[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[11]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[10]/w:qFormat[1]",
+          "PartUri": "/word/styles.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf157011_ins_del_empty_cols.source.docx",
+      "kind": "source",
+      "sha256": "7c737a45db1ed60fa1a56d8a388e7e4a0d394de909fa9c5ca5d07060a6914794",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:trPr[1]/w:tblHeader[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:trPr[1]/w:cantSplit[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[2]/w:trPr[1]/w:tblHeader[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[2]/w:trPr[1]/w:cantSplit[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[1]/w:trPr[1]/w:tblHeader[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '0'. The Enumeration constraint failed.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[1]/w:trPr[1]/w:cantSplit[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:tblGridChange[1]/w:tblGrid[1]/w:gridCol[4]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:tblGridChange[1]/w:tblGrid[1]/w:gridCol[3]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:tblGridChange[1]/w:tblGrid[1]/w:gridCol[2]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:tblGridChange[1]/w:tblGrid[1]/w:gridCol[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:gridCol[4]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:gridCol[3]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:gridCol[2]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '2256.5' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tblGrid[1]/w:gridCol[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '1' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[3]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:sdt[1]/w:sdtContent[1]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '1' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[3]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:pPr[1]/w:rPr[1]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '1' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[3]/w:sdtContent[1]/w:tc[1]/w:tcPr[1]/w:cellDel[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[2]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:sdt[1]/w:sdtContent[1]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[2]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:pPr[1]/w:rPr[1]/w:del[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[2]/w:sdtContent[1]/w:tc[1]/w:tcPr[1]/w:cellDel[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[1]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:sdt[1]/w:sdtContent[1]/w:ins[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[1]/w:sdtContent[1]/w:tc[1]/w:sdt[1]/w:sdtContent[1]/w:p[1]/w:pPr[1]/w:rPr[1]/w:ins[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_UniqueAttributeValue",
+          "Description": "Attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:id' should have unique value. Its current value '0' duplicates with others.",
+          "XPath": "/w:document[1]/w:body[1]/w:tbl[1]/w:tr[3]/w:sdt[1]/w:sdtContent[1]/w:tc[1]/w:tcPr[1]/w:cellIns[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' has invalid value '108.0'. The string '108.0' is not a valid 'Int16' value.",
+          "XPath": "/w:styles[1]/w:style[18]/w:tblPr[1]/w:tblCellMar[1]/w:right[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '0.0' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:styles[1]/w:style[18]/w:tblPr[1]/w:tblCellMar[1]/w:bottom[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' has invalid value '108.0'. The string '108.0' is not a valid 'Int16' value.",
+          "XPath": "/w:styles[1]/w:style[18]/w:tblPr[1]/w:tblCellMar[1]/w:left[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '0.0' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:styles[1]/w:style[18]/w:tblPr[1]/w:tblCellMar[1]/w:top[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[16]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[15]/w:unhideWhenUsed[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[15]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[13]/w:unhideWhenUsed[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[13]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' has invalid value '108.0'. The string '108.0' is not a valid 'Int16' value.",
+          "XPath": "/w:styles[1]/w:style[12]/w:tblPr[1]/w:tblCellMar[1]/w:right[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '0.0' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:styles[1]/w:style[12]/w:tblPr[1]/w:tblCellMar[1]/w:bottom[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' has invalid value '108.0'. The string '108.0' is not a valid 'Int16' value.",
+          "XPath": "/w:styles[1]/w:style[12]/w:tblPr[1]/w:tblCellMar[1]/w:left[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeUnionFailedEx",
+          "Description": "The 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' attribute is invalid - The value '0.0' is not valid according to any of the memberTypes of the union.",
+          "XPath": "/w:styles[1]/w:style[12]/w:tblPr[1]/w:tblCellMar[1]/w:top[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:w' has invalid value '0.0'. The string '0.0' is not a valid 'Int32' value.",
+          "XPath": "/w:styles[1]/w:style[12]/w:tblPr[1]/w:tblInd[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[12]/w:unhideWhenUsed[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[12]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[11]/w:unhideWhenUsed[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[11]/w:semiHidden[1]",
+          "PartUri": "/word/styles.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:val' has invalid value '1'. The Enumeration constraint failed.",
+          "XPath": "/w:styles[1]/w:style[10]/w:qFormat[1]",
+          "PartUri": "/word/styles.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf165059_broken.docx",
+      "kind": "round-trip",
+      "sha256": "c9a163de6c22ae3ef63661c34dc6c4c8101f758eca47de58c205c445d4735cf6",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf165059_broken.source.docx",
+      "kind": "source",
+      "sha256": "fd35fc252d2e1ac95fc6a987f2b7f2ffa44f76ca4d1893562fd355721cc9a7d7",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[5]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'utf-8'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[4]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'windows-1252'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[3]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_AttributeValueDataTypeDetailed",
+          "Description": "The attribute 'http://schemas.openxmlformats.org/wordprocessingml/2006/main:characterSet' has invalid value 'windows-1252'. The Enumeration constraint failed.",
+          "XPath": "/w:fonts[1]/w:font[1]/w:charset[1]",
+          "PartUri": "/word/fontTable.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf165933.docx",
+      "kind": "round-trip",
+      "sha256": "9f1c711a77d89205d782e7b142262a1ad1ac12176d58368af4b5d7e0673d3936",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf165933.source.docx",
+      "kind": "source",
+      "sha256": "78da3cc76ec9678090d87368479687fada2aa72c363d86bf1c55dd566860692e",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf167082.docx",
+      "kind": "round-trip",
+      "sha256": "83095194a256fdd2c1abdd9f6938a4e071f28fc0b4964f139e4042cfae98ed7a",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf167082.source.docx",
+      "kind": "source",
+      "sha256": "82937e06a5d9da4ae10e767e28caee3386dc78fca3b63e9b206128280b8789f2",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf170003_bottomSpacing.docx",
+      "kind": "round-trip",
+      "sha256": "c900a8c49deb9d3f490d5589ed248b15bef665e55cc75d42260f9b7548108fa9",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf170003_bottomSpacing.source.docx",
+      "kind": "source",
+      "sha256": "88d4ede4491008c134f0d10e251cb8d2edfd1fdf63a2cbc33fdc63d2c111f9fc",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf170908_delText.docx",
+      "kind": "round-trip",
+      "sha256": "7d7e8003feef218d3ec7af4403346327548b2a714fc4448fa002f596709d6474",
+      "errors": [
+        {
+          "ErrorType": "Semantic",
+          "Id": "Sem_InvalidRelationshipId",
+          "Description": "The relationship 'rId1' referenced by attribute 'http://schemas.openxmlformats.org/officeDocument/2006/relationships:id' does not exist.",
+          "XPath": "/w:numbering[1]/w:numPicBullet[1]/w:pict[1]/v:shape[1]/v:imagedata[1]",
+          "PartUri": "/word/numbering.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf170908_delText.source.docx",
+      "kind": "source",
+      "sha256": "8f8d5ea99c797d40173782faf335ce7b167e3e274b4f5ce5731cbc39bbf8be64",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf170952_delText.docx",
+      "kind": "round-trip",
+      "sha256": "a4425f76e7164e1f5b36007b8cd3bced051f285216aec638f3e02b279f93a4b3",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf170952_delText.source.docx",
+      "kind": "source",
+      "sha256": "a67b8ce17398d8ad7fdf4678eff3e340eefee11af108d7f2930846da0bedfd06",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf70234.docx",
+      "kind": "round-trip",
+      "sha256": "c146a6c7444a2a6284d535cdf0b232d4b175ed2fb0d69635e5db93da7621d113",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf70234.source.docx",
+      "kind": "source",
+      "sha256": "6546a77ae9004262aa38a5af6b60b405b3b6786d6c5ac0a4ff3a6ccb16040283",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf89731.docx",
+      "kind": "round-trip",
+      "sha256": "2ee20a1c1c81a024b7b1179e19bea804567300e17806b8aa13e65f2a4dc35004",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf89731.source.docx",
+      "kind": "source",
+      "sha256": "4cd35ae2e80f890f57da8efac0eead7a2caaafdda8abb79f27021d8e32d43977",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf89991.docx",
+      "kind": "round-trip",
+      "sha256": "c53be204dbb0eeb026f7db48e663149b82d1062bb2b8381991d90da015548adf",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--tdf89991.source.docx",
+      "kind": "source",
+      "sha256": "e1a1f34ede5891e63888775e1d69a4966dc03d129726dfbfe2578134d01c6dd2",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesDeletedEmptyParagraph.docx",
+      "kind": "round-trip",
+      "sha256": "ba6895f2fdb91bf284f3326ebcd527d28e257e507bdf2eedf0c40ece335f7bc2",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesDeletedEmptyParagraph.source.docx",
+      "kind": "source",
+      "sha256": "02515a463f09fef82a47431dfcf299275caf5d1b7bdb3b18ecb9a9705b1428e9",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesDeletedParagraphMark.docx",
+      "kind": "round-trip",
+      "sha256": "3482354811a5edde2869f3a7956af03a27960c8f7a882105528f820912b84d66",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesDeletedParagraphMark.source.docx",
+      "kind": "source",
+      "sha256": "e62d3361b5457cf1f6aab50b9f6f80127c9dbf87f6d75c440b0e78d594daace7",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesDeletedTableCell.docx",
+      "kind": "round-trip",
+      "sha256": "4c07e60262fb7a243c8f4aee0f1b2d5597a13526ac553e3ee513b25be02bc46d",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesDeletedTableCell.source.docx",
+      "kind": "source",
+      "sha256": "63be176f6a3c4cb87b1f900301592819ad71d3325ee6dc9aad96e3ff806e1afd",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesDeletedTableRow.docx",
+      "kind": "round-trip",
+      "sha256": "94d11ac4fec8a584449a761f550a61f3e2e5d898f55fd904257d136388c0071b",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesDeletedTableRow.source.docx",
+      "kind": "source",
+      "sha256": "d7836464e3b6e09d13e075a9ab6f945b093e5f3b6784f7f51254db1a6c08715d",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesEmptyParagraphsInADeletion.docx",
+      "kind": "round-trip",
+      "sha256": "5671b57bc559d4d94c9657ee5cf02a8cb1e7d1a8bac24d5ba1a000d7fa4cce52",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesEmptyParagraphsInADeletion.source.docx",
+      "kind": "source",
+      "sha256": "2f5fcecb69022c25a6525c436f9cdb35dba3455678e7059abc04c9c9f057e402",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesInsertedParagraphMark.docx",
+      "kind": "round-trip",
+      "sha256": "e348840a38429eeb4e2b631650e24cbc7de50672b44740df612d0a8997e15984",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesInsertedParagraphMark.source.docx",
+      "kind": "source",
+      "sha256": "03baa2659e826644f440bacb8f15137bd734845582b07b09805b4b158cf2dcfc",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesInsertedTableCell.docx",
+      "kind": "round-trip",
+      "sha256": "4c913abb77299a98c18b28e1a5b9ddd7279c334dffe8a3604e5f6d8d863163e9",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesInsertedTableCell.source.docx",
+      "kind": "source",
+      "sha256": "6f2d63be32322581fc9e185b3fd1e50993b93c8ba5f843ec6faef35514b11994",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesInsertedTableRow.docx",
+      "kind": "round-trip",
+      "sha256": "8389c9559ac1a0bdc0fde002c0d12ac1888028aee22905db7e0a962a54c788cc",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesInsertedTableRow.source.docx",
+      "kind": "source",
+      "sha256": "0a48dc4ade94db8aa056e4deaf1d8f924b7423d7b509ef67aa3d668b58db9436",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesParagraphProperties.docx",
+      "kind": "round-trip",
+      "sha256": "beee37cd76f66bd9cd73ad16a9a3c8c9f233efa087732f001af5dbebbb06adbc",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--lo-ooxmlexport--testTrackChangesParagraphProperties.source.docx",
+      "kind": "source",
+      "sha256": "3a96e9a9dc9c55dfe9e485476e255c278090251da96ae7f44cb5d72a21d7a151",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--poi--test-data--document--58067.docx",
+      "kind": "round-trip",
+      "sha256": "715c947f7b6e921ccd2fe9a4546140115e3aa7776a5b75ddfed04139d4becac3",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--poi--test-data--document--58067.source.docx",
+      "kind": "source",
+      "sha256": "719b5076b736e6208be4b10fd268e9e3b7e0029c819d485d53ca14700fc98fc5",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--poi--test-data--document--Tika-792.docx",
+      "kind": "round-trip",
+      "sha256": "78ba5695d87bdbba87e703030061d226267940ef5652f42a9658fe19cdf2f9ca",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_MissRequiredAttribute",
+          "Description": "The required attribute 'date' is missing.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:moveFromRangeStart[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_MissRequiredAttribute",
+          "Description": "The required attribute 'date' is missing.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[1]/w:moveToRangeStart[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--poi--test-data--document--Tika-792.source.docx",
+      "kind": "source",
+      "sha256": "95de9f3b655bfec5b619ee31d1319e5a9a6ce4f253a9738898876640a2969665",
+      "errors": [
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_MissRequiredAttribute",
+          "Description": "The required attribute 'date' is missing.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[2]/w:moveFromRangeStart[1]",
+          "PartUri": "/word/document.xml"
+        },
+        {
+          "ErrorType": "Schema",
+          "Id": "Sch_MissRequiredAttribute",
+          "Description": "The required attribute 'date' is missing.",
+          "XPath": "/w:document[1]/w:body[1]/w:p[1]/w:moveToRangeStart[1]",
+          "PartUri": "/word/document.xml"
+        }
+      ]
+    },
+    {
+      "file": "tracked-changes--poi--test-data--document--delins.docx",
+      "kind": "round-trip",
+      "sha256": "abbb8b3f0f360ad07f61b41bceda103c3540d358a705c78b869cd0edf9a562b1",
+      "errors": []
+    },
+    {
+      "file": "tracked-changes--poi--test-data--document--delins.source.docx",
+      "kind": "source",
+      "sha256": "7ecad102602586be7f1371f117fc567ea47f3ed0ca703b353e003002f1ff8d3f",
+      "errors": []
+    }
+  ],
+  "date": "2026-10-28",
+  "commit": "c9cecc9f09185e553dc43e6be642194a82f2b252"
+}

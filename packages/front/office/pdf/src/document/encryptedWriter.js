@@ -144,10 +144,16 @@ export const pdfEncryptedWriter = {
                     return { type: 'array', items };
                 }
                 case 'dict': {
+                    // A signature's /Contents stays clear (ISO 32000-2
+                    // § 7.6.2), as the decrypting read expects.
+                    const t = value.entries.Type;
+                    const sig = !!t && t.type === 'name'
+                        && (t.value === 'Sig' || t.value === 'DocTimeStamp');
                     const entries = {};
                     for (const k of Object.keys(value.entries)) {
-                        entries[k] = encryptObjectInPlace(
-                            value.entries[k], encryptOne, encryptEmbedded);
+                        entries[k] = sig && k === 'Contents'
+                            ? value.entries[k]
+                            : encryptObjectInPlace(value.entries[k], encryptOne, encryptEmbedded);
                     }
                     return { type: 'dict', entries };
                 }
@@ -412,10 +418,16 @@ export const pdfEncryptedWriter = {
                 const encEff = makeEffEnc
                     ? makeEffEnc(it.num | 0, it.gen | 0)
                     : null;
+                // `encryptMetadata: false` leaves the metadata stream clear
+                // (ISO 32000-2 Table 20, EncryptMetadata).
+                const clearMetadata = !encryptMetadata && it.value && it.value.type === 'stream'
+                    && it.value.dict && it.value.dict.entries && it.value.dict.entries.Type
+                    && it.value.dict.entries.Type.type === 'name'
+                    && it.value.dict.entries.Type.value === 'Metadata';
                 outIndirects[i] = {
                     num: it.num,
                     gen: it.gen,
-                    value: encryptObjectInPlace(it.value, encStm, encEff)
+                    value: clearMetadata ? it.value : encryptObjectInPlace(it.value, encStm, encEff)
                 };
             }
 

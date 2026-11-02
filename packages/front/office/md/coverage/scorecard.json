@@ -9,8 +9,8 @@
         "version": "bun 1.3.13",
         "source": null
       },
-      "date": "2026-10-17",
-      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "date": "2026-10-26",
+      "commit": "976d3b35efd5d87c67c83958937799f1b57be319",
       "command": "bun cli.ts office-scorecard axis-a --pkg md",
       "result": {
         "kind": "percent",
@@ -19,14 +19,14 @@
         "rows": 50,
         "model": "mean-of-rows",
         "pooled": {
-          "lines": 97.13,
-          "functions": 96.03
+          "lines": 97.15,
+          "functions": 96.06
         },
         "basis": [
           "src/**"
         ],
         "tests": {
-          "pass": 1616,
+          "pass": 1633,
           "fail": 0,
           "skip": 0
         }
@@ -149,6 +149,24 @@
         "total": 25,
         "budget": "5000 ms per case at the upstream size (cmark's own timeout); a case taking 200 ms or more must take at most 3x its time at half the input length (best of 2 runs at each size)",
         "criterion": "with maxDepth and maxNodes set to Infinity, renderHtml (renderMarkdown for nested inlines) returns output matching cmark's regex for the case; within the budget"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "commonmark-smart-dashes",
+        "version": "commonmark.js@0.31.2",
+        "source": "https://github.com/commonmark/commonmark.js/blob/0.31.2/test/smart_punct.txt"
+      },
+      "date": "2026-10-24",
+      "commit": "e65982e348cb50d7bfa11768b766f90d47addc38",
+      "command": "bun cli.ts office-scorecard axis-b --suite commonmark-smart-dashes",
+      "result": {
+        "kind": "pass-total",
+        "pass": 15,
+        "total": 15,
+        "criterion": "renderHtml(example, { safe: false }) of createMd({ extendedAutolinks: false, disallowedRawHtml: false, smart: true, smartDashes: true }) equals the expected HTML byte for byte (commonmark.js runs this file with new Parser({ smart: true }); md splits that option in two: smart for the quotes, smartDashes for the dashes and ellipses)"
       },
       "skipped": []
     }

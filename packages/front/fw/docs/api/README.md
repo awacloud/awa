@@ -23,11 +23,11 @@ Complete reference for all framework modules and APIs.
 | [DOM / Rendering](./dom/rendering/README.md) | `parser`, `render`, `sanitize`, `template`, `themeTokens`, `uiSession`, `virtualScroll`, `chart` |
 | [DOM / Query](./dom/query/README.md) | `dnd`, `dom`, `events`, `gesture`, `media` |
 | [DOM / Display](./dom/display/README.md) | `animate`, `fullscreen` |
-| [DOM / FS](./dom/fs/README.md) | `indexedDB`, `storage`, `download`, `fsAccess`, `remoteStore` |
+| [DOM / FS](./dom/fs/README.md) | `indexedDB`, `storage`, `download`, `fileIntake`, `fsAccess`, `remoteStore` |
 | [DOM / Net](./dom/net/README.md) | `ajax`, `ws`, `sse`, `webrtc`, `broadcastChannel`, `network` |
 | [DOM / Utils](./dom/utils/README.md) | `entropyCollector`, `clipboard`, `ua`, `permissions`, `notifications`, `focus`, `keybindings`, `leaderElection`, `webauthn` |
 | [DOM / Sensors](./dom/sensors/README.md) | `geolocation`, `battery`, `networkInfo`, `sensors` |
 | [DOM / Lifecycle](./dom/lifecycle/README.md) | `visibility`, `idle`, `wakeLock` |
-| [DOM / SW](./dom/sw/README.md) | `backgroundSync`, `cache`, `push`, `serviceWorker`, `sharedWorker` |
+| [DOM / SW](./dom/sw/README.md) | `backgroundSync`, `cache`, `installPrompt`, `precache`, `push`, `serviceWorker`, `sharedWorker`, `swUpdate` |
 | [Sanity](./sanity/base.md) | Security lockdown — [base](./sanity/base.md) (ESM, explicit call `applyBase()`, DOM/XSS denylist), [community](./sanity/community.md) (ESM, explicit call `applyCommunity()`, framework-friendly denylist), [lockdown](./sanity/lockdown.md) (ESM, explicit call `lockdown()`, SES-grade integrity + WebAssembly capability seam) · [lockdown.apply](./sanity/lockdown.md) (`@awacloud/fw/sanity/lockdown.apply` — self-applying wrapper, **documented by reference** inside the lockdown page; no separate page by design) · default tier: `lockdown()` (see [guide/security.md](../guide/security.md) § Recommended default) |
 | Integrations | **Mirror boundary — declared.** The 11 `integrations/*` export keys (`./vite`, `./esbuild`, `./rollup`, `./bun`, `./webpack`, `./astro`, `./vitest/shim`, `./jest/shim`, `./next`, `./turbopack`, `./nest`) are bundler/test-runner adapters documented by their own `integrations/<name>/README.md` and by [Integration guide](../guide/integration-bundlers.md); they are not mirrored under `docs/api/` |

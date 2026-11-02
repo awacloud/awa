@@ -8,7 +8,7 @@ import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 import { fw_require as odfFwRequire, modules as odfModules } from '@awacloud/odf';
 import { oconvIr as oconvIrDescriptor } from '../ir/ir.js';
 import { oconvOdsToIr } from './ods-to-ir.js';
-import { normalizeGrid } from './sheet-grid.js';
+import { normalizeGrid, paddedSize, sparseLines } from './sheet-grid.js';
 
 // Same composition pattern odt-to-ir.test.js uses for `@awacloud/odf`: build the
 // real `ods` public runtime for fixture bytes, and build the reader's
@@ -319,6 +319,55 @@ describe('oconvOdsToIr — sheet-grid mirror drift', () => {
             const actual = table ? tableTexts(table) : [];
 
             expect(actual).toEqual(expected);
+        }
+    });
+});
+
+describe('oconvOdsToIr — cellBudget: a sheet past the budget is not padded (T46, D9)', () => {
+    function wideBack() {
+        const gap = ods.cell('');
+        gap.repeated = 1000;
+        return ods.read(ods.write({
+            spreadsheet: {
+                tables: [{
+                    type: 'table', name: 'Wide', columns: [],
+                    rows: [
+                        { type: 'row', cells: [ods.cell('a'), ods.cell('b')] },
+                        { type: 'row', cells: [ods.cell('x'), gap, ods.cell('y')] },
+                        { type: 'row', cells: [ods.cell('c')] }
+                    ]
+                }]
+            }
+        }));
+    }
+
+    test('past the budget: one paragraph per value with its address, the loss', () => {
+        const { ir, losses } = odsToIr(wideBack(), { cellBudget: 100 });
+        expect(validate(ir).ok).toBe(true);
+        expect(ir.children.some((n) => n.kind === 'table')).toBe(false);
+        const lines = ir.children.filter((n) => n.kind === 'paragraph').map((p) => p.children[0].text);
+        expect(lines).toEqual(['A1: a', 'B1: b', 'A2: x', 'ALN2: y', 'A3: c']);
+        expect(losses).toEqual([{ code: 'sheet/sparse-form', detail: 'Wide: 3006 padded cells, 5 kept' }]);
+    });
+
+    test('within the budget the padded table as before; a bad budget is refused', () => {
+        const { ir } = odsToIr(wideBack(), { cellBudget: 3006 });
+        expect(tableTexts(ir.children.find((n) => n.kind === 'table')).map((r) => r.length)).toEqual([1002, 1002, 1002]);
+        expect(() => odsToIr(wideBack(), { cellBudget: 0 })).toThrow('oconv: bad cell budget');
+    });
+
+    test('the factory-internal size and sparse lines agree with ./sheet-grid.js', () => {
+        const shapes = [[['a']], [['a', 'b'], ['', '']], [['', 'x', ''], ['', 'y', ''], ['', '', '']], [['a'], ['', '', 'c'], ['d', '']]];
+        for (const shape of shapes) {
+            const back = ods.read(ods.write({
+                spreadsheet: { tables: [{ type: 'table', name: 'G', columns: [], rows: shape.map((r) => ({ type: 'row', cells: r.map((t) => ods.cell(t)) })) }] }
+            }));
+            const size = paddedSize(shape);
+            expect(odsToIr(back, { cellBudget: size }).ir.children.some((n) => n.kind === 'table')).toBe(true);
+            if (size > 1) {
+                const lines = odsToIr(back, { cellBudget: size - 1 }).ir.children.filter((n) => n.kind === 'paragraph').map((p) => p.children[0].text);
+                expect(lines).toEqual(sparseLines(shape));
+            }
         }
     });
 });

@@ -10,8 +10,220 @@
     "imageId": "sha256:33f848fc437b3d712a9c61175624539812ea46adf576e9d6d06d9d644961239e",
     "version": "ots 9.3.0"
   },
-  "criterion": "OTS 9.3.0 (ots-sanitize, the default table actions) exits 0 and reports no ERROR message for the subset (WARNING messages are recorded, not failing); a subset counts only when OTS accepts its source face too — a face it refuses, or one subsetForPdf refuses with a typed error, is skipped with the reason; documents: 26 (0 written, 26 round trips)",
+  "criterion": "OTS 9.3.0 (ots-sanitize, the default table actions) exits 0 and reports no ERROR message for the subset (WARNING messages are recorded, not failing); a subset counts only when OTS accepts its source face too — a face it refuses, or one subsetForPdf refuses with a typed error, is skipped with the reason; documents: 42 (0 written, 42 round trips)",
   "documents": [
+    {
+      "file": "caladea-bold--text.ttf",
+      "kind": "round-trip",
+      "sha256": "bca2f570e87185ff7dbc25ba95ad9316717161350da885fca5790cea1af8600d",
+      "errors": []
+    },
+    {
+      "file": "caladea-bold--text.source.ttf",
+      "kind": "source",
+      "sha256": "74eda4fc5ffba0d8dc4aa76d41499f5ab76168d9ed6141c6417064c6244db9b6",
+      "errors": []
+    },
+    {
+      "file": "caladea-bold--full.ttf",
+      "kind": "round-trip",
+      "sha256": "23a0b564d270cb15ad46517302d500d54b7d899eedff387a6d65292098afebe8",
+      "errors": []
+    },
+    {
+      "file": "caladea-bold--full.source.ttf",
+      "kind": "source",
+      "sha256": "74eda4fc5ffba0d8dc4aa76d41499f5ab76168d9ed6141c6417064c6244db9b6",
+      "errors": []
+    },
+    {
+      "file": "caladea-bold-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "2688362140571818a11fa6c2cec72a854a616aa380d1defb756efda58d746902",
+      "errors": []
+    },
+    {
+      "file": "caladea-bold-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "f47a35ad6cd0efa9914d93f9d03c93e30c55da43674bccfabac73b3c0d522c01",
+      "errors": []
+    },
+    {
+      "file": "caladea-bold-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "da3ab52ec5d094ca54d9c3efe0374ed782191d9c8caafba4212a9ea4e07d72d9",
+      "errors": []
+    },
+    {
+      "file": "caladea-bold-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "f47a35ad6cd0efa9914d93f9d03c93e30c55da43674bccfabac73b3c0d522c01",
+      "errors": []
+    },
+    {
+      "file": "caladea-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "a0f7071459a5485e911e5f5ad678973bfcefea3c6b8944d74cc3156711415285",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 37)"
+        }
+      ]
+    },
+    {
+      "file": "caladea-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "9c968bf60ba1e851cdfea77c71e3540c57792f77482dd241acc29d1425569c4e",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 91)"
+        }
+      ]
+    },
+    {
+      "file": "caladea-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "6a108f13ee13470cd4b4c7cb287cc223edabcb6ec891d691a5f53a9ab9b065be",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 89)"
+        }
+      ]
+    },
+    {
+      "file": "caladea-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "9c968bf60ba1e851cdfea77c71e3540c57792f77482dd241acc29d1425569c4e",
+      "errors": [
+        {
+          "severity": "WARNING",
+          "text": "glyf: Glyph bbox was incorrect; adjusting (glyph 91)"
+        }
+      ]
+    },
+    {
+      "file": "caladea-regular--text.ttf",
+      "kind": "round-trip",
+      "sha256": "1828cd08cee029c911d3c811e9510a9fe835783e68de7258af2d2205306afbc0",
+      "errors": []
+    },
+    {
+      "file": "caladea-regular--text.source.ttf",
+      "kind": "source",
+      "sha256": "d2f6cad33f191e65b68bd74e6d4f7708080a41b32db635866109df3090265d91",
+      "errors": []
+    },
+    {
+      "file": "caladea-regular--full.ttf",
+      "kind": "round-trip",
+      "sha256": "2de144b9f4eddd6f02c945ebd529cfb68960f7af2aba61287153bf377e561d13",
+      "errors": []
+    },
+    {
+      "file": "caladea-regular--full.source.ttf",
+      "kind": "source",
+      "sha256": "d2f6cad33f191e65b68bd74e6d4f7708080a41b32db635866109df3090265d91",
+      "errors": []
+    },
+    {
+      "file": "carlito-bold--text.ttf",
+      "kind": "round-trip",
+      "sha256": "62ec735d1f8637008c27b26e00f6e2f431aa3d48918dda2bd66d62eb32032b1f",
+      "errors": []
+    },
+    {
+      "file": "carlito-bold--text.source.ttf",
+      "kind": "source",
+      "sha256": "0f62ab34ad5d079a0a28fac01bcf7c7a724a4db4d6cb99cab9cabff382fbb80f",
+      "errors": []
+    },
+    {
+      "file": "carlito-bold--full.ttf",
+      "kind": "round-trip",
+      "sha256": "678fc9f4ba045206eeb035eb34caa0787bc4ccb94a40a3a674d2131029b056b5",
+      "errors": []
+    },
+    {
+      "file": "carlito-bold--full.source.ttf",
+      "kind": "source",
+      "sha256": "0f62ab34ad5d079a0a28fac01bcf7c7a724a4db4d6cb99cab9cabff382fbb80f",
+      "errors": []
+    },
+    {
+      "file": "carlito-bold-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "4c361fd3c267f3db387dab298ca1cfe3a0901ed7be723a7e6facb1f26267f143",
+      "errors": []
+    },
+    {
+      "file": "carlito-bold-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "380764b6898d7b73ceae6384b2958b196d2a0428962ef3adf138d27947228666",
+      "errors": []
+    },
+    {
+      "file": "carlito-bold-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "aee253a119cbca682b730ef8367f10424a22aada8025b56fd7e0ce1ae5ca9c34",
+      "errors": []
+    },
+    {
+      "file": "carlito-bold-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "380764b6898d7b73ceae6384b2958b196d2a0428962ef3adf138d27947228666",
+      "errors": []
+    },
+    {
+      "file": "carlito-italic--text.ttf",
+      "kind": "round-trip",
+      "sha256": "12d8ffcd4064c25c5c3334a51676143a13f141176f9d217ddca1e3e39e389bb7",
+      "errors": []
+    },
+    {
+      "file": "carlito-italic--text.source.ttf",
+      "kind": "source",
+      "sha256": "718a0663864d37a4868220a19b9668a5fe10a46197f6df367b4c2c30c04c026c",
+      "errors": []
+    },
+    {
+      "file": "carlito-italic--full.ttf",
+      "kind": "round-trip",
+      "sha256": "1c7259946eb21555e9a03b8a1034847f1b138a43c91cb66e3fdbbdef48359875",
+      "errors": []
+    },
+    {
+      "file": "carlito-italic--full.source.ttf",
+      "kind": "source",
+      "sha256": "718a0663864d37a4868220a19b9668a5fe10a46197f6df367b4c2c30c04c026c",
+      "errors": []
+    },
+    {
+      "file": "carlito-regular--text.ttf",
+      "kind": "round-trip",
+      "sha256": "71ecf4b98540b798405c244cf13c2f132575f4a33f6126fabd4f206827ce6a42",
+      "errors": []
+    },
+    {
+      "file": "carlito-regular--text.source.ttf",
+      "kind": "source",
+      "sha256": "b4ff23ba370cc95a3c349336b73f9c28514a1371210f89832efc85c4b1ea7131",
+      "errors": []
+    },
+    {
+      "file": "carlito-regular--full.ttf",
+      "kind": "round-trip",
+      "sha256": "f81eec61b37860b972b771de89532a6ff3400d9555faa599dfb7c50dac1f04b3",
+      "errors": []
+    },
+    {
+      "file": "carlito-regular--full.source.ttf",
+      "kind": "source",
+      "sha256": "b4ff23ba370cc95a3c349336b73f9c28514a1371210f89832efc85c4b1ea7131",
+      "errors": []
+    },
     {
       "file": "kalnia-glaze--text.ttf",
       "kind": "round-trip",
@@ -817,6 +1029,6 @@
       ]
     }
   ],
-  "date": "2026-10-15",
-  "commit": "f3b8d60e787d8d0f8cda0986fa011a44bf9a9509"
+  "date": "2026-10-24",
+  "commit": "ae11503649e334242baa417e3c352ee69af03b64"
 }

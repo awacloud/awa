@@ -89,8 +89,8 @@ export const settingsExtended = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const c of out.config) extras.push(renderConfig(c));
             delete out.config;
-            if (Array.isArray(s._extras) || !s._extras) out._extras = extras;
-            else out._extras = { ...s._extras, children: extras };
+            if (Array.isArray(s._extras)) out._extras = extras;
+            else out._extras = { ...(s._extras || {}), children: extras };
             return out;
         }
 

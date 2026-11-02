@@ -86,3 +86,11 @@ describe('pdfActionGoTo module', () => {
         expect(typeof m.typeGoToE).toBe('function');
     });
 });
+
+describe('SD, the structure destination (A38d)', () => {
+    test('typeGoTo and typeGoToR read SD as is', () => {
+        expect(typeGoTo(obj.dict({ D: obj.name('d'), SD: obj.array([]) })).sd.type).toBe('array');
+        expect(typeGoToR(obj.dict({ F: obj.string(new Uint8Array([97])), D: obj.name('d'), SD: obj.ref(3, 0) })).sd.type).toBe('ref');
+        expect('sd' in typeGoTo(obj.dict({ D: obj.name('d') }))).toBe(false);
+    });
+});

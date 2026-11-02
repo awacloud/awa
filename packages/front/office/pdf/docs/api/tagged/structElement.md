@@ -13,7 +13,7 @@ status: complete
 
 **Module** `pdfStructElement` | **Source** `packages/front/office/pdf/src/tagged/structElement.js` | **Deps** `pdfErrors`, `pdfParser` | **Worker-safe** yes
 
-Types a `/Type /StructElem` dict. Fields: `/S` (structure type — required), `/P` (parent), `/ID`, `/Pg` (owning page), `/K` (kids — `int`/`ref`/`dict` or array), `/A`/`/C` (attributes/classes), `/R` (revision), `/T`/`/Lang`/`/Alt`/`/E`/`/ActualText` (accessibility), `/AF` (PDF 2.0 associated files), `/NS` (namespace), `/PhoneticAlphabet`/`/Phoneme`. Kids are normalized to records `{ kind: 'mcid'|'elem'|'mcr'|'objr', … }`.
+Types a `/Type /StructElem` dict. Fields: `/S` (structure type — required), `/P` (parent), `/ID`, `/Pg` (owning page), `/K` (kids — `int`/`ref`/`dict` or array), `/A`/`/C` (attributes/classes), `/R` (revision), `/T`/`/Lang`/`/Alt`/`/E`/`/ActualText` (accessibility), `/AF` (PDF 2.0 associated files), `/NS` (namespace), `/PhoneticAlphabet`/`/Phoneme`, `/Ref` (ISO 32000-2: `ref`, the array or reference as read). Kids are normalized to records `{ kind: 'mcid'|'elem'|'mcr'|'objr', … }`.
 
 ## Resolve
 

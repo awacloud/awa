@@ -24,6 +24,12 @@
  * `grave` names to match the committed regular tables byte-for-byte.
  * `.notdef` and control slots stay 0.
  *
+ * Each `*_EXTRA_WIDTHS` object (all six AFM faces, the regular ones
+ * included) holds the widths, by glyph name, of the glyphs
+ * MacRomanEncoding and StandardEncoding name that the WinAnsi tables
+ * cannot hold (`EXTRA_GLYPHS`, composed from the package's own encoding
+ * tables), those the face's AFM carries.
+ *
  * Plain data module — NOT an fw module descriptor. `helvetica.js`/
  * `times.js` do not import it: a factory referencing a module-scope
  * import (even pure data) is disallowed by `fw/no-factory-capture` —
@@ -45,3 +51,15 @@ export const TIMES_BOLD_WIDTHS = Object.freeze([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 export const TIMES_ITALIC_WIDTHS = Object.freeze([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,250,333,420,500,500,833,778,214,333,333,500,675,250,333,250,278,500,500,500,500,500,500,500,500,500,500,333,333,675,675,675,500,920,611,611,667,722,611,611,722,722,333,444,667,556,833,667,722,611,722,611,500,556,722,611,833,611,556,556,389,278,389,422,500,333,500,500,444,500,444,278,500,500,278,278,444,278,722,500,500,500,500,389,389,278,500,444,667,444,444,389,400,275,400,541,0,500,0,333,500,556,889,500,500,333,1000,500,333,944,0,556,0,0,333,333,556,556,350,500,889,333,980,389,333,667,0,389,556,250,389,500,500,500,500,275,500,333,760,276,500,675,333,760,333,400,675,300,300,333,500,523,250,333,300,310,500,750,750,750,500,611,611,611,611,611,611,889,667,611,611,611,611,333,333,333,333,722,667,722,722,722,722,722,675,722,722,722,722,722,556,611,500,500,500,500,500,500,500,667,444,444,444,444,444,278,278,278,278,500,500,500,500,500,500,500,675,500,500,500,500,500,444,500,444]);
 
 export const TIMES_BOLD_ITALIC_WIDTHS = Object.freeze([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,250,389,555,500,500,833,778,278,333,333,500,570,250,333,250,278,500,500,500,500,500,500,500,500,500,500,333,333,570,570,570,500,832,667,667,667,722,667,667,722,778,389,500,667,611,889,722,722,611,722,667,556,611,722,667,889,667,611,611,333,278,333,570,500,333,500,500,444,500,444,333,500,556,278,278,500,278,778,556,500,500,500,389,389,278,556,444,667,500,444,389,348,220,348,570,0,500,0,333,500,500,1000,500,500,333,1000,556,333,944,0,611,0,0,333,333,500,500,350,500,1000,333,1000,389,333,722,0,389,611,250,389,500,500,500,500,220,500,333,747,266,500,606,333,747,333,400,570,300,300,333,576,500,250,333,300,300,500,750,750,750,500,667,667,667,667,667,667,944,667,667,667,667,667,389,389,389,389,722,722,722,722,722,722,722,570,722,722,722,722,722,611,611,500,500,500,500,500,500,500,722,444,444,444,444,444,278,278,278,278,500,556,500,500,500,500,500,570,500,556,556,556,556,444,500,444]);
+
+export const HELVETICA_EXTRA_WIDTHS = Object.freeze({"Delta":612,"Lslash":556,"breve":333,"caron":333,"dotaccent":333,"dotlessi":278,"fi":500,"fl":500,"fraction":167,"greaterequal":549,"hungarumlaut":333,"infinity":756,"lessequal":549,"lozenge":471,"lslash":222,"notequal":549,"ogonek":333,"partialdiff":476,"radical":453,"ring":333,"summation":600});
+
+export const TIMES_ROMAN_EXTRA_WIDTHS = Object.freeze({"Delta":612,"Lslash":611,"breve":333,"caron":333,"dotaccent":333,"dotlessi":278,"fi":556,"fl":556,"fraction":167,"greaterequal":549,"hungarumlaut":333,"infinity":677,"lessequal":549,"lozenge":471,"lslash":278,"notequal":549,"ogonek":333,"partialdiff":476,"radical":453,"ring":333,"summation":600});
+
+export const HELVETICA_BOLD_EXTRA_WIDTHS = Object.freeze({"Delta":612,"Lslash":611,"breve":333,"caron":333,"dotaccent":333,"dotlessi":278,"fi":611,"fl":611,"fraction":167,"greaterequal":549,"hungarumlaut":333,"infinity":871,"lessequal":549,"lozenge":494,"lslash":278,"notequal":549,"ogonek":333,"partialdiff":494,"radical":549,"ring":333,"summation":600});
+
+export const TIMES_BOLD_EXTRA_WIDTHS = Object.freeze({"Delta":612,"Lslash":667,"breve":333,"caron":333,"dotaccent":333,"dotlessi":278,"fi":556,"fl":556,"fraction":167,"greaterequal":549,"hungarumlaut":333,"infinity":752,"lessequal":549,"lozenge":494,"lslash":278,"notequal":549,"ogonek":333,"partialdiff":494,"radical":549,"ring":333,"summation":600});
+
+export const TIMES_ITALIC_EXTRA_WIDTHS = Object.freeze({"Delta":612,"Lslash":556,"breve":333,"caron":333,"dotaccent":333,"dotlessi":278,"fi":500,"fl":500,"fraction":167,"greaterequal":549,"hungarumlaut":333,"infinity":677,"lessequal":549,"lozenge":471,"lslash":278,"notequal":549,"ogonek":333,"partialdiff":476,"radical":453,"ring":333,"summation":600});
+
+export const TIMES_BOLD_ITALIC_EXTRA_WIDTHS = Object.freeze({"Delta":612,"Lslash":611,"breve":333,"caron":333,"dotaccent":333,"dotlessi":278,"fi":556,"fl":556,"fraction":167,"greaterequal":549,"hungarumlaut":333,"infinity":752,"lessequal":549,"lozenge":494,"lslash":278,"notequal":549,"ogonek":333,"partialdiff":494,"radical":549,"ring":333,"summation":600});

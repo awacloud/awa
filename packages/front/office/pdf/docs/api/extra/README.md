@@ -10,7 +10,7 @@ Optional modules beyond core PDF 2.0. Each is a `{ name, dependencies, factory }
 | [`pdfFontCidTyped`](./font-cid-typed.md) | read | CIDFont, CSI, `/W`, predefined CMaps §9.7. |
 | [`pdfFontColorTagging`](./font-color-tagging.md) | read | Color fonts (COLR/CPAL/sbix/SVG) §9.8.2. |
 | [`pdfTaggedPdfTyped`](./tagged-pdf-typed.md) | read | Structural attribute owners §14.8.5. |
-| [`pdfAnnotExtended`](./annot-extended.md) | read | Watermark/3D/RichMedia/Sound/Movie/Screen §12.5.6. |
+| [`pdfAnnotExtended`](./annot-extended.md) | read | Watermark/3D/RichMedia/Sound/Movie/Screen §12.5.6; markup and PDF 2.0 annotation entries. |
 | [`pdfAOutputIntent`](./pdf-a-output-intent.md) | lint | PDF/A detection + basic lint. |
 | [`pdfUaTagged`](./pdf-ua-tagged.md) | lint | PDF/UA-1/2 linter. |
 

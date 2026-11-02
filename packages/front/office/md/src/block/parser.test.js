@@ -259,3 +259,28 @@ describe('blockParser — U+0000 (CommonMark 2.3, insecure characters)', () => {
         expect(parse('<div>\u0000</div>\n').document.firstChild.literal).toBe('<div>�</div>');
     });
 });
+
+describe('blockParser — maxDepth refused while parsing', () => {
+    const deepList = (n) => Array.from({ length: n }, (_, k) => '  '.repeat(k) + '- item').join('\n') + '\n';
+
+    test('a container that would open deeper than maxDepth throws md/limit-exceeded (maxDepth)', () => {
+        let err;
+        try { bp.parse(deepList(40), { maxDepth: 10 }); } catch (e) { err = e; }
+        expect(err && err.code).toBe('md/limit-exceeded');
+        expect(err.context).toEqual({ kind: 'maxDepth', limit: 10, depth: 11 });
+    });
+
+    test('within maxDepth, or without it, the tree is the same as before', () => {
+        expect(() => bp.parse(deepList(4), { maxDepth: 10 })).not.toThrow();
+        expect(bp.parse(deepList(40)).document.firstChild.type).toBe('list');
+    });
+
+    test('leading spaces and tabs still give the same columns (the scan reused across containers)', () => {
+        const text = '- a\n  - b\n\t- c\n  \t- d\n';
+        const items = [];
+        const w = bp.parse(text).document.walker();
+        let ev;
+        while ((ev = w.next())) if (ev.entering && ev.node.type === 'item') items.push(ev.node.sourcepos[0][1]);
+        expect(items).toEqual([1, 3, 2, 4]);
+    });
+});

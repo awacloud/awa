@@ -42,7 +42,16 @@ export const pdfSecurity = {
                 throw new EncryptionError('pdf/crypto/encrypt-dict/bad-input',
                     '/Encrypt must be a dictionary');
             }
-            const get = (k) => (dict instanceof Map ? dict.get(k) : dict[k]);
+            // A typed dictionary node (what the reader yields): its numbers,
+            // booleans and strings read as plain values; names and
+            // dictionaries stay nodes, which the method resolution reads.
+            const isNode = !(dict instanceof Map) && dict.type === 'dict'
+                && dict.entries !== null && typeof dict.entries === 'object';
+            const plain = (n) => (n && typeof n === 'object'
+                && (n.type === 'int' || n.type === 'real' || n.type === 'bool' || n.type === 'string')
+                ? n.value : n);
+            const get = (k) => (dict instanceof Map ? dict.get(k)
+                : isNode ? plain(dict.entries[k]) : dict[k]);
 
             const V = get('V');
             const R = get('R');
@@ -283,7 +292,7 @@ export const pdfSecurity = {
         // returned unchanged and no handler is called — on every revision
         // (V=4, V=5 R=5, V=5 R=6). The standard handlers never see
         // `'Identity'`.
-        function dispatchDecryptStream(selection, stream, fek, objNum, gen, ciphertext) {
+        function dispatchDecryptStream(selection, stream, fek, objNum, gen, ciphertext, opts) {
             if (!selection || typeof selection !== 'object'
                     || !selection.handler) {
                 throw new EncryptionError('pdf/crypto/security/bad-selection',
@@ -301,11 +310,11 @@ export const pdfSecurity = {
                 // through it with `method = effMethod` is equivalent.
                 if (typeof h.decryptEmbeddedFile === 'function') {
                     return h.decryptEmbeddedFile(
-                        typedView, fek, objNum, gen, ciphertext);
+                        typedView, fek, objNum, gen, ciphertext, opts);
                 }
                 if (typeof h.decryptStream === 'function') {
                     return h.decryptStream(
-                        typedView, fek, objNum, gen, ciphertext);
+                        typedView, fek, objNum, gen, ciphertext, opts);
                 }
                 throw new EncryptionError('pdf/crypto/security/no-eff',
                     'selected handler lacks decryptEmbeddedFile and decryptStream');
@@ -315,7 +324,7 @@ export const pdfSecurity = {
                     'selected handler lacks decryptStream');
             }
             const typedView = { method: selection.method };
-            return h.decryptStream(typedView, fek, objNum, gen, ciphertext);
+            return h.decryptStream(typedView, fek, objNum, gen, ciphertext, opts);
         }
 
         return {

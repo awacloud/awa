@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/oconv",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "license": "AGPL-3.0-only",
   "description": "Browser-safe document conversion through a versioned pivot IR — docx/odt/xlsx/ods/pptx/odp/pdf to structured Markdown, Markdown to docx/odt/pdf, and docx/odt cross-format pairs, each call returning a machine-readable loss ledger. Zero runtime dependency beyond @awacloud/fw and the @awacloud office packages.",
   "keywords": [

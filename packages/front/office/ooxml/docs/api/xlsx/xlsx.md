@@ -32,7 +32,7 @@ const x = runtime.resolve('xlsx');
 | Method | Signature | Returns |
 |---------|-----------|---------|
 | `read` | `(bytes: Uint8Array, readOpts?) => { workbook, package, unmodelledParts }` | Typed workbook + raw package + loss record. See [Result shape](#result-shape). |
-| `write` | `(workbook) => Uint8Array` | `.xlsx` bytes. Single argument — no options object. |
+| `write` | `(workbook, opts?) => Uint8Array` | `.xlsx` bytes. `opts.preserveInput` (`true` / `false`, default `false`): `true` writes from a structured clone of `workbook`, so the given model is left exactly as it was — the extensions' dehydrate hooks and the writer's own patches (the authors of threaded comments added to `workbook.persons`) reach the clone; the bytes are the same. Another value throws `xlsx/invalid-preserve-input`. |
 | `use` | `(...exts) => api` | Plugs extras in (`hydrateWorkbook` / `hydrateSheet` / `hydrateSettings` hooks). |
 | `colName` | `(idx: number) => 'A'\|'B'\|…\|'AA'\|…` | 0-based index → letter. |
 | `colIndex` | `(name: string) => number` | Letter → 0-based index. |

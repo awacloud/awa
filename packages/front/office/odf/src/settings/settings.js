@@ -79,8 +79,10 @@ export const odfSettings = {
             const root = xml.el('office:document-settings', {
                 'xmlns:office': OFFICE_NS,
                 'xmlns:config': CONFIG_NS,
-                'office:version': ODF_VERSION
+                'office:version': (opts && opts.version !== undefined) ? opts.version : ODF_VERSION
             }, children.length ? [xml.el('office:settings', {}, children)] : []);
+            // keepVersion: a source part without a version is written without one.
+            if (root.attrs['office:version'] === null) delete root.attrs['office:version'];
             declareNamespaces(root, { carried: (opts && opts.namespaces) || {},
                 part: 'settings.xml', module: 'settings' });
             return xml.serialize(root);

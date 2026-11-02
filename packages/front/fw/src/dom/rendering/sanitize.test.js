@@ -275,6 +275,98 @@ describe('sanitize module', () => {
             });
         });
 
+        // ── 7b. allowDataImage opt-in (img src only) ─────────────────────────
+
+        describe('allowDataImage opt-in', () => {
+            const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+            const IMG = '<img src="' + PNG + '" alt="x" />';
+
+            test('default: a data:image src is dropped', () => {
+                expect(s.sanitizeHtml(IMG)).toBe('<img alt="x" />');
+                expect(s.sanitizeHtml(IMG, { allowDataImage: false })).toBe('<img alt="x" />');
+            });
+
+            test('opt-in: a data:image src on img is kept byte for byte', () => {
+                expect(s.sanitizeHtml(IMG, { allowDataImage: true }))
+                    .toBe('<img src="' + PNG + '" alt="x" />');
+            });
+
+            test('opt-in: every DATA_IMAGE_RE type is kept on img src', () => {
+                for (const mime of ['png', 'jpeg', 'jpg', 'gif', 'webp', 'svg+xml', 'bmp', 'ico', 'avif', 'apng']) {
+                    const url = 'data:image/' + mime + ';base64,AAAA';
+                    const out = s.sanitizeHtml('<img src="' + url + '" />', { allowDataImage: true });
+                    expect(out).toBe('<img src="' + url + '" />');
+                }
+            });
+
+            test('opt-in: href never takes a data: URL', () => {
+                const svg = s.sanitizeHtml('<a href="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=">x</a>', { allowDataImage: true });
+                expect(svg).toBe('<a>x</a>');
+                const png = s.sanitizeHtml('<a href="' + PNG + '">x</a>', { allowDataImage: true });
+                expect(png).toBe('<a>x</a>');
+            });
+
+            test('opt-in: non-image data: URLs are dropped from img src', () => {
+                for (const url of [
+                    'data:text/html,hello',
+                    'data:text/html;base64,PHNjcmlwdD4=',
+                    'data:application/pdf;base64,JVBERi0=',
+                    'data:application/javascript;base64,abc',
+                    'data:image/x-unknown;base64,AAAA',
+                    'data:,hello'
+                ]) {
+                    const out = s.sanitizeHtml('<img src="' + url + '" alt="x" />', { allowDataImage: true });
+                    expect(out).toBe('<img alt="x" />');
+                }
+            });
+
+            test('opt-in: obfuscated non-image forms are judged like the canonical form', () => {
+                for (const url of [
+                    'DaTa:text/html,x',
+                    'da\tta:text/html;base64,PHNjcmlwdD4=',
+                    '   data:application/pdf;base64,JVBERi0=',
+                    '\x01data:text/html,x'
+                ]) {
+                    const out = s.sanitizeHtml('<img src="' + url + '" alt="x" />', { allowDataImage: true });
+                    expect(out).toBe('<img alt="x" />');
+                }
+            });
+
+            test('mixed-case / padded data:image is kept only under the opt-in', () => {
+                const mixed = '<img src="DaTa:image/PNG;base64,AAAA" />';
+                expect(s.sanitizeHtml(mixed)).toBe('<img />');
+                expect(s.sanitizeHtml(mixed, { allowDataImage: true }))
+                    .toBe('<img src="DaTa:image/PNG;base64,AAAA" />');
+                const padded = '<img src="  data:image/png;base64,AAAA" />';
+                expect(s.sanitizeHtml(padded)).toBe('<img />');
+                expect(s.sanitizeHtml(padded, { allowDataImage: true }))
+                    .toBe('<img src="data:image/png;base64,AAAA" />');
+            });
+
+            test('opt-in: the default allowlist keeps no iframe / embed at all', () => {
+                const html = '<p>ok</p><iframe src="' + PNG + '"></iframe><embed src="' + PNG + '" />';
+                expect(s.sanitizeHtml(html, { allowDataImage: true })).toBe('<p>ok</p>');
+            });
+
+            test('opt-in: no other element src takes a data image, even when allowlisted', () => {
+                const others = ['iframe', 'embed', 'source', 'video', 'audio', 'script'];
+                const allowedTags = ['img', ...others];
+                const allowedAttributes = Object.fromEntries(allowedTags.map((t) => [t, new Set(['src'])]));
+                const opts = { allowedTags, allowedAttributes, dropDangerousContent: false, allowDataImage: true };
+                for (const tag of others) {
+                    const out = s.sanitizeHtml('<' + tag + ' src="' + PNG + '"></' + tag + '>', opts);
+                    expect(out).toContain('<' + tag);
+                    expect(out).not.toContain('data:');
+                }
+                expect(s.sanitizeHtml('<img src="' + PNG + '" />', opts)).toBe('<img src="' + PNG + '" />');
+            });
+
+            test('opt-in: https / relative src and href are unchanged', () => {
+                const html = '<a href="https://e.com/x">l</a><img src="/a.png" alt="a" />';
+                expect(s.sanitizeHtml(html, { allowDataImage: true })).toBe(s.sanitizeHtml(html));
+            });
+        });
+
         // ── 8. Encoding tricks ───────────────────────────────────────────────
 
         describe('encoding tricks', () => {

@@ -37,7 +37,7 @@ export const pdfFileSpec = {
 
         const KNOWN = new Set([
             'Type', 'FS', 'F', 'UF', 'DOS', 'Mac', 'Unix', 'ID', 'V',
-            'EF', 'RF', 'Desc', 'CI', 'AFRelationship', 'Thumb'
+            'EF', 'RF', 'Desc', 'CI', 'AFRelationship', 'Thumb', 'EP'
         ]);
         const REL = new Set([
             'Source', 'Data', 'Alternative', 'Supplement',
@@ -59,6 +59,9 @@ export const pdfFileSpec = {
             }
 
             const out = { raw: dict, _extras: {} };
+            // `/Type` and the thumbnail (Table 43), each only when present.
+            if (e.Type && e.Type.type === 'name') out.type = e.Type.value;
+            if (e.Thumb && e.Thumb.type !== 'null') out.thumb = e.Thumb;
 
             if (e.FS) {
                 if (e.FS.type !== 'name') {
@@ -110,6 +113,8 @@ export const pdfFileSpec = {
                 out.desc = e.Desc.value;
             }
             if (e.CI) out.ci = e.CI;
+            // PDF 2.0: the encrypted payload dictionary (§7.6.7), as read
+            if (e.EP !== undefined) out.ep = isType(e.EP, 'dict') || isType(e.EP, 'ref') ? e.EP : null;
             if (e.AFRelationship) {
                 if (e.AFRelationship.type !== 'name') {
                     throw new ParseError('pdf/filespec/bad-afrel',

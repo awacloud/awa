@@ -13,6 +13,8 @@
  * Key strategy: `event.code` for alpha-numeric keys (keyboard layout
  * independent, e.g. `KeyA` always maps to the physical A key), and `event.key`
  * for named keys (`'Escape'`, `'F1'`, `'Tab'`, etc.).
+ * Punctuation keys (`Plus`, `Minus`, `Equal`) match on `event.key` (the typed
+ * character, numpad included) and ignore the Shift modifier.
  *
  * Out of MVP scope: persistent user-side remapping.
  * Worker-safe: no - consumes DOM keyboard events.
@@ -85,7 +87,17 @@ export const keybindings = {
             arrowdown: 'ArrowDown',
             arrowleft: 'ArrowLeft',
             arrowright: 'ArrowRight',
+            plus: 'Plus',
+            minus: 'Minus',
+            equal: 'Equal',
+            equals: 'Equal',
+            '-': 'Minus',
+            '=': 'Equal',
         };
+
+        /** Punctuation keys matched on event.key (the typed character, layout-independent by construction). */
+        const PUNCTUATION_KEYS = { '+': 'Plus', '-': 'Minus', '=': 'Equal' };
+        const PUNCTUATION_NAMES = new Set(Object.values(PUNCTUATION_KEYS));
 
         /** Accepted modifier names (lowercase) */
         const MODIFIER_NAMES = new Set(['ctrl', 'shift', 'alt', 'meta', 'cmd', 'super']);
@@ -131,6 +143,10 @@ export const keybindings = {
                 }
             }
 
+            if (modifiers.shift && key !== null && PUNCTUATION_NAMES.has(key)) {
+                throw new Error('keybindings: Shift cannot qualify punctuation key "' + key + '" in segment "' + segment + '"');
+            }
+
             if (key === null) {
                 throw new Error('keybindings: no key specified in segment "' + segment + '"');
             }
@@ -173,6 +189,8 @@ export const keybindings = {
             // Alias via event.key
             const aliased = KEY_ALIASES[key.toLowerCase()];
             if (aliased) return aliased;
+            // Punctuation via event.key (typed character, Shift/numpad agnostic)
+            if (PUNCTUATION_KEYS[key]) return PUNCTUATION_KEYS[key];
             // Alpha-numeric via event.code (layout-independent)
             const code = event.code;
             if (code && /^Key[A-Z]$/.test(code)) return code.slice(3).toLowerCase();
@@ -201,7 +219,7 @@ export const keybindings = {
             const evCtrl = event.ctrlKey || altGr;
             const evAlt  = event.altKey  || altGr;
             if (evCtrl         !== modifiers.ctrl)   return false;
-            if (event.shiftKey !== modifiers.shift)  return false;
+            if (!PUNCTUATION_NAMES.has(key) && event.shiftKey !== modifiers.shift) return false;
             if (evAlt          !== modifiers.alt)    return false;
             if (event.metaKey  !== modifiers.meta)   return false;
             return _normalizeEventKey(event) === key;

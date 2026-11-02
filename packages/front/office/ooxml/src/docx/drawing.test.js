@@ -98,3 +98,79 @@ describe('docxDrawing — render/parse roundtrip', () => {
         expect(back.description).toBe('A red square');
     });
 });
+
+// T51 (g): a drawing keeps its source; untouched, it is written from it.
+describe('docxDrawing — kept source (T51 g)', () => {
+    const NS = 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
+        + ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
+        + ' xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'
+        + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    const PIC = `<w:drawing ${NS}><wp:inline distT="0" distB="0" distL="0" distR="0">`
+        + '<wp:extent cx="914400" cy="457200"/><wp:effectExtent l="0" t="0" r="0" b="0"/>'
+        + '<wp:docPr id="7" name="Picture 7"><a:hlinkClick r:id="rIdL"/></wp:docPr>'
+        + '<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>'
+        + '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        + '<pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="image1.png" descr="the picture"/>'
+        + '<pic:cNvPicPr><a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr></pic:nvPicPr>'
+        + '<pic:blipFill><a:blip r:embed="rIdP" cstate="print"/><a:srcRect/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+        + '<pic:spPr bwMode="auto"><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="457200"/></a:xfrm>'
+        + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></pic:spPr>'
+        + '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
+    const NO_LINK = PIC.replace('<a:hlinkClick r:id="rIdL"/>', '').replace('<wp:docPr id="7" name="Picture 7"></wp:docPr>', '<wp:docPr id="7" name="Picture 7"/>');
+    const read = (s) => drawing.parseDrawing(xml.parse(s));
+    const out = (d) => xml.serialize(drawing.renderDrawing(d));
+
+    test('the read keeps the element and the typed fields as read', () => {
+        const d = read(NO_LINK);
+        expect(d._source.name).toBe('w:drawing');
+        expect(d._read).toEqual({ type: 'drawing', mode: 'inline', distT: 0, distB: 0, distL: 0, distR: 0,
+            cx: 914400, cy: 457200, docName: 'Picture 7', picName: 'image1.png', picId: 0,
+            srcRect: d.srcRect, prstGeom: 'rect', offsetX: 0, offsetY: 0 });
+        expect('embedRef' in d._read || 'docId' in d._read).toBe(false);
+    });
+
+    test('an untouched drawing is written from its source', () => {
+        expect(out(read(NO_LINK))).toBe(xml.serialize(xml.parse(NO_LINK)));
+    });
+
+    test('the ids the write assigns are rewritten in the source', () => {
+        const d = read(NO_LINK);
+        d.embedRef = 'rImg3';
+        d.docId = 12;
+        const s = out(d);
+        expect(s).toContain('r:embed="rImg3"');
+        expect(s).toContain('<wp:docPr id="12" name="Picture 7"/>');
+        expect(s).toContain('cstate="print"');
+        expect(s).toContain('<a:picLocks noChangeAspect="1" noChangeArrowheads="1"/>');
+        expect(d._source.children.length).toBe(1);
+        expect(xml.serialize(d._source)).toContain('r:embed="rIdP"');
+    });
+
+    test('an edited drawing is rebuilt from its typed fields', () => {
+        const d = read(NO_LINK);
+        d.cx = 1828800;
+        const s = out(d);
+        expect(s).toContain('cx="1828800"');
+        expect(s).not.toContain('cstate');
+        expect(s).not.toContain('picLocks');
+    });
+
+    test('a typed reference without its place in the source rebuilds it', () => {
+        const d = read(NO_LINK);
+        d.chartRef = 'rIdC';
+        expect(out(d)).not.toContain('cstate');
+    });
+
+    test('another relationship reference needs the part to hold it', () => {
+        const d = read(PIC);
+        expect(out(d)).not.toContain('hlinkClick');
+        const scope = (links, media) => ({ links: new Set(links), media: new Set(media) });
+        expect(drawing.withRelationships(scope(['rIdX'], ['rIdP']), () => out(d))).not.toContain('hlinkClick');
+        // the picture's own id must be one the part gives its media
+        expect(drawing.withRelationships(scope(['rIdL'], []), () => out(d))).not.toContain('hlinkClick');
+        const kept = drawing.withRelationships(scope(['rIdL'], ['rIdP']), () => out(d));
+        expect(kept).toContain('<a:hlinkClick r:id="rIdL"/>');
+        expect(kept).toContain('cstate="print"');
+        expect(out(d)).not.toContain('hlinkClick');
+    });
+});

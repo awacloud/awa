@@ -2101,7 +2101,7 @@ export const odpBundled = {
     };
   } });
     __register({ name: "odfShared", dependencies: ["odfErrors","xml"], factory: function(errors, xml) {
-    const { ParseError, RenderError } = errors, ODF_NS = Object.freeze({
+    const { ParseError, RenderError, ContractError } = errors, ODF_NS = Object.freeze({
       OFFICE: "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
       TEXT: "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
       STYLE: "urn:oasis:names:tc:opendocument:xmlns:style:1.0",
@@ -2202,8 +2202,15 @@ export const odpBundled = {
       }
     }
     function sourceNamespaces(sourcePkg, partPath) {
+      const out = {}, attrs = sourceRootAttrs(sourcePkg, partPath);
+      for (const k of Object.keys(attrs))
+        if (k.startsWith("xmlns:") && k.length > 6)
+          out[k.slice(6)] = attrs[k];
+      return Object.freeze(out);
+    }
+    function sourceRootAttrs(sourcePkg, partPath) {
       try {
-        const out = {}, src = sourcePkg && sourcePkg.parts && sourcePkg.parts[partPath];
+        const src = sourcePkg && sourcePkg.parts && sourcePkg.parts[partPath];
         let tag = null;
         if (typeof src === "string")
           tag = firstStartTag(src);
@@ -2214,18 +2221,44 @@ export const odpBundled = {
             if (tag !== null || whole)
               break;
           }
-        if (tag) {
-          const el = xml.parse("<" + tag + "/>");
-          for (const k of Object.keys(el.attrs))
-            if (k.startsWith("xmlns:") && k.length > 6)
-              out[k.slice(6)] = el.attrs[k];
-        }
-        return Object.freeze(out);
+        return Object.freeze(tag ? { ...xml.parse("<" + tag + "/>").attrs } : {});
       } catch {
         return Object.freeze({});
       }
     }
-    const FORMULA_ATTRS = new Set(["table:formula", "text:formula", "text:condition"]);
+    function keptVersion(doc, opts, module) {
+      const v = opts && opts.keepVersion;
+      if (v !== void 0 && typeof v !== "boolean")
+        throw new ContractError(`odf/contract-error/${module}`, `${module}: write opts.keepVersion must be true or false`, { context: { module, argument: "opts.keepVersion" } });
+      if (!v)
+        return null;
+      const pkg = doc && doc.package;
+      if (!pkg || !pkg.parts)
+        return { of: () => "1.4", manifest: "1.4" };
+      const versionOf = (part) => sourceRootAttrs(pkg, part)["office:version"] || null, content = versionOf("content.xml"), manifest = content === null ? pkg.manifest && pkg.manifest.version || "1.4" : parseFloat(content) >= 1.2 ? content : null;
+      return {
+        of: (part) => pkg.parts[part] ? versionOf(part) : content,
+        manifest
+      };
+    }
+    function applyManifestVersion(p, kept) {
+      if (!kept)
+        return;
+      p.manifest.version = kept.manifest;
+      for (const e of p.manifest.entries || [])
+        if (e.fullPath === "/")
+          e.version = kept.manifest;
+    }
+    const VALUE_PREFIX_ATTRS = new Set([
+      "table:formula",
+      "text:formula",
+      "text:condition",
+      "chart:class",
+      "db:type",
+      "draw:engine",
+      "draw:extrusion-metal-type",
+      "form:control-implementation"
+    ]);
     function declareNamespaces(rootEl, opts) {
       const o = opts || {}, carried = o.carried || {}, resolvable = (p) => hasOwn(carried, p) || hasOwn(ODF_PREFIXES, p), missing = new Set, scope = [], inScope = (p) => {
         if (p === "xml")
@@ -2251,7 +2284,7 @@ export const odpBundled = {
           if (k === "xmlns" || k.startsWith("xmlns:"))
             continue;
           use(k);
-          if (FORMULA_ATTRS.has(k) && typeof attrs[k] === "string") {
+          if (VALUE_PREFIX_ATTRS.has(k) && typeof attrs[k] === "string") {
             const m = /^([A-Za-z_][\w.-]*):/.exec(attrs[k]);
             if (m && !inScope(m[1]) && resolvable(m[1]))
               missing.add(m[1]);
@@ -2303,7 +2336,10 @@ export const odpBundled = {
       return target;
     }
     function writeSidecars(p, doc, opts, sideMods, ctXml) {
-      const { pkg: pkgM, metaMod, settingsMod, stylesMod } = sideMods, ct = ctXml || CT.XML, ours = metaMod.empty().generator, ns = (part) => ({ namespaces: sourceNamespaces(doc.package, part) });
+      const { pkg: pkgM, metaMod, settingsMod, stylesMod } = sideMods, ct = ctXml || CT.XML, ours = metaMod.empty().generator, kept = keptVersion(doc, opts, "odf"), ns = (part) => ({
+        namespaces: sourceNamespaces(doc.package, part),
+        ...kept ? { version: kept.of(part) } : {}
+      });
       let meta = opts.meta ? opts.meta.generator == null ? { ...opts.meta, generator: ours } : opts.meta : { ...doc.meta || metaMod.empty(), generator: ours };
       pkgM.setPart(p, "meta.xml", _te.encode(metaMod.serialize(meta, ns("meta.xml"))), ct);
       const settings = opts.settings || doc.settings || settingsMod.empty();
@@ -2375,7 +2411,10 @@ export const odpBundled = {
       decodeText,
       parseXmlOrThrow,
       sourceNamespaces,
+      sourceRootAttrs,
       declareNamespaces,
+      keptVersion,
+      applyManifestVersion,
       readSidecars,
       writeSidecars,
       carryParts,
@@ -2467,10 +2506,9 @@ export const odpBundled = {
       return e;
     }
     function serialize(manifest) {
-      const m = manifest || { version: ODF_VERSION, entries: [] }, attrs = {
-        "xmlns:manifest": MANIFEST_NS,
-        "manifest:version": m.version || ODF_VERSION
-      };
+      const m = manifest || { version: ODF_VERSION, entries: [] }, attrs = { "xmlns:manifest": MANIFEST_NS };
+      if (m.version !== null)
+        attrs["manifest:version"] = m.version || ODF_VERSION;
       if (m._extras && m._extras.attrs)
         for (const k of Object.keys(m._extras.attrs))
           attrs[k] = m._extras.attrs[k];
@@ -2679,8 +2717,10 @@ export const odpBundled = {
         "xmlns:office": OFFICE_NS,
         "xmlns:meta": META_NS,
         "xmlns:dc": DC_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, [metaEl]);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "meta.xml",
@@ -2722,8 +2762,10 @@ export const odpBundled = {
       const root = xml.el("office:document-settings", {
         "xmlns:office": OFFICE_NS,
         "xmlns:config": CONFIG_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, children.length ? [xml.el("office:settings", {}, children)] : []);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "settings.xml",
@@ -2823,23 +2865,23 @@ export const odpBundled = {
       return out;
     }
     function serialize(styles, opts) {
-      const s = styles || { styles: [], automaticStyles: [], masterStyles: [] }, children = [
+      const s = styles || { styles: [], automaticStyles: [], masterStyles: [] }, extras = s._extras && s._extras.children || [], isDecls = (c) => c && c.type === "element" && c.name === "office:font-face-decls", children = [
+        ...extras.filter(isDecls),
         xml.el("office:styles", {}, bucketEntries(s.styles)),
         xml.el("office:automatic-styles", {}, bucketEntries(s.automaticStyles)),
-        xml.el("office:master-styles", {}, bucketEntries(s.masterStyles))
-      ];
-      if (s._extras && s._extras.children)
-        for (const c of s._extras.children)
-          children.push(c);
-      const root = xml.el("office:document-styles", {
+        xml.el("office:master-styles", {}, bucketEntries(s.masterStyles)),
+        ...extras.filter((c) => !isDecls(c))
+      ], root = xml.el("office:document-styles", {
         "xmlns:office": OFFICE_NS,
         "xmlns:style": STYLE_NS,
         "xmlns:text": TEXT_NS,
         "xmlns:fo": FO_NS,
         "xmlns:svg": SVG_NS,
         "xmlns:table": TABLE_NS,
-        "office:version": ODF_VERSION
+        "office:version": opts && opts.version !== void 0 ? opts.version : ODF_VERSION
       }, children);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: opts && opts.namespaces || {},
         part: "styles.xml",
@@ -2917,7 +2959,7 @@ export const odpBundled = {
       return r;
     }
     function parseInline(children, ctx, insideLink, positional) {
-      const runs = [], extras = [];
+      const runs = [], extras = [], inPlace = positional || !!(ctx && ctx.elementsInRuns);
       for (const c of children || [])
         if (c.type === "text")
           runs.push({ type: "text", value: c.value });
@@ -2935,7 +2977,7 @@ export const odpBundled = {
             runs.push(parseLink(c, ctx));
           else if (c.name === "draw:frame" && ctx && typeof ctx.parseFrame === "function")
             runs.push(ctx.parseFrame(c));
-          else if (positional)
+          else if (inPlace)
             runs.push(c);
           else
             extras.push(c);
@@ -3067,7 +3109,8 @@ export const odpBundled = {
             out.push(textOfRuns(r.runs));
             break;
           case "element":
-            out.push(xml.textContent(r));
+            if (inSpan)
+              out.push(xml.textContent(r));
             break;
           case "frame":
             if (inSpan)
@@ -3150,25 +3193,70 @@ export const odpBundled = {
             delete out.styleName;
         }
       }
-      if ((el.attrs && el.attrs["text:continue-numbering"]) === "true")
+      const stack = ctx && Array.isArray(ctx.listStack) ? ctx.listStack : null;
+      if (stack && !styleName && out.ordered === void 0 && typeof ctx.listLevel === "function")
+        for (let k = stack.length - 1;k >= 0; k--) {
+          if (!stack[k])
+            continue;
+          const num = ctx.listLevel(stack[k], stack.length + 1);
+          if (num) {
+            out.ordered = num.ordered;
+            if (num.ordered && num.numFormat)
+              out.numFormat = num.numFormat;
+          }
+          break;
+        }
+      const cont = el.attrs && el.attrs["text:continue-numbering"];
+      if (cont === "true")
         out.continueNumbering = !0;
+      const attrs = el && el.attrs || {};
+      if (attrs["xml:id"] != null)
+        out.id = attrs["xml:id"];
+      if (attrs["text:continue-list"] != null)
+        out.continueList = attrs["text:continue-list"];
+      const extraAttrs = otherAttrs(attrs, LIST_ATTRS, cont === "true" ? null : "text:continue-numbering");
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
-      for (const c of el.children || []) {
-        if (c.type !== "element")
-          continue;
-        if (c.name === "text:list-item")
-          out.items.push(parseItem(c, hooks, ctx));
-        else if (c.name === "text:list-header")
-          out.items.push({ ...parseItem(c, hooks, ctx), header: !0 });
-        else
-          extras.push(c);
+      if (stack)
+        stack.push(styleName || null);
+      try {
+        for (const c of el.children || []) {
+          if (c.type !== "element")
+            continue;
+          if (c.name === "text:list-item")
+            out.items.push(parseItem(c, hooks, ctx));
+          else if (c.name === "text:list-header")
+            out.items.push({ ...parseItem(c, hooks, ctx), header: !0 });
+          else
+            extras.push(c);
+        }
+      } finally {
+        if (stack)
+          stack.pop();
       }
       if (extras.length)
         out._extras = { children: extras };
       return out;
     }
+    const LIST_ATTRS = new Set(["text:style-name", "text:continue-numbering", "xml:id", "text:continue-list"]), ITEM_ATTRS = new Set(["text:start-value", "xml:id"]);
+    function otherAttrs(attrs, typed, keep) {
+      const out = {};
+      for (const [k, v] of Object.entries(attrs))
+        if ((!typed.has(k) || k === keep) && !k.startsWith("xmlns"))
+          out[k] = v;
+      return Object.keys(out).length ? out : null;
+    }
     function parseItem(el, hooks, ctx) {
-      const item = { children: [] }, xtra = [];
+      const item = { children: [] }, attrs = el && el.attrs || {}, start = attrs["text:start-value"];
+      if (start != null)
+        item.startValue = /^\d+$/.test(start) ? Number(start) : start;
+      if (attrs["xml:id"] != null)
+        item.id = attrs["xml:id"];
+      const extraAttrs = otherAttrs(attrs, ITEM_ATTRS, null);
+      if (extraAttrs)
+        item.extraAttrs = extraAttrs;
+      const xtra = [];
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
@@ -3190,6 +3278,8 @@ export const odpBundled = {
     }
     function renderList(list, hooks, ctx) {
       const attrs = {};
+      if (list.id != null)
+        attrs["xml:id"] = String(list.id);
       if (list.styleName)
         attrs["text:style-name"] = list.styleName;
       else if (list.ordered !== void 0 && ctx && typeof ctx.listStyle === "function")
@@ -3199,6 +3289,9 @@ export const odpBundled = {
         });
       if (list.continueNumbering)
         attrs["text:continue-numbering"] = "true";
+      if (list.continueList != null)
+        attrs["text:continue-list"] = String(list.continueList);
+      Object.assign(attrs, list.extraAttrs || {});
       const items = (list.items || []).map((it) => renderItem(it, hooks, ctx));
       if (list._extras && list._extras.children)
         for (const c of list._extras.children)
@@ -3223,8 +3316,13 @@ export const odpBundled = {
       if (item._extras && item._extras.children)
         for (const c of item._extras.children)
           children.push(c);
-      const tag = item.header ? "text:list-header" : "text:list-item";
-      return xml.el(tag, {}, children);
+      const tag = item.header ? "text:list-header" : "text:list-item", attrs = {};
+      if (item.startValue != null)
+        attrs["text:start-value"] = String(item.startValue);
+      if (item.id != null)
+        attrs["xml:id"] = String(item.id);
+      Object.assign(attrs, item.extraAttrs || {});
+      return xml.el(tag, attrs, children);
     }
     return { parseList, renderList };
   } });
@@ -3433,12 +3531,13 @@ export const odpBundled = {
         attrs["table:number-rows-repeated"] = String(row.repeated);
       if (row.visibility)
         attrs["table:visibility"] = row.visibility;
-      const children = (row.cells || []).map((c) => cellMod.renderCell(c));
+      const children = (row.cells && row.cells.length ? row.cells : [{ type: "cell", children: [] }]).map((c) => cellMod.renderCell(c));
       return xml.el("table:table-row", attrs, children);
     }
     return { parseRow, renderRow };
   } });
     __register({ name: "tableTable", dependencies: ["xml","tableRow"], factory: function(xml, rowMod) {
+    const ROW_GROUPS = new Set(["table:table-row-group", "table:table-rows"]);
     function parseColumn(el) {
       const out = {}, a = el.attrs || {};
       if (a["table:style-name"])
@@ -3472,29 +3571,52 @@ export const odpBundled = {
         out.styleName = a["table:style-name"];
       const extras = [];
       let headerRows = 0;
+      const breaks = [];
+      let pending = [];
+      const pushRow = (rowEl) => {
+        for (const b of pending) {
+          if (b.inExtras)
+            extras.splice(extras.indexOf(b.el), 1);
+          breaks.push(out.rows.length);
+        }
+        pending = [];
+        out.rows.push(rowMod.parseRow(rowEl));
+      };
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
         switch (c.name) {
           case "table:table-column":
             out.columns.push(parseColumn(c));
+            pending = [];
             break;
           case "table:table-row":
-            out.rows.push(rowMod.parseRow(c));
+            pushRow(c);
             break;
           case "table:table-header-rows":
-            for (const k of c.children || [])
-              if (k.type === "element" && k.name === "table:table-row") {
-                out.rows.push(rowMod.parseRow(k));
+            for (const k of c.children || []) {
+              if (k.type !== "element")
+                continue;
+              if (k.name === "table:table-row") {
+                pushRow(k);
                 headerRows++;
-              }
+              } else if (k.name === "text:soft-page-break")
+                pending.push({ el: k, inExtras: !1 });
+            }
+            break;
+          case "text:soft-page-break":
+            extras.push(c);
+            pending.push({ el: c, inExtras: !0 });
             break;
           default:
             extras.push(c);
+            pending = [];
         }
       }
       if (headerRows > 0)
         out.headerRows = headerRows;
+      if (breaks.length)
+        out._softPageBreaks = breaks;
       if (extras.length)
         out._extras = { children: extras };
       return out;
@@ -3517,17 +3639,30 @@ export const odpBundled = {
         attrs["table:name"] = t.name;
       if (t.styleName)
         attrs["table:style-name"] = t.styleName;
-      const children = [], headerN = t.headerRows || 0, rows = t.rows || [], columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
+      const children = [], extras = t._extras && t._extras.children || [];
+      let rows = t.rows || [];
+      const headerN = Math.min(t.headerRows || 0, rows.length);
+      if (!rows.length && !extras.some((c) => c && ROW_GROUPS.has(c.name)))
+        rows = [{ type: "row", cells: [] }];
+      const columns = t.columns && t.columns.length ? t.columns : [{ repeated: widthOf(rows) }];
       for (const col of columns)
         children.push(renderColumn(col));
+      const breaksBefore = new Map;
+      for (const i of t._softPageBreaks || [])
+        breaksBefore.set(i, (breaksBefore.get(i) || 0) + 1);
+      const pushRows = (into, from, to) => {
+        for (let i = from;i < to; i++) {
+          for (let n = breaksBefore.get(i) || 0;n > 0; n--)
+            into.push(xml.el("text:soft-page-break", {}, []));
+          into.push(rowMod.renderRow(rows[i]));
+        }
+      };
       if (headerN > 0) {
-        const headerKids = rows.slice(0, headerN).map((r) => rowMod.renderRow(r));
+        const headerKids = [];
+        pushRows(headerKids, 0, headerN);
         children.push(xml.el("table:table-header-rows", {}, headerKids));
-        for (const r of rows.slice(headerN))
-          children.push(rowMod.renderRow(r));
-      } else
-        for (const r of rows)
-          children.push(rowMod.renderRow(r));
+      }
+      pushRows(children, headerN, rows.length);
       if (t._extras && t._extras.children)
         for (const c of t._extras.children)
           children.push(c);
@@ -3700,6 +3835,12 @@ export const odpBundled = {
       if (extras)
         for (const el of extras)
           boxes(el, lines);
+      const elementRuns = (runs) => {
+        for (const r of runs || [])
+          if (r && r.type === "element")
+            boxes(r, lines);
+      };
+      elementRuns(n.runs);
       const visitRuns = (runs, inSpan) => {
         for (const r of runs || []) {
           if (!r)
@@ -3711,6 +3852,7 @@ export const odpBundled = {
             if (ex)
               for (const el of ex)
                 boxes(el, lines);
+            elementRuns(r.runs);
             visitRuns(r.runs, !1);
           } else if (r.type === "frame" && !inSpan)
             frameBoxes(r, lines);
@@ -3720,7 +3862,9 @@ export const odpBundled = {
     }
     function frameBoxes(f, lines) {
       const c = f.child;
-      if (c && c.kind === "text-box")
+      if (c && c.kind === "text-box" && Array.isArray(c.content))
+        walk(c.content, lines);
+      else if (c && c.kind === "text-box")
         boxes(xml.el("draw:text-box", { ...c.attrs || {} }, c.children || []), lines);
       for (const el of f._extras && f._extras.children || [])
         boxes(el, lines);
@@ -3778,16 +3922,20 @@ export const odpBundled = {
       "image/svg+xml": "svg"
     };
     function parseImage(el) {
-      const attrs = el.attrs || {}, out = { type: "image", href: attrs["xlink:href"] || "" }, mt = attrs["loext:mime-type"] || attrs["draw:mime-type"];
-      if (mt)
-        out.mimeType = mt;
+      const attrs = el.attrs || {}, out = { type: "image", href: attrs["xlink:href"] || "" }, draw = attrs["draw:mime-type"], lo = attrs["loext:mime-type"];
+      if (draw)
+        out.mimeType = draw;
+      else if (lo) {
+        out.mimeType = lo;
+        out._mimeTypeAttr = "loext:mime-type";
+      }
       const known = new Set([
         "xlink:href",
         "xlink:type",
         "xlink:show",
         "xlink:actuate",
-        "loext:mime-type",
-        "draw:mime-type"
+        "draw:mime-type",
+        ...draw ? [] : ["loext:mime-type"]
       ]), xa = {};
       let any = !1;
       for (const k of Object.keys(attrs))
@@ -3799,13 +3947,14 @@ export const odpBundled = {
         out._extras = { attrs: xa };
       return out;
     }
-    function renderImage(img) {
+    function renderImage(img, opts) {
       const attrs = { "xlink:href": img.href || "" };
       attrs["xlink:type"] = XLINK_DEFAULTS["xlink:type"];
       attrs["xlink:show"] = XLINK_DEFAULTS["xlink:show"];
       attrs["xlink:actuate"] = XLINK_DEFAULTS["xlink:actuate"];
+      const name = opts && opts.mimeTypeAsRead && img._mimeTypeAttr || "draw:mime-type";
       if (img.mimeType)
-        attrs["draw:mime-type"] = img.mimeType;
+        attrs[name] = img.mimeType;
       if (img._extras && img._extras.attrs)
         for (const k of Object.keys(img._extras.attrs))
           attrs[k] = img._extras.attrs[k];
@@ -3901,7 +4050,7 @@ export const odpBundled = {
       const { type: _type, ...rest } = node;
       return rest;
     }
-    function renderFrame(f) {
+    function renderFrame(f, opts) {
       const attrs = {};
       if (f.anchorType)
         attrs["text:anchor-type"] = f.anchorType;
@@ -3922,17 +4071,22 @@ export const odpBundled = {
           attrs[k] = f._extras.attrs[k];
       const children = [];
       if (f.child)
-        children.push(renderChild(f.child));
+        children.push(renderChild(f.child, opts));
       if (f._extras && f._extras.children)
         for (const c of f._extras.children)
           children.push(c);
       return xml.el("draw:frame", attrs, children);
     }
-    function renderChild(child) {
+    function renderChild(child, opts) {
       if (!child)
         return null;
       if (child.kind === "image")
-        return imageMod.renderImage({ href: child.href, mimeType: child.mimeType, _extras: child._extras });
+        return imageMod.renderImage({
+          href: child.href,
+          mimeType: child.mimeType,
+          _mimeTypeAttr: child._mimeTypeAttr,
+          _extras: child._extras
+        }, opts);
       if (child.kind === "text-box")
         return xml.el("draw:text-box", { ...child.attrs || {} }, (child.children || []).slice());
       if (child.kind === "object") {
@@ -4190,22 +4344,28 @@ export const odpBundled = {
           xa[k] = a[k];
           anyAttr = !0;
         }
-      const xtraChildren = [];
+      const xtraChildren = [], propertyChildren = {};
       for (const c of el.children || []) {
         if (c.type !== "element")
           continue;
         const key = PROP_TAGS[c.name];
-        if (key)
+        if (key) {
           out.properties[key] = { ...c.attrs || {} };
-        else
+          const kids = (c.children || []).filter((k) => k.type === "element");
+          if (kids.length)
+            propertyChildren[key] = kids;
+        } else
           xtraChildren.push(c);
       }
-      if (anyAttr || xtraChildren.length) {
+      const anyPropertyChild = Object.keys(propertyChildren).length > 0;
+      if (anyAttr || xtraChildren.length || anyPropertyChild) {
         out._extras = {};
         if (anyAttr)
           out._extras.attrs = xa;
         if (xtraChildren.length)
           out._extras.children = xtraChildren;
+        if (anyPropertyChild)
+          out._extras.propertyChildren = propertyChildren;
       }
       return out;
     }
@@ -4216,12 +4376,16 @@ export const odpBundled = {
       if (s._extras && s._extras.attrs)
         for (const k of Object.keys(s._extras.attrs))
           attrs[k] = s._extras.attrs[k];
-      const children = [];
-      for (const key of Object.keys(s.properties || {})) {
+      const children = [], kept = s._extras && s._extras.propertyChildren || {}, keys = Object.keys(s.properties || {});
+      for (const key of Object.keys(kept))
+        if (!keys.includes(key))
+          keys.push(key);
+      for (const key of keys) {
         const tag = TAG_BY_PROP[key];
         if (!tag)
           continue;
-        children.push(xml.el(tag, { ...s.properties[key] || {} }, []));
+        const attrs = s.properties && s.properties[key] || {};
+        children.push(xml.el(tag, { ...attrs }, [...kept[key] || []]));
       }
       if (s._extras && s._extras.children)
         for (const c of s._extras.children)
@@ -4457,7 +4621,9 @@ export const odpBundled = {
       writeSidecars,
       carryParts,
       sourceNamespaces,
-      declareNamespaces
+      declareNamespaces,
+      keptVersion,
+      applyManifestVersion
     } = shared, CT_ODP = CT.ODP, CT_XML = CT.XML, walker = walkerMod.createWalker();
     function read(bytes, opts) {
       const p = pkg.read(bytes, opts);
@@ -4499,6 +4665,13 @@ export const odpBundled = {
       if (!doc)
         throw new ContractError("odf/contract-error/odp", "odp: write needs a document", { context: { module: "odp", argument: "doc" } });
       opts = opts || {};
+      if (opts.preserveInput !== void 0 && typeof opts.preserveInput !== "boolean")
+        throw new ContractError("odf/contract-error/odp", "odp: write opts.preserveInput must be true or false", { context: { module: "odp", argument: "opts.preserveInput" } });
+      if (opts.preserveInput) {
+        const { package: envelope, ...rest } = doc, copy = structuredClone({ doc: rest, opts });
+        doc = envelope === void 0 ? copy.doc : { ...copy.doc, package: envelope };
+        opts = copy.opts;
+      }
       if (walker.hasExtensions) {
         const dehydrated = {
           slides: doc.slides,
@@ -4517,10 +4690,11 @@ export const odpBundled = {
           opts = { ...opts, styles: dehydrated.styles };
       }
       ({ doc, opts } = withDefaultMaster(doc, opts));
-      const p = pkg.empty(CT_ODP), contentXml = renderContent(doc);
+      const kept = keptVersion(doc, opts, "odp"), p = pkg.empty(CT_ODP), contentXml = renderContent(doc, kept ? kept.of("content.xml") : void 0);
       pkg.setPart(p, "content.xml", encodeText(contentXml), CT_XML);
       writeSidecars(p, doc, opts, { pkg, metaMod, settingsMod, stylesMod }, CT_XML);
       carryParts(p, doc.package, { pkg, manifestMod });
+      applyManifestVersion(p, kept);
       return pkg.write(p, { mtime: opts.mtime });
     }
     const DEFAULT_MASTER = "Default", isEl = (n, tag) => n && n.type === "element" && n.name === tag;
@@ -4548,7 +4722,7 @@ export const odpBundled = {
         opts: { ...opts, styles: { ...styles, automaticStyles: [...autos, layout], masterStyles: [...masters, master] } }
       };
     }
-    function renderContent(doc) {
+    function renderContent(doc, version) {
       const slideEls = (doc.slides || []).map((s) => slideMod.renderSlide(s)), presEl = xml.el("office:presentation", {}, slideEls), bodyEl = xml.el("office:body", {}, [presEl]), children = [];
       if (doc.automaticStyles)
         children.push(automaticMod.render(doc.automaticStyles));
@@ -4563,8 +4737,10 @@ export const odpBundled = {
         "xmlns:fo": ODF_NS.FO,
         "xmlns:svg": ODF_NS.SVG,
         "xmlns:xlink": ODF_NS.XLINK,
-        "office:version": ODF_VERSION
+        "office:version": version !== void 0 ? version : ODF_VERSION
       }, children);
+      if (root.attrs["office:version"] === null)
+        delete root.attrs["office:version"];
       declareNamespaces(root, {
         carried: sourceNamespaces(doc.package, "content.xml"),
         part: "content.xml",

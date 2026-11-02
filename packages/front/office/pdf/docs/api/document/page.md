@@ -53,6 +53,14 @@ const page = runtime.resolve('pdfPage');
     tabs?:     string,
     metadata?: PdfRef,
     group?:    PdfObject,
+    // each only when present (Table 31): numbers, integers and names by
+    // their value, strings as bytes, everything else as read
+    lastModified?: Uint8Array, boxColorInfo?: PdfObject, thumb?: PdfObject,
+    b?: PdfObject, dur?: number, trans?: PdfObject, aa?: PdfObject,
+    pieceInfo?: PdfObject, structParents?: number, id?: Uint8Array, pz?: number,
+    separationInfo?: PdfObject, templateInstantiated?: string,
+    presSteps?: PdfObject, vp?: PdfObject, af?: PdfObject,
+    outputIntents?: PdfObject, dPart?: PdfObject,
     raw:       PdfDict,
     _extras:   Object<string, PdfObject>
 }

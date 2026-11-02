@@ -37,7 +37,7 @@ directly is for a caller composing the IR itself.
 
 `opts.assets` maps a markdown image destination (`![alt](diagram.png)` →
 key `diagram.png`) to its encoded bytes; caller bytes win over the
-reader-carried `escapes.docx.bytes` / `escapes.odt.bytes` (see Notes). Omitted or `undefined`
+reader-carried `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes` (see Notes). Omitted or `undefined`
 reproduces the writer's original image-free behaviour exactly.
 
 ## Examples
@@ -132,6 +132,12 @@ image, no unsupported block).
   paragraph. `../read/docx-to-ir.js` reads the three styles back, so
   `md → docx → md` keeps a fenced code block (without its info string), a
   quote and a rule; consecutive quoted paragraphs re-read as one quote.
+- **An item without a leading paragraph keeps its marker**: a `listItem`
+  with no block, or whose first block is a nested list or a degraded
+  block, first writes one numbered paragraph with no content at its
+  level, so the return leg reads the empty item (`1. `) or the item
+  opening with a nested list (`1. 1. 5`) instead of folding its content
+  into the previous item.
 - **One numbering instance per top-level list**: every top-level IR
   `list` gets its own `numId`, allocated in document order starting at 1
   (a fresh `w:num` per list, backed by the bullet or the decimal abstract
@@ -170,7 +176,7 @@ image, no unsupported block).
 | `block/degraded` | `'listItem-child:<kind>'` | a non-paragraph, non-list block inside a `listItem` was emitted after the item's paragraph rather than inside it |
 | `block/degraded` | `'blockquote:nested'` | a quote nested in a quote was written as more-indented `BlockText` paragraphs — docx has no quote nesting, the return leg reads one flat quote (one loss per nested quote) |
 | `block/degraded` | `'blockquote-child:<kind>'` | a non-paragraph, non-quote block inside a quote was written with its own mapping, outside the quote style |
-| `image/dropped` | the image `name` | no bytes reachable — neither `opts.assets[name]` (or its percent-decoded form) nor `escapes.docx.bytes` / `escapes.odt.bytes` |
+| `image/placeholder` | the image `name` | no bytes reachable — neither `opts.assets[name]` (or its percent-decoded form) nor `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes` — so the image keeps its place as a placeholder picture: an inline drawing in a 2 in × 1.5 in box, `wp:docPr name` its name and `descr` its alt, whose `a:blip` names no relationship (no media part); the docx reader reads it back as the image reference. Earlier releases dropped such an image (`image/dropped`) |
 | `image/size-defaulted` | the image `name` | bytes were reachable and the image is placed, but no size could be read from its header (not a PNG, JPEG or GIF one, or a malformed one), so it sits in `@awacloud/ooxml`'s default 2 in × 4:3 box |
 
 A degraded block nested in a `listItem` emits BOTH its

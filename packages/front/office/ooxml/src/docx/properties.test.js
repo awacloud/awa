@@ -81,6 +81,43 @@ describe('docxProperties — pPr', () => {
         const back = props.parseParagraphProperties(el);
         expect(back).toEqual(pPr);
     });
+
+    const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+    const pPrOf = (inner) => props.parseParagraphProperties(xml.parse(`<w:pPr ${W}>${inner}</w:pPr>`));
+    const attrsOf = (pPr, name) => props.renderParagraphProperties(pPr).children.find((c) => c.name === name).attrs;
+
+    test('lineRule is typed; the other spacing attributes are kept in source order', () => {
+        const pPr = pPrOf('<w:spacing w:before="100" w:beforeAutospacing="1" w:after="0" w:afterAutospacing="1" w:line="240" w:lineRule="exact" w:beforeLines="50"/>');
+        expect(pPr.spacing).toEqual({
+            before: 100, after: 0, line: 240, lineRule: 'exact',
+            extraAttrs: { 'w:beforeAutospacing': '1', 'w:afterAutospacing': '1', 'w:beforeLines': '50' }
+        });
+        expect(Object.keys(pPr.spacing.extraAttrs)).toEqual(['w:beforeAutospacing', 'w:afterAutospacing', 'w:beforeLines']);
+        expect(attrsOf(pPr, 'w:spacing')).toEqual({
+            'w:before': '100', 'w:after': '0', 'w:line': '240', 'w:lineRule': 'exact',
+            'w:beforeAutospacing': '1', 'w:afterAutospacing': '1', 'w:beforeLines': '50'
+        });
+    });
+
+    test('the untyped indentation attributes are kept; an element with only those survives', () => {
+        const pPr = pPrOf('<w:ind w:start="720" w:end="360" w:leftChars="200" w:firstLineChars="100" w:hanging="360"/>');
+        expect(pPr.indent).toEqual({
+            hanging: 360,
+            extraAttrs: { 'w:start': '720', 'w:end': '360', 'w:leftChars': '200', 'w:firstLineChars': '100' }
+        });
+        expect(attrsOf(pPr, 'w:ind')).toEqual({ 'w:hanging': '360', 'w:start': '720', 'w:end': '360', 'w:leftChars': '200', 'w:firstLineChars': '100' });
+        const only = pPrOf('<w:ind w:start="720"/><w:spacing w:lineRule="auto"/>');
+        expect(only.indent).toEqual({ extraAttrs: { 'w:start': '720' } });
+        expect(only.spacing).toEqual({ lineRule: 'auto' });
+        expect(props.parseParagraphProperties(props.renderParagraphProperties(only))).toEqual(only);
+    });
+
+    test('a kept attribute never overrides a typed one; a model without the new fields renders as before', () => {
+        expect(attrsOf({ spacing: { line: 360, lineRule: 'auto', extraAttrs: { 'w:line': '1', 'w:lineRule': 'exact', 'w:x': undefined } } }, 'w:spacing'))
+            .toEqual({ 'w:line': '360', 'w:lineRule': 'auto' });
+        expect(attrsOf({ indent: { left: 720, extraAttrs: { 'w:left': '1' } } }, 'w:ind')).toEqual({ 'w:left': '720' });
+        expect(attrsOf({ spacing: { before: 1, after: 2, line: 3 } }, 'w:spacing')).toEqual({ 'w:before': '1', 'w:after': '2', 'w:line': '3' });
+    });
 });
 
 describe('docxProperties — tblPr (BL-1766)', () => {
@@ -111,6 +148,15 @@ describe('docxProperties — tblPr (BL-1766)', () => {
             + '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
             + '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
             + '</w:tblBorders></w:tblPr>');
+    });
+
+    // T59 (a): an empty w:tblBorders has nothing to type: kept verbatim.
+    test('an empty tblBorders read is written back', () => {
+        const el = xml.parse('<w:tblPr xmlns:w="x"><w:tblStyle w:val="T"/><w:tblBorders/><w:tblLook w:val="04A0"/></w:tblPr>');
+        const tp = props.parseTableProperties(el);
+        expect(tp.borders).toBeUndefined();
+        expect(xml.serializeNode(props.renderTableProperties(tp)))
+            .toBe('<w:tblPr><w:tblStyle w:val="T"/><w:tblBorders/><w:tblLook w:val="04A0"/></w:tblPr>');
     });
 
     test('render: edge order follows the schema whatever the key order of the input', () => {
@@ -282,5 +328,38 @@ describe('docxProperties — tblPr cellMargins (office/BATCH_48 follow-up)', () 
     test('parse then render is a fixed point on the typed model', () => {
         const model = { style: 'TableGrid', cellMargins: { left: dxa(108), right: dxa(108) } };
         expect(props.parseTableProperties(props.renderTableProperties(model))).toEqual(model);
+    });
+});
+
+describe('docxProperties — rPr theme links of w:color and w:u', () => {
+    const rPrOf = (inner) => props.parseRunProperties(xml.parse('<w:rPr xmlns:w="x">' + inner + '</w:rPr>'));
+    const el = (rPr, name) => props.renderRunProperties(rPr).children.find((c) => c.name === name);
+
+    test("w:color's theme link reads as colorTheme and is written back", () => {
+        const rPr = rPrOf('<w:color w:val="1F497D" w:themeColor="text2" w:themeTint="99" w:themeShade="BF"/>');
+        expect(rPr.color).toBe('1F497D');
+        expect(rPr.colorTheme).toEqual({ themeColor: 'text2', themeTint: '99', themeShade: 'BF' });
+        expect(el(rPr, 'w:color').attrs).toEqual({ 'w:val': '1F497D', 'w:themeColor': 'text2', 'w:themeTint': '99', 'w:themeShade': 'BF' });
+    });
+
+    test("w:u's colour and theme link read as underlineColor and underlineTheme and are written back", () => {
+        const rPr = rPrOf('<w:u w:val="single" w:color="FF0000" w:themeColor="accent1" w:themeShade="80"/>');
+        expect(rPr.underline).toBe('single');
+        expect(rPr.underlineColor).toBe('FF0000');
+        expect(rPr.underlineTheme).toEqual({ themeColor: 'accent1', themeShade: '80' });
+        expect(el(rPr, 'w:u').attrs).toEqual({ 'w:val': 'single', 'w:color': 'FF0000', 'w:themeColor': 'accent1', 'w:themeShade': '80' });
+    });
+
+    test('a theme link without w:val is written back as read', () => {
+        const rPr = rPrOf('<w:color w:themeColor="hyperlink"/>');
+        expect(el(rPr, 'w:color').attrs).toEqual({ 'w:themeColor': 'hyperlink' });
+    });
+
+    test('none written when absent', () => {
+        const rPr = rPrOf('<w:color w:val="FF0000"/><w:u w:val="double"/>');
+        expect('colorTheme' in rPr).toBe(false);
+        expect('underlineTheme' in rPr || 'underlineColor' in rPr).toBe(false);
+        expect(el(rPr, 'w:color').attrs).toEqual({ 'w:val': 'FF0000' });
+        expect(el(rPr, 'w:u').attrs).toEqual({ 'w:val': 'double' });
     });
 });

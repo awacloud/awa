@@ -31,7 +31,7 @@ const { readStructure } = runtime.resolve('oconvPdfStruct');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `readStructure` | `(readResult: object, resolve: (ref) => object) => null \| {order: {tag: string\|null, mcids: number[], pageIndex: number}[]}` | `null` for an untagged (or malformed) document; otherwise the flattened, reading-order struct element list | — |
+| `readStructure` | `(readResult: object, resolve: (ref) => object) => null \| {order: {tag: string\|null, mcids: number[], pageIndex: number}[], tree: StructNode[]}` | `null` for an untagged (or malformed) document; otherwise `order`, the flattened struct element list (each element's own ids, its tag as stored), and `tree`, the root elements in `/K` order: a `StructNode` is `{tag, pageIndex, kids}`, a kid either a marked-content id `{mcid, pageIndex}` (a marked-content reference's own `/Pg` wins) or a child `StructNode`; `tag` is mapped through the tree's `/RoleMap` to a standard structure type (16 hops at most, a cycle keeping the stored tag) | — |
 
 ## Examples
 
@@ -52,6 +52,7 @@ structure.order[0];
 
 ## Notes
 
+- `tree` keeps the interleaving of an element's own ids and its child elements, which `order` loses (it lists an element's ids, then its children): `oconvPdfToIr` walks `tree`, so an inline `Span` keeps its place in its paragraph and a list or table keeps its shape.
 - Returns `null` for an untagged document (no `/StructTreeRoot`) or a malformed one — only a successful, well-typed tree activates `oconvPdfToIr`'s tagged fast path; the reader falls back to content-stream-order text positioning otherwise.
 - `order` is depth-first over the struct tree; each element's `pageIndex` is inherited from its nearest ancestor's `/Pg` when the element itself carries none.
 - A struct element's `mcids` come from its own `/K` entries that are plain marked-content-reference integers/dicts; a `/K` entry that is itself a struct element is recursed into as a child, never folded into the parent's own `mcids`.

@@ -33,7 +33,7 @@ Whatever version is exposed in `doc.version` is the raw string found in the head
 
 Objects stored inside a `/Type /ObjStm` container (§7.5.7) are materialised on demand through `pdfObjStream`: `doc._raw.resolve(ref)` returns them like any other indirect, and each container is decoded once per document. A hybrid file (classical xref table plus a `/XRefStm` pointer, the common PDF 1.5+ producer output) has its companion stream merged too; entries the classical table itself provides take precedence.
 
-**Not supported.** Object streams inside an **encrypted** document stay out of the default pipeline: `readDocument`'s `resolveCompressed` throws `pdf/document/objstm-encrypted` because no decrypt path is composed for it (`resolveCompressed` in `src/document/document.js`).
+**Encrypted documents.** The object streams of an **encrypted** document are decrypted as streams when `readDocument` is given `password` (their members are read as stored). Without a password, under `allowEncrypted: true`, `resolveCompressed` throws `pdf/document/objstm-encrypted`: the container is still ciphertext (`resolveCompressed` in `src/document/document.js`).
 
 ## See also
 

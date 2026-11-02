@@ -232,6 +232,12 @@ describe('pdfStandardV6 — encrypt-side guards', () => {
                 .toBe('pdf/crypto/v6/encrypt-bad-iv');
         }
     });
+
+    test('a caller key that is not whole AES blocks is refused by buildUUE', () => {
+        const salt = new Uint8Array(8);
+        expect(codeOfV6(() => build().buildUUE('', new Uint8Array(15), salt, salt)))
+            .toBe('pdf/crypto/v6/bad-pt-len');
+    });
 });
 
 describe('pdfStandardV6 — hostile fw crypto stack', () => {

@@ -33,8 +33,11 @@
  *
  * hyperlink := { type: 'hyperlink',
  *                rId?: string, anchor?: string,
+ *                tgtFrame?, tooltip?, docLocation?: string,
+ *                history?: boolean,     // w:history, ST_OnOff
  *                target?: string, external?: boolean,
- *                children: [run] }
+ *                children: [inline],     // typed like a paragraph's
+ *                _extras?: [xmlNode] }   // any other child, verbatim
  *                // target / external: set by docx.read when the rId resolves
  *                // in the node's part, consumed by docx.write
  *
@@ -44,9 +47,28 @@
  *                                       // <w:tblPr> lives in tblPr._extras)
  *            _extras?: [xmlNode],       // <w:tblGrid> etc., verbatim
  *            rows: [{ type: 'row',
+ *                     sdt?: [SdtWrapper],  // the content controls around it
  *                     cells: [{ type: 'cell',
- *                               children: [paragraph|table] }] }] }
+ *                               sdt?: [SdtWrapper],
+ *                               children: [paragraph|table|marker] }] }] }
+ *
+ * marker := bookmarkStart | bookmarkEnd | commentRangeStart
+ *         | commentRangeEnd | rangeMarker   // inline, or between blocks
+ * bookmarkStart := { type: 'bookmarkStart', id, name?,
+ *                    colFirst?, colLast?: number, displacedByCustomXml? }
+ * bookmarkEnd | commentRangeStart | commentRangeEnd
+ *              := { type, id, displacedByCustomXml? }
+ *
+ * SdtWrapper := { group: number,          // unique within the row / table
+ *                 properties?: SdtProperties,
+ *                 _extras?: [xmlNode],    // <w:sdtEndPr>, verbatim
+ *                 _contentExtras?: [xmlNode] }
  * ```
+ *
+ * A cell inside a row-level `w:sdt` (CT_SdtCell), or a row inside a
+ * table-level one (CT_SdtRow), is read in place among its siblings and
+ * carries `sdt`, the controls around it, outermost first; the write puts
+ * consecutive items of one control back inside one `w:sdt`.
  *
  * @module ooxml/docx/structure
  */
@@ -72,6 +94,11 @@ export const docxStructure = {
             'w:cols', 'w:formProt', 'w:vAlign', 'w:noEndnote', 'w:titlePg', 'w:textDirection',
             'w:bidi', 'w:rtlGutter', 'w:docGrid', 'w:printerSettings', 'w:sectPrChange'
         ]);
+        const TCPR_SEQ = orderSeq([
+            'w:cnfStyle', 'w:tcW', 'w:gridSpan', 'w:hMerge', 'w:vMerge', 'w:tcBorders', 'w:shd',
+            'w:noWrap', 'w:tcMar', 'w:textDirection', 'w:tcFitText', 'w:vAlign', 'w:hideMark',
+            'w:headers', 'w:cellIns', 'w:cellDel', 'w:cellMerge', 'w:tcPrChange'
+        ]);
         // --- Run children: text, break, tab, references, deletion text ---
 
         function parseRunChildren(rEl) {
@@ -88,7 +115,9 @@ export const docxStructure = {
                         break;
                     case 'w:br': {
                         const kind = c.attrs['w:type'];
-                        out.push(kind ? { type: 'break', kind } : { type: 'break' });
+                        const br = kind ? { type: 'break', kind } : { type: 'break' };
+                        if (c.attrs['w:clear'] != null) br.clear = c.attrs['w:clear'];
+                        out.push(br);
                         break;
                     }
                     case 'w:tab':
@@ -104,11 +133,12 @@ export const docxStructure = {
                         out.push({ type: 'commentReference', id: c.attrs['w:id'] });
                         break;
                     case 'w:footnoteReference':
-                        out.push({ type: 'footnoteReference', id: c.attrs['w:id'] });
+                    case 'w:endnoteReference': {
+                        const ref = { type: c.name.slice(2), id: c.attrs['w:id'] };
+                        if (c.attrs['w:customMarkFollows'] != null) ref.customMarkFollows = isOn(c.attrs['w:customMarkFollows']);
+                        out.push(ref);
                         break;
-                    case 'w:endnoteReference':
-                        out.push({ type: 'endnoteReference', id: c.attrs['w:id'] });
-                        break;
+                    }
                     case 'w:drawing':
                         out.push(drawingMod.parseDrawing(c));
                         break;
@@ -117,6 +147,11 @@ export const docxStructure = {
                                      kind: c.attrs['w:fldCharType'] };
                         if (c.attrs['w:dirty'])
                             f.dirty = c.attrs['w:dirty'] === '1';
+                        if (c.attrs['w:fldLock'] !== undefined && isOn(c.attrs['w:fldLock']))
+                            f.fldLock = true;
+                        // `w:ffData` / `w:fldData` / `w:numberingChange`, verbatim.
+                        const kept = c.children.filter(k => k.type === 'element');
+                        if (kept.length) f._extras = kept;
                         out.push(f);
                         break;
                     }
@@ -146,11 +181,12 @@ export const docxStructure = {
                         out.push(xml.el('w:delText', { 'xml:space': 'preserve' },
                             [xml.text(ch.value || '')]));
                         break;
-                    case 'break':
-                        out.push(ch.kind
-                            ? xml.el('w:br', { 'w:type': ch.kind })
-                            : xml.el('w:br', {}));
+                    case 'break': {
+                        const a = ch.kind ? { 'w:type': ch.kind } : {};
+                        if (ch.clear != null) a['w:clear'] = String(ch.clear);
+                        out.push(xml.el('w:br', a));
                         break;
+                    }
                     case 'tab':
                         out.push(xml.el('w:tab', {}));
                         break;
@@ -164,18 +200,21 @@ export const docxStructure = {
                         out.push(xml.el('w:commentReference', { 'w:id': String(ch.id) }));
                         break;
                     case 'footnoteReference':
-                        out.push(xml.el('w:footnoteReference', { 'w:id': String(ch.id) }));
+                    case 'endnoteReference': {
+                        const a = {};
+                        if (ch.customMarkFollows != null) a['w:customMarkFollows'] = ch.customMarkFollows ? '1' : '0';
+                        a['w:id'] = String(ch.id);
+                        out.push(xml.el('w:' + ch.type, a));
                         break;
-                    case 'endnoteReference':
-                        out.push(xml.el('w:endnoteReference', { 'w:id': String(ch.id) }));
-                        break;
+                    }
                     case 'drawing':
                         out.push(drawingMod.renderDrawing(ch));
                         break;
                     case 'fldChar': {
                         const a = { 'w:fldCharType': ch.kind };
                         if (ch.dirty) a['w:dirty'] = '1';
-                        out.push(xml.el('w:fldChar', a));
+                        if (ch.fldLock) a['w:fldLock'] = '1';
+                        out.push(xml.el('w:fldChar', a, ch._extras || []));
                         break;
                     }
                     case 'instrText':
@@ -206,22 +245,37 @@ export const docxStructure = {
         function renderRun(run) {
             const children = [];
             const rPrEl = props.renderRunProperties(run.rPr);
+            // A read `<w:rPr/>` is an empty object: written back empty.
             if (rPrEl) children.push(rPrEl);
+            else if (run.rPr && typeof run.rPr === 'object') children.push(xml.el('w:rPr', {}, []));
             children.push(...renderRunChildren(run.children));
             return xml.el('w:r', {}, children);
         }
 
         // --- Hyperlink ---
-        // <w:hyperlink r:id="rIdN"> or <w:hyperlink w:anchor="bookmark"> wraps runs.
+        // <w:hyperlink r:id="rIdN"> or <w:hyperlink w:anchor="bookmark">
+        // holds a paragraph's content (CT_Hyperlink, EG_PContent): typed
+        // like a paragraph's, any other element kept verbatim in the
+        // hyperlink's own `_extras`.
+
+        const HYPERLINK_STRINGS = [['tgtFrame', 'w:tgtFrame'], ['tooltip', 'w:tooltip'], ['docLocation', 'w:docLocation']];
 
         function parseHyperlink(hEl) {
             const out = { type: 'hyperlink', children: [] };
             if (hEl.attrs['r:id'])     out.rId = hEl.attrs['r:id'];
             if (hEl.attrs['w:anchor']) out.anchor = hEl.attrs['w:anchor'];
+            // CT_Hyperlink's other attributes: the strings, then w:history
+            // (ST_OnOff).
+            for (const [k, a] of HYPERLINK_STRINGS) if (hEl.attrs[a] != null) out[k] = hEl.attrs[a];
+            if (hEl.attrs['w:history'] != null) out.history = isOn(hEl.attrs['w:history']);
+            const extras = [];
             for (const c of hEl.children) {
                 if (c.type !== 'element') continue;
-                if (c.name === 'w:r') out.children.push(parseRun(c));
+                const node = parseInline(c);
+                if (node) out.children.push(node);
+                else extras.push(c);
             }
+            if (extras.length) out._extras = extras;
             return out;
         }
 
@@ -229,8 +283,11 @@ export const docxStructure = {
             const attrs = {};
             if (h.rId)    attrs['r:id'] = h.rId;
             if (h.anchor) attrs['w:anchor'] = h.anchor;
-            return xml.el('w:hyperlink', attrs,
-                (h.children || []).map(renderRun));
+            for (const [k, a] of HYPERLINK_STRINGS) if (h[k] != null) attrs[a] = String(h[k]);
+            if (h.history != null) attrs['w:history'] = h.history ? '1' : '0';
+            const children = renderInlines(h.children);
+            if (h._extras) for (const ex of h._extras) children.push(ex);
+            return xml.el('w:hyperlink', attrs, children);
         }
 
         // --- Structured Document Tags (SDT, content controls) ---
@@ -257,7 +314,7 @@ export const docxStructure = {
                     case 'w:alias':         out.alias = c.attrs['w:val']; break;
                     case 'w:tag':           out.tag = c.attrs['w:val']; break;
                     case 'w:id':            out.id = Number(c.attrs['w:val']); break;
-                    case 'w:showingPlcHdr': out.showingPlcHdr = true; break;
+                    case 'w:showingPlcHdr': out.showingPlcHdr = isOn(c.attrs['w:val']); break;
                     case 'w:dataBinding': {
                         const db = {};
                         if (c.attrs['w:xpath']) db.xpath = c.attrs['w:xpath'];
@@ -266,7 +323,11 @@ export const docxStructure = {
                         out.dataBinding = db;
                         break;
                     }
-                    case 'w:text':          out.kind = 'text'; break;
+                    case 'w:text':
+                        out.kind = 'text';
+                        // Its attributes (w:multiLine) ride on the element.
+                        if (Object.keys(c.attrs).length) out._kindNode = c;
+                        break;
                     case 'w:richText':      out.kind = 'richText'; break;
                     case 'w:dropDownList':  out.kind = 'dropDownList'; out._kindNode = c; break;
                     case 'w:comboBox':      out.kind = 'comboBox'; out._kindNode = c; break;
@@ -321,8 +382,8 @@ export const docxStructure = {
                 children.push(xml.el('w:tag', { 'w:val': props.tag }));
             if (props.id != null)
                 children.push(xml.el('w:id', { 'w:val': String(props.id) }));
-            if (props.showingPlcHdr)
-                children.push(xml.el('w:showingPlcHdr', {}));
+            if (props.showingPlcHdr != null)
+                children.push(xml.el('w:showingPlcHdr', props.showingPlcHdr ? {} : { 'w:val': '0' }));
             if (props.dataBinding) {
                 const a = {};
                 if (props.dataBinding.prefixMappings)
@@ -333,7 +394,7 @@ export const docxStructure = {
                     a['w:storeItemID'] = props.dataBinding.storeItemID;
                 children.push(xml.el('w:dataBinding', a));
             }
-            if (props.kind === 'text')         children.push(xml.el('w:text', {}));
+            if (props.kind === 'text')         children.push(props._kindNode || xml.el('w:text', {}));
             else if (props.kind === 'richText') children.push(xml.el('w:richText', {}));
             else if (props.kind === 'picture')  children.push(xml.el('w:picture', {}));
             else if (props.kind === 'repeatingSection') {
@@ -363,23 +424,36 @@ export const docxStructure = {
             const out = { type: isBlock ? 'blockSdt' : 'sdt', children: [] };
             const props = parseSdtProperties(sdtPrEl);
             if (props) out.properties = props;
+            // The control's other children (w:sdtEndPr), verbatim.
+            const own = sdtEl.children.filter((c) => c.type === 'element'
+                && c.name !== 'w:sdtPr' && c.name !== 'w:sdtContent');
+            if (own.length) out._extras = own;
             if (sdtContentEl) {
                 if (isBlock) {
-                    // Body-level content : paragraphs, tables, nested sdt.
+                    // Body-level content: paragraphs, tables, nested
+                    // sdt and markers; any other child kept verbatim.
+                    const extras = [];
                     for (const c of sdtContentEl.children) {
                         if (c.type !== 'element') continue;
+                        const marker = parseMarker(c);
                         if (c.name === 'w:p')          out.children.push(parseParagraph(c));
                         else if (c.name === 'w:tbl')   out.children.push(parseTable(c));
                         else if (c.name === 'w:sdt')   out.children.push(parseSdt(c, true));
+                        else if (marker)               out.children.push(marker);
+                        else extras.push(c);
                     }
+                    if (extras.length) out._contentExtras = extras;
                 } else {
-                    // Inline content : runs, hyperlinks, nested sdt.
+                    // Inline content, typed as a paragraph's children; any
+                    // other child (w:proofErr …) kept verbatim after them.
+                    const extras = [];
                     for (const c of sdtContentEl.children) {
                         if (c.type !== 'element') continue;
-                        if (c.name === 'w:r')           out.children.push(parseRun(c));
-                        else if (c.name === 'w:hyperlink') out.children.push(parseHyperlink(c));
-                        else if (c.name === 'w:sdt')    out.children.push(parseSdt(c, false));
+                        const node = parseInline(c);
+                        if (node) out.children.push(node);
+                        else extras.push(c);
                     }
+                    if (extras.length) out._contentExtras = extras;
                 }
             }
             return out;
@@ -389,24 +463,136 @@ export const docxStructure = {
             const sdtChildren = [];
             const propsEl = renderSdtProperties(sdt.properties);
             if (propsEl) sdtChildren.push(propsEl);
+            if (sdt._extras) sdtChildren.push(...sdt._extras);
             const isBlock = sdt.type === 'blockSdt';
-            const contentChildren = [];
-            for (const c of sdt.children || []) {
-                if (isBlock) {
+            let contentChildren = [];
+            if (isBlock) {
+                for (const c of sdt.children || []) {
                     if (c.type === 'paragraph')      contentChildren.push(renderParagraph(c));
                     else if (c.type === 'table')     contentChildren.push(renderTable(c));
                     else if (c.type === 'blockSdt')  contentChildren.push(renderSdt(c));
-                } else {
-                    if (c.type === 'run')             contentChildren.push(renderRun(c));
-                    else if (c.type === 'hyperlink')  contentChildren.push(renderHyperlink(c));
-                    else if (c.type === 'sdt')        contentChildren.push(renderSdt(c));
+                    else {
+                        const marker = renderMarker(c);
+                        if (marker) contentChildren.push(marker);
+                    }
                 }
+            } else {
+                contentChildren = renderInlines(sdt.children || []);
             }
+            if (sdt._contentExtras) contentChildren.push(...sdt._contentExtras);
             sdtChildren.push(xml.el('w:sdtContent', {}, contentChildren));
             return xml.el('w:sdt', {}, sdtChildren);
         }
 
         // --- Paragraph ---
+
+        // Revision wrappers and their model types: ECMA-376 Part 1
+        // § 17.13.5 (w:ins, w:del) and § 17.13.5.22–23 (w:moveFrom, w:moveTo).
+        const REVISION_TAGS = { 'w:ins': 'ins', 'w:del': 'del', 'w:moveFrom': 'moveFrom', 'w:moveTo': 'moveTo' };
+        const REVISION_ELEMENTS = { ins: 'w:ins', del: 'w:del', moveFrom: 'w:moveFrom', moveTo: 'w:moveTo' };
+
+        // The range markup with no node type of its own: the revision range
+        // markers (ECMA-376 Part 1 § 17.13.5: the move ranges and the custom
+        // XML revision ranges), the permission ranges (§ 17.13.7) and the
+        // proofing marks (§ 17.13.8). Range markup may sit among a
+        // paragraph's runs or between blocks; each is one typed
+        // `rangeMarker` node, its attributes verbatim, at its place.
+        const RANGE_MARKERS = new Set([
+            'w:moveFromRangeStart', 'w:moveFromRangeEnd', 'w:moveToRangeStart', 'w:moveToRangeEnd',
+            'w:customXmlInsRangeStart', 'w:customXmlInsRangeEnd', 'w:customXmlDelRangeStart', 'w:customXmlDelRangeEnd',
+            'w:customXmlMoveFromRangeStart', 'w:customXmlMoveFromRangeEnd',
+            'w:customXmlMoveToRangeStart', 'w:customXmlMoveToRangeEnd',
+            'w:permStart', 'w:permEnd', 'w:proofErr'
+        ]);
+
+        // The bookmark and comment range markers (CT_Bookmark,
+        // CT_MarkupRange): typed nodes, inline or between blocks.
+        const MARKER_TYPES = {
+            'w:bookmarkStart': 'bookmarkStart', 'w:bookmarkEnd': 'bookmarkEnd',
+            'w:commentRangeStart': 'commentRangeStart', 'w:commentRangeEnd': 'commentRangeEnd'
+        };
+        const MARKER_ELEMENTS = Object.fromEntries(Object.entries(MARKER_TYPES).map(([k, v]) => [v, k]));
+
+        /** A bookmark / comment range marker or range markup, typed; `null` for any other element. */
+        function parseMarker(c) {
+            if (RANGE_MARKERS.has(c.name)) return parseRangeMarker(c);
+            const type = MARKER_TYPES[c.name];
+            if (!type) return null;
+            const a = c.attrs;
+            const out = { type, id: a['w:id'] };
+            if (type === 'bookmarkStart') {
+                out.name = a['w:name'];
+                if (a['w:colFirst'] !== undefined) out.colFirst = Number(a['w:colFirst']);
+                if (a['w:colLast'] !== undefined) out.colLast = Number(a['w:colLast']);
+            }
+            if (a['w:displacedByCustomXml'] !== undefined) out.displacedByCustomXml = a['w:displacedByCustomXml'];
+            return out;
+        }
+
+        /** The element of a marker node, or `null` for any other node. */
+        function renderMarker(m) {
+            if (m.type === 'rangeMarker') return renderRangeMarker(m);
+            const name = MARKER_ELEMENTS[m.type];
+            if (!name) return null;
+            const a = { 'w:id': String(m.id) };
+            if (m.type === 'bookmarkStart') {
+                if (m.name) a['w:name'] = m.name;
+                if (m.colFirst != null) a['w:colFirst'] = String(m.colFirst);
+                if (m.colLast != null) a['w:colLast'] = String(m.colLast);
+            }
+            if (m.displacedByCustomXml) a['w:displacedByCustomXml'] = m.displacedByCustomXml;
+            return xml.el(name, a);
+        }
+
+        function parseRangeMarker(el) {
+            return { type: 'rangeMarker', name: el.name.slice(2), attrs: { ...el.attrs } };
+        }
+
+        function renderRangeMarker(m) {
+            return xml.el('w:' + m.name, { ...(m.attrs || {}) }, []);
+        }
+
+        /**
+         * One inline child of a paragraph or of a revision, typed, or
+         * `null` for an element the model does not type (the caller keeps
+         * it verbatim in its own `_extras`).
+         */
+        function parseInline(c) {
+            const marker = parseMarker(c);
+            if (marker) return marker;
+            switch (c.name) {
+                case 'w:r':
+                    return parseRun(c);
+                case 'w:hyperlink':
+                    return parseHyperlink(c);
+                case 'w:ins':
+                case 'w:del':
+                case 'w:moveFrom':
+                case 'w:moveTo':
+                    return parseRevision(c, REVISION_TAGS[c.name]);
+                case 'w:sdt':
+                    return parseSdt(c, false);
+                case 'm:oMath':
+                    return mathMod.parseOMath(c);
+                case 'w:fldSimple': {
+                    const f = {
+                        type: 'fldSimple',
+                        instr: c.attrs['w:instr'] || '',
+                        children: []
+                    };
+                    if (c.attrs['w:dirty'])
+                        f.dirty = c.attrs['w:dirty'] === '1';
+                    for (const cc of c.children) {
+                        if (cc.type !== 'element') continue;
+                        if (cc.name === 'w:r')         f.children.push(parseRun(cc));
+                        else if (cc.name === 'w:hyperlink') f.children.push(parseHyperlink(cc));
+                    }
+                    return f;
+                }
+                default:
+                    return null;
+            }
+        }
 
         function parseParagraph(pEl) {
             const pPrEl = xml.findChild(pEl, 'w:pPr');
@@ -416,103 +602,98 @@ export const docxStructure = {
             for (const c of pEl.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'w:pPr') continue;
-                switch (c.name) {
-                    case 'w:r':
-                        children.push(parseRun(c));
-                        break;
-                    case 'w:hyperlink':
-                        children.push(parseHyperlink(c));
-                        break;
-                    case 'w:bookmarkStart':
-                        children.push({
-                            type: 'bookmarkStart',
-                            id: c.attrs['w:id'],
-                            name: c.attrs['w:name']
-                        });
-                        break;
-                    case 'w:bookmarkEnd':
-                        children.push({ type: 'bookmarkEnd', id: c.attrs['w:id'] });
-                        break;
-                    case 'w:commentRangeStart':
-                        children.push({ type: 'commentRangeStart', id: c.attrs['w:id'] });
-                        break;
-                    case 'w:commentRangeEnd':
-                        children.push({ type: 'commentRangeEnd', id: c.attrs['w:id'] });
-                        break;
-                    case 'w:ins':
-                        children.push(parseRevision(c, 'ins'));
-                        break;
-                    case 'w:del':
-                        children.push(parseRevision(c, 'del'));
-                        break;
-                    case 'w:sdt':
-                        children.push(parseSdt(c, false));
-                        break;
-                    case 'm:oMath':
-                        children.push(mathMod.parseOMath(c));
-                        break;
-                    case 'w:fldSimple': {
-                        const f = {
-                            type: 'fldSimple',
-                            instr: c.attrs['w:instr'] || '',
-                            children: []
-                        };
-                        if (c.attrs['w:dirty'])
-                            f.dirty = c.attrs['w:dirty'] === '1';
-                        for (const cc of c.children) {
-                            if (cc.type !== 'element') continue;
-                            if (cc.name === 'w:r')         f.children.push(parseRun(cc));
-                            else if (cc.name === 'w:hyperlink') f.children.push(parseHyperlink(cc));
-                        }
-                        children.push(f);
-                        break;
-                    }
-                    default:
-                        extras.push(c);
-                }
+                const node = parseInline(c);
+                if (node) children.push(node);
+                else extras.push(c);
             }
             const out = { type: 'paragraph', children };
             if (pPr) out.pPr = pPr;
             if (extras.length) out._extras = extras;
+            readIds(pEl, out);
             return out;
         }
 
-        // <w:ins> / <w:del> — tracked change wrappers around runs.
-        // ECMA-376 part 1 §17.13.5.10–12.
+        // --- Word's paragraph and row ids (w14:paraId, w14:textId) ---
+
+        // The `w14` ids of a `w:p` / `w:tr`, when the read kept them (the
+        // `extensions: 'keep'` read; the default one drops `w14`).
+        function readIds(el, out) {
+            const a = el.attrs || {};
+            if (a['w14:paraId'] != null) out.paraId = a['w14:paraId'];
+            if (a['w14:textId'] != null) out.textId = a['w14:textId'];
+        }
+
+        // The paraIds the part being written already carries, set by
+        // `docx.write` around each part (`withParaIds`); null outside a write.
+        let paraIdsWritten = null;
+
+        /**
+         * Run `fn` as the render of one part: a `paraId` an earlier paragraph
+         * or row of the part carries is not written again.
+         */
+        function withParaIds(fn) {
+            const before = paraIdsWritten;
+            paraIdsWritten = new Set();
+            try { return fn(); } finally { paraIdsWritten = before; }
+        }
+
+        // The attributes of a `w:p` / `w:tr` its node's ids give.
+        function idAttrs(node) {
+            const attrs = {};
+            const id = node.paraId;
+            if (id != null && !(paraIdsWritten && paraIdsWritten.has(String(id)))) {
+                attrs['w14:paraId'] = String(id);
+                if (paraIdsWritten) paraIdsWritten.add(String(id));
+            }
+            if (node.textId != null) attrs['w14:textId'] = String(node.textId);
+            return attrs;
+        }
+
+        // <w:ins> / <w:del> / <w:moveFrom> / <w:moveTo> — tracked change
+        // wrappers. Their children are a paragraph's inline content
+        // (ECMA-376 Part 1 § 17.13.5): typed like a paragraph's, any other
+        // element kept verbatim in the revision's own `_extras`.
         function parseRevision(el, kind) {
             const out = {
                 type: kind,
                 id: el.attrs['w:id'],
                 children: []
             };
-            if (el.attrs['w:author']) out.author = el.attrs['w:author'];
+            // w:author is required (CT_TrackChange): an empty one is kept.
+            if (el.attrs['w:author'] !== undefined) out.author = el.attrs['w:author'];
             if (el.attrs['w:date'])   out.date = el.attrs['w:date'];
+            const extras = [];
             for (const c of el.children) {
                 if (c.type !== 'element') continue;
-                if (c.name === 'w:r') out.children.push(parseRun(c));
+                const node = parseInline(c);
+                if (node) out.children.push(node);
+                else extras.push(c);
             }
+            if (extras.length) out._extras = extras;
             return out;
         }
 
         function renderRevision(rev) {
             const attrs = {};
             if (rev.id != null)  attrs['w:id'] = String(rev.id);
-            if (rev.author)      attrs['w:author'] = rev.author;
+            if (typeof rev.author === 'string') attrs['w:author'] = rev.author;
             if (rev.date)        attrs['w:date'] = rev.date;
-            const tag = rev.type === 'del' ? 'w:del' : 'w:ins';
-            return xml.el(tag, attrs, (rev.children || []).map(renderRun));
+            const children = renderInlines(rev.children);
+            if (rev._extras) for (const ex of rev._extras) children.push(ex);
+            return xml.el(REVISION_ELEMENTS[rev.type] || 'w:ins', attrs, children);
         }
 
-        function renderParagraph(p) {
+        /** The elements of a paragraph's or a revision's typed inline children; an unknown type writes nothing. */
+        function renderInlines(nodes) {
             const children = [];
-            const pPrEl = props.renderParagraphProperties(p.pPr);
-            if (pPrEl) children.push(pPrEl);
-            for (const c of p.children || []) {
+            for (const c of nodes || []) {
                 switch (c.type) {
                     case 'run':       children.push(renderRun(c)); break;
                     case 'hyperlink': children.push(renderHyperlink(c)); break;
                     case 'ins':
-                    case 'del':       children.push(renderRevision(c)); break;
+                    case 'del':
+                    case 'moveFrom':
+                    case 'moveTo':    children.push(renderRevision(c)); break;
                     case 'sdt':       children.push(renderSdt(c)); break;
                     case 'oMath':     children.push(mathMod.renderOMath(c)); break;
                     case 'fldSimple': {
@@ -526,31 +707,34 @@ export const docxStructure = {
                         children.push(xml.el('w:fldSimple', a, inner));
                         break;
                     }
-                    case 'bookmarkStart': {
-                        const a = { 'w:id': String(c.id) };
-                        if (c.name) a['w:name'] = c.name;
-                        children.push(xml.el('w:bookmarkStart', a));
-                        break;
-                    }
+                    case 'bookmarkStart':
                     case 'bookmarkEnd':
-                        children.push(xml.el('w:bookmarkEnd', { 'w:id': String(c.id) }));
-                        break;
                     case 'commentRangeStart':
-                        children.push(xml.el('w:commentRangeStart', { 'w:id': String(c.id) }));
-                        break;
                     case 'commentRangeEnd':
-                        children.push(xml.el('w:commentRangeEnd', { 'w:id': String(c.id) }));
+                    case 'rangeMarker':
+                        children.push(renderMarker(c));
                         break;
                 }
             }
+            return children;
+        }
+
+        function renderParagraph(p) {
+            const children = [];
+            const pPrEl = props.renderParagraphProperties(p.pPr);
+            // A read `<w:pPr/>` is an empty object: written back empty.
+            if (pPrEl) children.push(pPrEl);
+            else if (p.pPr && typeof p.pPr === 'object') children.push(xml.el('w:pPr', {}, []));
+            children.push(...renderInlines(p.children));
             if (p._extras) for (const ex of p._extras) children.push(ex);
-            return xml.el('w:p', {}, children);
+            return xml.el('w:p', idAttrs(p), children);
         }
 
         // --- Table ---
 
         function parseCell(tcEl) {
-            // <w:tc>: <w:tcPr/>?, then block-level content (paragraphs / nested tables)
+            // <w:tc>: <w:tcPr/>?, then block-level content (paragraphs, nested
+            // tables, block-level controls, markers)
             const tcPrEl = xml.findChild(tcEl, 'w:tcPr');
             const tcPr = tcPrEl ? parseCellProperties(tcPrEl) : undefined;
             const children = [];
@@ -558,8 +742,11 @@ export const docxStructure = {
             for (const c of tcEl.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'w:tcPr') continue;
+                const marker = parseMarker(c);
                 if (c.name === 'w:p')        children.push(parseParagraph(c));
                 else if (c.name === 'w:tbl') children.push(parseTable(c));
+                else if (c.name === 'w:sdt') children.push(parseSdt(c, true));
+                else if (marker)             children.push(marker);
                 else extras.push(c);
             }
             const out = { type: 'cell', children };
@@ -568,6 +755,9 @@ export const docxStructure = {
             return out;
         }
 
+        // Block-level content of a cell (EG_BlockLevelElts).
+        const CELL_BLOCKS = new Set(['w:p', 'w:tbl', 'w:sdt', 'w:customXml', 'w:altChunk']);
+
         function renderCell(c) {
             const children = [];
             const tcPrEl = renderCellProperties(c.tcPr);
@@ -575,10 +765,16 @@ export const docxStructure = {
             for (const ch of c.children || []) {
                 if (ch.type === 'paragraph') children.push(renderParagraph(ch));
                 else if (ch.type === 'table') children.push(renderTable(ch));
+                else if (ch.type === 'blockSdt') children.push(renderSdt(ch));
+                else {
+                    const marker = renderMarker(ch);
+                    if (marker) children.push(marker);
+                }
             }
             if (c._extras) for (const ex of c._extras) children.push(ex);
-            // A cell must contain at least one paragraph per ECMA-376.
-            if (!children.some(n => n.name === 'w:p')) {
+            // A cell must contain block-level content per ECMA-376: an
+            // empty paragraph when none is typed or kept verbatim.
+            if (!children.some(n => n && CELL_BLOCKS.has(n.name))) {
                 children.push(xml.el('w:p', {}));
             }
             return xml.el('w:tc', {}, children);
@@ -626,20 +822,90 @@ export const docxStructure = {
             }
             if (tcPr._extras) for (const ex of tcPr._extras) children.push(ex);
             if (!children.length) return null;
-            return xml.el('w:tcPr', {}, children);
+            return xml.el('w:tcPr', {}, ordered(children, TCPR_SEQ));
+        }
+
+        // --- Content controls around cells and rows ---
+        // A row-level `w:sdt` (CT_SdtCell) wraps cells, a table-level one
+        // (CT_SdtRow) wraps rows. Their items are read in place, each
+        // carrying `sdt`: the controls around it, outermost first, as
+        // `{ group, properties?, _extras?, _contentExtras? }` (`group`
+        // unique within the row or table, in the order the controls open;
+        // the items of one control share one wrapper). `_extras` keeps the
+        // control's other children (`w:sdtEndPr`), `_contentExtras` the
+        // content children that are neither an item nor a control. A
+        // control that wraps no item stays raw where it was.
+
+        /**
+         * Read the items of `children` (`w:tc` or `w:tr`, by `itemName`)
+         * into `items`, descending into content controls; any other child
+         * goes to `extras`.
+         */
+        function readWrapped(children, itemName, parseItem, items, extras) {
+            let group = 0;
+            const walk = (kids, chain, sink) => {
+                for (const c of kids) {
+                    if (c.type !== 'element') continue;
+                    if (c.name === itemName) {
+                        const item = parseItem(c);
+                        if (chain.length) item.sdt = chain.slice();
+                        items.push(item);
+                    } else if (c.name === 'w:sdt') {
+                        const ctl = { group: group++ };
+                        const pr = parseSdtProperties(xml.findChild(c, 'w:sdtPr'));
+                        if (pr) ctl.properties = pr;
+                        const own = c.children.filter(k => k.type === 'element'
+                            && k.name !== 'w:sdtPr' && k.name !== 'w:sdtContent');
+                        if (own.length) ctl._extras = own;
+                        const content = xml.findChild(c, 'w:sdtContent');
+                        const inner = [];
+                        const before = items.length;
+                        walk(content ? content.children : [], [...chain, ctl], inner);
+                        if (items.length === before) sink.push(c);
+                        else if (inner.length) ctl._contentExtras = inner;
+                    } else {
+                        sink.push(c);
+                    }
+                }
+            };
+            walk(children, [], extras);
+        }
+
+        /**
+         * Render `items` into `out`: consecutive items whose `sdt` lists
+         * share a control at a level are written inside one `w:sdt`.
+         */
+        function renderWrapped(items, renderItem, out) {
+            const stack = [];
+            const target = () => (stack.length ? stack[stack.length - 1].content : out);
+            const close = () => {
+                const { ctl, content } = stack.pop();
+                const kids = [];
+                const pr = renderSdtProperties(ctl.properties);
+                if (pr) kids.push(pr);
+                if (ctl._extras) kids.push(...ctl._extras);
+                kids.push(xml.el('w:sdtContent', {}, [...content, ...(ctl._contentExtras || [])]));
+                target().push(xml.el('w:sdt', {}, kids));
+            };
+            for (const it of items) {
+                const chain = Array.isArray(it && it.sdt) ? it.sdt : [];
+                let k = 0;
+                while (k < stack.length && k < chain.length && chain[k]
+                    && stack[k].ctl.group === chain[k].group) k++;
+                while (stack.length > k) close();
+                for (; k < chain.length; k++) if (chain[k]) stack.push({ ctl: chain[k], content: [] });
+                target().push(renderItem(it));
+            }
+            while (stack.length) close();
         }
 
         function parseRow(trEl) {
             const cells = [];
             const extras = [];
-            for (const c of trEl.children) {
-                if (c.type !== 'element') continue;
-                if (c.name === 'w:tc') cells.push(parseCell(c));
-                else if (c.name === 'w:trPr') extras.push(c); // not modelled yet
-                else extras.push(c);
-            }
+            readWrapped(trEl.children, 'w:tc', parseCell, cells, extras);
             const out = { type: 'row', cells };
             if (extras.length) out._extras = extras;
+            readIds(trEl, out);
             return out;
         }
 
@@ -649,25 +915,28 @@ export const docxStructure = {
             const extras = row._extras || [];
             const head = name => extras.filter(ex => ex && ex.name === name);
             const children = [...head('w:tblPrEx'), ...head('w:trPr')];
-            for (const c of row.cells || []) children.push(renderCell(c));
+            renderWrapped(row.cells || [], renderCell, children);
             for (const ex of extras) if (!(ex && (ex.name === 'w:tblPrEx' || ex.name === 'w:trPr'))) children.push(ex);
-            return xml.el('w:tr', {}, children);
+            return xml.el('w:tr', idAttrs(row), children);
         }
 
         function parseTable(tblEl) {
             const rows = [];
             const extras = [];
             const out = { type: 'table', rows };
+            const rest = [];
             for (const c of tblEl.children) {
                 if (c.type !== 'element') continue;
-                if (c.name === 'w:tr') rows.push(parseRow(c));
-                else if (c.name === 'w:tblPr') {
+                if (c.name === 'w:tblPr') {
                     const tp = props.parseTableProperties(c);
                     if (tp !== undefined) out.tblPr = tp;
                     else extras.push(c); // childless tblPr — preserved verbatim
                 }
-                else extras.push(c); // tblGrid — preserved verbatim
+                else rest.push(c);
             }
+            // Rows, those inside a content control included; tblGrid and
+            // any other element preserved verbatim.
+            readWrapped(rest, 'w:tr', parseRow, rows, extras);
             if (extras.length) out._extras = extras;
             return out;
         }
@@ -709,7 +978,7 @@ export const docxStructure = {
             const pr = tblPrEl || keptPr || xml.el('w:tblPr', {}, []);
             const children = [pr, keptGrid || renderGrid(t.rows || [])];
             for (const ex of extras) if (ex !== pr && ex !== keptGrid) children.push(ex);
-            for (const r of t.rows || []) children.push(renderRow(r));
+            renderWrapped(t.rows || [], renderRow, children);
             return xml.el('w:tbl', {}, children);
         }
 
@@ -722,6 +991,21 @@ export const docxStructure = {
             'w:titlePg'
         ]);
 
+        // Twips per unit of an ST_UniversalMeasure (§22.9.2.15).
+        const UNIT_TWIPS = { in: 1440, pt: 20, pc: 240, pi: 240, cm: 1440 / 2.54, mm: 144 / 2.54 };
+        const UNIVERSAL_MEASURE = /^(-?[0-9]+(?:\.[0-9]+)?)(mm|cm|in|pt|pc|pi)$/;
+
+        /**
+         * An ST_TwipsMeasure / ST_SignedTwipsMeasure attribute in twips: an
+         * integer as written, a universal measure (`612pt`, `2.54cm`, as
+         * strict OOXML writes them) converted and rounded; any other value
+         * read by `Number` as before.
+         */
+        function twipsMeasure(v) {
+            const m = UNIVERSAL_MEASURE.exec(v);
+            return m ? Math.round(Number(m[1]) * UNIT_TWIPS[m[2]]) : Number(v);
+        }
+
         function parseSection(sectPrEl) {
             const out = {};
             const extras = [];
@@ -730,16 +1014,17 @@ export const docxStructure = {
                 switch (c.name) {
                     case 'w:pgSz':
                         out.pageSize = {};
-                        if (c.attrs['w:w']) out.pageSize.w = Number(c.attrs['w:w']);
-                        if (c.attrs['w:h']) out.pageSize.h = Number(c.attrs['w:h']);
+                        if (c.attrs['w:w']) out.pageSize.w = twipsMeasure(c.attrs['w:w']);
+                        if (c.attrs['w:h']) out.pageSize.h = twipsMeasure(c.attrs['w:h']);
                         if (c.attrs['w:orient']) out.pageSize.orient = c.attrs['w:orient'];
+                        if (c.attrs['w:code'] != null && c.attrs['w:code'] !== '') out.pageSize.code = Number(c.attrs['w:code']);
                         break;
                     case 'w:pgMar':
                         out.pageMargin = {};
                         for (const k of ['top', 'right', 'bottom', 'left',
                                          'header', 'footer', 'gutter']) {
                             const a = c.attrs['w:' + k];
-                            if (a != null) out.pageMargin[k] = Number(a);
+                            if (a != null) out.pageMargin[k] = twipsMeasure(a);
                         }
                         break;
                     case 'w:type':
@@ -767,7 +1052,8 @@ export const docxStructure = {
                 }
             }
             if (extras.length) out._extras = extras;
-            return Object.keys(out).length ? out : undefined;
+            // An empty <w:sectPr/> reads as an empty object, written back.
+            return out;
         }
 
         function renderSection(sect) {
@@ -790,6 +1076,7 @@ export const docxStructure = {
                 if (sect.pageSize.w != null) a['w:w'] = String(sect.pageSize.w);
                 if (sect.pageSize.h != null) a['w:h'] = String(sect.pageSize.h);
                 if (sect.pageSize.orient) a['w:orient'] = sect.pageSize.orient;
+                if (sect.pageSize.code != null) a['w:code'] = String(sect.pageSize.code);
                 children.push(xml.el('w:pgSz', a));
             }
             if (sect.pageMargin) {
@@ -806,8 +1093,7 @@ export const docxStructure = {
                 children.push(xml.el('w:titlePg', {}));
             }
             if (sect._extras) for (const ex of sect._extras) children.push(ex);
-            if (!children.length) return null;
-            return xml.el('w:sectPr', {}, ordered(children, SECT_SEQ));
+            return xml.el('w:sectPr', {}, children.length ? ordered(children, SECT_SEQ) : []);
         }
 
         // --- Body dispatch ---
@@ -834,14 +1120,22 @@ export const docxStructure = {
                 switch (c.name) {
                     case 'w:p': {
                         const math = blockMathOf(c);
-                        body.push(math ? mathMod.parseOMathPara(math) : parseParagraph(c));
+                        // A paragraph holding only a display equation: its
+                        // ids ride on the equation, written on its `w:p`.
+                        const node = math ? mathMod.parseOMathPara(math) : parseParagraph(c);
+                        if (math) readIds(c, node);
+                        body.push(node);
                         break;
                     }
                     case 'w:tbl':       body.push(parseTable(c)); break;
                     case 'w:sdt':       body.push(parseSdt(c, true)); break;
                     case 'm:oMathPara': body.push(mathMod.parseOMathPara(c)); break;
                     case 'w:sectPr':    sectPr = parseSection(c); break;
-                    default:            extras.push(c);
+                    default: {
+                        const marker = parseMarker(c);
+                        if (marker) body.push(marker);
+                        else extras.push(c);
+                    }
                 }
             }
             return { body, sectPr, extras };
@@ -853,7 +1147,11 @@ export const docxStructure = {
                 if (node.type === 'paragraph')      children.push(renderParagraph(node));
                 else if (node.type === 'table')     children.push(renderTable(node));
                 else if (node.type === 'blockSdt')  children.push(renderSdt(node));
-                else if (node.type === 'oMathPara') children.push(xml.el('w:p', {}, [mathMod.renderOMathPara(node)]));
+                else if (node.type === 'oMathPara') children.push(xml.el('w:p', idAttrs(node), [mathMod.renderOMathPara(node)]));
+                else {
+                    const marker = renderMarker(node);
+                    if (marker) children.push(marker);
+                }
             }
             if (doc._extras) for (const ex of doc._extras) children.push(ex);
             const sect = renderSection(doc.sectPr);
@@ -864,7 +1162,7 @@ export const docxStructure = {
         return {
             parseRun, renderRun,
             parseHyperlink, renderHyperlink,
-            parseParagraph, renderParagraph,
+            parseParagraph, renderParagraph, withParaIds,
             parseTable, renderTable,
             parseRow, renderRow,
             parseCell, renderCell,

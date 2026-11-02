@@ -257,6 +257,8 @@ export const modules = [
     pdfAsciiHex, pdfAscii85, pdfRunLength,
     pdfFlate, pdfFilterDispatch,
     pdfObjStream, pdfCrossRefStream,
+    // Crypto (fw-bound; the document reader decrypts with them)
+    pdfSecurity, pdfAesGcm, pdfStandardV4, pdfStandardV5, pdfStandardV6, pdfPermissions,
     // Document
     pdfCatalog, pdfPages, pdfPage, pdfDocument, pdfWriter, pdfBuilder, pdfIncrementalWriter, pdfResources,
     pdfXrefStreamWriter,
@@ -274,8 +276,7 @@ export const modules = [
     // Tagged
     pdfStructTree, pdfStructElement, pdfRoleMap, pdfParentTree,
     pdfClassMap, pdfMarkedContent,
-    // Crypto (fw-bound)
-    pdfSecurity, pdfAesGcm, pdfStandardV4, pdfStandardV5, pdfStandardV6, pdfPermissions,
+    // Crypto writer (fw-bound)
     pdfEncryptedWriter,
     // Signatures (fw-bound)
     pdfSigOids, pdfSha1,

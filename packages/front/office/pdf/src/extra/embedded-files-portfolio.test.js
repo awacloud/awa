@@ -252,3 +252,76 @@ describe('extra/embedded-files-portfolio — top-level rejections', () => {
         expect(icon.raw.type).toBe('stream');
     });
 });
+
+describe('collection parts and the /Type of a field and a sort (A39b)', () => {
+    const { typeCollectionPart, COLLECTION_PART_KEYS, typeSchemaField: field, typeSort: sort } = pdfEmbeddedFilesPortfolio.factory(_pdfErrors_TD1);
+    const { ContractError, ParseError: PE } = _pdfErrors_TD1;
+    const u8 = (s) => new TextEncoder().encode(s);
+
+    test('a folder: each key by its value or as read', () => {
+        const f = typeCollectionPart(obj.dict({ Type: obj.name('Folder'), ID: obj.int(3), Name: obj.string(u8('Docs')), Parent: obj.ref(2, 0),
+            CreationDate: obj.string(u8('D:2026')), Thumb: obj.stream(obj.dict({}), new Uint8Array()), Free: obj.array([]), Foo: obj.int(1) }), 'folder');
+        expect([f.type, f.id, f.parent.type, f.thumb.type, f.free.type]).toEqual(['Folder', 3, 'ref', 'stream', 'array']);
+        expect([f.name, f.creationdate]).toEqual([u8('Docs'), u8('D:2026')]);
+        expect(f._extras).toEqual({ Foo: obj.int(1) });
+    });
+
+    test('colours, split, sub-item', () => {
+        expect(typeCollectionPart(obj.dict({ Background: obj.array([]), PrimaryText: obj.name('x') }), 'colors')).toMatchObject({ background: { type: 'array' }, primarytext: null });
+        expect(typeCollectionPart(obj.dict({ Direction: obj.name('H'), Position: obj.real(0.4) }), 'split')).toMatchObject({ direction: 'H', position: 0.4 });
+        expect(typeCollectionPart(obj.dict({ D: obj.real(12), P: obj.string(u8('$')) }), 'subitem')).toMatchObject({ d: 12, p: u8('$') });
+        expect(typeCollectionPart(obj.dict({ D: obj.string(u8('D:2026')) }), 'subitem').d).toEqual(u8('D:2026'));
+        expect(Object.keys(COLLECTION_PART_KEYS).sort()).toEqual(['colors', 'folder', 'split', 'subitem']);
+        const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+        expect(code(() => typeCollectionPart(obj.array([]), 'folder'))).toEqual([PE.name, 'pdf/portfolio/part/not-dict']);
+        expect(code(() => typeCollectionPart(obj.dict({}), 'navigator'))).toEqual([ContractError.name, 'pdf/portfolio/part/kind']);
+    });
+
+    test('a schema field and a sort read their /Type', () => {
+        const fd = field('F', obj.dict({ Type: obj.name('CollectionField'), Subtype: obj.name('S') }));
+        expect([fd.type, fd._extras]).toEqual(['CollectionField', {}]);
+        const so = sort(obj.dict({ Type: obj.name('CollectionSort'), S: obj.name('F') }));
+        expect([so.type, so._extras]).toEqual(['CollectionSort', {}]);
+    });
+});
+
+describe('extra/embedded-files-portfolio — the navigator type and layout (A40c)', () => {
+    test('type and layout, present only when the key is', () => {
+        const nav = obj.dict({ Type: obj.name('Navigator'), Layout: obj.name('FilmStrip') });
+        const r = m.typeNavigator(nav);
+        expect([r.type, r.layout, r.raw, r.entries]).toEqual(['Navigator', 'FilmStrip', nav, nav.entries]);
+        const list = obj.array([obj.name('D'), obj.name('T')]);
+        expect(m.typeNavigator(obj.dict({ Layout: list })).layout).toBe(list);
+        const bare = m.typeNavigator(obj.dict({}));
+        expect(['type' in bare, 'layout' in bare]).toEqual([false, false]);
+        expect(m.typeNavigator(obj.dict({ Layout: obj.int(1) })).layout).toBe(null);
+    });
+});
+
+describe('extra/embedded-files-portfolio — the file parts and targets (A40e)', () => {
+    const { ContractError } = _pdfErrors_TD1;
+    const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+    test('EF, RF, Mac, target', () => {
+        const st = obj.ref(6, 0);
+        const ef = m.typeFilePart(obj.dict({ F: st, UF: st, Foo: obj.int(1) }), 'ef');
+        expect([ef.f, ef.uf, ef._extras]).toEqual([st, st, { Foo: obj.int(1) }]);
+        const rf = m.typeFilePart(obj.dict({ F: obj.array([]), UF: obj.array([]) }), 'rf');
+        expect([rf.f.type, rf.uf.type]).toEqual(['array', 'array']);
+        const mac = m.typeFilePart(obj.dict({ Subtype: obj.int(1), Creator: obj.int(2), ResFork: st }), 'mac');
+        expect([mac.subtype, mac.creator, mac.resfork]).toEqual([1, 2, st]);
+        const t = m.typeFilePart(obj.dict({ R: obj.name('C'), N: obj.string(u8('a.pdf')), P: obj.int(0), A: obj.string(u8('note')), T: obj.dict({}) }), 'target');
+        expect([t.r, t.n, t.p, t.a, t.t.type]).toEqual(['C', u8('a.pdf'), 0, u8('note'), 'dict']);
+        expect(m.typeFilePart(obj.dict({ P: obj.string(u8('dest')), A: obj.int(2) }), 'target')).toMatchObject({ p: u8('dest'), a: 2 });
+        expect(m.typeFilePart(obj.dict({ R: obj.int(1) }), 'target').r).toBe(null);
+    });
+    test('every kind of FILE_PART_KEYS types every key of its list; errors', () => {
+        expect(Object.keys(m.FILE_PART_KEYS).sort()).toEqual(['ef', 'mac', 'rf', 'target']);
+        for (const [kind, keys] of Object.entries(m.FILE_PART_KEYS)) {
+            const entries = {};
+            for (const k of keys) entries[k] = obj.ref(1, 0);
+            expect(m.typeFilePart(obj.dict(entries), kind)._extras).toEqual({});
+        }
+        expect(code(() => m.typeFilePart(obj.array([]), 'ef'))).toEqual([ParseError.name, 'pdf/portfolio/file-part/not-dict']);
+        expect(code(() => m.typeFilePart(obj.dict({}), 'EF'))).toEqual([ContractError.name, 'pdf/portfolio/file-part/kind']);
+    });
+});

@@ -12,20 +12,20 @@ pipeline detects are recorded; the known silent cases are listed in the
 
 No network access, no external tool, no bundler. Its only runtime
 dependencies are
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/fw)
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/fw)
 and the office packages it composes:
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/ooxml),
-[`@awacloud/odf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/odf),
-[`@awacloud/md`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/md),
-[`@awacloud/pdf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/pdf)
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/ooxml),
+[`@awacloud/odf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/odf),
+[`@awacloud/md`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/md),
+[`@awacloud/pdf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/pdf)
 and
-[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/fonts).
+[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/fonts).
 
 Bounds, stated up front: `fromMd` is structural only (one fixed built-in style
-set per target, never caller styling); `pdf → md` reads text only (no scanned
-pages, no OCR); `md → pdf` is a bounded typesetter (one page size per
-document, one column, greedy line breaking, no hyphenation, no justification,
-no table splitting). The [loss matrix](./docs/loss-matrix.md) gives the
+set per target, never caller styling); `pdf → md` reads the text layer
+(pictures only on request, no scanned pages, no OCR); `md → pdf` is a bounded
+typesetter (one page size per document, one column, greedy line breaking, no
+hyphenation, no justification, no table splitting). The [loss matrix](./docs/loss-matrix.md) gives the
 Preserved / Degraded / Dropped breakdown for every pair.
 
 ## Installation
@@ -120,12 +120,14 @@ input field and error.
 tables, an asset manifest and the loss ledger. `convertedAt` is required and
 never defaults to the clock, so two calls on the same bytes produce the same
 Markdown byte for byte. [`docs/profile-v1.md`](./docs/profile-v1.md) is the
-full wire contract.
+full wire contract. The asset manifest carries the bytes of the pictures a
+docx, odt or pptx source holds (a pptx picture named `image<k>.<ext>` per
+distinct picture of the deck); a pdf's, on request (`pdfInclude`, below).
 
 The source format comes from `name`'s extension (`.docx`, `.odt`, `.xlsx`,
 `.ods`, `.pptx`, `.odp`, `.pdf`, case-insensitive) unless `format` is given;
-an unresolved format throws `oconv: unsupported format`. Two reader options
-exist:
+an unresolved format throws `oconv: unsupported format`. These reader
+options exist:
 
 - `includeNotes` (boolean, default `false`, `pptx` / `odp`): renders speaker
   notes as a trailing blockquote per slide instead of recording a
@@ -135,6 +137,110 @@ exist:
   XObjects, default `1000000`. It must be a safe integer of at least 1, else
   `oconv: bad form op budget`; passing it for another format throws
   `oconv: form op budget needs format pdf`.
+- `pdfInfer` (`pdf` only, opt-in): inference on an untagged PDF, beyond the
+  text-first default. `['headings']` turns a short line set larger than the
+  body text, or a short line set wholly in bold, into a Markdown heading,
+  its level ranked by size; `['tables']` reads a table drawn with rules
+  (a grid of crossing lines) and a block of lines whose short pieces align
+  in columns (measured on opendataloader-bench with both: overall 0.5753 →
+  0.7949, the `opendataloader-bench-layout` entry of the coverage
+  scorecard). `['running']` leaves out a running header or footer: a
+  line near the top or bottom of the page whose text, page numbers
+  aside, recurs at the same height on half the pages (3 pages or more),
+  recorded `text/running-dropped`. A tagged PDF keeps its own structure.
+  An unknown or repeated name throws `oconv: bad pdf infer`; passing it for
+  another format throws `oconv: pdf infer needs format pdf`.
+- `pdfDeclare` (`pdf` only, opt-in): records what the pdf reader otherwise
+  does silently. `['positional']` adds one `struct/positional` loss when
+  an untagged PDF's structure was built from the text's positions (the
+  detail names it: `paragraphs`, plus `headings` and `tables` under
+  `pdfInfer`), so such a read is `lossy`. An unknown or repeated name
+  throws `oconv: bad pdf declare`; passing it for another format throws
+  `oconv: pdf declare needs format pdf`.
+- `pdfInclude` (`pdf` only, opt-in): brings back parts the pdf reader
+  otherwise drops. `['images']` places each JPEG or JPEG 2000 (JP2)
+  picture, and each grey, RGB or indexed raw-pixel one written as a PNG
+  (its soft mask as alpha, an ICC profile kept), where it is drawn, as a
+  Markdown image (`image-<obj>.jpg` / `.jp2` / `.png`) whose bytes come
+  back in `assets`; a mask that cannot be applied — a JPEG's, a stencil —
+  is recorded (`image/mask-dropped`), and every other picture (CMYK, fax,
+  JBIG2, an inline image) is still dropped (`image/dropped`). On a tagged
+  PDF a picture stands with the struct element that lists it. An unknown
+  or repeated name throws `oconv: bad pdf include`; passing it for another
+  format throws `oconv: pdf include needs format pdf`.
+- `pdfPassword` (`pdf` only, opt-in): the user or owner password (a string
+  or bytes) that opens an encrypted PDF, RC4 (V1 / V2) files included
+  (oconv passes pdf's read-only `pdfLegacyRc4Read` with it); pass `''` for
+  an empty user password — none is tried unless `pdfPassword` is given.
+  Without it such a PDF throws `pdf/document/encrypted`, and a wrong one throws
+  `pdf/document/bad-password`. Passing it for another format throws
+  `oconv: pdf password needs format pdf`.
+- `pdfLineHyphens` (`pdf` only, opt-in): `'drop'` or `'keep'`. A word a
+  hyphen cuts at a line end comes out `infor- mation` by default (a soft
+  hyphen always joins); `'drop'` joins it without the hyphen
+  (`information`, though a compound cut at its own hyphen loses it),
+  `'keep'` with it (`infor-mation`, `well-known`). Another value throws
+  `oconv: bad pdf line hyphens`; passing it for another format throws
+  `oconv: pdf line hyphens needs format pdf`.
+- `pdfRecoverXref` (`pdf` only, opt-in): `true` rebuilds a cross-reference
+  chain the PDF reader cannot use (a damaged or truncated file) from the
+  file's object definitions; `false` reads as without it, another value
+  throws `oconv: bad pdf recover xref`, and passing it for another format
+  throws `oconv: pdf recover xref needs format pdf`. The rebuild is not
+  recorded in the ledger: `toMd` does not forward the PDF reader's own
+  losses (a known silent case, listed in the
+  [loss matrix](./docs/loss-matrix.md#known-silent-cases)).
+- `odtInclude` (`odt` only, opt-in): brings back parts the odt reader
+  otherwise drops. `['toc']` reads a table of contents' entries (and its
+  title) as paragraphs at its place, as the document shows them, page
+  numbers included and links not; without it the table of contents is
+  dropped (`block/dropped`). An unknown or repeated name throws
+  `oconv: bad odt include`; passing it for another format throws
+  `oconv: odt include needs format odt`.
+- `docxInclude` (`docx` only, opt-in): the same for a docx. `['toc']`
+  reads a table of contents control's entries as paragraphs at its place,
+  as the document shows them, page numbers included and links not;
+  without it the control is dropped (`block/dropped`, detail `toc`). An
+  unknown or repeated name throws `oconv: bad docx include`; passing it
+  for another format throws `oconv: docx include needs format docx`.
+- `sheets` (`xlsx` and `ods`, opt-in): `'table'` (the default) writes each
+  sheet as a GFM table; `'csv'` or `'tsv'` as one fenced `csv` / `tsv` block
+  under the sheet's heading — on a dense sheet a pipe table can weigh more
+  than its source, a CSV block a fraction of it. csv quotes per RFC 4180;
+  tsv escapes a cell's backslash, tab and line breaks (`sheet/tsv-escaped`).
+  Another value throws `oconv: bad sheets`; passing it for another format
+  throws `oconv: sheets needs format xlsx or ods`.
+- `sheetCellBudget` (`xlsx` and `ods`, opt-in): a positive safe integer.
+  A sheet whose padded table would hold more cells — one very wide row
+  pads every other row to its width — is written unpadded instead: one
+  `<A1 address>: <text>` line per value (its rows unpadded under `sheets`
+  `'csv'` / `'tsv'`), recorded `sheet/sparse-form`. Another value throws
+  `oconv: bad cell budget`; passing it for another format throws
+  `oconv: sheet cell budget needs format xlsx or ods`.
+- `outputBudget` (every format, opt-in): `{ bytes, overflow }`. After the
+  read, the UTF-8 size of the document's text (the markdown adds its
+  syntax on top) is compared with `bytes`, a positive safe integer, before
+  any markdown is built, so a small file that expands to gigabytes of text
+  fails fast instead of running out of memory. Past it, `overflow`
+  `'throw'` (the default) throws `oconv: output too large`; `'truncate'`
+  keeps the leading blocks (and a crossing table's leading rows) that fit
+  and records `doc/truncated`. Another shape throws `oconv: bad output
+  budget`.
+- `archiveLimits` (office formats, opt-in): `{ maxParts, maxUncompressed,
+  maxRatio, maxDepth }`, any of them, passed to the docx, xlsx, pptx,
+  odt, ods or odp reader. A large deck or a workbook that inflates past
+  256 MiB is refused by the readers' defaults; this raises (or lowers)
+  them per call, `0` disabling a check. The ODF readers take the first
+  three. A key or value that is not one of these non-negative safe
+  integers throws `oconv: bad archive limits`; passing it for a pdf throws
+  `oconv: archive limits need an office source`.
+
+One writer option exists, `opts.frontMatter`: `'full'` (the default),
+`'compact'` (the loss ledger with one counted line per code and detail —
+a long document's front matter shrinks by an order of magnitude) or
+`'none'` (the Markdown body alone; the result's `anchors`, `losses` and
+`assets` stand in for it). Any other value throws `oconv: bad front
+matter`.
 
 The `.odt` reader resolves run and list formatting from automatic styles and
 from named styles that are fully mapped (a single style, no parent-style
@@ -218,10 +324,11 @@ What happens next depends on the target, and the ledger says which:
   bytes the reader carried) as a `Pictures/` part in an inline frame sized
   by the same rule as docx, its alt text as the frame title (a header it
   cannot read gives a 2 in × 1.5 in frame and records
-  `image/size-defaulted`). With no bytes it records `image/dropped`. Read
-  back through `toMd`, the frame surfaces as an image asset with its bytes
-  and its alt text, named after its picture path (the writer writes no
-  frame name).
+  `image/size-defaulted`). With no bytes it keeps the image's place as an
+  empty frame in that default box (`image/placeholder`). Read back through
+  `toMd`, the frame surfaces as an image asset with its bytes (none for an
+  empty frame), its alt text and its name (the frame's `draw:name`, unique
+  per document).
 
 `assets` must be a non-null, non-array object of `Uint8Array` values, else
 `fromMd` throws `oconv: bad assets`.
@@ -251,7 +358,7 @@ covers the signature, the error order and the worker message.
 
 With no `opts.pdf.fonts`, the pdf writer uses the Standard 14 fonts (WinAnsi
 text only). Registering the optional
-[`@awacloud/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/oconv-fonts)
+[`@awacloud/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/oconv-fonts)
 pack switches every style class you did not supply to embedded Liberation
 faces. This package never imports the pack and does not list it as a
 dependency; the writer finds it by the module name `oconvDefaultFaces`.
@@ -387,9 +494,9 @@ Copyright (c) 2026 AwaCloud SAS
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/oconv`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.1.0/packages/front/office/oconv)
+- Source: [`packages/front/office/oconv`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/oconv)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/oconv@1.1.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/oconv@1.2.0/SECURITY.md
 - Documentation: [index](./docs/README.md),
   [getting started](./docs/guide/getting-started.md),
   [API reference](./docs/api/README.md),

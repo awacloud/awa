@@ -32,7 +32,7 @@
  *
  * | Option            | Default       | Meaning                                |
  * |-------------------|---------------|----------------------------------------|
- * | `maxParts`        | `1024`        | max number of entries in the archive   |
+ * | `maxParts`        | `8192`        | max number of entries in the archive   |
  * | `maxUncompressed` | `256 * 1MiB`  | max total uncompressed bytes           |
  * | `maxRatio`        | `200`         | max uncompressed/compressed ratio      |
  * | `maxDepth`        | `1000`        | max element depth of an XML part       |
@@ -60,7 +60,7 @@ export const opcPackage = {
         const { ParseError, RenderError, ContractError } = errors;
 
         const DEFAULT_LIMITS = Object.freeze({
-            maxParts: 1024,
+            maxParts: 8192,
             maxUncompressed: 256 * 1024 * 1024,
             maxRatio: 200,
             maxDepth: 1000
@@ -133,7 +133,7 @@ export const opcPackage = {
          *
          * @param {Uint8Array} bytes
          * @param {object} [opts]
-         * @param {number} [opts.maxParts=1024] max entries; `0` disables.
+         * @param {number} [opts.maxParts=8192] max entries; `0` disables.
          * @param {number} [opts.maxUncompressed=268435456] max total
          *        uncompressed bytes (256 MiB); `0` disables.
          * @param {number} [opts.maxRatio=200] max uncompressed/compressed

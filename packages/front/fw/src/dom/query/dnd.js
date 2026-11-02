@@ -9,7 +9,7 @@
  * Custom preview (clone or app-supplied element), threshold handling,
  * hoverClass.
  *
- * Out of scope : OS-level file drag (use `fsAccess` + `pickFile`).
+ * Out of scope : OS-level file drag (see the `fileIntake` module).
  *
  * Lifecycle robustness :
  * - `pointercancel` is treated as a graceful cancel (no `onDrop`, `onEnd`

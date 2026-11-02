@@ -24,7 +24,7 @@ Two versions: v0 (flat layers `(layerGid, paletteIndex)`) and v1 (paint graph: l
 | `parseColr` | function | `(bytes) => { version, baseGlyphs, layers, v1, baseLayer(gid) }`. `baseGlyphs[i]` is `{ glyphID, firstLayerIndex, numLayers }`; `layers[i]` is `{ glyphID, paletteIndex }`; `v1` is `null` for version 0, else `{ baseGlyphListOffset, layerListOffset, clipListOffset, varIndexMapOffset, itemVariationStoreOffset, baseGlyphPaintRecords? }`. `baseLayer(gid)` returns the layer slice for a base glyph. |
 | `decodeColorLine` | function | `(bytes, offset) => { extend, numStops, stops }`; each stop is `{ stopOffset, paletteIndex, alpha }`. |
 | `decodePaint` | function | `(bytes, offset) => { format, name, ...fields }` for every format 1–32 (`name` is the spec table name, e.g. `'PaintScaleAroundCenter'`); a format outside 1–32 returns `{ format, parsed: false }`. Child paint offsets stay raw (`paintOffset`, or `paintOffsetSrc` / `paintOffsetDst` for `PaintComposite`). |
-| `decodePaintGraph` | function | `(bytes, rootOffset, maxDepth=16) => PaintGraph` — `decodePaint` plus `offset`, with child offsets resolved into `paint` (or `paintSrc` / `paintDst`); cycles yield `{ cycle: true, offset }`, depth overflow `{ truncated: true, offset }`. |
+| `decodePaintGraph` | function | `(bytes, rootOffset, maxDepth=16) => PaintGraph` — `decodePaint` plus `offset`, with child offsets resolved into `paint` (or `paintSrc` / `paintDst`); depth overflow yields `{ truncated: true, offset }`. |
 | `tableColr` | factory | Factory. |
 
 ## Paint formats
@@ -100,7 +100,9 @@ const layers = colr.baseLayer(42);
 
 ## Notes
 
-- `maxDepth=16` avoids cycles in the paint graph.
+- `maxDepth=16` bounds the walk. A paint graph cannot cycle: child offsets
+  are unsigned and relative to their parent, so each child lies further
+  into the table.
 - Colors are resolved via [cpal](./cpal.md).
 
 ## See also

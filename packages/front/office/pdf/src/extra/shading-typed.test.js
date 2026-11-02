@@ -144,3 +144,46 @@ describe('factory', () => {
         expect(typeof api.typeFunction).toBe('function');
     });
 });
+
+describe('typePattern (ISO 32000-2 patterns)', () => {
+    const { typePattern, PATTERN_KEYS } = pdfShadingTyped.factory(_errors, _parserObj);
+
+    test('a tiling pattern (a stream): its keys by value or as read, its stream keys left out', () => {
+        const s = obj.stream(obj.dict({
+            Type: obj.name('Pattern'), PatternType: obj.int(1), PaintType: obj.int(1), TilingType: obj.int(2),
+            BBox: obj.array([]), XStep: obj.real(10), YStep: obj.int(12), Resources: obj.dict({}), Matrix: obj.array([]),
+            XUID: obj.array([]), Length: obj.int(30), Filter: obj.name('FlateDecode'), Foo: obj.int(1)
+        }), new Uint8Array(30));
+        const r = typePattern(s);
+        expect([r.type, r.patterntype, r.painttype, r.tilingtype, r.xstep, r.ystep]).toEqual(['Pattern', 1, 1, 2, 10, 12]);
+        expect([r.bbox.type, r.resources.type, r.matrix.type, r.xuid.type]).toEqual(['array', 'dict', 'array', 'array']);
+        expect('length' in r || 'filter' in r).toBe(false);
+        expect(r._extras).toEqual({ Foo: obj.int(1) });
+        expect(r.raw).toBe(s);
+    });
+
+    test('a shading pattern: Shading a dictionary or a stream, a wrong type null', () => {
+        const r = typePattern(obj.dict({ PatternType: obj.int(2), Shading: obj.dict({}), ExtGState: obj.ref(3, 0), Matrix: obj.name('x') }));
+        expect([r.shading.type, r.extgstate.type, r.matrix]).toEqual(['dict', 'ref', null]);
+        expect(typePattern(obj.dict({ PatternType: obj.int(2), Shading: obj.stream(obj.dict({}), new Uint8Array()) })).shading.type).toBe('stream');
+    });
+
+    test('every type of PATTERN_KEYS types every key of its list', () => {
+        expect(Object.isFrozen(PATTERN_KEYS)).toBe(true);
+        expect(Object.keys(PATTERN_KEYS).sort()).toEqual(['1', '2']);
+        for (const [type, keys] of Object.entries(PATTERN_KEYS)) {
+            expect(keys.length).toBe({ 1: 10, 2: 5 }[type]);
+            const entries = {};
+            for (const k of keys) entries[k] = obj.ref(1, 0);
+            entries.PatternType = obj.int(Number(type));
+            expect(typePattern(obj.dict(entries))._extras).toEqual({});
+        }
+    });
+
+    test('neither a dictionary nor a stream, or a missing or unknown /PatternType, throws', () => {
+        const code = (fn) => { try { fn(); } catch (e) { return [e instanceof ParseError, e.code]; } return null; };
+        expect(code(() => typePattern(obj.name('P0')))).toEqual([true, 'pdf/extra/shading/pattern/not-dict']);
+        expect(code(() => typePattern(obj.dict({})))).toEqual([true, 'pdf/extra/shading/pattern/bad-type']);
+        expect(code(() => typePattern(obj.dict({ PatternType: obj.int(3) })))).toEqual([true, 'pdf/extra/shading/pattern/bad-type']);
+    });
+});

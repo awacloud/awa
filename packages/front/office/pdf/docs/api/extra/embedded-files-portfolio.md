@@ -20,7 +20,8 @@ Augments the L1 `/Collection` typing with deep inspection: `/Schema` field defs,
 ```js
 const ext = runtime.resolve('pdfEmbeddedFilesPortfolio');
 // Returns: { typePortfolio, typeSchema, typeSchemaField, typeSort,
-//   typeNavigator, typeCustomIcon, typeCollectionItem,
+//   typeNavigator, typeCustomIcon, typeCollectionItem, typeCollectionPart,
+//   COLLECTION_PART_KEYS, typeFilePart, FILE_PART_KEYS,
 //   VIEW_MODES, SCHEMA_SUBTYPES }
 ```
 
@@ -30,11 +31,15 @@ const ext = runtime.resolve('pdfEmbeddedFilesPortfolio');
 |--------|-----------|---------|
 | `typePortfolio` | `(collectionDict) => Portfolio` | Full view `{ raw, _extras, schema?, initialDoc?, view?, sort?, navigator? }`. |
 | `typeSchema` | `(dict) => { fields, raw }` | `/Schema` fields, keyed by their dict key; the optional `/Type /CollectionSchema` names the dictionary and is not a field. |
-| `typeSchemaField` | `(name, dict) => Field` | A single field definition. |
-| `typeSort` | `(dict) => Sort` | `/Sort` `/S`/`/A`. |
-| `typeNavigator` | `(value) => Navigator` | Ref or typed dict. |
+| `typeSchemaField` | `(name, dict) => Field` | A single field definition; `type` holds `/Type` when present. |
+| `typeSort` | `(dict) => Sort` | `/Sort` `/S`/`/A`; `type` holds `/Type` when present. |
+| `typeNavigator` | `(value) => Navigator` | Ref or typed dict: `{ raw, entries }`, with `type` (a name by value) and `layout` (a name by value or the array as read, `null` for another value), each present only when the key is. |
 | `typeCustomIcon` | `(dict) => { raw }` | `/CI` icon. |
-| `typeCollectionItem` | `(dict) => CI` | Per-file metadata. |
+| `typeCollectionItem` | `(dict) => CI` | Per-file metadata; `type` holds `/Type` when present. |
+| `typeCollectionPart` | `(dict, kind) => Part` | A collection folder, colours, split or sub-item dictionary (`kind` `folder`, `colors`, `split`, `subitem`): one field per key of its list, named after the key in lower case (`CreationDate` → `creationdate`), present only when the key is — a name, a text string (its bytes; a date as its string), a number or an integer by its value, an array, a dictionary or a stream as read, a reference as read, a sub-item's `D` a string or a number, `null` for none — plus `raw` and `_extras`. |
+| `COLLECTION_PART_KEYS` | frozen object | Kind → its keys (the Arlington PDF Model's lists). |
+| `typeFilePart` | `(dict, kind) => FilePart` | A file specification's `/EF` (`kind` `ef`: `F`, `UF` streams) or `/RF` (`rf`: `F`, `UF` arrays), a Mac OS file information dictionary (`mac`: `Subtype`, `Creator` integers, `ResFork` a stream) or a go-to-embedded target (`target`: `R` a name, `N` a string's bytes, `P` and `A` an integer or a string, `T` a dictionary): one field per key of its list, named after the key in lower case, present only when the key is — a reference as read, `null` for a value of another type — plus `raw` and `_extras`. |
+| `FILE_PART_KEYS` | frozen object | Kind → its keys (the Arlington PDF Model's lists). |
 | `VIEW_MODES` | `Set` | `D`, `T`, `H`, `C`. |
 | `SCHEMA_SUBTYPES` | `Set` | `S`, `D`, `N`, `F`, `Desc`, `ModDate`, `CreationDate`, `Size`. |
 
@@ -79,6 +84,10 @@ ext.typeSort(sortDict);
 | `pdf/portfolio/bad-d` | `ParseError` | `/D` is not a string. |
 | `pdf/portfolio/bad-view` | `ParseError` | `/View` outside `VIEW_MODES`. |
 | `pdf/portfolio/ci-not-dict` | `ParseError` | `typeCollectionItem` argument is not a dict. |
+| `pdf/portfolio/part/not-dict` | `ParseError` | `typeCollectionPart`: not a dict. |
+| `pdf/portfolio/part/kind` | `ContractError` | `typeCollectionPart`: `kind` missing or unknown. |
+| `pdf/portfolio/file-part/not-dict` | `ParseError` | `typeFilePart`: not a dict. |
+| `pdf/portfolio/file-part/kind` | `ContractError` | `typeFilePart`: `kind` missing or unknown. |
 
 ## See also
 

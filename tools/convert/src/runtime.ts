@@ -31,7 +31,8 @@
  * @module tool-convert/runtime
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 /** Read a file's raw bytes (binary-safe). */
 export function readFileBytes(path: string): Uint8Array {
@@ -45,6 +46,13 @@ export function readFileText(path: string): string {
 
 /** Write bytes or text to a file, replacing it. */
 export function writeFileOut(path: string, data: Uint8Array | string): void {
+    writeFileSync(path, data);
+}
+
+/** Write bytes to `<dir>/<name>`, creating `dir` and any sub-directory `name` carries. `name` is a safe relative path (`assetFiles`). */
+export function writeFileUnder(dir: string, name: string, data: Uint8Array): void {
+    const path = join(dir, name);
+    mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, data);
 }
 

@@ -66,6 +66,7 @@ import { wmlRunFormatting } from '@awacloud/ooxml/extra/wml-run-formatting';
 | [`dmlShapesAdvanced`](./dml-shapes-advanced.md) | 26 | [`src/extra/dml-shapes-advanced.js`](../../../src/extra/dml-shapes-advanced.js) | Custom geometry |
 | [`dmlWpPositioning`](./dml-wp-positioning.md) | 27 | [`src/extra/dml-wp-positioning.js`](../../../src/extra/dml-wp-positioning.js) | wp:anchor + wrap |
 | [`dmlXdrAdvanced`](./dml-xdr-advanced.md) | 28 | [`src/extra/dml-xdr-advanced.js`](../../../src/extra/dml-xdr-advanced.js) | Connectors + groups |
+| [`dmlWpDrawing`](./dml-wp-drawing.md) | — | [`src/extra/dml-wp-drawing.js`](../../../src/extra/dml-wp-drawing.js) | docx drawing edits written into the kept source; typed `frame`, `layout`, `picture`, `shape`, `group`, `canvas` |
 | [`dmlMainMisc`](./dml-main-misc.md) | misc | [`src/extra/dml-main-misc.js`](../../../src/extra/dml-main-misc.js) | Long-tail dml sweeper |
 
 ## Math extras

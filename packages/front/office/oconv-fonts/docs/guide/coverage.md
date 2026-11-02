@@ -12,6 +12,6 @@ Generated from `coverage/scorecard.json` (format `office-scorecard/v1`) in the r
 
 | Suite | Result | What is measured | Measured | Replay |
 |---|---|---|---|---|
-| `bun-coverage-src` bun 1.3.13 | lines 100.00 %, functions 100.00 % (mean of 3 source files) | the coverage gate's model over the declared basis (src/**) | 2026-10-17, `cf58af11f` | `bun cli.ts office-scorecard axis-a --pkg oconv-fonts` |
+| `bun-coverage-src` bun 1.3.13 | lines 100.00 %, functions 100.00 % (mean of 3 source files) | the coverage gate's model over the declared basis (src/**) | 2026-10-26, `976d3b35e` | `bun cli.ts office-scorecard axis-a --pkg oconv-fonts` |
 
 <!-- office-scorecard:end -->

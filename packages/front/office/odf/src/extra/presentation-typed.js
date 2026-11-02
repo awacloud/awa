@@ -118,8 +118,8 @@ export const presentationTyped = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const n of out.presentation) extras.push(renderNode(n));
             delete out.presentation;
-            if (Array.isArray(slide._extras) || !slide._extras) out._extras = extras;
-            else out._extras = { ...slide._extras, children: extras };
+            if (Array.isArray(slide._extras)) out._extras = extras;
+            else out._extras = { ...(slide._extras || {}), children: extras };
             return out;
         }
 

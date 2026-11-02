@@ -111,6 +111,48 @@ interface ToMdInput {
     convertedAt: string;
     format?: string;
     includeNotes?: boolean;
+    sheets?: string;   // 'table' | 'csv' | 'tsv', xlsx/ods only
+    formOpBudget?: number;              // pdf only
+    pdfInfer?: string[];                // pdf only: 'headings', 'tables', 'running'
+    pdfDeclare?: string[];              // pdf only: 'positional'
+    pdfInclude?: string[];              // pdf only: 'images'
+    pdfPassword?: string | Uint8Array;  // pdf only
+    pdfRecoverXref?: boolean;           // pdf only
+    pdfLineHyphens?: string;            // pdf only: 'drop' | 'keep'
+    odtInclude?: string[];              // odt only: 'toc'
+    docxInclude?: string[];             // docx only: 'toc'
+    sheetCellBudget?: number;           // xlsx/ods only
+    archiveLimits?: ArchiveLimits;      // office formats only
+    outputBudget?: OutputBudget;        // every format
+    opts?: { frontMatter?: string };    // 'full' | 'compact' | 'none'
+}
+```
+
+## `ArchiveLimits`
+
+`ToMdInput.archiveLimits`: any of the office readers' archive limits,
+each a non-negative integer (`0` disables that check). odt, ods and odp
+take the first three.
+
+```ts
+interface ArchiveLimits {
+    maxParts?: number;
+    maxUncompressed?: number;
+    maxRatio?: number;
+    maxDepth?: number;
+}
+```
+
+## `OutputBudget`
+
+`ToMdInput.outputBudget`: past `bytes` of text (UTF-8, checked before the
+markdown is built), `'throw'` (the default) fails with `oconv: output too
+large`, `'truncate'` keeps what fits and records `doc/truncated`.
+
+```ts
+interface OutputBudget {
+    bytes: number;
+    overflow?: 'throw' | 'truncate';
 }
 ```
 
@@ -123,6 +165,7 @@ interface ToMdOutput {
     losses: Loss[];
     lossSummary: LossSummaryEntry[];
     lossy: boolean;
+    assets: Asset[];
 }
 ```
 
@@ -130,6 +173,32 @@ interface ToMdOutput {
 
 ```ts
 type ToMdResult = CoreError | ToMdOutput;
+```
+
+## `Asset`
+
+One entry of the asset manifest of a [`ToMdOutput`](#tomdoutput): an image
+the markdown references by `name`, in document order, one entry per name.
+`bytes` is present when the reader captured the image (a docx, odt or pptx
+picture; a pdf picture under `pdfInclude: ['images']`).
+
+```ts
+interface Asset {
+    kind: string;       // 'image'
+    name: string;
+    bytes?: Uint8Array;
+}
+```
+
+## `SkippedAsset`
+
+An asset [`assetFiles`](./assetFiles.md) will not write, and why.
+
+```ts
+interface SkippedAsset {
+    name: string;
+    reason: 'no bytes' | 'unsafe name';
+}
 ```
 
 ## `FromMdInput`

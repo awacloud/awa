@@ -8,6 +8,12 @@ back to the PDF Standard 14. If this package is absent from the runtime,
 `oconv` still resolves to Standard 14 and the module graph still links —
 this package is optional at every layer.
 
+It also vendors **Carlito** and **Caladea** (4 faces each), the metric
+twins of Calibri and Cambria, two faces office documents name constantly —
+for an application that serves faces itself: `faceUrls(opts)` gives the
+URL of every vendored face, Liberation included. They are not part of the
+`oconvDefaultFaces` face map.
+
 ## Installation
 
 ```bash
@@ -32,7 +38,7 @@ fetches the vendored faces from `../vendor/liberation/` relative to
 read through `fetch`; under Node.js 20+, whose `fetch` refuses `file:` URLs,
 they are read through `node:fs/promises` (imported only on that path).
 The `ModuleRuntime` used below comes from
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/oconv-fonts@1.0.0/packages/front/fw).
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/oconv-fonts@1.1.0/packages/front/fw).
 
 ## Quick Start
 
@@ -63,6 +69,34 @@ caller that wants the frozen face map without registering a descriptor
 [`docs/descriptor.md`](./docs/descriptor.md) for the frozen descriptor
 contract, the full precedence rule and its worked example.
 
+## Serving the faces yourself
+
+`faceUrls(opts)` returns, without reading anything, a frozen map from each
+vendored family to the `URL` of its four styles (`regular`, `bold`,
+`italic`, `boldItalic`): the families are `Liberation Sans`, `Liberation
+Serif`, `Liberation Mono`, `Carlito` and `Caladea`, 20 files in all. By
+default the URLs point at this package's own `vendor/` directory, resolved
+against `src/loader.js`; pass `opts.vendorUrl` (the directory serving a copy
+of `vendor/`, absolute or root-relative) when your application serves them
+from elsewhere. Note the difference with `opts.baseUrl` of
+`loadDefaultFaces`, which names the `vendor/liberation/` directory itself.
+
+```js
+import { faceUrls } from '@awacloud/oconv-fonts';
+
+const urls = faceUrls({ vendorUrl: 'https://cdn.example.com/fonts/' });
+console.log(Object.keys(urls));
+// [ 'Liberation Sans', 'Liberation Serif', 'Liberation Mono', 'Carlito', 'Caladea' ]
+console.log(urls.Carlito.bold.href);
+// 'https://cdn.example.com/fonts/carlito/Carlito-Bold.ttf'
+```
+
+Serve each family's licence and notice file with its faces (the table
+under [Vendored fonts](#vendored-fonts)). Carlito and Caladea are not part
+of the `oconvDefaultFaces` face map: `oconvDefaultFaces`,
+`loadDefaultFaces` and `registerDefaultFaces` behave as before. See
+[`docs/api/face-urls.md`](./docs/api/face-urls.md).
+
 ## Registering twice
 
 A second `registerDefaultFaces(runtime)` call does not hot-swap by itself —
@@ -80,8 +114,10 @@ module depending on `oconvDefaultFaces` (e.g. `oconv`'s writer), or call
 
 ## Coverage, measured
 
-Measured from each vendored face's own `cmap` (`font.glyphIndexForCodePoint`
-over each block's code points) — identical across all 12 faces:
+Measured from each vendored Liberation face's own `cmap`
+(`font.glyphIndexForCodePoint` over each block's code points) — identical
+across the 12 Liberation faces, the ones the default route embeds (Carlito
+and Caladea are not measured here):
 
 | block | coverage |
 |---|---|
@@ -102,25 +138,35 @@ script that needs shaping renders wrong even where the glyphs exist.
 
 ## Vendored fonts
 
-The vendored fonts are **SIL Open Font License 1.1** with Reserved Font Names
-`Liberation`, `Arimo`, `Tinos`, `Cousine` — verbatim text in
-[`vendor/OFL.txt`](./vendor/OFL.txt), obligations summarised in
-[`vendor/NOTICE-liberation`](./vendor/NOTICE-liberation).
+Each vendored family keeps its own licence:
+
+| Family | Licence | Licence text | Notice |
+|---|---|---|---|
+| Liberation Sans, Serif, Mono 2.1.5 | SIL OFL 1.1, Reserved Font Names `Liberation`, `Arimo`, `Tinos`, `Cousine` | [`vendor/OFL.txt`](./vendor/OFL.txt) | [`vendor/NOTICE-liberation`](./vendor/NOTICE-liberation) |
+| Carlito 1.103 | SIL OFL 1.1, Reserved Font Name `Carlito` | [`vendor/OFL-carlito.txt`](./vendor/OFL-carlito.txt) | [`vendor/NOTICE-carlito`](./vendor/NOTICE-carlito) |
+| Caladea 1.002 | Apache License 2.0 | [`vendor/LICENSE-apache-2.0.txt`](./vendor/LICENSE-apache-2.0.txt) | [`vendor/NOTICE-caladea`](./vendor/NOTICE-caladea) |
+
+Caladea is the 2013 build, the one that keeps Cambria's metrics; a later
+Caladea published under the OFL has other metrics and is not this payload.
 
 **Never pre-subset or otherwise modify the vendored faces.** OFL 1.1
 condition 3 forbids distributing a Modified Version under a Reserved Font
 Name, and the licence defines "Modified Version" to include any change to
 the font's format — which includes subsetting. A pre-subsetted face could
-no longer be called "Liberation". This is unnecessary in any case:
+no longer be called "Liberation" (or "Carlito"); Caladea is vendored
+unmodified too. This is unnecessary in any case:
 `@awacloud/oconv` already subsets at PDF-embed time, so the emitted PDF
-carries only the glyphs actually used — the full 12-face vendored weight
+carries only the glyphs actually used — the full 20-face vendored weight
 is a tarball concern, never a runtime one.
 
 ## Payload
 
-12 faces, **4 359 164 bytes**, TrueType flavour, vendored byte-identical
-from Liberation Fonts release 2.1.5 (the byte total is the sum of the 12
-`vendor/liberation/*.ttf` files). Per-file provenance and sha256 pins live in
+20 faces, TrueType flavour, vendored byte-identical: the 12 Liberation
+faces of release 2.1.5 (**4 359 164 bytes**, `vendor/liberation/*.ttf`),
+the 4 Carlito faces (**2 766 644 bytes**, `vendor/carlito/*.ttf`) and the
+4 Caladea faces (**241 544 bytes**, `vendor/caladea/*.ttf`), from the
+Chrome OS archives `crosextrafonts-carlito-20130920` and
+`crosextrafonts-20130214`. Per-file provenance and sha256 pins live in
 [`vendor/PROVENANCE.json`](./vendor/PROVENANCE.json); integrity is pinned by
 `vendor/provenance.test.js`.
 
@@ -134,9 +180,9 @@ bun test packages/front/office/oconv-fonts/
 
 | Sub-path | Target | Usage |
 |---|---|---|
-| `@awacloud/oconv-fonts` | `src/main.js` | The entry point: re-exports `createOconvDefaultFaces`, `loadDefaultFaces` and `registerDefaultFaces`; nothing is fetched or registered at import. |
+| `@awacloud/oconv-fonts` | `src/main.js` | The entry point: re-exports `createOconvDefaultFaces`, `loadDefaultFaces`, `registerDefaultFaces` and `faceUrls`; nothing is fetched or registered at import. |
 | `@awacloud/oconv-fonts/faces.js` | `src/faces.js` | `createOconvDefaultFaces(faces)` — builds the `oconvDefaultFaces` descriptor around five font programs you already hold. |
-| `@awacloud/oconv-fonts/loader.js` | `src/loader.js` | `loadDefaultFaces(opts)` (the async byte path) and `registerDefaultFaces(runtime, opts)` (load, then register). |
+| `@awacloud/oconv-fonts/loader.js` | `src/loader.js` | `loadDefaultFaces(opts)` (the async byte path), `registerDefaultFaces(runtime, opts)` (load, then register) and `faceUrls(opts)` (every vendored face's URL). |
 
 The `.js`-suffixed keys are the form to import from browser code: an import
 map that maps `@awacloud/oconv-fonts/` to a path prefix resolves them
@@ -145,22 +191,23 @@ function.
 
 ## Maturity
 
-`L3` (`awa.maturity` in `package.json`): the three exported functions each have
+`L3` (`awa.maturity` in `package.json`): the four exported functions each have
 an API page, the source is covered at 100.00 % of the declared `src/**` basis
 against a `0.98` floor, the tarball contents (including the licence files and
-all 12 faces) are pinned by an integration test, and the sha256 of every
+all 20 faces) are pinned by an integration test, and the sha256 of every
 vendored face is pinned.
 
 ## Licence
 
 This package's own JavaScript is [`AGPL-3.0-only`](./LICENSE); a commercial
 licence is also available (see [`NOTICE`](./NOTICE)). Copyright (c) 2026
-AwaCloud SAS. The vendored Liberation fonts keep their own licence, the SIL
-OFL 1.1 — see [Vendored fonts](#vendored-fonts) above.
+AwaCloud SAS. The vendored fonts keep their own licences, the SIL OFL 1.1
+(Liberation, Carlito) and the Apache License 2.0 (Caladea) — see
+[Vendored fonts](#vendored-fonts) above.
 
 ## Project
 
 - Website: https://awaforge.eu
-- Source: [`packages/front/office/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv-fonts@1.0.0/packages/front/office/oconv-fonts)
+- Source: [`packages/front/office/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv-fonts@1.1.0/packages/front/office/oconv-fonts)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/oconv-fonts@1.0.0/SECURITY.md)
+- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/oconv-fonts@1.1.0/SECURITY.md)

@@ -27,11 +27,12 @@ profile: v1
 ir: oconv-ir/v1
 sourceFormat: docx
 sourceName: report.docx
+title: "Quarterly report"
 sourceBytes: 1556
 sourceSha256: 7be541047cdb2255188fdf68ed6ddc98c47ed22332093df494dcb3f5c7f60b7c
 convertedAt: 2026-07-20T00:00:00Z
 converter: oconv
-converterVersion: 1.1.0
+converterVersion: 1.2.0
 engine: bun
 blocks: 6
 anchors:
@@ -64,6 +65,7 @@ Every front-matter key below is emitted **exactly in this order** by
 | `ir` | The pivot IR version that produced this document (`oconv-ir/v1`) | Traceability to the exact internal model — useful when auditing a conversion discrepancy. |
 | `sourceFormat` | `docx` \| `odt` \| `xlsx` \| `ods` \| `pptx` \| `odp` \| `pdf` | Which reader ran. |
 | `sourceName` | Original file name | Human/audit trail back to the source document. |
+| `title` | The source's own title, when it states a non-empty one: for a pdf its XMP `dc:title` (`x-default` first), else its Info `/Title`, decoded and trimmed; for a docx, xlsx or pptx its core properties' `dc:title` (`opcCoreProperties`), for an odt, ods or odp its `meta.xml` `dc:title`; omitted otherwise. Carried as stated: a deck often states its application's placeholder (`PowerPoint Presentation`) | A file name is often not a title; a retrieval index or a citation shows the document's real title. An added key: the profile stays `v1`, its readers read it as they read `count`. |
 | `sourceBytes` | Source byte length | A cheap sanity check alongside the hash. |
 | `sourceSha256` | Lowercase hex SHA-256 of the **source** bytes | **Auditable**: pins the exact input a reviewer can re-fetch and re-hash. Computed by the facade via `crypto.subtle.digest` — no external hashing tool, no network. |
 | `convertedAt` | ISO-8601 timestamp | **Always caller-injected, never `Date.now()`** — see Determinism below. |
@@ -73,7 +75,7 @@ Every front-matter key below is emitted **exactly in this order** by
 | `anchors` | `{level, anchor}[]`, document order | **Chunkable**: a chunker splits on headings without re-parsing the markdown; citations can address `#anchor` stably. |
 | `lossy` | `losses.length > 0` | A single boolean gate a pipeline can branch on ("flag lossy documents for human review"). |
 | `losses` | `{code, detail}[]`, reader losses then writer losses, document order | **Honest**: losses the pipeline detects are recorded; the [loss matrix](./loss-matrix.md) lists the known silent cases — see Loss ledger below. Present only when `lossy: true`. |
-| `assets` | `{kind, name, bytes?}[]`, deduplicated by name, document order | Image references extracted from the source; `bytes` travels by reference when the reader captured the image bytes: the same `Uint8Array`, never copied and never written into the front matter. The writer (`ir-to-md.js`) reads it from `escapes.docx.bytes`, the field the docx reader fills — the only reader that captures image bytes — so `bytes` is present for a docx image whose bytes resolved and absent for every other source. Measured on `poi-with-gif.docx`: one asset (`Grafik 1`) whose `bytes` is a 6554-byte `Uint8Array`, `lossy: false` (`tests/fidelity.integration.test.js`). Present only when the document has images. |
+| `assets` | `{kind, name, bytes?}[]`, deduplicated by name, document order | Image references extracted from the source; `bytes` travels by reference when the reader captured the image bytes: the same `Uint8Array`, never copied and never written into the front matter. The writer (`ir-to-md.js`) reads it from the node's `escapes.docx.bytes`, `escapes.odt.bytes`, `escapes.pdf.bytes` or `escapes.pptx.bytes`, the field the docx, odt, pdf (under the opt-in `pdfInclude: ['images']`) and pptx readers fill — so `bytes` is present for an image of those sources whose bytes resolved and absent for an image with none (a linked pptx picture, a docx chart, an odt frame without a picture part) and for every xlsx, ods and odp source. Measured on `poi-with-gif.docx`: one asset (`Grafik 1`) whose `bytes` is a 6554-byte `Uint8Array`, `lossy: false` (`tests/fidelity.integration.test.js`). Present only when the document has images. |
 
 ## Determinism and auditability
 
@@ -187,13 +189,13 @@ shipped readers and the `md` writer:
 | `block/dropped` | An IR node (or a source element with no IR equivalent) could not be represented; `detail` names the source element/kind. |
 | `link/target-missing` | A hyperlink run had no resolvable target; the visible text is kept, the link is not. |
 | `list/numbering-unresolved` | The list's ordered-vs-bullet status could not be resolved (docx: no matching `numbering.xml` entry; odt: the list style falls outside the resolution scope below) — falls back to bullet. |
-| `list/nesting-flattened` | (docx only) A nested list level (`ilvl > 0`) was flattened into its enclosing list — recorded once per document. |
+| `list/nesting-flattened` | No longer emitted: the docx reader keeps nested list levels. Kept here so a consumer reading an older output can name it. |
 | `heading/level-clamped` | (odt only) An `outlineLevel` above 6 was clamped to 6. |
 | `heading/subtitle-degraded` | (docx only) A paragraph whose style is the built-in `Subtitle` (resolved by its `w:name` through `styles.xml`) was kept as a plain paragraph — no heading level is guessed for it; `detail` is the style ID, one record per subtitle paragraph. Pinned by `src/read/docx-to-ir.test.js`, including the committed French-styled fixture `docx-fr-styles.docx`. |
 | `image/unresolved` | (odt only) A frame that is not an image — a text box, an embedded object — has no IR equivalent (inside a span, a frame holding text keeps that text). |
-| `image/bytes-unavailable` | (docx, odt) An image's bytes were not found: a docx drawing's `r:embed` relationship never resolved, or an odt image frame names a missing or external picture part; `detail` names the drawing or frame. The image reference is kept. Pinned by `src/read/docx-to-ir.test.js`. |
+| `image/bytes-unavailable` | (docx, odt, pptx) An image's bytes were not found: a docx drawing's `r:embed` relationship never resolved, an odt image frame names a missing or external picture part, or a pptx picture is linked; `detail` names the drawing, frame or picture shape. The image reference is kept. Pinned by `src/read/docx-to-ir.test.js`. |
 | `inline/dropped` | (odt only, this reader's own sense) An unmapped inline XML element inside a run; `detail` names the element. Also the target of an image inside a link (`detail: 'link-target'` — an IR image has no link prop; the image is kept). Same code name as the `fromMd` reader's `inline/dropped` below — a different domain, the same "unmapped node, kept as loss" shape. |
-| `inline/flattened` | (odt only) An element inside a `<text:span>` (a field, a reference, a note) holds text: the text is kept as a plain run carrying the span's emphasis, the element's meaning is not; `detail` names the element. A frame holding text inside a span records `image/unresolved` instead, and an element holding no text records `inline/dropped` (or `image/unresolved` for a frame). |
+| `inline/flattened` | (write) A list or a table inside a table cell, which a GFM cell cannot hold: its text is written inline, the pieces (a list's items, a table's cells row by row, nested ones too) joined by `; `, the structure not kept; `detail` is `table cell list` or `table cell table`. (odt read) An element inside a `<text:span>` (a field, a reference, a note) holds text: the text is kept as a plain run carrying the span's emphasis, the element's meaning is not; `detail` names the element. A frame holding text inside a span records `image/unresolved` instead, and an element holding no text records `inline/dropped` (or `image/unresolved` for a frame). |
 | `run/format-unresolved` | (odt only) A `<text:span>` run's bold/italic/strike/monospace styling could not be resolved — the style falls outside the resolution scope below. |
 
 **Read-side resolution scope for the two odt `*-unresolved` codes**: semantic
@@ -214,19 +216,25 @@ Remaining reader codes:
 | `sheet/format-dropped` | (xlsx/ods) Recorded once per sheet, first styled cell seen. |
 | `sheet/merge-dropped` | (xlsx/ods) Recorded once per sheet, first merged/spanned range seen. |
 | `sheet/chart-dropped` | (xlsx/ods) Recorded once per sheet, first embedded chart/drawing seen. |
+| `sheet/tsv-escaped` | (xlsx/ods, opt-in: the `toMd` `sheets: 'tsv'` input) A cell's backslash, tab, LF or CR was written as a two-character escape in the sheet's TSV block. Once per sheet. |
+| `sheet/sparse-form` | (xlsx/ods, opt-in: the `toMd` `sheetCellBudget` input) A sheet whose padded table would hold more cells than the budget was written unpadded instead — one `<A1 address>: <text>` paragraph per value (its rows unpadded under `sheets` `'csv'` / `'tsv'`); every value is kept. Once per sheet; `detail` is `<sheet>: <n> padded cells, <k> kept`. |
 | `slides/untitled` | (pptx/odp) The slide carries no title placeholder/frame, or its only one has no non-empty text. |
-| `slides/media-dropped` | (pptx/odp) A non-text shape/frame (picture, table, chart, image, object) was dropped at tier 1; `detail` names its kind. |
+| `slides/media-dropped` | (pptx/odp) A non-text shape/frame (pptx: table, chart, graphic frame — a picture is carried; odp: image, object) was dropped at tier 1; `detail` names its kind. |
 | `slides/notes-omitted` | (odp; documented no-op for pptx) The slide has speaker notes but `includeNotes` was `false` (the default). |
 | `text/undecodable` | (pdf) ≥1 character code in a text run resolved to no Unicode — counted, never silently kept. |
 | `text/font-unresolved` | (pdf) A show operator ran with no resolvable current font. |
 | `text/width-approximated` | (pdf) A font's glyph widths could not be read from the font, so a declared fallback width (500/1000 em) placed its text — once per font resource per page, `detail` = the resource name. The text is kept; only the inferred word spaces around it are approximate. |
-| `image/dropped` | (pdf, to-md) An image XObject draw or inline image, including one drawn inside a Form XObject — tier 1 keeps no images. Also emitted by the `fromMd` docx and odt writers (`detail` = the IR image's `name`), only when no bytes are reachable for the image (neither `opts.assets[name]` (or its percent-decoded form) nor the docx reader's `escapes.docx.bytes`) — when bytes are reachable the writer embeds the image at the size its header gives (PNG, JPEG or GIF) and records nothing; it records `image/size-defaulted` only for a header that gives no size (odt: a default 5.08cm × 3.81cm (2 in × 1.5 in) frame). |
+| `image/dropped` | (pdf, to-md) An image XObject draw or inline image, including one drawn inside a Form XObject — tier 1 keeps no images (under the `toMd` `pdfInclude: ['images']` input, every picture but a placed one; on a tagged document, one no struct element lists). One entry per draw; `detail` names the picture by its resource name, object and pixel size (`Im1 (12 0 R, 1103x599)`, `inline (64x64)` for an inline image). No writer emits it: an image with no reachable bytes is kept by the `fromMd` and `convert` docx and odt writers as `image/placeholder` (below), and when bytes are reachable the writer embeds the image at the size its header gives (PNG, JPEG or GIF) and records nothing; it records `image/size-defaulted` only for a header that gives no size (docx: `@awacloud/ooxml`'s 2 in × 4:3 box; odt: a default 5.08cm × 3.81cm (2 in × 1.5 in) frame). |
+| `image/mask-dropped` | (pdf, to-md, opt-in: the `toMd` `pdfInclude: ['images']` input) A placed picture's `/SMask` or `/Mask` is not applied (a JPEG or JPX picture's; a PNG's other than a same-size soft mask or a colour-key array): the picture is written without it (`detail` = the asset name). |
 | `xobject/form-dropped` | (pdf) A Form XObject's stream could not be used (not a stream, undecodable, unparsable), so its text is not extracted; `detail` = `<name>: <reason>`. A usable form is executed in place and records nothing. |
 | `xobject/form-cycle` | (pdf) A Form XObject drawn from inside itself, directly or through other forms, was not re-entered; `detail` = the resource name. |
 | `xobject/form-depth` | (pdf) A Form XObject that would nest deeper than 12 forms was not executed; `detail` = the resource name. |
 | `xobject/form-budget` | (pdf) A page ran a budget of `formOpBudget` operators inside Form XObjects (default 1,000,000, configurable through the `toMd` `formOpBudget` input); its later form draws were not executed. Recorded once per page; `detail` = the first skipped resource name. |
 | `content/undecodable` | (pdf) A content stream failed to resolve, decode or parse and was skipped; `detail` is `stream <objNum>: <cause>`, the cause being the thrown error's message collapsed to one line and capped at 160 characters. |
 | `struct/dropped` | (pdf, tagged fast path) A `Table`/`L` struct container was flattened; its descendant text is kept as paragraphs. |
+| `text/running-dropped` | (pdf, untagged path, opt-in: the `toMd` `pdfInfer: ['running']` input) A running header or footer line — near the top or bottom of the page, its text (digits read as `#`) recurring at the same height on half the pages and 3 — left out of every page; `detail` is its pattern. |
+| `struct/positional` | (pdf, untagged path, opt-in: the `toMd` `pdfDeclare: ['positional']` input) The structure was built from the text's positions, not stated by the file — once per document; `detail` names what was built (`paragraphs`, then `headings` and `tables` under `pdfInfer`). |
+| `doc/truncated` | (every source, opt-in: the `toMd` `outputBudget` input with `overflow: 'truncate'`) The text past the budget was cut: the top-level blocks that fit are kept, with a crossing table's leading rows that fit. Once per document; `detail` is `kept <n> bytes of text; <b> blocks and <r> table rows dropped`. |
 
 `xobject/form-dropped`, `xobject/form-cycle`, `xobject/form-depth`,
 `xobject/form-budget`, `content/undecodable`, `text/font-unresolved` and
@@ -248,6 +256,7 @@ Codes emitted by the `fromMd` reader (`src/read/md-to-ir.js`) and the
 | `inline/dropped` | An unmapped inline node kind (`detail` = its type, e.g. `html_inline`), or a non-empty link title (`detail: 'link-title'` — the link text/target are kept). Same code name as the odt reader's own `inline/dropped` above — a different domain, the same "unmapped node, kept as loss" shape. |
 | `list/depth-clamped` | (docx target) A list nested deeper than `ilvl` 8 was clamped to 8. |
 | `block/degraded` | (docx and odt targets) A block was written in a structurally simpler form: a quote nested in a quote (`detail: 'blockquote:nested'`), a non-paragraph block inside a quote (`detail: 'blockquote-child:<kind>'`), or — docx only — a non-paragraph/non-list block inside a list item (`detail: 'listItem-child:<kind>'`). |
+| `image/placeholder` | (docx and odt targets) No bytes are reachable for an image (neither `opts.assets[name]` nor bytes a reader carried): it keeps its place as a placeholder picture with its name and alt text and no picture part — odt: a frame with no content child in the default 5.08cm × 3.81cm box; docx: a drawing in a 2 in × 1.5 in box whose blip names no relationship; read back, it is the same image reference without bytes (`image/bytes-unavailable`). `detail` names the image. |
 | `image/size-defaulted` | (docx and odt targets) Image bytes WERE reachable and the image is PLACED, but no size could be read from its header (not a PNG, JPEG or GIF one, or a malformed one), so it sits in a default box — `@awacloud/ooxml`'s 2 in × 4:3 box for docx, a 5.08cm × 3.81cm (2 in × 1.5 in) frame for odt; `detail` names the image. A degrade, never a drop. An image whose header gives its size is placed at that size and records nothing. |
 
 The `.pdf` target's bounded typesetter (`src/write/ir-to-pdf.js` +
@@ -259,7 +268,7 @@ table states only the vocabulary:
 | Code | Meaning |
 |---|---|
 | `layout/unhandled-block` | An IR block kind the typesetter has no delegate for was skipped entirely. |
-| `layout/font-fallback` | A style class had no explicit AND no default-face bytes on a mixed/embedded font call — fell back to Standard 14 for that class. |
+| `layout/font-fallback` | A style class had no explicit AND no default-face bytes on a mixed/embedded font call — fell back to Standard 14 for that class; or its caller face has no TrueType outlines (a CFF / CFF2 face, not embeddable), recorded on every route with `reason: 'no TrueType outlines'`. |
 | `layout/s14-variant-metrics-approx` | DEFENSIVE FALLBACK — fires only if the fonts package regresses to a shared width table across the four Standard 14 variants; not reachable against the real `@awacloud/fonts`, whose Standard 14 tables give each variant its own widths (only a stubbed measurer reaches it, `src/write/ir-to-pdf.test.js`). |
 | `text/unencodable` | Route-conditional: a non-WinAnsi code point degrades to `?` on the Standard 14 route; a code point missing from the resolved face's own `cmap` draws `.notdef` on the explicit/default-face route — one collapsed record per document. |
 | `layout/line-overflow` | An unbreakable token (or an overlong code line) wider than the column overflowed it. |
@@ -326,6 +335,19 @@ plain ES are `crypto.subtle.digest` (source hashing, `toMd` only) and
 for an air-gapped deployment, not a soft goal: `bun test
 packages/front/office/oconv/` runs the whole suite, including the fidelity
 harness, with no network access.
+
+## Front-matter forms (opt-in)
+
+`irToMd`'s `opts.frontMatter` (and `toMd`'s `opts`, forwarded) chooses
+the front matter's form. `'full'`, the default, is the form above. In
+`'compact'`, every key stays, in the same order, but `losses` holds one
+entry per distinct `(code, detail)`, in first-occurrence order, with its
+count — `- { code: inline/dropped, detail: text:bookmark, count: 3 }`
+(on the ODF 1.4 part 3 ODT, 63,278 front-matter lines become 2,957). A
+profile-v1 reader that reads `losses` entries reads `count` as an extra
+key. `'none'` writes the body alone: that output is plain CommonMark/GFM,
+not a profile-v1 document; the facade's result (`anchors`, `lossy`,
+`losses`, `assets`) carries what the front matter would.
 
 ## Versioning
 

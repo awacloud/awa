@@ -9,24 +9,24 @@
         "version": "bun 1.3.13",
         "source": null
       },
-      "date": "2026-10-17",
-      "commit": "cf58af11fbd7a4cc6983e36ab64b6b0114f5c01f",
+      "date": "2026-10-26",
+      "commit": "976d3b35efd5d87c67c83958937799f1b57be319",
       "command": "bun cli.ts office-scorecard axis-a --pkg pdf",
       "result": {
         "kind": "percent",
-        "lines": 97.68,
-        "functions": 95.6,
+        "lines": 97.82,
+        "functions": 96.08,
         "rows": 130,
         "model": "mean-of-rows",
         "pooled": {
-          "lines": 97.78,
-          "functions": 96.64
+          "lines": 98.01,
+          "functions": 96.7
         },
         "basis": [
           "src/**"
         ],
         "tests": {
-          "pass": 2844,
+          "pass": 3057,
           "fail": 0,
           "skip": 0
         }
@@ -48,6 +48,24 @@
         "pass": 905,
         "total": 906,
         "criterion": "read(bytes) of the base reader returns without throwing and the document has at least one page; every file counts, -pass- and -fail- alike (their names are PDF/A or PDF/UA verdicts the reader does not judge)"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "verapdf-read-password",
+        "version": "v1.28.1",
+        "source": "https://github.com/veraPDF/veraPDF-corpus/tree/v1.28.1"
+      },
+      "date": "2026-10-26",
+      "commit": "42e6c2f5b444734a123409a11f513bd9c44d1039",
+      "command": "bun cli.ts office-scorecard axis-b --suite verapdf-read-password",
+      "result": {
+        "kind": "pass-total",
+        "pass": 906,
+        "total": 906,
+        "criterion": "read(bytes, { password: '' }) of the base reader returns without throwing and the document has at least one page: the verapdf-read check with the reader's opt-in password, the empty user password, which opens an encrypted file that has none; every file counts"
       },
       "skipped": []
     },
@@ -191,14 +209,14 @@
         "version": "arlington@c48b363e9",
         "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
       },
-      "date": "2026-10-13",
-      "commit": "f3d44fc683a9d9b9b5610b1c0b8043fcb5461fd0",
+      "date": "2026-10-25",
+      "commit": "c7aeebca9005a5e95819c4bcc5c8f2a5db6b2b87",
       "command": "bun cli.ts office-scorecard axis-b --suite arlington-read-keys",
       "result": {
         "kind": "pass-total",
-        "pass": 1445,
+        "pass": 3289,
         "total": 3357,
-        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled when a bound typer returns and leaves it out of the record's _extras, or, for a typer with no _extras channel, returns something else once the key is removed or nulled; 364 objects measured, 166 with a typer, 198 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
+        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled when a bound typer returns and leaves it out of the record's _extras, or, for a typer with no _extras channel, returns something else once the key is removed or nulled; 364 objects measured, 345 with a typer, 19 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
       },
       "skipped": [
         {
@@ -1442,14 +1460,14 @@
         "version": "arlington@c48b363e9",
         "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
       },
-      "date": "2026-10-13",
-      "commit": "06eec33ccd19e47f899c067a21426211b213b89c",
+      "date": "2026-10-25",
+      "commit": "7c488da7591fda0acc2777dfa77142203c9a0eea",
       "command": "bun cli.ts office-scorecard axis-b --suite arlington-read-keys-surfaced",
       "result": {
         "kind": "pass-total",
-        "pass": 1335,
+        "pass": 3280,
         "total": 3357,
-        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled only when it reaches the typed record: removing it, or nulling it, changes what a bound typer returns, the record compared without raw, the input copies and _extras (a key a typer lists as known but keeps only in raw does not count — the difference with arlington-read-keys); 364 objects measured, 166 with a typer, 198 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
+        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled only when it reaches the typed record: removing it, or nulling it, changes what a bound typer returns, the record compared without raw, the input copies and _extras (a key a typer lists as known but keeps only in raw does not count — the difference with arlington-read-keys); 364 objects measured, 345 with a typer, 19 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
       },
       "skipped": [
         {
@@ -2931,6 +2949,272 @@
         "criterion": "per PDF of the Stressful PDF Corpus batch5.tgz, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
       },
       "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "pdf-differences-recover",
+        "version": "pdf-differences@907fe96e5",
+        "source": "https://github.com/pdf-association/pdf-differences/tree/907fe96e52b73e491489eee545c47b119bf9989b"
+      },
+      "date": "2026-10-24",
+      "commit": "6a4994638139ed74ce60e316b947eb662cd6c872",
+      "command": "bun cli.ts office-scorecard axis-b --suite pdf-differences-recover",
+      "result": {
+        "kind": "pass-total",
+        "pass": 13,
+        "total": 13,
+        "criterion": "the files and expectations of pdf-differences, each read with the opt-in { recoverXref: true }: the cross-reference table is rebuilt from the bytes when its chain cannot be used; UnknownFilter-xrefstm, -Linearized and -OutlineObjStm — read returns the page and records pdf/document/xref-rebuilt in losses; every other file — the pdf-differences expectation, unchanged. The same files are skipped"
+      },
+      "skipped": [
+        {
+          "case": "Atomic-Fill+Stroke/FillStrokeOrdering.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Atomic-Fill+Stroke/SelfIntersecting-Opaque.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Atomic-Fill+Stroke/SelfIntersecting-Transparency.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "ColorBurn-ColorDodge/ColorBurn.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "ColorBurn-ColorDodge/ColorDodge.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Dashing-Degenerate/DegenerateDashing.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Dashing-EndBeforeBend/Dashing-EndBeforeBend.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Dashing-EndBeforeBend/Dashing-EndBeforeBend2.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "DefaultColorSpaces/DefaultRGBColourSpaces-inherit.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "DefaultColorSpaces/DefaultRGBColourSpaces.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "IndexedColor/IndexedCS_negative_and_high.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "LargeMitreLimit/LargeMitreLimit-Beziers.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "LargeMitreLimit/LargeMitreLimit.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "LineCap-Degenerate/LineCap-Degenerate.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Negative-DashPhase/CutHereExample.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Negative-DashPhase/Negative-DashPhase.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "NegativeFontSize/NegativeFontSize.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "OverlappingGlyphClipping/OverlappingGlyphClipping.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "PageLabels-UX/PageLabelsTest.pdf",
+          "reason": "page labels are carried raw (catalog.pageLabels), never computed"
+        },
+        {
+          "case": "TextClipModeChanges/TextClippingModeChanges.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "Type3WordSpacing/Type3Test.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "VerticalText/VerticalText.pdf",
+          "reason": "a difference in painting: content streams are parsed to operators, not rendered"
+        },
+        {
+          "case": "UnknownFilter/382252277877c00a92f3bb54daef1413bafe5557e2f5f7c32c23e800cd9bdcd4.pdf",
+          "reason": "a real-world SafeDocs file, not a PDF Association work: the CC BY 4.0 statement does not cover it; its issue is left undisclosed upstream"
+        },
+        {
+          "case": "UnknownFilter/4387ba480c6f935b8e97749d40b3c001ad584b7bda66ca2c040be67337669497.pdf",
+          "reason": "a real-world SafeDocs file, not a PDF Association work: the CC BY 4.0 statement does not cover it; its issue is left undisclosed upstream"
+        }
+      ]
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "arlington-write-conformance-metrics",
+        "version": "arlington@c48b363e9",
+        "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
+      },
+      "date": "2026-10-26",
+      "commit": "aa2b03e0c21e3f4cfbc2772d04bc6a7f54db9cc4",
+      "command": "bun cli.ts office-scorecard axis-b --suite arlington-write-conformance-metrics",
+      "result": {
+        "kind": "pass-total",
+        "pass": 387,
+        "total": 387,
+        "criterion": "per key instance of the documents pdfBuilder (every Standard 14 face through addFont's opt-in metrics) and pdf.write write (builder-blank, builder-standard-14, builder-standard-14-metrics, builder-embedded, builder-image, write-standard-14, write-embedded; 85 dictionaries and streams reached from the trailer through the Arlington links): a key present passes when its object lists it, its SinceVersion holds for PDF 2.0, its value has one of the key's types valid in 2.0 and, when that type's possible values are literals, one of those valid in 2.0; every key required for 2.0 and absent (inherited keys looked up the /Parent chain) is a failing case; fn: predicates are evaluated only for versions, TRUE / FALSE, || and && (fn:Extension false) — the others are not evaluated: 27 passing instances carry one, and an absent key required by one is skipped; IndirectReference, SpecialCase, DefaultValue and deprecation are not checked; array positions and map entries are walked, not counted"
+      },
+      "skipped": [
+        {
+          "case": "builder-blank trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-blank 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-blank 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-blank 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-standard-14 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-standard-14 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-standard-14 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-standard-14 7 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-standard-14 7 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-standard-14 7 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-standard-14-metrics trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-standard-14-metrics 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-standard-14-metrics 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-standard-14-metrics 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-embedded trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-embedded 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-embedded 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-embedded 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-image trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-image 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-image 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-image 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "builder-image 3 0 R XObjectImage/StructParent",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:ImageIsStructContentItem()))"
+        },
+        {
+          "case": "write-standard-14 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "write-standard-14 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "write-standard-14 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "write-standard-14 7 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "write-standard-14 7 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "write-standard-14 7 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "write-embedded trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "write-embedded 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "write-embedded 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "write-embedded 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        }
+      ]
     }
   ],
   "comparators": []

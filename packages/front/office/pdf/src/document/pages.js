@@ -74,7 +74,10 @@ export const pdfPages = {
                     return;
                 }
 
-                const kids = node.entries.Kids;
+                // Any value may be indirect (ISO 32000-2 § 7.3.10): a
+                // `/Kids` given by reference is resolved to its array.
+                let kids = node.entries.Kids;
+                if (kids && kids.type === 'ref') kids = resolveRef(kids);
                 if (!kids || kids.type !== 'array') {
                     throw new ParseError('pdf/pages/missing-kids',
                         'intermediate page tree node missing /Kids array',

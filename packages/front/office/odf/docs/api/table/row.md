@@ -23,7 +23,7 @@ kept as written; `renderRow` writes it back.
 | Method | Description |
 |---------|-------------|
 | `parseRow(el, { maxRepeat? })` | Converts `<table:table-row>` into the model. Optional `maxRepeat` caps `table:number-rows-repeated` and throws `ParseError('odf/parse-error/limit', …)` if exceeded. |
-| `renderRow(row)` | Builds the node. |
+| `renderRow(row)` | Builds the node. A row with no cell is written with one empty `<table:table-cell>` (the schema needs a cell in a row); the model passed in is not modified. |
 
 ## Notes
 

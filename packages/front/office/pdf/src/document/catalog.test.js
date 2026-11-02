@@ -88,3 +88,12 @@ describe('pdfCatalog module', () => {
         expect(typeof m.typeCatalog).toBe('function');
     });
 });
+
+describe('typeCatalog — the extensions dictionary (A41a)', () => {
+    test('Extensions as read, present only when the key is', () => {
+        const ext = obj.dict({ Type: obj.name('Extensions') });
+        const c = typeCatalog(obj.dict({ Type: obj.name('Catalog'), Pages: obj.ref(2, 0), Extensions: ext }));
+        expect([c.extensions, c._extras]).toEqual([ext, {}]);
+        expect('extensions' in typeCatalog(obj.dict({ Type: obj.name('Catalog'), Pages: obj.ref(2, 0) }))).toBe(false);
+    });
+});

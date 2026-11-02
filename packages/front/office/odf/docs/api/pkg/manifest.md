@@ -41,7 +41,7 @@ const manifest = runtime.resolve('pkgManifest');
 | Method | Description |
 |--------|-------------|
 | `parse(xmlString)` | Throws `ParseError` if the root isn't `<manifest:manifest>`. |
-| `serialize(model)` | XML with prolog + manifest namespace. The written root declares every namespace prefix it uses: a parsed source's other root declarations come back through `_extras.attrs`, any other prefix is declared from `odfShared.ODF_PREFIXES`, and a prefix nobody declares throws `RenderError('odf/render-error/namespace')`. |
+| `serialize(model)` | XML with prolog + manifest namespace. A model whose `version` is `null` is written without `manifest:version` on the root (the attribute is ODF 1.2's; the `keepVersion` write sets it for an older source). The written root declares every namespace prefix it uses: a parsed source's other root declarations come back through `_extras.attrs`, any other prefix is declared from `odfShared.ODF_PREFIXES`, and a prefix nobody declares throws `RenderError('odf/render-error/namespace')`. |
 | `empty(mimetype)` | Manifest with only the root entry. |
 | `setEntry(m, fullPath, mediaType)` | Adds or replaces an entry. |
 

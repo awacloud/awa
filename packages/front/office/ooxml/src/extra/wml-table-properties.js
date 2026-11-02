@@ -38,6 +38,16 @@ export const wmlTableProperties = {
     deps: [xml, docxProperties],
 
     factory(xml, core) {
+        // CT_TblPr order, the kept children included; a hand-wired
+        // docxProperties without the ordering helper writes the old order.
+        const TBLPR_SEQ = core.sequence ? core.sequence([
+            'w:tblStyle', 'w:tblpPr', 'w:tblOverlap', 'w:bidiVisual', 'w:tblStyleRowBandSize',
+            'w:tblStyleColBandSize', 'w:tblW', 'w:jc', 'w:tblCellSpacing', 'w:tblInd',
+            'w:tblBorders', 'w:shd', 'w:tblLayout', 'w:tblCellMar', 'w:tblLook', 'w:tblCaption',
+            'w:tblDescription', 'w:tblPrChange'
+        ]) : null;
+        const ordered = (children, seq) => (seq && core.orderBySequence ? core.orderBySequence(children, seq) : children);
+
         // --- common helpers ---
         function widthAttrs(w) {
             const a = {};
@@ -215,7 +225,7 @@ export const wmlTableProperties = {
             if (t.tblCaption != null)     c.push(xml.el('w:tblCaption', { 'w:val': String(t.tblCaption) }));
             if (t.tblDescription != null) c.push(xml.el('w:tblDescription', { 'w:val': String(t.tblDescription) }));
             if (t._extras) for (const ex of t._extras) c.push(ex);
-            return c.length ? xml.el('w:tblPr', {}, c) : null;
+            return c.length ? xml.el('w:tblPr', {}, ordered(c, TBLPR_SEQ)) : null;
         }
 
         // --- trPr ---

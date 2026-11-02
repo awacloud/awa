@@ -296,6 +296,12 @@ export const ooxmlShared = {
             ['w16sdtdh', 'http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash', true]
         ]);
 
+        // The extension prefixes of that table, in its order: the ones
+        // `wordRootAttrs` lists in `mc:Ignorable`, which the docx reader
+        // treats as ignorable whether a part lists them or not.
+        const WORD_EXTENSION_PREFIXES = Object.freeze(
+            WORD_ROOT_PREFIXES.filter(([, , ext]) => ext).map(([p]) => p));
+
         /**
          * Root namespace attributes of a WordprocessingML part whose root
          * element will hold `nodes`.
@@ -634,7 +640,13 @@ export const ooxmlShared = {
                     case 'a:clrRepl': {
                         return { kind: 'clrRepl', color: findFirstColor(el, { withMods: true }) };
                     }
-                    default: return null;
+                    // Any other transform (`a:satMod`, `a:alpha`, `a:hueMod`,
+                    // `a:red` …): an `a:` leaf, kept as its name and attributes.
+                    default:
+                        if (/^a:\w+$/.test(el.name) && !(el.children || []).some(c => c.type === 'element')) {
+                            return { kind: el.name.slice(2), attrs: { ...el.attrs } };
+                        }
+                        return null;
                 }
             }
 
@@ -660,7 +672,7 @@ export const ooxmlShared = {
                     ]);
                     case 'clrRepl':      return xml.el('a:clrRepl', {},
                         m.color ? [renderColor(m.color, { withMods: true })] : []);
-                    default: return null;
+                    default: return m.kind ? xml.el('a:' + m.kind, m.attrs || {}) : null;
                 }
             }
 
@@ -771,7 +783,7 @@ export const ooxmlShared = {
             toEmu, inchesToEmu, cmToEmu, ptToEmu,
             readBoolAttr, writeBoolAttr,
             partExt, lookupCT, trackUnmodelledParts,
-            wordRootAttrs,
+            wordRootAttrs, WORD_EXTENSION_PREFIXES,
             encodeText, decodeText,
             createRidAllocator,
             createTypedColorCodec,

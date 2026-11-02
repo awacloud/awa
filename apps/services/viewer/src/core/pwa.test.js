@@ -4,15 +4,19 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview The PWA adapter against a fake service-worker container:
- * a waiting release is reported once and only to a controlled page; a check
- * says current, ready or offline; an accepted update takes over and
- * reloads, never before; the worker's release is asked through a channel;
- * the launch queue opens the first file.
+ * @fileoverview The PWA adapter over the real fw `installPrompt` and
+ * `swUpdate` modules, against a fake service-worker container: a waiting
+ * release is reported once and only to a controlled page; a check says
+ * current, ready or offline; an accepted update takes over and reloads,
+ * never before; the worker's release is asked through a channel; the install
+ * button follows the browser's offer; the offline note shows on a controlled
+ * page only; the launch queue opens the first file and hands the others on.
  *
  * @module viewer/core/pwa.test
  */
 import { describe, test, expect } from 'bun:test';
+import { installPrompt } from '@awacloud/fw/dom/sw/installPrompt.js';
+import { swUpdate } from '@awacloud/fw/dom/sw/swUpdate.js';
 import { mountPwa, SW_MESSAGES } from './pwa.js';
 
 /** A minimal EventTarget-like object. */
@@ -22,7 +26,7 @@ function target(extra = {}) {
         listeners,
         addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
         removeEventListener(type, fn) { listeners[type] = (listeners[type] || []).filter((f) => f !== fn); },
-        emit(type) { for (const fn of [...(listeners[type] || [])]) fn({}); }
+        emit(type, event = {}) { for (const fn of [...(listeners[type] || [])]) fn(event); }
     }, extra);
 }
 
@@ -49,7 +53,8 @@ function page({ controlled = true, waiting = null, update, online = true, suppor
 }
 
 const base = (p, extra = {}) => mountPwa({
-    serviceWorker: p.serviceWorker, swUrl: 'sw.js', installButton: null, offlineNote: null,
+    installPrompt: installPrompt.factory(), swUpdate: swUpdate.factory(p.serviceWorker),
+    swUrl: 'sw.js', installButton: null, offlineNote: null,
     onFile: () => {}, win: p.win, ...extra
 });
 
@@ -143,6 +148,73 @@ describe('updates', () => {
     });
 });
 
+describe('install button', () => {
+    /** A `beforeinstallprompt` event, recording the prompt. */
+    const offer = () => {
+        const e = { prevented: false, prompted: 0, preventDefault() { e.prevented = true; }, async prompt() { e.prompted++; }, userChoice: Promise.resolve({ outcome: 'accepted' }) };
+        return e;
+    };
+
+    test('the button shows only when the browser offers installation; a click hides it and prompts once', async () => {
+        const p = page();
+        const button = target({ hidden: true });
+        await base(p, { installButton: button });
+        expect(button.hidden).toBe(true);
+        const e = offer();
+        p.win.emit('beforeinstallprompt', e);
+        expect(e.prevented).toBe(true);
+        expect(button.hidden).toBe(false);
+        button.emit('click');
+        expect(button.hidden).toBe(true);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(e.prompted).toBe(1);
+        button.emit('click');
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(e.prompted).toBe(1);
+    });
+
+    test('once installed the button is hidden again', async () => {
+        const p = page();
+        const button = target({ hidden: true });
+        await base(p, { installButton: button });
+        p.win.emit('beforeinstallprompt', offer());
+        expect(button.hidden).toBe(false);
+        p.win.emit('appinstalled');
+        expect(button.hidden).toBe(true);
+    });
+
+    test('without a button the offer is kept and nothing throws', async () => {
+        const p = page();
+        await base(p);
+        p.win.emit('beforeinstallprompt', offer());
+        p.win.emit('appinstalled');
+    });
+});
+
+describe('offline note', () => {
+    test('shown on a page a worker controls, from the start', async () => {
+        const note = { hidden: true };
+        await base(page({ controlled: true }), { offlineNote: note });
+        expect(note.hidden).toBe(false);
+    });
+
+    test('hidden on an uncontrolled page; shown once a worker takes control', async () => {
+        const note = { hidden: true };
+        const p = page({ controlled: false });
+        await base(p, { offlineNote: note });
+        expect(note.hidden).toBe(true);
+        p.container.controller = worker('activated');
+        p.container.emit('controllerchange');
+        expect(note.hidden).toBe(false);
+    });
+
+    test('without service workers the note stays hidden', async () => {
+        const note = { hidden: true };
+        await base(page({ supported: false }), { offlineNote: note });
+        expect(note.hidden).toBe(true);
+    });
+});
+
 describe('launch queue', () => {
     test('the first launched file opens', async () => {
         const p = page();
@@ -152,5 +224,30 @@ describe('launch queue', () => {
         await base(p, { onFile: (file) => opened.push(file.name) });
         await consumer({ files: [{ getFile: async () => new File(['x'], 'a.pdf') }] });
         expect(opened).toEqual(['a.pdf']);
+    });
+
+    test('a second handle goes to onMore, as handles, not files', async () => {
+        const p = page();
+        let consumer = null;
+        p.win.launchQueue = { setConsumer: (fn) => { consumer = fn; } };
+        const opened = [];
+        const more = [];
+        await base(p, { onFile: (file) => opened.push(file.name), onMore: (handles) => more.push(handles) });
+        const second = { getFile: async () => new File(['y'], 'b.pdf') };
+        const third = { getFile: async () => new File(['z'], 'c.pdf') };
+        await consumer({ files: [{ getFile: async () => new File(['x'], 'a.pdf') }, second, third] });
+        expect(opened).toEqual(['a.pdf']);
+        expect(more).toEqual([[second, third]]);
+    });
+
+    test('a launch with no handles opens nothing; no launch queue is no error', async () => {
+        const p = page();
+        let consumer = null;
+        p.win.launchQueue = { setConsumer: (fn) => { consumer = fn; } };
+        const opened = [];
+        await base(p, { onFile: (file) => opened.push(file.name) });
+        await consumer({ files: [] });
+        expect(opened).toEqual([]);
+        await base(page());
     });
 });

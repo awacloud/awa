@@ -152,6 +152,18 @@ describe('the measure’s own rules', () => {
     /** The package runtime with one module replaced by a stand-in. */
     const standIn = (name, mod) => ({ resolve: (n) => (n === name ? mod : rt.resolve(n)) });
 
+    test('opts.read reaches fonts.read; the vendored measure is the same with allowMissingName (A52)', () => {
+        const api = rt.resolve('fonts');
+        const seen = [];
+        const fake = { read(b, o) { seen.push(o); return api.read(b, o); } };
+        const ttf = files.find((f) => f.path === 'Tests/ttx/data/TestTTF.ttf');
+        measure([ttf], standIn('fonts', fake), { read: { allowMissingName: true } });
+        measure([ttf], standIn('fonts', fake));
+        expect(seen).toEqual([{ allowMissingName: true }, undefined]);
+        const withOption = measure(files, rt, { read: { allowMissingName: true } });
+        expect(withOption.fonts.cases).toEqual(result.fonts.cases);
+    });
+
     test('every glyph of a glyf font is resolved: a glyph that cannot be fails the file', () => {
         const api = rt.resolve('fonts');
         const fake = {
@@ -196,9 +208,9 @@ describe('the vendored fonttools fonts', () => {
         ]);
     });
 
-    test('fonttools-tables: every one of the 2,278 table instances parses; per-tag counts', () => {
-        expect(result.tables.cases).toHaveLength(2278);
-        expect(passes(result.tables)).toBe(2278);
+    test('fonttools-tables: every one of the 2,280 table instances parses; per-tag counts', () => {
+        expect(result.tables.cases).toHaveLength(2280);
+        expect(passes(result.tables)).toBe(2280);
         const byTag = {};
         for (const c of result.tables.cases) {
             const tag = c.case.split(' :: ')[1];
@@ -206,14 +218,12 @@ describe('the vendored fonttools fonts', () => {
         }
         expect(byTag).toEqual({
             'CFF ': 208, DSIG: 7, GDEF: 148, GPOS: 93, GSUB: 94, 'OS/2': 214, cmap: 214, gasp: 6,
-            glyf: 5, head: 214, hhea: 214, hmtx: 214, loca: 5, maxp: 214, name: 214, post: 214
+            glyf: 6, head: 214, hhea: 214, hmtx: 214, loca: 6, maxp: 214, name: 214, post: 214
         });
     });
 
-    test('skipped: the transformed glyf and loca of the WOFF2, and the hinting tables no parser reads', () => {
+    test('skipped: the hinting tables no parser reads (the WOFF2 is reassembled, its glyf and loca parsed)', () => {
         expect(result.tables.skipped).toEqual([
-            { case: 'Tests/ttx/data/TestWOFF2.woff2 :: glyf', reason: 'WOFF2-transformed table: the transform is not reversed (documented limit)' },
-            { case: 'Tests/ttx/data/TestWOFF2.woff2 :: loca', reason: 'WOFF2-transformed table: the transform is not reversed (documented limit)' },
             { case: 'table "cvt "', reason: 'no parser in the package (6 instances)' },
             { case: 'table "fpgm"', reason: 'no parser in the package (6 instances)' },
             { case: 'table "prep"', reason: 'no parser in the package (6 instances)' }
@@ -239,5 +249,27 @@ describe('the vendored fonttools fonts', () => {
         expect([err.code, err.cause.code]).toEqual(['fonts/woff2-no-dictionary', 'ENEEDDICT']);
         expect(err.message).toContain('brotliDictWords.setBlob');
         expect(Object.keys(rt.resolve('fontWoff2').decode(woff2).tables)).toContain('name');
+    });
+
+    test('the WOFF2 reassembled by toSfnt is TestTTF.ttf, the same font: its glyphs, metrics and tables', () => {
+        const { parseSfnt } = rt.resolve('fontSfnt');
+        const { parseGlyf } = rt.resolve('tableGlyf');
+        const { parseLoca } = rt.resolve('tableLoca');
+        const woff2 = files.find((f) => f.path === 'Tests/ttx/data/TestWOFF2.woff2').bytes;
+        const ttf = files.find((f) => f.path === 'Tests/ttx/data/TestTTF.ttf').bytes;
+        const decoded = rt.resolve('fontWoff2').decode(woff2);
+        expect([decoded.tables.glyf.transformed, decoded.tables.loca.transformed]).toEqual([true, true]);
+        const sfnt = rt.resolve('fontWoff2').toSfnt(woff2);
+        const [a, b] = [parseSfnt(sfnt).tables, parseSfnt(ttf).tables];
+        const glyphs = (t) => parseGlyf(t.glyf.bytes, parseLoca(t.loca.bytes, 6, 0));
+        expect(glyphs(a)).toEqual(glyphs(b));
+        expect(glyphs(a).map((g) => g && g.kind)).toEqual([null, 'simple', null, 'simple', 'simple', 'composite'].map((k, i) => glyphs(b)[i] && glyphs(b)[i].kind));
+        // Every other table but DSIG (not in the WOFF2) and head (its checksum adjustment) byte for byte.
+        for (const t of Object.keys(b).filter((t) => !['DSIG', 'head', 'glyf', 'loca'].includes(t))) {
+            expect([t, [...a[t].bytes]]).toEqual([t, [...b[t].bytes]]);
+        }
+        const fonts = rt.resolve('fonts');
+        const [fa, fb] = [fonts.read(sfnt), fonts.read(ttf)];
+        for (let gid = 0; gid < 6; gid++) expect(fa.getGlyphByIndex(gid)).toEqual(fb.getGlyphByIndex(gid));
     });
 });

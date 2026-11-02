@@ -6661,7 +6661,7 @@ ${_wrapLines(body, 64)}-----END ${label}-----
       const tok = tokenize(bytes, { start: at }), kw = tok.next();
       if (!kw || kw.kind !== "kw" || kw.value !== "xref")
         throw new ParseError("pdf/xref/no-xref-keyword", "expected xref keyword", { context: { offset: at } });
-      const entries = {};
+      const entries = {}, tolerated = new Set;
       for (;; ) {
         const first = tok.peek();
         if (!first || first.kind !== "int") {
@@ -6673,13 +6673,19 @@ ${_wrapLines(body, 64)}-----END ${label}-----
         const cnt = tok.next();
         if (!cnt || cnt.kind !== "int" || cnt.value < 0)
           throw new ParseError("pdf/xref/bad-subsection-header", "xref subsection header must be `<first> <count>`", { context: { offset: first.offset } });
-        let p = tok.pos();
+        let p = tok.pos(), q = p;
+        while (q < bytes.length && (bytes[q] === 32 || bytes[q] === 9))
+          q++;
+        if (q > p && q < bytes.length && (bytes[q] === 13 || bytes[q] === 10)) {
+          tolerated.add("subsection-header-space");
+          p = q;
+        }
         if (p < bytes.length && bytes[p] === 13)
           p++;
         if (p < bytes.length && bytes[p] === 10)
           p++;
         for (let k = 0;k < cnt.value; k++) {
-          if (p + 20 > bytes.length)
+          if (p + 19 > bytes.length)
             throw new ParseError("pdf/xref/truncated-entry", "truncated xref entry", { context: { offset: p, expected: 20 } });
           const off = parseIntBytes(bytes, p, 10);
           if (bytes[p + 10] !== 32)
@@ -6695,11 +6701,16 @@ ${_wrapLines(body, 64)}-----END ${label}-----
             gen,
             free: tag === 102
           };
-          p += 20;
+          const e1 = bytes[p + 18], e2 = bytes[p + 19];
+          if ((e1 === 13 || e1 === 10) && e2 !== 13 && e2 !== 10 && e2 !== 32) {
+            tolerated.add("entry-eol-one-byte");
+            p += 19;
+          } else
+            p += 20;
         }
         tok.seek(p);
       }
-      return { entries, end: tok.pos() };
+      return tolerated.size ? { entries, end: tok.pos(), tolerated: [...tolerated] } : { entries, end: tok.pos() };
     }
     function parseTrailerDict(bytes, at) {
       const tok = tokenize(bytes, { start: at }), kw = tok.next();
@@ -6851,7 +6862,7 @@ endobj
         out.info = { num: e.Info.num, gen: e.Info.gen };
       if (e.Prev && e.Prev.type === "int")
         out.prev = e.Prev.value;
-      if (e.Encrypt)
+      if (e.Encrypt && e.Encrypt.type !== "null")
         out.encrypt = e.Encrypt.type === "ref" ? { num: e.Encrypt.num, gen: e.Encrypt.gen } : e.Encrypt;
       if (e.ID && e.ID.type === "array" && e.ID.items.length === 2 && e.ID.items[0].type === "string" && e.ID.items[1].type === "string")
         out.id = [e.ID.items[0].value, e.ID.items[1].value];
@@ -7076,7 +7087,8 @@ endstream`);
       "NeedsRendering",
       "DSS",
       "AF",
-      "DPartRoot"
+      "DPartRoot",
+      "Extensions"
     ]);
     function typeCatalog(dict) {
       if (!isType(dict, "dict"))
@@ -7121,6 +7133,37 @@ endstream`);
         out.ocProperties = e.OCProperties;
       if (e.OutputIntents)
         out.outputIntents = e.OutputIntents;
+      const has = (v) => !!v && v.type !== "null";
+      if (has(e.Threads))
+        out.threads = e.Threads;
+      if (has(e.OpenAction))
+        out.openAction = e.OpenAction;
+      if (has(e.AA))
+        out.aa = e.AA;
+      if (has(e.URI))
+        out.uri = e.URI;
+      if (has(e.Extensions))
+        out.extensions = e.Extensions;
+      if (has(e.SpiderInfo))
+        out.spiderInfo = e.SpiderInfo;
+      if (has(e.PieceInfo))
+        out.pieceInfo = e.PieceInfo;
+      if (has(e.Perms))
+        out.perms = e.Perms;
+      if (has(e.Legal))
+        out.legal = e.Legal;
+      if (has(e.Requirements))
+        out.requirements = e.Requirements;
+      if (has(e.Collection))
+        out.collection = e.Collection;
+      if (isType(e.NeedsRendering, "bool"))
+        out.needsRendering = e.NeedsRendering.value;
+      if (has(e.DSS))
+        out.dss = e.DSS;
+      if (has(e.AF))
+        out.af = e.AF;
+      if (has(e.DPartRoot))
+        out.dPartRoot = e.DPartRoot;
       for (const k of Object.keys(e))
         if (!KNOWN.has(k))
           out._extras[k] = e[k];
@@ -7151,7 +7194,9 @@ endstream`);
             throw new ParseError("pdf/pages/too-many", "page count limit exceeded", { context: { maxPages } });
           return;
         }
-        const kids = node.entries.Kids;
+        let kids = node.entries.Kids;
+        if (kids && kids.type === "ref")
+          kids = resolveRef(kids);
         if (!kids || kids.type !== "array")
           throw new ParseError("pdf/pages/missing-kids", "intermediate page tree node missing /Kids array", { context: { ref, hasKids: !!kids } });
         for (const k of kids.items) {
@@ -7207,7 +7252,7 @@ endstream`);
       "OutputIntents",
       "DPart",
       "AssociatedFiles"
-    ]);
+    ]), has = (v) => !!v && v.type !== "null", isNum = (v) => !!v && (v.type === "int" || v.type === "real");
     function toBox(v) {
       if (!v || v.type !== "array" || v.items.length !== 4)
         return null;
@@ -7285,6 +7330,42 @@ endstream`);
         out.metadata = e.Metadata;
       if (e.Group)
         out.group = e.Group;
+      if (isType(e.LastModified, "string"))
+        out.lastModified = e.LastModified.value;
+      if (has(e.BoxColorInfo))
+        out.boxColorInfo = e.BoxColorInfo;
+      if (has(e.Thumb))
+        out.thumb = e.Thumb;
+      if (has(e.B))
+        out.b = e.B;
+      if (isNum(e.Dur))
+        out.dur = e.Dur.value;
+      if (has(e.Trans))
+        out.trans = e.Trans;
+      if (has(e.AA))
+        out.aa = e.AA;
+      if (has(e.PieceInfo))
+        out.pieceInfo = e.PieceInfo;
+      if (isType(e.StructParents, "int"))
+        out.structParents = e.StructParents.value;
+      if (isType(e.ID, "string"))
+        out.id = e.ID.value;
+      if (isNum(e.PZ))
+        out.pz = e.PZ.value;
+      if (has(e.SeparationInfo))
+        out.separationInfo = e.SeparationInfo;
+      if (isType(e.TemplateInstantiated, "name"))
+        out.templateInstantiated = e.TemplateInstantiated.value;
+      if (has(e.PresSteps))
+        out.presSteps = e.PresSteps;
+      if (has(e.VP))
+        out.vp = e.VP;
+      if (has(e.AF))
+        out.af = e.AF;
+      if (has(e.OutputIntents))
+        out.outputIntents = e.OutputIntents;
+      if (has(e.DPart))
+        out.dPart = e.DPart;
       for (const k of Object.keys(e))
         if (!KNOWN.has(k))
           out._extras[k] = e[k];
@@ -7474,11 +7555,9 @@ endstream`);
           case 3:
             out[i] = v - (left + up >> 1) & 255;
             break;
-          case 4:
+          default:
             out[i] = v - paeth(left, up, upLeft) & 255;
             break;
-          default:
-            throw new ParseError("pdf/flate/bad-png-filter", "unknown PNG filter tag", { context: { tag: filter } });
         }
       }
       return out;
@@ -7949,7 +8028,7 @@ endstream`);
     return { decode, encode };
   } });
     __register({ name: "pdfFilterDispatch", dependencies: ["pdfErrors","pdfFlate","pdfAsciiHex","pdfAscii85","pdfRunLength"], factory: function(errors, flate, asciiHex, ascii85, runLength) {
-    const { ParseError } = errors;
+    const { ParseError, ContractError } = errors;
     function isType(node, kind) {
       return !!(node && node.type === kind);
     }
@@ -8065,7 +8144,68 @@ endstream`);
     function names() {
       return Object.keys(decoders);
     }
+    function filterNames(v) {
+      if (v === void 0)
+        return [];
+      if (isType(v, "name"))
+        return [v.value];
+      if (isType(v, "array") && v.items.every((it) => isType(it, "name")))
+        return v.items.map((it) => it.value);
+      return null;
+    }
+    function filterParms(v) {
+      if (isType(v, "dict"))
+        return [v];
+      if (isType(v, "array") && v.items.every((it) => isType(it, "dict") || isType(it, "null")))
+        return v.items.map((it) => isType(it, "dict") ? it : null);
+      return null;
+    }
+    function typeStreamEntries(streamObj) {
+      const dict = isType(streamObj, "stream") ? streamObj.dict : streamObj;
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/filter/not-stream", "typeStreamEntries expects a stream or a stream dictionary", { context: { type: streamObj && streamObj.type } });
+      const e = dict.entries, refOf = (v) => isType(v, "ref") ? { num: v.num, gen: v.gen } : null;
+      return {
+        length: isType(e.Length, "int") ? e.Length.value : refOf(e.Length),
+        filter: filterNames(e.Filter),
+        decodeParms: filterParms(e.DecodeParms),
+        f: isType(e.F, "string") ? e.F.value : isType(e.F, "dict") ? e.F : refOf(e.F),
+        fFilter: filterNames(e.FFilter),
+        fDecodeParms: filterParms(e.FDecodeParms),
+        dl: isType(e.DL, "int") && e.DL.value >= 0 ? e.DL.value : null
+      };
+    }
+    const DECODE_READ = Object.freeze({
+      int: (v) => isType(v, "int") ? v.value : null,
+      bool: (v) => isType(v, "bool") ? v.value : null,
+      name: (v) => isType(v, "name") ? v.value : null,
+      stream: (v) => isType(v, "stream") ? v : null
+    }), keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(" ").map((p) => p.split(":")))), PREDICTOR = "Predictor:int Colors:int BitsPerComponent:int Columns:int", DECODE_PARMS_TYPES = Object.freeze({
+      FlateDecode: keyTypes(PREDICTOR),
+      LZWDecode: keyTypes(`${PREDICTOR} EarlyChange:int`),
+      CCITTFaxDecode: keyTypes("K:int EndOfLine:bool EncodedByteAlign:bool Columns:int Rows:int EndOfBlock:bool BlackIs1:bool DamagedRowsBeforeError:int"),
+      DCTDecode: keyTypes("ColorTransform:int"),
+      JBIG2Decode: keyTypes("JBIG2Globals:stream"),
+      Crypt: keyTypes("Type:name Name:name")
+    }), DECODE_PARMS_KEYS = Object.freeze(Object.fromEntries(Object.entries(DECODE_PARMS_TYPES).map(([filter, types]) => [filter, Object.freeze(Object.keys(types))])));
+    function typeDecodeParms(dict, filter) {
+      const name = typeof filter === "string" ? resolveAbbrev(filter) : filter;
+      if (typeof name !== "string" || !Object.prototype.hasOwnProperty.call(DECODE_PARMS_TYPES, name))
+        throw new ContractError("pdf/filter/decodeparms/filter", "filter must be a key of DECODE_PARMS_KEYS", { context: { filter } });
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/filter/decodeparms/not-dict", "decode parameters must be a dictionary", { context: { type: dict && dict.type } });
+      const types = DECODE_PARMS_TYPES[name], out = { raw: dict, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (!Object.prototype.hasOwnProperty.call(types, k))
+          out._extras[k] = v;
+        else
+          out[k.toLowerCase()] = isType(v, "ref") ? v : DECODE_READ[types[k]](v);
+      return out;
+    }
     return {
+      typeStreamEntries,
+      typeDecodeParms,
+      DECODE_PARMS_KEYS,
       decode,
       decodeChain,
       encodeChain,
@@ -8078,8 +8218,1195 @@ endstream`);
       decodeStream
     };
   } });
-    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod) {
-    const { ParseError } = errors, tokenize = tokenizerMod && tokenizerMod.tokenize, parseIndirect = parserMod && parserMod.parseIndirect, locateStartXref = xrefMod && xrefMod.locateStartXref, readStartXref = xrefMod && xrefMod.readStartXref, parseXrefTable = xrefMod && xrefMod.parseXrefTable, parseTrailerDict = xrefMod && xrefMod.parseTrailerDict, typeTrailer = trailerMod && trailerMod.typeTrailer, typeCatalog = catalogMod && catalogMod.typeCatalog, typePage = pageMod && pageMod.typePage, walkPageTree = pagesMod && pagesMod.walkPageTree, HEADER_PREFIX = new Uint8Array([37, 80, 68, 70, 45]), XREF_KEYWORD = new Uint8Array([120, 114, 101, 102]), PDF_NULL = Object.freeze({ type: "null" }), SECTION_LOCAL_KEYS = new Set([
+    __register({ name: "pdfSecurity", dependencies: ["pdfErrors"], factory: function(errors) {
+    const { EncryptionError } = errors;
+    function asUint8(v) {
+      if (v == null)
+        return;
+      if (v instanceof Uint8Array)
+        return v;
+      if (typeof v === "string") {
+        const out = new Uint8Array(v.length);
+        for (let i = 0;i < v.length; i++)
+          out[i] = v.charCodeAt(i) & 255;
+        return out;
+      }
+      if (Array.isArray(v))
+        return new Uint8Array(v);
+      return;
+    }
+    function typeEncryptDict(dict) {
+      if (dict == null || typeof dict !== "object")
+        throw new EncryptionError("pdf/crypto/encrypt-dict/bad-input", "/Encrypt must be a dictionary");
+      const isNode = !(dict instanceof Map) && dict.type === "dict" && dict.entries !== null && typeof dict.entries === "object", plain = (n) => n && typeof n === "object" && (n.type === "int" || n.type === "real" || n.type === "bool" || n.type === "string") ? n.value : n, get = (k) => dict instanceof Map ? dict.get(k) : isNode ? plain(dict.entries[k]) : dict[k], V = get("V"), R = get("R"), Filter = get("Filter");
+      if (V === void 0 || R === void 0)
+        throw new EncryptionError("pdf/crypto/encrypt-dict/missing-V-R", "/Encrypt requires both /V and /R", { context: { V, R } });
+      if (typeof V !== "number" || typeof R !== "number")
+        throw new EncryptionError("pdf/crypto/encrypt-dict/bad-V-R-type", "/V and /R must be integers", { context: { V, R } });
+      return {
+        V,
+        R,
+        Filter,
+        SubFilter: get("SubFilter"),
+        Length: get("Length"),
+        CF: get("CF"),
+        StmF: get("StmF"),
+        StrF: get("StrF"),
+        EFF: get("EFF"),
+        O: asUint8(get("O")),
+        U: asUint8(get("U")),
+        OE: asUint8(get("OE")),
+        UE: asUint8(get("UE")),
+        Perms: asUint8(get("Perms")),
+        EncryptMetadata: get("EncryptMetadata") !== !1,
+        P: get("P"),
+        raw: dict
+      };
+    }
+    function nameValue(v) {
+      if (v == null)
+        return null;
+      if (typeof v === "string")
+        return v;
+      if (typeof v === "object" && v.type === "name")
+        return v.value;
+      return null;
+    }
+    function dictGet(d, key) {
+      if (d == null)
+        return;
+      if (d instanceof Map)
+        return d.get(key);
+      if (typeof d === "object" && d.type === "dict" && d.entries)
+        return d.entries[key];
+      if (typeof d === "object")
+        return d[key];
+      return;
+    }
+    function resolveV4Method(typedEncrypt) {
+      const stmFName = nameValue(typedEncrypt.StmF) || "Identity", strFName = nameValue(typedEncrypt.StrF) || "Identity", effName = nameValue(typedEncrypt.EFF) || stmFName, streamMethod = stmFName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, stmFName), stringMethod = strFName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, strFName), embeddedFileMethod = effName === "Identity" ? "Identity" : resolveCfmFor(typedEncrypt, effName);
+      return {
+        method: streamMethod,
+        strMethod: stringMethod,
+        effMethod: embeddedFileMethod
+      };
+    }
+    function resolveCfmFor(typedEncrypt, filterName) {
+      const cf = typedEncrypt.CF, entry = dictGet(cf, filterName);
+      if (!entry)
+        throw new EncryptionError("pdf/crypto/v4/missing-cf-entry", "V=4 requires /CF /" + filterName + " entry", { context: { filterName } });
+      const cfm = nameValue(dictGet(entry, "CFM"));
+      if (cfm !== "AESV2" && cfm !== "V2")
+        throw new EncryptionError("pdf/crypto/v4/bad-cfm", "V=4 CFM must be AESV2 or V2", { context: { cfm } });
+      return cfm;
+    }
+    function resolveV5Method(typedEncrypt) {
+      const stmFName = nameValue(typedEncrypt.StmF) || "Identity", strFName = nameValue(typedEncrypt.StrF) || "Identity", effName = nameValue(typedEncrypt.EFF) || stmFName, streamMethod = stmFName === "Identity" ? "Identity" : resolveCfmForV5(typedEncrypt, stmFName), stringMethod = strFName === "Identity" ? "Identity" : resolveCfmForV5(typedEncrypt, strFName), embeddedFileMethod = effName === "Identity" ? "Identity" : resolveCfmForV5(typedEncrypt, effName);
+      return {
+        method: streamMethod,
+        strMethod: stringMethod,
+        effMethod: embeddedFileMethod
+      };
+    }
+    function resolveCfmForV5(typedEncrypt, filterName) {
+      const cf = typedEncrypt.CF, entry = dictGet(cf, filterName);
+      if (!entry)
+        return "AESV3";
+      const cfm = nameValue(dictGet(entry, "CFM"));
+      if (cfm == null)
+        return "AESV3";
+      if (cfm !== "AESV3" && cfm !== "AESV4")
+        throw new EncryptionError("pdf/crypto/v5/bad-cfm", "V=5 CFM must be AESV3 or AESV4", { context: { cfm } });
+      return cfm;
+    }
+    function selectHandler(typedEncrypt, handlers) {
+      if (!typedEncrypt || typeof typedEncrypt !== "object")
+        throw new EncryptionError("pdf/crypto/security/bad-typed", "selectHandler requires a typed /Encrypt");
+      const { V, R } = typedEncrypt;
+      if (V < 4)
+        throw new EncryptionError("pdf/crypto/unsupported-version", "Security Handler V=" + V + " is not supported at this level", { context: { V, R } });
+      if (V === 4) {
+        if (R !== 4)
+          throw new EncryptionError("pdf/crypto/unsupported-version", "Standard handler V=4 requires R=4", { context: { V, R } });
+        if (!handlers || !handlers.v4)
+          throw new EncryptionError("pdf/crypto/missing-handler", "no v4 handler provided");
+        const m = resolveV4Method(typedEncrypt);
+        return {
+          handler: handlers.v4,
+          revision: 4,
+          method: m.method,
+          strMethod: m.strMethod,
+          effMethod: m.effMethod
+        };
+      }
+      if (V !== 5)
+        throw new EncryptionError("pdf/crypto/unsupported-version", "Security Handler V=" + V + " is unknown", { context: { V, R } });
+      if (R === 5) {
+        if (!handlers || !handlers.v5)
+          throw new EncryptionError("pdf/crypto/missing-handler", "no v5 handler provided");
+        const m5 = resolveV5Method(typedEncrypt);
+        return {
+          handler: handlers.v5,
+          revision: 5,
+          method: m5.method,
+          strMethod: m5.strMethod,
+          effMethod: m5.effMethod
+        };
+      }
+      if (R === 6) {
+        if (!handlers || !handlers.v6)
+          throw new EncryptionError("pdf/crypto/missing-handler", "no v6 handler provided");
+        const m6 = resolveV5Method(typedEncrypt);
+        return {
+          handler: handlers.v6,
+          revision: 6,
+          method: m6.method,
+          strMethod: m6.strMethod,
+          effMethod: m6.effMethod
+        };
+      }
+      throw new EncryptionError("pdf/crypto/unsupported-version", "Standard handler revision R=" + R + " is not supported", { context: { V, R } });
+    }
+    function isEmbeddedFileStream(stream) {
+      if (!stream || stream.type !== "stream")
+        return !1;
+      const d = stream.dict;
+      if (!d || d.type !== "dict" || !d.entries)
+        return !1;
+      const t = d.entries.Type;
+      if (!t)
+        return !1;
+      if (t.type === "name")
+        return t.value === "EmbeddedFile";
+      if (typeof t === "string")
+        return t === "EmbeddedFile";
+      return !1;
+    }
+    function dispatchDecryptStream(selection, stream, fek, objNum, gen, ciphertext, opts) {
+      if (!selection || typeof selection !== "object" || !selection.handler)
+        throw new EncryptionError("pdf/crypto/security/bad-selection", "dispatchDecryptStream requires a selection from selectHandler");
+      const h = selection.handler, embedded = isEmbeddedFileStream(stream);
+      if ((embedded ? selection.effMethod : selection.method) === "Identity")
+        return ciphertext;
+      if (embedded) {
+        const typedView = { method: selection.effMethod };
+        if (typeof h.decryptEmbeddedFile === "function")
+          return h.decryptEmbeddedFile(typedView, fek, objNum, gen, ciphertext, opts);
+        if (typeof h.decryptStream === "function")
+          return h.decryptStream(typedView, fek, objNum, gen, ciphertext, opts);
+        throw new EncryptionError("pdf/crypto/security/no-eff", "selected handler lacks decryptEmbeddedFile and decryptStream");
+      }
+      if (typeof h.decryptStream !== "function")
+        throw new EncryptionError("pdf/crypto/security/no-stream", "selected handler lacks decryptStream");
+      const typedView = { method: selection.method };
+      return h.decryptStream(typedView, fek, objNum, gen, ciphertext, opts);
+    }
+    return {
+      typeEncryptDict,
+      selectHandler,
+      isEmbeddedFileStream,
+      dispatchDecryptStream
+    };
+  } });
+    __register({ name: "pdfStandardV4", dependencies: ["pdfErrors","aes","cbc","bitArray"], factory: function(errors, aes, cbc, bitArray) {
+    const { EncryptionError } = errors;
+    if (!aes || !cbc || !bitArray)
+      throw new EncryptionError("pdf/crypto/v4/missing-fw", "pdfStandardV4 requires aes, cbc, bitArray fw modules");
+    const PASSWORD_PADDING = new Uint8Array([
+      40,
+      191,
+      78,
+      94,
+      78,
+      117,
+      138,
+      65,
+      100,
+      0,
+      78,
+      86,
+      255,
+      250,
+      1,
+      8,
+      46,
+      46,
+      0,
+      182,
+      208,
+      104,
+      62,
+      128,
+      47,
+      12,
+      169,
+      254,
+      100,
+      83,
+      105,
+      122
+    ]), AES_SALT = new Uint8Array([115, 65, 108, 84]);
+    function bytesToWords(b, off, len) {
+      const n = len >>> 2, out = Array(n);
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        out[i] = b[j] << 24 | b[j + 1] << 16 | b[j + 2] << 8 | b[j + 3] | 0;
+      }
+      return out;
+    }
+    function wordsToBytes(w, into, off) {
+      for (let i = 0;i < w.length; i++) {
+        const j = off + (i << 2);
+        into[j] = w[i] >>> 24 & 255;
+        into[j + 1] = w[i] >>> 16 & 255;
+        into[j + 2] = w[i] >>> 8 & 255;
+        into[j + 3] = w[i] & 255;
+      }
+    }
+    function rc4(key, data) {
+      const S = new Uint8Array(256);
+      for (let i = 0;i < 256; i++)
+        S[i] = i;
+      let j = 0;
+      for (let i = 0;i < 256; i++) {
+        j = j + S[i] + key[i % key.length] & 255;
+        const t = S[i];
+        S[i] = S[j];
+        S[j] = t;
+      }
+      const out = new Uint8Array(data.length);
+      let a = 0, b = 0;
+      for (let n = 0;n < data.length; n++) {
+        a = a + 1 & 255;
+        b = b + S[a] & 255;
+        const t = S[a];
+        S[a] = S[b];
+        S[b] = t;
+        const k = S[S[a] + S[b] & 255];
+        out[n] = data[n] ^ k;
+      }
+      return out;
+    }
+    function md5(bytes) {
+      function rol(x, n) {
+        return x << n | x >>> 32 - n | 0;
+      }
+      const r = [
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        7,
+        12,
+        17,
+        22,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        5,
+        9,
+        14,
+        20,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        4,
+        11,
+        16,
+        23,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21,
+        6,
+        10,
+        15,
+        21
+      ], k = [
+        3614090360,
+        3905402710,
+        606105819,
+        3250441966,
+        4118548399,
+        1200080426,
+        2821735955,
+        4249261313,
+        1770035416,
+        2336552879,
+        4294925233,
+        2304563134,
+        1804603682,
+        4254626195,
+        2792965006,
+        1236535329,
+        4129170786,
+        3225465664,
+        643717713,
+        3921069994,
+        3593408605,
+        38016083,
+        3634488961,
+        3889429448,
+        568446438,
+        3275163606,
+        4107603335,
+        1163531501,
+        2850285829,
+        4243563512,
+        1735328473,
+        2368359562,
+        4294588738,
+        2272392833,
+        1839030562,
+        4259657740,
+        2763975236,
+        1272893353,
+        4139469664,
+        3200236656,
+        681279174,
+        3936430074,
+        3572445317,
+        76029189,
+        3654602809,
+        3873151461,
+        530742520,
+        3299628645,
+        4096336452,
+        1126891415,
+        2878612391,
+        4237533241,
+        1700485571,
+        2399980690,
+        4293915773,
+        2240044497,
+        1873313359,
+        4264355552,
+        2734768916,
+        1309151649,
+        4149444226,
+        3174756917,
+        718787259,
+        3951481745
+      ], msgLenBytes = bytes.length, withOne = new Uint8Array((msgLenBytes + 8 >> 6 << 6) + 64);
+      withOne.set(bytes);
+      withOne[msgLenBytes] = 128;
+      const bitsLo = msgLenBytes * 8 >>> 0, bitsHi = Math.floor(msgLenBytes * 8 / 4294967296) >>> 0, dv = new DataView(withOne.buffer);
+      dv.setUint32(withOne.length - 8, bitsLo, !0);
+      dv.setUint32(withOne.length - 4, bitsHi, !0);
+      let a0 = 1732584193, b0 = -271733879, c0 = -1732584194, d0 = 271733878;
+      for (let off = 0;off < withOne.length; off += 64) {
+        const M = Array(16);
+        for (let i = 0;i < 16; i++)
+          M[i] = dv.getUint32(off + i * 4, !0);
+        let A = a0, B = b0, C = c0, D = d0;
+        for (let i = 0;i < 64; i++) {
+          let F, g;
+          if (i < 16) {
+            F = B & C | ~B & D;
+            g = i;
+          } else if (i < 32) {
+            F = D & B | ~D & C;
+            g = (5 * i + 1) % 16;
+          } else if (i < 48) {
+            F = B ^ C ^ D;
+            g = (3 * i + 5) % 16;
+          } else {
+            F = C ^ (B | ~D);
+            g = 7 * i % 16;
+          }
+          const t = A + F + k[i] + M[g] | 0;
+          A = D;
+          D = C;
+          C = B;
+          B = B + rol(t, r[i]) | 0;
+        }
+        a0 = a0 + A | 0;
+        b0 = b0 + B | 0;
+        c0 = c0 + C | 0;
+        d0 = d0 + D | 0;
+      }
+      const out = new Uint8Array(16), ov = new DataView(out.buffer);
+      ov.setUint32(0, a0, !0);
+      ov.setUint32(4, b0, !0);
+      ov.setUint32(8, c0, !0);
+      ov.setUint32(12, d0, !0);
+      return out;
+    }
+    function padPassword(pw) {
+      if (pw === void 0 || pw === null)
+        pw = "";
+      if (typeof pw === "string")
+        pw = new TextEncoder().encode(pw);
+      if (!(pw instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/bad-password", "password must be string or Uint8Array");
+      const out = new Uint8Array(32), take = Math.min(32, pw.length);
+      out.set(pw.subarray(0, take));
+      out.set(PASSWORD_PADDING.subarray(0, 32 - take), take);
+      return out;
+    }
+    function computeFileKey(pw, O, P, idFirst, encryptMetadata) {
+      if (!(O instanceof Uint8Array) || O.length !== 32)
+        throw new EncryptionError("pdf/crypto/v4/bad-O", "/O must be a 32-byte Uint8Array");
+      if (!(idFirst instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/bad-id", "first /ID element required");
+      const padded = padPassword(pw), extra = encryptMetadata === !1 ? 4 : 0, buf = new Uint8Array(68 + idFirst.length + extra);
+      let p = 0;
+      buf.set(padded, p);
+      p += 32;
+      buf.set(O, p);
+      p += 32;
+      new DataView(buf.buffer).setInt32(p, P | 0, !0);
+      p += 4;
+      buf.set(idFirst, p);
+      p += idFirst.length;
+      if (extra) {
+        buf[p++] = 255;
+        buf[p++] = 255;
+        buf[p++] = 255;
+        buf[p] = 255;
+      }
+      let h = md5(buf);
+      const nBytes = 16;
+      for (let i = 0;i < 50; i++)
+        h = md5(h.subarray(0, nBytes));
+      return h.subarray(0, nBytes);
+    }
+    function computeU(fileKey, idFirst) {
+      const seed = new Uint8Array(PASSWORD_PADDING.length + idFirst.length);
+      seed.set(PASSWORD_PADDING, 0);
+      seed.set(idFirst, PASSWORD_PADDING.length);
+      let h = md5(seed);
+      h = rc4(fileKey, h);
+      for (let i = 1;i <= 19; i++) {
+        const xk = new Uint8Array(fileKey.length);
+        for (let n = 0;n < fileKey.length; n++)
+          xk[n] = fileKey[n] ^ i;
+        h = rc4(xk, h);
+      }
+      const out = new Uint8Array(32);
+      out.set(h, 0);
+      return out;
+    }
+    function computeO(ownerPw, userPw) {
+      const oPad = padPassword(ownerPw && ownerPw.length ? ownerPw : userPw);
+      let h = md5(oPad);
+      for (let i = 0;i < 50; i++)
+        h = md5(h);
+      const rc4Key = h.subarray(0, 16);
+      let out = rc4(rc4Key, padPassword(userPw));
+      for (let i = 1;i <= 19; i++) {
+        const xk = new Uint8Array(16);
+        for (let n = 0;n < 16; n++)
+          xk[n] = rc4Key[n] ^ i;
+        out = rc4(xk, out);
+      }
+      return out;
+    }
+    function bytesEqual(a, b, n) {
+      const len = n === void 0 ? Math.min(a.length, b.length) : n;
+      for (let i = 0;i < len; i++)
+        if (a[i] !== b[i])
+          return !1;
+      return !0;
+    }
+    function objectKey(fileKey, objNum, gen, isAes) {
+      const extra = isAes ? 4 : 0, buf = new Uint8Array(fileKey.length + 5 + extra);
+      buf.set(fileKey, 0);
+      buf[fileKey.length + 0] = objNum & 255;
+      buf[fileKey.length + 1] = objNum >> 8 & 255;
+      buf[fileKey.length + 2] = objNum >> 16 & 255;
+      buf[fileKey.length + 3] = gen & 255;
+      buf[fileKey.length + 4] = gen >> 8 & 255;
+      if (isAes)
+        buf.set(AES_SALT, fileKey.length + 5);
+      return md5(buf).subarray(0, Math.min(fileKey.length + 5, 16));
+    }
+    function aesOf(opts) {
+      return opts && opts.fastCipher === !0 && aes.ttable ? aes.ttable : aes;
+    }
+    function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
+      if (ciphertext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v4/bad-ciphertext-len", "AES-CBC ciphertext length must be a multiple of 16");
+      const cipher = A.fn(bytesToWords(key, 0, key.length), !0);
+      if (cipher === !1)
+        throw new EncryptionError("pdf/crypto/v4/aes-schedule-failed", "AES-128 key schedule failed");
+      const ctWords = bytesToWords(ciphertext, 0, ciphertext.length), ivWords = bytesToWords(iv, 0, 16), ptWords = cbc.decrypt(cipher, ctWords, ivWords);
+      if (ptWords === !1)
+        throw new EncryptionError("pdf/crypto/v4/cbc-decrypt-failed", "AES-128-CBC decryption failed");
+      const out = new Uint8Array(ciphertext.length);
+      wordsToBytes(ptWords, out, 0);
+      return out;
+    }
+    function aesCbcEncrypt(key, iv, plaintext) {
+      if (plaintext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v4/bad-pt-len", "AES-CBC plaintext length must be a multiple of 16");
+      const cipher = aes.fn(bytesToWords(key, 0, key.length), !1);
+      if (cipher === !1 || typeof cipher.encrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v4/aes-encrypt-schedule", "AES-128 key schedule failed for encrypt");
+      const ptWords = bytesToWords(plaintext, 0, plaintext.length), ivWords = bytesToWords(iv, 0, 16), ctWords = cbc.encrypt(cipher, ptWords, ivWords);
+      if (ctWords === !1)
+        throw new EncryptionError("pdf/crypto/v4/cbc-encrypt-failed", "AES-128-CBC encryption failed");
+      const out = new Uint8Array(plaintext.length);
+      wordsToBytes(ctWords, out, 0);
+      return out;
+    }
+    function padPkcs7(buf) {
+      const pad = 16 - buf.length % 16, out = new Uint8Array(buf.length + pad);
+      out.set(buf);
+      for (let i = buf.length;i < out.length; i++)
+        out[i] = pad;
+      return out;
+    }
+    function stripPkcs7(buf) {
+      if (buf.length === 0)
+        return buf;
+      const pad = buf[buf.length - 1];
+      if (pad < 1 || pad > 16 || pad > buf.length)
+        return buf;
+      for (let i = buf.length - pad;i < buf.length; i++)
+        if (buf[i] !== pad)
+          return buf;
+      return buf.subarray(0, buf.length - pad);
+    }
+    function tryPassword(typedEncrypt, password, isOwner, _opts) {
+      const { O, U, idFirst } = typedEncrypt, P = typedEncrypt.P | 0, encryptMetadata = typedEncrypt.EncryptMetadata !== !1;
+      if (!(O instanceof Uint8Array) || O.length !== 32 || !(U instanceof Uint8Array) || U.length !== 32)
+        throw new EncryptionError("pdf/crypto/v4/bad-O-U", "/O and /U must be 32 bytes for v4");
+      if (!(idFirst instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/bad-id", "idFirst is required for v4 key derivation");
+      let userPw;
+      if (isOwner) {
+        const oPad = padPassword(password);
+        let h = md5(oPad);
+        for (let i = 0;i < 50; i++)
+          h = md5(h);
+        const rc4Key = h.subarray(0, 16);
+        let recovered = O;
+        for (let i = 19;i >= 0; i--) {
+          const xk = new Uint8Array(16);
+          for (let n = 0;n < 16; n++)
+            xk[n] = rc4Key[n] ^ i;
+          recovered = rc4(xk, recovered);
+        }
+        userPw = recovered;
+      } else
+        userPw = password;
+      const fk = computeFileKey(userPw, O, P, idFirst, encryptMetadata), u = computeU(fk, idFirst);
+      return bytesEqual(u, U, 16) ? { fileEncryptionKey: fk } : { fileEncryptionKey: null };
+    }
+    function decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      const method = typedEncrypt && typedEncrypt.method;
+      if (method === "AESV2") {
+        if (ciphertext.length < 16)
+          throw new EncryptionError("pdf/crypto/v4/bad-string", "AESV2 string must be at least 16 bytes (IV)");
+        const key = objectKey(fek, objNum, gen, !0), iv = ciphertext.subarray(0, 16), body = ciphertext.subarray(16);
+        if (body.length === 0)
+          return body;
+        const pt = aesCbcDecrypt(key, iv, body, aesOf(opts));
+        return stripPkcs7(pt);
+      }
+      if (method === "V2" || method === "RC4") {
+        const key = objectKey(fek, objNum, gen, !1);
+        return rc4(key, ciphertext);
+      }
+      throw new EncryptionError("pdf/crypto/v4/bad-method", "V4 method must be AESV2 or V2", { context: { method } });
+    }
+    function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
+    }
+    function decryptEmbeddedFile(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
+    }
+    function encryptEmbeddedFile(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);
+    }
+    function encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      const method = typedEncrypt && typedEncrypt.method;
+      if (!(plaintext instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/encrypt-bad-input", "plaintext must be Uint8Array");
+      if (method === "AESV2") {
+        if (!(iv instanceof Uint8Array) || iv.length !== 16)
+          throw new EncryptionError("pdf/crypto/v4/encrypt-bad-iv", "AESV2 IV must be 16 bytes");
+        const key = objectKey(fek, objNum, gen, !0), padded = padPkcs7(plaintext), body = aesCbcEncrypt(key, iv, padded), out = new Uint8Array(16 + body.length);
+        out.set(iv, 0);
+        out.set(body, 16);
+        return out;
+      }
+      if (method === "V2" || method === "RC4") {
+        const key = objectKey(fek, objNum, gen, !1);
+        return rc4(key, plaintext);
+      }
+      throw new EncryptionError("pdf/crypto/v4/bad-method", "V4 method must be AESV2 or V2", { context: { method } });
+    }
+    function encryptStream(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);
+    }
+    function buildOU(ownerPassword, userPassword, P, idFirst, encryptMetadata) {
+      if (!(idFirst instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v4/bad-id", "idFirst required to build /O and /U");
+      const O = computeO(ownerPassword, userPassword), fek = computeFileKey(userPassword, O, P, idFirst, encryptMetadata), U = computeU(fek, idFirst);
+      return { O, U, fek };
+    }
+    function buildPerms() {
+      return null;
+    }
+    return {
+      tryPassword,
+      decryptString,
+      decryptStream,
+      decryptEmbeddedFile,
+      encryptEmbeddedFile,
+      encryptString,
+      encryptStream,
+      buildOU,
+      buildPerms,
+      computeFileKey,
+      computeU,
+      computeO,
+      objectKey,
+      rc4,
+      md5,
+      padPassword,
+      PASSWORD_PADDING
+    };
+  } });
+    __register({ name: "pdfAesGcm", dependencies: ["pdfErrors","aes","gcm","bitArray"], factory: function(errors, aes, gcm, bitArray) {
+    const { EncryptionError } = errors;
+    function bytesToWords(b, off, len) {
+      const n = len >>> 2, out = Array(n);
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        out[i] = b[j] << 24 | b[j + 1] << 16 | b[j + 2] << 8 | b[j + 3] | 0;
+      }
+      return out;
+    }
+    if (!aes || !gcm || !bitArray)
+      throw new EncryptionError("pdf/crypto/gcm/missing-fw", "pdfAesGcm requires aes, gcm, bitArray fw modules");
+    function buildCipher(fek) {
+      if (!(fek instanceof Uint8Array) || fek.length !== 32)
+        throw new EncryptionError("pdf/crypto/gcm/bad-fek", "File Encryption Key must be 32 bytes (AES-256)", { context: { length: fek && fek.length } });
+      const c = aes.fn(bytesToWords(fek, 0, 32), !1);
+      if (c === !1)
+        throw new EncryptionError("pdf/crypto/gcm/aes-schedule-failed", "AES-256 key schedule failed");
+      return c;
+    }
+    function decryptObjectGcm(fek, framed) {
+      if (!(framed instanceof Uint8Array) || framed.length < 28)
+        throw new EncryptionError("pdf/crypto/gcm/bad-input", "AES-GCM framed input must be at least 28 bytes (IV + tag)");
+      const cipher = buildCipher(fek), iv = framed.subarray(0, 12), tag = framed.subarray(framed.length - 16), ct = framed.subarray(12, framed.length - 16), pt = gcm.decrypt(cipher, bitArray.ui8_to_ba(ct), bitArray.ui8_to_ba(iv), [], bitArray.ui8_to_ba(tag), 128);
+      if (pt === !1)
+        throw new EncryptionError("pdf/crypto/gcm/tag-mismatch", "AES-GCM authentication tag mismatch");
+      return bitArray.ba_to_ui8(pt);
+    }
+    function encryptObjectGcm(fek, plaintext, ivProvider) {
+      if (!(plaintext instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/gcm/bad-plaintext", "plaintext must be Uint8Array");
+      if (typeof ivProvider !== "function")
+        throw new EncryptionError("pdf/crypto/gcm/bad-iv-provider", "ivProvider must be a function returning 12 bytes");
+      const iv = ivProvider();
+      if (!(iv instanceof Uint8Array) || iv.length !== 12)
+        throw new EncryptionError("pdf/crypto/gcm/bad-iv", "ivProvider must return exactly 12 bytes (96-bit nonce)", { context: { length: iv && iv.length } });
+      const cipher = buildCipher(fek), res = gcm.encrypt(cipher, bitArray.ui8_to_ba(plaintext), bitArray.ui8_to_ba(iv), [], 128);
+      if (res === !1)
+        throw new EncryptionError("pdf/crypto/gcm/encrypt-failed", "AES-GCM encryption failed");
+      const ct = bitArray.ba_to_ui8(res.ct), tag = bitArray.ba_to_ui8(res.tag), out = new Uint8Array(12 + ct.length + 16);
+      out.set(iv, 0);
+      out.set(ct, 12);
+      out.set(tag, 12 + ct.length);
+      return out;
+    }
+    return { encryptObjectGcm, decryptObjectGcm };
+  } });
+    __register({ name: "pdfStandardV5", dependencies: ["pdfErrors","aes","cbc","sha256","bitArray","pdfAesGcm"], factory: function(errors, aes, cbc, sha256, bitArray, pdfAesGcm) {
+    const { EncryptionError } = errors;
+    if (!aes || !cbc || !sha256 || !bitArray)
+      throw new EncryptionError("pdf/crypto/v5/missing-fw", "pdfStandardV5 requires aes, cbc, sha256, bitArray fw modules");
+    const ZERO_IV = new Uint8Array(16);
+    function bytesToWords(b, off, len) {
+      const n = len >>> 2, out = Array(n);
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        out[i] = b[j] << 24 | b[j + 1] << 16 | b[j + 2] << 8 | b[j + 3] | 0;
+      }
+      return out;
+    }
+    function wordsToBytes(w, into, off) {
+      for (let i = 0;i < w.length; i++) {
+        const j = off + (i << 2);
+        into[j] = w[i] >>> 24 & 255;
+        into[j + 1] = w[i] >>> 16 & 255;
+        into[j + 2] = w[i] >>> 8 & 255;
+        into[j + 3] = w[i] & 255;
+      }
+    }
+    function passwordToBytes(password) {
+      if (password === void 0 || password === null || password === "")
+        return new Uint8Array(0);
+      if (password instanceof Uint8Array)
+        return password.length > 127 ? password.subarray(0, 127) : password;
+      if (typeof password === "string") {
+        const enc = new TextEncoder().encode(password);
+        return enc.length > 127 ? enc.subarray(0, 127) : enc;
+      }
+      throw new EncryptionError("pdf/crypto/v5/bad-password", "password must be string or Uint8Array");
+    }
+    function sha256Bytes(bytes) {
+      const ba = bitArray.ui8_to_ba(bytes), out = sha256.hash(ba);
+      return bitArray.ba_to_ui8(out);
+    }
+    function concatBytes(parts) {
+      let n = 0;
+      for (const p of parts)
+        n += p.length;
+      const out = new Uint8Array(n);
+      let off = 0;
+      for (const p of parts) {
+        out.set(p, off);
+        off += p.length;
+      }
+      return out;
+    }
+    function aesOf(opts) {
+      return opts && opts.fastCipher === !0 && aes.ttable ? aes.ttable : aes;
+    }
+    function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
+      if (ciphertext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v5/bad-ciphertext-len", "AES-CBC ciphertext length must be a multiple of 16", { context: { length: ciphertext.length } });
+      const cipher = A.fn(bytesToWords(key, 0, 32), !0);
+      if (cipher === !1)
+        throw new EncryptionError("pdf/crypto/v5/aes-schedule-failed", "AES-256 key schedule failed");
+      const ctWords = bytesToWords(ciphertext, 0, ciphertext.length), ivWords = bytesToWords(iv, 0, 16), ptWords = cbc.decrypt(cipher, ctWords, ivWords);
+      if (ptWords === !1)
+        throw new EncryptionError("pdf/crypto/v5/cbc-decrypt-failed", "AES-256-CBC decryption failed");
+      const out = new Uint8Array(ciphertext.length);
+      wordsToBytes(ptWords, out, 0);
+      return out;
+    }
+    function stripPkcs7(buf) {
+      if (buf.length === 0)
+        return buf;
+      const pad = buf[buf.length - 1];
+      if (pad < 1 || pad > 16 || pad > buf.length)
+        return buf;
+      for (let i = buf.length - pad;i < buf.length; i++)
+        if (buf[i] !== pad)
+          return buf;
+      return buf.subarray(0, buf.length - pad);
+    }
+    function tryPassword(typedEncrypt, password, isOwner, opts) {
+      const { O, U, OE, UE } = typedEncrypt;
+      if (!(O instanceof Uint8Array) || O.length < 48 || !(U instanceof Uint8Array) || U.length < 48)
+        throw new EncryptionError("pdf/crypto/v5/bad-O-U", "/O and /U must be at least 48 bytes for v5");
+      const pw = passwordToBytes(password), target = isOwner ? O : U, valSalt = target.subarray(32, 40), keySalt = target.subarray(40, 48);
+      let h;
+      if (isOwner) {
+        h = sha256Bytes(concatBytes([pw, valSalt, U.subarray(0, 48)]));
+        for (let i = 0;i < 32; i++)
+          if (h[i] !== O[i])
+            return { fileEncryptionKey: null };
+      } else {
+        h = sha256Bytes(concatBytes([pw, valSalt]));
+        for (let i = 0;i < 32; i++)
+          if (h[i] !== U[i])
+            return { fileEncryptionKey: null };
+      }
+      const intermediate = isOwner ? sha256Bytes(concatBytes([pw, keySalt, U.subarray(0, 48)])) : sha256Bytes(concatBytes([pw, keySalt])), oeue = isOwner ? OE : UE;
+      if (!(oeue instanceof Uint8Array) || oeue.length !== 32)
+        throw new EncryptionError("pdf/crypto/v5/bad-OE-UE", "/OE and /UE must be exactly 32 bytes for v5", { context: { length: oeue && oeue.length } });
+      return { fileEncryptionKey: aesCbcDecrypt(intermediate, ZERO_IV, oeue, aesOf(opts)) };
+    }
+    function methodOf(typedEncrypt, fallback) {
+      const m = typedEncrypt && typedEncrypt.method;
+      if (m === "AESV3" || m === "AESV4")
+        return m;
+      return fallback || "AESV3";
+    }
+    function requireGcm() {
+      if (!pdfAesGcm || typeof pdfAesGcm.decryptObjectGcm !== "function")
+        throw new EncryptionError("pdf/crypto/v5/missing-gcm", "AESV4 requires pdfAesGcm dependency");
+      return pdfAesGcm;
+    }
+    function decryptString(typedEncrypt, fek, _objNum, _gen, ciphertext, opts) {
+      if (methodOf(typedEncrypt, "AESV3") === "AESV4")
+        return requireGcm().decryptObjectGcm(fek, ciphertext);
+      if (!(ciphertext instanceof Uint8Array) || ciphertext.length < 32)
+        throw new EncryptionError("pdf/crypto/v5/bad-string", "AES-256 encrypted string must be at least 32 bytes (IV+1 block)");
+      const iv = ciphertext.subarray(0, 16), body = ciphertext.subarray(16), pt = aesCbcDecrypt(fek, iv, body, aesOf(opts));
+      return stripPkcs7(pt);
+    }
+    function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
+    }
+    function aesCbcEncrypt(key, iv, plaintext) {
+      if (plaintext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v5/bad-pt-len", "AES-CBC plaintext length must be a multiple of 16", { context: { length: plaintext.length } });
+      const cipher = aes.fn(bytesToWords(key, 0, key.length), !1);
+      if (cipher === !1 || typeof cipher.encrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v5/aes-encrypt-schedule", "AES key schedule failed for encrypt");
+      const ptWords = bytesToWords(plaintext, 0, plaintext.length), ivWords = bytesToWords(iv, 0, 16), ctWords = cbc.encrypt(cipher, ptWords, ivWords);
+      if (ctWords === !1)
+        throw new EncryptionError("pdf/crypto/v5/cbc-encrypt-failed", "AES-CBC encryption failed");
+      const out = new Uint8Array(plaintext.length);
+      wordsToBytes(ctWords, out, 0);
+      return out;
+    }
+    function padPkcs7(buf) {
+      const pad = 16 - buf.length % 16, out = new Uint8Array(buf.length + pad);
+      out.set(buf);
+      for (let i = buf.length;i < out.length; i++)
+        out[i] = pad;
+      return out;
+    }
+    function encryptString(typedEncrypt, fek, _objNum, _gen, plaintext, iv) {
+      if (!(plaintext instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v5/encrypt-bad-input", "plaintext must be Uint8Array");
+      if (methodOf(typedEncrypt, "AESV3") === "AESV4") {
+        if (!(iv instanceof Uint8Array) || iv.length !== 12)
+          throw new EncryptionError("pdf/crypto/v5/encrypt-bad-iv", "AESV4 IV must be a 12-byte Uint8Array");
+        return requireGcm().encryptObjectGcm(fek, plaintext, () => iv);
+      }
+      if (!(iv instanceof Uint8Array) || iv.length !== 16)
+        throw new EncryptionError("pdf/crypto/v5/encrypt-bad-iv", "IV must be a 16-byte Uint8Array");
+      const padded = padPkcs7(plaintext), body = aesCbcEncrypt(fek, iv, padded), out = new Uint8Array(16 + body.length);
+      out.set(iv, 0);
+      out.set(body, 16);
+      return out;
+    }
+    function encryptStream(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);
+    }
+    function buildUUE(password, fek, valSalt, keySalt) {
+      const pw = passwordToBytes(password), hVal = sha256Bytes(concatBytes([pw, valSalt])), U = new Uint8Array(48);
+      U.set(hVal, 0);
+      U.set(valSalt, 32);
+      U.set(keySalt, 40);
+      const intermediate = sha256Bytes(concatBytes([pw, keySalt])), UE = aesCbcEncrypt(intermediate, ZERO_IV, fek);
+      return { U, UE };
+    }
+    function buildOOE(password, fek, U48, valSalt, keySalt) {
+      const pw = passwordToBytes(password), hVal = sha256Bytes(concatBytes([pw, valSalt, U48])), O = new Uint8Array(48);
+      O.set(hVal, 0);
+      O.set(valSalt, 32);
+      O.set(keySalt, 40);
+      const intermediate = sha256Bytes(concatBytes([pw, keySalt, U48])), OE = aesCbcEncrypt(intermediate, ZERO_IV, fek);
+      return { O, OE };
+    }
+    function buildPerms(p, fek, encryptMetadata, randomBytes) {
+      const buf = new Uint8Array(16), v = p | 0;
+      buf[0] = v & 255;
+      buf[1] = v >>> 8 & 255;
+      buf[2] = v >>> 16 & 255;
+      buf[3] = v >>> 24 & 255;
+      buf[4] = 255;
+      buf[5] = 255;
+      buf[6] = 255;
+      buf[7] = 255;
+      buf[8] = encryptMetadata ? 84 : 70;
+      buf[9] = 97;
+      buf[10] = 100;
+      buf[11] = 98;
+      const rand = randomBytes(4);
+      buf[12] = rand[0];
+      buf[13] = rand[1];
+      buf[14] = rand[2];
+      buf[15] = rand[3];
+      const cipher = aes.fn(bytesToWords(fek, 0, 32), !1);
+      if (cipher === !1 || typeof cipher.encrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v5/perms-schedule", "AES-256-ECB schedule failed for /Perms");
+      const blk = cipher.encrypt(bytesToWords(buf, 0, 16)), out = new Uint8Array(16);
+      wordsToBytes(blk, out, 0);
+      return out;
+    }
+    return {
+      tryPassword,
+      decryptString,
+      decryptStream,
+      encryptString,
+      encryptStream,
+      buildUUE,
+      buildOOE,
+      buildPerms
+    };
+  } });
+    __register({ name: "pdfStandardV6", dependencies: ["pdfErrors","aes","cbc","sha256","sha384","sha512","bitArray","pdfAesGcm"], factory: function(errors, aes, cbc, sha256, sha384, sha512, bitArray, pdfAesGcm) {
+    const { EncryptionError } = errors;
+    if (!aes || !cbc || !sha256 || !sha384 || !sha512 || !bitArray)
+      throw new EncryptionError("pdf/crypto/v6/missing-fw", "pdfStandardV6 requires aes, cbc, sha256, sha384, sha512, bitArray");
+    const ZERO_IV = new Uint8Array(16), _AES128_KEY_SCRATCH = Array(4);
+    function bytesToWords(b, off, len, scratch) {
+      const n = len >>> 2, out = scratch && scratch.length >= n ? scratch : Array(n);
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        out[i] = b[j] << 24 | b[j + 1] << 16 | b[j + 2] << 8 | b[j + 3] | 0;
+      }
+      if (out.length !== n && out !== scratch)
+        out.length = n;
+      if (scratch && out === scratch)
+        out.length = n;
+      return out;
+    }
+    function wordsToBytes(w, into, off, count) {
+      const n = count === void 0 ? w.length : count;
+      for (let i = 0;i < n; i++) {
+        const j = off + (i << 2);
+        into[j] = w[i] >>> 24 & 255;
+        into[j + 1] = w[i] >>> 16 & 255;
+        into[j + 2] = w[i] >>> 8 & 255;
+        into[j + 3] = w[i] & 255;
+      }
+    }
+    function concatBytes(parts) {
+      let n = 0;
+      for (const p of parts)
+        n += p.length;
+      const out = new Uint8Array(n);
+      let off = 0;
+      for (const p of parts) {
+        out.set(p, off);
+        off += p.length;
+      }
+      return out;
+    }
+    function passwordToBytes(password) {
+      if (password === void 0 || password === null || password === "")
+        return new Uint8Array(0);
+      if (password instanceof Uint8Array)
+        return password.length > 127 ? password.subarray(0, 127) : password;
+      if (typeof password === "string") {
+        const enc = new TextEncoder().encode(password);
+        return enc.length > 127 ? enc.subarray(0, 127) : enc;
+      }
+      throw new EncryptionError("pdf/crypto/v6/bad-password", "password must be string or Uint8Array");
+    }
+    function hashBytes(hashMod, bytes, outLen) {
+      const ba = bitArray.ui8_to_ba(bytes), digest = hashMod.hash(ba), u8 = bitArray.ba_to_ui8(digest);
+      return u8.length === outLen ? u8 : u8.subarray(0, outLen);
+    }
+    function aesOf(opts) {
+      return opts && opts.fastCipher === !0 && aes.ttable ? aes.ttable : aes;
+    }
+    function aesCbcEncryptRaw(key, iv, plaintext, A = aes) {
+      if (plaintext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v6/bad-pt-len", "AES-CBC plaintext length must be a multiple of 16", { context: { length: plaintext.length } });
+      const cipher = A.fn(bytesToWords(key, 0, key.length, _AES128_KEY_SCRATCH), !1);
+      if (cipher === !1)
+        throw new EncryptionError("pdf/crypto/v6/aes-schedule-failed", "AES key schedule failed");
+      const out = new Uint8Array(plaintext.length);
+      let p0 = iv[0] << 24 | iv[1] << 16 | iv[2] << 8 | iv[3], p1 = iv[4] << 24 | iv[5] << 16 | iv[6] << 8 | iv[7], p2 = iv[8] << 24 | iv[9] << 16 | iv[10] << 8 | iv[11], p3 = iv[12] << 24 | iv[13] << 16 | iv[14] << 8 | iv[15];
+      for (let off = 0;off < plaintext.length; off += 16) {
+        const b0 = plaintext[off] << 24 | plaintext[off + 1] << 16 | plaintext[off + 2] << 8 | plaintext[off + 3], b1 = plaintext[off + 4] << 24 | plaintext[off + 5] << 16 | plaintext[off + 6] << 8 | plaintext[off + 7], b2 = plaintext[off + 8] << 24 | plaintext[off + 9] << 16 | plaintext[off + 10] << 8 | plaintext[off + 11], b3 = plaintext[off + 12] << 24 | plaintext[off + 13] << 16 | plaintext[off + 14] << 8 | plaintext[off + 15], blk = cipher.encrypt([b0 ^ p0, b1 ^ p1, b2 ^ p2, b3 ^ p3]);
+        p0 = blk[0];
+        p1 = blk[1];
+        p2 = blk[2];
+        p3 = blk[3];
+        wordsToBytes(blk, out, off, 4);
+      }
+      return out;
+    }
+    function aesCbcDecrypt(key, iv, ciphertext, A = aes) {
+      if (ciphertext.length % 16 !== 0)
+        throw new EncryptionError("pdf/crypto/v6/bad-ct-len", "AES-CBC ciphertext length must be a multiple of 16");
+      const cipher = A.fn(bytesToWords(key, 0, key.length), !0);
+      if (cipher === !1 || typeof cipher.decrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v6/aes-decrypt-schedule", "AES-256 decrypt key schedule failed");
+      const ctWords = bytesToWords(ciphertext, 0, ciphertext.length), ivWords = bytesToWords(iv, 0, 16), ptWords = cbc.decrypt(cipher, ctWords, ivWords);
+      if (ptWords === !1)
+        throw new EncryptionError("pdf/crypto/v6/cbc-decrypt-failed", "AES-256-CBC decryption failed");
+      const out = new Uint8Array(ciphertext.length);
+      wordsToBytes(ptWords, out, 0, ptWords.length);
+      return out;
+    }
+    function stripPkcs7(buf) {
+      if (buf.length === 0)
+        return buf;
+      const pad = buf[buf.length - 1];
+      if (pad < 1 || pad > 16 || pad > buf.length)
+        return buf;
+      for (let i = buf.length - pad;i < buf.length; i++)
+        if (buf[i] !== pad)
+          return buf;
+      return buf.subarray(0, buf.length - pad);
+    }
+    function hardenKey(password, salt, extra, A = aes) {
+      let K = hashBytes(sha256, concatBytes([password, salt, extra]), 32), round = 0;
+      while (!0) {
+        const block = concatBytes([password, K, extra]), K1 = new Uint8Array(block.length * 64);
+        for (let i = 0;i < 64; i++)
+          K1.set(block, i * block.length);
+        const aesKey = K.subarray(0, 16), iv = K.subarray(16, 32), E = aesCbcEncryptRaw(aesKey, iv, K1, A);
+        let sum = 0;
+        for (let i = 0;i < 16; i++)
+          sum = (sum + E[i]) % 3;
+        let nextHash, outLen;
+        if (sum === 0) {
+          nextHash = sha256;
+          outLen = 32;
+        } else if (sum === 1) {
+          nextHash = sha384;
+          outLen = 48;
+        } else {
+          nextHash = sha512;
+          outLen = 64;
+        }
+        K = hashBytes(nextHash, E, outLen);
+        round++;
+        if (round >= 64 && E[E.length - 1] <= round - 32)
+          break;
+      }
+      return K.subarray(0, 32);
+    }
+    function tryPassword(typedEncrypt, password, isOwner, opts) {
+      const A = aesOf(opts), O = typedEncrypt.O, U = typedEncrypt.U, OE = typedEncrypt.OE, UE = typedEncrypt.UE;
+      if (!(O instanceof Uint8Array) || O.length < 48 || !(U instanceof Uint8Array) || U.length < 48)
+        throw new EncryptionError("pdf/crypto/v6/bad-O-U", "/O and /U must be at least 48 bytes for v6");
+      const pw = passwordToBytes(password), target = isOwner ? O : U, valSalt = target.subarray(32, 40), keySalt = target.subarray(40, 48), extra = isOwner ? U.subarray(0, 48) : new Uint8Array(0), valHash = hardenKey(pw, valSalt, extra, A);
+      for (let i = 0;i < 32; i++)
+        if (valHash[i] !== target[i])
+          return { fileEncryptionKey: null };
+      const intermediate = hardenKey(pw, keySalt, extra, A), oeue = isOwner ? OE : UE;
+      if (!(oeue instanceof Uint8Array) || oeue.length !== 32)
+        throw new EncryptionError("pdf/crypto/v6/bad-OE-UE", "/OE and /UE must be exactly 32 bytes for v6");
+      return { fileEncryptionKey: aesCbcDecrypt(intermediate, ZERO_IV, oeue, A) };
+    }
+    function methodOf(typedEncrypt, fallback) {
+      const m = typedEncrypt && typedEncrypt.method;
+      if (m === "AESV3" || m === "AESV4")
+        return m;
+      return fallback || "AESV3";
+    }
+    function requireGcm() {
+      if (!pdfAesGcm || typeof pdfAesGcm.decryptObjectGcm !== "function")
+        throw new EncryptionError("pdf/crypto/v6/missing-gcm", "AESV4 requires pdfAesGcm dependency");
+      return pdfAesGcm;
+    }
+    function decryptString(typedEncrypt, fek, _objNum, _gen, ciphertext, opts) {
+      if (methodOf(typedEncrypt, "AESV3") === "AESV4")
+        return requireGcm().decryptObjectGcm(fek, ciphertext);
+      if (!(ciphertext instanceof Uint8Array) || ciphertext.length < 32)
+        throw new EncryptionError("pdf/crypto/v6/bad-string", "AES-256 encrypted string must be at least 32 bytes");
+      const iv = ciphertext.subarray(0, 16), body = ciphertext.subarray(16), pt = aesCbcDecrypt(fek, iv, body, aesOf(opts));
+      return stripPkcs7(pt);
+    }
+    function decryptStream(typedEncrypt, fek, objNum, gen, ciphertext, opts) {
+      return decryptString(typedEncrypt, fek, objNum, gen, ciphertext, opts);
+    }
+    function aesCbcEncrypt256(key, iv, plaintext) {
+      return aesCbcEncryptRaw(key, iv, plaintext);
+    }
+    function padPkcs7(buf) {
+      const pad = 16 - buf.length % 16, out = new Uint8Array(buf.length + pad);
+      out.set(buf);
+      for (let i = buf.length;i < out.length; i++)
+        out[i] = pad;
+      return out;
+    }
+    function encryptString(typedEncrypt, fek, _objNum, _gen, plaintext, iv) {
+      if (!(plaintext instanceof Uint8Array))
+        throw new EncryptionError("pdf/crypto/v6/encrypt-bad-input", "plaintext must be Uint8Array");
+      if (methodOf(typedEncrypt, "AESV3") === "AESV4") {
+        if (!(iv instanceof Uint8Array) || iv.length !== 12)
+          throw new EncryptionError("pdf/crypto/v6/encrypt-bad-iv", "AESV4 IV must be a 12-byte Uint8Array");
+        return requireGcm().encryptObjectGcm(fek, plaintext, () => iv);
+      }
+      if (!(iv instanceof Uint8Array) || iv.length !== 16)
+        throw new EncryptionError("pdf/crypto/v6/encrypt-bad-iv", "IV must be a 16-byte Uint8Array");
+      const padded = padPkcs7(plaintext), body = aesCbcEncrypt256(fek, iv, padded), out = new Uint8Array(16 + body.length);
+      out.set(iv, 0);
+      out.set(body, 16);
+      return out;
+    }
+    function encryptStream(typedEncrypt, fek, objNum, gen, plaintext, iv) {
+      return encryptString(typedEncrypt, fek, objNum, gen, plaintext, iv);
+    }
+    function buildUUE(password, fek, valSalt, keySalt) {
+      const pw = passwordToBytes(password), hVal = hardenKey(pw, valSalt, new Uint8Array(0)), U = new Uint8Array(48);
+      U.set(hVal, 0);
+      U.set(valSalt, 32);
+      U.set(keySalt, 40);
+      const intermediate = hardenKey(pw, keySalt, new Uint8Array(0)), UE = aesCbcEncrypt256(intermediate, ZERO_IV, fek);
+      return { U, UE };
+    }
+    function buildOOE(password, fek, U48, valSalt, keySalt) {
+      const pw = passwordToBytes(password), hVal = hardenKey(pw, valSalt, U48), O = new Uint8Array(48);
+      O.set(hVal, 0);
+      O.set(valSalt, 32);
+      O.set(keySalt, 40);
+      const intermediate = hardenKey(pw, keySalt, U48), OE = aesCbcEncrypt256(intermediate, ZERO_IV, fek);
+      return { O, OE };
+    }
+    function buildPerms(p, fek, encryptMetadata, randomBytes) {
+      const buf = new Uint8Array(16), v = p | 0;
+      buf[0] = v & 255;
+      buf[1] = v >>> 8 & 255;
+      buf[2] = v >>> 16 & 255;
+      buf[3] = v >>> 24 & 255;
+      buf[4] = 255;
+      buf[5] = 255;
+      buf[6] = 255;
+      buf[7] = 255;
+      buf[8] = encryptMetadata ? 84 : 70;
+      buf[9] = 97;
+      buf[10] = 100;
+      buf[11] = 98;
+      const rand = randomBytes(4);
+      buf[12] = rand[0];
+      buf[13] = rand[1];
+      buf[14] = rand[2];
+      buf[15] = rand[3];
+      const cipher = aes.fn(bytesToWords(fek, 0, 32, _AES128_KEY_SCRATCH), !1);
+      if (cipher === !1 || typeof cipher.encrypt !== "function")
+        throw new EncryptionError("pdf/crypto/v6/perms-schedule", "AES-256-ECB schedule failed for /Perms");
+      const blk = cipher.encrypt(bytesToWords(buf, 0, 16)), out = new Uint8Array(16);
+      wordsToBytes(blk, out, 0, 4);
+      return out;
+    }
+    return {
+      tryPassword,
+      decryptString,
+      decryptStream,
+      encryptString,
+      encryptStream,
+      buildUUE,
+      buildOOE,
+      buildPerms
+    };
+  } });
+    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch","pdfSecurity","pdfStandardV4","pdfStandardV5","pdfStandardV6"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod, securityMod, v4Mod, v5Mod, v6Mod) {
+    const { ParseError, ContractError, EncryptionError } = errors, tokenize = tokenizerMod && tokenizerMod.tokenize, parseIndirect = parserMod && parserMod.parseIndirect, locateStartXref = xrefMod && xrefMod.locateStartXref, readStartXref = xrefMod && xrefMod.readStartXref, parseXrefTable = xrefMod && xrefMod.parseXrefTable, parseTrailerDict = xrefMod && xrefMod.parseTrailerDict, typeTrailer = trailerMod && trailerMod.typeTrailer, typeCatalog = catalogMod && catalogMod.typeCatalog, typePage = pageMod && pageMod.typePage, walkPageTree = pagesMod && pagesMod.walkPageTree, HEADER_PREFIX = new Uint8Array([37, 80, 68, 70, 45]), XREF_KEYWORD = new Uint8Array([120, 114, 101, 102]), PDF_NULL = Object.freeze({ type: "null" }), SECTION_LOCAL_KEYS = new Set([
       "Prev",
       "XRefStm",
       "Type",
@@ -8148,6 +9475,53 @@ endstream`);
         }
       return { ...dicts[0], entries };
     }
+    const OBJ_HEADER = /(?<![0-9A-Za-z])(\d{1,10})[\0\t\n\f\r ]+(\d{1,5})[\0\t\n\f\r ]+obj(?![0-9A-Za-z])/g, TRAILER_KEYWORD = /(?<![0-9A-Za-z])trailer(?![0-9A-Za-z])/g;
+    function nameEntry(dict, key) {
+      const v = dict && dict.type === "dict" && dict.entries[key];
+      return v && v.type === "name" ? v.value : null;
+    }
+    function rebuildXref(bytes) {
+      const text = new TextDecoder("latin1").decode(bytes), entries = {}, trailers = [];
+      let lastCatalog = null, maxNum = -1;
+      OBJ_HEADER.lastIndex = 0;
+      for (let m = OBJ_HEADER.exec(text);m !== null; m = OBJ_HEADER.exec(text)) {
+        const num = Number(m[1]), gen = Number(m[2]), at = m.index;
+        let def;
+        try {
+          def = parseIndirect(tokenize(bytes, { start: at }), () => null);
+        } catch (_e) {
+          continue;
+        }
+        entries[num] = { type: 1, offset: at, gen, free: !1 };
+        if (num > maxNum)
+          maxNum = num;
+        const value = def.value, dict = value && value.type === "stream" ? value.dict : value, type = nameEntry(dict, "Type");
+        if (type === "Catalog")
+          lastCatalog = { num, gen };
+        if (type === "XRef" && value.type === "stream")
+          trailers.push({ at, dict: value.dict });
+        else if (type === "ObjStm" && value.type === "stream" && objStreamMod && filterDispatchMod)
+          try {
+            objStreamMod.parseObjectStream(filterDispatchMod.decode(value), value.dict).forEach((member, index) => {
+              entries[member.num] = { type: 2, objStm: num, index, free: !1, offset: 0, gen: 0 };
+              if (member.num > maxNum)
+                maxNum = member.num;
+            });
+          } catch (_e) {}
+      }
+      TRAILER_KEYWORD.lastIndex = 0;
+      for (let m = TRAILER_KEYWORD.exec(text);m !== null; m = TRAILER_KEYWORD.exec(text))
+        try {
+          trailers.push({ at: m.index, dict: parseTrailerDict(bytes, m.index).dict });
+        } catch (_e) {}
+      trailers.sort((a, b) => b.at - a.at);
+      const merged = trailers.length > 0 ? mergeTrailerDicts(trailers.map((t) => t.dict)) : { type: "dict", entries: {} }, trailerEntries = { ...merged.entries };
+      if (!trailerEntries.Root && lastCatalog)
+        trailerEntries.Root = { type: "ref", num: lastCatalog.num, gen: lastCatalog.gen };
+      if (!trailerEntries.Size)
+        trailerEntries.Size = { type: "int", value: maxNum + 1 };
+      return { entries, trailer: { ...merged, entries: trailerEntries } };
+    }
     function readHeader(bytes) {
       if (bytes.length < 8)
         throw new ParseError("pdf/document/short", "input too short to contain a PDF header", { context: { length: bytes.length } });
@@ -8179,51 +9553,180 @@ endstream`);
         p++;
       return { version, end: p };
     }
+    function resolvedDict(node, resolve) {
+      const d = resolve(node);
+      if (!d || d.type !== "dict")
+        return d;
+      const entries = {};
+      for (const k of Object.keys(d.entries))
+        entries[k] = resolve(d.entries[k]);
+      const cf = entries.CF;
+      if (cf && cf.type === "dict") {
+        const cfEntries = {};
+        for (const k of Object.keys(cf.entries))
+          cfEntries[k] = resolve(cf.entries[k]);
+        entries.CF = { ...cf, entries: cfEntries };
+      }
+      return { ...d, entries };
+    }
+    function hasType(dict, value) {
+      const t = dict && dict.type === "dict" && dict.entries.Type;
+      return !!t && t.type === "name" && t.value === value;
+    }
+    function createDecryptor(encryptNode, trailerTyped, password, resolve, legacyRc4, fastCipher) {
+      const typed = securityMod.typeEncryptDict(resolvedDict(encryptNode, resolve)), filter = typed.Filter && typed.Filter.type === "name" ? typed.Filter.value : typed.Filter;
+      if (filter !== "Standard")
+        throw new EncryptionError("pdf/crypto/unsupported-filter", "only the Standard security handler is supported", { context: { filter } });
+      typed.idFirst = trailerTyped.id ? trailerTyped.id[0] : void 0;
+      const badPassword = () => new EncryptionError("pdf/document/bad-password", "the password opens the document neither as its user nor as its owner password", { context: { V: typed.V, R: typed.R } });
+      let strings, streams;
+      if (legacyRc4 && (typed.V === 1 || typed.V === 2)) {
+        const params = {
+          O: typed.O,
+          U: typed.U,
+          P: typed.P,
+          idFirst: typed.idFirst,
+          revision: typed.R,
+          keyLength: typed.V === 2 && typeof typed.Length === "number" ? typed.Length : 40,
+          encryptMetadata: typed.EncryptMetadata
+        };
+        let r = legacyRc4.validateUserPassword(password, params);
+        if (!r.ok)
+          r = legacyRc4.validateOwnerPassword(password, params);
+        if (!r.ok)
+          throw badPassword();
+        const fileKey = r.fileKey;
+        strings = (bytes, num, gen) => legacyRc4.decryptString(fileKey, num, gen, bytes);
+        streams = (stream, num, gen) => legacyRc4.decryptStream(fileKey, num, gen, stream.raw);
+      } else {
+        const selection = securityMod.selectHandler(typed, { v4: v4Mod, v5: v5Mod, v6: v6Mod }), h = selection.handler, copts = fastCipher ? { fastCipher: !0 } : void 0;
+        let fek = h.tryPassword(typed, password, !1, copts).fileEncryptionKey;
+        if (!fek)
+          fek = h.tryPassword(typed, password, !0, copts).fileEncryptionKey;
+        if (!fek)
+          throw badPassword();
+        const strView = { method: selection.strMethod };
+        strings = (bytes, num, gen) => selection.strMethod === "Identity" ? bytes : h.decryptString(strView, fek, num, gen, bytes, copts);
+        streams = (stream, num, gen) => securityMod.dispatchDecryptStream(selection, stream, fek, num, gen, stream.raw, copts);
+      }
+      const encryptNum = encryptNode && encryptNode.type === "ref" ? encryptNode.num : -1;
+      function walk(v, num, gen) {
+        if (!v || typeof v !== "object")
+          return v;
+        switch (v.type) {
+          case "string":
+            return { ...v, value: strings(v.value, num, gen) };
+          case "array":
+            return { ...v, items: v.items.map((x) => walk(x, num, gen)) };
+          case "dict": {
+            const sig = hasType(v, "Sig") || hasType(v, "DocTimeStamp"), entries = {};
+            for (const k of Object.keys(v.entries))
+              entries[k] = sig && k === "Contents" ? v.entries[k] : walk(v.entries[k], num, gen);
+            return { ...v, entries };
+          }
+          case "stream": {
+            if (hasType(v.dict, "XRef"))
+              return v;
+            const dict = walk(v.dict, num, gen);
+            if (hasType(v.dict, "Metadata") && !typed.EncryptMetadata)
+              return { ...v, dict };
+            const raw = v.raw instanceof Uint8Array ? streams(v, num, gen) : v.raw;
+            return { ...v, dict, raw };
+          }
+          default:
+            return v;
+        }
+      }
+      return {
+        decrypt(num, gen, value) {
+          return num === encryptNum ? value : walk(value, num, gen);
+        }
+      };
+    }
     function readDocument(bytes, opts = {}) {
       if (!(bytes instanceof Uint8Array))
         throw new ParseError("pdf/document/bad-input", "readDocument expects a Uint8Array", { context: { typeof: typeof bytes } });
-      const { version, end: headerEnd } = readHeader(bytes), sxAt = locateStartXref(bytes);
-      if (sxAt < 0)
-        throw new ParseError("pdf/document/no-startxref", "startxref keyword not found near EOF");
-      const xrefAt = readStartXref(bytes, sxAt), xref = { entries: {}, sections: [] }, losses = [], trailerDicts = [];
-      let cursor = xrefAt;
-      const seenSections = new Set;
-      function mergeSection(at, kind, entries) {
-        xref.sections.push({ at, kind, entries });
-        for (const k of Object.keys(entries))
-          if (!(k in xref.entries))
-            xref.entries[k] = entries[k];
-      }
-      for (let safety = 0;safety < 32 && cursor >= 0; safety++) {
-        if (seenSections.has(cursor))
-          break;
-        seenSections.add(cursor);
-        let dict;
-        if (startsXrefTable(bytes, skipWhitespace(bytes, cursor))) {
-          const section = parseXrefTable(bytes, cursor);
-          mergeSection(cursor, "table", section.entries);
-          dict = parseTrailerDict(bytes, section.end).dict;
-          const stmAt = dict && dict.entries && dict.entries.XRefStm;
-          if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < bytes.length) {
-            const hybrid = readXrefStreamSection(bytes, stmAt.value);
-            mergeSection(stmAt.value, "stream", hybrid.entries);
-          }
-        } else {
-          const section = readXrefStreamSection(bytes, cursor);
-          mergeSection(cursor, "stream", section.entries);
-          dict = section.dict;
+      const password = opts.password;
+      if (password !== void 0 && typeof password !== "string" && !(password instanceof Uint8Array))
+        throw new ContractError("pdf/document/bad-password-option", "opts.password must be a string or a Uint8Array", { context: { typeof: typeof password } });
+      const legacyRc4 = opts.legacyRc4;
+      if (legacyRc4 !== void 0 && !(legacyRc4 && [
+        "validateUserPassword",
+        "validateOwnerPassword",
+        "decryptString",
+        "decryptStream"
+      ].every((f) => typeof legacyRc4[f] === "function")))
+        throw new ContractError("pdf/document/bad-legacy-rc4-option", "opts.legacyRc4 must be the pdfLegacyRc4Read instance", { context: { typeof: typeof legacyRc4 } });
+      const fastCipher = opts.fastCipher;
+      if (fastCipher !== void 0 && typeof fastCipher !== "boolean")
+        throw new ContractError("pdf/document/bad-fast-cipher-option", "opts.fastCipher must be a boolean", { context: { typeof: fastCipher === null ? "null" : typeof fastCipher } });
+      const { version, end: headerEnd } = readHeader(bytes), xref = { entries: {}, sections: [] }, losses = [];
+      function walkChain() {
+        const sxAt = locateStartXref(bytes);
+        if (sxAt < 0)
+          throw new ParseError("pdf/document/no-startxref", "startxref keyword not found near EOF");
+        const xrefAt = readStartXref(bytes, sxAt), trailerDicts = [];
+        let cursor = xrefAt;
+        const seenSections = new Set;
+        function mergeSection(at, kind, entries) {
+          xref.sections.push({ at, kind, entries });
+          for (const k of Object.keys(entries))
+            if (!(k in xref.entries))
+              xref.entries[k] = entries[k];
         }
-        trailerDicts.push(dict);
-        const prev = dict && dict.type === "dict" && dict.entries && dict.entries.Prev;
-        if (prev && prev.type === "int" && prev.value >= 0 && prev.value !== cursor)
-          cursor = prev.value;
-        else
-          break;
+        for (let safety = 0;safety < 32 && cursor >= 0; safety++) {
+          if (seenSections.has(cursor))
+            break;
+          seenSections.add(cursor);
+          let dict;
+          if (startsXrefTable(bytes, skipWhitespace(bytes, cursor))) {
+            const section = parseXrefTable(bytes, cursor);
+            for (const shape of section.tolerated || [])
+              losses.push({
+                code: "pdf/document/xref-tolerated",
+                message: "a cross-reference table shape outside the standard was read",
+                context: { shape, at: cursor }
+              });
+            mergeSection(cursor, "table", section.entries);
+            dict = parseTrailerDict(bytes, section.end).dict;
+            const stmAt = dict && dict.entries && dict.entries.XRefStm;
+            if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < bytes.length) {
+              const hybrid = readXrefStreamSection(bytes, stmAt.value);
+              mergeSection(stmAt.value, "stream", hybrid.entries);
+            }
+          } else {
+            const section = readXrefStreamSection(bytes, cursor);
+            mergeSection(cursor, "stream", section.entries);
+            dict = section.dict;
+          }
+          trailerDicts.push(dict);
+          const prev = dict && dict.type === "dict" && dict.entries && dict.entries.Prev;
+          if (prev && prev.type === "int" && prev.value >= 0 && prev.value !== cursor)
+            cursor = prev.value;
+          else
+            break;
+        }
+        if (trailerDicts.length === 0)
+          throw new ParseError("pdf/document/no-trailer", "no usable trailer dictionary found");
+        return typeTrailer(mergeTrailerDicts(trailerDicts));
       }
-      if (trailerDicts.length === 0)
-        throw new ParseError("pdf/document/no-trailer", "no usable trailer dictionary found");
-      const trailerTyped = typeTrailer(mergeTrailerDicts(trailerDicts));
-      if (trailerTyped.encrypt && opts.allowEncrypted !== !0)
+      let trailerTyped;
+      try {
+        trailerTyped = walkChain();
+      } catch (err) {
+        if (opts.recoverXref !== !0 || !(err instanceof ParseError))
+          throw err;
+        const rebuilt = rebuildXref(bytes);
+        xref.entries = rebuilt.entries;
+        xref.sections = [{ at: null, kind: "rebuilt", entries: xref.entries }];
+        losses.push({
+          code: "pdf/document/xref-rebuilt",
+          message: "the cross-reference chain could not be used; the table was rebuilt from the file",
+          context: { cause: err.code, entries: Object.keys(xref.entries).length }
+        });
+        trailerTyped = typeTrailer(rebuilt.trailer);
+      }
+      if (trailerTyped.encrypt && opts.allowEncrypted !== !0 && password === void 0)
         throw new ParseError("pdf/document/encrypted", "document is encrypted (trailer /Encrypt present) \u2014 " + "no decrypt path is composed for readDocument; pass { allowEncrypted: true } to read the raw ciphertext container", { context: { encrypt: trailerTyped.encrypt } });
       const indirects = new Map, lossKeys = new Set, freeKeys = new Set, objStmMembers = new Map;
       function resolve(ref) {
@@ -8254,8 +9757,9 @@ endstream`);
         const tok = tokenize(bytes, { start: offset }), def = parseIndirect(tok, resolve);
         if (def.num !== num || def.gen !== gen)
           throw new ParseError("pdf/document/xref-mismatch", "xref points to a different object", { context: { expected: { num, gen }, found: { num: def.num, gen: def.gen } } });
-        indirects.set(key, { value: def.value, offset });
-        return def.value;
+        const value = decryptor ? decryptor.decrypt(num, gen, def.value) : def.value;
+        indirects.set(key, { value, offset });
+        return value;
       }
       function resolveFreeEntry(num, gen) {
         const key = num + ":" + gen;
@@ -8285,8 +9789,8 @@ endstream`);
         losses.push(loss);
       }
       function resolveCompressed(num, gen, entry) {
-        if (trailerTyped && trailerTyped.encrypt)
-          throw new ParseError("pdf/document/objstm-encrypted", "object streams of an encrypted document cannot be " + "read \u2014 no decrypt path is composed for readDocument", { context: { num, gen, objStm: entry.objStm } });
+        if (trailerTyped && trailerTyped.encrypt && !decryptor)
+          throw new ParseError("pdf/document/objstm-encrypted", "object streams of an encrypted document cannot be read without its password", { context: { num, gen, objStm: entry.objStm } });
         const containerNum = entry.objStm;
         let members = objStmMembers.get(containerNum);
         if (!members) {
@@ -8313,6 +9817,11 @@ endstream`);
             found: member ? member.num : null
           } });
         return member.value;
+      }
+      let decryptor = null;
+      if (trailerTyped.encrypt && password !== void 0) {
+        const encryptNode = trailerTyped.encrypt.type === "dict" ? trailerTyped.encrypt : { type: "ref", num: trailerTyped.encrypt.num, gen: trailerTyped.encrypt.gen };
+        decryptor = createDecryptor(encryptNode, trailerTyped, password, resolve, legacyRc4, fastCipher === !0);
       }
       const rootRef = trailerTyped.root, catalogDict = resolve({ type: "ref", num: rootRef.num, gen: rootRef.gen });
       if (freeKeys.has(rootRef.num + ":" + rootRef.gen))

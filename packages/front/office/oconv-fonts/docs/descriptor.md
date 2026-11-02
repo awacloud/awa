@@ -67,8 +67,9 @@ Liberation metric twins of the PDF Standard 14's Helvetica x4 + Courier):
 | `boldItalic` | `boldItalic` | `vendor/liberation/LiberationSans-BoldItalic.ttf` | 408 996 |
 | `mono` | `code` | `vendor/liberation/LiberationMono-Regular.ttf` | 319 508 |
 
-No other face is ever returned; the Serif family and the other Mono styles
-stay vendored but unused by this descriptor.
+No other face is ever returned; the Serif family, the other Mono styles and
+the Carlito and Caladea faces stay vendored but unused by this descriptor
+(`faceUrls` gives their URLs; see [`api/face-urls.md`](./api/face-urls.md)).
 
 ## API
 
@@ -130,7 +131,7 @@ Two invariants ride with the rule:
   reached by NAME only: `oconv`'s PDF writer declares an ordinary fw
   dependency on the name `oconvDefaultFaces`, and `@awacloud/oconv`'s entry
   point registers a name-only stand-in under that name at version `0.0.0`.
-  A registered pack carries a higher version (`1.0.0`) and displaces the
+  A registered pack carries a higher version (`1.1.0`) and displaces the
   stand-in in either registration order, so an application that does not
   ship this package still links.
 
@@ -251,5 +252,5 @@ worker's runtime.
 
 - [`../README.md`](../README.md) — package overview, coverage and licence.
 - [`./api/README.md`](./api/README.md) — one reference page per exported function.
-- [`oconv`'s PDF writer page](https://github.com/awacloud/awa/blob/@awacloud/oconv-fonts@1.0.0/packages/front/office/oconv/docs/pdf-writer.md) — the
+- [`oconv`'s PDF writer page](https://github.com/awacloud/awa/blob/@awacloud/oconv-fonts@1.1.0/packages/front/office/oconv/docs/pdf-writer.md) — the
   `opts.pdf` block, including `opts.pdf.fonts`.

@@ -23,18 +23,15 @@ export const dmlFillsAdvanced = {
     deps: [xml, ooxmlShared],
 
     factory(xml, shared) {
-        // Shared DML color codec — fills-advanced flavour deliberately
-        // drops child color transforms on the flat `<a:gs>` / `<a:fgClr>`
-        // / `<a:bgClr>` colors (they are tracked elsewhere when needed,
-        // e.g. by `dmlEffects`). `withMods: false` preserves that
-        // historical semantics so existing round-trips do not gain
-        // spurious `<a:lumMod>` etc. children on render.
+        // Shared DML color codec, with the colours' transforms (`mods`):
+        // a gradient stop's or a pattern's `a:tint` / `a:satMod` … come
+        // back as read.
         const codec = shared.createDmlColorCodec(xml);
         const COLOR_TAGS = codec.COLOR_TAGS;
 
-        function parseColor(el) { return codec.parseColor(el, { withMods: false }); }
-        function renderColor(c) { return codec.renderColor(c, { withMods: false }); }
-        function findFirstColor(el) { return codec.findFirstColor(el, { withMods: false }); }
+        function parseColor(el) { return codec.parseColor(el, { withMods: true }); }
+        function renderColor(c) { return codec.renderColor(c, { withMods: true }); }
+        function findFirstColor(el) { return codec.findFirstColor(el, { withMods: true }); }
 
         // ---- gradient fill --------------------------------------
         function parseGradFill(el) {

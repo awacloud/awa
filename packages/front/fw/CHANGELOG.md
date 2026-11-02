@@ -4,6 +4,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **fileIntake** (`dom/fs`) — picker, OS file drop and keyboard-operable dropzone wired to one `onFiles(files, source)` callback.
+- **installPrompt** (`dom/sw`) — the `beforeinstallprompt` deferral (+ `appinstalled`) and the File Handling `launchQueue` consumer.
+- **swUpdate** (`dom/sw`) — the waiting-release update flow: report a waiting release once to a controlled page, check, apply, read the worker version.
+- **precache** (`dom/sw`) — worker-side release precache with cache-first / network-first strategies and the skip-waiting / version message protocol.
+- **clipboard** — `setRich({ html, text })` writes one item with a `text/html` and a `text/plain` flavour (strings or promises, written synchronously inside the user gesture), and `isSupported()` gains the `richWrite` flag; `set`, `get` and `share` are unchanged.
+- **sanitize** — `sanitizeHtml(html, { allowDataImage: true })` keeps a `data:image/*` URL on `<img src>` only, the opt-in its comment documented but never honoured; `href` and every other `src` still drop `data:`, and the default is unchanged.
+
+### Changed
+
+- **keybindings** — punctuation keys `Plus`, `Minus`, `Equal` (and the literal `-` / `=`) parse and match on `event.key`, Shift ignored; `Shift+Plus` is refused.
+
+### Fixed
+
+- **fileIntake** — the type build (`tsconfig.types.json`) failed with TS2488 on the picker's `FileList` spread; it now uses `Array.from` (same behaviour, emitted `.d.ts` unchanged), and an integration test keeps the type build at zero diagnostics.
+
+
 ## [0.1.0] - 2026-09-29
 
 ### Added

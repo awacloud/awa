@@ -258,3 +258,116 @@ describe('factory', () => {
         expect(typeof api.detectPadesProfile).toBe('function');
     });
 });
+
+describe('typeSeedValue (signature field and certificate seed values)', () => {
+    const { typeSeedValue, SEED_VALUE_KEYS } = pdfSigPades.factory(_errors, _parserObj);
+    const { ContractError } = _errors;
+    const u8 = (s) => new TextEncoder().encode(s);
+
+    test('a field seed value: each key by its value or as read, the rest in _extras', () => {
+        const d = obj.dict({
+            Type: obj.name('SV'), Ff: obj.int(7), Filter: obj.name('Adobe.PPKLite'), SubFilter: obj.array([]),
+            V: obj.int(2), Cert: obj.dict({}), MDP: obj.ref(4, 0), AddRevInfo: obj.bool(true),
+            LockDocument: obj.name('auto'), AppearanceFilter: obj.string(u8('a1')), Foo: obj.int(1)
+        });
+        const r = typeSeedValue(d, 'field');
+        expect([r.type, r.ff, r.filter, r.v, r.addrevinfo, r.lockdocument]).toEqual(['SV', 7, 'Adobe.PPKLite', 2, true, 'auto']);
+        expect([r.subfilter.type, r.cert.type, r.mdp.type]).toEqual(['array', 'dict', 'ref']);
+        expect(r.appearancefilter).toEqual(u8('a1'));
+        expect(r._extras).toEqual({ Foo: obj.int(1) });
+        expect(r.raw).toBe(d);
+    });
+
+    test('a certificate seed value: the signature-policy keys, a wrong type null', () => {
+        const r = typeSeedValue(obj.dict({
+            Type: obj.name('SVCert'), Ff: obj.int(1), SignaturePolicyOID: obj.string(u8('1.2.3')),
+            SignaturePolicyHashAlgorithm: obj.name('SHA256'), KeyUsage: obj.array([]), URL: obj.string(u8('https://ca')),
+            URLType: obj.name('Browser'), V: obj.int(1)
+        }), 'cert');
+        expect([r.type, r.ff, r.signaturepolicyhashalgorithm, r.urltype]).toEqual(['SVCert', 1, 'SHA256', 'Browser']);
+        expect([r.signaturepolicyoid, r.url]).toEqual([u8('1.2.3'), u8('https://ca')]);
+        expect(r._extras).toEqual({ V: obj.int(1) });
+        expect(typeSeedValue(obj.dict({ Ff: obj.real(1.5) }), 'cert').ff).toBe(null);
+    });
+
+    test('every kind of SEED_VALUE_KEYS types every key of its list', () => {
+        expect(Object.isFrozen(SEED_VALUE_KEYS)).toBe(true);
+        expect(Object.keys(SEED_VALUE_KEYS).sort()).toEqual(['cert', 'field', 'mdp', 'timeStamp']);
+        for (const [kind, keys] of Object.entries(SEED_VALUE_KEYS)) {
+            expect(keys.length).toBe({ field: 14, cert: 13, mdp: 1, timeStamp: 2 }[kind]);
+            const entries = {};
+            for (const k of keys) entries[k] = obj.ref(1, 0);
+            expect(typeSeedValue(obj.dict(entries), kind)._extras).toEqual({});
+        }
+    });
+
+    test('a non-dictionary throws ParseError, an unknown kind ContractError', () => {
+        const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+        expect(code(() => typeSeedValue(obj.array([]), 'field'))).toEqual([ParseError.name, 'pdf/extra/pades/seed/not-dict']);
+        expect(code(() => typeSeedValue(obj.dict({}), 'timestamp'))).toEqual([ContractError.name, 'pdf/extra/pades/seed/kind']);
+    });
+
+    test('the seed value MDP and time stamp dictionaries (A40a)', () => {
+        const mdp = typeSeedValue(obj.dict({ P: obj.int(2), Foo: obj.int(1) }), 'mdp');
+        expect([mdp.p, mdp._extras]).toEqual([2, { Foo: obj.int(1) }]);
+        const ts = typeSeedValue(obj.dict({ URL: obj.string(u8('https://tsa')), Ff: obj.int(1) }), 'timeStamp');
+        expect([ts.url, ts.ff, ts._extras]).toEqual([u8('https://tsa'), 1, {}]);
+        expect(typeSeedValue(obj.dict({ P: obj.name('x') }), 'mdp').p).toBe(null);
+    });
+});
+
+describe('typeVRIEntry (A40a)', () => {
+    const { typeVRIEntry } = pdfSigPades.factory(_errors, _parserObj);
+    const u8 = (s) => new TextEncoder().encode(s);
+
+    test('one VRI entry: each key by its value or as read, the rest in _extras', () => {
+        const ts = obj.ref(9, 0);
+        const d = obj.dict({ Type: obj.name('VRI'), Cert: obj.array([]), CRL: obj.ref(3, 0), OCSP: obj.array([]),
+            TU: obj.string(u8('D:20261025')), TS: ts, Foo: obj.int(1) });
+        const r = typeVRIEntry(d);
+        expect([r.type, r.cert.type, r.crl.type, r.ocsp.type, r.ts]).toEqual(['VRI', 'array', 'ref', 'array', ts]);
+        expect(r.tu).toEqual(u8('D:20261025'));
+        expect(r._extras).toEqual({ Foo: obj.int(1) });
+        expect(r.raw).toBe(d);
+        const bare = typeVRIEntry(obj.dict({ Cert: obj.int(1) }));
+        expect([bare.cert, 'type' in bare, 'tu' in bare]).toEqual([null, false, false]);
+    });
+
+    test('a non-dictionary throws ParseError', () => {
+        const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+        expect(code(() => typeVRIEntry(obj.array([])))).toEqual([ParseError.name, 'pdf/extra/pades/vri/not-dict']);
+    });
+});
+
+describe('the signature build data, the reference digests (A38e)', () => {
+    const { typeBuildData, typeBuildProperties, BUILD_DATA_KEYS, typeReferenceArray: refs } = pdfSigPades.factory(_errors, _parserObj);
+    const { ContractError } = _errors;
+    const u8 = (s) => new TextEncoder().encode(s);
+
+    test('build data: each key by its value or as read', () => {
+        const d = typeBuildData(obj.dict({ Name: obj.name('Adobe.PPKLite'), Date: obj.string(u8('Oct 25 2026')), R: obj.int(131104),
+            PreRelease: obj.bool(false), OS: obj.array([]), NonEFontNoWarn: obj.bool(true), TrustedMode: obj.bool(true), V: obj.real(2),
+            REx: obj.string(u8('11.0')), Foo: obj.int(1) }), 'app');
+        expect([d.name, d.r, d.prerelease, d.nonefontnowarn, d.trustedmode, d.v]).toEqual(['Adobe.PPKLite', 131104, false, true, true, 2]);
+        expect([d.date, d.rex, d.os.type]).toEqual([u8('Oct 25 2026'), u8('11.0'), 'array']);
+        expect(d._extras).toEqual({ Foo: obj.int(1) });
+        expect(typeBuildData(obj.dict({ Preview: obj.bool(true), REx: obj.string(u8('x')) }), 'sigQ')).toMatchObject({ preview: true, _extras: { REx: obj.string(u8('x')) } });
+        expect(Object.keys(BUILD_DATA_KEYS).sort()).toEqual(['app', 'data', 'sigQ']);
+    });
+
+    test('build properties: each entry typed by typeBuildData', () => {
+        const p = typeBuildProperties(obj.dict({ Filter: obj.dict({ Name: obj.name('Adobe.PPKLite') }), PubSec: obj.ref(4, 0),
+            App: obj.dict({ REx: obj.string(u8('9')) }), SigQ: obj.name('x') }));
+        expect([p.filter.name, p.pubSec.type, p.app.rex, p.sigQ]).toEqual(['Adobe.PPKLite', 'ref', u8('9'), null]);
+        const code = (fn) => { try { fn(); } catch (e) { return [e.constructor.name, e.code]; } return null; };
+        expect(code(() => typeBuildProperties(obj.array([])))).toEqual([ParseError.name, 'pdf/extra/pades/build/not-dict']);
+        expect(code(() => typeBuildData(obj.dict({}), 'pubSec'))).toEqual([ContractError.name, 'pdf/extra/pades/build/kind']);
+    });
+
+    test('a signature reference: DigestValue, DigestLocation', () => {
+        const [r] = refs(obj.array([obj.dict({ TransformMethod: obj.name('DocMDP'), DigestValue: obj.string(u8('h')), DigestLocation: obj.array([]) })]));
+        expect([r.digestValue, r.digestLocation.type]).toEqual([u8('h'), 'array']);
+        const [bare] = refs(obj.array([obj.dict({ TransformMethod: obj.name('DocMDP') })]));
+        expect([bare.digestValue, bare.digestLocation]).toEqual([null, null]);
+    });
+});

@@ -21,7 +21,7 @@ Supported namespaces: `dc`, `xmp`, `xmpMM`, `pdf`, `pdfaid`, `pdfuaid`.
 
 ```js
 const ext = runtime.resolve('pdfXmpExtended');
-// Returns: { parsePacket, extract, group, KNOWN_NAMESPACES }
+// Returns: { parsePacket, dcTitle, extract, group, KNOWN_NAMESPACES }
 ```
 
 ## API
@@ -29,6 +29,7 @@ const ext = runtime.resolve('pdfXmpExtended');
 | Member | Signature | Returns |
 |--------|-----------|---------|
 | `parsePacket` | `(string \| Uint8Array) => { pairs, grouped }` | Top-level entry point. |
+| `dcTitle` | `(string \| Uint8Array) => string \| null` | The packet's `dc:title`: its `rdf:li` with `xml:lang="x-default"`, else its first `rdf:li`, else a leaf value; entities decoded, trimmed, `null` when none is left. The Dublin Core prefix is the one the packet binds to `http://purl.org/dc/elements/1.1/` (`dc` when none). The leaf harvest of `parsePacket` does not reach the `rdf:Alt` alternatives. Throws as `parsePacket` on a bad input. |
 | `extract` | `(input) => Pair[]` | Flat list `{ prefix, ns, localName, value, attrs }`. |
 | `group` | `(pairs) => { [prefix]: { [localName]: value \| values[] } }` | Re-groups a flat pair list. |
 | `KNOWN_NAMESPACES` | object | URI → prefix. |

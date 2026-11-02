@@ -26,7 +26,7 @@ const mc = runtime.resolve('markupCompatibility');
 
 | Method | Signature | Returns |
 |---------|-----------|---------|
-| `process` | `(root: element, options?) => element` | The same `root`, with `mc:*` resolved. |
+| `process` | `(root: element, options?) => element` | The same `root`, with `mc:*` resolved and adjacent text nodes merged. |
 | `wrapAlternateContent` | `({ choices, fallback }) => element` | `<mc:AlternateContent>` builder. |
 | `setIgnorable` | `(rootEl, prefixes: string\|string[]) => rootEl` | Sets `xmlns:mc` + `mc:Ignorable`. |
 | `MC_NS` | string constant | The MC 2006 namespace. |
@@ -38,6 +38,7 @@ const mc = runtime.resolve('markupCompatibility');
 | `supportedPrefixes` | `string[]` | `[]` | Prefixes the caller "understands". An `mc:Choice` wins when **all** of its Requires are supported. |
 | `preserveAlternateContent` | `boolean` | `false` | When `true`, leaves `mc:AlternateContent` untouched (only `mc:Ignorable` is stripped). |
 | `keepElements` | `string[]` | `[]` | Qualified element names (`prefix:localName`) that survive even when their prefix is ignorable, together with their whole subtree: attributes and descendants are kept, no ignorable-prefix dropping happens inside. `mc:AlternateContent` and `mc:*` attributes inside are still resolved. Every other element of the same prefix is dropped as usual. Matching is by prefix, like the rest of this module: a document binding the same namespace to another prefix is not recognised. |
+| `ignorablePrefixes` | `string[]` | `[]` | Prefixes ignorable from the root down, as if the root listed them in `mc:Ignorable` — for a part that uses an extension namespace without declaring it ignorable. A `supportedPrefixes` entry is still not ignorable, and `keepElements` still win. `docx.read` passes `ooxmlShared.WORD_EXTENSION_PREFIXES`. |
 
 ## Examples
 
@@ -84,8 +85,9 @@ mc.setIgnorable(rootEl, ['w14', 'w15']);
 - `mc:Ignorable` is inherited across the subtree via a Set threaded through the recursive walks.
 - Nested `mc:AlternateContent` elements are resolved recursively.
 - The `mc:*` attributes (Ignorable/PreserveElements/PreserveAttributes/MustUnderstand/ProcessContent) are removed in place.
+- No element of the returned tree holds two adjacent text nodes: the text on both sides of a dropped node (an ignorable element, an `mc:AlternateContent` resolved to nothing, a comment the XML parser skips) is merged into one node, inside `keepElements` subtrees too. A write serialises the two as one run of characters, so a split tree would not read back as itself.
 
 ## See also
 
 - [docx](./docx/docx.md), [xlsx](./xlsx/xlsx.md), [pptx](./pptx/pptx.md) — all call `process` on read.
-- [`@awacloud/fw` xml](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.1.0/packages/front/fw/docs/api/io/codec/xml.md) — the node model being manipulated.
+- [`@awacloud/fw` xml](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/packages/front/fw/docs/api/io/codec/xml.md) — the node model being manipulated.

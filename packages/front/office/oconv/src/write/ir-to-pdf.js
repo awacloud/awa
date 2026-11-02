@@ -113,7 +113,7 @@
  *
  * | Code | Detail | Meaning |
  * |---|---|---|
- * | `layout/font-fallback` | `{style, baseFont}` | a style class resolved to its Standard 14 face while at least one class is embedded (explicit OR default) — the pure Standard 14 route is a CHOICE, not a fallback |
+ * | `layout/font-fallback` | `{style, baseFont, reason?}` | a style class resolved to its Standard 14 face while at least one class is embedded (explicit OR default) — the pure Standard 14 route is a CHOICE, not a fallback; or a caller face (either tier) that has no TrueType outlines (a CFF / CFF2 face `subsetForPdf` refuses), always recorded, `reason: 'no TrueType outlines'` |
  * | `layout/s14-variant-metrics-approx` | `{styles}` | DEFENSIVE FALLBACK — fires only if the fonts package regresses to a shared width table across Standard 14 variants (the fonts package now ships real per-variant tables); not reachable against the real `@awacloud/fonts` |
  * | `text/unencodable` | `{count, sample}` | ONE record per document, on BOTH routes: how many character occurrences could not be drawn faithfully — on the Standard 14 route not WinAnsi-representable (each emitted as `?`), on the embedded route (explicit or default face) no glyph in the resolved face (drawn as `.notdef`) — and a sample of the distinct characters |
  *
@@ -481,10 +481,11 @@ export const oconvIrToPdf = {
             const losses = [];
 
             for (const style of measurer.fallbacks) {
-                losses.push({
-                    code: 'layout/font-fallback',
-                    detail: { style, baseFont: measurer.face(style).baseFont }
-                });
+                const detail = { style, baseFont: measurer.face(style).baseFont };
+                // A caller face with no TrueType outlines (a CFF face) is
+                // not embeddable: the reason travels in the detail.
+                if (measurer.unembeddable.includes(style)) detail.reason = 'no TrueType outlines';
+                losses.push({ code: 'layout/font-fallback', detail });
             }
 
             const check = irApi.validate(ir);

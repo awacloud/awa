@@ -18,6 +18,8 @@
  *
  * Function types: 0 (Sampled), 2 (Exponential), 3 (Stitching), 4 (PostScript).
  *
+ * Pattern types (`typePattern`): 1 — tiling, 2 — shading.
+ *
  * @module pdf/extra/shading-typed
  */
 
@@ -216,7 +218,75 @@ export const pdfShadingTyped = {
             };
         }
 
-        return { typeShading, typeFunction };
+        const isRefV = (v) => isType(v, 'ref');
+        const KEY_READ = Object.freeze({
+            name: (v) => (isType(v, 'name') ? v.value : undefined),
+            string: (v) => (isType(v, 'string') ? v.value : undefined),
+            num: (v) => (isType(v, 'int') || isType(v, 'real') ? v.value : undefined),
+            int: (v) => (isType(v, 'int') ? v.value : undefined),
+            bool: (v) => (isType(v, 'bool') ? v.value : undefined),
+            array: (v) => (isType(v, 'array') ? v : undefined),
+            dict: (v) => (isType(v, 'dict') ? v : undefined),
+            stream: (v) => (isType(v, 'stream') ? v : undefined)
+        });
+        // A key's value by the first of its types that fits; a reference
+        // as read; null when none fits.
+        function keyValue(type, v) {
+            if (isRefV(v)) return v;
+            for (const t of type.split('|')) {
+                const r = KEY_READ[t](v);
+                if (r !== undefined) return r;
+            }
+            return null;
+        }
+        const keyTypes = (text) => Object.freeze(Object.fromEntries(text.split(' ').map((p) => p.split(':'))));
+        const keysOf = (table) => Object.freeze(Object.fromEntries(
+            Object.entries(table).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+
+        // The patterns: per /PatternType, its keys and their types (the
+        // Arlington PDF Model's), as `Key:type` pairs apart by a space.
+        const PATTERN_TYPES = Object.freeze({
+            1: keyTypes('Type:name PatternType:int PaintType:int TilingType:int BBox:array XStep:num YStep:num '
+                + 'Resources:dict Matrix:array XUID:array'),
+            2: keyTypes('Type:name PatternType:int Shading:dict|stream Matrix:array ExtGState:dict')
+        });
+        const PATTERN_KEYS = keysOf(PATTERN_TYPES);
+        // A tiling pattern's Table 5 keys: typeStreamEntries' part.
+        const STREAM_KEYS = new Set(['Length', 'Filter', 'DecodeParms', 'F', 'FFilter', 'FDecodeParms', 'DL']);
+
+        /**
+         * Type a pattern dictionary or stream (its dictionary read), its
+         * kind given by its `/PatternType` (`PATTERN_KEYS`: 1, 2): one
+         * field per key of its list, named after the key in lower case
+         * (`PaintType` → `painttype`), present only when the key is; a
+         * stream's Table 5 keys left to `typeStreamEntries`; the other keys
+         * in `_extras`.
+         */
+        function typePattern(value) {
+            const dict = isType(value, 'stream') ? value.dict : value;
+            if (!isType(dict, 'dict')) {
+                throw new ParseError('pdf/extra/shading/pattern/not-dict',
+                    'a pattern must be a dictionary or a stream',
+                    { context: { type: value && value.type } });
+            }
+            const e = dict.entries;
+            const t = isType(e.PatternType, 'int') ? e.PatternType.value : null;
+            const types = t !== null && Object.prototype.hasOwnProperty.call(PATTERN_TYPES, t) ? PATTERN_TYPES[t] : null;
+            if (!types) {
+                throw new ParseError('pdf/extra/shading/pattern/bad-type',
+                    '/PatternType must be 1 or 2',
+                    { context: { actual: t } });
+            }
+            const streamed = isType(value, 'stream');
+            const out = { raw: value, _extras: {} };
+            for (const [k, v] of Object.entries(e)) {
+                if (Object.prototype.hasOwnProperty.call(types, k)) out[k.toLowerCase()] = keyValue(types[k], v);
+                else if (!(streamed && STREAM_KEYS.has(k))) out._extras[k] = v;
+            }
+            return out;
+        }
+
+        return { typeShading, typeFunction, typePattern, PATTERN_KEYS };
     }
 };
 

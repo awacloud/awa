@@ -35,6 +35,6 @@ describe('scriptMacros', () => {
         ext.hydrateMetadata(meta);
         expect(meta.scripts).toHaveLength(1);
         const out = ext.dehydrateMetadata(meta);
-        expect(out._extras[0].name).toBe('office:scripts');
+        expect(out._extras.children[0].name).toBe('office:scripts');
     });
 });

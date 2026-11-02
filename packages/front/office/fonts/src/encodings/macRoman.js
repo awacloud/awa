@@ -48,12 +48,11 @@ export const encodingMacRoman = {
             'endash','emdash','quotedblleft','quotedblright','quoteleft','quoteright','divide','lozenge',
             'ydieresis','Ydieresis','fraction','currency','guilsinglleft','guilsinglright','fi','fl',
             'daggerdbl','periodcentered','quotesinglbase','quotedblbase','perthousand','Acircumflex','Ecircumflex','Aacute',
-            'Edieresis','Egrave','Iacute','Icircumflex','Idieresis','Eacute','Igrave','Oacute',
+            'Edieresis','Egrave','Iacute','Icircumflex','Idieresis','Igrave','Oacute',
             'Ocircumflex','apple','Ograve','Uacute','Ucircumflex','Ugrave','dotlessi','circumflex',
             'tilde','macron','breve','dotaccent','ring','cedilla','hungarumlaut','ogonek','caron'
         ];
-        const cap = Math.min(hi.length, 128);
-        for (let i = 0; i < cap; i++) a[0x80 + i] = hi[i];
+        for (let i = 0; i < hi.length; i++) a[0x80 + i] = hi[i];
         const MAC_ROMAN = Object.freeze(a);
         function lookup(byte) { return MAC_ROMAN[byte & 0xFF]; }
         return { MAC_ROMAN, lookup };

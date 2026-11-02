@@ -124,8 +124,8 @@ export const tableAdvanced = {
                 : (out._extras && Array.isArray(out._extras.children) ? [...out._extras.children] : []);
             for (const a of out.advanced) extras.push(renderNode(a));
             delete out.advanced;
-            if (Array.isArray(t._extras) || !t._extras) out._extras = extras;
-            else out._extras = { ...t._extras, children: extras };
+            if (Array.isArray(t._extras)) out._extras = extras;
+            else out._extras = { ...(t._extras || {}), children: extras };
             return out;
         }
 

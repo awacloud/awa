@@ -40,7 +40,7 @@ header/footer beyond the page number, keep-with-next for headings only,
 and `run.strike` unrendered — recorded as `inline/strike-dropped`,
 never drawn. The only
 difference from `md → pdf` is the source of the IR: a `convert` call
-resolves an image only through the reader-carried `escapes.docx.bytes` / `escapes.odt.bytes`
+resolves an image only through the reader-carried `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`
 (no `assets` manifest — see [`docs/convert.md`](./convert.md)). See
 [`docs/loss-matrix.md`](./loss-matrix.md) § "Cross-format pairs" for
 the measured `docx → pdf` / `odt → pdf` rows this inheritance produces.
@@ -102,7 +102,7 @@ Mixing is allowed: a document can supply `regular`/`bold`/`italic`/
 then falls back to Standard 14 `Courier` and the facade records
 **`layout/font-fallback`** (`{style, baseFont}`) for it. On the **pure**
 Standard 14 route (no `opts.pdf.fonts` at all) nothing is recorded as a
-fallback — it is the chosen route, not a degrade.
+fallback — it is the chosen route, not a degrade. A caller face (explicit or default) that `@awacloud/fonts` reads but that has no TrueType outlines — a CFF / CFF2 OpenType face, which `subsetForPdf` cannot subset — is not embedded: its class falls back to Standard 14 and records `layout/font-fallback` with `reason: 'no TrueType outlines'` in its detail, on every route (the face was asked for).
 
 **Standard 14 measurement covers the full WinAnsi byte map.**
 `@awacloud/fonts`' Standard 14 width tables fill the 95 printable-ASCII
@@ -148,7 +148,7 @@ stays at 0 hits). `main.js` registers a **stand-in** under that name at
 version `0.0.0` (`src/write/pdf/default-faces.js`, `oconvDefaultFacesAbsent`)
 whose `defaultFaces()` returns `null`, so with nothing else registered every
 call is byte-identical to a call made before this tier existed. A real face
-pack carries a higher version (`@awacloud/oconv-fonts` ships `1.0.0`) and
+pack carries a higher version (`@awacloud/oconv-fonts` ships `1.1.0`) and
 `ModuleRuntime#register` re-points the name's `latestDef` to whichever
 registered version is `>=` the current one — so the real pack **displaces
 the stand-in in either registration order**.
@@ -269,7 +269,7 @@ plus the ones inherited unchanged from `md-to-ir.js` (the same reader
 
 | Code | Emitted by | Detail | Trigger |
 |---|---|---|---|
-| `layout/font-fallback` | `ir-to-pdf.js` | `{style, baseFont}` | a style class resolved to its Standard 14 face because neither `opts.pdf.fonts` nor a registered/posted default-face map supplied bytes for it, on a mixed/embedded call (never on the pure Standard 14 route, and never when a registered default-face pack covers every class) |
+| `layout/font-fallback` | `ir-to-pdf.js` | `{style, baseFont, reason?}` | a style class resolved to its Standard 14 face because neither `opts.pdf.fonts` nor a registered/posted default-face map supplied bytes for it, on a mixed/embedded call (never on the pure Standard 14 route, and never when a registered default-face pack covers every class) |
 | `layout/s14-variant-metrics-approx` | `ir-to-pdf.js` | `{styles}` | defensive fallback: bold-bearing text measured on the Standard 14 **regular** width table — fires only if the fonts package regresses to a shared table across variants; the real `@awacloud/fonts` gives bold and bold-italic their own tables, so it is not reachable without a stubbed measurer |
 | `text/unencodable` | `ir-to-pdf.js` | `{count, sample}` | **Route-conditional**: ONE record per document, on BOTH routes — on the Standard 14/WinAnsi route, a code point outside WinAnsi (drawn as `?`); on the embedded/default-face route (explicit `opts.pdf.fonts` OR a registered/posted default face), a code point with **no glyph in the resolved face's own `cmap`** (`hasGlyph(cp)`, drawn as `.notdef`) — previously silent, now always recorded. A sample of up to 8 distinct characters either way |
 | `layout/unhandled-block` | `ir-to-pdf.js` (renderer dispatch default) / `stack.js` (flow default) | `{kind}` (facade) / string (stack) | an IR block kind with no flow mapping and no renderer (unreachable from `md-to-ir.js`'s own output today) |
@@ -357,7 +357,7 @@ non-array object whose every value is a `Uint8Array`, else `fromMd` throws
 `oconv: bad assets` before the reader even runs.
 
 The resolution rule is the same in all three writers: **caller `assets`
-first, then the bytes a reader carried in `escapes.docx.bytes` / `escapes.odt.bytes`,
+first, then the bytes a reader carried in `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`,
 else nothing.** The three copies of that rule are pinned byte-identical by
 `src/write/asset-bytes-drift.test.js`.
 

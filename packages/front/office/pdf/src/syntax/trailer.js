@@ -57,7 +57,9 @@ export const pdfTrailer = {
             if (e.Prev && e.Prev.type === 'int') {
                 out.prev = e.Prev.value;
             }
-            if (e.Encrypt) {
+            // A null value is the same as an absent entry (ISO 32000-2
+            // § 7.3.9): `/Encrypt null` is a plaintext document.
+            if (e.Encrypt && e.Encrypt.type !== 'null') {
                 out.encrypt = e.Encrypt.type === 'ref'
                     ? { num: e.Encrypt.num, gen: e.Encrypt.gen }
                     : e.Encrypt;

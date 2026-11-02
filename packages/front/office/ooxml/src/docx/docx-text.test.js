@@ -84,6 +84,24 @@ describe('docxText module', () => {
             expect(t.toText(doc)).toBe('link+ins');
         });
 
+        test('reads a hyperlink\'s children as a paragraph\'s: an insertion inside a link shows, a deletion does not', () => {
+            const doc = {
+                body: [{ type: 'paragraph', children: [
+                    { type: 'hyperlink', children: [
+                        { type: 'run', children: [{ type: 'text', value: 'link' }] },
+                        { type: 'ins', children: [
+                            { type: 'run', children: [{ type: 'text', value: '+ins' }] }
+                        ] },
+                        { type: 'del', children: [
+                            { type: 'run', children: [{ type: 'delText', value: 'GONE' }] }
+                        ] },
+                        { type: 'bookmarkStart', id: '1', name: 'b' }
+                    ] }
+                ] }]
+            };
+            expect(t.toText(doc)).toBe('link+ins');
+        });
+
         test('serialises tables with tab/newline separators', () => {
             const doc = {
                 body: [{ type: 'table', rows: [

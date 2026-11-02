@@ -42,7 +42,7 @@ directly is for measuring text or probing font routes in isolation.
 `face(style)` (frozen face record), `widthOf(text, style, sizePt)`
 (advance sum, points), `covers(text, style)` (`true` when the style's
 face draws every character of `text`: a non-zero glyph on an embedded
-face, a WinAnsi byte on a Standard 14 one), `fallbacks` (style classes that fell back to
+face, a WinAnsi byte on a Standard 14 one), `unembeddable` (style classes whose caller face has no TrueType outlines — a CFF face — and so falls back to Standard 14, always listed in `fallbacks` too), `fallbacks` (style classes that fell back to
 Standard 14 — empty on the pure Standard 14 route), `s14VariantApprox`
 (defensive flag, see Notes).
 

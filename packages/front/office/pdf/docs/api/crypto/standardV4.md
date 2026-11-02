@@ -41,8 +41,8 @@ const v4 = runtime.resolve('pdfStandardV4');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `tryPassword` | `(typedEncrypt: { O, U, P, idFirst, EncryptMetadata? }, password, isOwner: boolean) => { fileEncryptionKey: Uint8Array \| null }` | `null` FEK on rejection; recovers the user password from `/O` first when `isOwner`. |
-| `decryptString` | `(typedEncrypt: { method }, fek, objNum, gen, ciphertext) => Uint8Array` | Dispatches on `typedEncrypt.method` (`'AESV2'` or `'V2'`/`'RC4'`). |
+| `tryPassword` | `(typedEncrypt: { O, U, P, idFirst, EncryptMetadata? }, password, isOwner: boolean, opts?: object) => { fileEncryptionKey: Uint8Array \| null }` | `null` FEK on rejection; recovers the user password from `/O` first when `isOwner`. |
+| `decryptString` | `(typedEncrypt: { method }, fek, objNum, gen, ciphertext, opts?: { fastCipher?: boolean }) => Uint8Array` | Dispatches on `typedEncrypt.method` (`'AESV2'` or `'V2'`/`'RC4'`). `opts.fastCipher === true`: the AESV2 decryption through fw's T-table `aes.ttable` (not constant-time). `tryPassword` takes the same `opts` and ignores it (MD5 and RC4, no AES). |
 | `decryptStream` | same signature as `decryptString` | Alias — identical implementation. |
 | `decryptEmbeddedFile` | same signature as `decryptString` | Alias for the `/EFF`-resolved method (ISO 32000-1 §7.6.5). |
 | `encryptString` | `(typedEncrypt: { method }, fek, objNum, gen, plaintext, iv?) => Uint8Array` | `iv` (16 bytes) required for `'AESV2'`; ignored for RC4. |

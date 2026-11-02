@@ -4,6 +4,54 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-02
+
+### Added
+
+- `@awacloud/oconv`'s `docxInclude` on the three surfaces: `toMd`, the
+  `to_md` MCP tool and `to-md --docx-include <list>` (`toc`: a docx table
+  of contents control's entries as paragraphs); on another source format,
+  or with a value oconv refuses, a usage error.
+- `pdfInfer` takes `running` on the three surfaces (`--pdf-infer
+  running`, the MCP enum), `@awacloud/oconv`'s new inference.
+- `@awacloud/oconv`'s `pdfLineHyphens` on the three surfaces: `toMd`,
+  the `to_md` MCP tool and `to-md --pdf-line-hyphens <drop|keep>`; a bad
+  value or another source format is a usage error.
+- `@awacloud/oconv`'s `sheetCellBudget`, `archiveLimits` and
+  `outputBudget` on the three surfaces: `toMd`, the `to_md` MCP tool and
+  `to-md` (`--sheet-cell-budget`, `--max-parts`, `--max-uncompressed`,
+  `--max-ratio`, `--max-depth`, `--output-budget`, `--output-overflow`),
+  with the new exported types `ArchiveLimits` and `OutputBudget`. A bad
+  value or a wrong source format is a usage error (exit 2); a limit the
+  document exceeds, or an output past its budget under `throw`, is a
+  conversion error (exit 1).
+- `to-md --sheets <table|csv|tsv>`, the `to_md` MCP tool's `sheets`
+  argument and `toMd`'s `sheets` input: for an `xlsx` or `ods` source,
+  `csv` or `tsv` writes each sheet as a fenced `csv` / `tsv` block instead
+  of a GFM table (`@awacloud/oconv`'s `sheets`); `table` is the default.
+  A bad value, or the option on another source format, is a usage error.
+- Every other `toMd` input of `@awacloud/oconv` on the three surfaces:
+  `pdfInfer`, `pdfDeclare`, `pdfInclude`, `pdfRecoverXref`,
+  `formOpBudget`, `odtInclude` and `opts.frontMatter` on `toMd`, the
+  `to_md` MCP tool (`frontMatter`) and `to-md` (`--pdf-infer`,
+  `--pdf-declare`, `--pdf-include`, `--pdf-recover-xref`,
+  `--form-op-budget`, `--odt-include`, `--front-matter`, plus the missing
+  `--include-notes`); `pdfPassword` on `toMd`, read from a file on the
+  CLI (`--password-file`) and over MCP (`pdfPasswordPath`), never taken
+  as an argument. Each option on another source format (`--include-notes`
+  and `includeNotes` excepted, which are ignored there), or with a value
+  oconv refuses, is a usage error (CLI exit 2).
+- `assets` on the `toMd` result (the asset manifest, image bytes
+  included, new type `Asset`), the `assetFiles` function (which assets
+  have bytes and a name that stays inside a directory, new type
+  `SkippedAsset`), and `to-md --assets-dir <dir>` / the MCP `assetsDir`
+  argument, which write them there (MCP: listed as `assets` and
+  `assetsSkipped`).
+- The MCP server checks `array` (of `items.type`) and `integer`
+  arguments against their schema type; `argument <name>: expected
+  array of string, got string` and `expected integer, got number` are
+  usage errors.
+
 ## [1.1.0] - 2026-10-21
 
 ### Added
