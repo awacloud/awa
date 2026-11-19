@@ -18,8 +18,8 @@
  * which are driven by `core.sanityImportLine` and can inject
  * `import {lockdown} …; lockdown();`), so `sanity: 'lockdown'` had nothing to
  * prepend but a bare `@awacloud/fw/sanity/lockdown` — and since the sanity
- * tiers became explicit-call ES modules (BATCH_20), a bare import of that
- * hardens NOTHING. `sanity: 'lockdown'` was therefore silently a no-op (BL-45).
+ * tiers became explicit-call ES modules (2026-07), a bare import of that
+ * hardens NOTHING. `sanity: 'lockdown'` was therefore silently a no-op.
  * This module is the specifier such a host can prepend.
  *
  * `./lockdown.js` itself is UNCHANGED and stays explicit-call: importing it
@@ -42,7 +42,7 @@
  *
  * Because it is side-effect-only, this file is listed in the package's
  * `sideEffects` array — without that, a production bundler flags it pure and
- * deletes the prepended import, silently re-opening BL-45.
+ * deletes the prepended import, and `sanity: 'lockdown'` is a no-op again.
  *
  * Related: `./lockdown.js` (the tier), `../../integrations/webpack/index.js`
  * (the only consumer of this subpath) and `docs/api/sanity/lockdown.md`

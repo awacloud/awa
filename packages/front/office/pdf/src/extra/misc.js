@@ -334,7 +334,9 @@ export const pdfMisc = {
             bool: (v) => (isBool(v) ? v.value : null),
             array: (v) => (isArr(v) || isRef(v) ? v : null),
             dict: (v) => (isDict(v) || isRef(v) ? v : null),
-            stream: (v) => (v && (v.type === 'stream' || v.type === 'ref') ? v : null)
+            stream: (v) => (v && (v.type === 'stream' || v.type === 'ref') ? v : null),
+            // A key that takes any object: its value as read.
+            any: (v) => (v === undefined ? null : v)
         });
         // A key's value by its type (of several, `a|b`, the first that
         // fits); a reference, whatever the type, as read.
@@ -625,7 +627,65 @@ export const pdfMisc = {
             return out;
         }
 
+        // Small objects no other typer is bound to (the Arlington PDF
+        // Model's; ISO 32000-2 unless noted): per kind, the keys and their
+        // types. A date is its string; `any` copies the value as read.
+        const SMALL_OBJECT_TYPES = Object.freeze({
+            alternateImage: keyTypes('Image:stream DefaultForPrinting:bool OC:dict'),
+            data: keyTypes('LastModified:text Private:any'),
+            destDict: keyTypes('D:array SD:array'),
+            fixedPrint: keyTypes('Type:name Matrix:array H:number V:number'),
+            markInfo: keyTypes('Marked:bool UserProperties:bool Suspects:bool'),
+            markedContentReference: keyTypes('Type:name Pg:dict Stm:stream StmOwn:array|dict|stream MCID:int'),
+            minimumBitDepth: keyTypes('Type:name V:int M:int'),
+            namespace: keyTypes('Type:name NS:text Schema:dict|text RoleMapNS:dict'),
+            objectReference: keyTypes('Type:name Pg:dict Obj:array|dict|stream'),
+            reference: keyTypes('F:dict|text Page:int|text ID:array'),
+            sourceInformation: keyTypes('AU:dict|text TS:text E:text S:int C:dict'),
+            timespan: keyTypes('Type:name S:name V:number'),
+            urlAlias: keyTypes('U:text C:array'),
+            userProperty: keyTypes('N:text V:any F:text H:bool'),
+            winLaunch: keyTypes('F:text D:text O:text P:text')
+        });
+        const SMALL_OBJECT_KEYS = Object.freeze(Object.fromEntries(
+            Object.entries(SMALL_OBJECT_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+
+        /**
+         * Type a small object of the given kind (a key of
+         * `SMALL_OBJECT_KEYS`): an alternate image, a page-piece data
+         * dictionary, a structure destination's dictionary, a fixed-print
+         * dictionary, the mark information, a marked-content or an object
+         * reference, a minimum bit depth, a namespace, a reference
+         * XObject's reference, a web capture's source information, a
+         * timespan, a URL alias, a user property, the Windows launch
+         * parameters (`winLaunch`). Accepts a stream or a dictionary: one
+         * field per key of its list, named after the key in lower case,
+         * present only when the key is; the other keys in `_extras`.
+         */
+        function typeSmallObject(value, kind) {
+            if (typeof kind !== 'string' || !Object.prototype.hasOwnProperty.call(SMALL_OBJECT_TYPES, kind)) {
+                throw new ContractError('pdf/misc/small-object/kind',
+                    'kind must be a key of SMALL_OBJECT_KEYS',
+                    { context: { kind } });
+            }
+            const dict = value && value.type === 'stream' ? value.dict : value;
+            if (!isDict(dict)) {
+                throw new ParseError('pdf/misc/small-object/not-dict',
+                    'neither a stream nor a dictionary',
+                    { context: { type: value && value.type } });
+            }
+            const types = SMALL_OBJECT_TYPES[kind];
+            const out = { raw: value, _extras: {} };
+            for (const [k, v] of Object.entries(dict.entries)) {
+                if (Object.prototype.hasOwnProperty.call(types, k)) out[k.toLowerCase()] = readKey(types[k], v);
+                else out._extras[k] = v;
+            }
+            return out;
+        }
+
         return {
+            typeSmallObject,
+            SMALL_OBJECT_KEYS,
             typeSpiderInfo,
             typeViewerPreferences,
             typeThreads,

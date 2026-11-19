@@ -134,4 +134,4 @@ try {
 
 - [`md`](./md.md) — the facade that throws `ContractError` on non-string input
 - [`render/html`](./render/html.md) — throws `RenderError`
-- [`@awacloud/fw` errors](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.0/packages/front/fw/docs/api) — the framework's own error pattern
+- [`@awacloud/fw` errors](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.1/packages/front/fw/docs/api) — the framework's own error pattern

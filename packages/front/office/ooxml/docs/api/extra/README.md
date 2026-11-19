@@ -19,6 +19,8 @@ import { wmlRunFormatting } from '@awacloud/ooxml/extra/wml-run-formatting';
 | [`wmlParagraphFormatting`](./wml-paragraph-formatting.md) | 2 | [`src/extra/wml-paragraph-formatting.js`](../../../src/extra/wml-paragraph-formatting.js) | Typed `<w:pPr>` (tabs, framePr, kinsoku, …) |
 | [`wmlTableProperties`](./wml-table-properties.md) | 3 | [`src/extra/wml-table-properties.js`](../../../src/extra/wml-table-properties.js) | Typed tblPr / trPr / tcPr |
 | [`wmlNumberingDetails`](./wml-numbering-details.md) | 4 | [`src/extra/wml-numbering-details.js`](../../../src/extra/wml-numbering-details.js) | numbering.xml advanced |
+| [`wmlDocumentDetails`](./wml-document-details.md) | 4c | [`src/extra/wml-document-details.js`](../../../src/extra/wml-document-details.js) | body, sections and settings details (shading, borders, property changes, sections, mathPr, toggles) |
+| [`wmlStyleDetails`](./wml-style-details.md) | 4b | [`src/extra/wml-style-details.js`](../../../src/extra/wml-style-details.js) | styles.xml details (style flags, tblStylePr, latentStyles) |
 | [`wmlSettings`](./wml-settings.md) | 5 | [`src/extra/wml-settings.js`](../../../src/extra/wml-settings.js) | settings.xml advanced |
 | [`wmlFields`](./wml-fields.md) | 6 | [`src/extra/wml-fields.js`](../../../src/extra/wml-fields.js) | Field instruction tokenizer |
 | [`wmlTrackedChanges`](./wml-tracked-changes.md) | 7 | [`src/extra/wml-tracked-changes.js`](../../../src/extra/wml-tracked-changes.js) | moveFrom / rPrChange / cellIns / … |
@@ -35,6 +37,8 @@ import { wmlRunFormatting } from '@awacloud/ooxml/extra/wml-run-formatting';
 | [`smlWorkbookConfig`](./sml-workbook-config.md) | 12 | [`src/extra/sml-workbook-config.js`](../../../src/extra/sml-workbook-config.js) | workbook-level config |
 | [`smlFormControls`](./sml-form-controls.md) | 13 | [`src/extra/sml-form-controls.js`](../../../src/extra/sml-form-controls.js) | ActiveX form controls |
 | [`smlMisc`](./sml-misc.md) | misc | [`src/extra/sml-misc.js`](../../../src/extra/sml-misc.js) | Long-tail sweeper |
+| [`smlWorkbookDetails`](./sml-workbook-details.md) | 13b | [`src/extra/sml-workbook-details.js`](../../../src/extra/sml-workbook-details.js) | xlsx workbook details: the stylesheet's slicer and timeline styles and colors, font flags, a dxf's protection, a table column's XML mapping and calculated formula |
+| [`smlPackageParts`](./sml-package-parts.md) | 13c | [`src/extra/sml-package-parts.js`](../../../src/extra/sml-package-parts.js) | xlsx parts the core leaves unmodelled: the calculation chain, external links, XML maps, connections, query tables, pivot caches and tables |
 
 ## PresentationML extras
 
@@ -63,6 +67,9 @@ import { wmlRunFormatting } from '@awacloud/ooxml/extra/wml-run-formatting';
 |--------|------|--------|------|
 | [`dmlEffects`](./dml-effects.md) | 24 | [`src/extra/dml-effects.js`](../../../src/extra/dml-effects.js) | effectLst / effectDag / 3D scene |
 | [`dmlFillsAdvanced`](./dml-fills-advanced.md) | 25 | [`src/extra/dml-fills-advanced.js`](../../../src/extra/dml-fills-advanced.js) | gradFill / blipFill / pattFill |
+| [`dmlTextDetails`](./dml-text-details.md) | 25b | [`src/extra/dml-text-details.js`](../../../src/extra/dml-text-details.js) | pptx text details: run fills, effects and fonts, paragraph spacing, bullets and tabs, `endParaRPr`, the theme's script fonts |
+| [`pmlPartDetails`](./pml-part-details.md) | 25c | [`src/extra/pml-part-details.js`](../../../src/extra/pml-part-details.js) | pptx part-level elements: a slide's, layout's or master's transition, timing and header / footer flags |
+| [`pmlPackageParts`](./pml-package-parts.md) | 25d | [`src/extra/pml-package-parts.js`](../../../src/extra/pml-package-parts.js) | pptx parts the core leaves unmodelled: notes slides, the notes and handout masters with their themes, the layouts no slide uses |
 | [`dmlShapesAdvanced`](./dml-shapes-advanced.md) | 26 | [`src/extra/dml-shapes-advanced.js`](../../../src/extra/dml-shapes-advanced.js) | Custom geometry |
 | [`dmlWpPositioning`](./dml-wp-positioning.md) | 27 | [`src/extra/dml-wp-positioning.js`](../../../src/extra/dml-wp-positioning.js) | wp:anchor + wrap |
 | [`dmlXdrAdvanced`](./dml-xdr-advanced.md) | 28 | [`src/extra/dml-xdr-advanced.js`](../../../src/extra/dml-xdr-advanced.js) | Connectors + groups |

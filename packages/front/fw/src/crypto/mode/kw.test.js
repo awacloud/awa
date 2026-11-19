@@ -137,6 +137,23 @@ describe('kw module (RFC 3394 / RFC 5649)', () => {
             expect(_kw.unwrap(_aes.ttable.fn(kek), wrapped)).toBe(false);
         });
 
+        test('KW unwrap integrity failure is reported at warn level, not error', () => {
+            const data = fromHex('00112233445566778899AABBCCDDEEFF');
+            const wrapped = _kw.wrap(_aes.ttable.fn(kek), data);
+            wrapped[0] ^= 1;
+        const _logs = { warn: [], error: [] };
+        const _w = console.warn, _e = console.error;
+        console.warn = (...a) => { _logs.warn.push(a.join(' ')); };
+        console.error = (...a) => { _logs.error.push(a.join(' ')); };
+            let r;
+            try { r = _kw.unwrap(_aes.ttable.fn(kek), wrapped); } finally {
+        console.warn = _w; console.error = _e;
+            }
+            expect(r).toBe(false);
+            expect(_logs.error.length).toBe(0);
+            expect(_logs.warn.some((m) => m.includes('CORRUPT'))).toBe(true);
+        });
+
         test('KWP rejects empty input', () => {
             expect(_kw.wrapPad(_aes.ttable.fn(kek), new Uint8Array(0))).toBe(false);
         });

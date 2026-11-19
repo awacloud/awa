@@ -85,7 +85,7 @@
  * render(node, childCtx) → { items, losses, height }
  * ```
  *
- * - `node` is the `oconv-ir/v1` `image` node (block position, or lifted out
+ * - `node` is the `oconv-ir/v2` `image` node (block position, or lifted out
  *   of a text block's inlines by `../stack.js`).
  * - `childCtx` is the stack's child context (`measurer`, `layout`, `column`,
  *   `sizeFor`, `leading`, `linebreak`, `losses`, `render`, `flowChildren`)
@@ -558,15 +558,20 @@ export const oconvPdfRenderImage = {
             const leading = ctx.layout.leading(body.sizePt);
             const x = ctx.layout.margin + body.indent;
 
-            const items = (body.lines || []).map((line, n) => ({
-                x,
-                y: body.spaceBefore + (n + 1) * leading,
-                style: line.tokens.length > 0 ? line.tokens[0].style : PLACEHOLDER_STYLE,
-                sizePt: body.sizePt,
-                tokens: line.tokens,
-                index: ctx.index,
-                kind: ctx.kind
-            }));
+            const items = (body.lines || []).map((line, n) => {
+                const item = {
+                    x,
+                    y: body.spaceBefore + (n + 1) * leading,
+                    style: line.tokens.length > 0 ? line.tokens[0].style : PLACEHOLDER_STYLE,
+                    sizePt: body.sizePt,
+                    tokens: line.tokens,
+                    index: ctx.index,
+                    kind: ctx.kind
+                };
+                // A tagged document: the placeholder is the text of a `P`.
+                if (body.tag) item.tag = body.tag;
+                return item;
+            });
 
             return {
                 items,
@@ -583,7 +588,7 @@ export const oconvPdfRenderImage = {
          * directly-embeddable encoding, otherwise draw the italic
          * placeholder and record `layout/image-dropped` with its reason.
          *
-         * @param {object} node `oconv-ir/v1` `image` node (`{name, alt}`,
+         * @param {object} node `oconv-ir/v2` `image` node (`{name, alt}`,
          *   optionally carrying `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes`).
          * @param {object} ctx Stack child context (see the module header).
          * @returns {{items: object[], losses: object[], height: number}}
@@ -649,21 +654,33 @@ export const oconvPdfRenderImage = {
             const drawW = spec.width * scale;
             const drawH = spec.height * scale;
 
+            const item = {
+                x: ctx.layout.margin + indent,
+                // Block-local `y` of the image's BOTTOM edge: its top
+                // edge is the block top, so the bottom is one image
+                // height below it.
+                y: drawH,
+                xobject: { name: resourceName, w: drawW, h: drawH },
+                style: 'regular',
+                sizePt: ctx.layout.sizeFor('paragraph'),
+                tokens: [],
+                index: ctx.index,
+                kind: ctx.kind
+            };
+            const losses = [];
+            // A tagged document: a `Figure` with its alt text; without alt
+            // text the picture is decorative, an artifact (HTML's reading
+            // of an empty alt), and the reader is told.
+            if (Array.isArray(ctx.tagPath)) {
+                if (alt !== '') item.tag = [...ctx.tagPath, { key: String(ctx.index), type: 'Figure', props: { alt } }];
+                else {
+                    item.artifact = true;
+                    losses.push({ code: 'image/decorative', detail: { index: ctx.index, name } });
+                }
+            }
             return {
-                items: [{
-                    x: ctx.layout.margin + indent,
-                    // Block-local `y` of the image's BOTTOM edge: its top
-                    // edge is the block top, so the bottom is one image
-                    // height below it.
-                    y: drawH,
-                    xobject: { name: resourceName, w: drawW, h: drawH },
-                    style: 'regular',
-                    sizePt: ctx.layout.sizeFor('paragraph'),
-                    tokens: [],
-                    index: ctx.index,
-                    kind: ctx.kind
-                }],
-                losses: [],
+                items: [item],
+                losses,
                 height: drawH + IMAGE_SPACE_AFTER
             };
         }

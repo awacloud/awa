@@ -1,7 +1,7 @@
 ---
 module: oconvPdfTextExtract
 category: oconv/read/pdf
-dependencies: [pdfResources, pdfFilterDispatch, pdfContentStream, oconvPdfFontDecoder, oconvPdfImagePng]
+dependencies: [pdfPageText, pdfFilterDispatch, oconvPdfImagePng]
 returns: object
 worker-safe: true
 status: complete
@@ -11,9 +11,9 @@ status: complete
 
 > Page-level text extraction for the tier-1 pdf reader — content-stream order, minimal graphics state.
 
-**Module** `oconvPdfTextExtract` (`oconvPdfTextExtract`) | **Source** `packages/front/office/oconv/src/read/pdf/text-extract.js` | **Deps** `pdfResources`, `pdfFilterDispatch`, `pdfContentStream`, `oconvPdfFontDecoder`, `oconvPdfImagePng` | **Worker-safe** yes
+**Module** `oconvPdfTextExtract` (`oconvPdfTextExtract`) | **Source** `packages/front/office/oconv/src/read/pdf/text-extract.js` | **Deps** `pdfPageText`, `pdfFilterDispatch`, `oconvPdfImagePng` | **Worker-safe** yes
 
-Decodes a page's `/Contents` stream(s), parses the operators, and walks them keeping a minimal text + graphics state (CTM via `q`/`Q`/`cm`, text matrix via `BT`/`Td`/`TD`/`Tm`/`T*`/`TL`, current font via `Tf`, character spacing `Tc`, word spacing `Tw`, horizontal scaling `Tz`) to emit a flat list of positioned text pieces in content-stream order, each with its start and end position. Character decode and glyph widths are delegated to `oconvPdfFontDecoder`; positioning is used only to place each piece — no layout inference.
+`@awacloud/pdf`'s page walk (`pdfPageText.extractPage`: the content streams decoded and parsed, the text and graphics state kept — CTM via `q`/`Q`/`cm`, text matrix via `BT`/`Td`/`TD`/`Tm`/`T*`/`TL`, current font via `Tf`, character spacing `Tc`, word spacing `Tw`, horizontal scaling `Tz` —, the Form XObjects executed, character decode and glyph widths by `pdfFontDecoder`), with this reader's own items built on its `visit` hook: the image draws and, under `opts.rules`, the rules, merged in content-stream order among the walk's text pieces and losses. Positioning is used only to place each piece — no layout inference.
 
 ## Resolve
 
@@ -31,7 +31,7 @@ const { extractPage } = runtime.resolve('oconvPdfTextExtract');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `extractPage` | `(page: object, resolve: (ref) => object, opts?: {formOpBudget?: number, rules?: boolean, images?: boolean}) => {items, counts, losses}` | `items` — `{kind:'text', x, y, fontSize, xEnd, text, mcid, bold}[]` / `{kind:'image', mcid}[]` (with `opts.images`, a placeable picture's also `resource, name, bytes, contentType, masked`) / with `opts.rules`, `{kind:'rule', x0, y0, x1, y1}[]`, content-stream order; `counts` — `{operators, decoded, undecodable}`; `losses` — `{code, detail}[]` | `oconv: bad form op budget` |
+| `extractPage` | `(page: object, resolve: (ref) => object, opts?: {formOpBudget?: number, rules?: boolean, images?: boolean, cellKerns?: boolean}) => {items, counts, losses}` | `items` — `{kind:'text', x, y, fontSize, xEnd, text, mcid, bold}[]` / `{kind:'image', mcid}[]` (with `opts.images`, a placeable picture's also `resource, name, bytes, contentType, masked`) / with `opts.rules`, `{kind:'rule', x0, y0, x1, y1}[]`, content-stream order; `counts` — `{operators, decoded, undecodable}`; `losses` — `{code, detail}[]` | `oconv: bad form op budget` |
 
 ## Examples
 
@@ -47,14 +47,15 @@ counts;      // { operators, decoded, undecodable }
 
 ## Notes
 
-- `x`/`y` is where a text piece starts and `xEnd` where it ends, both in the page's device space (after the CTM). Each show operator advances the text matrix by the displacement of the string it shows (ISO 32000-2 §9.4.4): Σ ((w0 / 1000) × Tfs + Tc + (Tw when the code is the single byte 32)) × Th, where w0 is the glyph width from the font (`oconvPdfFontDecoder`'s `width`), Tfs the `Tf` size and Th = `Tz` / 100. Each number n in a `TJ` array moves the position by −n / 1000 × Tfs × Th. So a `Tj` that follows another without a `Td` starts where the previous one ended.
-- `'` moves to the next line before showing; `"` also sets Tw and Tc from its first two operands. `Tc`, `Tw` and `Tz` belong to the graphics state: `q`/`Q` save and restore them with the CTM.
+- `x`/`y` is where a text piece starts and `xEnd` where it ends, both in the page's device space (after the CTM). Each show operator advances the text matrix by the displacement of the string it shows (ISO 32000-2 §9.4.4): Σ ((w0 / 1000) × Tfs + Tc + (Tw when the code is the single byte 32)) × Th, where w0 is the glyph width from the font (`pdfFontDecoder`'s `width`), Tfs the `Tf` size and Th = `Tz` / 100. Each number n in a `TJ` array moves the position by −n / 1000 × Tfs × Th. So a `Tj` that follows another without a `Td` starts where the previous one ended.
+- `'` moves to the next line before showing; `"` also sets Tw and Tc from its first two operands. The font and its size, the leading, `Tc`, `Tw` and `Tz` belong to the graphics state: `q`/`Q` save and restore them with the CTM (ISO 32000-2 §8.4.1), so text after a `q … Tf … Q` is shown in the font set before the `q`; a `Q` with nothing saved keeps the font in force.
 - A vertical-mode composite font (a `…-V` CMap) and a show under an unresolved font advance nothing: the piece's `xEnd` equals its `x`.
 - Inside one `TJ` array, a number n with −n / 1000 > 0.15 (a move to the right of more than 0.15 em — the same threshold as the paragraph grouping's word gap between two pieces) is read as a word space: one `' '` joins the strings on either side of it, unless the text before it already ends, or the text after it already starts, with whitespace. A space is never doubled.
+- `opts.cellKerns: true` (opt-in) cuts a table row drawn as one `TJ`: a number n with −n / 1000 > 1 (a move to the right of more than 1 em), with a drawn string before and after it, is a cell gap; an array with 2 such gaps or more gives one piece per part, cut at them, each starting where its first string is drawn. Without the option, or with fewer gaps, the array is one piece as above.
 - Between two separate pieces on one line, the word space is decided later, by `oconvPdfToIr`'s paragraph grouping, from this `xEnd` and the next piece's `x`.
-- `opts.images: true` (opt-in) carries a **placeable** picture's bytes on its item and records no loss for it: an indirect image XObject drawn by `Do` (inside a form too), not an `/ImageMask`, whose last filter is `DCTDecode` or `JPXDecode` (abbreviations resolved) and no earlier one, whose `/Decode` (if any) is the default (`0 1` per pair), and whose decoded bytes — the filters before it applied, the last passed through — are a JPEG file (`FF D8 FF`) or a JP2 file (its signature box). The item gains `resource` (the resource name), `name` (`image-<obj>.jpg` / `image-<obj>.jp2`, `-<gen>` before the extension when the generation is not 0), `bytes`, `contentType` (`image/jpeg`, `image/jp2`) and `masked` (an `/SMask` or a `/Mask`). A picture with no such last filter is placeable too when [`oconvPdfImagePng`](./image-png.md)`.imageToPng` writes its samples as a PNG (`contentType` `image/png`, `name` `image-<obj>.png`); `masked` is then true only for a mask it could not apply. Every other picture keeps the bare item and its `image/dropped`.
+- `opts.images: true` (opt-in) carries a **placeable** picture's bytes on its item and records no loss for it: an indirect image XObject drawn by `Do` (inside a form too), not an `/ImageMask`, whose last filter is `DCTDecode` or `JPXDecode` (abbreviations resolved) and no earlier one, whose `/Decode` (if any) is the default (`0 1` per pair), and whose decoded bytes — the filters before it applied, the last passed through — are a JPEG file (`FF D8 FF`) or a JP2 file (its signature box). The item gains `resource` (the resource name), `name` (`image-<obj>.jpg` / `image-<obj>.jp2`, `-<gen>` before the extension when the generation is not 0), `bytes`, `contentType` (`image/jpeg`, `image/jp2`) and `masked` (an `/SMask` or a `/Mask`). A picture with no such last filter is placeable too when [`oconvPdfImagePng`](./image-png.md)`.imageToPng` writes its samples as a PNG (`contentType` `image/png`, `name` `image-<obj>.png`); `masked` is then true only for a mask it could not apply. An inline image (`BI … ID … EI`) is placeable by the same rules: its dict's abbreviated keys (`W`, `H`, `CS`, `BPC`, `F`, `DP`, `D`, `IM`, `I`) and colour-space names (`G`, `RGB`, `CMYK`, `I`) are expanded, a colour-space name that is no device space is looked up in the resources' `/ColorSpace`, and it is named `image-inline-<hash>.<ext>` (the FNV-1a 32 of its bytes, 8 hex digits), so the same picture drawn twice is one name; its `resource` is `null`. Every other picture keeps the bare item and its `image/dropped`.
 - `opts.rules: true` (opt-in) adds the page's **rules**, forms included: when a path is stroked, each straight segment within 0.5 of horizontal or vertical in device space and longer than 5 (a stroked rectangle gives its four sides); when it is filled, a rectangle thinner than 2 and longer than 5, along its centre line. A rule item is `{kind:'rule', x0, y0, x1, y1}` (`x0 <= x1`, `y0 <= y1`, device space), pushed when its path is painted; `n` discards a path; curves, diagonals and large fills give none. Without the option the items are unchanged.
-- `bold` on each item is the current font's (`oconvPdfFontDecoder`'s `bold`: a bold weight in its name or descriptor).
+- `bold` on each item is the current font's (`pdfFontDecoder`'s `bold`: a bold weight in its name or descriptor).
 - `mcid` on each item is the innermost marked-content id in scope (`BDC … EMC`), or `null` — the tagged fast path (`oconvPdfStruct` + `oconvPdfToIr`) keys struct elements to text through it.
 - A Form XObject drawn by `Do` is executed in place (ISO 32000-2 §8.10.1). The graphics state is saved, the form's `/Matrix` (identity by default) is concatenated onto the CTM, and fonts and XObjects resolve from the form's own `/Resources`, or from the page's when the form has none. The form's content stream then runs through the same operator walk, so its text and image draws enter `items` in content-stream order, placed and advanced under the form's matrix. The state is restored on return, and an unbalanced `Q` or `EMC` inside a form never reaches past the form's entry state. The `mcid` in scope at the `Do` carries into the form.
 - A form's `/Resources` resolves an indirect category through the document resolver. If the dictionary as a whole still fails to type, each category is typed on its own, so one bad category never drops the form's fonts.
@@ -68,7 +69,7 @@ counts;      // { operators, decoded, undecodable }
 ## See also
 
 - [docs/api/README.md](../../README.md) — full module index + `exports` boundary note
-- [`oconvPdfFontDecoder`](./font-decoder.md) — the per-font decoder this module delegates character decode to
+- `@awacloud/pdf`'s `pdfPageText` and `pdfFontDecoder` — the page walk and the per-font decoder this module is built on
 - [`oconvPdfStruct`](./struct.md) — the tagged-structure companion this page's `mcid`s key into
 - [`oconvPdfToIr`](../pdf-to-ir.md) — the reader composing the pdf pipeline
 - [loss matrix](../../../loss-matrix.md)

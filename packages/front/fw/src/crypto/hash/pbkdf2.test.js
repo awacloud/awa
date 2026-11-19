@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -176,7 +176,7 @@ const _hmac3_256_pbk   = hmac.factory(_ba, _utf8, _sha3_pbk.sha3_256_hash);
 const _hmac3_384_pbk   = hmac.factory(_ba, _utf8, _sha3_pbk.sha3_384_hash);
 const _hmac3_512_pbk   = hmac.factory(_ba, _utf8, _sha3_pbk.sha3_512_hash);
 
-describe('pbkdf2 - iteration B4 (10-family cross-check)', () => {
+describe('pbkdf2 - 10-family cross-check', () => {
 
     describe('PBKDF2-HMAC-SHA2-256 (cross-check vs Python hashlib)', () => {
         const VECTORS = [
@@ -316,5 +316,14 @@ describe('pbkdf2 - iteration B4 (10-family cross-check)', () => {
     test('length=0 returns [] (no phantom block)', () => {
         const dk = _pbkdf2('password', 'salt', 1000, 0);
         expect(dk).toEqual([]);
+    });
+});
+
+describe('pbkdf2: the iteration count (D9 G4)', () => {
+    test('a count below 1 (0, a negative, NaN) is refused: false, never a key derived without iterating', () => {
+        for (const c of [0, -1, NaN, 0.5]) {
+            expect(_pbkdf2('password', 'salt', c, 256)).toBe(false);
+        }
+        expect(_pbkdf2('password', 'salt', 1, 256)).not.toBe(false);
     });
 });

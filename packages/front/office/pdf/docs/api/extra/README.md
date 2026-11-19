@@ -24,6 +24,9 @@ Optional modules beyond core PDF 2.0. Each is a `{ name, dependencies, factory }
 | [`pdfTransparencyTyped`](./transparency-typed.md) | read | Transparency Group + Soft Mask + blend modes §11. |
 | [`pdfSigPades`](./sig-pades.md) | read | PAdES profile + DSS + Reference §12.8.4.3. |
 | [`pdfSigAesGcm`](./sig-aes-gcm.md) | read | AES-GCM crypt filter ISO/TS 32003. |
+| [`pdfCryptPublicKey`](./crypt-public-key.md) | read | Public-key security handler dictionaries and crypt filter maps, typed (no decryption). |
+| [`pdfFontDecoder`](./font-decoder.md) | read | A Font dict's character codes to Unicode text (ToUnicode, the encoding + AGL hop, the Unicode CMaps) and glyph widths. Not in the prebuilt bundles (a `@awacloud/fonts` dependency). |
+| [`pdfPageText`](./page-text.md) | read | A page's positioned text runs (Form XObjects executed, under guards), its counts and text losses, a visitor hook on the walk, and its plain text by lines. Not in the prebuilt bundles (on `pdfFontDecoder`). |
 | [`pdfDocumentParts`](./document-parts.md) | read | DPartRoot/DPart/DPM ISO/TS 32004. |
 | [`pdfRedactionIso32005`](./redaction-iso32005.md) | read | Redaction workflow ISO/TS 32005. |
 | [`pdfXPrepress`](./pdf-x-prepress.md) | lint | PDF/X profiles ISO 15930. |

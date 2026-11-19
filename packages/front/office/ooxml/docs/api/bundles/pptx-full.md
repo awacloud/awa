@@ -1,7 +1,7 @@
 ---
 module: pptxFullBundle
 category: bundles
-dependencies: [pptxLargeBundle, dmlShapesAdvanced, transitional, legacyVml, pmlMisc, dmlChartMisc, dmlMainMisc, mathMisc]
+dependencies: [pptxLargeBundle, dmlShapesAdvanced, transitional, legacyVml, pmlMisc, dmlChartMisc, dmlMainMisc, mathMisc, dmlTextDetails, pmlPartDetails, pmlPackageParts]
 returns: object
 worker-safe: true
 status: complete
@@ -9,15 +9,19 @@ status: complete
 
 # pptxFullBundle
 
-> Pre-wired bundle: `pptx-large` + further toolkits; none of them types a read.
+> Pre-wired bundle: `pptx-large` + two extras that type a read (the text details and the theme's script fonts; the part-level transition, timing and header / footer flags) + further toolkits.
 
-**Module** `pptxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/pptx-full.js` | **Deps** `pptxLargeBundle` + 7 extras | **Worker-safe** yes
+**Module** `pptxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/pptx-full.js` | **Deps** `pptxLargeBundle` + 9 extras | **Worker-safe** yes
 
 ## Included
 
 Everything in [`pptx-large`](./pptx-large.md) — its extras that type a read and its toolkits — plus:
 
-None of the extras below types a read.
+**Typing a read** — a walker hook runs on every `read()` / `write()`:
+
+- [`dmlTextDetails`](../extra/dml-text-details.md) — a run's fills, effects and script fonts; a paragraph's spacing, bullets and tabs; `endParaRPr`; the theme's script fonts (in `_extras` through `pptx-large`)
+- [`pmlPartDetails`](../extra/pml-part-details.md) — a slide's, layout's or master's `transition`, `timing` and `hf` (in `_extras` through `pptx-large`)
+- [`pmlPackageParts`](../extra/pml-package-parts.md) — a slide's `notes`, the `notesMaster` and `handoutMaster` with their themes, and with one slide master the layouts no slide uses (in `unmodelledParts` through `pptx-large`)
 
 **Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
 
@@ -42,7 +46,7 @@ Depends on `pptxLargeBundle` plus every remaining pptx-touching extra.
 
 | Resolve key | Returns | Dependencies (auto-wired) |
 |-------------|---------|---------------------------|
-| `'pptxFullBundle'` | enriched `pptx` API | `pptxLargeBundle` + `dmlShapesAdvanced`, `transitional`, `legacyVml`, `pmlMisc`, `dmlChartMisc`, `dmlMainMisc`, `mathMisc` |
+| `'pptxFullBundle'` | enriched `pptx` API | `pptxLargeBundle` + `dmlShapesAdvanced`, `transitional`, `legacyVml`, `pmlMisc`, `dmlChartMisc`, `dmlMainMisc`, `mathMisc`, `dmlTextDetails`, `pmlPartDetails`, `pmlPackageParts` |
 
 ## Examples
 

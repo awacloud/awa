@@ -6,9 +6,9 @@ AES operating modes + ChaCha20 AEAD. Each module takes a pre-scheduled block/str
 |--------|----------|------|-------------|
 | [cbc](./cbc.md) | `{encrypt, decrypt}` | `bitArray`, `aes` | AES-CBC (SP 800-38A §6.2) — confidentiality, caller-provided padding |
 | [ctr](./ctr.md) | `{encrypt}` | `bitArray`, `aes` | AES-CTR (SP 800-38A §6.5) — stream, no padding |
-| [gcm](./gcm.md) | `{encrypt, decrypt, gmac, gmacVerify, nonceTracker, _internal}` | `bitArray`, `aes` | AES-GCM (SP 800-38D) — AEAD, GMAC included |
-| [cmac](./cmac.md) | `{mac, verify, truncatedMac, truncatedVerify, _internal}` | `bitArray`, `aes` | AES-CMAC (SP 800-38B / RFC 4493); TDES rejected |
-| [kw](./kw.md) | `{wrap, unwrap, wrapPad, unwrapPad, wrapInverseCipher, unwrapInverseCipher, _internal}` | `bitArray`, `aes` | AES-KW + KWP (SP 800-38F / RFC 3394 / RFC 5649) |
+| [gcm](./gcm.md) | `{encrypt, decrypt, gmac, gmacVerify, nonceTracker}` | `bitArray`, `aes` | AES-GCM (SP 800-38D) — AEAD, GMAC included |
+| [cmac](./cmac.md) | `{mac, verify, truncatedMac, truncatedVerify}` | `bitArray`, `aes` | AES-CMAC (SP 800-38B / RFC 4493); TDES rejected |
+| [kw](./kw.md) | `{wrap, unwrap, wrapPad, unwrapPad, wrapInverseCipher, unwrapInverseCipher}` | `bitArray`, `aes` | AES-KW + KWP (SP 800-38F / RFC 3394 / RFC 5649) |
 | [chacha20poly1305](./chacha20poly1305.md) | `{encrypt, decrypt, nonceTracker}` | `chacha20`, `poly1305` | AEAD ChaCha20-Poly1305 (RFC 8439) |
 
 ## Common pattern (AEAD)

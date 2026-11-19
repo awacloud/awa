@@ -72,6 +72,7 @@ the calc chain, and the legacy VML drawing of comment shapes (for which
         state?: 'visible'|'hidden'|'veryHidden',
         rows: [ [cell, cell, …], … ],   // an array of rows, each an array of cells
         rowProps?: { [rowIndex]: { r, height?, customHeight?, hidden? } },
+        rowNumbers?: [number],         // each row's 1-based number, when one is not its index + 1
         merges?: ['A1:B2', …],
         cols?: [{ min, max, width?, hidden?, style?, bestFit? }],
         sheetViews?, autoFilter?, hyperlinks?, dataValidations?,
@@ -90,9 +91,18 @@ the calc chain, and the legacy VML drawing of comment shapes (for which
 cell := { type: 'cell',
           value, t,                  // t: 'n'|'s'|'b'|'inlineStr'|'str'|'e'
           formula?, ref?,
+          formulaType?: 'shared'|'array'|'dataTable'|'normal', // the <f>'s t
+          formulaRef?: string,       // the <f>'s ref (a shared or array range)
+          sharedIndex?: number,      // the <f>'s si
+          formulaAttrs?: object,     // the <f>'s other attributes (ca, aca …)
           s?: number,                // index into cellXfs
           hyperlinkRef?: string }
 ```
+
+A formula is written back with the attributes it was read with. A shared
+formula's follower cell has `formula: ''` with its `formulaType` and
+`sharedIndex`, and is written `<f t="shared" si="…"/>`. A cell with an empty
+`formula` and no `formulaType` carries no formula, as before.
 
 `sheet.rows` is a **plain array of rows**, and each row is a **plain array of
 cells** — there is no `{ index, cells }` wrapper. Gaps produced by a sparse
@@ -104,8 +114,14 @@ column index equals the position in the row array.
 `sheet.rows`, each entry with the row's 1-based number `r` (its `r=`
 attribute — the same number as the row part of its cells' `ref`). It is
 absent when no row carries one of them. `write()` emits them on the row at
-that index (rows are written as `r = index + 1`; `rowProps[i].r` is not
-used on write). Other row attributes (`s`, `customFormat`, `outlineLevel`,
+that index (`rowProps[i].r` is not used on write).
+
+`sheet.rows` holds the rows the sheet has, densely: a row's index is not its
+number when the sheet skips one. `sheet.rowNumbers` then gives each row's
+number (aligned with `sheet.rows`); it is absent for a sheet whose rows are
+1..n. `write()` numbers each row, and its cells' `r`, by `rowNumbers`;
+without the field, past its end, or where a number does not grow, a row is
+numbered after the previous one (so 1..n without it). Other row attributes (`s`, `customFormat`, `outlineLevel`,
 `collapsed`, `spans`) are not modelled. Boolean attributes read `1` and
 `true` alike, on rows and on `cols` (`hidden`, `bestFit`).
 
@@ -168,6 +184,7 @@ invoked — call their parse/render helpers directly. See the
   The row and cell caps are checked twice: on a pre-scan of the worksheet part's text, before its XML is parsed, and while its rows are mapped, so gap padding stops the moment the cell total passes the cap. The `opcPackage.read` archive limits bound the part bytes before either. A cap of `0` disables that check (and, for `maxCellsPerSheet`, the bound on gap padding).
   - `readOpts.maxParts`, `readOpts.maxUncompressed`, `readOpts.maxRatio` and `readOpts.maxDepth` override the archive limits of [`opc.read`](../opc/package.md) from the same options object (defaults kept; `0` disables a check).
 - `readOpts.typedRunColors: true` types the text-run fills of drawing shapes that a bare `'RRGGBB'` cannot express (theme colours, colour transforms) as `rPr.color = { rgb | schemeColor, mods? }`; by default they stay verbatim in `rPr._extras` (see [drawingml](../drawingml/drawingml.md#text-body-model)).
+- `readOpts.typedLineColors: true` types a drawing shape's line colour the same way (`shapeProps.line.color`); by default a theme line colour stays verbatim in `line._extras` (see [drawingmlShape](../drawingml/shape.md)).
 - Threaded comments (Office 2018+): see [xlsx-threaded-comments](./threaded-comments.md). They coexist with legacy comments.
 
 ## See also

@@ -28,6 +28,7 @@ Core concepts and usage recipes for the framework.
 | [Hot module replacement](./hmr.md) | `runtime.invalidate()`, the dehydrate/hydrate convention, and what is not preserved |
 | [HMR per integration](./integrations-hmr.md) | What each integration supports today, and what the host bundler provides instead |
 | [TypeScript](./typescript.md) | Cohabiting `.d.ts` declarations, worker-serialisation pitfall, narrow typings |
+| [API stability](./stability.md) | What is frozen at 1.0.0, the SemVer rules, the deprecation cycle and the snapshot gate |
 
 ## Contribution conventions
 

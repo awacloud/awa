@@ -1,4 +1,4 @@
-﻿---
+---
 module: secPolicy
 category: dom/rendering
 dependencies: []
@@ -52,15 +52,15 @@ The returned object exposes **constants** (Sets, RegExp) and **pure functions** 
 | `URL_ATTRS` | `Set<string>` | URL-bearing attributes: `href`, `src`, `action`, `formaction`, `srcset`, `xlink:href`, `data`, `codebase` |
 | `SCHEME_DANGEROUS_RE` | `RegExp` | Categorically refused schemes: `javascript:`, `vbscript:`, `file:`, `jar:`, `data:text`, `data:application` |
 | `SAFE_SCHEMES` | `Set<string>` | Default allowed schemes: `http`, `https`, `mailto`, `tel`, `ftp` |
-| `DATA_IMAGE_RE` | `RegExp` | Accepted `data:image/*` MIMEs when `allowDataImage=true` |
-| `isSafeUrl(url, schemes?, allowDataImage?)` | function | Decides whether `url` can be set on a URL-bearing attribute |
+| `DATA_IMAGE_RE` | `RegExp` | Accepted `data:image/*` MIMEs (png, jpeg, gif, webp, svg+xml, bmp, ico, avif, apng), followed by a parameter (`;base64`, `;utf8`) or directly by the data (`,`) — both RFC 2397 forms |
+| `isSafeUrl(url, schemes?, allowDataImage?)` | function | Decides whether `url` can be set on a URL-bearing attribute. `schemes` is an array or a `Set` of lowercase scheme names (no colon) that replaces `SAFE_SCHEMES`; `allowDataImage` defaults to `true` (only an explicit `false` refuses `data:image`) |
 
 `isSafeUrl` applies in order:
 1. Non-string → unsafe
 2. Empty (after stripping control chars) → safe
 3. Starts with `#`, `/`, `?`, `.` → safe (anchor / relative)
 4. Matches `SCHEME_DANGEROUS_RE` → unsafe
-5. `data:` → safe **only** if `allowDataImage` AND matches `DATA_IMAGE_RE`
+5. `data:` → safe **only** if `allowDataImage` is not `false` AND the URL matches `DATA_IMAGE_RE`
 6. No `:` → safe (relative)
 7. `:` after a `/` → safe (path containing `:`)
 8. Scheme in `schemes` (or `SAFE_SCHEMES` by default)

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -89,7 +89,6 @@ import { brotliDictWords } from './brotli_dict_words.js';
  * @property {BrotliSharedStreamCtor} BrotliCompressStream Streaming compressor.
  * @property {BrotliSharedStreamCtor} BrotliDecompressStream Streaming decompressor.
  * @property {(buf: Uint8Array) => BrotliSharedDictionary} parseSharedDictionary Parse a §5 shared-dictionary stream.
- * @property {object} _internal Internal helpers exposed for tests.
  */
 
 export const brotliShared = {
@@ -689,7 +688,7 @@ export const brotliShared = {
             push(chunk, final) { return this._inner.push(chunk, final); }
         }
 
-        return {
+        return Object.defineProperty({
             brotliCompressSync,
             brotliDecompressSync,
             brotliCompress,
@@ -697,9 +696,10 @@ export const brotliShared = {
             BrotliCompressStream,
             BrotliDecompressStream,
             parseSharedDictionary,
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal helpers exposed for tests and potential companion
-            // modules. Same `_internal` convention as the rest of fw.
-            _internal: {
+            // modules. The internal slot (core/internal.js), as the rest of fw.
+            value: {
                 ferment: _ferment,
                 shiftStep: _shiftStep,
                 shiftAddend: _shiftAddend,
@@ -709,7 +709,7 @@ export const brotliShared = {
                 customLookupWord: _customLookupWord,
                 makeResolveStaticDictRef: _makeResolveStaticDictRef,
                 buildExt: _buildExt,
-            },
-        };
+            }
+        });
     }
 };

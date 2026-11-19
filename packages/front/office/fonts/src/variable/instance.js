@@ -22,10 +22,10 @@
  *
  * **Scope**: this module computes the tuple scalar product +
  * exposes `applyGvarDeltas(glyph, deltas, scalar)` for callers that
- * already decoded a tuple's deltas. Wiring the full instantiation
- * pipeline (decode tuple → compute scalar → unpack deltas → apply to
- * glyf points → re-pack glyf bytes) is the consumer's job: there is no
- * one-shot `instantiate(font, coords)` entry point.
+ * already decoded a tuple's deltas. The full pipeline is elsewhere:
+ * `varGlyph` (`variable/glyph.js`) draws a glyph at coordinates (its
+ * tuples decoded, IUP), and `varInstantiate` (`variable/instantiate.js`)
+ * writes a whole static font, `instantiate(font, coords)`.
  *
  * Strict factory body.
  *

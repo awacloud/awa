@@ -13,8 +13,9 @@
  *      and SHA-256, nothing unlisted, and every file is either run (with an
  *      expected return) or skipped (with a reason) — never both, never neither.
  *   2. Expected returns — what the reader must return for each run file
- *      (`EXPECTED`); the two files the reader does not read are pinned as
- *      such, with the reason (no cross-reference reconstruction).
+ *      (`EXPECTED`). Since T30 (b) the reader rebuilds an unusable
+ *      cross-reference chain by default, so the three files that need it
+ *      read; with `recoverXref: false` they are refused, as pinned.
  *   3. Reading — every other file reads and its content streams parse to
  *      operators: a skipped case is skipped because its difference is in
  *      painting, not because the reader fails on it.
@@ -71,27 +72,33 @@ const EXPECTED = {
     'PDF-version/PDF-versions1.pdf': 'version-pair',
     'PDF-version/PDF-versions2.pdf': 'version-pair',
     'PDF-version/PDF-versions3.pdf': 'version-pair',
-    'UnknownFilter/UnknownFilter-xrefstm.pdf': 'refused',
+    'UnknownFilter/UnknownFilter-xrefstm.pdf': 'rebuilt',
     'UnknownFilter/UnknownFilter-objstm.pdf': 'localised',
     'UnknownFilter/UnknownFilter-PageContentStream.pdf': 'localised',
     'UnknownFilter/UnknownFilter-Font.pdf': 'localised',
     'UnknownFilter/UnknownFilter-ImageXObject.pdf': 'localised',
     'UnknownFilter/UnknownFilter-FormXObject.pdf': 'localised',
     'UnknownFilter/UnknownFilter-ICC.pdf': 'localised',
-    'UnknownFilter/UnknownFilter-Linearized.pdf': 'readable',
-    'UnknownFilter/UnknownFilter-OutlineObjStm.pdf': 'readable',
+    'UnknownFilter/UnknownFilter-Linearized.pdf': 'rebuilt',
+    'UnknownFilter/UnknownFilter-OutlineObjStm.pdf': 'rebuilt',
     'Inline-Image-Abbreviations/InlineAbbreviations.pdf': 'inline-images',
 };
 
 /** The run files the reader does not read, and why it fails on them. */
-const KNOWN_MISSES = [
+/**
+ * The files whose cross-reference chain cannot be used, with the cause the
+ * strict read (`recoverXref: false`) throws; the default read rebuilds
+ * their table (T30 (b)). Upstream calls the first "effectively
+ * unprocessable without additional recovery processing".
+ */
+const REBUILT = [
+    // Only the cross-reference stream uses an unknown filter.
+    { path: 'UnknownFilter/UnknownFilter-xrefstm.pdf', detail: 'pdf/filter/unsupported' },
     // The unknown filter sits on the first-page cross-reference stream, the
-    // only section that locates the catalog and the page: reaching them
-    // needs cross-reference reconstruction, which the reader does not do.
+    // only section that locates the catalog and the page.
     { path: 'UnknownFilter/UnknownFilter-Linearized.pdf', detail: 'pdf/filter/unsupported' },
     // Upstream, the incremental update's startxref, /XRefStm and xref entry
-    // point 20 bytes before their targets; the reader does not search around
-    // a wrong offset.
+    // point 20 bytes before their targets.
     { path: 'UnknownFilter/UnknownFilter-OutlineObjStm.pdf', detail: 'pdf/parser/indirect-bad-num' },
 ];
 
@@ -146,7 +153,10 @@ function check(kind, bytes) {
     }
     const doc = api.read(bytes);
     if (doc.pages.length !== 1) throw new Error(`${doc.pages.length} pages`);
-    if (kind === 'version-pair') {
+    if (kind === 'rebuilt') {
+        // Read with the cross-reference table rebuilt, the rebuild recorded.
+        if (!doc.losses.some((l) => l.code === 'pdf/document/xref-rebuilt')) throw new Error('read, but the table was not rebuilt');
+    } else if (kind === 'version-pair') {
         // The catalog's /Version is a name, typed as its string value.
         if (doc.version !== '1.4' || doc.catalog.version !== '1.6') {
             throw new Error(`version ${doc.version} / catalog ${doc.catalog.version}`);
@@ -233,8 +243,8 @@ describe('pdf-differences — manifest and integrity', () => {
 describe('pdf-differences — expected returns of the run files', () => {
     const outcomes = Object.keys(EXPECTED).map(outcome);
 
-    test('every run file gets its expected return, except the two known misses', () => {
-        expect(outcomes.filter((o) => !o.ok).map(({ path, detail }) => ({ path, detail }))).toEqual(KNOWN_MISSES);
+    test('every run file gets its expected return', () => {
+        expect(outcomes.filter((o) => !o.ok).map(({ path, detail }) => ({ path, detail }))).toEqual([]);
     });
 
     test('negative controls: a wrong expectation is reported', () => {
@@ -261,30 +271,27 @@ describe('pdf-differences — expected returns of the run files', () => {
     });
 });
 
-describe('pdf-differences — the two known misses with recoverXref', () => {
-    test('UnknownFilter-xrefstm, refused by default, reads its page with the table rebuilt', () => {
-        const doc = api.read(bytesOf('UnknownFilter/UnknownFilter-xrefstm.pdf'), { recoverXref: true });
-        expect(doc.pages.length).toBe(1);
-        expect(doc.losses.filter((l) => l.code === 'pdf/document/xref-rebuilt').map((l) => l.context.cause))
-            .toEqual(['pdf/filter/unsupported']);
-    });
-
-    for (const miss of KNOWN_MISSES) {
-        test(`${miss.path}: the rebuilt table reads the page; every object resolves or fails typed`, () => {
-            const doc = api.read(bytesOf(miss.path), { recoverXref: true });
+describe('pdf-differences — the three files the default read rebuilds', () => {
+    for (const miss of REBUILT) {
+        test(`${miss.path}: refused strictly; the rebuilt table reads the page`, () => {
+            let code = null;
+            try { api.read(bytesOf(miss.path), { recoverXref: false }); } catch (e) { code = e.code; }
+            expect(code).toBe(miss.detail);
+            const doc = api.read(bytesOf(miss.path));
             expect(doc.pages.length).toBe(1);
             expect(doc.losses.filter((l) => l.code === 'pdf/document/xref-rebuilt').map((l) => l.context.cause))
                 .toEqual([miss.detail]);
             const failures = objectFailures(doc);
-            // the unknown filter: on the first-page xref stream (14), on the outline object stream (12)
-            expect(failures.length).toBeGreaterThan(0);
+            // Every object resolves or fails typed; the unknown filter fails
+            // the objects behind it (the first-page xref stream, the outline
+            // object stream) and nothing else.
             expect(failures.filter((f) => typeof f.code !== 'string' || !f.code.startsWith('pdf/'))).toEqual([]);
         });
     }
 });
 
 describe('pdf-differences — every other file reads', () => {
-    const refusedOnPurpose = new Set(['UnknownFilter/UnknownFilter-xrefstm.pdf', ...KNOWN_MISSES.map((m) => m.path)]);
+    const refusedOnPurpose = new Set(REBUILT.map((m) => m.path));
 
     test('the skipped and run files read, and every page content parses to operators', () => {
         const failures = [];

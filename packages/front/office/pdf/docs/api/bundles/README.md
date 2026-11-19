@@ -13,6 +13,14 @@ and enumerated on its page.
 
 These three descriptors are the **source-side** bundles. The committed `dist/` build additionally crosses them with a Read / Read+Write family axis — see [Committed `dist/` bundle matrix](./dist-matrix.md) for the eight roots, the `-rw` naming scheme and the write inventory. Every `-rw` root also ships the signature verifier `pdfSignature` beside the signer, so a Read+Write bundle can verify what it signs; no Read root carries it.
 
+What a consumer of the committed build registers depends on the surface and the family ([details](./dist-matrix.md#what-a-consumer-registers)):
+
+| Surface | Family | Register |
+|---|---|---|
+| `@awacloud/pdf/standalone/<root>.js` | Read and Read+Write | nothing: `factory()` takes no argument |
+| `@awacloud/pdf/build/<root>.js` | Read | `fw_require` |
+| `@awacloud/pdf/build/<root>-rw.js` | Read+Write | `fw_require` and `pkg_require` (`@awacloud/fonts`' manifest: the root declares `standard14Lookup` and `encodingLookup` instead of inlining them) |
+
 Bundles are `{ name, dependencies, factory }` descriptors — consumption is exclusively declarative via `ModuleRuntime`. The three bundle descriptors are reachable through the root `bundle` array (as above) or through their own subpath exports (`@awacloud/pdf/pdf-large`, `@awacloud/pdf/pdf-full`, `@awacloud/pdf/pdf-legacy`); they are **not** re-exported from the package root by binding name, so `import { pdfLargeBundle } from '@awacloud/pdf'` is `undefined`. The same holds for every `extras` descriptor.
 
 ## Common pattern

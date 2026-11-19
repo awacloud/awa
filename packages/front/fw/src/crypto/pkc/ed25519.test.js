@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -8,6 +8,7 @@ import { sha512 } from '../hash/sha512.js';
 import { bitArray } from '../utils/bitArray.js';
 import { utf8 } from '../../io/codec/utf8.js';
 import { hex } from '../../io/codec/hex.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _ba = bitArray.factory();
 const _utf8 = utf8.factory();
@@ -36,7 +37,7 @@ describe('ed25519 module (RFC 8032)', () => {
         expect(toHex(kp.publicKey)).toBe(expectedPub);
         const sig = _ed.sign(kp.privateKey, new Uint8Array(0));
         expect(toHex(sig)).toBe(expectedSig);
-        expect(_ed.verify(kp.publicKey, new Uint8Array(0), sig)).toBe(true);
+        expect(_ed.verify(kp.publicKey, sig, new Uint8Array(0))).toBe(true);
     });
 
     // RFC 8032 §7.1 - Test 2 (single-byte message)
@@ -49,7 +50,7 @@ describe('ed25519 module (RFC 8032)', () => {
         const kp = _ed.keyPair(seed);
         const sig = _ed.sign(kp.privateKey, msg);
         expect(toHex(sig)).toBe(expectedSig);
-        expect(_ed.verify(kp.publicKey, msg, sig)).toBe(true);
+        expect(_ed.verify(kp.publicKey, sig, msg)).toBe(true);
     });
 
     // RFC 8032 §7.1 - Test 3 (2-byte message)
@@ -61,7 +62,7 @@ describe('ed25519 module (RFC 8032)', () => {
         const kp = _ed.keyPair(seed);
         const sig = _ed.sign(kp.privateKey, msg);
         expect(toHex(sig)).toBe(expectedSig);
-        expect(_ed.verify(kp.publicKey, msg, sig)).toBe(true);
+        expect(_ed.verify(kp.publicKey, sig, msg)).toBe(true);
     });
 
     test('verify rejects modified message', () => {
@@ -70,7 +71,7 @@ describe('ed25519 module (RFC 8032)', () => {
         const msg = new TextEncoder().encode('original');
         const sig = _ed.sign(kp.privateKey, msg);
         const tampered = new TextEncoder().encode('Original');
-        expect(_ed.verify(kp.publicKey, tampered, sig)).toBe(false);
+        expect(_ed.verify(kp.publicKey, sig, tampered)).toBe(false);
     });
 
     test('verify rejects modified signature', () => {
@@ -79,7 +80,7 @@ describe('ed25519 module (RFC 8032)', () => {
         const msg = new TextEncoder().encode('hello');
         const sig = _ed.sign(kp.privateKey, msg);
         sig[0] ^= 1;
-        expect(_ed.verify(kp.publicKey, msg, sig)).toBe(false);
+        expect(_ed.verify(kp.publicKey, sig, msg)).toBe(false);
     });
 
     test('rejects bad seed length', () => {
@@ -148,7 +149,7 @@ describe('EDDSA-KeyVer-1.0 (NIST CAVP, ED-25519, 4/4 vectors)', () => {
     test.each(_KV_ED)(
         'tgId=$tg tcId=$tc (expected=$pass): _internal.isValidPublicKey(q)',
         (v) => {
-            const ok = _ed._internal.isValidPublicKey(fromHex(v.q));
+            const ok = _ed[INTERNAL].isValidPublicKey(fromHex(v.q));
             expect(ok).toBe(v.pass);
         }
     );
@@ -172,7 +173,7 @@ describe('EDDSA-SigVer-1.0 (NIST CAVP, ED-25519, 10/10 vectors)', () => {
     test.each(_SV_ED)(
         'tgId=$tg tcId=$tc (expected=$pass): verify(q, msg, sig)',
         (v) => {
-            const ok = _ed.verify(fromHex(v.q), fromHex(v.msg), fromHex(v.sig));
+            const ok = _ed.verify(fromHex(v.q), fromHex(v.sig), fromHex(v.msg));
             expect(ok).toBe(v.pass);
         },
         20_000
@@ -227,7 +228,7 @@ describe('EDDSA-SigVer-1.0 preHash=True (NIST CAVP, Ed25519ph iteration E1)', ()
     test.each(_PH_SIGVER)(
         'tgId=$tg tcId=$tc (expected=$pass, reason=$reason): verifyPh(q, msg, sig)',
         (v) => {
-            const ok = _ed.verifyPh(fromHex(v.q), fromHex(v.msg), fromHex(v.sig));
+            const ok = _ed.verifyPh(fromHex(v.q), fromHex(v.sig), fromHex(v.msg));
             expect(ok).toBe(v.pass);
         }, 20_000
     );
@@ -244,7 +245,7 @@ describe('Ed25519ctx (RFC 8032 §5.1, iteration E1)', () => {
         const ctx = new TextEncoder().encode('test-context');
         const sig = _ed.signCtx(kp.privateKey, msg, ctx);
         expect(sig).not.toBe(false);
-        expect(_ed.verifyCtx(kp.publicKey, msg, sig, ctx)).toBe(true);
+        expect(_ed.verifyCtx(kp.publicKey, sig, msg, ctx)).toBe(true);
     });
 
     test('verifyCtx rejects with wrong context', () => {
@@ -252,7 +253,7 @@ describe('Ed25519ctx (RFC 8032 §5.1, iteration E1)', () => {
         const ctxA = new TextEncoder().encode('ctx-A');
         const ctxB = new TextEncoder().encode('ctx-B');
         const sig = _ed.signCtx(kp.privateKey, msg, ctxA);
-        expect(_ed.verifyCtx(kp.publicKey, msg, sig, ctxB)).toBe(false);
+        expect(_ed.verifyCtx(kp.publicKey, sig, msg, ctxB)).toBe(false);
     });
 
     test('verifyCtx rejects when verifying with verify() (pure path)', () => {
@@ -260,7 +261,7 @@ describe('Ed25519ctx (RFC 8032 §5.1, iteration E1)', () => {
         const ctx = new TextEncoder().encode('ctx');
         const sig = _ed.signCtx(kp.privateKey, msg, ctx);
         // Ed25519ctx signature is NOT valid under pure Ed25519 verify (different dom prefix).
-        expect(_ed.verify(kp.publicKey, msg, sig)).toBe(false);
+        expect(_ed.verify(kp.publicKey, sig, msg)).toBe(false);
     });
 
     test('signCtx rejects empty context (use sign() for pure Ed25519)', () => {
@@ -282,14 +283,14 @@ describe('Ed25519ph cross-check (round-trip and domain separation)', () => {
         const msg = new TextEncoder().encode('the quick brown fox');
         const sig = _ed.signPh(kp.privateKey, msg);
         expect(sig).not.toBe(false);
-        expect(_ed.verifyPh(kp.publicKey, msg, sig)).toBe(true);
+        expect(_ed.verifyPh(kp.publicKey, sig, msg)).toBe(true);
     });
 
     test('signPh + verifyPh round-trip with context', () => {
         const msg = new TextEncoder().encode('the quick brown fox');
         const ctx = new TextEncoder().encode('app-prefix-1');
         const sig = _ed.signPh(kp.privateKey, msg, ctx);
-        expect(_ed.verifyPh(kp.publicKey, msg, sig, ctx)).toBe(true);
+        expect(_ed.verifyPh(kp.publicKey, sig, msg, ctx)).toBe(true);
     });
 
     test('Ed25519ph signature ≠ pure Ed25519 signature on same message', () => {
@@ -302,7 +303,7 @@ describe('Ed25519ph cross-check (round-trip and domain separation)', () => {
     test('verifyPh rejects pure Ed25519 signature', () => {
         const msg = new TextEncoder().encode('cross-mode rejection');
         const sigPure = _ed.sign(kp.privateKey, msg);
-        expect(_ed.verifyPh(kp.publicKey, msg, sigPure)).toBe(false);
+        expect(_ed.verifyPh(kp.publicKey, sigPure, msg)).toBe(false);
     });
 
     test('signPh rejects context > 255 bytes', () => {
@@ -320,30 +321,8 @@ describe('Ed25519ph cross-check (round-trip and domain separation)', () => {
 // to prevent any silent usage of an Ed448 function.
 // ============================================================================
 
-describe('Ed448 explicit reject (E2)', () => {
-    test('ed448.keyPair returns false (NOT-IMPLEMENTED)', () => {
-        expect(_ed.ed448.keyPair(new Uint8Array(57))).toBe(false);
-    });
-
-    test('ed448.sign returns false', () => {
-        expect(_ed.ed448.sign(new Uint8Array(114), new Uint8Array(0))).toBe(false);
-    });
-
-    test('ed448.verify returns false', () => {
-        expect(_ed.ed448.verify(new Uint8Array(57), new Uint8Array(0), new Uint8Array(114))).toBe(false);
-    });
-
-    test('ed448.signPh returns false', () => {
-        expect(_ed.ed448.signPh(new Uint8Array(114), new Uint8Array(0))).toBe(false);
-    });
-
-    test('ed448.verifyPh returns false', () => {
-        expect(_ed.ed448.verifyPh(new Uint8Array(57), new Uint8Array(0), new Uint8Array(114))).toBe(false);
-    });
-
-    test('ed448 namespace shape: { keyPair, sign, verify, signPh, verifyPh }', () => {
-        for (const k of ['keyPair', 'sign', 'verify', 'signPh', 'verifyPh']) {
-            expect(typeof _ed.ed448[k]).toBe('function');
-        }
+describe('Ed448', () => {
+    test('the `ed448` reject namespace is gone (D9 G3)', () => {
+        expect(_ed.ed448).toBeUndefined();
     });
 });

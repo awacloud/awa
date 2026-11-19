@@ -15,7 +15,7 @@ title: "@awacloud/oconv — the md → pdf bounded typesetter"
 >
 > **Prerequisites.** The `@awacloud/oconv` main entry (`fw_require` and
 > `modules`, registered on an `@awacloud/fw` `ModuleRuntime` — see
-> [Examples](#examples)); the `@awacloud/oconv/src/worker.js` sub-path for the
+> [Examples](#examples)); the `@awacloud/oconv/worker.js` sub-path for the
 > worker path; optionally the companion package `@awacloud/oconv-fonts` for
 > the default-face tier. Runs in a browser or on the runtimes the package's
 > `engines` field names (Bun ≥ 1.0, Node ≥ 20). The writer itself performs no

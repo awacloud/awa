@@ -1,7 +1,7 @@
 ---
 module: totp
 category: crypto/utils
-dependencies: [hmac, random, base32]
+dependencies: [hmac, random, base32, bitArray, sha256, sha512]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > TOTP RFC 6238 — time-based OTP generation, verification, and enrollment.
 
-**Module** `totp` | **Source** `packages/front/fw/src/crypto/utils/totp.js` | **Deps** `hmac`, `random`, `base32` | **Worker-safe** yes
+**Module** `totp` | **Source** `packages/front/fw/src/crypto/utils/totp.js` | **Deps** `hmac`, `random`, `base32`, `bitArray`, `sha256`, `sha512` | **Worker-safe** yes
 
 Strict TOTP (RFC 6238) implementation built on HOTP (RFC 4226). Algorithm: HMAC-SHA-1/256/512 of the time counter T (8 bytes big-endian), dynamic truncation, modulo 10^digits. Includes enrollment helpers (random secret generation, `otpauth://` URI) compatible with standard authenticators (Google Authenticator, Authy, etc.).
 

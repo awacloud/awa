@@ -50,6 +50,7 @@
             <li><strong>Find</strong> (<kbd>Ctrl</kbd>+<kbd>F</kbd>) marks every match in the text as you type and outlines the current one; <kbd>Enter</kbd> or <kbd>F3</kbd> goes to the next, <kbd>Shift</kbd>+<kbd>F3</kbd> to the previous.</li>
             <li><strong>Replace</strong> (<kbd>Ctrl</kbd>+<kbd>H</kbd>): one at a time, or all. <strong>Go to line</strong> (<kbd>Ctrl</kbd>+<kbd>G</kbd>).</li>
             <li><strong>Undo</strong> (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) and <strong>Redo</strong> (<kbd>Ctrl</kbd>+<kbd>Y</kbd>): typing is undone a word group at a time, and Replace all or the date (<kbd>F5</kbd>) in one step.</li>
+            <li><strong>Tab</strong> inserts a tab in the text; with several lines selected it indents each of them, and <kbd>Shift</kbd>+<kbd>Tab</kbd> outdents (it removes one leading tab, or up to four leading spaces). Each is one step for Undo. To leave the text with the keyboard, press <kbd>Escape</kbd> and then <kbd>Tab</kbd>: the focus moves on, and any other key, or a click, makes Tab insert again. Or press <kbd>Ctrl</kbd>+<kbd>M</kbd> to make Tab move the focus instead, until you press it again (the status bar says which; it is forgotten when you close the page).</li>
             <li>Word wrap, and the text size (<kbd>Ctrl</kbd>+wheel too), are remembered.</li>
         </ul>
 
@@ -66,8 +67,11 @@
                 <tr><td><kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd></td><td>Next / previous match</td></tr>
                 <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> (or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>)</td><td>Undo / Redo</td></tr>
                 <tr><td><kbd>F5</kbd></td><td>Insert the time and date</td></tr>
+                <tr><td><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Insert a tab (indent the selected lines) / outdent</td></tr>
+                <tr><td><kbd>Escape</kbd>, then <kbd>Tab</kbd></td><td>Leave the text: the focus moves on</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>Tab inserts a tab / Tab moves the focus</td></tr>
                 <tr><td><kbd>Ctrl</kbd>+wheel</td><td>Text size</td></tr>
-                <tr><td><kbd>Escape</kbd></td><td>Close the find or go-to bar</td></tr>
+                <tr><td><kbd>Escape</kbd></td><td>Close the find or go-to bar (in the text, it also releases Tab)</td></tr>
             </tbody>
         </table>
 

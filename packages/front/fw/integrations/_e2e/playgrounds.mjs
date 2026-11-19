@@ -54,7 +54,8 @@ function onPath(bin) {
 const PLAYGROUNDS = [
     {
         name: 'nodejs',
-        needsInstall: false,
+        // `bun install` runs the postinstall that links node_modules/@awacloud/fw.
+        needsInstall: true,
         steps: [{ cmd: ['node', 'app.mjs'] }],
     },
     {

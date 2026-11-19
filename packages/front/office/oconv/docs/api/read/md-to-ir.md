@@ -9,7 +9,7 @@ status: complete
 
 # oconvMdToIr
 
-> Markdown text (via `@awacloud/md`'s `md.parse`) → `oconv-ir/v1` — the `fromMd`/`convert` read side.
+> Markdown text (via `@awacloud/md`'s `md.parse`) → `oconv-ir/v2` — the `fromMd`/`convert` read side.
 
 **Module** `oconvMdToIr` (`oconvMdToIr`) | **Source** `packages/front/office/oconv/src/read/md-to-ir.js` | **Deps** `oconvIr`, `md`, `mdFrontmatter` | **Worker-safe** yes
 
@@ -31,7 +31,7 @@ const { mdToIr } = runtime.resolve('oconvMdToIr');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `mdToIr` | `(markdown: string) => {ir, losses, frontmatter}` | `ir` — an `oconv-ir/v1` document; `losses` — `{code, detail}[]`; `frontmatter` — `{lang, content}` or `null` | `TypeError`/`Error` `oconv: markdown must be a string` when `markdown` is not a string |
+| `mdToIr` | `(markdown: string) => {ir, losses, frontmatter}` | `ir` — an `oconv-ir/v2` document; `losses` — `{code, detail}[]`; `frontmatter` — `{lang, content}` or `null` | `TypeError`/`Error` `oconv: markdown must be a string` when `markdown` is not a string |
 
 ## Examples
 

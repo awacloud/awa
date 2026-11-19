@@ -6,12 +6,12 @@
 import { describe, test, expect } from 'bun:test';
 import { encodingAgl } from './agl.js';
 import { testRuntime } from './_test-runtime.js';
-const { glyphNameToUnicode } = testRuntime.resolve('encodingAgl');
+const { glyphNameToUnicode, dingbatsNameToUnicode } = testRuntime.resolve('encodingAgl');
 
 describe('encodingAgl module', () => {
     test('should have correct module metadata', () => {
         expect(encodingAgl.name).toBe('encodingAgl');
-        expect(encodingAgl.dependencies).toEqual(['encodingAglTable']);
+        expect(encodingAgl.dependencies).toEqual(['encodingAglTable', 'encodingZapfDingbatsGlyphs']);
         expect(typeof encodingAgl.factory).toBe('function');
     });
 
@@ -109,5 +109,60 @@ describe('encodingAgl module', () => {
         test('a name absent from the table and not a uni/u form is null', () => {
             expect(glyphNameToUnicode('not-a-known-glyph')).toBeNull();
         });
+    });
+});
+
+// T25 (f) — the names of the Zapf Dingbats font, read from the vendored
+// ITC Zapf Dingbats Glyph List when the caller says the font is one.
+describe('encodingAgl — dingbatsNameToUnicode', () => {
+    test('a Zapf Dingbats name reads through the ITC Zapf Dingbats Glyph List', () => {
+        expect(dingbatsNameToUnicode('a73')).toEqual([0x25A0]);
+        expect(dingbatsNameToUnicode('a24')).toEqual([0x2718]);
+        expect(dingbatsNameToUnicode('a206')).toEqual([0x2770]);
+    });
+
+    test('glyphNameToUnicode does not read Zapf Dingbats names', () => {
+        expect(glyphNameToUnicode('a73')).toBeNull();
+    });
+
+    test('any other name reads as glyphNameToUnicode does; nothing resolves to null', () => {
+        for (const n of ['space', 'bullet', 'uni2022', 'u1F600', 'a']) {
+            expect(dingbatsNameToUnicode(n)).toEqual(glyphNameToUnicode(n));
+        }
+        expect(dingbatsNameToUnicode('a207')).toBeNull();
+        expect(dingbatsNameToUnicode('')).toBeNull();
+        expect(dingbatsNameToUnicode(null)).toBeNull();
+    });
+});
+
+// T74 — the AGL specification's own steps (§ 2): everything from the first
+// full stop dropped, the rest split at underscores, each component read.
+describe('encodingAgl — the full stop and the underscores (T74)', () => {
+    test('a suffixed name reads as its stem', () => {
+        expect(glyphNameToUnicode('one.SP')).toEqual([0x31]);
+        expect(glyphNameToUnicode('zero.ST')).toEqual([0x30]);
+        expect(glyphNameToUnicode('uni0031.sups')).toEqual([0x31]);
+        expect(glyphNameToUnicode('one.osf.alt')).toEqual([0x31]);
+    });
+
+    test('a ligature name reads as its components, concatenated', () => {
+        expect(glyphNameToUnicode('f_f_i')).toEqual([0x66, 0x66, 0x69]);
+        expect(glyphNameToUnicode('f_i.alt')).toEqual([0x66, 0x69]);
+        expect(glyphNameToUnicode('uni0041_B')).toEqual([0x41, 0x42]);
+    });
+
+    test('a component nothing reads maps to nothing; all of them, null', () => {
+        expect(glyphNameToUnicode('one_foo')).toEqual([0x31]);
+        expect(glyphNameToUnicode('foo.bar')).toBeNull();
+        expect(glyphNameToUnicode('foo_qux')).toBeNull();
+        expect(glyphNameToUnicode('foo_bar')).toEqual([0x7C]); // `bar` is an AGL name
+        expect(glyphNameToUnicode('.notdef')).toBeNull();
+        expect(glyphNameToUnicode('C0')).toBeNull();
+        expect(glyphNameToUnicode('_')).toBeNull();
+    });
+
+    test('a name the table reads whole is read as before', () => {
+        expect(glyphNameToUnicode('Lcommaaccent')).toEqual([0x013B]);
+        expect(glyphNameToUnicode('uni20AC')).toEqual([0x20AC]);
     });
 });

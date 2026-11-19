@@ -7,6 +7,7 @@ import { cmac } from './cmac.js';
 import { aes } from '../cipher/aes.js';
 import { bitArray } from '../utils/bitArray.js';
 import { hex } from '../../io/codec/hex.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _ba = bitArray.factory();
 const _hex = hex.factory();
@@ -31,8 +32,8 @@ describe('cmac module (RFC 4493 / NIST SP 800-38B)', () => {
         const cipher = _aes.ttable.fn(KEY);
         const L = cipher.encrypt([0, 0, 0, 0]);
         expect(toHex(L)).toBe('7df76b0c1ab899b33e42f047b91b546f');
-        const K1 = _cmac._internal.dbl(L);
-        const K2 = _cmac._internal.dbl(K1);
+        const K1 = _cmac[INTERNAL].dbl(L);
+        const K2 = _cmac[INTERNAL].dbl(K1);
         expect(toHex(K1)).toBe('fbeed618357133667c85e08f7236a8de');
         expect(toHex(K2)).toBe('f7ddac306ae266ccf90bc11ee46d513b');
     });

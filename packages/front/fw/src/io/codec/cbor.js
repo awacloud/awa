@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -43,7 +43,7 @@ import { utf8 } from './utf8.js';
 /**
  * @typedef {object} CborAPI
  * @property {(value: unknown, options?: { deterministic?: boolean }) => Uint8Array} encode
- * @property {(bytes: Uint8Array, options?: { useMap?: boolean }) => unknown} decode
+ * @property {(bytes: Uint8Array, options?: { useMap?: boolean, maxDepth?: number }) => unknown} decode
  * @property {new (tag: number, value: unknown) => CborTagged} Tagged
  * @property {new (value: number) => CborSimple} Simple
  */
@@ -295,6 +295,14 @@ export const cbor = {
                     else writeHead(out, 1, -1 - val);
                     return;
                 }
+                // Every safe integer is an integer on the wire (RFC 8949 §3.1,
+                // App. A: 1e12 is 0x1b000000e8d4a51000, D24); past 2^53 a
+                // number is no longer exact and stays a float.
+                if (Number.isSafeInteger(val)) {
+                    if (val >= 0) writeHead(out, 0, BigInt(val));
+                    else writeHead(out, 1, -1n - BigInt(val));
+                    return;
+                }
                 encodeFloatShortest(val, out);
                 return;
             }
@@ -360,6 +368,19 @@ export const cbor = {
         }
 
         /**
+         * Set an own enumerable property, `__proto__` included: assigning
+         * `obj.__proto__ = v` would replace the object's prototype with a
+         * decoded value instead of storing it. Every other key assigns.
+         */
+        function _setOwn(obj, key, value) {
+            if (key === '__proto__') {
+                Object.defineProperty(obj, key, { value, writable: true, enumerable: true, configurable: true });
+            } else {
+                obj[key] = value;
+            }
+        }
+
+        /**
          * Encode a JS value to a CBOR byte array.
          * @param {any} value
          * @param {{deterministic?: boolean}} [options]
@@ -376,6 +397,26 @@ export const cbor = {
         }
 
         // ---------- decoder ----------
+
+        /** Default nesting limit of `decode` (arrays, maps, tags). */
+        const DEFAULT_MAX_DEPTH = 512;
+
+        /**
+         * Enter one nesting level: past `maxDepth` the decode throws instead
+         * of recursing until the engine's stack overflows (audit A5; a
+         * 100 000-deep array is a few hundred kilobytes of input).
+         */
+        function enter(ctx) {
+            if (++ctx.depth > ctx.maxDepth) throw new Error('CBOR: nesting deeper than maxDepth (' + ctx.maxDepth + ')');
+        }
+
+        function maxDepthOf(options) {
+            const d = options && options.maxDepth;
+            if (d === undefined || d === null) return DEFAULT_MAX_DEPTH;
+            if (!Number.isInteger(d) || d < 1) throw new RangeError('cbor.decode: maxDepth must be a positive integer');
+            return d;
+        }
+
 
         function readArgument(ctx, info) {
             const { view } = ctx;
@@ -394,20 +435,52 @@ export const cbor = {
         }
 
         function decodeMap(ctx, n) {
+            enter(ctx);
             if (ctx.useMap) {
                 const m = new Map();
                 for (let i = 0; i < n; i++) {
-                    const k = decodeValue(ctx);
-                    m.set(k, decodeValue(ctx));
+                    const k = decodeItem(ctx);
+                    m.set(k, decodeItem(ctx));
                 }
+                ctx.depth--;
                 return m;
             }
-            const obj = {};
+            const obj = Object.create(null);   // null prototype: no inherited key collides with a decoded one (D9 G7)
             for (let i = 0; i < n; i++) {
-                const k = decodeValue(ctx);
-                obj[k] = decodeValue(ctx);
+                const k = decodeItem(ctx);
+                _setOwn(obj, k, decodeItem(ctx));
             }
+            ctx.depth--;
             return obj;
+        }
+
+        /**
+         * A data item: `decodeValue`, where a break stop code (0xff) is not
+         * well-formed (RFC 8949 §3.2.1: a break only ends an indefinite-length
+         * item; App. F). The indefinite loops read their break themselves.
+         */
+        function decodeItem(ctx) {
+            const v = decodeValue(ctx);
+            if (v === BREAK) throw new Error('CBOR: break outside an indefinite-length item');
+            return v;
+        }
+
+        /**
+         * The next chunk of an indefinite-length string of `major`, or BREAK:
+         * a chunk is a definite-length string of the same major type (RFC 8949
+         * §3.2.3), not a nested indefinite one.
+         */
+        function decodeChunk(ctx, major) {
+            if (ctx.offset >= ctx.bytes.length) throw new Error('CBOR: unexpected end of input');
+            const b = ctx.bytes[ctx.offset];
+            if (b === 0xff) { ctx.offset++; return BREAK; }
+            if ((b >> 5) !== major || (b & 0x1f) === 31) throw new Error('CBOR: an indefinite-length string chunk must be a definite-length string of the same type');
+            return decodeValue(ctx);
+        }
+
+        /** Throw unless `n` bytes remain at the offset (App. F: short data). */
+        function need(ctx, n) {
+            if (!(n <= ctx.bytes.length - ctx.offset)) throw new Error('CBOR: unexpected end of input');
         }
 
         function decodeValue(ctx) {
@@ -423,7 +496,12 @@ export const cbor = {
                 if (info === 22) return null;
                 if (info === 23) return undefined;
                 if (info < 24) return new Simple(info);
-                if (info === 24) { const v = view.getUint8(ctx.offset); ctx.offset += 1; return new Simple(v); }
+                if (info === 24) {
+                    const v = view.getUint8(ctx.offset); ctx.offset += 1;
+                    // RFC 8949 §3.3: simple values 0-31 have a one-byte form only.
+                    if (v < 32) throw new Error('CBOR: simple value ' + v + ' in a two-byte encoding');
+                    return new Simple(v);
+                }
                 if (info === 25) { const h = view.getUint16(ctx.offset, false); ctx.offset += 2; return float16ToFloat64(h); }
                 if (info === 26) { const f = view.getFloat32(ctx.offset, false); ctx.offset += 4; return f; }
                 if (info === 27) { const f = view.getFloat64(ctx.offset, false); ctx.offset += 8; return f; }
@@ -435,7 +513,7 @@ export const cbor = {
                 if (major === 2) {
                     const parts = [];
                     for (; ;) {
-                        const next = decodeValue(ctx);
+                        const next = decodeChunk(ctx, 2);
                         if (next === BREAK) break;
                         if (!(next instanceof Uint8Array)) throw new Error('CBOR: expected byte string chunk');
                         parts.push(next);
@@ -445,7 +523,7 @@ export const cbor = {
                 if (major === 3) {
                     let s = '';
                     for (; ;) {
-                        const next = decodeValue(ctx);
+                        const next = decodeChunk(ctx, 3);
                         if (next === BREAK) break;
                         if (typeof next !== 'string') throw new Error('CBOR: expected text string chunk');
                         s += next;
@@ -453,30 +531,35 @@ export const cbor = {
                     return s;
                 }
                 if (major === 4) {
+                    enter(ctx);
                     const arr = [];
                     for (; ;) {
                         const next = decodeValue(ctx);
                         if (next === BREAK) break;
                         arr.push(next);
                     }
+                    ctx.depth--;
                     return arr;
                 }
                 if (major === 5) {
+                    enter(ctx);
                     if (ctx.useMap) {
                         const m = new Map();
                         for (; ;) {
                             const k = decodeValue(ctx);
                             if (k === BREAK) break;
-                            m.set(k, decodeValue(ctx));
+                            m.set(k, decodeItem(ctx));
                         }
+                        ctx.depth--;
                         return m;
                     }
-                    const obj = {};
+                    const obj = Object.create(null);   // null prototype: no inherited key collides with a decoded one (D9 G7)
                     for (; ;) {
                         const k = decodeValue(ctx);
                         if (k === BREAK) break;
-                        obj[k] = decodeValue(ctx);
+                        _setOwn(obj, k, decodeItem(ctx));
                     }
+                    ctx.depth--;
                     return obj;
                 }
                 throw new Error(`CBOR: indefinite length not allowed for major ${major}`);
@@ -491,25 +574,31 @@ export const cbor = {
                     return -1 - arg;
                 case 2: {
                     const n = Number(arg);
+                    need(ctx, n);
                     const out = bytes.slice(ctx.offset, ctx.offset + n);
                     ctx.offset += n;
                     return out;
                 }
                 case 3: {
                     const n = Number(arg);
+                    need(ctx, n);
                     const s = utf8.fromBytes(bytes.subarray(ctx.offset, ctx.offset + n));
                     ctx.offset += n;
                     return s;
                 }
                 case 4: {
                     const n = Number(arg);
+                    enter(ctx);
                     const arr = new Array(n);
-                    for (let i = 0; i < n; i++) arr[i] = decodeValue(ctx);
+                    for (let i = 0; i < n; i++) arr[i] = decodeItem(ctx);
+                    ctx.depth--;
                     return arr;
                 }
                 case 5: return decodeMap(ctx, Number(arg));
                 case 6: {
-                    const inner = decodeValue(ctx);
+                    enter(ctx);
+                    const inner = decodeItem(ctx);
+                    ctx.depth--;
                     const tag = typeof arg === 'bigint' ? Number(arg) : arg;
                     if (tag === 2 && inner instanceof Uint8Array) {
                         let n = 0n;
@@ -530,9 +619,11 @@ export const cbor = {
         /**
          * Decode a CBOR byte array into a JS value.
          * @param {Uint8Array} bytes
-         * @param {{useMap?: boolean}} [options]
+         * @param {{useMap?: boolean, maxDepth?: number}} [options]
          *        `useMap` : return `Map` instances instead of plain objects
          *        (preserves non-string keys and insertion order).
+         *        `maxDepth` : nesting limit of arrays, maps and tags (default
+         *        512); a deeper item throws.
          * @returns {any}
          */
         function decode(bytes, options) {
@@ -540,9 +631,11 @@ export const cbor = {
                 bytes,
                 view: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
                 offset: 0,
-                useMap: !!(options && options.useMap)
+                useMap: !!(options && options.useMap),
+                depth: 0,
+                maxDepth: maxDepthOf(options),
             };
-            return decodeValue(ctx);
+            return decodeItem(ctx);
         }
 
         return { encode, decode, Tagged, Simple };

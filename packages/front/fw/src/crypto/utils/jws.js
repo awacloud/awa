@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -36,11 +36,9 @@ import { ed25519 } from '../pkc/ed25519.js';
  * Public shape returned by `jws.factory()`.
  * @typedef {object} JwsAPI
  * @property {(payload: Uint8Array, alg: string, key: Uint8Array, extraHeader?: Object) => (string|false)} sign Sign a payload and return a compact JWS.
- * @property {(token: string, key: Uint8Array, opts?: {expectedAlg?: string|string[], expectedTyp?: string}) => ({header:Object, payload:Uint8Array, claims?: Object}|false)} verify Verify a compact JWS.
+ * @property {(token: string, key: Uint8Array, opts: {expectedAlg: string|string[], expectedTyp?: string}) => ({header:Object, payload:Uint8Array, claims?: Object}|false)} verify Verify a compact JWS (`expectedAlg` required).
  * @property {(claims: Object, alg: string, key: Uint8Array) => (string|false)} signJwt Sign a JSON claim set as a JWT.
- * @property {(token: string, key: Uint8Array, opts?: {expectedAlg?: string|string[], expectedTyp?: string}) => ({header:Object, payload:Uint8Array, claims?: Object}|false)} verifyJwt Verify a JWT and parse its claims.
- * @property {(bytes: Uint8Array) => string} _b64uEnc base64url (no padding) encode.
- * @property {(s: string) => (Uint8Array|false)} _b64uDec base64url (no padding) decode.
+ * @property {(token: string, key: Uint8Array, opts: {expectedAlg: string|string[], expectedTyp?: string}) => ({header:Object, payload:Uint8Array, claims?: Object}|false)} verifyJwt Verify a JWT and parse its claims (`expectedAlg` required).
  */
 
 export const jws = {
@@ -53,21 +51,12 @@ export const jws = {
     /** @returns {JwsAPI} */
     factory(bitArray, utf8, b64, hmac, sha256, sha512, ed25519) {
 
-        // ── base64url codec (no padding) - wraps the standard b64 codec ──
+        // ── base64url (no padding): `b64.url`, whose decoder accepts the
+        // canonical form only (RFC 4648 sections 3.5 and 5), so a token has
+        // one accepted spelling and is not malleable.
 
-        function _b64uEnc(bytes) {
-            return b64.fromBytes(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-        }
-
-        function _b64uDec(s) {
-            if (!/^[A-Za-z0-9\-_]*$/.test(s)) {
-                console.warn('[crypto] INVALID: jws: malformed base64url');
-                return false;
-            }
-            const std = s.replace(/-/g, '+').replace(/_/g, '/');
-            const pad = (4 - (std.length % 4)) % 4;
-            return b64.toBytes(std + '='.repeat(pad));
-        }
+        const _b64uEnc = b64.url.fromBytes;
+        const _decodeStrict = b64.url.toBytes;
 
         // ── string helpers ──────────────────────────────────────────────
 
@@ -130,43 +119,51 @@ export const jws = {
          * Verify a compact JWS. `key` is the HMAC secret (Uint8Array) for
          * HS*, or the Ed25519 public key (32 bytes) for EdDSA.
          *
-         * Algorithm pinning: if `expectedAlg` is provided (string or array
-         * of acceptable algs), the header `alg` field MUST be in the
-         * allowlist - this prevents alg-confusion / alg-downgrade attacks
-         * where an attacker substitutes the header to flip HS512 → HS256.
+         * Algorithm pinning: `expectedAlg` (an alg, or a non-empty array of
+         * acceptable algs) is required, and the header `alg` field MUST be
+         * in it - this prevents alg-confusion / alg-downgrade attacks where
+         * an attacker substitutes the header to flip HS512 → HS256, or MACs
+         * an HS256 token with an Ed25519 public key (RFC 8725 §3.1).
+         * Without it `verify` throws a `TypeError`: the caller's error, not
+         * the token's.
          *
          * `typ` pinning: if `expectedTyp` is provided, the header `typ`
          * field MUST equal it (defends against cross-protocol confusion).
          *
          * @param {string} token
          * @param {Uint8Array} key
-         * @param {{expectedAlg?: string|string[], expectedTyp?: string}} [opts]
+         * @param {{expectedAlg: string|string[], expectedTyp?: string}} opts
          * @returns {{header:Object, payload:Uint8Array, claims?: Object}|false}
          */
         function verify(token, key, opts) {
+            /** @type {{expectedAlg?: string|string[], expectedTyp?: string}} */
             const o = opts || {};
+            const allowed = Array.isArray(o.expectedAlg) ? o.expectedAlg : [o.expectedAlg];
+            if (allowed.length === 0 || !allowed.every((a) => typeof a === 'string' && a !== '')) {
+                throw new TypeError('jws.verify: expectedAlg is required (an alg, or a non-empty array of algs)');
+            }
             const parts = String(token).split('.');
             if (parts.length !== 3) {
                 console.warn('[crypto] INVALID: jws: token must have 3 parts');
                 return false;
             }
             const [h64, p64, s64] = parts;
-            const headerBytes = _b64uDec(h64);
-            const payloadBytes = _b64uDec(p64);
-            const sig = _b64uDec(s64);
-            if (headerBytes === false || payloadBytes === false || sig === false) return false;
+            const headerBytes = _decodeStrict(h64);
+            const payloadBytes = _decodeStrict(p64);
+            const sig = _decodeStrict(s64);
+            if (headerBytes === false || payloadBytes === false || sig === false) {
+                console.warn('[crypto] INVALID: jws: malformed base64url');
+                return false;
+            }
 
             let header;
             try { header = JSON.parse(_bytesStr(headerBytes)); }
             catch { console.warn('[crypto] INVALID: jws: malformed header JSON'); return false; }
 
             const alg = header.alg;
-            if (o.expectedAlg !== undefined) {
-                const allowed = Array.isArray(o.expectedAlg) ? o.expectedAlg : [o.expectedAlg];
-                if (!allowed.includes(alg)) {
-                    console.warn('[crypto] INVALID: jws: alg ' + alg + ' not in expectedAlg allowlist');
-                    return false;
-                }
+            if (!allowed.includes(alg)) {
+                console.warn('[crypto] INVALID: jws: alg ' + alg + ' not in expectedAlg allowlist');
+                return false;
             }
             if (o.expectedTyp !== undefined && header.typ !== o.expectedTyp) {
                 console.warn('[crypto] INVALID: jws: typ ' + header.typ + ' does not match expectedTyp ' + o.expectedTyp);
@@ -180,13 +177,15 @@ export const jws = {
                 if (expected === false) return false;
                 ok = _ctEq(expected, sig);
             } else if (alg === 'EdDSA') {
-                ok = ed25519.verify(key, _strBytes(signingInput), sig);
+                ok = ed25519.verify(key, sig, _strBytes(signingInput));
             } else {
                 console.warn('[crypto] INVALID: jws: unsupported alg ' + alg);
                 return false;
             }
             if (!ok) {
-                console.error('[crypto] CORRUPT: jws: signature verification failed');
+                // A failed check is an expected outcome, reported at warn
+                // level (the crypto logging policy, NIST_CONFORMANCE.md).
+                console.warn('[crypto] CORRUPT: jws: signature verification failed');
                 return false;
             }
             return { header, payload: payloadBytes };
@@ -204,7 +203,7 @@ export const jws = {
          * `expectedAlg` / `expectedTyp` pinning as {@link verify}.
          * @param {string} token
          * @param {Uint8Array} key
-         * @param {{expectedAlg?: string|string[], expectedTyp?: string}} [opts]
+         * @param {{expectedAlg: string|string[], expectedTyp?: string}} opts
          */
         function verifyJwt(token, key, opts) {
             const r = verify(token, key, opts);
@@ -214,9 +213,6 @@ export const jws = {
             return r;
         }
 
-        return {
-            sign, verify, signJwt, verifyJwt,
-            _b64uEnc, _b64uDec
-        };
+        return { sign, verify, signJwt, verifyJwt };
     }
 };

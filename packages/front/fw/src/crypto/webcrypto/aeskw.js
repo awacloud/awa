@@ -63,10 +63,10 @@ export const webcryptoAesKw = {
          * Generate a new AES-KW key-encryption key.
          *
          * @param {128|192|256} [lengthBits=256] KEK size in bits.
-         * @param {boolean} [extractable=true] Whether the CryptoKey may be exported.
+         * @param {boolean} [extractable=false] Whether the CryptoKey may be exported.
          * @returns {Promise<CryptoKey|false>}
          */
-        async function generateKek(lengthBits = 256, extractable = true) {
+        async function generateKek(lengthBits = 256, extractable = false) {
             if (!_hasSubtle) {
                 console.error('[crypto] NOT READY: crypto.subtle unavailable');
                 return false;
@@ -175,6 +175,11 @@ export const webcryptoAesKw = {
                     usages
                 );
             } catch (e) {
+                if (e && e.name === 'OperationError') {
+                    // Integrity failure of the wrapped key: an expected outcome.
+                    console.warn('[crypto] CORRUPT: webcryptoAesKw.unwrapKey: integrity check failed');
+                    return false;
+                }
                 console.error('[crypto] FAIL: webcryptoAesKw.unwrapKey: ' + (e && e.message));
                 return false;
             }

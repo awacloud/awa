@@ -37,6 +37,8 @@ for (const sub of kern.tables) if (sub.format === 0) console.log(sub.pairs);
 ## Notes
 
 - Prefer GPOS Type 2 (`kern` feature) on modern fonts.
+- An OpenType subtable's `horizontal` is coverage bit 0 set (data for horizontal text), `crossStream` bit 2; an Apple subtable's `horizontal` is the vertical bit 0x8000 clear.
+- [`aatKerxEngine.applyKern`](../extra/apple-aat/kerx-engine.md) applies the horizontal format 0 subtables (through `fontShaper`).
 - Non-format-0 subtables (1/2/3) are skipped, not captured — the parser only keeps `{ format, length, parsed: false }` for them; their bytes are not retained.
 
 ## See also

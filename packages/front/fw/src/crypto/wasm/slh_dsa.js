@@ -13,7 +13,7 @@
  * (`slh_dsa_{sha2,shake}_{128,192,256}{f,s}`) so the two surfaces are
  * interchangeable — see {@link SUPPORTED}.
  *
- * RE-SCOPED (BATCH_11 ERRATA-2, 2026-06-22): the binary is the colocated
+ * The binary is the colocated
  * `./slh_dsa.scalar.wasm` (vendored from `@awacloud/fw-wasm-crypto`), loaded BY NAME via
  * `wasmRuntime.load('slh_dsa', …)`. There is NO fw-local `slh_dsa.wasm.js`.
  * SLH-DSA is hash-bound (`simd:false` in the package manifest), so only the

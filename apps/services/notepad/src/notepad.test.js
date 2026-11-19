@@ -14,6 +14,8 @@
  */
 import '../tests/setup-dom.js';   // FIRST — registers window/document
 import { describe, test, expect, afterEach } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { mountNotepad } from './notepad.js';
 
 const enc = (s) => new TextEncoder().encode(s);
@@ -553,5 +555,172 @@ describe('mountNotepad', () => {
         n.destroy();
         mounted.length = 0;
         expect(host.children.length).toBe(0);
+    });
+
+    describe('Tab in the text', () => {
+        /** @param {HTMLElement} root @param {string} k @param {KeyboardEventInit} [mods] */
+        const press = (root, k, mods = {}) => {
+            const ev = new KeyboardEvent('keydown', {
+                key: k, code: k.length === 1 ? `Key${k.toUpperCase()}` : k, bubbles: true, cancelable: true, ...mods
+            });
+            textarea(root).dispatchEvent(ev);
+            return ev;
+        };
+        const opened = async (content, mountOpts = {}) => {
+            const n = mount(mountOpts);
+            await n.open({ name: 'a.txt', bytes: enc(content) });
+            return n;
+        };
+
+        test('Tab inserts a tab at the caret, fires input, and one Undo takes it away', async () => {
+            const edits = [];
+            const n = await opened('ab', { onEdit: (e) => edits.push(e) });
+            const t = textarea(n.element);
+            edits.length = 0;
+            let inputs = 0;
+            t.addEventListener('input', () => { inputs++; });
+            t.setSelectionRange(1, 1);
+            const ev = press(n.element, 'Tab');
+            expect(ev.defaultPrevented).toBe(true);
+            expect(n.text).toBe('a\tb');
+            expect(t.selectionStart).toBe(2);
+            expect(inputs).toBe(1);
+            expect(n.status.dirty).toBe(true);
+            expect(edits.length).toBe(1);
+            press(n.element, 'Tab');
+            expect(n.text).toBe('a\t\tb');
+            expect(n.undo()).toBe(true);
+            expect(n.text).toBe('a\tb');
+            expect(n.undo()).toBe(true);
+            expect(n.text).toBe('ab');
+            expect(n.status.dirty).toBe(false);
+        });
+
+        test('Tab replaces a selection within one line, as typing does', async () => {
+            const n = await opened('abcd');
+            const t = textarea(n.element);
+            t.setSelectionRange(1, 3);
+            press(n.element, 'Tab');
+            expect(n.text).toBe('a\td');
+            n.undo();
+            expect(n.text).toBe('abcd');
+        });
+
+        test('Tab indents every selected line, one Undo restores them; a trailing line start is left alone; empty lines stay empty', async () => {
+            const n = await opened('one\ntwo\n\nthree\nfour');
+            const t = textarea(n.element);
+            t.setSelectionRange(2, 15);   // from "ne" to inside "three"
+            press(n.element, 'Tab');
+            expect(n.text).toBe('\tone\n\ttwo\n\n\tthree\nfour');
+            expect([t.selectionStart, t.selectionEnd]).toEqual([3, 18]);
+            expect(n.undo()).toBe(true);
+            expect(n.text).toBe('one\ntwo\n\nthree\nfour');
+            expect(n.status.dirty).toBe(false);
+            t.setSelectionRange(0, 8);   // ends on the empty 3rd line's start: lines 1-2 only
+            press(n.element, 'Tab');
+            expect(n.text).toBe('\tone\n\ttwo\n\nthree\nfour');
+            expect([t.selectionStart, t.selectionEnd]).toEqual([0, 10]);
+            n.undo();
+            t.setSelectionRange(8, 12);   // from the empty line to inside "three"
+            press(n.element, 'Tab');
+            expect(n.text).toBe('one\ntwo\n\n\tthree\nfour');
+        });
+
+        test('Shift+Tab outdents: a tab, or up to four spaces, per line; one Undo restores; nothing to remove is no step', async () => {
+            const n = await opened('\tone\n      two\n  three\nfour');
+            const t = textarea(n.element);
+            t.setSelectionRange(0, n.text.length);
+            const ev = press(n.element, 'Tab', { shiftKey: true });
+            expect(ev.defaultPrevented).toBe(true);
+            expect(n.text).toBe('one\n  two\nthree\nfour');
+            expect(n.undo()).toBe(true);
+            expect(n.text).toBe('\tone\n      two\n  three\nfour');
+            expect(n.status.dirty).toBe(false);
+            // A caret alone outdents its own line, and the caret keeps its place in the text.
+            t.setSelectionRange(8, 8);   // inside "      two" (6 spaces)
+            press(n.element, 'Tab', { shiftKey: true });
+            expect(n.text).toBe('\tone\n  two\n  three\nfour');
+            expect(t.selectionStart).toBe(5);   // inside the cut spaces: the start of the line
+            n.undo();
+            // Nothing to remove: no step, no dirty state.
+            const m = await opened('plain');
+            textarea(m.element).setSelectionRange(2, 2);
+            press(m.element, 'Tab', { shiftKey: true });
+            expect(m.text).toBe('plain');
+            expect(m.status.canUndo).toBe(false);
+        });
+
+        test('Escape, then Tab, leaves the text alone: the focus is not held; any other key, or a focus, re-arms Tab', async () => {
+            const n = await opened('ab');
+            expect(press(n.element, 'Escape').defaultPrevented).toBe(false);
+            const out = press(n.element, 'Tab');
+            expect(out.defaultPrevented).toBe(false);
+            expect(n.text).toBe('ab');
+            // The release was for one key only.
+            expect(press(n.element, 'Tab').defaultPrevented).toBe(true);
+            // Shift on its way to Shift+Tab does not re-arm it.
+            press(n.element, 'Escape');
+            press(n.element, 'Shift', { shiftKey: true });
+            expect(press(n.element, 'Tab', { shiftKey: true }).defaultPrevented).toBe(false);
+            // Another key, a click, a focus: Tab inserts again.
+            press(n.element, 'Escape');
+            press(n.element, 'x');
+            expect(press(n.element, 'Tab').defaultPrevented).toBe(true);
+            press(n.element, 'Escape');
+            textarea(n.element).dispatchEvent(new Event('pointerdown', { bubbles: true }));
+            expect(press(n.element, 'Tab').defaultPrevented).toBe(true);
+            press(n.element, 'Escape');
+            textarea(n.element).dispatchEvent(new Event('focus'));
+            expect(press(n.element, 'Tab').defaultPrevented).toBe(true);
+        });
+
+        test('Escape still closes the find bar, and releases Tab at the same time', async () => {
+            const n = await opened('ab');
+            click(n.element, 'find');
+            expect(n.status.panel).toBe('find');
+            textarea(n.element).focus();   // the caret is in the text, the bar is open beside it
+            press(n.element, 'Escape');
+            expect(n.status.panel).toBe(null);
+            expect(press(n.element, 'Tab').defaultPrevented).toBe(false);
+        });
+
+        test('Ctrl+M switches Tab between inserting and moving the focus, announced in the status bar; Ctrl+Tab and Alt+Tab are the browser\'s', async () => {
+            const n = await opened('ab');
+            const live = /** @type {HTMLElement} */ (n.element.querySelector('.awn-status-tab'));
+            expect(live.getAttribute('role')).toBe('status');
+            expect(live.getAttribute('aria-live')).toBe('polite');
+            expect(live.textContent).toBe('Tab inserts a tab');
+            const toggle = press(n.element, 'm', { ctrlKey: true });
+            expect(toggle.defaultPrevented).toBe(true);
+            expect(live.textContent).toBe('Tab moves the focus');
+            expect(press(n.element, 'Tab').defaultPrevented).toBe(false);
+            expect(n.text).toBe('ab');
+            press(n.element, 'm', { ctrlKey: true });
+            expect(live.textContent).toBe('Tab inserts a tab');
+            expect(press(n.element, 'Tab').defaultPrevented).toBe(true);
+            expect(press(n.element, 'Tab', { ctrlKey: true }).defaultPrevented).toBe(false);
+            expect(press(n.element, 'Tab', { altKey: true }).defaultPrevented).toBe(false);
+            // The wording follows the language.
+            n.setLocale('fr');
+            expect(live.textContent).toBe('Tab insère une tabulation');
+        });
+
+        test('the toggle lasts the session only: a new notepad starts with Tab inserting', async () => {
+            const a = await opened('ab');
+            press(a.element, 'm', { ctrlKey: true });
+            const b = await opened('cd');
+            expect(press(b.element, 'Tab').defaultPrevented).toBe(true);
+        });
+
+        test('both help pages name Tab, Shift+Tab, Escape then Tab and Ctrl+M, and the key table lists them', () => {
+            for (const [lang, rows] of [['en', ['Escape</kbd>, then <kbd>Tab', 'Shift</kbd>+<kbd>Tab']], ['fr', ['Échap</kbd>, puis <kbd>Tab', 'Maj</kbd>+<kbd>Tab']]]) {
+                const html = readFileSync(fileURLToPath(new URL(`../public/help/${lang}.html`, import.meta.url)), 'utf8');
+                const table = /<table>[\s\S]*?<\/table>/.exec(html)?.[0] ?? '';
+                for (const row of [...rows, 'Ctrl</kbd>+<kbd>M']) {
+                    expect(html, `${lang}: ${row}`).toContain(row);
+                    expect(table, `${lang} table: ${row}`).toContain(row);
+                }
+            }
+        });
     });
 });

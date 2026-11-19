@@ -22,10 +22,13 @@
  * - **chainSkip** - walk heuristic that follows the sparsest chain inside
  *   the current best match instead of the position's own chain.
  *
- * The scan runs once, in `encodeTokens`, and packs the token stream as
- * `(len|0, dist|byte)` pairs into an `Int32Array`; `encode` replays that
- * stream through two callbacks (`literal(pos)`, `match(pos, len, dist)`).
- * Both accept `opts.tokens` to reuse a caller-owned buffer.
+ * The scan packs the token stream as `(len|0, dist|byte)` pairs into an
+ * `Int32Array`. `createScanner` runs it in steps: each `fill(tokens, max)`
+ * writes the next `max` tokens at most and resumes where it stopped, so a
+ * block-wise consumer holds one block of tokens. `encodeTokens` is one fill
+ * over the whole input; `encode` replays that stream through two callbacks
+ * (`literal(pos)`, `match(pos, len, dist)`). Both accept `opts.tokens` to
+ * reuse a caller-owned buffer.
  *
  * ## API
  *
@@ -33,6 +36,7 @@
  * |---|---|
  * | `encode(data, opts, callbacks)` | `void` - drives the scan, reports via callbacks |
  * | `encodeTokens(data, opts)` | `{ tokens, count }` - packed token pairs |
+ * | `createScanner(data, opts)` | `{ fill(tokens, max), done }` - the same scan, resumable |
  * | `findMatch(data, pos, head, prev, opts)` | `{ len, dist } \| null` - single-position probe |
  *
  * ## Hash function
@@ -47,9 +51,17 @@
  * @typedef {object} Lz77API
  * @property {(data: Uint8Array, opts: object, callbacks: { literal: (pos: number) => void, match: (pos: number, len: number, dist: number) => void }) => void} encode Run the hash-chain encoder, reporting tokens via callbacks.
  * @property {(data: Uint8Array, opts?: object) => { tokens: Int32Array, count: number }} encodeTokens Callback-free fast path: same token sequence as `encode`, packed as `(len|0, dist|byte)` pairs into an `Int32Array`.
+ * @property {(data: Uint8Array, opts?: object) => Lz77Scanner} createScanner Resumable scan: successive `fill` calls give the `encodeTokens` token sequence, `max` tokens at a time.
  * @property {(data: Uint8Array, pos: number, head: Int32Array, prev: Int32Array, opts: object) => ({ len: number, dist: number } | null)} findMatch Single-position match probe.
  * @property {(dst: Uint8Array, ops: Array<{ lit?: number, pos?: number, len?: number, dist?: number }>) => number} decodeStream Replay a token stream into `dst`; returns bytes written.
  * @property {{ windowBits: number, minMatch: number, maxMatch: number, chainDepth: number, lazy: boolean, hashBits: number, niceLength: number, goodLength: number, maxLazy: number, chainSkip: boolean, start: number, hashFn: (((data: Uint8Array, pos: number) => number) | null) }} DEFAULT Frozen default option set.
+ */
+
+/**
+ * A resumable scan from `lz77.createScanner`.
+ * @typedef {object} Lz77Scanner
+ * @property {(tokens: Int32Array, max: number) => number} fill Write at most `max` tokens (`2 × max` entries) from index 0; returns how many. Fewer than `max` only at the end of the input.
+ * @property {boolean} done `true` once every token has been written.
  */
 
 export const lz77 = {
@@ -264,63 +276,38 @@ export const lz77 = {
         }
 
         /**
-         * Scan `data` and pack its token stream as `(len|0, dist|byte)` pairs
-         * into an `Int32Array`: `tokens[2k] === 0` marks a literal whose byte
-         * is `tokens[2k + 1]`, otherwise the pair is a match length and its
-         * distance.
+         * Write the next tokens of the scan `st` (see `createScanner`) into
+         * `tokens` from index 0, at most `max` of them, and record where the
+         * scan stopped. Every field the loop reads is copied to a local first:
+         * the loop runs once per input position.
          *
-         * @param {Uint8Array} data
-         * @param {object} [opts] See `DEFAULT`; `opts.tokens` (Int32Array)
-         *   is reused when it holds `2 × (data.length - start)` entries.
-         * @returns {{ tokens: Int32Array, count: number }} `count` token
-         *   pairs are valid at `tokens[0 .. 2*count)`.
-         * @throws {Error} When `data` is not a `Uint8Array` or `opts.tokens` is too small.
+         * @param {object} st Scan state built by `createScanner`.
+         * @param {Int32Array} tokens At least `2 × max` entries.
+         * @param {number} max Most tokens to write (≥ 1).
+         * @returns {number} Tokens written; fewer than `max` only at the end.
          */
-        function encodeTokens(data, opts) {
-            if (!(data instanceof u8)) throw new Error('lz77.encodeTokens: data must be Uint8Array');
-            const o = _resolveOpts(opts);
-            const len = data.length;
-            const cap = 2 * Math.max(0, len - o.start);
-
-            const provided = opts && opts.tokens;
-            let tokens;
-            if (provided) {
-                if (provided.length < cap) throw new Error('lz77.encodeTokens: tokens buffer too small');
-                tokens = provided;
-            } else {
-                tokens = new i32(cap);
-            }
-
+        function _fill(st, tokens, max) {
+            const data = st.data, len = st.len, head = st.head, prev = st.prev, hash = st.hash;
+            const maxMatch = st.maxMatch, niceLength = st.niceLength, chainDepth = st.chainDepth;
+            const lazy = st.lazy, goodLength = st.goodLength, maxLazy = st.maxLazy, chainSkip = st.chainSkip;
+            const wndSize = st.wndSize, wndMask = wndSize - 1, lastKey = st.lastKey, atLeast = st.atLeast;
+            const cap = 2 * max;
             let p = 0;
-            if (o.start >= len) return { tokens, count: 0 };
-
-            // Every option the loop reads, as a local.
-            const maxMatch = o.maxMatch, niceLength = o.niceLength, chainDepth = o.chainDepth;
-            const lazy = o.lazy, goodLength = o.goodLength, maxLazy = o.maxLazy, chainSkip = o.chainSkip;
-            const wndSize = 1 << o.windowBits;
-            const wndMask = wndSize - 1;
-            const head = new i32(1 << o.hashBits).fill(-1);
-            // One chain link per input position, capped at the window: a
-            // short input never touches the higher slots.
-            const prev = new i32(Math.min(wndSize, len)).fill(-1);
-            const hash = _hasherFor(o);
-            /** Last position with a complete hash key (inclusive). */
-            const lastKey = len - o.minMatch;
-            /** Floor of the first probe at a position: a match must exceed it. */
-            const atLeast = o.minMatch - 1;
-
-            // Prime the chains with [0, start): never emitted, still matchable.
-            for (let k = 0; k < o.start && k <= lastKey; ++k) {
-                const h = hash(data, k);
-                prev[k & wndMask] = head[h];
-                head[h] = k;
+            if (st.heldLen) {
+                tokens[p++] = st.heldLen;
+                tokens[p++] = st.heldDist;
+                st.heldLen = 0;
             }
-
-            let i = o.start;
-            while (i <= lastKey) {
+            let i = st.at;
+            while (p < cap && i <= lastKey) {
                 const h = hash(data, i);
-                let matchLen = _longestMatch(data, i, h, head, prev, wndSize, wndMask,
-                    Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast);
+                // The probe's own first test, inline: on incompressible data
+                // the bucket's newest entry is nearly always empty or out of
+                // the window, and the call is most of the cost.
+                const newest = head[h];
+                let matchLen = newest === -1 || i - newest >= wndSize ? 0
+                    : _longestMatch(data, i, h, head, prev, wndSize, wndMask,
+                        Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast);
                 let dist = matchDist;
                 // Insert `i` now: every path below needs it in the chain before
                 // moving on, and the lazy probe at `i + 1` must be able to reach it.
@@ -339,9 +326,11 @@ export const lz77 = {
                     // match that is already "good" only gets a quarter of
                     // the chain (at least one probe).
                     const h1 = hash(data, i + 1);
-                    const nextLen = _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask,
-                        Math.min(maxMatch, len - i - 1), niceLength,
-                        matchLen >= goodLength ? (chainDepth >> 2) || 1 : chainDepth, chainSkip, matchLen);
+                    const newest1 = head[h1];
+                    const nextLen = newest1 === -1 || i + 1 - newest1 >= wndSize ? 0
+                        : _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask,
+                            Math.min(maxMatch, len - i - 1), niceLength,
+                            matchLen >= goodLength ? (chainDepth >> 2) || 1 : chainDepth, chainSkip, matchLen);
                     if (nextLen) {
                         tokens[p++] = 0;
                         tokens[p++] = data[i];
@@ -355,8 +344,13 @@ export const lz77 = {
                     }
                 }
 
-                tokens[p++] = matchLen;
-                tokens[p++] = dist;
+                if (p < cap) {
+                    tokens[p++] = matchLen;
+                    tokens[p++] = dist;
+                } else {
+                    st.heldLen = matchLen;     // the cut fell between the lazy literal and its match
+                    st.heldDist = dist;
+                }
                 const end = i + matchLen;
                 for (let k = i + 1; k < end && k <= lastKey; ++k) {
                     const hk = hash(data, k);
@@ -366,12 +360,102 @@ export const lz77 = {
                 i = end;
             }
             // Tail: the last `minMatch - 1` bytes cannot form a hash key.
-            while (i < len) {
+            while (p < cap && i < len) {
                 tokens[p++] = 0;
                 tokens[p++] = data[i];
                 i++;
             }
-            return { tokens, count: p / 2 };
+            st.at = i;
+            return p >> 1;
+        }
+
+        /**
+         * A resumable scan of `data`: the scan's state (the position and the
+         * hash chains) lives in the returned object, and each `fill` call
+         * writes the next tokens of the stream as `(len|0, dist|byte)` pairs
+         * — the format of `encodeTokens` — then stops. Successive fills give
+         * exactly the token sequence of one `encodeTokens` call, whatever
+         * `max` each one is given: a lazy step that emits a literal and a
+         * match across the cut keeps the match for the next fill.
+         *
+         * A consumer that handles the stream in blocks (DEFLATE) holds one
+         * block of tokens instead of the whole input's.
+         *
+         * @param {Uint8Array} data
+         * @param {object} [opts] See `DEFAULT` (`opts.tokens` is ignored).
+         * @returns {Lz77Scanner}
+         * @throws {Error} When `data` is not a `Uint8Array`.
+         */
+        function createScanner(data, opts) {
+            if (!(data instanceof u8)) throw new Error('lz77.createScanner: data must be Uint8Array');
+            const o = _resolveOpts(opts);
+            const len = data.length;
+            const wndSize = 1 << o.windowBits;
+            const wndMask = wndSize - 1;
+            const empty = o.start >= len;
+            const hash = _hasherFor(o);
+            /** Last position with a complete hash key (inclusive). */
+            const lastKey = len - o.minMatch;
+            const head = empty ? null : new i32(1 << o.hashBits).fill(-1);
+            // One chain link per input position, capped at the window: a
+            // short input never touches the higher slots.
+            const prev = empty ? null : new i32(Math.min(wndSize, len)).fill(-1);
+
+            // Prime the chains with [0, start): never emitted, still matchable.
+            if (!empty) {
+                for (let k = 0; k < o.start && k <= lastKey; ++k) {
+                    const h = hash(data, k);
+                    prev[k & wndMask] = head[h];
+                    head[h] = k;
+                }
+            }
+
+            const st = {
+                data, len, hash, lastKey, wndSize, head, prev,
+                maxMatch: o.maxMatch, niceLength: o.niceLength, chainDepth: o.chainDepth,
+                lazy: o.lazy, goodLength: o.goodLength, maxLazy: o.maxLazy, chainSkip: o.chainSkip,
+                /** Floor of the first probe at a position: a match must exceed it. */
+                atLeast: o.minMatch - 1,
+                /** Next input position to scan. */
+                at: empty ? len : o.start,
+                /** A match token held across a cut (length, 0 when none) and its distance. */
+                heldLen: 0, heldDist: 0,
+            };
+            return {
+                fill(tokens, max) { return _fill(st, tokens, max); },
+                get done() { return st.at >= st.len && st.heldLen === 0; },
+            };
+        }
+
+        /**
+         * Scan `data` and pack its token stream as `(len|0, dist|byte)` pairs
+         * into an `Int32Array`: `tokens[2k] === 0` marks a literal whose byte
+         * is `tokens[2k + 1]`, otherwise the pair is a match length and its
+         * distance. One `createScanner(data, opts).fill` over the whole input.
+         *
+         * @param {Uint8Array} data
+         * @param {object} [opts] See `DEFAULT`; `opts.tokens` (Int32Array)
+         *   is reused when it holds `2 × (data.length - start)` entries.
+         * @returns {{ tokens: Int32Array, count: number }} `count` token
+         *   pairs are valid at `tokens[0 .. 2*count)`.
+         * @throws {Error} When `data` is not a `Uint8Array` or `opts.tokens` is too small.
+         */
+        function encodeTokens(data, opts) {
+            if (!(data instanceof u8)) throw new Error('lz77.encodeTokens: data must be Uint8Array');
+            const n = Math.max(0, data.length - Math.max(0, (opts && opts.start) | 0));
+            const cap = 2 * n;
+
+            const provided = opts && opts.tokens;
+            let tokens;
+            if (provided) {
+                if (provided.length < cap) throw new Error('lz77.encodeTokens: tokens buffer too small');
+                tokens = provided;
+            } else {
+                tokens = new i32(cap);
+            }
+            if (n === 0) return { tokens, count: 0 };
+            // At most one token per input byte: one fill holds the whole stream.
+            return { tokens, count: createScanner(data, opts).fill(tokens, n) };
         }
 
         /**
@@ -400,6 +484,7 @@ export const lz77 = {
         return {
             encode,
             encodeTokens,
+            createScanner,
             findMatch,
             decodeStream,
             DEFAULT,

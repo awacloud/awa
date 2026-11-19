@@ -193,7 +193,23 @@ export const drawingmlShape = {
 
         // --- Line ---
 
-        function parseLine(lnEl) {
+        // A line fill's colour, or `undefined` (the fill is then kept
+        // verbatim in `_extras`). Default (1.0.0): the `val` of an
+        // `a:srgbClr`, transforms dropped. `typedLineColors`: the
+        // `'RRGGBB'` string for a bare `a:srgbClr`, else the typed
+        // `{ rgb | schemeColor, mods? }` object, when the codec types it.
+        function lineColor(solidFill, opts) {
+            if (!(opts && opts.typedLineColors)) {
+                const col = parseColorChild(solidFill);
+                return col && col.rgb ? col.rgb : undefined;
+            }
+            const el = solidFill.children.find(n => n.type === 'element');
+            if (!el) return undefined;
+            if (el.name === 'a:srgbClr' && !el.children.some(n => n.type === 'element')) return el.attrs.val;
+            return typedColor.parse(el) || undefined;
+        }
+
+        function parseLine(lnEl, opts) {
             if (!lnEl) return undefined;
             const out = {};
             if (lnEl.attrs.w != null)   out.width = Number(lnEl.attrs.w);
@@ -212,10 +228,10 @@ export const drawingmlShape = {
             for (const c of lnEl.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'a:solidFill') {
-                    // An `a:srgbClr` colour is typed (`RRGGBB`, transforms
-                    // dropped); any other colour is kept verbatim.
-                    const col = parseColorChild(c);
-                    if (col && col.rgb) out.color = col.rgb;
+                    // See lineColor: a colour it does not type is kept
+                    // verbatim.
+                    const col = lineColor(c, opts);
+                    if (col !== undefined) out.color = col;
                     else extras.push(c);
                 } else if (c.name === 'a:prstDash') {
                     out.dash = c.attrs.val;
@@ -248,8 +264,9 @@ export const drawingmlShape = {
             if (line.color === null) {
                 children.push(xml.el('a:noFill', {}));
             } else if (line.color) {
-                children.push(xml.el('a:solidFill', {},
-                    [renderSrgbClr(line.color)]));
+                // A typed `{ rgb | schemeColor, mods? }` colour, or 'RRGGBB'.
+                const el = typeof line.color === 'object' ? typedColor.render(line.color) : renderSrgbClr(line.color);
+                if (el) children.push(xml.el('a:solidFill', {}, [el]));
             }
             if (line.dash) {
                 children.push(xml.el('a:prstDash', { val: line.dash }));
@@ -267,9 +284,12 @@ export const drawingmlShape = {
 
         // --- Top-level shapeProps from spPr ---
 
-        function parseShapeProperties(spPrEl) {
+        // `opts.typedLineColors` (default `false`): see lineColor.
+        function parseShapeProperties(spPrEl, opts) {
             if (!spPrEl) return undefined;
             const out = {};
+            // CT_ShapeProperties' one attribute.
+            if (spPrEl.attrs && spPrEl.attrs.bwMode) out.bwMode = spPrEl.attrs.bwMode;
             const xfrmEl = xml.findChild(spPrEl, 'a:xfrm');
             Object.assign(out, parseXfrm(xfrmEl));
 
@@ -284,7 +304,7 @@ export const drawingmlShape = {
 
             const ln = xml.findChild(spPrEl, 'a:ln');
             if (ln) {
-                const lineProps = parseLine(ln);
+                const lineProps = parseLine(ln, opts);
                 if (lineProps !== undefined) out.line = lineProps;
             }
 
@@ -324,9 +344,10 @@ export const drawingmlShape = {
             if (fillEl) children.push(fillEl);
             const lineEl = renderLine(props.line);
             if (lineEl) children.push(lineEl);
-            if (!props._extras) return xml.el(tag, {}, children);
+            const attrs = props.bwMode ? { bwMode: String(props.bwMode) } : {};
+            if (!props._extras) return xml.el(tag, attrs, children);
             for (const ex of props._extras) children.push(ex);
-            return xml.el(tag, {}, ordered(children, SPPR_SEQ));
+            return xml.el(tag, attrs, ordered(children, SPPR_SEQ));
         }
 
         // --- EMU helpers (shared) ---

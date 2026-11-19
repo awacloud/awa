@@ -244,7 +244,7 @@ export function createFwCore(options = {}) {
  * Produce the source snippet that activates the requested sanity tier.
  *
  * All three tiers (`base`, `community`, `lockdown`) are explicit-call ES
- * modules: a bare side-effect import is INERT (proven — W0 FINDINGS §a/§c.1,
+ * modules: a bare side-effect import is INERT (proven by
  * `bare_import_of_esm_shape_is_INERT`). The snippet must therefore import the
  * tier's named export and invoke it, mirroring the `lockdown` shape that was
  * already correct before this conversion.

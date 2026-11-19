@@ -237,6 +237,10 @@ export const wmlSettings = {
                 root.trackRevisions = root.trackChanges;
                 delete root.trackChanges;
             }
+            // Each child typed only when it is written back as read.
+            return Array.isArray(root) ? typeSettings(root) : core.hydrateLossless(root, typeSettings, dehydrate);
+        }
+        function typeSettings(root) {
             const extras = root._extras || (Array.isArray(root) ? root : []);
             const remaining = [];
             for (const c of extras) {

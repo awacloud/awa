@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -12,7 +12,7 @@
  * Block size: 1024 bits (identical to SHA-512, required for HMAC-SHA-384).
  *
  * **Architecture (post-upgrade audit)**: this module is now a thin wrapper
- * over `sha512._internal.makeSha(_INIT_384, 12)` - previously it duplicated
+ * over the `makeSha(_INIT_384, 12)` of sha512's internal slot - previously it duplicated
  * the 120 LOC of the compression function. Mirrors the
  * `sha512_224.js` / `sha512_256.js` pattern.
  *
@@ -34,7 +34,7 @@ import { sha512 } from './sha512.js';
  */
 
 /**
- * Object returned by `sha384.factory()` (delegates to `sha512._internal.makeSha`).
+ * Object returned by `sha384.factory()` (delegates to the `makeSha` of sha512's internal slot).
  * @typedef {object} Sha384API
  * @property {new (hash?: Sha384Hasher) => Sha384Hasher} fn Streaming hasher constructor (optional arg clones an existing instance).
  * @property {(data: number[]|string) => number[]} hash One-shot hash; returns the 384-bit digest as a bitArray.
@@ -56,6 +56,6 @@ export const sha384 = {
         ];
 
         // outWords = 12 → 12 × 32-bit = 384 bits (FIPS 180-4 §6.5 truncation).
-        return sha512._internal.makeSha(_INIT_384, 12);
+        return sha512[Symbol.for('@awacloud/fw/internal')].makeSha(_INIT_384, 12);
     }
 };

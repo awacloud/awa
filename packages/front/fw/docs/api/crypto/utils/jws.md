@@ -27,15 +27,15 @@ const jws = runtime.resolve('jws');
 | Method | Signature | Returns |
 |--------|-----------|---------|
 | `sign(payload, alg, key, extraHeader?)` | `(Uint8Array, 'HS256'\|'HS512'\|'EdDSA', Uint8Array, Object?) => string \| false` | Compact JWS token |
-| `verify(token, key, opts?)` | `(string, Uint8Array, {expectedAlg?, expectedTyp?}) => {header, payload} \| false` | Verified result or `false` |
+| `verify(token, key, opts)` | `(string, Uint8Array, {expectedAlg, expectedTyp?}) => {header, payload} \| false` | Verified result or `false`; throws `TypeError` without `expectedAlg` |
 | `signJwt(claims, alg, key)` | `(Object, string, Uint8Array) => string \| false` | Sign shortcut with `typ:'JWT'` |
-| `verifyJwt(token, key, opts?)` | `(string, Uint8Array, {expectedAlg?, expectedTyp?}) => {header, payload, claims} \| false` | Verify + parse JSON claims |
+| `verifyJwt(token, key, opts)` | `(string, Uint8Array, {expectedAlg, expectedTyp?}) => {header, payload, claims} \| false` | Verify + parse JSON claims; throws `TypeError` without `expectedAlg` |
 
 ### `verify` / `verifyJwt` — options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `expectedAlg` | `string \| string[]` | Algorithm allowlist (anti-alg-confusion / downgrade) |
+| `expectedAlg` | `string \| string[]` | **Required.** Algorithm allowlist (anti-alg-confusion / downgrade); a token whose header `alg` is not in it is refused (`false`) |
 | `expectedTyp` | `string` | Expected value of the `typ` field (anti-cross-protocol confusion) |
 
 ## Examples
@@ -82,7 +82,9 @@ const worker = fw.createWorker(
 
 ## Notes
 
-- **`verify` with `expectedAlg`**: always pass `expectedAlg` to prevent alg-confusion attacks (RFC 8725 §3.1) — e.g. an attacker flipping HS512→HS256 in the header.
+- **`verify` requires `expectedAlg`** (RFC 8725 §3.1): the header must not choose the algorithm — an attacker could flip HS512→HS256, or sign an `HS256` token with an Ed25519 **public** key as the HMAC key, which verifies against that key when the header decides. Without `expectedAlg` (or with an empty one), `verify` and `verifyJwt` throw a `TypeError` before reading the token.
+- **Canonical base64url only**: each part must be unpadded base64url (RFC 4648 §5) in its canonical form — a length of 1 mod 4, or non-zero unused bits in the last character, is refused (`false` + one `INVALID` warning per call). A token therefore has one spelling, and two tokens with the same bytes compare equal as strings.
+- **Log levels**: a malformed token or a mismatched `alg`/`typ` warns `INVALID`; a signature that does not verify warns `CORRUPT` — an expected outcome, reported at warn level, never as `console.error`.
 - **`expectedTyp`**: use to prevent cross-protocol token reuse (e.g. a generic JWS token accepted as a JWT).
 - **HS384 not supported** — no `sha384` dependency declared in the factory; warns if attempted.
 - **alg='none'** not accepted (RFC 8725 §3.1) — returns `false` + `console.warn('INVALID')`.

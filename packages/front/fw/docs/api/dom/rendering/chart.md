@@ -37,7 +37,7 @@ const chart = runtime.resolve('chart');
 |--------|------|--------|-------------|
 | `el` | `HTMLCanvasElement \| HTMLElement` | — | Canvas or container (canvas auto-created) |
 | `data` | `number[] \| {x:number,y:number}[]` | `[]` | Data to display |
-| `color` | `string` | `'#4a9eff'` | Primary CSS colour |
+| `color` | `string` | `'#4a9eff'` | Primary colour: any CSS colour (`#abc`, 8-digit hex, `rgb()`, `hsl()`, a name). Area and bar fills are the same colour made translucent by `globalAlpha` (0.2 and 0.667) |
 | `animate` | `number \| false` | `false` | Animation duration in ms, or `false` |
 
 ### `line` / `area` options
@@ -53,8 +53,8 @@ const chart = runtime.resolve('chart');
 | Option | Type | Default | Description |
 |--------|------|--------|-------------|
 | `label` | `string?` | — | Axis label (not displayed in MVP) |
-| `ticks` | `number[]?` | auto (5) | Tick values |
-| `format` | `(v: number) => string` | `String(round(v))` | Tick formatter |
+| `ticks` | `number[]?` | auto: round values (a step of 1, 2, 2.5 or 5 × 10ⁿ, at most 4 intervals) inside the domain | Tick values |
+| `format` | `(v: number) => string` | auto ticks: the value at its step's precision; given `ticks`: rounded to 2 decimals | Tick formatter |
 | `domain` | `[min, max]?` | auto-fit | Explicit domain |
 
 ### `ChartHandle` interface
@@ -135,7 +135,8 @@ h.dispose();
 ## Notes
 
 - DPR-aware: `canvas.width = displayWidth * devicePixelRatio` + `ctx.scale(dpr, dpr)` — rendering stays sharp on Retina displays.
-- Auto-fit domain: if `domain` is not provided, the domain is computed from `stats.min/max` with 5% padding. If all values are identical, the domain is widened by ±1.
+- Auto-fit domain: if `domain` is not provided, the domain is computed from `stats.min/max` with 5% padding. If all values are identical, the domain is widened by ±1. The automatic ticks are round values inside that domain (300–1000 ms gives 400, 600, 800, 1000), so the axis ends need not carry a label.
+- Plot padding: the left padding fits the widest y label (`format` included — `"1000 ms"` is not clipped) and half the first x label, the right one half the last x label; never below 40 / 10 px. `handle._state.pad` holds the last draw's values.
 - `sparkline` displays no axes or ticks — ideal for compact inline trend indicators.
 - No tooltip, no interactivity, no PNG export in the MVP — deliberately out of scope to stay lightweight.
 - `ResizeObserver` is attached only when `el` is an HTML container (not a `<canvas>`) — call `resize()` manually if the canvas is resized directly.

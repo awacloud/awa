@@ -1,7 +1,7 @@
 ---
 module: docxFullBundle
 category: bundles
-dependencies: [docxLargeBundle, wmlVmlLegacy, dmlShapesAdvanced, transitional, legacyVml, wmlMisc, mathMisc, dmlMainMisc]
+dependencies: [docxLargeBundle, wmlVmlLegacy, dmlShapesAdvanced, transitional, legacyVml, wmlMisc, mathMisc, dmlMainMisc, wmlStyleDetails, wmlDocumentDetails]
 returns: object
 worker-safe: true
 status: complete
@@ -9,17 +9,20 @@ status: complete
 
 # docxFullBundle
 
-> Pre-wired bundle: `docx-large` + further toolkits (VML, custom geometry, transitional mapping, long-tail catalogues); none of them types a read.
+> Pre-wired bundle: `docx-large` + two extras that type a read (the styles' and numbering's details; the body's, sections' and settings') + further toolkits (VML, custom geometry, transitional mapping, long-tail catalogues).
 
-**Module** `docxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/docx-full.js` | **Deps** `docxLargeBundle` + 7 extras | **Worker-safe** yes
+**Module** `docxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/docx-full.js` | **Deps** `docxLargeBundle` + 9 extras | **Worker-safe** yes
 
-It adds toolkits for the long tail and the Office 2003 / VML material; what a read types is `docx-large`'s, and what it does not type stays verbatim.
+It adds the styles', numbering's, body's, sections' and settings' details to what a read types, and toolkits for the long tail and the Office 2003 / VML material; what a read does not type stays verbatim.
 
 ## Included
 
 Everything in [`docx-large`](./docx-large.md) — its extras that type a read and its toolkits — plus:
 
-None of the extras below types a read.
+**Types a read** — its walker hooks run on every `read()` (hydrate) and `write()` (dehydrate):
+
+- [`wmlDocumentDetails`](../extra/wml-document-details.md) — shading, paragraph borders, property changes, a paragraph's section, a section's grid / columns / numbering, `mathPr`, the remaining settings toggles (in `_extras` through `docx-large`)
+- [`wmlStyleDetails`](../extra/wml-style-details.md) — a style's flags and names, `tblStylePr`, `latentStyles`; the numbering's `nsid`, `tmpl`, a level's `suff`, `pStyle`, `isLgl`, `legacy`, … (in `_extras` through `docx-large`)
 
 **Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
 

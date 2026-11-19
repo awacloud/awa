@@ -1,0 +1,119 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — Lumen Rail</title>
+
+    <!-- 0. IMPORT MAP — the svg3d kernels main.js reaches by their public
+         `exports` subpaths (pure leaves: no fw import of their own). -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@awacloud/graphic-anim/kernels/svg3d/vec3.js":    "/packages/front/graphic/anim/src/svg3d/vec3.js",
+            "@awacloud/graphic-anim/kernels/svg3d/project.js": "/packages/front/graphic/anim/src/svg3d/project.js"
+        }
+    }
+    </script>
+
+    <!-- 1. SANITY LOCKDOWN — first, before any application module. -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 2. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 2bis. Surface-local layout only (the game's colours live in main.js). -->
+    <style>
+        #mount { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #0B1026; touch-action: none; }
+        .demo-controls { flex-wrap: wrap; align-items: center; }
+        .keys { color: var(--muted); }
+    </style>
+</head>
+
+<body data-demo="lumen-rail">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to demos</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>Lumen Rail — a rail shooter in SVG</h1>
+        <p class="demo-lede">
+            Fly the Kite down a dusk lane: drones come in waves, pylons stand in
+            the way, and the Warden waits at the end of a one-minute run. The
+            lasers fire on their own. The scene is built once; each frame only
+            moves pooled sprites, on the package's shared scheduler, with the
+            svg3d kernels for the perspective.
+        </p>
+    </header>
+
+    <div class="demo-stage">
+        <svg id="mount" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lumen Rail: a ship flies over a grid toward drones and pylons"></svg>
+    </div>
+
+    <div class="demo-controls">
+        <button id="fly" type="button">Fly (Enter)</button>
+        <button id="auto" type="button">Watch the autopilot</button>
+        <button id="pause" type="button">Pause</button>
+        <span class="keys">Steer: arrow keys / WASD, or drag on the scene.</span>
+    </div>
+
+    <p class="demo-note" id="motion-note" hidden>
+        Reduced motion is on: the game waits for Fly or the autopilot.
+    </p>
+
+    <p class="demo-note">
+        No build step: this page runs straight off the filesystem via a static
+        server. Running the <code id="variant-label">standalone</code> build;
+        append <code>?variant=fw</code> to run it registered on an
+        <code>@awacloud/fw</code> runtime. Technique map:
+        <code>lumen-rail-notes.md</code>.
+    </p>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/demos/lumen-rail/</code></p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+
+<!-- 3. ENTRY — the `run()` contract, plus the page controls. -->
+<script type="module">
+    import { boot } from '../_boot.js';
+    import { run } from './main.js';
+
+    const $ = (id) => document.getElementById(id);
+    const mount = $('mount');
+    const reduced = Boolean(globalThis.matchMedia && globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const { anim, variant } = await boot();
+    $('variant-label').textContent = variant;
+    const handle = await run({ mount, anim, variant, autoplay: !reduced });
+    if (reduced) $('motion-note').hidden = false;
+
+    let paused = reduced;
+    const syncPause = () => { $('pause').textContent = paused ? 'Resume' : 'Pause'; };
+    const fly = () => { handle.start({ autopilot: false }); handle.play(); paused = false; syncPause(); mount.focus && mount.focus(); };
+    $('fly').addEventListener('click', fly);
+    $('auto').addEventListener('click', () => { handle.start({ autopilot: true, force: true }); handle.play(); paused = false; syncPause(); });
+    $('pause').addEventListener('click', () => { paused = !paused; (paused ? handle.pause : handle.play)(); syncPause(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && handle.state !== 'flying') fly(); });
+    syncPause();
+
+    // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+    globalThis.addEventListener('pagehide', () => handle.dispose(), { once: true });
+</script>
+</body>
+</html>

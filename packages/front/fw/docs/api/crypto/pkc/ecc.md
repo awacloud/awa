@@ -19,19 +19,22 @@ FIPS 186-5 + RFC 6979 compliant ECDSA (deterministic k via HMAC-DRBG, eliminates
 
 ```js
 const ecc = runtime.resolve('ecc');
-// Returns: { curves, publicKey, secretKey, sign, verify, deserialize, _internal }
+// Returns: { ecdsa, elGamal, curves, curveName, deserialize, basicKey, curve, point, pointJac }
 ```
 
 ## API
 
-| Method | Signature | Returns |
+| Member | Signature | Returns |
 |--------|-----------|---------|
-| `curves` | `{c192, c224, c256, c384, c521, k192, k224, k256, k283, k409, k571}` | Available curves |
-| `secretKey(curve, exponent)` | — | `{exponent, publicKey, sign, verify}` |
-| `publicKey(curve, point)` | — | `{point, verify}` |
-| `sign(hash, opts?)` | `(bitArray, {strict?, hashForK?, deterministic?}) => Object` | `{r, s}` (deterministic by default) |
-| `verify(hash, rs, opts?)` | `(bitArray, {r,s}, {strict?, fakeLegacyVersion?}) => boolean` | Constant-time |
-| `deserialize(bits, curveName)` | — | Public key (subgroup-checked) |
+| `curves` | `{c192, c224, c256, c384, c521, k192, k224, k256}` | The registered curves: P-192 … P-521 and secp192k1 / secp224k1 / secp256k1 |
+| `curveName(curve)` | `(curve) => string \| false` | The registry key of a curve instance (`'c256'`) |
+| `ecdsa.generateKeys(curve, paranoia?, sec?)` | `(number \| curve, number?, bn?) => {pub, sec} \| false` | A key pair; a number is a curve size (`256` → `curves.c256`) |
+| `ecdsa.secretKey` / `ecdsa.publicKey` | constructors `(curve, exponent)` / `(curve, point)` | Key objects (prefer `generateKeys` / `deserialize`) |
+| `sec.sign(hash, opts?)` | `(bitArray, {strict?, hashForK?, deterministic?}) => bitArray` | `r ‖ s` (deterministic RFC 6979 by default) |
+| `pub.verify(hash, rs, opts?)` | `(bitArray, bitArray, {strict?, fakeLegacyVersion?}) => boolean` | `true`, or `false` on any invalid input |
+| `elGamal.generateKeys(curve, paranoia?, sec?)` | as `ecdsa` | ECDH key pair: `sec.dh(pub)`, `pub.kem()` → `{key, tag}`, `sec.unkem(tag)` |
+| `deserialize(key)` | `({type: 'ecdsa'\|'elGamal', curve, point \| exponent, secretKey?}) => key \| false` | A public key (subgroup-checked) or a secret key; `point` is the hex of `x ‖ y`, `exponent` hex, `curve` a `curves` key |
+| `basicKey`, `curve`, `point`, `pointJac` | constructors | The low-level key, curve and point classes the keys are built on |
 
 ### Options
 
@@ -46,22 +49,21 @@ const ecc = runtime.resolve('ecc');
 ```js
 const { ecc, sha256 } = fw.runtime.resolveAll(['ecc', 'sha256']);
 
-const sk = ecc.secretKey(ecc.curves.c256);
-const pk = sk.publicKey;
+const { pub, sec } = ecc.ecdsa.generateKeys(256);
 
 const hashBa = sha256.hash('message');
-const sig = sk.sign(hashBa);                     // deterministic RFC 6979
-const ok  = pk.verify(hashBa, sig);              // true
+const sig = sec.sign(hashBa);                    // deterministic RFC 6979
+const ok  = pub.verify(hashBa, sig);             // true
 
 // Strict mode (low-s)
-const sigStrict = sk.sign(hashBa, { strict: true });
-const okStrict  = pk.verify(hashBa, sigStrict, { strict: true });
+const sigStrict = sec.sign(hashBa, { strict: true });
+const okStrict  = pub.verify(hashBa, sigStrict, { strict: true });
 ```
 
 ### Subgroup check (deserialize)
 
 ```js
-const pkPoint = ecc.deserialize(rawBytes, 'c256');   // false if point is outside the subgroup
+const pk = ecc.deserialize({ type: 'ecdsa', curve: 'c256', point: hexPoint });   // false if the point is outside the subgroup
 ```
 
 ## Worker Usage
@@ -69,7 +71,7 @@ const pkPoint = ecc.deserialize(rawBytes, 'c256');   // false if point is outsid
 ```js
 const worker = fw.createWorker(
     function ({ libs, args }) {
-        const sk = libs.ecc.secretKey(libs.ecc.curves.c256, args[0]);
+        const sk = libs.ecc.deserialize({ type: 'ecdsa', secretKey: true, curve: 'c256', exponent: args[0] });
         self.postMessage(sk.sign(args[1]));
     },
     { dependencies: ['ecc'], args: [exponent, hashBa] }
@@ -82,7 +84,7 @@ const worker = fw.createWorker(
 - **Scalar mult NOT constant-time**: 4-bit windowed method with pre-computed multiple table — the index is the scalar nibble, observable via cache-timing (Bernstein 2005). Acceptable in a browser without a co-resident adversary; for multi-tenant servers prefer WebCrypto `subtle.*` or X25519/Ed25519.
 - **Subgroup check FIPS 186-5 §A.4.2**: `deserialize` rejects points outside the subgroup of order `n` (~1-3 ms per P-256).
 - **P-521 RFC 6979** byte-exact (fixes the `bn.bitLength() = 528` rounding bug via the `_trueBitLength` helper).
-- **K-curves (Koblitz)**: covered (k192, k224, k256, k283, k409, k571) but deprecated by NIST SP 800-186 — prefer P-curves.
+- **K-curves (Koblitz)**: k192, k224 and k256 (secp192k1 / secp224k1 / secp256k1) — prefer the P-curves.
 
 ## See also
 

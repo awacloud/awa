@@ -48,8 +48,8 @@
  * Public surface of `wasmPbkdf2.factory()`.
  * @typedef {object} WasmPbkdf2API
  * @property {() => boolean} isAvailable  Whether `WebAssembly` is present.
- * @property {(password: Uint8Array, salt: Uint8Array, dkLen: number, iterations?: number, hash?: 256|384|512) => Promise<Uint8Array|false>} deriveBits
- *   Derive `dkLen` bytes via PBKDF2-HMAC-SHA-{256|384|512}. Resolves
+ * @property {(password: Uint8Array, salt: Uint8Array, lengthBits: number, iterations?: number, hash?: 256|384|512) => Promise<Uint8Array|false>} deriveBits
+ *   Derive `lengthBits / 8` bytes via PBKDF2-HMAC-SHA-{256|384|512}. Resolves
  *   `false` on invalid params, load failure, or WASM error — never rejects.
  */
 
@@ -118,12 +118,13 @@ export const wasmPbkdf2 = {
          *
          * @param {Uint8Array} password   Passphrase bytes (empty is valid).
          * @param {Uint8Array} salt       Salt bytes (empty is valid; ≥ 16 recommended).
-         * @param {number} dkLen          Desired derived key length in bytes (≥ 1).
+         * @param {number} lengthBits     Derived key length in **bits**, a positive
+         *   multiple of 8 — the unit of the pure and WebCrypto tiers (D9 G5).
          * @param {number} [iterations]   Iteration count ≥ 1 (default: 600000).
          * @param {256|384|512} [hash]    PRF selector (default: 256 = HMAC-SHA-256).
          * @returns {Promise<Uint8Array|false>}
          */
-        async function deriveBits(password, salt, dkLen, iterations, hash) {
+        async function deriveBits(password, salt, lengthBits, iterations, hash) {
 
             // ── parameter validation ─────────────────────────────────────────
             if (!(password instanceof Uint8Array)) {
@@ -143,10 +144,11 @@ export const wasmPbkdf2 = {
                 return false;
             }
 
-            if (typeof dkLen !== 'number' || !Number.isInteger(dkLen) || dkLen < 1) {
-                console.error('[crypto] INVALID: wasmPbkdf2: dkLen must be an integer ≥ 1');
+            if (typeof lengthBits !== 'number' || !Number.isInteger(lengthBits) || lengthBits < 8 || lengthBits % 8 !== 0) {
+                console.error('[crypto] INVALID: wasmPbkdf2: lengthBits must be a positive multiple of 8');
                 return false;
             }
+            const dkLen = lengthBits / 8;
 
             const hashId = (hash === undefined || hash === null) ? 256 : hash;
             if (!_VALID_HASH_IDS.includes(hashId)) {

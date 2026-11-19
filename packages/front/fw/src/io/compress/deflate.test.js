@@ -139,9 +139,9 @@ const RFC_CODE_LENGTH_ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 1
 /** 32 KiB of distinguishable history, primed through a stored block. */
 const HISTORY = new Uint8Array(32768).map((_, i) => (i * 7 + 3) & 0xFF);
 
-/** `e.code` of the error thrown by `fn`, or `null` when it does not throw. */
+/** `e.errno` of the error thrown by `fn` (the numeric code), or `null` when it does not throw. */
 function errorCode(fn) {
-    try { fn(); return null; } catch (e) { return e.code; }
+    try { fn(); return null; } catch (e) { return e.errno; }
 }
 
 describe('deflate module', () => {
@@ -880,5 +880,39 @@ describe('deflate module', () => {
             expect(oracleInflate(out)).toEqual(TEXT);
             expect(_api.inflateSync(out)).toEqual(TEXT);
         });
+    });
+});
+
+describe('inflate end hooks (T6.5)', () => {
+    const bs2 = bitstream.factory();
+    const D = deflate.factory(bs2, huffman.factory(bs2), lz77.factory());
+    const text = new TextEncoder().encode('end hooks: where the deflate stream stops. '.repeat(50));
+
+    test('inflateSync onEnd reports the bytes the deflate stream used', () => {
+        const raw = D.deflateSync(text);
+        const tail = new Uint8Array([9, 9, 9, 9, 9]);
+        const input = new Uint8Array(raw.length + tail.length);
+        input.set(raw);
+        input.set(tail, raw.length);
+        let end = -1;
+        const out = D.inflateSync(input, { onEnd: (n) => { end = n; } });
+        expect(out).toEqual(text);
+        expect(end).toBe(raw.length);
+    });
+
+    test('InflateStream: ended and rest() once the final block is decoded', () => {
+        const raw = D.deflateSync(text);
+        const tail = new Uint8Array([1, 2, 3]);
+        const s = new D.InflateStream(() => {});
+        expect(s.ended).toBe(false);
+        expect(s.rest()).toBeNull();
+        s.push(raw.subarray(0, 10), false);
+        expect(s.ended).toBe(false);
+        const restIn = new Uint8Array(raw.length - 10 + tail.length);
+        restIn.set(raw.subarray(10));
+        restIn.set(tail, raw.length - 10);
+        s.push(restIn, false);
+        expect(s.ended).toBe(true);
+        expect(s.rest()).toEqual(tail);
     });
 });

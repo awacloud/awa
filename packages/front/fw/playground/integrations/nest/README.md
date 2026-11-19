@@ -13,13 +13,13 @@ crypto/codec primitives server-side, via the official
 
 ## Run
 
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
+
 ```sh
-npm i && npm start
+bun install && bun run start
 ```
 
-Run from this directory. `npm start` compiles the TypeScript (`tsc`,
-decorators + `emitDecoratorMetadata`) and runs `dist/main.js`. `main.ts`
-boots a standalone Nest application context, resolves `SignService`, and logs:
+`bun run start` compiles the TypeScript (`tsc`, decorators + `emitDecoratorMetadata`) and runs `dist/main.js`. `main.ts` boots a standalone Nest application context, resolves `SignService`, and logs:
 
 ```
 payload: {"hello":"world","n":42}

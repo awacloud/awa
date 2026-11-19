@@ -27,6 +27,7 @@ import { mountAbout } from './core/about.js';
 import { mountHelp } from './core/help.js';
 import { createHandoff, PARAM } from './core/handoff.js';
 import { mountMore } from './core/more.js';
+import { mountDocName } from './core/docname.js';
 
 const LOCALE_KEY = 'awa-viewer.locale';
 /**
@@ -99,8 +100,13 @@ export function boot({ doc = document, win = window, handoff: handoffKv, loadHel
             return new File([await response.blob()], s.file);
         }
     }));
+    // The header line: the open document's file name, the tagline with none.
+    const docName = mountDocName({ doc, t: (k, p) => tr.t(k, p) });
     const viewer = mountViewer(host, {
         runtime, locale, samples,
+        onOpen: ({ name }) => docName.show(name),
+        onClose: () => docName.clear(),
+        onError: () => docName.clear(),
         onMore: (files) => more.add(files.map((file) => ({ file }))),
         onHelp: () => { void help.open(); }
     });
@@ -132,6 +138,7 @@ export function boot({ doc = document, win = window, handoff: handoffKv, loadHel
         viewer.setLocale(select.value);
         try { if (local) local.set(LOCALE_KEY, select.value); } catch { /* storage blocked */ }
         translatePage();
+        docName.label();
         about.label();
         help.label();
     });

@@ -1,7 +1,7 @@
 ---
 module: leaderElection
 category: dom/utils
-dependencies: [broadcastChannel]
+dependencies: [broadcastChannel, uuid]
 returns: object
 worker-safe: false
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > Elects a unique leader among multiple tabs/clients of the same origin.
 
-**Module** `leaderElection` | **Source** `packages/front/fw/src/dom/utils/leaderElection.js` | **Deps** `broadcastChannel` | **Worker-safe** no
+**Module** `leaderElection` | **Source** `packages/front/fw/src/dom/utils/leaderElection.js` | **Deps** `broadcastChannel`, `uuid` | **Worker-safe** no
 
 Used to centralise a WebSocket connection, relay cross-tab via a single writer, avoid job duplication (remote sync, cron), or as a fallback when SharedWorker is unavailable.
 

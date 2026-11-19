@@ -36,6 +36,11 @@
  *
  * cell := { type: 'cell',
  *           value, t, formula?, ref?,
+ *           formulaType?: 'shared' | 'array' | 'dataTable' | 'normal',
+ *           formulaRef?: string,   // the <f>'s `ref` (a shared or array range)
+ *           sharedIndex?: number,  // the <f>'s `si`
+ *           formulaAttrs?: object, // the <f>'s other attributes (ca, aca …)
+ *                                  // a shared formula's follower: formula ''
  *           s?: number,            // cellXfs index
  *           hyperlinkRef?: string  // soft hint (sheet.hyperlinks holds the rel)
  *         }
@@ -67,7 +72,11 @@
  * threaded) are read and written by the core. Pivot tables, the calc
  * chain and form controls have typed parsers and renderers in the
  * associated extras, but `read()` does not load those parts: they are
- * listed in `unmodelledParts`.
+ * listed in `unmodelledParts`. Through `xlsxFullBundle` (`smlPackageParts`,
+ * on the walker's package hooks) the calculation chain, the external
+ * links, the XML maps, the connections, the query tables and the pivot
+ * caches and tables are read and written back, each only when it is
+ * written back as read.
  *
  * @module ooxml/xlsx
  */
@@ -644,6 +653,17 @@ export const xlsx = {
                 Target: 'xl/workbook.xml'
             }]);
 
+            if (walker.hasExtensions) {
+                walker.applyPackageDehydrate(workbook, {
+                    package: pkg, wbPart: '/xl/workbook.xml',
+                    sheetParts: sheets.map((_, i) => `/xl/worksheets/sheet${i + 1}.xml`),
+                    // The part a table of the model was written to, or null.
+                    tablePartOf(t) {
+                        const name = t && t.id != null ? `/xl/tables/table${t.id}.xml` : null;
+                        return name && pkg.parts[name] ? name : null;
+                    }
+                });
+            }
             return opc.write(pkg);
         }
 
@@ -672,9 +692,15 @@ export const xlsx = {
             }
 
             // <sheetData>
+            // A row's number: `rowNumbers`' when it grows, else the previous
+            // row's + 1 (1..n without the field).
+            let prevNum = 0;
             const rows = (sheet.rows || []).map((row, r) => {
-                const cells = row.map((val, c) => renderCell(val, r, c, internString));
-                const a = { r: String(r + 1) };
+                const given = Array.isArray(sheet.rowNumbers) ? sheet.rowNumbers[r] : undefined;
+                const num = Number.isInteger(given) && given > prevNum ? given : prevNum + 1;
+                prevNum = num;
+                const cells = row.map((val, c) => renderCell(val, num - 1, c, internString));
+                const a = { r: String(num) };
                 const p = sheet.rowProps && sheet.rowProps[r];
                 if (p) {
                     if (p.height != null) a.ht = String(p.height);
@@ -818,8 +844,8 @@ export const xlsx = {
             if (cell.s != null) a.s = String(cell.s);
 
             // Formula cell — emit <f> + cached value if any.
-            if (cell.formula) {
-                const inner = [xml.el('f', {}, [xml.text(cell.formula)])];
+            if (hasFormula(cell)) {
+                const inner = [renderFormula(cell)];
                 if (cell.value != null && cell.value !== '') {
                     inner.push(xml.el('v', {}, [xml.text(String(cell.value))]));
                 }
@@ -852,10 +878,28 @@ export const xlsx = {
             return xml.el('c', a, [xml.el('v', {}, [xml.text(String(cell.value))])]);
         }
 
+        // A formula to write: its text, or a kind (a shared formula's
+        // follower has no text).
+        function hasFormula(cell) {
+            return cell.formula != null && (cell.formula !== '' || cell.formulaType != null);
+        }
+
+        // <f> with the attributes it was read with.
+        function renderFormula(cell) {
+            const a = {};
+            if (cell.formulaAttrs && typeof cell.formulaAttrs === 'object') {
+                for (const [k, v] of Object.entries(cell.formulaAttrs)) if (v != null) a[k] = String(v);
+            }
+            if (cell.formulaType != null) a.t = String(cell.formulaType);
+            if (cell.formulaRef != null) a.ref = String(cell.formulaRef);
+            if (cell.sharedIndex != null) a.si = String(cell.sharedIndex);
+            return xml.el('f', a, cell.formula !== '' ? [xml.text(String(cell.formula))] : []);
+        }
+
         function normalizeCell(val) {
             if (val == null) return { value: null, t: 'n' };
             if (typeof val === 'object' && val.type === 'cell') {
-                if (val.formula) return { ...val, t: val.t || 'n' };
+                if (hasFormula(val)) return { ...val, t: val.t || 'n' };
                 if (val.t)        return val;
                 return { ...val, t: inferT(val.value) };
             }
@@ -903,13 +947,18 @@ export const xlsx = {
          *        (scheme colours, colour transforms) as `rPr.color = { rgb |
          *        schemeColor, mods? }` (default `false`: such fills stay
          *        verbatim in `rPr._extras`).
+         * @param {boolean} [readOpts.typedLineColors] type a drawing shape's
+         *        line colour the same way (`shapeProps.line.color`; default
+         *        `false`: a theme line colour stays verbatim in
+         *        `line._extras`).
          */
         function read(bytes, readOpts) {
             const pkg = opc.read(bytes, archiveLimits(readOpts));
+            const plainParts = pkg.parts;
             const { value: result, unmodelledParts } =
                 trackUnmodelledParts(pkg, p => {
                     try {
-                        return readPackage(p, readOpts);
+                        return readPackage(p, readOpts, plainParts);
                     } catch (e) {
                         throw typedPartXml(e);
                     }
@@ -930,8 +979,9 @@ export const xlsx = {
         }
 
         // The read pass proper, over an access-tracking view of
-        // `pkg.parts` (see `ooxmlShared.trackUnmodelledParts`).
-        function readPackage(pkg, readOpts) {
+        // `pkg.parts` (see `ooxmlShared.trackUnmodelledParts`); `plainParts`
+        // is the untracked map the package hooks read through.
+        function readPackage(pkg, readOpts, plainParts) {
             const pkgRels = pkg.rels['/'] || [];
             const docRel = pkgRels.find(r => r.Type.endsWith('/officeDocument'));
             if (!docRel) throw new ParseError('xlsx/missing-officeDocument-rel',
@@ -1009,6 +1059,9 @@ export const xlsx = {
             // Sheets + collected tables.
             const sheets = [];
             const tables = [];
+            const sheetParts = [];
+            const sheetIds = [];
+            const tableParts = [];
             const sheetsEl = xml.findChild(wbRoot, 'sheets');
             if (sheetsEl) {
                 const sheetEls = xml.findAll(sheetsEl, 'sheet');
@@ -1043,6 +1096,7 @@ export const xlsx = {
                             if (!tBytes) continue;
                             const t = tablesMod.parse(decodeText(tBytes));
                             tables.push(t);
+                            tableParts.push(tPart);
                             sheet.tableRefs.push(t.id);
                         }
                         delete sheet._tableRefs;
@@ -1084,7 +1138,8 @@ export const xlsx = {
                             const dBytes = pkg.parts[drawingPart];
                             if (dBytes) {
                                 const parsed = drawingsMod.parse(decodeText(dBytes),
-                                    { typedRunColors: !!(readOpts && readOpts.typedRunColors) });
+                                    { typedRunColors: !!(readOpts && readOpts.typedRunColors),
+                                      typedLineColors: !!(readOpts && readOpts.typedLineColors) });
                                 const drawingRels = pkg.rels[drawingPart] || [];
                                 sheet.drawings = resolveDrawingEntries(
                                     parsed.entries, drawingPart, drawingRels, pkg);
@@ -1094,6 +1149,8 @@ export const xlsx = {
                     delete sheet._drawingRid;
 
                     sheets.push(sheet);
+                    sheetParts.push(wsPart);
+                    sheetIds.push(sEl.attrs.sheetId);
                 }
             }
 
@@ -1103,8 +1160,14 @@ export const xlsx = {
             if (tables.length)       workbook.tables = tables;
             if (persons && persons.length) workbook.persons = persons;
 
-            walker.applyHydrate(workbook);
-            return { workbook, package: pkg };
+            // The package hooks, then the walk (which reaches what they read).
+            const hydrated = walker.applyPackageHydrate(workbook, {
+                package: pkg, parts: plainParts, rels: pkg.rels,
+                wbPart, wbRoot, wbRels, sheetParts, sheetIds, tableParts, readOpts,
+                consume(partName) { return pkg.parts[partName]; }
+            });
+            walker.applyHydrate(hydrated);
+            return { workbook: hydrated, package: pkg };
         }
 
         function resolveDrawingEntries(entries, drawingPart, drawingRels, pkg) {
@@ -1221,7 +1284,13 @@ export const xlsx = {
                 // Every cell the reader materialises — the empty cells padded
                 // in for column gaps included — spends one unit of budget.
                 const budget = { max: limits.maxCellsPerSheet, used: 0, partName };
+                // Each row's number (its `r`, else the previous one's + 1),
+                // kept in `rowNumbers` when one is not its index + 1.
+                const rowNumbers = [];
                 for (const rEl of xml.findAll(data, 'row')) {
+                    const prevNum = rowNumbers.length ? rowNumbers[rowNumbers.length - 1] : 0;
+                    const given = /^\d+$/.test(rEl.attrs.r || '') ? Number(rEl.attrs.r) : 0;
+                    rowNumbers.push(given > prevNum ? given : prevNum + 1);
                     if (limits.maxRowsPerSheet
                         && sheet.rows.length >= limits.maxRowsPerSheet) {
                         throw limitExceeded('maxRowsPerSheet',
@@ -1231,6 +1300,7 @@ export const xlsx = {
                     if (props) (sheet.rowProps || (sheet.rowProps = {}))[sheet.rows.length] = props;
                     sheet.rows.push(parseRow(rEl, sharedStrings, budget));
                 }
+                if (rowNumbers.some((n, i) => n !== i + 1)) sheet.rowNumbers = rowNumbers;
             }
 
             const af = xml.findChild(root, 'autoFilter');
@@ -1411,6 +1481,19 @@ export const xlsx = {
 
             const out = { type: 'cell', value, t };
             if (formula)      out.formula = formula;
+            if (fEl) {
+                // The <f>'s attributes: its kind, range and shared index
+                // typed, any other kept; a follower keeps an empty formula.
+                const other = {};
+                for (const [k, v] of Object.entries(fEl.attrs || {})) {
+                    if (k === 't') out.formulaType = v;
+                    else if (k === 'ref') out.formulaRef = v;
+                    else if (k === 'si') out.sharedIndex = Number(v);
+                    else other[k] = v;
+                }
+                if (Object.keys(other).length) out.formulaAttrs = other;
+                if (!formula && out.formulaType != null) out.formula = '';
+            }
             if (ref)          out.ref = ref;
             if (s !== undefined) out.s = s;
             return out;

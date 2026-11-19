@@ -67,6 +67,12 @@ const out = ext.renderRunProperties(rPr);
 
 ## Notes
 
+- **Lossless.** The run hooks type an element only when it is written
+  back as read (`docxProperties.hydrateLossless`, and `sameElement` for a
+  whole `tblPr` / `trPr`): an attribute the typed field does not keep, an
+  empty element or a name held twice leaves the element in `_extras` as
+  read, so a save-back through the bundle writes what the core's writes.
+
 - Toggles encode `false` as `<w:caps w:val="0"/>` per ECMA-376.
 - Unknown children stay in `_extras`; ordering relative to typed siblings is not preserved (Word reorders silently).
 - The `w:w` element is exposed as `scale` to avoid collision with the namespace prefix.

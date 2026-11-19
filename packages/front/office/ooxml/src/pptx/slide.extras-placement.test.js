@@ -64,9 +64,9 @@ describe('pptx slide — p:cSld-only elements stay in p:cSld', () => {
         expect(names(cSldOf(root))).toEqual(['p:spTree', 'p:custDataLst', 'p:controls']);
     });
 
-    test('p:extLst and unknown names keep their old placement (both places)', () => {
+    test('p:extLst and unknown names of a model without cSldExtras go to p:cSld alone (T62 c: they were written in both places)', () => {
         const root = rootOf(slideMod.serializeSlide({ type: 'slide', shapes, _extras: [el('p:extLst'), el('p:zz')] }));
-        expect(names(root)).toEqual(['p:cSld', 'p:extLst', 'p:zz']);
+        expect(names(root)).toEqual(['p:cSld']);
         expect(names(cSldOf(root))).toEqual(['p:spTree', 'p:extLst', 'p:zz']);
     });
 

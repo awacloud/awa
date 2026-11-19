@@ -9,7 +9,7 @@ status: complete
 
 # oconvOdsToIr
 
-> `.ods` (`@awacloud/odf`'s `ods.read()` result) → `oconv-ir/v1`, tier 2 — one heading + one table per `<table:table>`.
+> `.ods` (`@awacloud/odf`'s `ods.read()` result) → `oconv-ir/v2`, tier 2 — one heading + one table per `<table:table>`.
 
 **Module** `oconvOdsToIr` (`oconvOdsToIr`) | **Source** `packages/front/office/oconv/src/read/ods-to-ir.js` | **Deps** `oconvIr`, `ods` | **Worker-safe** yes
 
@@ -32,7 +32,7 @@ const { odsToIr } = runtime.resolve('oconvOdsToIr');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `odsToIr` | `(readResult: object, opts?: object) => {ir, losses}` | `ir` — an `oconv-ir/v1` document; `losses` — `{code, detail}[]` | — |
+| `odsToIr` | `(readResult: object, opts?: object) => {ir, losses}` | `ir` — an `oconv-ir/v2` document; `losses` — `{code, detail}[]` | — |
 
 ## Examples
 
@@ -52,7 +52,7 @@ ir.kind;   // 'document'
 - Cell text uses the typed `office:value-type` string when present, otherwise the cell's raw paragraph children are text-extracted; a `<table:covered-table-cell>` always contributes `''`.
 - `table:number-rows-repeated` / `table:number-columns-repeated` are expanded, capped at 1000 (`MAX_REPEAT`) as a documented safety bound — real content repeats stay far below it, and a trailing "rest of the sheet is empty" repeat is trimmed away regardless by the same grid-normalisation step `oconvXlsxToIr` uses.
 - **`opts.sheets`** (`toMd`'s `sheets` input): `'table'` (default) maps each sheet to a GFM table as above; `'csv'` or `'tsv'` writes the same normalised grid as one `codeBlock` (`info` `csv` / `tsv`) under the sheet's heading — RFC 4180 quoting for csv; for tsv a cell's backslash, tab, LF and CR written as two-character escapes, recorded once per sheet as `sheet/tsv-escaped`. Another value throws `oconv: bad sheets`.
-- **`opts.cellBudget`** (`toMd`'s `sheetCellBudget` input): a positive safe integer, else `oconv: bad cell budget`. A sheet whose padded table (its kept rows times its kept columns, found from the row lengths without padding) would hold more cells is never padded: under `'table'` one `paragraph` per non-empty cell, `<A1 address>: <text>`, in row then column order; under `'csv'` / `'tsv'` its rows unpadded. Recorded `sheet/sparse-form` (the sheet name, the padded and the kept cell counts). Without it every sheet is padded as above.
+- **`opts.cellBudget`** (`toMd`'s `sheetCellBudget` input): a positive safe integer, else `oconv: bad cell budget`; **5,000,000 when absent** (since 2.0.0). A sheet whose padded table (its kept rows times its kept columns, found from the row lengths without padding) would hold more cells is never padded: under `'table'` one `paragraph` per non-empty cell, `<A1 address>: <text>`, in row then column order; under `'csv'` / `'tsv'` its rows unpadded. Recorded `sheet/sparse-form` (the sheet name, the padded and the kept cell counts). `Number.MAX_SAFE_INTEGER` pads every sheet as above, as 1.x did without the option.
 - Loss codes this module emits: `sheet/formula-as-value`, `sheet/format-dropped` (once per sheet, first cell carrying a `styleName`), `sheet/merge-dropped` (once per sheet, first cell with `colSpan`/`rowSpan` > 1), `sheet/chart-dropped` (once per sheet, when the table carries a `table:shapes` extra).
 - Pivot tables are a matrix-level, permanently out-of-scope drop, same treatment as `oconvXlsxToIr`.
 

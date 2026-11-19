@@ -37,7 +37,8 @@
  */
 
 /**
- * The allowlist in force. **Empty is the default and the current state.**
+ * The allowlist in force: empty unless a by-design console line needs one;
+ * each entry carries the reason it is not a defect.
  * Serialized verbatim into every report, so an artifact always states what was
  * muted.
  *

@@ -1,0 +1,98 @@
+{
+  "name": "@awacloud/graphic-anim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "awa": { "maturity": "L3", "coverageFloor": 0.81 },
+  "description": "SVG-first animation engine — fw add-on with Worker-safe math kernels",
+  "keywords": ["awa", "svg", "animation", "tween", "timeline", "easing", "fw", "browser", "pageflip", "hypertree", "svg3d"],
+  "license": "Apache-2.0",
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/graphic/anim"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": { "url": "https://github.com/awacloud/awa/issues" },
+  "engines": { "node": ">=18" },
+  "main": "src/main.js",
+  "types": "types/main.d.ts",
+  "sideEffects": false,
+  "dependencies": { "@awacloud/fw": "workspace:*" },
+  "devDependencies": {
+    "@awacloud/tool-prebuild-generator": "workspace:*",
+    "@awacloud/tool-dev-portal": "workspace:*",
+    "@awacloud/tool-local-web": "workspace:*"
+  },
+  "_filesComment": "Consumer allowlist: hand-authored src (minus co-located tests and the perf measurement utility), the generated dist surfaces and their declarations, the hand-authored types, the docs, LICENSE and NOTICE, plus demos/ and playground/ (owner ruling: they ship for the standalone dev-portal serve). Tests and tooling stay in the git repo only.",
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "!src/perf/**",
+    "src/**/*.d.ts",
+    "types/**/*.d.ts",
+    "dist/build/**",
+    "dist/standalone/**",
+    "docs",
+    "demos",
+    "playground",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE",
+    "third-party"
+  ],
+  "exports": {
+    ".": {
+      "types": "./types/main.d.ts",
+      "browser": "./src/main.js",
+      "import": "./src/main.js",
+      "default": "./src/main.js"
+    },
+    "./kernels/pageflip/fold.js": {
+      "types": "./src/pageflip/fold.d.ts",
+      "default": "./src/pageflip/fold.js"
+    },
+    "./kernels/pageflip/compose.js": {
+      "types": "./src/pageflip/compose.d.ts",
+      "default": "./src/pageflip/compose.js"
+    },
+    "./kernels/hypertree/layout.js": {
+      "types": "./src/hypertree/layout.d.ts",
+      "default": "./src/hypertree/layout.js"
+    },
+    "./kernels/hypertree/measure.js": {
+      "types": "./src/hypertree/measure.d.ts",
+      "default": "./src/hypertree/measure.js"
+    },
+    "./kernels/svg3d/vec3.js": {
+      "types": "./src/svg3d/vec3.d.ts",
+      "default": "./src/svg3d/vec3.js"
+    },
+    "./kernels/svg3d/mesh.js": {
+      "types": "./src/svg3d/mesh.d.ts",
+      "default": "./src/svg3d/mesh.js"
+    },
+    "./kernels/svg3d/project.js": {
+      "types": "./src/svg3d/project.d.ts",
+      "default": "./src/svg3d/project.js"
+    },
+    "./kernels/svg3d/apply.js": {
+      "types": "./src/svg3d/apply.d.ts",
+      "default": "./src/svg3d/apply.js"
+    },
+    "./build/*": { "default": "./dist/build/*" },
+    "./standalone/*": { "default": "./dist/standalone/*" },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "bun test src/ tests/",
+    "test:e2e": "node e2e/run.mjs clean",
+    "lint": "eslint . --max-warnings 0",
+    "gen:bundles": "bun run tools/generate-bundles.mjs",
+    "serve": "dev-portal serve"
+  }
+}

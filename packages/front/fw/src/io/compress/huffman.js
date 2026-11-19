@@ -52,6 +52,7 @@ import { bitstream } from './bitstream.js';
  * @typedef {object} HuffmanAPI
  * @property {(codeLengths: Uint8Array|number[], maxBits: number, reversed: 0|1|number) => Uint16Array} buildMap Build the encode map (`reversed=0`) or reversed-code decode table (`reversed=1`) from canonical code lengths.
  * @property {(freqs: Uint16Array|number[], maxBits: number) => { t: Uint8Array, l: number }} buildTree Derive a length-limited canonical code; `t` = per-symbol code lengths, `l` = max bits used.
+ * @property {(codeLengths: Uint8Array|number[]) => { oversubscribed: boolean, incomplete: boolean }} kraft Kraft check of a code-length set (`buildMap` does not check).
  */
 
 export const huffman = {
@@ -317,6 +318,28 @@ export const huffman = {
             return { t, l: lengths[0] };
         }
 
-        return { buildTree, buildMap };
+        /**
+         * Kraft check of a code-length set (RFC 1951 § 3.2.2): does it use
+         * more codes than exist (`oversubscribed` — `buildMap` would overwrite
+         * slots), or leave codes unused (`incomplete` — `buildMap` leaves
+         * holes)? RFC 1951 § 3.2.7 allows one incomplete case, a single
+         * distance code of length 1; the caller decides what to reject.
+         * `buildMap` itself does not check.
+         *
+         * @param {Uint8Array|number[]} codeLengths Per-symbol length, 0 = unused.
+         * @returns {{ oversubscribed: boolean, incomplete: boolean }}
+         */
+        function kraft(codeLengths) {
+            const perLength = new Int32Array(LENGTH_SLOTS);
+            for (let s = 0; s < codeLengths.length; ++s) perLength[codeLengths[s]]++;
+            let left = 1;
+            for (let len = 1; len < LENGTH_SLOTS; ++len) {
+                left = left * 2 - perLength[len];
+                if (left < 0) return { oversubscribed: true, incomplete: false };
+            }
+            return { oversubscribed: false, incomplete: left > 0 };
+        }
+
+        return { buildTree, buildMap, kraft };
     },
 };

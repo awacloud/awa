@@ -52,17 +52,25 @@ function extractDepsBindings(src) {
 
 /**
  * Extract the default-export array binding names from `src/core/modules.js`.
- * Tolerant of whitespace and trailing commas.
+ * Tolerant of whitespace, trailing commas and line comments. Exactly two
+ * shapes are accepted — the historical `export default [ … ];` and the fw 1.0
+ * frozen registry `export default Object.freeze([ … ]);` (fw T27). Any other
+ * expression still throws: the parser is not widened beyond these two forms.
  *
  * @param {string} src
  * @returns {string[]}
  */
 function extractDefaultArrayBindings(src) {
-    const m = src.match(/export\s+default\s*\[([\s\S]*?)\]\s*;?\s*$/m);
+    const m = src.match(
+        /export\s+default\s*(?:\[([\s\S]*?)\]|Object\s*\.\s*freeze\s*\(\s*\[([\s\S]*?)\]\s*\))\s*;?\s*$/m
+    );
     if (!m) {
-        throw new Error('[validate-deps] could not locate `export default [...]` in modules.js');
+        throw new Error(
+            '[validate-deps] could not locate `export default [...]` or ' +
+                '`export default Object.freeze([...])` in modules.js'
+        );
     }
-    return m[1]
+    return (m[1] ?? m[2])
         .split(/[,\n]/)
         .map((s) => s.trim().replace(/\/\/.*$/, '').trim())
         .filter(Boolean);

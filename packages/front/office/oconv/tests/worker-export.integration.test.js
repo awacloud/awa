@@ -4,8 +4,10 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview Integration test — the `./src/worker.js` exports key
- * (BL-1278, publication-maturity-oconv W2 task 01).
+ * @fileoverview Integration test — the `./worker.js` exports key
+ * (BL-1278; office-coverage-3 T65, D40: the key follows the `/vendor`
+ * identity rule, `@awacloud/oconv/<p>` → `src/<p>`, and the
+ * `./src/worker.js` key is gone in 2.0.0).
  *
  * The Worker entry is exported under a key that MIRRORS its file path, so the
  * specifier `@awacloud/oconv/src/worker.js` reaches the same file under Node's
@@ -31,7 +33,8 @@ const PKG = join(HERE, '..');
 
 const pkg = JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8'));
 
-const WORKER_SPECIFIER = '@awacloud/oconv/src/worker.js';
+const WORKER_SPECIFIER = '@awacloud/oconv/worker.js';
+const OLD_SPECIFIER = '@awacloud/oconv/src/worker.js';
 const NOT_EXPORTED_SPECIFIER = '@awacloud/oconv/src/oconv.js';
 
 const NODE_OK = (() => {
@@ -71,19 +74,21 @@ function nodeResolveAll(specifiers) {
 }
 
 describe('exports map — the worker entry is exported under its own path', () => {
-    test('manifest declares "./src/worker.js" → "./src/worker.js"', () => {
-        expect(pkg.exports['./src/worker.js']).toBe('./src/worker.js');
+    test('manifest declares "./worker.js" → "./src/worker.js", and no "./src/worker.js" key', () => {
+        expect(pkg.exports['./worker.js']).toBe('./src/worker.js');
+        expect(pkg.exports['./src/worker.js']).toBeUndefined();
         expect(pkg.exports['.']).toBe('./src/main.js');
     });
 
-    test('Bun resolves @awacloud/oconv/src/worker.js to the worker file', () => {
+    test('Bun resolves @awacloud/oconv/worker.js to the worker file', () => {
         const resolved = import.meta.resolve(WORKER_SPECIFIER).replaceAll('\\', '/');
         expect(resolved.endsWith('oconv/src/worker.js')).toBe(true);
     });
 
-    test.skipIf(!NODE_OK)('Node resolves @awacloud/oconv/src/worker.js to the worker file', () => {
-        const results = nodeResolveAll([WORKER_SPECIFIER]);
+    test.skipIf(!NODE_OK)('Node resolves @awacloud/oconv/worker.js to the worker file, and refuses the 1.x specifier', () => {
+        const results = nodeResolveAll([WORKER_SPECIFIER, OLD_SPECIFIER]);
         expect(results[WORKER_SPECIFIER].endsWith('oconv/src/worker.js')).toBe(true);
+        expect(results[OLD_SPECIFIER]).toBe('ERR_PACKAGE_PATH_NOT_EXPORTED');
     });
 
     test.skipIf(!NODE_OK)('negative control: Node refuses @awacloud/oconv/src/oconv.js (the key is specific, not a wildcard)', () => {

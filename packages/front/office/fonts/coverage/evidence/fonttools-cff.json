@@ -1,0 +1,246 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "fonttools-cff",
+    "version": "fonttools@4.66.1",
+    "source": "https://github.com/fonttools/fonttools/tree/4.66.1"
+  },
+  "oracle": {
+    "image": "awa-oracle-fonttools:4.66.1",
+    "imageId": "sha256:cffe1d79143a91d446bb3ce3f673d8c407e176f92fd0c08df9dd7a25fb774c4e",
+    "version": "fonttools@4.66.1"
+  },
+  "criterion": "per bare CFF program, fontTools 4.66.1 (cffLib, every glyph drawn through DecomposingRecordingPen) and fonts fontCffProgram.readCff give the same number of glyphs, per glyph index the same name (cid%05d for a CID, .notdef for its glyph 0; a .<n> suffix cffLib adds to a duplicate name is no difference), the same advance and the same moveTo / lineTo / curveTo / closePath commands at 1/1000 unit, and for a name-keyed font the same 256 built-in encoding slots (.notdef an empty slot; ExpertEncoding checked as the package's Expert table); a program fontTools cannot read is skipped with its error; the programs: every /FontFile3 of subtype Type1C or CIDFontType0C of the pinned pypdf-benchmarks and wild PDFs and of the fetched verapdf-corpus tag (decoded by the pdf package, deduplicated by SHA-256) and fonttools Tests/cffLib/data/TestSupplementEncoding.cff; documents: 38 (38 written, 0 round trips)",
+  "documents": [
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--487.cff",
+      "kind": "written",
+      "sha256": "3e0e46682c09f5f63e936c5d89271dd761354be2721413c38aea0a6d3e3e6a96",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--485.cff",
+      "kind": "written",
+      "sha256": "c0b844cc83938a253a22626e0e3e1dbc11f000b9c5da6dd916a1b29c9e654db7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--486.cff",
+      "kind": "written",
+      "sha256": "1428208d1dff3a6c4b49add3bf0389944ce46ab63de8e1341907e0c06eb7c199",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--483.cff",
+      "kind": "written",
+      "sha256": "fc7dac0794b545f6acaa211929d96d7b0feecf6453ae187feeaf7092cecda19b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--489.cff",
+      "kind": "written",
+      "sha256": "015a350851f13feff4259abffa044c0951512d57a9e7d5ceb905fba66871d813",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--488.cff",
+      "kind": "written",
+      "sha256": "46d0386c80eccc6bcb0c40196cb11af3ef839e24c6d8541c3b0cbaa67251523a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--491.cff",
+      "kind": "written",
+      "sha256": "8ed972ff76ba0dcca5059fc21536b2e6e8cd3f6ce313052912b836fffe4a7a19",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--484.cff",
+      "kind": "written",
+      "sha256": "dbebcb1cd0d2d82a709ff52c1acd5567786f7e48cc16d883e0fe513215ddf4d9",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--482.cff",
+      "kind": "written",
+      "sha256": "ae65eeaaa2b5fa8fd79ea153a152c40f43d5ebbb50809b9486132f286c19e888",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00214.pdf--490.cff",
+      "kind": "written",
+      "sha256": "a3e82fdd26d5d6d9ba67fd2334ceb94dbd9d5bc575c0816d2275646eef32ecfd",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--274.cff",
+      "kind": "written",
+      "sha256": "48fb5f5d307c631ecedff262e22347187f151b319b380edd62142d863d3067f5",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--388.cff",
+      "kind": "written",
+      "sha256": "e11316a51484ade6c7c3bc89e7bde75d5f83a1f5b19afaed22051c8baa65ef31",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--386.cff",
+      "kind": "written",
+      "sha256": "711b0aef9b0c23b36913349b43513d55e1eb91233a7cb71343054581a430f4f7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--382.cff",
+      "kind": "written",
+      "sha256": "44156e88883138b90bfc1caa6aca9f33be414433d64b5b6c88b3dd81ea03150d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--381.cff",
+      "kind": "written",
+      "sha256": "0f1b267599da3b9fb67516b33562ee4154c60d5c5db177ec7b64bc5118332563",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--377.cff",
+      "kind": "written",
+      "sha256": "d64df140c193bd6d291acff258a2248c1dfd52f3366b0bfff5595f8a8b16246b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--389.cff",
+      "kind": "written",
+      "sha256": "73207b47b70b9ae937afa24b9f741f767b30391b4d61e091e27523626641e95a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--385.cff",
+      "kind": "written",
+      "sha256": "73646a2592b3fd1a24b78f5d827ec6a7b1b194d3f5af6f041109ac0d8887c4ee",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--384.cff",
+      "kind": "written",
+      "sha256": "30eeea732012ce8353f6490258261de9920e74ac58a83ba0835b455f21537888",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--380.cff",
+      "kind": "written",
+      "sha256": "bb7713b9a585cb1833babe15ed701db7ee2c90062830c2fa3aab334689cb8f70",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--378.cff",
+      "kind": "written",
+      "sha256": "788c7bcd5d793146b5c19653e5c036e3be52cc09fd624212aed3dceab185fb33",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--387.cff",
+      "kind": "written",
+      "sha256": "27602f26914a2881d9002176e31576f423de906917a43125338e4d509eb88944",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--383.cff",
+      "kind": "written",
+      "sha256": "65fdccf0442591921426c8689c755a2dbcf98b95c18d413502c0ffd670f4a0ec",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--390.cff",
+      "kind": "written",
+      "sha256": "305800222e8273d9c70950deb8d2d387f5dd4b79ccf6a7a008471b88ddfbf148",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--391.cff",
+      "kind": "written",
+      "sha256": "e268ec16bbe5c592a337002deefcbd12fbf03bfed56efbd26e4f3abc55a3b793",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00151.pdf--379.cff",
+      "kind": "written",
+      "sha256": "325ea7d3a1df29c61be7f711bf7061e17c094f508fe22e2c398db9953625c4a4",
+      "errors": []
+    },
+    {
+      "file": "wild--qpdf--qpdf--qtest--qpdf--digitally-signed.pdf--18.cff",
+      "kind": "written",
+      "sha256": "427af119e8f704848644710f5da65ea8d385162ce3d78bb774a2b0bda4893f95",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--8.2.5.26-t06-fail-a.pdf--71.cff",
+      "kind": "written",
+      "sha256": "f40cea3b58bce3003916d79c1a35e837b17d8ef3ab2fd781e7512a711e6ed84d",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--PDF_A-1b--6.3--Fonts--6.3.3.1--General--veraPDF--test--suite--6-3-3-1-t01-fail-a.pdf--24.cff",
+      "kind": "written",
+      "sha256": "6739d18cdade61c157678dcd954b66e238953486d7c1c4d064dc1224b490b13a",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--PDF_A-1b--6.3--Fonts--6.3.5--Font--subsets--6-3-5-t02-fail-a.pdf--26.cff",
+      "kind": "written",
+      "sha256": "3cffc97cc4013afd5b97903dd24e9fb17678e3adacdd22b91bbd39450e10439f",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--PDF_A-1b--6.3--Fonts--6.3.5--Font--subsets--6-3-5-t03-fail-a.pdf--31.cff",
+      "kind": "written",
+      "sha256": "812c737d96ddb8e751e07f8b7c7ce167d32eba63b9e083e01a828d73e856c767",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--PDF_UA-1--7.18--Annotations--7.18.5--Links--7.18.5-t01-pass-b.pdf--37.cff",
+      "kind": "written",
+      "sha256": "d36fe9f7adcd4f6dd05b3b813fc1f7eae65becb36b5ce21cfae6b522f7113a1b",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--PDF_UA-1--7.21--Fonts--7.21.7--Unicode--character--maps--7.21.7-t01-pass-a.pdf--22.cff",
+      "kind": "written",
+      "sha256": "9461f221a6db245369278ad4f88e220199a3f974653c01a63306b440ddf71181",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--TWG--test--files--TWG--test--suite--A007-pdfa2-fail-a.pdf--23.cff",
+      "kind": "written",
+      "sha256": "0c897d24ef288d2b23f067f62a58fe4f88f40b089e33ce5d3f651920666caa17",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--TWG--test--files--TWG--test--suite--A008-pdfa1-pass-a.pdf--24.cff",
+      "kind": "written",
+      "sha256": "8e3d4402ec0bc9a06ec8576755e8f883e0dcc8c5dc9ae42cb8bdf7489888fd35",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--TWG--test--files--TWG--test--suite--A016-pdfa2-fail-a.pdf--18.cff",
+      "kind": "written",
+      "sha256": "1d6ad5f6e02b62733685dc42503db3da78621ca76b4ca49f5c7b993b95f27535",
+      "errors": []
+    },
+    {
+      "file": "verapdf-corpus--TWG--test--files--TWG--test--suite--A016-pdfa2-pass-b.pdf--22.cff",
+      "kind": "written",
+      "sha256": "a1862f5f3b32c4def63a001952a504f957483600ae95b3d3c66b4712fd954aac",
+      "errors": []
+    },
+    {
+      "file": "fonttools--Tests--cffLib--data--TestSupplementEncoding.cff",
+      "kind": "written",
+      "sha256": "eea32aeacf5a9592ebf67a4211d95d88b3723b7ed06e87d0c13909ad1fcd2bc5",
+      "errors": []
+    }
+  ],
+  "date": "2026-11-10",
+  "commit": "4364ececae04640f2ffaca65807e1d76c23bec9c"
+}

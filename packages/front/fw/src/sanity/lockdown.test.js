@@ -144,10 +144,12 @@ write(JSON.stringify({ ok, checks }));
  *   - a frozen `Error.prototype` makes happy-dom's `DOMException` constructor
  *     throw, so `querySelector` is unusable post-lock — the innerHTML redirect
  *     is asserted via `textContent` + `childElementCount` only;
- *   - step 6 is asynchronous by contract (dynamic `import`), so the probe polls
- *     for the `Element.prototype.innerHTML` setter to change identity rather
- *     than assuming a fixed number of ticks. A poll that times out leaves the
- *     behavioural checks failing, which is the intended loud failure.
+ *   - step 6 is SYNCHRONOUS and runs before the intrinsic freeze: the base
+ *     layer must be in force the moment `lockdown()` returns, and base's own
+ *     intrinsic wrappers (`Math.random`, `JSON.parse`) must hold — the frozen
+ *     namespaces once made `applyBase()` abort on its first assignment, behind
+ *     a swallowing `.catch`, so `Math.random()` stayed callable under lockdown.
+ *     The checks are taken right after the call, before any tick.
  */
 const PROBE_DOM = `
 const out = process.stdout; const write = out.write.bind(out); write('');
@@ -178,15 +180,15 @@ expectTrue('before_document_write_allowed', typeof document.write === 'function'
 
 lockdown();
 
-// Step 6 lands on a later microtask (dynamic import). Poll on the identity of
-// the innerHTML setter — non-mutating, unlike calling document.write.
-let composed = false;
-for (let i = 0; i < 200 && !composed; i++) {
-  await sleep(10);
-  const d = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  composed = !!d && d.set !== beforeSetter;
-}
+// Step 6 is synchronous: read everything before yielding a single tick.
+const syncDesc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+const composed = !!syncDesc && syncDesc.set !== beforeSetter;
 expectTrue('step6_composed_base_layer', composed);
+expectTrue('step6_synchronous', composed);
+expectThrow('after_math_random_throws', () => Math.random());
+expectThrow('after_json_parse_reviver_throws', () => JSON.parse('{}', (k, v) => v));
+expectTrue('after_math_frozen', Object.isFrozen(Math));
+await sleep(0);
 
 // ── "After": the documented base DOM/XSS guarantees are in force. ──
 after.innerHTML = '<img src=x onerror=alert(1)>';
@@ -341,6 +343,16 @@ describe('sanity/lockdown', () => {
             expect(domParsed?.checks.before_innerHTML_parses_markup).toBe(true);
             expect(domParsed?.checks.after_innerHTML_redirected_no_elements).toBe(true);
             expect(domParsed?.checks.after_innerHTML_redirected_to_text).toBe(true);
+        });
+
+        test('step 6 is synchronous: the base layer holds when lockdown() returns', () => {
+            expect(domParsed?.checks.step6_synchronous).toBe(true);
+        });
+
+        test('after lockdown(), base intrinsic wrappers hold and are frozen', () => {
+            expect(domParsed?.checks.after_math_random_throws).toBe(true);
+            expect(domParsed?.checks.after_json_parse_reviver_throws).toBe(true);
+            expect(domParsed?.checks.after_math_frozen).toBe(true);
         });
 
         test('after lockdown(), document.write throws', () => {

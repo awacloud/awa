@@ -8,19 +8,13 @@ The `sanity: 'base'` layer is injected at the entry by the plugin.
 
 ## Run
 
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
+
 ```sh
-npm i && npm run dev
+bun install && bun run dev
 ```
 
-Run from this directory. `npm run dev` starts the dev server; `npm run build`
-then `npm run preview` builds for production and serves the built output.
-
-`@awacloud/fw` resolves via a local link: the `postinstall` hook runs
-[`playground/_tools/link-fw.mjs`](../../_tools/link-fw.mjs), which creates a
-`node_modules/@awacloud/fw` symlink/junction pointing at the package root (live
-source, no copy — `workspace:*`/`file:` don't work here, see the script header).
-No publish/install of the framework itself is needed; `npm run setup` re-creates
-the link without reinstalling.
+`bun run dev` starts the Vite dev server; `bun run build` then `bun run preview` serves the production build.
 
 ## What it shows
 

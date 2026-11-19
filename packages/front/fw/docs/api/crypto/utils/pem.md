@@ -1,7 +1,7 @@
 ---
 module: pem
 category: crypto/utils
-dependencies: []
+dependencies: [b64]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > PEM (RFC 7468) — encode/decode between `Uint8Array` and `-----BEGIN/END LABEL-----` Base64.
 
-**Module** `pem` | **Source** `packages/front/fw/src/crypto/utils/pem.js` | **Deps** none | **Worker-safe** yes
+**Module** `pem` | **Source** `packages/front/fw/src/crypto/utils/pem.js` | **Deps** `b64` | **Worker-safe** yes
 
 ## Resolve
 
@@ -25,7 +25,7 @@ const pem = runtime.resolve('pem');
 | Method | Signature | Returns |
 |--------|-----------|---------|
 | `encode(bytes, label)` | `(Uint8Array, string) => string` | PEM with BEGIN/END headers |
-| `decode(text, label?)` | `(string, string?) => Uint8Array \| false` | Bytes or `false` if invalid / label mismatch |
+| `decode(text, label?)` | `(string, string?) => {label, bytes} \| false` | The first block's label and bytes, or `false` if invalid / label mismatch |
 
 ## Examples
 

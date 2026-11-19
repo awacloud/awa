@@ -20,9 +20,13 @@
  * stored inside an object stream are materialised on demand through
  * `pdfObjStream`, with the container decoded once per document.
  *
- * Encrypted documents (trailer `/Encrypt` present) fail loud by
- * default: `readDocument` throws `pdf/document/encrypted` instead of
- * silently handing back a ciphertext model. `{ password }` opens one
+ * Encrypted documents (trailer `/Encrypt` present): read with no
+ * password, the empty one is tried (as the user, then as the owner); a
+ * file it opens reads, one `pdf/document/opened-with-empty-password` loss
+ * recording it with the permission bits, and one it does not open throws
+ * `pdf/document/encrypted` rather than hand back a ciphertext model
+ * (`emptyPassword: false`: every encrypted read with no password throws
+ * it). `{ password }` opens one
  * (ISO 32000-2 § 7.6): the Standard handler V4, V5 or V6 chosen by
  * `pdfSecurity.selectHandler`, the password tried as the user, then as the
  * owner password, and every indirect object decrypted as `resolveByKey`
@@ -35,6 +39,47 @@
  * `{ allowEncrypted: true }` returns the raw ciphertext model
  * instead (an object stream's members cannot be read there:
  * `pdf/document/objstm-encrypted`).
+ *
+ * ## A byte source
+ *
+ * The input may also be a byte source `{ byteLength, read(offset,
+ * length) }`: `read` is synchronous and returns a `Uint8Array` of up to
+ * `length` bytes from `offset` (Bun / Node's `readSync`, a worker's
+ * `FileReaderSync` over a `Blob`), so a file need not be held to be read.
+ * The reader then reads windows:
+ *
+ * - the header from the file's start;
+ * - `startxref` from its last 8,192 bytes;
+ * - each xref section with its trailer, and each object as it is
+ *   resolved, from a window at its offset.
+ *
+ * A window starts at 64 KiB (`opts.sourceWindow`, an integer of at least
+ * 16) and doubles while a parse runs out of it, a stream whose `/Length`
+ * passes the window's end included. Past the parser's `maxStreamBytes`
+ * plus 64 KiB it is refused: `pdf/document/source-window`. A resolved
+ * stream keeps a copy of its bytes, not its window. A `Uint8Array` input
+ * is one window over the whole file: the same code path, unchanged. The
+ * result's `_raw` carries `source` in place of `bytes`. The rebuild of a
+ * broken cross-reference chain scans the whole file, so a source whose
+ * chain fails is read whole once for it: a source and its bytes give one
+ * outcome. A read that returns no `Uint8Array` throws
+ * `pdf/document/bad-source-read`.
+ *
+ * The result also carries, public (office-coverage-3 T64):
+ *
+ * - `resolve(node)`: a reference to its object (decrypted as every read
+ *   object), any other value itself (the resolver `_raw.resolve` is);
+ * - `info()`: the Info dictionary as text, `{ title, author, subject,
+ *   keywords, creator, producer, creationDate, modDate, trapped }` (each
+ *   string a decoded PDF text string; a missing or non-string entry left
+ *   out; `trapped` a name's value, or `'True'` / `'False'` for a
+ *   boolean), or `null` when the trailer has no Info dictionary; it never
+ *   throws on a malformed entry;
+ * - `pageContents(i)`: page `i`'s content, its streams resolved, decoded
+ *   through their filters and joined with a newline between two (ISO
+ *   32000 §7.8.2); empty bytes for a page without `/Contents`. A stream
+ *   that does not resolve or decode throws its error; an index that is no
+ *   page's throws `pdf/document/bad-page-index`.
  *
  * @module pdf/document/document
  */
@@ -57,6 +102,7 @@ import { pdfSecurity } from '../crypto/security.js';
 import { pdfStandardV4 } from '../crypto/standardV4.js';
 import { pdfStandardV5 } from '../crypto/standardV5.js';
 import { pdfStandardV6 } from '../crypto/standardV6.js';
+import { pdfInfo } from '../metadata/info.js';
 
 export const pdfDocument = {
     name: 'pdfDocument',
@@ -65,15 +111,18 @@ export const pdfDocument = {
         'pdfXref', 'pdfTrailer',
         'pdfCatalog', 'pdfPage', 'pdfPages',
         'pdfCrossRefStream', 'pdfObjStream', 'pdfFilterDispatch',
-        'pdfSecurity', 'pdfStandardV4', 'pdfStandardV5', 'pdfStandardV6'
+        'pdfSecurity', 'pdfStandardV4', 'pdfStandardV5', 'pdfStandardV6', 'pdfInfo'
     ],
     deps: [pdfErrors, pdfTokenizer, pdfParser, pdfXref, pdfTrailer, pdfCatalog, pdfPage, pdfPages, pdfCrossRefStream, pdfObjStream, pdfFilterDispatch,
-        pdfSecurity, pdfStandardV4, pdfStandardV5, pdfStandardV6],
+        pdfSecurity, pdfStandardV4, pdfStandardV5, pdfStandardV6, pdfInfo],
     factory(errors, tokenizerMod, parserMod, xrefMod, trailerMod,
             catalogMod, pageMod, pagesMod,
             crossRefStreamMod, objStreamMod, filterDispatchMod,
-            securityMod, v4Mod, v5Mod, v6Mod) {
+            securityMod, v4Mod, v5Mod, v6Mod, infoMod) {
         const { ParseError, ContractError, EncryptionError } = errors;
+        // The deepest nesting of objects being resolved at once: a sound
+        // file needs a few (an object stream, its /Length).
+        const MAX_RESOLVE_DEPTH = 32;
         const tokenize = tokenizerMod && tokenizerMod.tokenize;
         const parseIndirect = parserMod && parserMod.parseIndirect;
         const locateStartXref = xrefMod && xrefMod.locateStartXref;
@@ -148,11 +197,12 @@ export const pdfDocument = {
          * (§7.5.8) and return its entries plus its dict, which doubles as
          * the section's trailer.
          */
-        function readXrefStreamSection(bytes, at) {
+        function readXrefStreamSection(bytes, at, end = true) {
             requireStreamWiring(at);
             const tok = tokenize(bytes, { start: at });
             const def = parseIndirect(tok, refuseIndirectLength);
             const streamObj = def.value;
+            checkStreamWindow(streamObj, bytes, end, null);
             const typeEntry = streamObj && streamObj.dict
                 && streamObj.dict.entries && streamObj.dict.entries.Type;
             if (!streamObj || streamObj.type !== 'stream'
@@ -404,12 +454,146 @@ export const pdfDocument = {
             };
         }
 
-        function readDocument(bytes, opts = {}) {
-            if (!(bytes instanceof Uint8Array)) {
-                throw new ParseError('pdf/document/bad-input',
-                    'readDocument expects a Uint8Array',
-                    { context: { 'typeof': typeof bytes } });
+        // A byte source is read by windows: the first SOURCE_WINDOW bytes
+        // (or `opts.sourceWindow`), doubled while a parse runs out of them,
+        // up to the parser's `maxStreamBytes` plus SOURCE_WINDOW_SLACK.
+        const SOURCE_WINDOW = 64 * 1024;
+        const SOURCE_WINDOW_MIN = 16;
+        const SOURCE_WINDOW_SLACK = 64 * 1024;
+        // `startxref` is looked for in the file's last STARTXREF_TAIL bytes
+        // (`pdfXref.locateStartXref`'s own window).
+        const STARTXREF_TAIL = 8192;
+
+        /** True for a byte source: `{ byteLength, read(offset, length) }`. */
+        function isSource(v) {
+            return !!v && typeof v === 'object' && !(v instanceof Uint8Array)
+                && Number.isSafeInteger(v.byteLength) && v.byteLength >= 0 && typeof v.read === 'function';
+        }
+
+        /** A window grew short of the parse: read a larger one. */
+        class WindowShort extends Error {}
+
+        /**
+         * The input as windows. `window(offset, length)` returns `{ bytes,
+         * base, end }`: bytes from `base` covering `offset` onward (a
+         * `Uint8Array` input is one window over the whole file), `end`
+         * true when they reach the file's end. `run(offset, parse)` hands
+         * `parse(bytes, at, end)` the window holding `offset` (`at` its
+         * place in the window), again with a doubled window while the parse
+         * throws a `ParseError` or `WindowShort` and the window does not
+         * reach the file's end; past the cap, `pdf/document/source-window`.
+         */
+        function inputOf(input, first) {
+            if (!isSource(input)) {
+                const whole = { bytes: input, base: 0, end: true };
+                return { size: input.length, window: () => whole, run: (offset, parse) => parse(input, offset, true) };
             }
+            const size = input.byteLength;
+            function window(offset, length) {
+                const n = Math.max(0, Math.min(length, size - offset));
+                const got = input.read(offset, n);
+                if (!(got instanceof Uint8Array)) {
+                    throw new ContractError('pdf/document/bad-source-read',
+                        'a byte source read must return a Uint8Array',
+                        { context: { offset, length: n, 'typeof': typeof got } });
+                }
+                return { bytes: got, base: offset, end: offset + got.length >= size };
+            }
+            function run(offset, parse) {
+                const cap = parserMod.parserLimits.maxStreamBytes + SOURCE_WINDOW_SLACK;
+                let length = Math.min(first, cap);
+                for (;;) {
+                    const w = window(offset, length);
+                    try {
+                        return parse(w.bytes, 0, w.end);
+                    } catch (err) {
+                        // At the file's end the parse saw what a whole-file
+                        // read sees: its error stands (a WindowShort is
+                        // never thrown there).
+                        if (w.end || !(err instanceof ParseError || err instanceof WindowShort)) throw err;
+                    }
+                    if (length >= cap) {
+                        throw new ParseError('pdf/document/source-window',
+                            'the object does not fit the largest window a byte source is read by',
+                            { context: { offset, window: length } });
+                    }
+                    length = Math.min(length * 2, cap);
+                }
+            }
+            return { size, window, run };
+        }
+
+        /**
+         * A stream parsed in a window that does not reach the file's end,
+         * whose declared `/Length` (direct, or resolved by `resolveRef`)
+         * runs past the window: the parse took the `endstream` scan, so
+         * the window was too short.
+         */
+        function checkStreamWindow(value, bytes, end, resolveRef) {
+            if (end || !value || value.type !== 'stream') return;
+            let len = value.dict && value.dict.entries && value.dict.entries.Length;
+            if (len && len.type === 'ref' && resolveRef) len = resolveRef(len);
+            if (len && len.type === 'int' && len.value > value.raw.length) {
+                throw new WindowShort('stream longer than its window');
+            }
+        }
+
+        const INFO_TEXT = [['Title', 'title'], ['Author', 'author'], ['Subject', 'subject'], ['Keywords', 'keywords'],
+            ['Creator', 'creator'], ['Producer', 'producer'], ['CreationDate', 'creationDate'], ['ModDate', 'modDate']];
+
+        /** The Info dictionary `node` (resolved) as text, or null (module header). */
+        function infoText(node, resolve) {
+            let dict;
+            try { dict = resolve(node); } catch { return null; }
+            if (!dict || dict.type !== 'dict') return null;
+            const out = {};
+            for (const [key, name] of INFO_TEXT) {
+                let v;
+                try { v = resolve(dict.entries[key]); } catch { continue; }
+                if (v && v.type === 'string' && v.value instanceof Uint8Array) out[name] = infoMod.decodeTextString(v.value);
+            }
+            let t;
+            try { t = resolve(dict.entries.Trapped); } catch { t = undefined; }
+            if (t && t.type === 'name') out.trapped = t.value;
+            else if (t && t.type === 'bool') out.trapped = t.value ? 'True' : 'False';
+            return out;
+        }
+
+        /** Page `page`'s content streams, decoded and joined with a newline (module header). */
+        function contentsOf(page, resolve) {
+            const parts = [];
+            for (const ref of page.contents || []) {
+                const s = resolve({ type: 'ref', num: ref.num, gen: ref.gen });
+                if (!s || s.type !== 'stream')
+                    throw new ParseError('pdf/document/bad-contents', `content ${ref.num} ${ref.gen} R is not a stream`, { context: { num: ref.num, gen: ref.gen } });
+                parts.push(filterDispatchMod.decode(s));
+            }
+            const size = parts.reduce((n, x) => n + x.length, 0) + Math.max(0, parts.length - 1);
+            const out = new Uint8Array(size);
+            let at = 0;
+            parts.forEach((x, k) => {
+                if (k) out[at++] = 0x0A;
+                out.set(x, at);
+                at += x.length;
+            });
+            return out;
+        }
+
+        function readDocument(input, opts = {}) {
+            if (!(input instanceof Uint8Array) && !isSource(input)) {
+                throw new ParseError('pdf/document/bad-input',
+                    'readDocument expects a Uint8Array or a byte source { byteLength, read(offset, length) }',
+                    { context: { 'typeof': input === null ? 'null' : typeof input } });
+            }
+            const sourceWindow = opts.sourceWindow;
+            if (sourceWindow !== undefined && !(Number.isSafeInteger(sourceWindow) && sourceWindow >= SOURCE_WINDOW_MIN)) {
+                throw new ContractError('pdf/document/bad-source-window-option',
+                    `opts.sourceWindow must be an integer of at least ${SOURCE_WINDOW_MIN}`,
+                    { context: { 'typeof': typeof sourceWindow } });
+            }
+            const fromSource = isSource(input);
+            const src = inputOf(input, sourceWindow === undefined ? SOURCE_WINDOW : sourceWindow);
+            const bytes = fromSource ? null : input;
             const password = opts.password;
             if (password !== undefined && typeof password !== 'string' && !(password instanceof Uint8Array)) {
                 throw new ContractError('pdf/document/bad-password-option',
@@ -429,7 +613,7 @@ export const pdfDocument = {
                     'opts.fastCipher must be a boolean',
                     { context: { 'typeof': fastCipher === null ? 'null' : typeof fastCipher } });
             }
-            const { version, end: headerEnd } = readHeader(bytes);
+            const { version, end: headerEnd } = readHeader(fromSource ? src.window(0, SOURCE_WINDOW).bytes : bytes);
 
             const xref = { entries: {}, sections: [] };
             // Read-path loss ledger: degradations the reader
@@ -439,12 +623,16 @@ export const pdfDocument = {
             // The startxref / /Prev walk (§7.5.5, §7.5.8); fills `xref` and
             // returns the typed, merged trailer.
             function walkChain() {
-                const sxAt = locateStartXref(bytes);
+                // Through a source, the file's last STARTXREF_TAIL bytes.
+                const tail = fromSource
+                    ? src.window(Math.max(0, src.size - STARTXREF_TAIL), STARTXREF_TAIL).bytes
+                    : bytes;
+                const sxAt = locateStartXref(tail);
                 if (sxAt < 0) {
                     throw new ParseError('pdf/document/no-startxref',
                         'startxref keyword not found near EOF');
                 }
-                const xrefAt = readStartXref(bytes, sxAt);
+                const xrefAt = readStartXref(tail, sxAt);
 
                 // Every section's trailer dict, in visit order (newest first).
                 const trailerDicts = [];
@@ -460,8 +648,28 @@ export const pdfDocument = {
                     if (seenSections.has(cursor)) break;
                     seenSections.add(cursor);
                     let dict;
-                    if (startsXrefTable(bytes, skipWhitespace(bytes, cursor))) {
-                        const section = parseXrefTable(bytes, cursor);
+                    // The section at `cursor`, a table with its trailer or a
+                    // stream, read in one window.
+                    const read = src.run(cursor, (b, at, end) => {
+                        if (startsXrefTable(b, skipWhitespace(b, at))) {
+                            const section = parseXrefTable(b, at);
+                            // A trailer that does not parse at the file's
+                            // end is thrown after the table is merged, as
+                            // a whole-file read does.
+                            let trailerError = null;
+                            let trailerDict;
+                            try {
+                                trailerDict = parseTrailerDict(b, section.end).dict;
+                            } catch (err) {
+                                if (!end) throw err;
+                                trailerError = err;
+                            }
+                            return { table: section, dict: trailerDict, trailerError };
+                        }
+                        return { stream: readXrefStreamSection(b, at, end) };
+                    });
+                    if (read.table) {
+                        const section = read.table;
                         for (const shape of section.tolerated || []) {
                             losses.push({
                                 code: 'pdf/document/xref-tolerated',
@@ -470,19 +678,20 @@ export const pdfDocument = {
                             });
                         }
                         mergeSection(cursor, 'table', section.entries);
-                        dict = parseTrailerDict(bytes, section.end).dict;
+                        if (read.trailerError) throw read.trailerError;
+                        dict = read.dict;
                         // Hybrid-reference file (§7.5.8.4): the trailer points at
                         // a companion xref stream holding the entries a 1.4 reader
                         // is not expected to see. Its own /Prev is ignored — the
                         // classical chain drives the walk.
                         const stmAt = dict && dict.entries && dict.entries.XRefStm;
                         if (stmAt && stmAt.type === 'int'
-                            && stmAt.value >= 0 && stmAt.value < bytes.length) {
-                            const hybrid = readXrefStreamSection(bytes, stmAt.value);
+                            && stmAt.value >= 0 && stmAt.value < src.size) {
+                            const hybrid = src.run(stmAt.value, (b, at, end) => readXrefStreamSection(b, at, end));
                             mergeSection(stmAt.value, 'stream', hybrid.entries);
                         }
                     } else {
-                        const section = readXrefStreamSection(bytes, cursor);
+                        const section = read.stream;
                         mergeSection(cursor, 'stream', section.entries);
                         dict = section.dict;
                     }
@@ -515,9 +724,10 @@ export const pdfDocument = {
                 trailerTyped = walkChain();
             } catch (err) {
                 // `recoverXref`: a chain that cannot be used is rebuilt from the
-                // bytes (opt-in; without it the walk's error stands).
-                if (opts.recoverXref !== true || !(err instanceof ParseError)) throw err;
-                const rebuilt = rebuildXref(bytes);
+                // bytes, unless the caller says `false` (then the walk's error
+                // stands). A source is read whole once for it.
+                if (opts.recoverXref === false || !(err instanceof ParseError)) throw err;
+                const rebuilt = rebuildXref(bytes || src.window(0, src.size).bytes);
                 xref.entries = rebuilt.entries;
                 xref.sections = [{ at: null, kind: 'rebuilt', entries: xref.entries }];
                 losses.push({
@@ -529,17 +739,34 @@ export const pdfDocument = {
             }
 
             if (trailerTyped.encrypt && opts.allowEncrypted !== true && password === undefined) {
-                // Fail-loud arm — the trailer carries /Encrypt but
-                // this package composes no decrypt path (deferred, see
-                // pdf/document/document.js @fileoverview). Returning the
-                // model here would silently hand back ciphertext for
-                // strings/streams. Callers that actually want the raw
-                // encrypted container (tests, tooling) opt in explicitly.
-                throw new ParseError('pdf/document/encrypted',
-                    'document is encrypted (trailer /Encrypt present) — ' +
-                    'no decrypt path is composed for readDocument; pass ' +
-                    '{ allowEncrypted: true } to read the raw ciphertext container',
+                // No password given: the empty one is tried, as the user then
+                // as the owner (the common file whose owner password only
+                // restricts printing or copying), unless `emptyPassword:
+                // false`. A file it does not open is refused: returning the
+                // model would hand back ciphertext for strings and streams.
+                const refused = new ParseError('pdf/document/encrypted',
+                    'document is encrypted (trailer /Encrypt present) and the empty password does not open it — ' +
+                    'pass { password } to decrypt it, or { allowEncrypted: true } to read the raw ciphertext container',
                     { context: { encrypt: trailerTyped.encrypt } });
+                if (opts.emptyPassword === false) throw refused;
+                let opened;
+                try {
+                    opened = readDocument(input, { ...opts, password: '' });
+                } catch {
+                    throw refused;
+                }
+                // The typed trailer's `encrypt` is `{ num, gen }`, or the
+                // dictionary itself when it is direct.
+                const er = opened.trailer.encrypt;
+                const encNode = er && er.type === 'dict' ? er
+                    : opened._raw.resolve({ type: 'ref', num: er.num, gen: er.gen });
+                const p = encNode && encNode.type === 'dict' && encNode.entries.P ? encNode.entries.P.value : null;
+                opened.losses.push({
+                    code: 'pdf/document/opened-with-empty-password',
+                    message: 'the document is encrypted; it was opened with the empty password',
+                    context: { permissions: p }
+                });
+                return opened;
             }
 
             const indirects = new Map();
@@ -549,14 +776,49 @@ export const pdfDocument = {
             // Decoded members of every /Type /ObjStm container touched by
             // this read — one decode + parse per container, per document.
             const objStmMembers = new Map();
+            // Keys of the objects being resolved now, innermost last. A
+            // stream's indirect /Length is resolved while the stream is
+            // parsed, so a /Length that names the stream itself (qpdf's
+            // issue-117.pdf), or a container that names one of its own
+            // members, would re-enter without end.
+            const resolving = new Set();
 
             function resolve(ref) {
                 if (!ref || ref.type !== 'ref') return ref;
                 return resolveByKey(ref.num, ref.gen);
             }
+            /**
+             * Object `num gen`, through the re-entry guard: a reference to
+             * an object being resolved reads as null, recorded as
+             * `pdf/document/reference-cycle` (a null /Length falls to the
+             * `endstream` scan); a nesting deeper than
+             * `MAX_RESOLVE_DEPTH` throws `pdf/document/resolve-too-deep`.
+             */
             function resolveByKey(num, gen) {
                 const key = num + ':' + gen;
                 if (indirects.has(key)) return indirects.get(key).value;
+                if (resolving.has(key)) {
+                    recordLoss('cycle:' + key, {
+                        code: 'pdf/document/reference-cycle',
+                        message: `object ${num} ${gen} is referenced while it is being read; ` +
+                            'the reference reads as null',
+                        context: { num, gen }
+                    });
+                    return PDF_NULL;
+                }
+                if (resolving.size >= MAX_RESOLVE_DEPTH) {
+                    throw new ParseError('pdf/document/resolve-too-deep',
+                        `object ${num} ${gen} nests more than ${MAX_RESOLVE_DEPTH} objects being read`,
+                        { context: { num, gen, depth: resolving.size } });
+                }
+                resolving.add(key);
+                try {
+                    return resolveUnguarded(num, gen, key);
+                } finally {
+                    resolving.delete(key);
+                }
+            }
+            function resolveUnguarded(num, gen, key) {
                 let entry = xref.entries[num];
                 if (!entry) {
                     throw new ParseError('pdf/document/missing-xref',
@@ -573,13 +835,19 @@ export const pdfDocument = {
                     return value;
                 }
                 const offset = entry.offset;
-                if (offset <= 0 || offset >= bytes.length) {
+                if (offset <= 0 || offset >= src.size) {
                     throw new ParseError('pdf/document/bad-offset',
                         `object ${num} ${gen} xref offset out of range`,
-                        { context: { num, gen, offset, total: bytes.length } });
+                        { context: { num, gen, offset, total: src.size } });
                 }
-                const tok = tokenize(bytes, { start: offset });
-                const def = parseIndirect(tok, resolve);
+                const def = src.run(offset, (b, at, end) => {
+                    const d = parseIndirect(tokenize(b, { start: at }), resolve);
+                    checkStreamWindow(d.value, b, end, resolve);
+                    // Through a source, a stream keeps its own bytes, not
+                    // its window's.
+                    if (fromSource && d.value && d.value.type === 'stream') d.value = { ...d.value, raw: d.value.raw.slice() };
+                    return d;
+                });
                 if (def.num !== num || def.gen !== gen) {
                     throw new ParseError('pdf/document/xref-mismatch',
                         `xref points to a different object`,
@@ -715,12 +983,17 @@ export const pdfDocument = {
                 trailer: trailerTyped,
                 xref,
                 losses,
-                _raw: {
-                    resolve,
-                    bytes,
-                    headerEnd,
-                    indirects
-                }
+                resolve,
+                info: () => (trailerTyped && trailerTyped.info ? infoText({ type: 'ref', num: trailerTyped.info.num, gen: trailerTyped.info.gen }, resolve) : null),
+                pageContents(i) {
+                    if (!Number.isInteger(i) || i < 0 || i >= pages.length)
+                        throw new ContractError('pdf/document/bad-page-index', `no page ${i} (the document has ${pages.length})`, { context: { index: i, pages: pages.length } });
+                    return contentsOf(pages[i], resolve);
+                },
+                // A byte-source read carries `source`, never `bytes`.
+                _raw: fromSource
+                    ? { resolve, source: input, headerEnd, indirects }
+                    : { resolve, bytes, headerEnd, indirects }
             };
         }
 

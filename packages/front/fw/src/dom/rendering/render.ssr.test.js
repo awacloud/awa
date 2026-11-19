@@ -130,6 +130,14 @@ describe('render.toHTML (SSR)', () => {
         expect(html).not.toMatch(/href=/);
     });
 
+    test('keeps a parameter-less data:image/svg+xml, src (RFC 2397)', () => {
+        const { r, p } = setup();
+        const tpl = p.fromHTML('<img src="#{u}">');
+        const svg = 'data:image/svg+xml,%3Csvg%2F%3E';
+        const html = r.toHTML(tpl, { u: svg });
+        expect(html).toContain('src="' + svg + '"');
+    });
+
     test('blocks DOM clobbering names', () => {
         const { r, p } = setup();
         const tpl = p.fromHTML('<input name="#{n}">');
@@ -196,6 +204,51 @@ describe('render.toHTML (SSR)', () => {
         expect(html).toContain('C');
         // Three <li>
         expect(html.match(/<li[\s>]/g)).toHaveLength(3);
+    });
+
+    describe('iterate rows carry data-fw-row', () => {
+        test('each row root gets its 0-based index; data-fw-id is unchanged', () => {
+            const { r, p } = setup();
+            const tpl = p.fromHTML('<ul id="list"><!-- $row --><li id="item"><b>#{t}</b></li><!-- row$ --></ul>');
+            const html = r.toHTML(tpl, {}, { iterates: { row: [{ t: 'A' }, { t: 'B' }, { t: 'C' }] } });
+            expect(html.match(/<li data-fw-id="item" data-fw-row="\d+">/g)).toEqual([
+                '<li data-fw-id="item" data-fw-row="0">',
+                '<li data-fw-id="item" data-fw-row="1">',
+                '<li data-fw-id="item" data-fw-row="2">',
+            ]);
+            // only the row roots: not the list, not the row's descendants
+            expect(html.match(/data-fw-row/g)).toHaveLength(3);
+            expect(html).toContain('<ul data-fw-id="list">');
+        });
+
+        test('a multi-root row gives its index to each root', () => {
+            const { r, p } = setup();
+            const tpl = p.fromHTML('<dl><!-- $row --><dt>#{k}</dt><dd>#{v}</dd><!-- row$ --></dl>');
+            const html = r.toHTML(tpl, {}, { iterates: { row: [{ k: 'a', v: '1' }, { k: 'b', v: '2' }] } });
+            expect(html.match(/<(dt|dd)[^>]*data-fw-row="(\d)"/g).map(m => m.replace(/ data-fw-id="[^"]*"/, '')))
+                .toEqual(['<dt data-fw-row="0"', '<dd data-fw-row="0"', '<dt data-fw-row="1"', '<dd data-fw-row="1"']);
+        });
+
+        test('the idPrefix applies to data-fw-id only', () => {
+            const { r, p } = setup();
+            const tpl = p.fromHTML('<ul><!-- $row --><li id="it">#{t}</li><!-- row$ --></ul>');
+            const html = r.toHTML(tpl, {}, { idPrefix: 'app', iterates: { row: [{ t: 'x' }] } });
+            expect(html).toContain('<li data-fw-id="app:it" data-fw-row="0">');
+        });
+
+        test('hydrate: false emits neither marker', () => {
+            const { r, p } = setup();
+            const tpl = p.fromHTML('<ul><!-- $row --><li>#{t}</li><!-- row$ --></ul>');
+            const html = r.toHTML(tpl, {}, { hydrate: false, iterates: { row: [{ t: 'x' }, { t: 'y' }] } });
+            expect(html).not.toContain('data-fw-row');
+            expect(html).not.toContain('data-fw-id');
+        });
+
+        test('an empty row set emits no marker', () => {
+            const { r, p } = setup();
+            const tpl = p.fromHTML('<ul><!-- $row --><li>#{t}</li><!-- row$ --></ul>');
+            expect(r.toHTML(tpl, {}, { iterates: { row: [] } })).not.toContain('data-fw-row');
+        });
     });
 
     test('default + prepend bindings work in attributes', () => {

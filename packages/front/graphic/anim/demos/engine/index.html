@@ -1,0 +1,107 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — engine demo</title>
+
+    <!-- 1. SANITY LOCKDOWN — first, before any application module. -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 2. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 2bis. Surface-local layout only (no palette redeclaration). -->
+    <style>
+        #mount { width: 100%; height: 180px; }
+        ul.legend {
+            list-style: none;
+            margin: 16px 0 0;
+            padding: 0;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        ul.legend li { margin: 2px 0; }
+    </style>
+</head>
+
+<body data-demo="engine">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to demos</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>Engine — tween + timeline + stagger</h1>
+        <p class="demo-lede">A handful of real <code>&lt;svg&gt;</code> shapes animated
+            through the <code>graphic.anim</code> aggregate: a single tween, a
+            sequenced timeline, and a staggered group.</p>
+    </header>
+
+    <p class="demo-note" style="margin-top:0;">Variant: <code id="variant-label">…</code></p>
+
+    <div class="demo-stage">
+        <svg id="mount" viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="demo-controls">
+        <button type="button" id="restart">Restart</button>
+    </div>
+
+    <ul class="legend">
+        <li>Blue → orange dot: a single tween, position + color, eased.</li>
+        <li>Green bars: one timeline, 3 tweens in sequence.</li>
+        <li>Purple dots: one timeline, staggered per-element delay.</li>
+    </ul>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/demos/engine/</code></p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+
+<!-- 3. ENTRY — the `run()` contract. -->
+<script type="module">
+    import { boot } from '../_boot.js';
+    import { run } from './main.js';
+
+    const mount = document.getElementById('mount');
+    const variantLabel = document.getElementById('variant-label');
+    const restartButton = document.getElementById('restart');
+
+    /** @type {{ dispose(): void }|null} */
+    let handle = null;
+
+    async function start() {
+        if (handle) {
+            handle.dispose();
+            handle = null;
+        }
+        while (mount.firstChild) mount.removeChild(mount.firstChild);
+
+        const { anim, variant } = await boot();
+        variantLabel.textContent = variant;
+        handle = await run({ mount, anim, variant });
+        // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+        requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+    }
+
+    restartButton.addEventListener('click', () => { start(); });
+
+    start();
+</script>
+</body>
+</html>

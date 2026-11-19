@@ -12,7 +12,7 @@
  *
  * Two steps, both pure:
  *
- * 1. {@link flowBlocks} flattens an `oconv-ir/v1` document into a linear
+ * 1. {@link flowBlocks} flattens an `oconv-ir/v2` document into a linear
  *    sequence of {@link FlowBlock} records — text blocks carry their broken
  *    `lines` (`ctx.linebreak.breakInlines`), delegated blocks carry
  *    the `items` their renderer produced.
@@ -295,7 +295,7 @@ export const oconvPdfStack = {
         }
 
         /**
-         * Flatten an `oconv-ir/v1` document into flow blocks.
+         * Flatten an `oconv-ir/v2` document into flow blocks.
          *
          * Production fidelity for the kinds this module owns:
          *
@@ -330,7 +330,7 @@ export const oconvPdfStack = {
          * renderer losses, unhandled IR kinds) are appended to `ctx.losses`,
          * each carrying the offending block's `index` and `kind`.
          *
-         * @param {object} irDoc `oconv-ir/v1` node with block `children`.
+         * @param {object} irDoc `oconv-ir/v2` node with block `children`.
          * @param {Ctx} ctx
          * @returns {FlowBlock[]}
          * @throws {Error} `oconv: pdf stack needs ctx.<member>` when
@@ -373,7 +373,21 @@ export const oconvPdfStack = {
                 if (spec.ruleX !== null && spec.ruleX !== undefined) {
                     block.rule = { x: spec.ruleX, width: QUOTE_RULE_WIDTH };
                 }
+                if (spec.tag) block.tag = spec.tag;
                 return block;
+            }
+
+            /**
+             * The structure path of an element of `type` keyed `key` under
+             * `path`, or null when the document is not tagged.
+             *
+             * @param {object[]|null} path
+             * @param {string} key
+             * @param {string} type
+             * @returns {object[]|null}
+             */
+            function tagUnder(path, key, type) {
+                return path ? [...path, { key, type }] : null;
             }
 
             /**
@@ -390,11 +404,14 @@ export const oconvPdfStack = {
              * @param {string} index Dotted path for this block.
              * @param {number} indent Points.
              * @param {number|null} ruleX Enclosing quote's rule x, or `null`.
+             * @param {object[]|null} path The structure path the block's
+             *   elements go under, or null when the document is not tagged.
              */
-            function delegate(node, index, indent, ruleX) {
+            function delegate(node, index, indent, ruleX, path) {
                 const kind = node && node.kind;
                 if (typeof ctx.render !== 'function') throw needsCtx('render');
                 const childCtx = { ...ctx, index, indent, kind };
+                if (path) childCtx.tagPath = path;
                 const rendered = ctx.render(node, childCtx) || {};
                 const items = rendered.items || [];
                 for (const loss of rendered.losses || []) losses.push({ index, kind, ...loss });
@@ -454,9 +471,10 @@ export const oconvPdfStack = {
              * @param {string} index The owning text block's index.
              * @param {number} indent Points.
              * @param {number|null} ruleX
+             * @param {object[]|null} path
              */
-            function emitInlineImages(images, index, indent, ruleX) {
-                images.forEach((img, n) => delegate(img, index + '.i' + n, indent, ruleX));
+            function emitInlineImages(images, index, indent, ruleX, path) {
+                images.forEach((img, n) => delegate(img, index + '.i' + n, indent, ruleX, path));
             }
 
             /**
@@ -466,20 +484,23 @@ export const oconvPdfStack = {
              * @param {string} index Dotted path.
              * @param {number} indent Points.
              * @param {number|null} ruleX Enclosing quote's rule x, or `null`.
+             * @param {object[]|null} path The structure path of the
+             *   enclosing element, or null when the document is not tagged.
              */
-            function emit(node, index, indent, ruleX) {
+            function emit(node, index, indent, ruleX, path) {
                 const kind = node && node.kind;
                 switch (kind) {
                     case 'heading': {
                         const sizePt = layout.sizeFor('heading', node.level);
                         const split = partitionInlines(node.children);
+                        const level = Number.isFinite(node.level) ? Math.min(6, Math.max(1, Math.trunc(node.level))) : 1;
                         blocks.push(textBlock({
                             index, kind, inlines: split.runs, sizePt, indent,
                             spaceBefore: HEADING_SPACE_BEFORE * sizePt,
                             spaceAfter: HEADING_SPACE_AFTER * sizePt,
-                            keepTogether: true, ruleX
+                            keepTogether: true, ruleX, tag: tagUnder(path, index, `H${level}`)
                         }));
-                        emitInlineImages(split.images, index, indent, ruleX);
+                        emitInlineImages(split.images, index, indent, ruleX, path);
                         break;
                     }
                     case 'paragraph': {
@@ -489,9 +510,9 @@ export const oconvPdfStack = {
                             index, kind, inlines: split.runs, sizePt, indent,
                             spaceBefore: 0,
                             spaceAfter: PARAGRAPH_SPACE_AFTER * sizePt,
-                            keepTogether: false, ruleX
+                            keepTogether: false, ruleX, tag: tagUnder(path, index, 'P')
                         }));
-                        emitInlineImages(split.images, index, indent, ruleX);
+                        emitInlineImages(split.images, index, indent, ruleX, path);
                         break;
                     }
                     case 'blockquote': {
@@ -501,8 +522,9 @@ export const oconvPdfStack = {
                         // no italic override.
                         const childIndent = indent + INDENT_STEP;
                         const barX = layout.margin + indent;
+                        const quotePath = tagUnder(path, index, 'BlockQuote');
                         (node.children || []).forEach((kid, i) => {
-                            emit(kid, `${index}.${i}`, childIndent, barX);
+                            emit(kid, `${index}.${i}`, childIndent, barX, quotePath);
                         });
                         break;
                     }
@@ -522,7 +544,7 @@ export const oconvPdfStack = {
                     case 'codeBlock':
                     case 'table':
                     case 'image':
-                        delegate(node, index, indent, ruleX);
+                        delegate(node, index, indent, ruleX, path);
                         break;
                     default:
                         losses.push({
@@ -536,8 +558,11 @@ export const oconvPdfStack = {
             const baseIndent = Number.isFinite(ctx.indent) ? ctx.indent : 0;
             const prefix = ctx.indexPrefix === undefined || ctx.indexPrefix === null ? '' : String(ctx.indexPrefix);
             const baseRuleX = ctx.ruleX === undefined ? null : ctx.ruleX;
+            // A tagged document's structure path (`ctx.tagPath`, set by the
+            // facade under PDF/UA): each block's elements go under it.
+            const basePath = Array.isArray(ctx.tagPath) ? ctx.tagPath : null;
             ((irDoc && irDoc.children) || []).forEach((node, i) => {
-                emit(node, prefix === '' ? String(i) : `${prefix}.${i}`, baseIndent, baseRuleX);
+                emit(node, prefix === '' ? String(i) : `${prefix}.${i}`, baseIndent, baseRuleX, basePath);
             });
             return blocks;
         }
@@ -601,6 +626,7 @@ export const oconvPdfStack = {
                     kind: block.kind
                 };
                 if (first && words.every((t) => t.link === first)) item.link = first;
+                if (block.tag) item.tag = block.tag;
                 page.items.push(item);
             };
 

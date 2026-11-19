@@ -5,15 +5,13 @@ using the official `FwWebpackPlugin` (scheme-based virtual modules, zero custom 
 
 ## Run
 
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
+
 ```sh
-npm i && npx webpack && npx serve --no-clean-urls dist
+bun install && bun run start
 ```
 
-Run from this directory. `--no-clean-urls` avoids `serve`'s default
-extension-redirect behaviour. Then open the served URL — the page (and the
-console) prints the preset's module list and the resolved `errors` module
-type. The build writes `dist/bundle.js` and copies `index.html` into
-`dist/` so `serve --no-clean-urls dist` is self-contained.
+`webpack` writes `dist/` (the bundle and the copied page) and the in-repo static server serves it at http://127.0.0.1:4800/. With `sanity: 'base'` the plugin injects `dist/build/sanity-base-classic.min.js`, which `bun run setup:playground` builds.
 
 ## What it shows
 

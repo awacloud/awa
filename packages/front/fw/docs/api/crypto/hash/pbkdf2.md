@@ -84,7 +84,7 @@ const worker = fw.createWorker(
 
 - **Default 600 000 iter** (OWASP 2023). `count < 100000` emits `console.warn('WEAK')` but does not abort (compat with KAT vectors).
 - **`length=0`** returns `[]` (audit post-upgrade Finding 4 — previously returned a phantom block).
-- **SP 800-132 limits**: `count ≥ 1000` + `length ≤ (2³² - 1) × hashLen`. No explicit validation beyond the `WEAK` warning.
+- **SP 800-132 limits**: `count ≥ 1000` + `length ≤ (2³² - 1) × hashLen`. A count below 1 (or `NaN`) returns `false` (RFC 8018 §5.2: a positive integer); below 100 000 only the `WEAK` warning.
 
 ## See also
 

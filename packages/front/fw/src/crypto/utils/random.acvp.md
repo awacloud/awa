@@ -38,7 +38,7 @@ Two surfaces:
    - **Continuous health tests (SP 800-90B)**: RCT (C=4) + APT (W=512,
      C=13), permanent latch-dead on failure.
 
-API: `random.factory(bitArray, aes, sha256)`; `_internal.makeDrbg()`
+API: `random.factory(bitArray, aes, sha256)`; `internalOf(random).makeDrbg()`
 exposed for ACVP replay with controlled entropy (test-only,
 **out-of-band for production**).
 
@@ -109,10 +109,10 @@ Each vector executes the SP 800-90A §10.2.1 spec sequence:
 - [x] **SHA-256 folding** — additional input > 48 bytes folded to 32
   bytes (buffer bounding).
 - [x] **CTR_DRBG with df (derivation function, SP 800-90A §10.4.2)** —
-  **Iteration H4**: `_makeDrbg({ aesKeyBits, df: true })` implements a full
+  `_makeDrbg({ aesKeyBits, df: true })` implements a full
   BCC + Block_Cipher_df. Allows entropy / nonce / perso of arbitrary
   length to be distilled to seedlen.
-- [x] **CTR_DRBG-AES-128/192** — **Iteration H4**: parametric `_makeDrbg({
+- [x] **CTR_DRBG-AES-128/192** — parametric `_makeDrbg({
   aesKeyBits: 128|192|256, df })`. KEY_BYTES = aesKeyBits/8 and SEED_BYTES =
   KEY_BYTES + 16 derived at runtime. `ctrDRBG-1.0` ACVP vectors with
   predResistance=false validated byte-exact for 5 combos (AES-128/192 ×
@@ -148,7 +148,7 @@ Each vector executes the SP 800-90A §10.2.1 spec sequence:
   consistent 256-bit security strength. 90 ACVP vectors filtered out.
 - **HMAC_DRBG / Hash_DRBG** (SP 800-90A §10.1): not implemented.
   CTR_DRBG was chosen to reuse the already-validated AES block.
-- **`_internal.makeDrbg`**: test-only surface exposing the constructor
+- **`internalOf(random).makeDrbg`**: test-only surface exposing the constructor
   without automatic seeding. Documented in a comment; **must not be
   called from application code** — the FIPS lifecycle (POST + RCT/APT +
   OS NRBG seeding) is only guaranteed via `drbg()`.
@@ -160,7 +160,7 @@ Each vector executes the SP 800-90A §10.2.1 spec sequence:
 ## Cross-references
 
 - Module: [`utils/random.js`](./random.js)
-- Tests: [`utils/random.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/utils/random.test.js) — **80 tests** (65 baseline + 15 iteration H4: CTR_DRBG-AES-{128,192} no-df + AES-{128,192,256} with-df, [first/mid/last] sub-sample by default, 140 under `CRYPTO_FULL=1`)
+- Tests: [`utils/random.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/utils/random.test.js) — **80 tests** (65 baseline + 15 more: CTR_DRBG-AES-{128,192} no-df + AES-{128,192,256} with-df, [first/mid/last] sub-sample by default, 140 under `CRYPTO_FULL=1`)
 - ACVP draft: `references/NIST/ACVP/src/draft-vassilev-acvp-drbg.adoc`
 - Vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ctrDRBG-1.0/`
 - Underlying AES: [`../cipher/aes.acvp.md`](../cipher/aes.acvp.md)

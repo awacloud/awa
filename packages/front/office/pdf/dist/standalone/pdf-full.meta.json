@@ -27,6 +27,7 @@
     "pdfAesGcm",
     "pdfStandardV5",
     "pdfStandardV6",
+    "pdfInfo",
     "pdfDocument",
     "pdfWriter",
     "pdf",
@@ -57,12 +58,13 @@
     "pdfJbig2Read",
     "pdfMisc",
     "pdfInfoDictDeprecated",
-    "pdfSandbox"
+    "pdfSandbox",
+    "pdfCryptPublicKey"
   ],
   "fwDependencies": [],
   "bytes": {
-    "dev": 570299,
-    "min": 324675
+    "dev": 643163,
+    "min": 365170
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

@@ -30,6 +30,7 @@
     "exclude": [
         "src/**/*.test.js",
         "src/**/*.kat.js",
+        "src/**/*.reference.js",
         "src/**/*.test.html",
         "src/typed.js",
         "src/**/__fixtures__/**",

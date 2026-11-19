@@ -24,10 +24,11 @@ Live DOM nodes
 | [parser](./parser.md) | HTML ↔ elm-array | `secPolicy` |
 | [render](./render.md) | Data transformer (no DOM) | `secPolicy` |
 | [sanitize](./sanitize.md) | Allowlist-based HTML sanitiser (XSS) | `secPolicy` |
-| [template](./template.md) | DOM engine, contexts, catalogue | `secPolicy` |
-| [themeTokens](./themeTokens.md) | CSS Custom Properties design tokens | `dom` |
+| [template](./template.md) | DOM engine, contexts, catalogue | `secPolicy`, `styleSheet` |
+| [themeTokens](./themeTokens.md) | CSS Custom Properties design tokens | `dom`, `styleSheet` |
+| [styleSheet](./styleSheet.md) | Attach CSS text as a `<style>` element or a constructable stylesheet | none |
 | [uiSession](./uiSession.md) | High-level facade | `uiSessionCore`, `uiSessionDirect`, `uiSessionList` |
-| [component](./component.md) | Reusable component (template + state + lifecycle) | none |
+| [component](./component.md) | Reusable component (template + state + lifecycle) | `reactiveBind`, `styleSheet` |
 | [reactiveBind](./reactiveBind.md) | Explicit signal→DOM binding controller (patch via uiSession, no re-render) | `signal` |
 | [virtualScroll](./virtualScroll.md) | Virtualised list for 10⁴–10⁶ items | `dom`, `events` |
 | [chart](./chart.md) | Canvas 2D charts — line, area, bar, sparkline | `dom`, `animate`, `stats`, `linalg` |

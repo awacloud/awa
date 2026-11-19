@@ -76,7 +76,7 @@ const dct = (entries = {}) => image(PX_JPEG, { Filter: obj.name('DCTDecode'), ..
  * resource name to `{ num, value, gen? }` (each written as its own object);
  * `extra` adds objects; `catalog` adds catalog entries.
  */
-function genPdf(content, xobjects = {}, { extra = [], catalog = {} } = {}) {
+function genPdf(content, xobjects = {}, { extra = [], catalog = {}, resources = {} } = {}) {
     const xo = {};
     const indirects = [
         { num: 1, gen: 0, value: obj.dict({ Type: obj.name('Catalog'), Pages: obj.ref(2, 0), ...catalog }) },
@@ -88,7 +88,7 @@ function genPdf(content, xobjects = {}, { extra = [], catalog = {} } = {}) {
         xo[name] = obj.ref(x.num, x.gen || 0);
         indirects.push({ num: x.num, gen: x.gen || 0, value: x.value });
     }
-    const res = { Font: obj.dict({ F1: obj.ref(5, 0) }) };
+    const res = { Font: obj.dict({ F1: obj.ref(5, 0) }), ...resources };
     if (Object.keys(xo).length) res.XObject = obj.dict(xo);
     indirects.push({ num: 3, gen: 0, value: obj.dict({
         Type: obj.name('Page'), Parent: obj.ref(2, 0),
@@ -168,7 +168,6 @@ describe('oconvPdfToIr — include: images, the untagged path', () => {
 
     test('every other picture keeps image/dropped and no IR image', () => {
         const cases = [
-            image(new Uint8Array([0, 0, 0, 0]), { ColorSpace: obj.name('DeviceCMYK') }),
             dct({ ImageMask: obj.bool(true) }),
             dct({ Decode: obj.array([obj.int(1), obj.int(0)]) }),
             image(PX_JPEG, { Filter: obj.array([obj.name('DCTDecode'), obj.name('FlateDecode')]) }),
@@ -182,11 +181,15 @@ describe('oconvPdfToIr — include: images, the untagged path', () => {
         }
     });
 
-    test('an inline image stays dropped', () => {
-        const inline = 'q 10 0 0 10 72 500 cm BI /W 1 /H 1 /CS /G /BPC 8 ID \x80 EI Q\n';
-        const { ir, losses } = read(genPdf(text(720, 'Inline.') + inline), IMAGES);
-        expect(kinds(ir)).toEqual(['paragraph']);
-        expect(losses).toEqual([{ code: 'image/dropped', detail: 'inline (1x1)' }]);
+    test('an inline image mask, and an inline image without the option, stay dropped', () => {
+        const mask = 'q 10 0 0 10 72 500 cm BI /W 1 /H 1 /IM true ID A EI Q\n';
+        const masked = read(genPdf(text(720, 'Inline.') + mask), IMAGES);
+        expect(kinds(masked.ir)).toEqual(['paragraph']);
+        expect(masked.losses).toEqual([{ code: 'image/dropped', detail: 'inline (1x1)' }]);
+        const inline = 'q 10 0 0 10 72 500 cm BI /W 1 /H 1 /CS /G /BPC 8 ID A EI Q\n';
+        const without = read(genPdf(text(720, 'Inline.') + inline));
+        expect(kinds(without.ir)).toEqual(['paragraph']);
+        expect(without.losses).toEqual([{ code: 'image/dropped', detail: 'inline (1x1)' }]);
     });
 
     test('a default Decode array is accepted', () => {
@@ -460,5 +463,113 @@ describe('oconvPdfToIr — include: images, raw pixels written as PNG', () => {
         const r = await oconvApi.toMd({ name: 'p.pdf', bytes: between({ value: rgb(1, 1, [1, 2, 3]) }), convertedAt: FIXED_AT, pdfInclude: ['images'] });
         expect(r.markdown).toContain('](image-7.png)');
         expect(readPng(r.assets[0].bytes).rows.map((x) => [...x])).toEqual([[1, 2, 3]]);
+    });
+});
+
+// T26 — inline images and raw CMYK pictures, under `include: ['images']`.
+
+describe('oconvPdfToIr — include: images, inline images (T26)', () => {
+    const at = (bi) => `q 10 0 0 10 72 500 cm ${bi} Q\n`;
+    /** The placed inline picture of `bi`, its PNG read back (or null), and the read's losses. */
+    function inlinePng(bi, opts = {}) {
+        const { ir, losses } = read(genPdf(text(720, 'Inline.') + at(bi), {}, opts), IMAGES);
+        const img = ir.children.find((n) => n.kind === 'image');
+        return { ir, img, losses, png: img && img.escapes.pdf.contentType === 'image/png' ? readPng(img.escapes.pdf.bytes) : null };
+    }
+    const pixels = (png) => png.rows.map((r) => [...r]);
+
+    test('a grey inline image is placed as a PNG, named by its bytes', () => {
+        const { ir, img, losses, png } = inlinePng('BI /W 1 /H 1 /CS /G /BPC 8 ID A EI');
+        expect(validate(ir).ok).toBe(true);
+        expect(kinds(ir)).toEqual(['paragraph', 'image']);
+        expect(losses).toEqual([]);
+        expect(img.name).toMatch(/^image-inline-[0-9a-f]{8}\.png$/);
+        expect(png.colorType).toBe(0);
+        expect(pixels(png)).toEqual([[65]]);
+    });
+
+    test('abbreviated keys, names and filters: an ASCIIHex RGB image', () => {
+        const { png } = inlinePng('BI /W 2 /H 1 /CS /RGB /BPC 8 /F /AHx ID FF000000FF00> EI');
+        expect(png.colorType).toBe(2);
+        expect(pixels(png)).toEqual([[255, 0, 0, 0, 255, 0]]);
+    });
+
+    test('a colour space named in the resources: an Indexed palette', () => {
+        const cs = obj.array([obj.name('Indexed'), obj.name('DeviceRGB'), obj.int(1), obj.string(new Uint8Array([255, 0, 0, 0, 0, 255]))]);
+        const resources = { ColorSpace: obj.dict({ CS0: cs }) };
+        const { png, losses } = inlinePng('BI /W 2 /H 1 /CS /CS0 /BPC 8 /F /AHx ID 0001> EI', { resources });
+        expect(losses).toEqual([]);
+        expect(png.colorType).toBe(3);
+        expect([...png.palette]).toEqual([255, 0, 0, 0, 0, 255]);
+        expect(pixels(png)).toEqual([[0, 1]]);
+    });
+
+    test('an inline JPEG passes through', () => {
+        const hex = [...PX_JPEG].map((v) => v.toString(16).padStart(2, '0')).join('') + '>';
+        const { img, losses } = inlinePng(`BI /W 1 /H 1 /CS /G /BPC 8 /F [/AHx /DCT] ID ${hex} EI`);
+        expect(losses).toEqual([]);
+        expect(img.name).toMatch(/^image-inline-[0-9a-f]{8}\.jpg$/);
+        expect(img.escapes.pdf.contentType).toBe('image/jpeg');
+        expect([...img.escapes.pdf.bytes]).toEqual([...PX_JPEG]);
+    });
+
+    test('the same inline picture drawn twice is one asset; another one is a second', async () => {
+        const content = text(720, 'Twice.') + at('BI /W 1 /H 1 /CS /G /BPC 8 ID A EI') + at('BI /W 1 /H 1 /CS /G /BPC 8 ID A EI')
+            + at('BI /W 1 /H 1 /CS /G /BPC 8 ID B EI');
+        const r = await oconvApi.toMd({ name: 'p.pdf', bytes: genPdf(content), convertedAt: FIXED_AT, pdfInclude: ['images'] });
+        expect(r.assets.length).toBe(2);
+        expect(r.assets.map((a) => pixels(readPng(a.bytes)))).toEqual([[[65]], [[66]]]);
+        expect(r.markdown.match(/\]\(image-inline-/g).length).toBe(3);
+    });
+});
+
+describe('oconvPdfToIr — include: images, raw CMYK converted to RGB (T26)', () => {
+    /** The placed picture's PNG, read back. */
+    function png(xobject, extra = []) {
+        const { ir } = read(genPdf(text(720, 'Pixels.') + DRAW, { Im1: { num: 7, value: xobject } }, { extra }), IMAGES);
+        const img = ir.children.find((n) => n.kind === 'image');
+        return img ? readPng(img.escapes.pdf.bytes) : null;
+    }
+    const cmyk = (w, h, bytes, entries = {}) => image(new Uint8Array(bytes), { Width: obj.int(w), Height: obj.int(h), ColorSpace: obj.name('DeviceCMYK'), ...entries });
+    const pixels = (p) => p.rows.map((r) => [...r]);
+    // White, cyan, black, and a 50 % grey of k.
+    const SAMPLES = [0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 128];
+    const RGB = [255, 255, 255, 0, 255, 255, 0, 0, 0, 127, 127, 127];
+
+    test('DeviceCMYK: r = 255 (1 - c)(1 - k), and so on', () => {
+        const p = png(cmyk(4, 1, SAMPLES));
+        expect(p).toMatchObject({ colorType: 2, bitDepth: 8 });
+        expect(pixels(p)).toEqual([RGB]);
+    });
+
+    test('Decode [1 0 1 0 1 0 1 0] inverts every component first', () => {
+        const inverted = SAMPLES.map((v) => 255 - v);
+        const d = obj.array([1, 0, 1, 0, 1, 0, 1, 0].map((v) => obj.int(v)));
+        expect(pixels(png(cmyk(4, 1, inverted, { Decode: d })))).toEqual([RGB]);
+    });
+
+    test('ICCBased N 4 converts the same, the profile not carried', () => {
+        const profile = new Uint8Array([1, 2, 3, 4]);
+        const icc = { num: 9, gen: 0, value: obj.stream(obj.dict({ N: obj.int(4), Length: obj.int(profile.length) }), profile) };
+        const p = png(cmyk(4, 1, SAMPLES, { ColorSpace: obj.array([obj.name('ICCBased'), obj.ref(9, 0)]) }), [icc]);
+        expect(p.icc).toBeFalsy();
+        expect(pixels(p)).toEqual([RGB]);
+    });
+
+    test('Indexed on DeviceCMYK: the palette converted', () => {
+        const cs = obj.array([obj.name('Indexed'), obj.name('DeviceCMYK'), obj.int(1), obj.string(new Uint8Array([255, 0, 0, 0, 0, 0, 0, 255]))]);
+        const p = png(image(new Uint8Array([1, 0]), { Width: obj.int(2), Height: obj.int(1), ColorSpace: cs }));
+        expect(p.colorType).toBe(3);
+        expect([...p.palette]).toEqual([0, 255, 255, 0, 0, 0]);
+        expect(pixels(p)).toEqual([[1, 0]]);
+    });
+
+    test('a 16-bit CMYK picture and one with a soft mask are converted too', () => {
+        const sixteen = png(cmyk(1, 1, [0, 0, 0, 0, 0xFF, 0xFF, 0, 0], { BitsPerComponent: obj.int(16) }));
+        expect(pixels(sixteen)).toEqual([[255, 255, 0]]);
+        const sm = { num: 8, gen: 0, value: image(new Uint8Array([128]), { Width: obj.int(1), Height: obj.int(1) }) };
+        const masked = png(cmyk(1, 1, [0, 255, 0, 0], { SMask: obj.ref(8, 0) }), [sm]);
+        expect(masked.colorType).toBe(6);
+        expect(pixels(masked)).toEqual([[255, 0, 255, 128]]);
     });
 });

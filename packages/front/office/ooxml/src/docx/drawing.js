@@ -50,6 +50,10 @@
  *   anchorAttrs?: { ... },      // preserved attrs of <wp:anchor>
  *   anchorChildren?: [xmlNode], // wrap / positioning markers verbatim
  *   _extras?: [xmlNode],
+ *   alternate?: {               // read with alternateContent: 'choice'
+ *     requires: string,         // the mc:Choice's Requires
+ *     fallback: xmlNode | null  // the mc:Fallback element as read
+ *   },
  *   _source?: xmlNode,          // the <w:drawing> element as read
  *   _read?: object              // the typed fields as read
  * }
@@ -315,10 +319,10 @@ export const docxDrawing = {
 
         // --- Kept source ---
 
-        // The fields the read resolves (`image`, `chart`) or the write
-        // assigns (the ids) after `parseDrawing`: left out of `_read`, the
-        // ids rewritten in the source.
-        const LATE_FIELDS = new Set(['image', 'chart', 'embedRef', 'svgRef', 'chartRef', 'docId', '_source', '_read']);
+        // The fields the read resolves (`image`, `chart`, `alternate`) or
+        // the write assigns (the ids) after `parseDrawing`: left out of
+        // `_read`, the ids rewritten in the source.
+        const LATE_FIELDS = new Set(['image', 'chart', 'alternate', 'embedRef', 'svgRef', 'chartRef', 'docId', '_source', '_read']);
         const REL_NAMESPACES = new Set([R_NS, 'http://purl.oclc.org/ooxml/officeDocument/relationships']);
 
         /**
@@ -452,6 +456,24 @@ export const docxDrawing = {
                 ? renderAnchorWrapper(drawing)
                 : renderInlineWrapper(drawing);
             return xml.el('w:drawing', {}, [inner]);
+        }
+
+        /**
+         * The run child `drawing` is written as: `renderDrawing`'s element,
+         * wrapped back in the `mc:AlternateContent` it was read from when it
+         * carries `alternate` (the read option `alternateContent: 'choice'`)
+         * — one `mc:Choice` requiring `alternate.requires`, then
+         * `alternate.fallback` when not null — unless it was edited since
+         * the read (its typed fields differ from `_read`): an edited drawing
+         * is written alone, as its Fallback would show it as it was.
+         */
+        function renderRunChild(drawing) {
+            const el = renderDrawing(drawing);
+            const alt = drawing.alternate;
+            if (!alt || (drawing._read && !sameModel(typedFields(drawing), drawing._read))) return el;
+            const children = [xml.el('mc:Choice', { Requires: String(alt.requires || '') }, [el])];
+            if (alt.fallback) children.push(alt.fallback);
+            return xml.el('mc:AlternateContent', {}, children);
         }
 
         function renderInlineWrapper(d) {
@@ -693,7 +715,7 @@ export const docxDrawing = {
         }
 
         return {
-            parseDrawing, renderDrawing, withRelationships, typedFields, keepSource, image, chart, shape,
+            parseDrawing, renderDrawing, renderRunChild, withRelationships, typedFields, keepSource, image, chart, shape,
             sniffImageType, extensionFor, toEmu,
             EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96,
             REL_TYPE_IMAGE,

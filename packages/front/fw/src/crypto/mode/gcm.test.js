@@ -457,6 +457,24 @@ describe('gcm module', () => {
             tamperedT[0] = (tamperedT[0] ^ 0x01) | 0;
             expect(_gcm.decrypt(cipher, ct, iv, adata, tamperedT)).toBe(false);
         });
+
+        test('a tag mismatch is reported at warn level, not error', () => {
+            const cipher = _aes.ttable.fn(key, false);
+            const { ct, tag } = _gcm.encrypt(cipher, plain, iv, adata);
+            const tamperedT = tag.slice();
+            tamperedT[0] = (tamperedT[0] ^ 0x01) | 0;
+        const _logs = { warn: [], error: [] };
+        const _w = console.warn, _e = console.error;
+        console.warn = (...a) => { _logs.warn.push(a.join(' ')); };
+        console.error = (...a) => { _logs.error.push(a.join(' ')); };
+            let r;
+            try { r = _gcm.decrypt(cipher, ct, iv, adata, tamperedT); } finally {
+        console.warn = _w; console.error = _e;
+            }
+            expect(r).toBe(false);
+            expect(_logs.error.length).toBe(0);
+            expect(_logs.warn.some((m) => m.includes('CORRUPT'))).toBe(true);
+        });
     });
 
     describe('truncated tags', () => {

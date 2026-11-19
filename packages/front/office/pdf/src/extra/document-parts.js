@@ -33,7 +33,7 @@ export const pdfDocumentParts = {
         const { isType } = parser;
 
         const DPART_KNOWN = new Set([
-            'Type', 'Parent', 'DParts', 'Start', 'End', 'DPM', 'NodeNameTree'
+            'Type', 'Parent', 'DParts', 'Start', 'End', 'DPM', 'NodeNameTree', 'AF'
         ]);
         const ROOT_KNOWN = new Set([
             'Type', 'DPartRootNode', 'RecordLevel', 'NodeNameList'
@@ -89,6 +89,8 @@ export const pdfDocumentParts = {
                 end:          pageRef(e.End),
                 dpm:          isType(e.DPM, 'dict') ? typeDPM(e.DPM) : null,
                 nodeNameTree: e.NodeNameTree || null,
+                // The part's associated files (PDF 2.0), as read.
+                af:           e.AF || null,
                 raw:          dict,
                 _extras:      {}
             };

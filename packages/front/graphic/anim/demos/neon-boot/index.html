@@ -1,0 +1,243 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — Neon Grid</title>
+
+    <!-- 1. SANITY LOCKDOWN — first, before any application module. -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 2. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 2bis. Surface-local layout only (no palette redeclaration; the scene's
+         own colours live in main.js). -->
+    <style>
+        .proof { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; padding: 0; list-style: none; color: var(--muted); }
+        .proof li::before { content: "✓ "; color: var(--accent); }
+        .proof li[hidden] { display: none; }
+        .stage-box { position: relative; }
+        .stage-box:fullscreen { display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; border: 0; border-radius: 0; background: #0A0A0F; }
+        .stage-box:fullscreen #mount { width: min(100vw, 177.78vh); }
+        .stage-box:fullscreen #caption { font-size: 15px; }
+        .fs-exit { display: none; position: absolute; top: 12px; right: 12px; }
+        .stage-box:fullscreen .fs-exit { display: block; }
+        #mount { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #0A0A0F; color: #7FDCFF; }
+        #mount.outline * { fill: none !important; stroke: currentColor !important; stroke-width: 1px !important; filter: none !important; }
+        #mount.outline text { fill: currentColor !important; stroke: none !important; }
+        #caption {
+            position: absolute; left: 3%; right: 3%; bottom: 4%; margin: 0; padding: 6px 10px;
+            font: var(--mono); color: #E6FBFF; background: rgba(10, 10, 15, 0.72);
+            border-left: 2px solid #00D9FF; border-radius: 2px;
+        }
+        #caption[hidden] { display: none; }
+        .demo-controls { flex-wrap: wrap; align-items: center; }
+        .demo-controls button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+        #scrub { flex: 1 1 220px; min-width: 160px; }
+        #clock { font: var(--mono); min-width: 7ch; text-align: right; }
+        #code-panel { margin-top: var(--gap); }
+        #code-panel[hidden] { display: none; }
+        #code-panel h2 { font-size: 1rem; margin: 0 0 6px; }
+        #code-panel pre { margin: 0; padding: 10px 12px; max-height: 340px; overflow: auto; background: var(--code-bg); border-radius: var(--radius); font: var(--mono); }
+        details.run-local { margin-top: var(--gap); color: var(--muted); }
+    </style>
+</head>
+
+<body data-demo="neon-boot">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to demos</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>SVG animation that boots without a build.</h1>
+        <p class="demo-lede">
+            Neon Grid is one SVG scene. One <code>Timeline</code> plays the 11 s
+            boot; everything that keeps moving afterwards is a pure function of
+            time on the same clock, so you can scrub it, slow it down or pause
+            it. Plain SVG DOM, ESM and import maps, zero third-party runtime
+            dependencies (it builds on <code>@awacloud/fw</code>).
+        </p>
+        <ul class="proof">
+            <li id="proof-nodes">SVG nodes in the scene</li>
+            <li id="proof-size" hidden></li>
+            <li>runs under fw's sanity lockdown (<code>Math.random</code> and <code>performance.now</code> are blocked on this page)</li>
+            <li>the same time always draws the same frame</li>
+        </ul>
+    </header>
+
+    <div class="demo-stage stage-box">
+        <svg id="mount" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Neon Grid: a city skyline boots up under a neon logo"></svg>
+        <p id="caption" aria-live="polite" hidden></p>
+        <button id="fs-exit" class="fs-exit" type="button">Exit full screen</button>
+    </div>
+
+    <div class="demo-controls">
+        <button id="play" type="button">Pause</button>
+        <button id="replay" type="button">Replay</button>
+        <input id="scrub" type="range" min="0" max="11000" step="10" value="0" aria-label="Scene time">
+        <output id="clock" for="scrub">0.0 s</output>
+        <button type="button" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+        <button type="button" data-speed="0.25" aria-pressed="false">0.25×</button>
+        <button id="captions" type="button" aria-pressed="true">Captions</button>
+        <button id="outline" type="button" aria-pressed="false">Outline</button>
+        <button id="code" type="button" aria-pressed="false">How it's built</button>
+        <button id="fullscreen" type="button" aria-pressed="false" hidden>Full screen</button>
+    </div>
+
+    <section id="code-panel" hidden>
+        <h2 id="code-title">How it's built</h2>
+        <pre><code id="code-slice"></code></pre>
+        <p class="demo-note">The block of <code>main.js</code> that builds the act on
+            screen, cut from the file itself at its <code>// @act</code> markers.</p>
+    </section>
+
+    <p class="demo-note" id="motion-note" hidden>
+        Reduced motion is on: this is the final frame, paused. Press Play to run it.
+    </p>
+
+    <details class="run-local">
+        <summary>Run it locally</summary>
+        <p>From the repository root:
+            <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code>,
+            then open this page. Running the <code id="variant-label">standalone</code>
+            build; append <code>?variant=fw</code> to run it registered on an
+            <code>@awacloud/fw</code> runtime. Technique map:
+            <code>neon-boot-notes.md</code>.</p>
+    </details>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/demos/neon-boot/</code></p>
+    </footer>
+
+</div>
+
+<!-- 3. ENTRY — the `run()` contract, plus the page controls. -->
+<script type="module">
+    import { boot } from '../_boot.js';
+    import { run } from './main.js';
+
+    const $ = (id) => document.getElementById(id);
+    const mount = $('mount');
+    const reduced = Boolean(globalThis.matchMedia && globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    let act = null;
+    let captions = true;
+    /** @type {Record<string, string>} */
+    let slices = {};
+
+    const showCaption = () => {
+        const box = $('caption');
+        box.hidden = !captions || !act;
+        box.textContent = act ? act.caption : '';
+    };
+    const showCode = () => {
+        if ($('code-panel').hidden) return;
+        $('code-title').textContent = act ? `How it's built — act "${act.id}"` : "How it's built";
+        $('code-slice').textContent = act ? (slices[act.id] || 'Source not available here: open main.js.') : 'The boot has not started yet.';
+    };
+
+    const { anim, variant } = await boot();
+    $('variant-label').textContent = variant;
+    const handle = await run({
+        mount, anim, variant, autoplay: !reduced,
+        onCaption: (a) => { act = a; showCaption(); showCode(); },
+    });
+
+    // Proof points: measured here, not typed in.
+    $('proof-nodes').textContent = `${handle.nodeCount} SVG nodes, none created per frame`;
+    fetch(`../../dist/build/graphic-anim.${variant}.meta.json`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((meta) => {
+            if (!meta || !meta.bytes || !meta.bytes.min) return;
+            $('proof-size').textContent = `${(meta.bytes.min / 1000).toFixed(1)} kB minified: the graphic.anim engine (${variant === 'fw' ? 'on an fw runtime' : 'fw inlined'})`;
+            $('proof-size').hidden = false;
+        })
+        .catch(() => {});
+    fetch('./main.js')
+        .then((r) => (r.ok ? r.text() : ''))
+        .then((src) => {
+            for (const m of src.matchAll(/^ *\/\/ @act (\w+)\n([\s\S]*?)^ *\/\/ @end \1$/gm)) {
+                slices[m[1]] = m[2].replace(/^ {4}/gm, '').trimEnd();
+            }
+            showCode();
+        })
+        .catch(() => {});
+
+    // Controls.
+    const scrub = $('scrub');
+    scrub.max = String(handle.duration);
+    const syncPlay = () => { $('play').textContent = handle.paused ? 'Play' : 'Pause'; };
+    $('play').addEventListener('click', () => { (handle.paused ? handle.play : handle.pause)(); syncPlay(); });
+    $('replay').addEventListener('click', () => { handle.replay(); syncPlay(); });
+    let resumeAfterScrub = false;
+    scrub.addEventListener('pointerdown', () => { resumeAfterScrub = !handle.paused; handle.pause(); syncPlay(); });
+    scrub.addEventListener('input', () => { handle.seek(Number(scrub.value)); });
+    scrub.addEventListener('change', () => { if (resumeAfterScrub) handle.play(); resumeAfterScrub = false; syncPlay(); });
+    for (const b of document.querySelectorAll('[data-speed]')) {
+        b.addEventListener('click', () => {
+            handle.setSpeed(Number(b.dataset.speed));
+            for (const o of document.querySelectorAll('[data-speed]')) o.setAttribute('aria-pressed', String(o === b));
+        });
+    }
+    const toggle = (id, on) => $(id).setAttribute('aria-pressed', String(on));
+    $('captions').addEventListener('click', () => { captions = !captions; toggle('captions', captions); showCaption(); });
+    $('outline').addEventListener('click', () => { const on = mount.classList.toggle('outline'); toggle('outline', on); });
+    $('code').addEventListener('click', () => { const panel = $('code-panel'); panel.hidden = !panel.hidden; toggle('code', !panel.hidden); showCode(); });
+
+    // Full screen: the stage and its caption (Esc leaves it).
+    const stage = document.querySelector('.stage-box');
+    if (document.fullscreenEnabled && typeof stage.requestFullscreen === 'function') {
+        $('fullscreen').hidden = false;
+        const flip = () => {
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            else stage.requestFullscreen().catch(() => {});
+        };
+        $('fullscreen').addEventListener('click', flip);
+        $('fs-exit').addEventListener('click', flip);
+        mount.addEventListener('dblclick', flip);
+        document.addEventListener('fullscreenchange', () => {
+            const on = document.fullscreenElement === stage;
+            $('fullscreen').textContent = on ? 'Exit full screen' : 'Full screen';
+            toggle('fullscreen', on);
+        });
+    }
+
+    // The scrub bar and the clock follow the scene, on the same shared loop.
+    const ui = {
+        _step() {
+            const t = Math.min(handle.time, handle.duration);
+            if (document.activeElement !== scrub) scrub.value = String(Math.round(t));
+            $('clock').textContent = `${(handle.time / 1000).toFixed(1)} s`;
+        },
+    };
+    anim.scheduler.scheduler.add(ui);
+
+    if (reduced) {
+        handle.seek(handle.duration + 2500);
+        $('motion-note').hidden = false;
+    }
+    syncPlay();
+
+    // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+    globalThis.addEventListener('pagehide', () => {
+        anim.scheduler.scheduler.remove(ui);
+        handle.dispose();
+    }, { once: true });
+</script>
+</body>
+</html>

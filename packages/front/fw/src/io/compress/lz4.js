@@ -42,7 +42,7 @@
 /**
  * LZ4 compression/decompression surface returned by `factory()`.
  * @typedef {object} Lz4API
- * @property {(src: Uint8Array, len: number, opts?: { mode?: 'speed'|'ratio' }) => [number, Uint8Array]} compress - Compress data; returns `[compressed_size, compressed_data]` (`[0, original]` if incompressible, `[-1, original]` on size-limit error). `opts.mode`: 'speed' (default) or 'ratio' (smaller blocks, slower encode); any other value throws a RangeError.
+ * @property {(src: Uint8Array, len?: number|{ mode?: 'speed'|'ratio' }, opts?: { mode?: 'speed'|'ratio' }) => [number, Uint8Array]} compress - Compress `src[0, len)` (all of `src` when `len` is omitted or is the options object); returns `[compressed_size, compressed_data]` (`[0, original]` if incompressible, `[-1, original]` on size-limit error). `opts.mode`: 'speed' (default) or 'ratio' (smaller blocks, slower encode); any other value throws a RangeError.
  * @property {(src: Uint8Array) => [number, Uint8Array]} decompress - Decompress data; returns `[decompressed_size, decompressed_data]` (`[-1, compressed]` on error).
  * @property {new (ondata: (chunk: Uint8Array, isFinal: boolean) => void, opts?: { mode?: 'speed'|'ratio' }) => {ondata: ((chunk: Uint8Array, isFinal: boolean) => void)|null, push: (chunk: Uint8Array, final?: boolean) => void}} Lz4CompressStream - Streaming LZ4 compressor constructor; `opts` as for `compress`.
  * @property {new (ondata: (chunk: Uint8Array, isFinal: boolean) => void) => {ondata: ((chunk: Uint8Array, isFinal: boolean) => void)|null, push: (chunk: Uint8Array, final?: boolean) => void}} Lz4DecompressStream - Streaming LZ4 decompressor constructor.
@@ -56,6 +56,14 @@ export const lz4 = {
 
     /** @returns {Lz4API} */
     factory() {
+        /** An `Error` with the compressor family's string `code` (D9 G6). */
+        function _codedError(code, message) {
+            const e = new Error(message);
+            // @ts-ignore - Error.code is a non-standard but widely-used extension
+            e.code = code;
+            return e;
+        }
+
 
         // --- Limits ---
         /** Largest input `compress` accepts and largest output `decompress` produces (~1 GB). */
@@ -164,6 +172,9 @@ export const lz4 = {
          * @throws {RangeError} when `opts.mode` is neither 'speed' nor 'ratio'.
          */
         function compress(src, len, opts) {
+            // `compress(src)` and `compress(src, opts)`: the whole of `src`.
+            if (len !== null && typeof len === 'object') { opts = len; len = undefined; }
+            if (len === undefined) len = src.length;
             const { probes, covered, skipShift } = settingsOf(opts);
             return encodeBlock(src, len, probes, covered, skipShift);
         }
@@ -339,7 +350,7 @@ export const lz4 = {
                 if (lit > n - ip) return [-1, src];
                 ip += lit;
                 total += lit;
-                if (total > MAX_INPUT) throw new Error('Decompression exceeds maximum size limit');
+                if (total > MAX_INPUT) throw _codedError('EMAXOUT', 'Decompression exceeds maximum size limit');
                 if (ip === n) break;                 // literal-only final sequence
 
                 if (n - ip < 2) return [-1, src];
@@ -356,7 +367,7 @@ export const lz4 = {
                     } while (b === EXT_MAX);
                 }
                 total += ml + MIN_MATCH;
-                if (total > MAX_INPUT) throw new Error('Decompression exceeds maximum size limit');
+                if (total > MAX_INPUT) throw _codedError('EMAXOUT', 'Decompression exceeds maximum size limit');
             }
 
             // Pass 2: the block is known valid; copy into an exact-size buffer.
@@ -415,15 +426,42 @@ export const lz4 = {
             }
 
             /**
-             * Compress `chunk` and forward the block (or the raw chunk when the
-             * result is not a block) to `ondata`.
+             * Compress `chunk` and forward one LZ4 block to `ondata`: the
+             * compressed block, or, when `chunk` does not compress (or is 12
+             * bytes or less), a block of its bytes as literals — never the
+             * raw chunk, which `Lz4DecompressStream` would decode as a block
+             * (BL-1703, D9 G7).
              * @param {Uint8Array} chunk
              * @param {boolean} [final]
+             * @throws {Error} code `'EMAXOUT'` past the block size limit.
              */
             push(chunk, final) {
                 const [size, data] = compress(chunk, chunk.length, this.#opts);
-                if (this.ondata) this.ondata(size > 0 ? data : chunk, !!final);
+                if (size < 0) throw _codedError('EMAXOUT', 'lz4: chunk exceeds maximum size limit');
+                if (this.ondata) this.ondata(size > 0 ? data : _literalBlock(chunk), !!final);
             }
+        }
+
+        /**
+         * One LZ4 block holding `src` as a single literal run (the last
+         * sequence of a block carries no match): the token, the length
+         * extension bytes past 15, the bytes.
+         * @param {Uint8Array} src
+         * @returns {Uint8Array}
+         */
+        function _literalBlock(src) {
+            const n = src.length;
+            const ext = n >= 15 ? Math.floor((n - 15) / 255) + 1 : 0;
+            const out = new Uint8Array(1 + ext + n);
+            out[0] = (n >= 15 ? 15 : n) << 4;
+            let o = 1;
+            if (n >= 15) {
+                let r = n - 15;
+                while (r >= 255) { out[o++] = 255; r -= 255; }
+                out[o++] = r;
+            }
+            out.set(src, o);
+            return out;
         }
 
         /** Streaming decompressor: each `push` is decoded as one independent block. */
@@ -441,7 +479,7 @@ export const lz4 = {
              */
             push(chunk, final) {
                 const [size, data] = decompress(chunk);
-                if (size < 0) throw new Error('lz4 decompression error');
+                if (size < 0) throw _codedError('EBADSTREAM', 'lz4 decompression error');
                 if (this.ondata) this.ondata(data, !!final);
             }
         }

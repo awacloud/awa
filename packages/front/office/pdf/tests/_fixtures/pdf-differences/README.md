@@ -31,24 +31,24 @@ skipped, with the reason:
 | Files | Expected return |
 |---|---|
 | `PDF-version/` (3) | `doc.version` is the header's `1.4`, `doc.catalog.version` the newest catalog's `1.6`. ISO 32000-2 § 7.5.2 makes the file's version the greater of the two; the reader exposes both and computes no effective version. |
-| `UnknownFilter/UnknownFilter-xrefstm.pdf` | `read` throws `pdf/filter/unsupported`: the only cross-reference stream uses an unknown filter. |
+| `UnknownFilter/UnknownFilter-xrefstm.pdf` | `read` rebuilds the table (by default; `recoverXref: false` throws `pdf/filter/unsupported`): the only cross-reference stream uses an unknown filter, which upstream calls "effectively unprocessable without additional recovery processing". |
 | `UnknownFilter/` `objstm`, `PageContentStream`, `Font`, `ImageXObject`, `FormXObject`, `ICC` (6) | `read` returns the page; every in-use object either resolves and decodes or throws a typed `pdf/…` error, and at least one throws. |
-| `UnknownFilter/` `Linearized`, `OutlineObjStm` (2) | upstream expects a readable document; the reader throws, pinned as known misses (below). |
+| `UnknownFilter/` `Linearized`, `OutlineObjStm` (2) | upstream expects a readable document; the reader rebuilds the table by default and reads the page (below). |
 | `Inline-Image-Abbreviations/InlineAbbreviations.pdf` | the page content parses to 8 inline images; each keeps its keys as written (full and abbreviated side by side); decoded with the abbreviated keys first (ISO 32000-2 § 8.9.7 as corrected), each gives the same 600 bytes (20 × 10 pixels, RGB, 8 bits). |
 | 14 painting directories (21 files) | skipped — fill and stroke, blend modes, dashes, line caps, mitre limits, default and indexed colour spaces, negative font size, Type 3 word spacing, text clipping, vertical text. The test still reads each file and parses its page content. |
 | `PageLabels-UX/` (1) | skipped — page labels are carried raw (`doc.catalog.pageLabels`), never computed. |
 
-Known misses, both outside what the reader claims:
+The two files that were known misses read since the reader rebuilds an
+unusable cross-reference chain by default:
 
 - `UnknownFilter-Linearized.pdf`: the unknown filter sits on the first-page
   cross-reference stream, which is the only section that locates the
-  catalog and the page. Reaching them needs cross-reference
-  reconstruction, which the reader does not do: `read` throws
-  `pdf/filter/unsupported`.
+  catalog and the page. The rebuilt table reaches them; read strictly
+  (`recoverXref: false`) it throws `pdf/filter/unsupported`.
 - `UnknownFilter-OutlineObjStm.pdf`: in this file, the incremental update's
   `startxref`, `/XRefStm` and cross-reference entry 16 point 20 bytes
-  before their targets. The reader does not search around a wrong offset:
-  `read` throws `pdf/parser/indirect-bad-num`.
+  before their targets. The rebuilt table finds them; read strictly it
+  throws `pdf/parser/indirect-bad-num`.
 
 One upstream detail the test pins: in `UnknownFilter-PageContentStream.pdf`
 the content stream dictionary closes with a single `>`

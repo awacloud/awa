@@ -22,13 +22,14 @@
  *   },
  *   fontScheme?: {
  *     name: string,
- *     majorFont?: { latin?, ea?, cs? },   // typeface names
- *     minorFont?: { latin?, ea?, cs? }
+ *     majorFont?: { latin?, ea?, cs?,     // typeface names
+ *                   fontAttrs?: { latin?, ea?, cs? } }, // their other attributes
+ *     minorFont?: { latin?, ea?, cs?, fontAttrs? }
  *   },
  *   fmtScheme?: xmlNode,  // preserved verbatim — large and rarely edited
- *   objectDefaults?: xmlNode,
- *   extraClrSchemeLst?: xmlNode,
- *   _extras?: [xmlNode]
+ *   objectDefaults?: xmlNode | null,    // null: read without one, written without
+ *   extraClrSchemeLst?: xmlNode | null, // null: read without one, written without
+ *   _extras?: [xmlNode]   // the root's other children (custClrLst, extLst …)
  * }
  *
  * color := { srgb?: 'RRGGBB', sysClr?: { val, lastClr } }
@@ -85,7 +86,7 @@ export const pptxTheme = {
                                   'accent5', 'accent6', 'hlink', 'folHlink'];
 
         function parseClrScheme(el) {
-            const out = { name: el.attrs.name || '', colors: {} };
+            const out = { name: el.attrs.name ?? '', colors: {} };
             for (const key of CLR_SCHEME_KEYS) {
                 const child = xml.findChild(el, 'a:' + key);
                 if (child) out.colors[key] = parseColorContainer(child);
@@ -101,10 +102,23 @@ export const pptxTheme = {
                 const el = renderColorContainer('a:' + key, c);
                 if (el) children.push(el);
             }
-            return xml.el('a:clrScheme', { name: scheme.name || 'Office' }, children);
+            return xml.el('a:clrScheme', { name: schemeName(scheme) }, children);
+        }
+
+        // A scheme's name as read, `""` included; a model without one is
+        // written "Office".
+        function schemeName(scheme) {
+            return typeof scheme.name === 'string' ? scheme.name : 'Office';
         }
 
         // --- Font scheme ---
+
+        // A font's attributes beyond `typeface`.
+        function otherFontAttrs(el) {
+            const out = {};
+            for (const [k, v] of Object.entries(el.attrs || {})) if (k !== 'typeface') out[k] = v;
+            return Object.keys(out).length ? out : null;
+        }
 
         function parseFontKind(el) {
             // <a:majorFont>: <a:latin typeface=…/> + <a:ea/> + <a:cs/> + many fallbacks
@@ -115,6 +129,12 @@ export const pptxTheme = {
             if (latin) out.latin = latin.attrs.typeface;
             if (ea)    out.ea = ea.attrs.typeface;
             if (cs)    out.cs = cs.attrs.typeface;
+            const fontAttrs = {};
+            for (const [key, f] of [['latin', latin], ['ea', ea], ['cs', cs]]) {
+                const other = f && otherFontAttrs(f);
+                if (other) fontAttrs[key] = other;
+            }
+            if (Object.keys(fontAttrs).length) out.fontAttrs = fontAttrs;
             // Preserve fallback fonts (<a:font script="..." typeface="..."/>).
             const extras = el.children.filter(n => n.type === 'element'
                 && !['a:latin', 'a:ea', 'a:cs'].includes(n.name));
@@ -124,15 +144,23 @@ export const pptxTheme = {
 
         function renderFontKind(tag, kind) {
             const children = [];
-            children.push(xml.el('a:latin', { typeface: kind.latin || 'Calibri' }));
-            children.push(xml.el('a:ea', { typeface: kind.ea || '' }));
-            children.push(xml.el('a:cs', { typeface: kind.cs || '' }));
+            const fa = (key) => {
+                const a = kind.fontAttrs && kind.fontAttrs[key];
+                const out = {};
+                if (a && typeof a === 'object') {
+                    for (const [k, v] of Object.entries(a)) if (k !== 'typeface' && v != null) out[k] = String(v);
+                }
+                return out;
+            };
+            children.push(xml.el('a:latin', { typeface: kind.latin || 'Calibri', ...fa('latin') }));
+            children.push(xml.el('a:ea', { typeface: kind.ea || '', ...fa('ea') }));
+            children.push(xml.el('a:cs', { typeface: kind.cs || '', ...fa('cs') }));
             if (kind._extras) for (const ex of kind._extras) children.push(ex);
             return xml.el(tag, {}, children);
         }
 
         function parseFontScheme(el) {
-            const out = { name: el.attrs.name || '' };
+            const out = { name: el.attrs.name ?? '' };
             const major = xml.findChild(el, 'a:majorFont');
             const minor = xml.findChild(el, 'a:minorFont');
             if (major) out.majorFont = parseFontKind(major);
@@ -144,10 +172,17 @@ export const pptxTheme = {
             const children = [];
             children.push(renderFontKind('a:majorFont', scheme.majorFont || {}));
             children.push(renderFontKind('a:minorFont', scheme.minorFont || {}));
-            return xml.el('a:fontScheme', { name: scheme.name || 'Office' }, children);
+            return xml.el('a:fontScheme', { name: schemeName(scheme) }, children);
         }
 
         // --- Top-level parse / serialize ---
+
+        // The root's children the model types; the others are `_extras`,
+        // written in CT_OfficeStyleSheet's order.
+        const ROOT_TYPED = new Set(['a:themeElements', 'a:objectDefaults', 'a:extraClrSchemeLst']);
+        const ROOT_SEQ = shared.sequence ? shared.sequence(['a:themeElements', 'a:objectDefaults',
+            'a:extraClrSchemeLst', 'a:custClrLst', 'a:extLst']) : null;
+        const ordered = (children, seq) => (seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children);
 
         function parse(input) {
             const text = typeof input === 'string' ? input : decodeText(input);
@@ -165,10 +200,11 @@ export const pptxTheme = {
                 if (fs) out.fontScheme = parseFontScheme(fs);
                 if (fm) out.fmtScheme = fm;     // preserved verbatim
             }
-            const od = xml.findChild(root, 'a:objectDefaults');
-            const xc = xml.findChild(root, 'a:extraClrSchemeLst');
-            if (od) out.objectDefaults = od;
-            if (xc) out.extraClrSchemeLst = xc;
+            // Absent, they are `null` and written without.
+            out.objectDefaults = xml.findChild(root, 'a:objectDefaults') || null;
+            out.extraClrSchemeLst = xml.findChild(root, 'a:extraClrSchemeLst') || null;
+            const extras = root.children.filter(c => c.type === 'element' && !ROOT_TYPED.has(c.name));
+            if (extras.length) out._extras = extras;
             return out;
         }
 
@@ -179,11 +215,14 @@ export const pptxTheme = {
             if (obj.fmtScheme)  themeChildren.push(obj.fmtScheme);
             const themeElements = xml.el('a:themeElements', {}, themeChildren);
             const children = [themeElements];
-            children.push(obj.objectDefaults || xml.el('a:objectDefaults', {}));
-            children.push(obj.extraClrSchemeLst || xml.el('a:extraClrSchemeLst', {}));
+            if (obj.objectDefaults !== null) children.push(obj.objectDefaults || xml.el('a:objectDefaults', {}));
+            if (obj.extraClrSchemeLst !== null) children.push(obj.extraClrSchemeLst || xml.el('a:extraClrSchemeLst', {}));
+            for (const ex of Array.isArray(obj._extras) ? obj._extras : []) {
+                if (ex && ex.type === 'element' && !ROOT_TYPED.has(ex.name)) children.push(ex);
+            }
             return xml.serialize(xml.el('a:theme',
                 { 'xmlns:a': A_NS, name: obj.name || 'Office Theme' },
-                children));
+                ordered(children, ROOT_SEQ)));
         }
 
         function bytesOf(obj) { return encodeText(serialize(obj)); }

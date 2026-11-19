@@ -6,23 +6,13 @@ form-validation island.
 
 ## Run
 
-```sh
-npm i && npm run dev
-```
-
-Run from this directory. `npm i` installs next/react and creates
-`node_modules/@awacloud/fw` (postinstall → junction/symlink); `npm run dev`
-starts the dev server at http://localhost:3000 (Webpack — do NOT pass `--turbo`).
-
-Production:
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
 
 ```sh
-npm run build && npm run start
+bun install && bun run dev
 ```
 
-> The `postinstall` runs `node ../../_tools/link-fw.mjs`, which points
-> `node_modules/@awacloud/fw` at the fw package root (live source, no copy).
-> Re-run `npm run setup` if the link is ever removed.
+`bun install` installs Next and React and links `node_modules/@awacloud/fw`; `bun run dev` serves the app at http://localhost:3000. Next 16 builds with **Turbopack** by default, so this project is also the Turbopack example: `withFw` materializes the virtual modules for Turbopack (`@awacloud/fw/turbopack`) and plugs the Webpack plugin when Webpack is used. Next telemetry is yours to disable (`NEXT_TELEMETRY_DISABLED=1`).
 
 ## Files
 

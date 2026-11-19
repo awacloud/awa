@@ -31,7 +31,10 @@ export const docxWalker = {
             'hydrateTable', 'dehydrateTable',
             'hydrateRow', 'dehydrateRow',
             'hydrateDrawing', 'dehydrateDrawing',
-            'hydrateSettings', 'dehydrateSettings'
+            'hydrateSettings', 'dehydrateSettings',
+            'hydrateStyles', 'dehydrateStyles',
+            'hydrateNumbering', 'dehydrateNumbering',
+            'hydrateSection', 'dehydrateSection'
         ];
 
         // Build a fresh walker instance — one per `docx` orchestrator
@@ -61,12 +64,18 @@ export const docxWalker = {
                 if (changed) rebuildIndex();
             }
 
+            // Hydrate hooks run in registration order, dehydrate hooks in
+            // the reverse one: an extension registered after another writes
+            // its fields back first, so a field it typed inside the other's
+            // structure is in that structure's `_extras` before it renders.
             function applyHook(name, value) {
                 if (value == null) return value;
                 const list = _hookIndex[name];
                 if (!list) return value;
-                for (let i = 0; i < list.length; i++) {
-                    const r = list[i][name](value);
+                const reverse = name.startsWith('dehydrate');
+                for (let n = 0; n < list.length; n++) {
+                    const ext = list[reverse ? list.length - 1 - n : n];
+                    const r = ext[name](value);
                     if (r !== undefined) value = r;
                 }
                 return value;
@@ -96,8 +105,19 @@ export const docxWalker = {
                 const htc = phase === 'hydrate' ? 'hydrateTcPr' : 'dehydrateTcPr';
                 if (node.type === 'run' && node.rPr) node.rPr = applyHook(hr, node.rPr);
                 if (node.type === 'paragraph') {
+                    // A paragraph's own section (`pPr.sectPr`, once a hook
+                    // typed it): visited after its paragraph hooks on
+                    // hydrate, before them on dehydrate.
+                    const hs = phase === 'hydrate' ? 'hydrateSection' : 'dehydrateSection';
+                    const section = () => {
+                        if (node.pPr && node.pPr.sectPr && typeof node.pPr.sectPr === 'object' && node.pPr.sectPr.type !== 'element') {
+                            node.pPr.sectPr = applyHook(hs, node.pPr.sectPr);
+                        }
+                    };
+                    if (phase === 'dehydrate') section();
                     if (node.pPr) node.pPr = applyHook(hp, node.pPr);
                     if (node.pPr && node.pPr.rPr) node.pPr.rPr = applyHook(hr, node.pPr.rPr);
+                    if (phase === 'hydrate') section();
                 }
                 if (node.type === 'cell' && node.tcPr) node.tcPr = applyHook(htc, node.tcPr);
                 if (node.body)     walkProperties(node.body, phase);
@@ -109,20 +129,49 @@ export const docxWalker = {
             function applyExtensions(result, phase) {
                 if (!_exts.length) return;
                 if (result.document) walkProperties(result.document, phase);
+                // The body's final section.
+                if (result.document && result.document.sectPr) {
+                    result.document.sectPr = applyHook(phase === 'hydrate' ? 'hydrateSection' : 'dehydrateSection', result.document.sectPr);
+                }
                 for (const k of Object.keys(result.headers || {})) walkProperties(result.headers[k], phase);
                 for (const k of Object.keys(result.footers || {})) walkProperties(result.footers[k], phase);
                 // The notes' and comments' bodies, typed as the body is.
                 for (const item of (result.footnotes && result.footnotes.notes) || []) if (item) walkProperties(item.body, phase);
                 for (const item of (result.endnotes && result.endnotes.notes) || []) if (item) walkProperties(item.body, phase);
                 for (const item of (result.comments && result.comments.comments) || []) if (item) walkProperties(item.body, phase);
-                if (result.styles && Array.isArray(result.styles.styles)) {
-                    const hrName = phase === 'hydrate' ? 'hydrateRunProperties' : 'dehydrateRunProperties';
-                    const hpName = phase === 'hydrate' ? 'hydrateParagraphProperties' : 'dehydrateParagraphProperties';
-                    for (const st of result.styles.styles) {
+                const hrName = phase === 'hydrate' ? 'hydrateRunProperties' : 'dehydrateRunProperties';
+                const hpName = phase === 'hydrate' ? 'hydrateParagraphProperties' : 'dehydrateParagraphProperties';
+                // A part hook types the part before its properties are
+                // visited (hydrate) and writes it back after (dehydrate);
+                // its returned object replaces the part.
+                const part = (key, hook, visit) => {
+                    if (!result[key]) return;
+                    if (phase === 'hydrate') result[key] = applyHook('hydrate' + hook, result[key]);
+                    visit(result[key]);
+                    if (phase === 'dehydrate') result[key] = applyHook('dehydrate' + hook, result[key]);
+                };
+                part('styles', 'Styles', (styles) => {
+                    const dd = styles.docDefaults;
+                    if (dd && dd.rPr) dd.rPr = applyHook(hrName, dd.rPr);
+                    if (dd && dd.pPr) dd.pPr = applyHook(hpName, dd.pPr);
+                    for (const st of Array.isArray(styles.styles) ? styles.styles : []) {
                         if (st.rPr) st.rPr = applyHook(hrName, st.rPr);
                         if (st.pPr) st.pPr = applyHook(hpName, st.pPr);
+                        // A table style's conditional formats, once typed.
+                        for (const t of Array.isArray(st.tblStylePr) ? st.tblStylePr : []) {
+                            if (t && t.rPr) t.rPr = applyHook(hrName, t.rPr);
+                            if (t && t.pPr) t.pPr = applyHook(hpName, t.pPr);
+                        }
                     }
-                }
+                });
+                part('numbering', 'Numbering', (numbering) => {
+                    for (const an of Array.isArray(numbering.abstractNums) ? numbering.abstractNums : []) {
+                        for (const lvl of (an && Array.isArray(an.levels)) ? an.levels : []) {
+                            if (lvl.pPr) lvl.pPr = applyHook(hpName, lvl.pPr);
+                            if (lvl.rPr) lvl.rPr = applyHook(hrName, lvl.rPr);
+                        }
+                    }
+                });
                 if (result.settings) {
                     const name = phase === 'hydrate' ? 'hydrateSettings' : 'dehydrateSettings';
                     result.settings = applyHook(name, result.settings);

@@ -37,6 +37,7 @@ const ext = smlCalculation.factory(xml);
 
 - The chain is informational — Excel rebuilds it on open.
 - Modifying it on write only matters for performance hints.
+- A read never calls these codecs. Through [`xlsx-full`](../bundles/xlsx-full.md), [`smlPackageParts`](./sml-package-parts.md) reads and writes the chain into `workbook.calcChain`.
 
 ## See also
 

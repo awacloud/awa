@@ -273,6 +273,10 @@ export const pmlAnimations = {
                     case 'p:progress':  node.progress = parseAnimVal(c); break;
                     case 'p:wheel':     node.wheel = { ...c.attrs }; break;
                     case 'p:videoClr':  node.videoClr = { ...c.attrs }; break;
+                    // A sequence's (CT_TLTimeNodeSequence) and a motion path's.
+                    case 'p:prevCondLst': node.prevCondLst = parseCondLst(c, 'prevCondLst'); break;
+                    case 'p:nextCondLst': node.nextCondLst = parseCondLst(c, 'nextCondLst'); break;
+                    case 'p:rCtr':      node.rCtr = { ...c.attrs }; break;
                 }
             }
             return node;
@@ -455,6 +459,7 @@ export const pmlAnimations = {
             if (c.endCondLst)  kids.push(renderCondLst(c.endCondLst));
             if (c.prevCondLst) kids.push(renderCondLst(c.prevCondLst));
             if (c.nextCondLst) kids.push(renderCondLst(c.nextCondLst));
+            if (c.endSync)     kids.push(xml.el('p:endSync', c.endSync.attrs || {}, renderCond(c.endSync).children));
             if (c.iterate)     kids.push(renderIterate(c.iterate));
             if (c.childTnLst && c.childTnLst.children && c.childTnLst.children.length) {
                 kids.push(xml.el('p:childTnLst', {},
@@ -464,7 +469,6 @@ export const pmlAnimations = {
                 kids.push(xml.el('p:subTnLst', {},
                     c.subTnLst.children.map(renderTimeNode)));
             }
-            if (c.endSync) kids.push(xml.el('p:endSync', c.endSync.attrs || {}));
             return xml.el('p:cTn', c.attrs || {}, kids);
         }
 
@@ -473,9 +477,13 @@ export const pmlAnimations = {
             if (node.cTn)        kids.push(renderCTn(node.cTn));
             if (node.cBhvr)      kids.push(renderCBhvr(node.cBhvr));
             if (node.cMediaNode) kids.push(renderCMediaNode(node.cMediaNode));
+            if (node.prevCondLst) kids.push(renderCondLst(node.prevCondLst));
+            if (node.nextCondLst) kids.push(renderCondLst(node.nextCondLst));
+            // by, from, to: the schema's order (animClr, animScale, animMotion).
+            if (node.by)         kids.push(xml.el('p:by',   node.by.attrs   || {}, renderValChildren(node.by)));
             if (node.from)       kids.push(xml.el('p:from', node.from.attrs || {}, renderValChildren(node.from)));
             if (node.to)         kids.push(xml.el('p:to',   node.to.attrs   || {}, renderValChildren(node.to)));
-            if (node.by)         kids.push(xml.el('p:by',   node.by.attrs   || {}, renderValChildren(node.by)));
+            if (node.rCtr)       kids.push(xml.el('p:rCtr', node.rCtr));
             if (node.tavLst)     kids.push(renderTavLst(node.tavLst));
             if (node.progress)   kids.push(xml.el('p:progress', node.progress.attrs || {}, renderValChildren(node.progress)));
             if (node.wheel)      kids.push(xml.el('p:wheel', node.wheel));

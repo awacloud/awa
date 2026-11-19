@@ -12,7 +12,7 @@ Bun only, because it reads stdin through `Bun.stdin`.
 - Newline-delimited JSON-RPC 2.0 on stdin and stdout. Each frame is one
   JSON object on one line.
 - stdout carries protocol frames only. On start the server writes one line
-  to stderr: `convert-mcp 1.2.0: stdio JSON-RPC MCP server — Ctrl+C to stop`.
+  to stderr: `convert-mcp 2.0.0: stdio JSON-RPC MCP server — Ctrl+C to stop`.
 - Methods: `initialize`, `tools/list`, `tools/call` and `ping`. The
   notifications `notifications/initialized` and `notifications/cancelled`
   get no response. Any other method gets JSON-RPC error `-32601`. A line
@@ -21,7 +21,7 @@ Bun only, because it reads stdin through `Bun.stdin`.
 
 ```text
 → {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
-← {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"convert","version":"1.2.0"}}}
+← {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"convert","version":"2.0.0"}}}
 → {"jsonrpc":"2.0","id":15,"method":"ping"}
 ← {"jsonrpc":"2.0","id":15,"result":{}}
 → {"jsonrpc":"2.0","id":16,"method":"resources/list"}
@@ -93,16 +93,17 @@ Document to Markdown. Wraps [`toMd`](./toMd.md).
 | `format` | string | no | `docx`, `odt`, `xlsx`, `ods`, `pptx`, `odp` or `pdf`. |
 | `includeNotes` | boolean | no | `pptx` and `odp`: include speaker notes. Default `false`; ignored on another format (no error). |
 | `sheets` | string | no | `xlsx` and `ods` only: `table` (default), `csv` or `tsv` — each sheet as a fenced `csv` / `tsv` block instead of a GFM table. Another value or format is a usage error. |
-| `pdfInfer` | array of string | no | `pdf` only: `headings`, `tables`, `running` — inference on an untagged pdf. |
+| `pdfInfer` | array of string | no | `pdf` only: `headings`, `tables`, `running` — inference on an untagged pdf. Default `["headings", "tables"]`; `[]` for none. |
 | `pdfDeclare` | array of string | no | `pdf` only: `positional` records one `struct/positional` loss when the structure was built from positions. |
 | `pdfInclude` | array of string | no | `pdf` only: `images` places each JPEG, JPEG 2000 and raw-pixel picture as a Markdown image (write them with `assetsDir`). |
-| `pdfRecoverXref` | boolean | no | `pdf` only: `true` rebuilds an unusable cross-reference chain. |
+| `pdfRecoverXref` | boolean | no | `pdf` only: an unusable cross-reference chain is rebuilt by default; `false` reads strictly. |
+| `pdfEmptyPassword` | boolean | no | `pdf` only: with no password, an encrypted pdf is opened with the empty one when it opens (the default); `false` refuses it. |
 | `pdfLineHyphens` | string | no | `pdf` only: `drop` or `keep` — a word a hyphen cuts at a line end is joined without or with the hyphen. |
 | `pdfPasswordPath` | string | no | `pdf` only: a file holding the user or owner password of an encrypted pdf; one trailing line break is dropped. No argument takes the password itself. |
 | `formOpBudget` | integer | no | `pdf` only: the per-page Form XObject operator budget, default `1000000`. |
-| `sheetCellBudget` | integer | no | `xlsx` / `ods` only: a sheet whose padded table would hold more cells is written unpadded, one `<A1 address>: <text>` line per value (`sheet/sparse-form`). |
+| `sheetCellBudget` | integer | no | `xlsx` / `ods` only, default `5000000`: a sheet whose padded table would hold more cells is written unpadded, one `<A1 address>: <text>` line per value (`sheet/sparse-form`); `Number.MAX_SAFE_INTEGER` pads every sheet. |
 | `archiveLimits` | object | no | office formats only (a `pdf` source is a usage error): `{ maxParts, maxUncompressed, maxRatio, maxDepth }`, any of them, non-negative integers, the reader's archive limits (`0` disables a check). Defaults: `maxParts` 8192 (docx, xlsx, pptx) or 4096 (odt, ods, odp), `maxUncompressed` 256 MiB, `maxRatio` 200, `maxDepth` 1000 (docx, xlsx, pptx only). A limit the document exceeds is a conversion error (`OPC: too many parts in archive`, `usage: false`). |
-| `outputBudget` | object | no | every format: `{ bytes, overflow }` — `bytes` a positive integer, `overflow` `"throw"` (default) or `"truncate"`. Past `bytes` of text the conversion fails (`oconv: output too large`, `usage: false`), or with `overflow: "truncate"` keeps what fits (`doc/truncated`). `overflow` without `bytes` is a usage error (`oconv: bad output budget`). |
+| `outputBudget` | object | no | every format: `{ bytes, overflow }` — `bytes` a positive integer, 268435456 (256 MiB) when absent, `overflow` `"throw"` (default) or `"truncate"`. Past `bytes` of text the conversion fails (`oconv: output too large`, `usage: false`), or with `overflow: "truncate"` keeps what fits (`doc/truncated`). With no `outputBudget`, a document past 256 MiB of text fails. |
 | `odtInclude` | array of string | no | `odt` only: `toc` reads a table of contents' entries as paragraphs. |
 | `docxInclude` | array of string | no | `docx` only: `toc` reads a table of contents control's entries as paragraphs. |
 | `frontMatter` | string | no | `full` (default), `compact` (the loss ledger counted per code and detail) or `none` (the body alone). |
@@ -164,6 +165,10 @@ Markdown to a document. Wraps [`fromMd`](./fromMd.md).
 | `path` | string | one of `markdown` / `path` | Markdown file on disk. |
 | `target` | string | yes | `docx`, `odt` or `pdf`. |
 | `name` | string | no | Output file name. |
+| `pdfA` | string | no | pdf target: `4` or `2b` — claim PDF/A-4 or PDF/A-2b. Without `pdfFonts`, the Liberation faces of the optional package `@awacloud/oconv-fonts` are used when it is installed; when it is not, a usage error `pdfA: no embeddable face: regular.ttf, bold.ttf, italic.ttf, boldItalic.ttf and mono.ttf are needed. Install the optional package (npm i @awacloud/oconv-fonts) for the Liberation faces, or pass --pdf-fonts <dir> (pdfFonts) with your own.` |
+| `pdfUA` | number | no | pdf target: `1` or `2` — claim PDF/UA-1 or PDF/UA-2, a tagged document (the title from the front matter or the first heading). Needs `pdfLang`; the faces as for `pdfA`. |
+| `pdfLang` | string | no | pdf target: the document language under `pdfUA` (a BCP 47 tag, such as `en-GB`). |
+| `pdfFonts` | string | no | pdf target: a directory holding the TrueType faces to embed, each optional: `regular.ttf`, `bold.ttf`, `italic.ttf`, `boldItalic.ttf`, `mono.ttf`. |
 | `outPath` | string | no | Write the document here. |
 | `lossView` | string | no | `full` (default): `losses` and `lossSummary`. `summary`: `lossSummary` only, no `losses` key — recommended, since `losses` grows with the document. Any other value is a usage error, checked before the input is read. |
 
@@ -189,6 +194,11 @@ Document to document. Wraps [`convert`](./convert.md). Pairs: `docx>odt`,
 | `bytesBase64` | string | one of `path` / `bytesBase64` | Source bytes, base64. Needs `name`. |
 | `name` | string | with `bytesBase64` | Source file name, for format detection. |
 | `format` | string | no | Source format. |
+| `layout` | boolean | no | docx → odt: carry the page (size, orientation, margins) the paragraphs' alignment and page breaks, and the runs' size, font, colour, underline and script to the odt. On another pair, a usage error. |
+| `pdfA` | string | no | pdf target: `4` or `2b` — claim PDF/A-4 or PDF/A-2b. Without `pdfFonts`, the Liberation faces of the optional package `@awacloud/oconv-fonts` are used when it is installed; when it is not, a usage error `pdfA: no embeddable face: regular.ttf, bold.ttf, italic.ttf, boldItalic.ttf and mono.ttf are needed. Install the optional package (npm i @awacloud/oconv-fonts) for the Liberation faces, or pass --pdf-fonts <dir> (pdfFonts) with your own.` |
+| `pdfUA` | number | no | pdf target: `1` or `2` — claim PDF/UA-1 or PDF/UA-2, a tagged document (the title from the front matter or the first heading). Needs `pdfLang`; the faces as for `pdfA`. |
+| `pdfLang` | string | no | pdf target: the document language under `pdfUA` (a BCP 47 tag, such as `en-GB`). |
+| `pdfFonts` | string | no | pdf target: a directory holding the TrueType faces to embed, each optional: `regular.ttf`, `bold.ttf`, `italic.ttf`, `boldItalic.ttf`, `mono.ttf`. |
 | `target` | string | yes | `odt`, `docx` or `pdf`. |
 | `outPath` | string | no | Write the document here. |
 | `lossView` | string | no | `full` (default): `losses` and `lossSummary`. `summary`: `lossSummary` only, no `losses` key — recommended, since `losses` grows with the document. Any other value is a usage error, checked before the input is read. |

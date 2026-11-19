@@ -41,6 +41,9 @@ export const tableCffCharstring = {
             // endchar: no args (width-only if 1 on stack), or the four of seac
             // (adx ady bchar achar, TN 5177 Appendix C; width-first if 5)
             if (op === 14) return stackLen >= 4 ? 4 : 0;
+            // hstem, vstem, hstemhm, vstemhm, and hintmask / cntrmask (their
+            // implicit vstems) take pairs: an odd count holds the width.
+            if (op === 1 || op === 3 || op === 18 || op === 23 || op === 19 || op === 20) return stackLen & ~1;
             if (op === 21) return 2;     // rmoveto
             if (op === 22 || op === 4) return 1; // hmoveto / vmoveto
             return 0;
@@ -251,7 +254,17 @@ export const tableCffCharstring = {
          * Encoding code names, or null) the commands are the base glyph's,
          * then the accent's translated by (adx, ady), when both resolve.
          *
-         * @param {{ globalSubrs?: Array, localSubrs?: Array, nominalWidthX?: number, defaultWidthX?: number, maxDepth?: number, seacGlyph?: (code: number) => (Uint8Array|null) }} [ctx]
+         * With `ctx.cff2: { regionCounts, vsindex }` the charstring is a CFF2
+         * one read at the default instance: `vsindex` (15) selects the
+         * ItemVariationData whose region count k each `blend` (16) takes, a
+         * `blend` of n values keeps their n default operands and drops their
+         * n × k deltas, and no width is read (CFF2 carries none; its end is
+         * the end of the bytes, a subroutine's too). With `ctx.cff2.scalars`
+         * (per `vsindex`, the scalar of each of its regions at some
+         * coordinates) a `blend` adds to each default operand its k deltas,
+         * each times its region's scalar, instead of dropping them.
+         *
+         * @param {{ globalSubrs?: Array, localSubrs?: Array, nominalWidthX?: number, defaultWidthX?: number, maxDepth?: number, seacGlyph?: (code: number) => (Uint8Array|null), cff2?: { regionCounts: number[], vsindex?: number, scalars?: number[][] } }} [ctx]
          * @returns {{ commands: Array, hintCount: number, width?: number, seac?: { adx: number, ady: number, bchar: number, achar: number } }}
          */
         function decodeCharstring(bytes, ctx) {
@@ -268,6 +281,11 @@ export const tableCffCharstring = {
             let hadFirstStackOp = false;
             let seac;
             const stack = [];
+            // CFF2 (`ctx.cff2`): `blend` / `vsindex` at the default
+            // instance, no width; the region count of the current vsindex.
+            const cff2 = ctx.cff2 || null;
+            let regions = cff2 ? (cff2.regionCounts[cff2.vsindex || 0] ?? 0) : 0;
+            let blendScalars = cff2 && cff2.scalars ? (cff2.scalars[cff2.vsindex || 0] || []) : null;
 
             function run(stream, depth) {
                 if (depth > maxDepth)
@@ -289,7 +307,35 @@ export const tableCffCharstring = {
                         // Operator
                         let op = b0;
                         if (op === 12) op = 0x0C00 | stream[i++];
-                        if (!hadFirstStackOp && stack.length > 0 && isWidthOp(op)) {
+                        if (cff2 && (op === 15 || op === 16)) {
+                            // CFF2: `vsindex` picks the ItemVariationData whose
+                            // region count a `blend` takes; `blend` keeps its n
+                            // default operands, dropping their n × k deltas.
+                            if (op === 15) {
+                                const v = stack.pop();
+                                regions = cff2.regionCounts[v];
+                                if (regions === undefined)
+                                    throw new ParseError('fonts/cff2-cs-vsindex', `CFF2 vsindex ${v} names no ItemVariationData`, { context: { vsindex: v } });
+                                if (cff2.scalars) blendScalars = cff2.scalars[v] || [];
+                                stack.length = 0;
+                            } else {
+                                const nb = stack.pop();
+                                const drop = nb * regions;
+                                if (!(nb >= 0) || stack.length < nb + drop)
+                                    throw new ParseError('fonts/cff2-cs-blend', 'CFF2 blend has too few operands', { context: { n: nb, regions, stack: stack.length } });
+                                if (blendScalars) {
+                                    const base = stack.length - nb - drop;
+                                    for (let j = 0; j < nb; j++) {
+                                        let v = stack[base + j];
+                                        for (let r = 0; r < regions; r++) v += stack[base + nb + j * regions + r] * (blendScalars[r] || 0);
+                                        stack[base + j] = v;
+                                    }
+                                }
+                                stack.length -= drop;
+                            }
+                            continue;
+                        }
+                        if (!cff2 && !hadFirstStackOp && stack.length > 0 && isWidthOp(op)) {
                             // Type 2 width detection : if stack has an extra (odd)
                             // value before certain ops, that's the width delta.
                             const expected = expectedOpArgs(op, stack.length);

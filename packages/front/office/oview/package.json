@@ -1,0 +1,75 @@
+{
+  "name": "@awacloud/oview",
+  "version": "0.3.0",
+  "license": "AGPL-3.0-only",
+  "description": "The embeddable core of AWA Viewer: mount a browser-only document viewer (PDF, DOCX, XLSX, PPTX, ODT, ODS, ODP, Markdown, text) inside any page, as a function call or as the <awa-viewer> element. Nothing is uploaded.",
+  "keywords": [
+    "document-viewer",
+    "embeddable",
+    "pdf",
+    "docx",
+    "xlsx",
+    "pptx",
+    "odt",
+    "ods",
+    "odp",
+    "markdown",
+    "browser",
+    "office"
+  ],
+  "private": true,
+  "type": "module",
+  "main": "src/main.js",
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "src/styles/*.css",
+    "docs",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./viewer.js": "./src/viewer.js",
+    "./element.js": "./src/element.js",
+    "./cascade.js": "./src/cascade.js",
+    "./viewer.css": "./src/styles/viewer.css",
+    "./tokens.css": "./src/styles/tokens.css",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.0"
+  },
+  "scripts": {
+    "test": "bun test .",
+    "lint": "bunx eslint --no-warn-ignored ."
+  },
+  "dependencies": {
+    "@awacloud/fw": "workspace:*",
+    "@awacloud/pdf": "workspace:*",
+    "@awacloud/ooxml": "workspace:*",
+    "@awacloud/odf": "workspace:*",
+    "@awacloud/md": "workspace:*",
+    "@awacloud/fonts": "workspace:*",
+    "@awacloud/oconv": "workspace:*"
+  },
+  "awa": {
+    "maturity": "L2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awacloud/awa.git",
+    "directory": "packages/front/office/oview"
+  },
+  "homepage": "https://awaforge.eu",
+  "bugs": {
+    "url": "https://github.com/awacloud/awa/issues"
+  },
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS"
+}

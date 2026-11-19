@@ -10,7 +10,7 @@
  * @fileoverview `@awacloud/ooxml/bundles/prebuilt/docx-full-package` — pre-built single-factory bundle.
  *
  * Variant **package** : declares the 7 fw modules as dependencies and inlines every
- * ooxml-local factory transitively reachable from `docx` plus 19 extras.
+ * ooxml-local factory transitively reachable from `docx` plus 21 extras.
  *
  * @module ooxml/bundles/prebuilt/docx-full-package
  */
@@ -93,7 +93,7 @@ export const docxFullPackage = {
       for (const c of p.children || [])
         if (c.type === "run")
           out.push(textOfRun(c));
-        else if (c.type === "hyperlink" || c.type === "ins" || c.type === "moveTo")
+        else if (c.type === "hyperlink" || c.type === "ins" || c.type === "moveTo" || c.type === "smartTag")
           out.push(textOfParagraph(c));
       return out.join("");
     }
@@ -272,7 +272,10 @@ export const docxFullPackage = {
       SLIDE: NS.R + "/slide",
       SLIDE_LAYOUT: NS.R + "/slideLayout",
       SLIDE_MASTER: NS.R + "/slideMaster",
-      THEME: NS.R + "/theme"
+      THEME: NS.R + "/theme",
+      NOTES_SLIDE: NS.R + "/notesSlide",
+      NOTES_MASTER: NS.R + "/notesMaster",
+      HANDOUT_MASTER: NS.R + "/handoutMaster"
     }), CT = Object.freeze({
       DOCUMENT: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
       STYLES_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
@@ -298,7 +301,10 @@ export const docxFullPackage = {
       SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
       THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
       VML_DRAWING: "application/vnd.openxmlformats-officedocument.vmlDrawing",
-      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"
+      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml",
+      NOTES_SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+      NOTES_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+      HANDOUT_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml"
     });
     function toEmu(v) {
       if (typeof v === "number")
@@ -1073,6 +1079,96 @@ export const docxFullPackage = {
         return xml.el(name, { "w:val": "0" });
       return null;
     }
+    function toggleForm(v) {
+      if (v === void 0 || v === "true" || v === "1" || v === "on")
+        return "on";
+      if (v === "false" || v === "0" || v === "off")
+        return "off";
+      return v;
+    }
+    function significant(children) {
+      return (children || []).filter((c) => !(c && c.type === "text" && /^\s*$/.test(String(c.value ?? c.text ?? ""))));
+    }
+    function sameElement(a, b) {
+      if (!a || !b || a.type !== b.type)
+        return !1;
+      if (a.type !== "element")
+        return String(a.value ?? a.text ?? "") === String(b.value ?? b.text ?? "");
+      if (a.name !== b.name)
+        return !1;
+      const ka = significant(a.children), kb = significant(b.children), aa = a.attrs || {}, ba = b.attrs || {}, keys = new Set([...Object.keys(aa), ...Object.keys(ba)]);
+      for (const k of keys)
+        if (k === "w:val" && ka.length === 0 && kb.length === 0) {
+          if (toggleForm(aa[k]) !== toggleForm(ba[k]))
+            return !1;
+        } else if (aa[k] !== ba[k])
+          return !1;
+      if (ka.length !== kb.length)
+        return !1;
+      for (let i = 0;i < ka.length; i++)
+        if (!sameElement(ka[i], kb[i]))
+          return !1;
+      return !0;
+    }
+    function isPlain(v) {
+      return !!v && typeof v === "object" && !Array.isArray(v);
+    }
+    function hydrateLossless(bag, typeBag, untypeBag) {
+      if (!bag || !Array.isArray(bag._extras))
+        return bag;
+      const count = new Map;
+      for (const c of bag._extras)
+        if (c && c.type === "element")
+          count.set(c.name, (count.get(c.name) || 0) + 1);
+      const claimed = new Map, keysOf = (k) => {
+        if (!claimed.has(k))
+          claimed.set(k, new Set(isPlain(bag[k]) ? Object.keys(bag[k]) : []));
+        return claimed.get(k);
+      }, verdicts = bag._extras.map((c) => {
+        if (!c || c.type !== "element")
+          return null;
+        const probe = typeBag({ _extras: [c] }) || {}, fields = Object.keys(probe).filter((k) => k !== "_extras");
+        if (count.get(c.name) > 1 && !fields.every((k) => Array.isArray(probe[k])))
+          return null;
+        const merges = (k) => Array.isArray(probe[k]) && (bag[k] === void 0 || Array.isArray(bag[k])) || isPlain(probe[k]) && (bag[k] === void 0 || isPlain(bag[k])) && (k[0] === "_" || Object.keys(probe[k]).every((s) => !keysOf(k).has(s))), taken = (k) => bag[k] !== void 0 || claimed.has(k), clash = fields.some((k) => taken(k) && !merges(k));
+        if (fields.length === 0 || (probe._extras || []).length > 0 || clash)
+          return null;
+        const back = (untypeBag({ ...probe }) || {})._extras || [];
+        if (back.length !== 1 || !sameElement(back[0], c))
+          return null;
+        for (const k of fields) {
+          const keys = keysOf(k);
+          if (isPlain(probe[k]))
+            for (const s of Object.keys(probe[k]))
+              keys.add(s);
+        }
+        return { name: c.name, probe, fields };
+      }), refused = new Set;
+      bag._extras.forEach((c, i) => {
+        if (c && c.type === "element" && count.get(c.name) > 1 && verdicts[i] === null)
+          refused.add(c.name);
+      });
+      const remaining = [];
+      bag._extras.forEach((c, i) => {
+        const v = verdicts[i];
+        if (v === null || refused.has(v.name)) {
+          remaining.push(c);
+          return;
+        }
+        for (const k of v.fields)
+          if (Array.isArray(v.probe[k]))
+            bag[k] = (Array.isArray(bag[k]) ? bag[k] : []).concat(v.probe[k]);
+          else if (isPlain(bag[k]))
+            bag[k] = { ...bag[k], ...v.probe[k] };
+          else
+            bag[k] = v.probe[k];
+      });
+      if (remaining.length)
+        bag._extras = remaining;
+      else
+        delete bag._extras;
+      return bag;
+    }
     function valOf(el) {
       return el ? el.attrs["w:val"] : void 0;
     }
@@ -1681,7 +1777,9 @@ export const docxFullPackage = {
       valOf,
       elVal,
       sequence,
-      orderBySequence
+      orderBySequence,
+      sameElement,
+      hydrateLossless
     };
   } });
     __register({ name: "drawingmlShape", dependencies: ["xml","ooxmlShared"], factory: function(xml, shared) {
@@ -1803,7 +1901,19 @@ export const docxFullPackage = {
       }
       return null;
     }
-    function parseLine(lnEl) {
+    function lineColor(solidFill, opts) {
+      if (!(opts && opts.typedLineColors)) {
+        const col = parseColorChild(solidFill);
+        return col && col.rgb ? col.rgb : void 0;
+      }
+      const el = solidFill.children.find((n) => n.type === "element");
+      if (!el)
+        return;
+      if (el.name === "a:srgbClr" && !el.children.some((n) => n.type === "element"))
+        return el.attrs.val;
+      return typedColor.parse(el) || void 0;
+    }
+    function parseLine(lnEl, opts) {
       if (!lnEl)
         return;
       const out = {};
@@ -1828,9 +1938,9 @@ export const docxFullPackage = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:solidFill") {
-          const col = parseColorChild(c);
-          if (col && col.rgb)
-            out.color = col.rgb;
+          const col = lineColor(c, opts);
+          if (col !== void 0)
+            out.color = col;
           else
             extras.push(c);
         } else if (c.name === "a:prstDash")
@@ -1864,8 +1974,11 @@ export const docxFullPackage = {
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
-      else if (line.color)
-        children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
+      else if (line.color) {
+        const el = typeof line.color === "object" ? typedColor.render(line.color) : renderSrgbClr(line.color);
+        if (el)
+          children.push(xml.el("a:solidFill", {}, [el]));
+      }
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
       if (!line._extras)
@@ -1879,10 +1992,13 @@ export const docxFullPackage = {
       }
       return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
-    function parseShapeProperties(spPrEl) {
+    function parseShapeProperties(spPrEl, opts) {
       if (!spPrEl)
         return;
-      const out = {}, xfrmEl = xml.findChild(spPrEl, "a:xfrm");
+      const out = {};
+      if (spPrEl.attrs && spPrEl.attrs.bwMode)
+        out.bwMode = spPrEl.attrs.bwMode;
+      const xfrmEl = xml.findChild(spPrEl, "a:xfrm");
       Object.assign(out, parseXfrm(xfrmEl));
       const prst = xml.findChild(spPrEl, "a:prstGeom");
       if (prst) {
@@ -1895,7 +2011,7 @@ export const docxFullPackage = {
         out.fill = fill;
       const ln = xml.findChild(spPrEl, "a:ln");
       if (ln) {
-        const lineProps = parseLine(ln);
+        const lineProps = parseLine(ln, opts);
         if (lineProps !== void 0)
           out.line = lineProps;
       }
@@ -1930,11 +2046,12 @@ export const docxFullPackage = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
+      const attrs = props.bwMode ? { bwMode: String(props.bwMode) } : {};
       if (!props._extras)
-        return xml.el(tag, {}, children);
+        return xml.el(tag, attrs, children);
       for (const ex of props._extras)
         children.push(ex);
-      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
+      return xml.el(tag, attrs, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -2248,7 +2365,7 @@ export const docxFullPackage = {
       }
       return null;
     }
-    const LATE_FIELDS = new Set(["image", "chart", "embedRef", "svgRef", "chartRef", "docId", "_source", "_read"]), REL_NAMESPACES = new Set([R_NS, "http://purl.oclc.org/ooxml/officeDocument/relationships"]);
+    const LATE_FIELDS = new Set(["image", "chart", "alternate", "embedRef", "svgRef", "chartRef", "docId", "_source", "_read"]), REL_NAMESPACES = new Set([R_NS, "http://purl.oclc.org/ooxml/officeDocument/relationships"]);
     function typedFields(d) {
       const out = {};
       for (const k of Object.keys(d))
@@ -2350,6 +2467,15 @@ export const docxFullPackage = {
         return kept;
       const inner = drawing.mode === "anchor" ? renderAnchorWrapper(drawing) : renderInlineWrapper(drawing);
       return xml.el("w:drawing", {}, [inner]);
+    }
+    function renderRunChild(drawing) {
+      const el = renderDrawing(drawing), alt = drawing.alternate;
+      if (!alt || drawing._read && !sameModel(typedFields(drawing), drawing._read))
+        return el;
+      const children = [xml.el("mc:Choice", { Requires: String(alt.requires || "") }, [el])];
+      if (alt.fallback)
+        children.push(alt.fallback);
+      return xml.el("mc:AlternateContent", {}, children);
     }
     function renderInlineWrapper(d) {
       const a = {};
@@ -2554,6 +2680,7 @@ export const docxFullPackage = {
     return {
       parseDrawing,
       renderDrawing,
+      renderRunChild,
       withRelationships,
       typedFields,
       keepSource,
@@ -3079,6 +3206,33 @@ export const docxFullPackage = {
       "w:cellMerge",
       "w:tcPrChange"
     ]);
+    let choiceDrawings = !1;
+    function withChoiceDrawings(on, fn) {
+      const before = choiceDrawings;
+      choiceDrawings = on === !0;
+      try {
+        return fn();
+      } finally {
+        choiceDrawings = before;
+      }
+    }
+    const CHOICE_PREFIXES = new Set(["wps", "wpg", "wpc"]);
+    function choiceDrawing(ac) {
+      const els = ac.children.filter((k) => k.type === "element"), choice = els[0], fallback = els[1] || null;
+      if (!choice || choice.name !== "mc:Choice" || els.length > 2 || fallback && fallback.name !== "mc:Fallback")
+        return null;
+      if (Object.keys(ac.attrs).length || Object.keys(choice.attrs).some((k) => k !== "Requires"))
+        return null;
+      const requires = String(choice.attrs.Requires || ""), prefixes = requires.split(/\s+/).filter(Boolean);
+      if (!prefixes.length || !prefixes.every((p) => CHOICE_PREFIXES.has(p)))
+        return null;
+      const inner = choice.children.filter((k) => k.type === "element");
+      if (inner.length !== 1 || inner[0].name !== "w:drawing")
+        return null;
+      const drawing = drawingMod.parseDrawing(inner[0]);
+      drawing.alternate = { requires, fallback };
+      return drawing;
+    }
     function parseRunChildren(rEl) {
       const out = [];
       for (const c of rEl.children) {
@@ -3120,6 +3274,9 @@ export const docxFullPackage = {
           }
           case "w:drawing":
             out.push(drawingMod.parseDrawing(c));
+            break;
+          case "mc:AlternateContent":
+            out.push(choiceDrawings && choiceDrawing(c) || { type: "unknown", node: c });
             break;
           case "w:fldChar": {
             const f = {
@@ -3189,7 +3346,7 @@ export const docxFullPackage = {
             break;
           }
           case "drawing":
-            out.push(drawingMod.renderDrawing(ch));
+            out.push(drawingMod.renderRunChild(ch));
             break;
           case "fldChar": {
             const a = { "w:fldCharType": ch.kind };
@@ -3560,6 +3717,25 @@ export const docxFullPackage = {
           return parseRevision(c, REVISION_TAGS[c.name]);
         case "w:sdt":
           return parseSdt(c, !1);
+        case "w:smartTag": {
+          const t = { type: "smartTag", attrs: { ...c.attrs || {} }, children: [] }, extras = [];
+          for (const cc of c.children) {
+            if (cc.type !== "element")
+              continue;
+            if (cc.name === "w:smartTagPr") {
+              t.smartTagPr = cc;
+              continue;
+            }
+            const node = parseInline(cc);
+            if (node)
+              t.children.push(node);
+            else
+              extras.push(cc);
+          }
+          if (extras.length)
+            t._extras = extras;
+          return t;
+        }
         case "m:oMath":
           return mathMod.parseOMath(c);
         case "w:fldSimple": {
@@ -3690,6 +3866,16 @@ export const docxFullPackage = {
           case "sdt":
             children.push(renderSdt(c));
             break;
+          case "smartTag": {
+            const kids = [];
+            if (c.smartTagPr)
+              kids.push(c.smartTagPr);
+            kids.push(...renderInlines(c.children));
+            if (c._extras)
+              kids.push(...c._extras);
+            children.push(xml.el("w:smartTag", { ...c.attrs || {} }, kids));
+            break;
+          }
           case "oMath":
             children.push(mathMod.renderOMath(c));
             break;
@@ -4133,6 +4319,7 @@ export const docxFullPackage = {
       parseParagraph,
       renderParagraph,
       withParaIds,
+      withChoiceDrawings,
       parseTable,
       renderTable,
       parseRow,
@@ -4809,12 +4996,15 @@ export const docxFullPackage = {
       const children = [];
       if (obj.defaultTabStop != null)
         children.push(xml.el("w:defaultTabStop", { "w:val": String(obj.defaultTabStop) }));
-      if (obj.evenAndOddHeaders === !0)
-        children.push(xml.el("w:evenAndOddHeaders", {}));
-      if (obj.updateFields === !0)
-        children.push(xml.el("w:updateFields", {}));
-      if (obj.trackChanges === !0)
-        children.push(xml.el("w:trackRevisions", {}));
+      const toggle = (name, v) => {
+        if (v === !0)
+          children.push(xml.el(name, {}));
+        else if (v === !1)
+          children.push(xml.el(name, { "w:val": "0" }));
+      };
+      toggle("w:evenAndOddHeaders", obj.evenAndOddHeaders);
+      toggle("w:updateFields", obj.updateFields);
+      toggle("w:trackRevisions", obj.trackChanges);
       if (obj.zoom) {
         const a = {};
         if (obj.zoom.val)
@@ -5647,7 +5837,13 @@ export const docxFullPackage = {
       "hydrateDrawing",
       "dehydrateDrawing",
       "hydrateSettings",
-      "dehydrateSettings"
+      "dehydrateSettings",
+      "hydrateStyles",
+      "dehydrateStyles",
+      "hydrateNumbering",
+      "dehydrateNumbering",
+      "hydrateSection",
+      "dehydrateSection"
     ];
     function createWalker() {
       const _exts = [];
@@ -5679,8 +5875,9 @@ export const docxFullPackage = {
         const list = _hookIndex[name];
         if (!list)
           return value;
-        for (let i = 0;i < list.length; i++) {
-          const r = list[i][name](value);
+        const reverse = name.startsWith("dehydrate");
+        for (let n = 0;n < list.length; n++) {
+          const r = list[reverse ? list.length - 1 - n : n][name](value);
           if (r !== void 0)
             value = r;
         }
@@ -5712,10 +5909,18 @@ export const docxFullPackage = {
         if (node.type === "run" && node.rPr)
           node.rPr = applyHook(hr, node.rPr);
         if (node.type === "paragraph") {
+          const hs = phase === "hydrate" ? "hydrateSection" : "dehydrateSection", section = () => {
+            if (node.pPr && node.pPr.sectPr && typeof node.pPr.sectPr === "object" && node.pPr.sectPr.type !== "element")
+              node.pPr.sectPr = applyHook(hs, node.pPr.sectPr);
+          };
+          if (phase === "dehydrate")
+            section();
           if (node.pPr)
             node.pPr = applyHook(hp, node.pPr);
           if (node.pPr && node.pPr.rPr)
             node.pPr.rPr = applyHook(hr, node.pPr.rPr);
+          if (phase === "hydrate")
+            section();
         }
         if (node.type === "cell" && node.tcPr)
           node.tcPr = applyHook(htc, node.tcPr);
@@ -5733,6 +5938,8 @@ export const docxFullPackage = {
           return;
         if (result.document)
           walkProperties(result.document, phase);
+        if (result.document && result.document.sectPr)
+          result.document.sectPr = applyHook(phase === "hydrate" ? "hydrateSection" : "dehydrateSection", result.document.sectPr);
         for (const k of Object.keys(result.headers || {}))
           walkProperties(result.headers[k], phase);
         for (const k of Object.keys(result.footers || {}))
@@ -5746,15 +5953,43 @@ export const docxFullPackage = {
         for (const item of result.comments && result.comments.comments || [])
           if (item)
             walkProperties(item.body, phase);
-        if (result.styles && Array.isArray(result.styles.styles)) {
-          const hrName = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hpName = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties";
-          for (const st of result.styles.styles) {
+        const hrName = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hpName = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties", part = (key, hook, visit) => {
+          if (!result[key])
+            return;
+          if (phase === "hydrate")
+            result[key] = applyHook("hydrate" + hook, result[key]);
+          visit(result[key]);
+          if (phase === "dehydrate")
+            result[key] = applyHook("dehydrate" + hook, result[key]);
+        };
+        part("styles", "Styles", (styles) => {
+          const dd = styles.docDefaults;
+          if (dd && dd.rPr)
+            dd.rPr = applyHook(hrName, dd.rPr);
+          if (dd && dd.pPr)
+            dd.pPr = applyHook(hpName, dd.pPr);
+          for (const st of Array.isArray(styles.styles) ? styles.styles : []) {
             if (st.rPr)
               st.rPr = applyHook(hrName, st.rPr);
             if (st.pPr)
               st.pPr = applyHook(hpName, st.pPr);
+            for (const t of Array.isArray(st.tblStylePr) ? st.tblStylePr : []) {
+              if (t && t.rPr)
+                t.rPr = applyHook(hrName, t.rPr);
+              if (t && t.pPr)
+                t.pPr = applyHook(hpName, t.pPr);
+            }
           }
-        }
+        });
+        part("numbering", "Numbering", (numbering) => {
+          for (const an of Array.isArray(numbering.abstractNums) ? numbering.abstractNums : [])
+            for (const lvl of an && Array.isArray(an.levels) ? an.levels : []) {
+              if (lvl.pPr)
+                lvl.pPr = applyHook(hpName, lvl.pPr);
+              if (lvl.rPr)
+                lvl.rPr = applyHook(hrName, lvl.rPr);
+            }
+        });
         if (result.settings) {
           const name = phase === "hydrate" ? "hydrateSettings" : "dehydrateSettings";
           result.settings = applyHook(name, result.settings);
@@ -5900,14 +6135,14 @@ export const docxFullPackage = {
     }
     function read(bytes, opts) {
       const alternate = opts && opts.alternateContent !== void 0 ? opts.alternateContent : "fallback";
-      if (alternate !== "fallback" && alternate !== "keep")
-        throw new ContractError("docx/invalid-alternate-content", "docx.read: opts.alternateContent must be 'fallback' or 'keep'", { context: { received: alternate === null ? "null" : typeof alternate === "string" ? alternate : typeof alternate } });
+      if (alternate !== "fallback" && alternate !== "keep" && alternate !== "choice")
+        throw new ContractError("docx/invalid-alternate-content", "docx.read: opts.alternateContent must be 'fallback', 'keep' or 'choice'", { context: { received: alternate === null ? "null" : typeof alternate === "string" ? alternate : typeof alternate } });
       const extensions = opts && opts.extensions !== void 0 ? opts.extensions : "drop";
       if (extensions !== "drop" && extensions !== "keep")
         throw new ContractError("docx/invalid-extensions", "docx.read: opts.extensions must be 'drop' or 'keep'", { context: { received: extensions === null ? "null" : typeof extensions === "string" ? extensions : typeof extensions } });
       const pkg = opc.read(bytes, archiveLimits(opts)), { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
         try {
-          return readPackage(p, alternate === "keep", extensions === "keep");
+          return structure.withChoiceDrawings(alternate === "choice", () => readPackage(p, alternate !== "fallback", extensions === "keep"));
         } catch (e) {
           throw typedPartXml(e);
         }
@@ -6245,7 +6480,7 @@ export const docxFullPackage = {
       }
       const carry = carrySpec(opts);
       checkReferences(doc, opts);
-      let settings = opts.settings;
+      let { settings, styles: stylesPart, numbering: numberingPart } = opts;
       if (walker.hasExtensions) {
         const parts = {
           document: doc,
@@ -6255,10 +6490,13 @@ export const docxFullPackage = {
           endnotes: opts.endnotes,
           comments: opts.comments,
           styles: opts.styles,
+          numbering: opts.numbering,
           settings: opts.settings
         };
         walker.applyDehydrate(parts);
         settings = parts.settings;
+        stylesPart = parts.styles;
+        numberingPart = parts.numbering;
       }
       assignDocIds(doc, opts);
       const pkg = opc.empty(), kept = keptOf(doc), keptIds = keptIdsOf(kept), storyKept = storyKeptOf(opts), hyperlinks = opts.hyperlinks || derivedHyperlinks(doc), collected = collectImages(doc, opts.images, keptIds), chartCollected = collectCharts(doc, keptIds), story = collectStoryDrawings(opts, collected, chartCollected.length, storyKept);
@@ -6324,18 +6562,18 @@ export const docxFullPackage = {
             links.add(id);
         return drawingMod.withRelationships({ links, media }, () => structure.withParaIds(fn));
       }
-      if (opts.styles)
+      if (stylesPart)
         attachPart({
-          bytes: stylesMod.bytesOf(opts.styles),
+          bytes: stylesMod.bytesOf(stylesPart),
           contentType: stylesMod.CT_STYLES
         }, "/word/styles.xml", {
           Id: claimRid(),
           Type: stylesMod.REL_TYPE_STYLES,
           Target: "styles.xml"
         });
-      if (opts.numbering)
+      if (numberingPart)
         attachPart({
-          bytes: numberingMod.bytesOf(opts.numbering),
+          bytes: numberingMod.bytesOf(numberingPart),
           contentType: numberingMod.CT_NUMBERING
         }, "/word/numbering.xml", {
           Id: claimRid(),
@@ -7419,6 +7657,9 @@ export const docxFullPackage = {
       return xml.el("w:stylisticSets", {}, kids);
     }
     function hydrate(rPr) {
+      return core.hydrateLossless(rPr, typeRun, dehydrate);
+    }
+    function typeRun(rPr) {
       if (!rPr || !rPr._extras)
         return rPr;
       const remaining = [];
@@ -7782,6 +8023,9 @@ export const docxFullPackage = {
       return xml.el("w:framePr", a);
     }
     function hydrate(pPr) {
+      return core.hydrateLossless(pPr, typeParagraph, dehydrate);
+    }
+    function typeParagraph(pPr) {
       if (!pPr || !pPr._extras)
         return pPr;
       const remaining = [];
@@ -8467,6 +8711,22 @@ export const docxFullPackage = {
       return parseWidth(el);
     }
     function hydrateTcPr(tcPr) {
+      return core.hydrateLossless(tcPr, typeTcPr, untypeTcPr);
+    }
+    function untypeTcPr(tcPr) {
+      const out = dehydrateTcPr(tcPr);
+      if (out.width) {
+        const a = {};
+        if (out.width.w != null)
+          a["w:w"] = String(out.width.w);
+        if (out.width.type != null)
+          a["w:type"] = String(out.width.type);
+        out._extras = [...out._extras || [], xml.el("w:tcW", a)];
+        delete out.width;
+      }
+      return out;
+    }
+    function typeTcPr(tcPr) {
       if (!tcPr || !tcPr._extras)
         return tcPr;
       const remaining = [];
@@ -8556,16 +8816,17 @@ export const docxFullPackage = {
         out._extras = extras;
       return out;
     }
-    const extShaped = new WeakSet;
+    const extShaped = new WeakSet, coreKept = new WeakSet;
     function adoptCoreTblPr(table) {
       const t = table && table.tblPr;
-      if (!t || extShaped.has(t))
+      if (!t || extShaped.has(t) || coreKept.has(t))
         return;
-      const el = core.renderTableProperties(t), typed = el ? parseTblPr(el) : void 0;
-      if (typed) {
+      const el = core.renderTableProperties(t), typed = el ? parseTblPr(el) : void 0, back = typed ? renderTblPr(typed) : null;
+      if (typed && back && core.sameElement(back, el)) {
         extShaped.add(typed);
         table.tblPr = typed;
-      }
+      } else
+        coreKept.add(t);
     }
     function hydrateTable(table) {
       adoptCoreTblPr(table);
@@ -8576,13 +8837,13 @@ export const docxFullPackage = {
       }
       const remaining = [];
       for (const c of table._extras) {
-        if (c.type === "element" && c.name === "w:tblPr") {
-          const t = parseTblPr(c);
-          if (t) {
+        if (c.type === "element" && c.name === "w:tblPr" && table.tblPr === void 0) {
+          const t = parseTblPr(c), back = t ? renderTblPr(t) : null;
+          if (t && back && core.sameElement(back, c)) {
             extShaped.add(t);
             table.tblPr = t;
+            continue;
           }
-          continue;
         }
         remaining.push(c);
       }
@@ -8598,11 +8859,12 @@ export const docxFullPackage = {
       if (row && row._extras) {
         const remaining = [];
         for (const c of row._extras) {
-          if (c.type === "element" && c.name === "w:trPr") {
-            const t = parseTrPr(c);
-            if (t)
+          if (c.type === "element" && c.name === "w:trPr" && row.trPr === void 0) {
+            const t = parseTrPr(c), back = t ? renderTrPr(t) : null;
+            if (t && back && core.sameElement(back, c)) {
               row.trPr = t;
-            continue;
+              continue;
+            }
           }
           remaining.push(c);
         }
@@ -8622,7 +8884,7 @@ export const docxFullPackage = {
       if (!table)
         return table;
       const out = { ...table }, extras = out._extras ? [...out._extras] : [];
-      if (out.tblPr) {
+      if (out.tblPr && !coreKept.has(out.tblPr)) {
         const el = renderTblPr(out.tblPr);
         if (el)
           extras.unshift(el);
@@ -9146,6 +9408,9 @@ export const docxFullPackage = {
         root.trackRevisions = root.trackChanges;
         delete root.trackChanges;
       }
+      return Array.isArray(root) ? typeSettings(root) : core.hydrateLossless(root, typeSettings, dehydrate);
+    }
+    function typeSettings(root) {
       const extras = root._extras || (Array.isArray(root) ? root : []), remaining = [];
       for (const c of extras) {
         if (c.type !== "element") {
@@ -17044,9 +17309,521 @@ export const docxFullPackage = {
     }
     return { parseElement, renderElement, ELEMENTS };
   } });
+    __register({ name: "wmlStyleDetails", dependencies: ["xml","docxProperties"], factory: function(xml, core) {
+    const TOGGLES = [
+      "autoRedefine",
+      "hidden",
+      "semiHidden",
+      "unhideWhenUsed",
+      "qFormat",
+      "locked",
+      "personal",
+      "personalCompose",
+      "personalReply"
+    ], STRINGS = ["aliases", "link", "rsid"], TBL_STYLE_PR_SEQ = core.sequence(["w:pPr", "w:rPr", "w:tblPr", "w:trPr", "w:tcPr"]);
+    function attrsOf(el) {
+      const out = {};
+      for (const [k, v] of Object.entries(el.attrs || {}))
+        out[k.replace(/^w:/, "")] = v;
+      return out;
+    }
+    function wAttrs(o) {
+      const out = {};
+      for (const [k, v] of Object.entries(o || {}))
+        if (v != null)
+          out["w:" + k] = String(v);
+      return out;
+    }
+    function parseTblStylePr(el) {
+      const out = { type: el.attrs["w:type"] }, extras = [];
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        const empty = !(c.children || []).some((x) => x.type === "element") && Object.keys(c.attrs || {}).length === 0;
+        if (c.name === "w:pPr")
+          out.pPr = empty ? {} : core.parseParagraphProperties(c);
+        else if (c.name === "w:rPr")
+          out.rPr = empty ? {} : core.parseRunProperties(c);
+        else if (c.name === "w:tblPr")
+          out.tblPr = empty ? {} : core.parseTableProperties(c);
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderTblStylePr(t) {
+      const children = [], emptyEl = (bag, name) => bag && typeof bag === "object" && Object.keys(bag).length === 0 ? xml.el(name, {}) : null, p = core.renderParagraphProperties(t.pPr) || emptyEl(t.pPr, "w:pPr");
+      if (p)
+        children.push(p);
+      const r = core.renderRunProperties(t.rPr) || emptyEl(t.rPr, "w:rPr");
+      if (r)
+        children.push(r);
+      const tb = core.renderTableProperties(t.tblPr) || emptyEl(t.tblPr, "w:tblPr");
+      if (tb)
+        children.push(tb);
+      if (t._extras)
+        for (const e of t._extras)
+          children.push(e);
+      return xml.el("w:tblStylePr", t.type != null ? { "w:type": String(t.type) } : {}, core.orderBySequence(children, TBL_STYLE_PR_SEQ));
+    }
+    function parseLatentStyles(el) {
+      const out = { ...attrsOf(el), exceptions: [] };
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        if (c.name !== "w:lsdException")
+          return;
+        out.exceptions.push(attrsOf(c));
+      }
+      return out;
+    }
+    function renderLatentStyles(l) {
+      const { exceptions, ...attrs } = l;
+      return xml.el("w:latentStyles", wAttrs(attrs), (exceptions || []).map((e) => xml.el("w:lsdException", wAttrs(e))));
+    }
+    function typeStyle(st) {
+      if (!st || !st._extras)
+        return st;
+      const remaining = [];
+      for (const c of st._extras) {
+        if (c.type !== "element") {
+          remaining.push(c);
+          continue;
+        }
+        const local = c.name.replace(/^w:/, "");
+        if (c.name.startsWith("w:") && TOGGLES.includes(local))
+          st[local] = core.readToggle(c);
+        else if (c.name.startsWith("w:") && STRINGS.includes(local))
+          st[local] = c.attrs["w:val"];
+        else if (c.name === "w:uiPriority")
+          st.uiPriority = Number(c.attrs["w:val"]);
+        else if (c.name === "w:tblStylePr")
+          (st.tblStylePr = st.tblStylePr || []).push(parseTblStylePr(c));
+        else
+          remaining.push(c);
+      }
+      if (remaining.length)
+        st._extras = remaining;
+      else
+        delete st._extras;
+      return st;
+    }
+    function untypeStyle(st) {
+      if (!st)
+        return st;
+      const out = { ...st }, extras = out._extras ? [...out._extras] : [];
+      for (const t of TOGGLES)
+        if (out[t] !== void 0) {
+          const el = core.writeToggle("w:" + t, out[t]);
+          if (el)
+            extras.push(el);
+          delete out[t];
+        }
+      for (const s of STRINGS)
+        if (out[s] != null) {
+          extras.push(xml.el("w:" + s, { "w:val": String(out[s]) }));
+          delete out[s];
+        }
+      if (out.uiPriority != null) {
+        extras.push(xml.el("w:uiPriority", { "w:val": String(out.uiPriority) }));
+        delete out.uiPriority;
+      }
+      if (out.tblStylePr) {
+        for (const t of out.tblStylePr)
+          extras.push(renderTblStylePr(t));
+        delete out.tblStylePr;
+      }
+      if (extras.length)
+        out._extras = extras;
+      else
+        delete out._extras;
+      return out;
+    }
+    function typePart(part) {
+      if (!part || !part._extras)
+        return part;
+      const remaining = [];
+      for (const c of part._extras) {
+        if (c.type === "element" && c.name === "w:latentStyles") {
+          const l = parseLatentStyles(c);
+          if (l) {
+            part.latentStyles = l;
+            continue;
+          }
+        }
+        remaining.push(c);
+      }
+      if (remaining.length)
+        part._extras = remaining;
+      else
+        delete part._extras;
+      return part;
+    }
+    function untypePart(part) {
+      if (!part)
+        return part;
+      const out = { ...part }, extras = out._extras ? [...out._extras] : [];
+      if (out.latentStyles) {
+        extras.push(renderLatentStyles(out.latentStyles));
+        delete out.latentStyles;
+      }
+      if (extras.length)
+        out._extras = extras;
+      else
+        delete out._extras;
+      return out;
+    }
+    function hydrateStyles(styles) {
+      if (!styles || typeof styles !== "object")
+        return styles;
+      core.hydrateLossless(styles, typePart, untypePart);
+      for (const st of Array.isArray(styles.styles) ? styles.styles : [])
+        core.hydrateLossless(st, typeStyle, untypeStyle);
+      return styles;
+    }
+    function dehydrateStyles(styles) {
+      if (!styles || typeof styles !== "object")
+        return styles;
+      const out = untypePart(styles);
+      if (Array.isArray(styles.styles))
+        out.styles = styles.styles.map(untypeStyle);
+      return out;
+    }
+    const LEGACY_ATTRS = ["legacy", "legacySpace", "legacyIndent"];
+    function typeBy(spec) {
+      return (bag) => {
+        if (!bag || !bag._extras)
+          return bag;
+        const remaining = [];
+        for (const c of bag._extras) {
+          const local = c && c.type === "element" && c.name.startsWith("w:") ? c.name.slice(2) : null;
+          if (local !== null && (spec.strings || []).includes(local))
+            bag[local] = c.attrs["w:val"];
+          else if (local !== null && (spec.numbers || []).includes(local))
+            bag[local] = Number(c.attrs["w:val"]);
+          else if (local !== null && (spec.toggles || []).includes(local))
+            bag[local] = core.readToggle(c);
+          else if (local === "legacy" && spec.legacy) {
+            const l = {};
+            for (const a of LEGACY_ATTRS)
+              if (c.attrs["w:" + a] != null)
+                l[a] = c.attrs["w:" + a];
+            bag.legacy = l;
+          } else
+            remaining.push(c);
+        }
+        if (remaining.length)
+          bag._extras = remaining;
+        else
+          delete bag._extras;
+        return bag;
+      };
+    }
+    function untypeBy(spec) {
+      return (bag) => {
+        if (!bag)
+          return bag;
+        const out = { ...bag }, extras = out._extras ? [...out._extras] : [];
+        for (const k of [...spec.strings || [], ...spec.numbers || []])
+          if (out[k] != null) {
+            extras.push(xml.el("w:" + k, { "w:val": String(out[k]) }));
+            delete out[k];
+          }
+        for (const k of spec.toggles || [])
+          if (out[k] !== void 0) {
+            const el = core.writeToggle("w:" + k, out[k]);
+            if (el)
+              extras.push(el);
+            delete out[k];
+          }
+        if (spec.legacy && out.legacy) {
+          const a = {};
+          for (const k of LEGACY_ATTRS)
+            if (out.legacy[k] != null)
+              a["w:" + k] = String(out.legacy[k]);
+          extras.push(xml.el("w:legacy", a));
+          delete out.legacy;
+        }
+        if (extras.length)
+          out._extras = extras;
+        else
+          delete out._extras;
+        return out;
+      };
+    }
+    const NUMBERING_PART = { numbers: ["numIdMacAtCleanup"] }, ABSTRACT = { strings: ["nsid", "tmpl", "styleLink", "numStyleLink"] }, LEVEL = { strings: ["suff", "pStyle"], numbers: ["lvlRestart", "lvlPicBulletId"], toggles: ["isLgl"], legacy: !0 }, typeNumberingPart = typeBy(NUMBERING_PART), untypeNumberingPart = untypeBy(NUMBERING_PART), typeAbstract = typeBy(ABSTRACT), untypeAbstract = untypeBy(ABSTRACT), typeLevel = typeBy(LEVEL), untypeLevel = untypeBy(LEVEL);
+    function hydrateNumbering(numbering) {
+      if (!numbering || typeof numbering !== "object")
+        return numbering;
+      core.hydrateLossless(numbering, typeNumberingPart, untypeNumberingPart);
+      for (const an of Array.isArray(numbering.abstractNums) ? numbering.abstractNums : []) {
+        if (!an)
+          continue;
+        core.hydrateLossless(an, typeAbstract, untypeAbstract);
+        for (const lvl of Array.isArray(an.levels) ? an.levels : [])
+          if (lvl)
+            core.hydrateLossless(lvl, typeLevel, untypeLevel);
+      }
+      return numbering;
+    }
+    function dehydrateNumbering(numbering) {
+      if (!numbering || typeof numbering !== "object")
+        return numbering;
+      const out = untypeNumberingPart(numbering);
+      if (Array.isArray(numbering.abstractNums))
+        out.abstractNums = numbering.abstractNums.map((an) => {
+          if (!an)
+            return an;
+          const a = untypeAbstract(an);
+          if (Array.isArray(an.levels))
+            a.levels = an.levels.map((lvl) => lvl ? untypeLevel(lvl) : lvl);
+          return a;
+        });
+      return out;
+    }
+    return {
+      hydrateStyles,
+      dehydrateStyles,
+      hydrateNumbering,
+      dehydrateNumbering,
+      parseTblStylePr,
+      renderTblStylePr,
+      parseLatentStyles,
+      renderLatentStyles
+    };
+  } });
+    __register({ name: "wmlDocumentDetails", dependencies: ["xml","docxProperties","docxStructure"], factory: function(xml, core, structure) {
+    const TOGGLE_VALUES = new Set(["true", "false", "1", "0", "on", "off"]), elementsOf = (el) => (el.children || []).filter((c) => c.type === "element"), isEmpty = (el) => elementsOf(el).length === 0 && Object.keys(el.attrs || {}).length === 0;
+    function attrsOf(el) {
+      const out = {};
+      for (const [k, v] of Object.entries(el.attrs || {}))
+        out[k.startsWith("w:") ? k.slice(2) : k] = v;
+      return out;
+    }
+    function wAttrs(o) {
+      const out = {};
+      for (const [k, v] of Object.entries(o || {}))
+        if (v != null && typeof v !== "object")
+          out[k.includes(":") ? k : "w:" + k] = String(v);
+      return out;
+    }
+    function isToggle(el) {
+      if (elementsOf(el).length)
+        return !1;
+      const keys = Object.keys(el.attrs || {});
+      return keys.length === 0 || keys.length === 1 && keys[0] === "w:val" && TOGGLE_VALUES.has(el.attrs["w:val"]);
+    }
+    const KINDS = {
+      toggle: { parse: (el) => isToggle(el) ? core.readToggle(el) : void 0, render: (name, v) => core.writeToggle(name, v) },
+      val: { parse: (el) => el.attrs["w:val"], render: (name, v) => xml.el(name, { "w:val": String(v) }) },
+      num: { parse: (el) => Number(el.attrs["w:val"]), render: (name, v) => xml.el(name, { "w:val": String(v) }) },
+      pval: { parse: (el) => el.attrs[el.name.split(":")[0] + ":val"], render: (name, v) => xml.el(name, { [name.split(":")[0] + ":val"]: String(v) }) },
+      attrs: { parse: (el) => elementsOf(el).length ? void 0 : attrsOf(el), render: (name, v) => xml.el(name, wAttrs(v)) },
+      group: {
+        parse(el) {
+          const out = {};
+          if (Object.keys(el.attrs || {}).length)
+            return;
+          for (const c of elementsOf(el)) {
+            const key = c.name.startsWith("w:") ? c.name.slice(2) : c.name;
+            if (elementsOf(c).length || out[key] !== void 0)
+              return;
+            out[key] = attrsOf(c);
+          }
+          return out;
+        },
+        render: (name, v) => xml.el(name, {}, Object.entries(v).map(([k, a]) => xml.el(k.includes(":") ? k : "w:" + k, wAttrs(a))))
+      },
+      cols: {
+        parse(el) {
+          const kids = elementsOf(el);
+          if (kids.some((c) => c.name !== "w:col" || elementsOf(c).length))
+            return;
+          return { ...attrsOf(el), col: kids.map(attrsOf) };
+        },
+        render(name, v) {
+          const { col, ...attrs } = v;
+          return xml.el(name, wAttrs(attrs), (col || []).map((a) => xml.el("w:col", wAttrs(a))));
+        }
+      },
+      rPrChange: changeKind("w:rPr", (el) => core.parseRunProperties(el), (v) => core.renderRunProperties(v), "rPr"),
+      pPrChange: changeKind("w:pPr", (el) => core.parseParagraphProperties(el), (v) => core.renderParagraphProperties(v), "pPr"),
+      section: {
+        parse: (el) => isEmpty(el) ? {} : structure.parseSection(el),
+        render: (name, v) => Object.keys(v).length === 0 ? xml.el(name, {}) : structure.renderSection(v)
+      },
+      tblPrEx: {
+        parse: (el) => Object.keys(el.attrs || {}).length ? void 0 : isEmpty(el) ? {} : core.parseTableProperties(el),
+        render(name, v) {
+          const el = Object.keys(v).length ? core.renderTableProperties(v) : null;
+          return xml.el(name, {}, el ? el.children : []);
+        }
+      },
+      mathPr: {
+        parse(el) {
+          const out = {};
+          if (Object.keys(el.attrs || {}).length)
+            return;
+          for (const c of elementsOf(el)) {
+            const key = c.name.replace(/^m:/, ""), keys = Object.keys(c.attrs || {});
+            if (!c.name.startsWith("m:") || elementsOf(c).length || out[key] !== void 0)
+              return;
+            if (keys.length === 0)
+              out[key] = !0;
+            else if (keys.length === 1 && keys[0] === "m:val")
+              out[key] = c.attrs["m:val"];
+            else
+              return;
+          }
+          return out;
+        },
+        render: (name, v) => xml.el(name, {}, Object.entries(v).map(([k, val]) => xml.el("m:" + k, val === !0 ? {} : { "m:val": String(val) })))
+      }
+    };
+    function changeKind(innerName, parseInner, renderInner, key) {
+      return {
+        parse(el) {
+          const kids = elementsOf(el);
+          if (kids.length !== 1 || kids[0].name !== innerName)
+            return;
+          return { ...attrsOf(el), [key]: isEmpty(kids[0]) ? {} : parseInner(kids[0]) };
+        },
+        render(name, v) {
+          const { [key]: inner, ...attrs } = v, innerEl = (inner && Object.keys(inner).length ? renderInner(inner) : null) || xml.el(innerName, {});
+          return xml.el(name, wAttrs(attrs), [innerEl]);
+        }
+      };
+    }
+    function bagOf(spec, toggles) {
+      const byName = new Map(spec.map(([name, kind, field]) => [name, { kind: KINDS[kind], field: field || name.replace(/^w:/, "") }]));
+      function type(bag) {
+        if (!bag || !bag._extras)
+          return bag;
+        const remaining = [];
+        for (const c of bag._extras) {
+          const s = c && c.type === "element" ? byName.get(c.name) : void 0, v = s ? s.kind.parse(c) : void 0;
+          if (s && v !== void 0 && !(typeof v === "number" && Number.isNaN(v)))
+            bag[s.field] = v;
+          else if (!s && toggles && c && c.type === "element" && c.name.startsWith("w:") && isToggle(c))
+            (bag.toggles = bag.toggles || {})[c.name.slice(2)] = core.readToggle(c);
+          else
+            remaining.push(c);
+        }
+        if (remaining.length)
+          bag._extras = remaining;
+        else
+          delete bag._extras;
+        return bag;
+      }
+      function untype(bag) {
+        if (!bag)
+          return bag;
+        const out = { ...bag }, extras = out._extras ? [...out._extras] : [];
+        for (const [name, s] of byName) {
+          if (out[s.field] === void 0)
+            continue;
+          const el = s.kind.render(name, out[s.field]);
+          if (el)
+            extras.push(el);
+          delete out[s.field];
+        }
+        if (toggles && out.toggles) {
+          for (const [k, v] of Object.entries(out.toggles)) {
+            const el = core.writeToggle("w:" + k, v);
+            if (el)
+              extras.push(el);
+          }
+          delete out.toggles;
+        }
+        if (extras.length)
+          out._extras = extras;
+        else
+          delete out._extras;
+        return out;
+      }
+      return {
+        hydrate: (bag) => core.hydrateLossless(bag, type, untype),
+        dehydrate: untype
+      };
+    }
+    const run = bagOf([
+      ["w:rtl", "toggle"],
+      ["w:spacing", "num"],
+      ["w:del", "attrs", "markDel"],
+      ["w:ins", "attrs", "markIns"],
+      ["w:moveFrom", "attrs", "markMoveFrom"],
+      ["w:moveTo", "attrs", "markMoveTo"],
+      ["w:rPrChange", "rPrChange"]
+    ]), paragraph = bagOf([
+      ["w:shd", "attrs"],
+      ["w:pBdr", "group"],
+      ["w:sectPr", "section"],
+      ["w:pPrChange", "pPrChange"]
+    ]), cell = bagOf([["w:shd", "attrs"]]), rowBag = bagOf([["w:tblPrEx", "tblPrEx"]]), section = bagOf([
+      ["w:docGrid", "attrs"],
+      ["w:cols", "cols"],
+      ["w:formProt", "toggle"],
+      ["w:pgNumType", "attrs"],
+      ["w:textDirection", "val"],
+      ["w:vAlign", "val"],
+      ["w:lnNumType", "attrs"],
+      ["w:pgBorders", "attrs"],
+      ["w:noEndnote", "toggle"],
+      ["w:bidi", "toggle"],
+      ["w:rtlGutter", "toggle"],
+      ["w:paperSrc", "attrs"],
+      ["w:titlePg", "toggle"],
+      ["w:footnotePr", "group"],
+      ["w:endnotePr", "group"]
+    ]), settings = bagOf([
+      ["m:mathPr", "mathPr", "mathPr"]
+    ], !0), compat = bagOf([], !0);
+    function hydrateRow(row) {
+      if (!row)
+        return row;
+      return rowBag.hydrate(row);
+    }
+    function dehydrateRow(row) {
+      if (!row)
+        return row;
+      return rowBag.dehydrate(row);
+    }
+    function hydrateSettings(s) {
+      if (!s || typeof s !== "object" || Array.isArray(s))
+        return s;
+      settings.hydrate(s);
+      if (s.compat && typeof s.compat === "object")
+        compat.hydrate(s.compat);
+      return s;
+    }
+    function dehydrateSettings(s) {
+      if (!s || typeof s !== "object" || Array.isArray(s))
+        return s;
+      const out = settings.dehydrate(s);
+      if (out.compat && typeof out.compat === "object")
+        out.compat = compat.dehydrate(out.compat);
+      return out;
+    }
+    return {
+      hydrateRunProperties: run.hydrate,
+      dehydrateRunProperties: run.dehydrate,
+      hydrateParagraphProperties: paragraph.hydrate,
+      dehydrateParagraphProperties: paragraph.dehydrate,
+      hydrateTcPr: cell.hydrate,
+      dehydrateTcPr: cell.dehydrate,
+      hydrateRow,
+      dehydrateRow,
+      hydrateSection: section.hydrate,
+      dehydrateSection: section.dehydrate,
+      hydrateSettings,
+      dehydrateSettings
+    };
+  } });
 
     const __core = __resolve("docx");
-    __core.use(__resolve("wmlRunFormatting"), __resolve("wmlParagraphFormatting"), __resolve("wmlTableProperties"), __resolve("wmlNumberingDetails"), __resolve("wmlSettings"), __resolve("wmlFields"), __resolve("wmlTrackedChanges"), __resolve("mathAdvanced"), __resolve("dmlWpPositioning"), __resolve("dmlEffects"), __resolve("dmlFillsAdvanced"), __resolve("dmlWpDrawing"), __resolve("wmlVmlLegacy"), __resolve("dmlShapesAdvanced"), __resolve("transitional"), __resolve("legacyVml"), __resolve("wmlMisc"), __resolve("mathMisc"), __resolve("dmlMainMisc"));
+    __core.use(__resolve("wmlRunFormatting"), __resolve("wmlParagraphFormatting"), __resolve("wmlTableProperties"), __resolve("wmlNumberingDetails"), __resolve("wmlSettings"), __resolve("wmlFields"), __resolve("wmlTrackedChanges"), __resolve("mathAdvanced"), __resolve("dmlWpPositioning"), __resolve("dmlEffects"), __resolve("dmlFillsAdvanced"), __resolve("dmlWpDrawing"), __resolve("wmlVmlLegacy"), __resolve("dmlShapesAdvanced"), __resolve("transitional"), __resolve("legacyVml"), __resolve("wmlMisc"), __resolve("mathMisc"), __resolve("dmlMainMisc"), __resolve("wmlStyleDetails"), __resolve("wmlDocumentDetails"));
     return __core;
     }
 };

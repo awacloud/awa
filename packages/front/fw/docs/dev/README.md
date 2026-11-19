@@ -7,6 +7,8 @@ Practical sheets for **operating** the `@awacloud/fw` repo (running, building, g
 | [runtime.md](./runtime.md) | Dev runtime choice: bun by default vs Node — which task, which prerequisites, lean install policy. |
 | [testing.md](./testing.md) | Running the suite (bun / Node-vitest), categories, extended crypto, KAT/ACVP vectors. |
 | [types.md](./types.md) | Generating `.d.ts`, typed registry, audit. |
+| [bench.md](./bench.md) | Measuring performance: one cell per process, the A/A calibration, oracle parity, comparing two revisions. |
+| [crypto-references.md](./crypto-references.md) | The logical references kept beside the flattened crypto modules, their differential tests, and the generators of the generated code. |
 | [provenance.md](./provenance.md) | Origin of third-party-derived code (SJCL, BSD-2-Clause; TweetNaCl, public domain; Penner easing equations, BSD); the notices shipped out of prudence live under `third-party/`. |
 | [publishing.md](./publishing.md) | **Lean** npm package (consumer) + transparency via git/CDN-git + CDN usage. |
 

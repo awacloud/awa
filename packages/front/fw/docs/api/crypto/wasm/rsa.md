@@ -102,7 +102,7 @@ await wasmRsa.verify(kp.publicKey, bad, msg, 'PSS', 256);  // → false
 - **NIST-anchored.** The test suite verifies a genuine NIST RSA-SigGen-FIPS186-5 PKCS#1-v1.5 signature byte-for-byte against the delivered binary, plus OAEP/PSS/PKCS1 round-trips on a fixed NIST DecryptionPrimitive key.
 - **Scalar only.** The `rsa` target ships `rsa.scalar.wasm` (no SIMD build); the wrapper passes `{ variant: 'scalar' }` to `wasmRuntime.load`.
 - **Output is copied OUT** of WASM linear memory into fresh `Uint8Array`s (never a view that could alias reused memory).
-- **No-throw contract.** Every failure path resolves to `false` after a `console.error`; nothing rejects.
+- **No-throw contract.** Every failure path resolves to `false`; nothing rejects. An OAEP decryption failure (a wrong key, a tampered ciphertext) logs `CORRUPT` at warn level, every other failure logs at `console.error`.
 
 ## See also
 

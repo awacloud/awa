@@ -43,7 +43,8 @@ Modules for DOM manipulation, events, rendering, storage, and network communicat
 | [dom](./query/dom.md) | `secPolicy` | no | Selection, styles, attributes, scroll (CSS filtering via `secPolicy`) |
 | [events](./query/events.md) | none | no | Named event management |
 | [gesture](./query/gesture.md) | `events` | no | Touch/pointer gestures: tap, swipe, pan, pinch |
-| [media](./query/media.md) | none | no | JS media queries |
+| [media](./query/media.md) | none | no | Camera, microphone and screen streams |
+| [sound](./query/sound.md) | none | no | Record and play short sound clips (Web Audio) |
 
 ### display
 

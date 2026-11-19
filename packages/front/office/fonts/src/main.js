@@ -127,11 +127,15 @@ import { tableGposValueRecord } from './table/gpos/value-record.js';
 
 import { varCoordsConvert } from './variable/coordsConvert.js';
 import { varInstance }      from './variable/instance.js';
+import { varItemStore }     from './variable/itemVariationStore.js';
+import { varGlyph }         from './variable/glyph.js';
+import { varInstantiate }   from './variable/instantiate.js';
 
 import { embedClosure }          from './embed-pdf/subsetForPdf/closure.js';
 import { embedCmapBuilder }      from './embed-pdf/subsetForPdf/cmap-builder.js';
 import { embedGlyphRewriter }    from './embed-pdf/subsetForPdf/glyph-rewriter.js';
 import { embedHash }             from './embed-pdf/subsetForPdf/hash.js';
+import { embedCffSubset }        from './embed-pdf/subsetForPdf/cff-subset.js';
 import { embedSubsetForPdf }     from './embed-pdf/subsetForPdf.js';
 import { embedFontDescriptor }   from './embed-pdf/fontDescriptor.js';
 import { embedCidSystemInfo }    from './embed-pdf/cidSystemInfo.js';
@@ -139,6 +143,7 @@ import { embedToUnicodeBuilder } from './embed-pdf/toUnicodeBuilder.js';
 
 import { layoutClassDefinitions } from './layout/classDefinitions.js';
 import { cmapToUnicode }          from './cmap/toUnicode.js';
+import { cmapCid }                from './cmap/cid.js';
 
 import { standard14Helvetica }    from './standard14/helvetica.js';
 import { standard14Times }        from './standard14/times.js';
@@ -156,10 +161,15 @@ import { encodingZapfDingbats } from './encodings/zapfDingbats.js';
 import { encodingLookup }       from './encodings/lookup.js';
 import { encodingAglTable }     from './encodings/aglTable.js';
 import { encodingAgl }          from './encodings/agl.js';
+import { encodingZapfDingbatsGlyphs } from './encodings/zapfDingbatsGlyphs.js';
+import { encodingTexMath }      from './encodings/texMath.js';
 
 import { fontPath }             from './glyph/path.js';
 import { fontGlyph }            from './glyph/glyph.js';
 import { fontCompositeResolve } from './glyph/compositeResolve.js';
+import { fontType1Charstring } from './type1/charstring.js';
+import { fontType1 } from './type1/type1.js';
+import { fontCffProgram } from './type1/cff.js';
 
 import { fonts } from './fonts.js';
 
@@ -185,16 +195,17 @@ export const modules = [
     tableGsubScriptFeatureList, tableGsubTypes14, tableGsubTypes57,
     tableGposType1, tableGposType2, tableGposType3, tableGposType46,
     tableGposType78, tableGposType9, tableGposValueRecord,
-    varCoordsConvert, varInstance,
-    embedClosure, embedCmapBuilder, embedGlyphRewriter, embedHash,
+    varCoordsConvert, varInstance, varItemStore, varGlyph, varInstantiate,
+    embedClosure, embedCmapBuilder, embedGlyphRewriter, embedHash, embedCffSubset,
     embedSubsetForPdf, embedFontDescriptor, embedCidSystemInfo, embedToUnicodeBuilder,
-    layoutClassDefinitions, cmapToUnicode,
+    layoutClassDefinitions, cmapToUnicode, cmapCid,
     standard14Helvetica, standard14Times, standard14Courier,
     standard14Symbol, standard14ZapfDingbats, standard14Lookup,
     encodingWinAnsi, encodingMacRoman, encodingMacExpert,
     encodingStandard, encodingSymbol, encodingZapfDingbats, encodingLookup,
-    encodingAglTable, encodingAgl,
+    encodingAglTable, encodingZapfDingbatsGlyphs, encodingAgl, encodingTexMath,
     fontPath, fontGlyph, fontCompositeResolve,
+    fontType1Charstring, fontType1, fontCffProgram,
     fonts
 ];
 
@@ -217,6 +228,7 @@ import { extraShaperArabic } from './extra/shaper-arabic.js';
 import { extraShaperIndic }  from './extra/shaper-indic.js';
 import { extraShaperCjk }    from './extra/shaper-cjk.js';
 import { extraWoff2Write }   from './extra/woff2-write.js';
+import { fontShaper }        from './extra/shaper.js';
 
 import { aatMorx } from './extra/apple-aat/morx.js';
 import { aatKerx } from './extra/apple-aat/kerx.js';
@@ -224,6 +236,9 @@ import { aatAnkr } from './extra/apple-aat/ankr.js';
 import { aatProp } from './extra/apple-aat/prop.js';
 import { aatLcar } from './extra/apple-aat/lcar.js';
 import { aatFeat } from './extra/apple-aat/feat.js';
+import { aatLookup } from './extra/apple-aat/lookup.js';
+import { aatMorxEngine } from './extra/apple-aat/morx-engine.js';
+import { aatKerxEngine } from './extra/apple-aat/kerx-engine.js';
 
 export const extras = [
     extraMath, extraJstf, extraDsig,
@@ -231,9 +246,10 @@ export const extras = [
     ttHintingOpPush, ttHintingOpStack, ttHintingOpMath,
     ttHintingOpControl, ttHintingOpGs, ttHintingOpOutline, ttHintingOpCvt,
     extraTtHinting,
-    extraShaperArabic, extraShaperIndic, extraShaperCjk,
+    extraShaperArabic, extraShaperIndic, extraShaperCjk, fontShaper,
     extraWoff2Write,
-    aatMorx, aatKerx, aatAnkr, aatProp, aatLcar, aatFeat
+    aatMorx, aatKerx, aatAnkr, aatProp, aatLcar, aatFeat,
+    aatLookup, aatMorxEngine, aatKerxEngine
 ];
 
 // --- bundle — pure fw factory descriptors layering core + extras.
@@ -269,16 +285,17 @@ export {
     tableGsubScriptFeatureList, tableGsubTypes14, tableGsubTypes57,
     tableGposType1, tableGposType2, tableGposType3, tableGposType46,
     tableGposType78, tableGposType9, tableGposValueRecord,
-    varCoordsConvert, varInstance,
-    embedClosure, embedCmapBuilder, embedGlyphRewriter, embedHash,
+    varCoordsConvert, varInstance, varItemStore, varGlyph, varInstantiate,
+    embedClosure, embedCmapBuilder, embedGlyphRewriter, embedHash, embedCffSubset,
     embedSubsetForPdf, embedFontDescriptor, embedCidSystemInfo, embedToUnicodeBuilder,
-    layoutClassDefinitions, cmapToUnicode,
+    layoutClassDefinitions, cmapToUnicode, cmapCid,
     standard14Helvetica, standard14Times, standard14Courier,
     standard14Symbol, standard14ZapfDingbats, standard14Lookup,
     encodingWinAnsi, encodingMacRoman, encodingMacExpert,
     encodingStandard, encodingSymbol, encodingZapfDingbats, encodingLookup,
-    encodingAglTable, encodingAgl,
+    encodingAglTable, encodingZapfDingbatsGlyphs, encodingAgl, encodingTexMath,
     fontPath, fontGlyph, fontCompositeResolve,
+    fontType1Charstring, fontType1, fontCffProgram,
     fonts,
     fontsLargeBundle, fontsFullBundle, fontsAppleAatBundle
 };

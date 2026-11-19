@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `oconvOdtToIr` — odt → `oconv-ir/v1` reader (tier 2).
+ * @fileoverview `oconvOdtToIr` — odt → `oconv-ir/v2` reader (tier 2).
  *
  * Converts the value of `@awacloud/odf`'s `odt.read(bytes)` into the frozen
  * pivot IR (`../ir/ir.js`), composing `@awacloud/odf`'s public surface only
@@ -73,7 +73,7 @@
  * | `tab` | `run{text:'\t'}` | |
  * | `line-break` | `run{text:'\n'}` | |
  * | `span` without `runs`, any of bold/italic/strike/monospace set | `run{text, bold, italic, strike, code: !!monospace}`, NO loss | A named style's binding is kept and its resolved flags are added: a resolvable content-automatic OR styles.xml named style carries these flags — `styleName` may ALSO be present (kept, named case) or absent (dropped, auto case); the reader keys on flag presence, never on `styleName` absence. |
- * | `span` without `runs`, no flags set | `run{text}` (bold/italic/strike/code all `false`) | The style (named or auto) could not be resolved to emphasis flags — loss `run/format-unresolved`, detail = `styleName` or `'(unnamed)'`. |
+ * | `span` without `runs`, no flags set | `run{text}` (bold/italic/strike/code all `false`) | The style (named or auto) could not be resolved to emphasis flags — loss `run/format-unresolved`, detail = `styleName` or `'(unnamed)'` — unless the style is defined in the document (a `content.xml` automatic style as read, or a `styles.xml` style) and neither it nor a style up its parent chain states an emphasis property (`fo:font-weight`, `fo:font-style`, their `-asian` / `-complex` forms, `style:text-line-through-style` / `-type`): such a style states no emphasis, and the span is read with no loss (T84; a size, a font, a colour, an underline or a script alone, as oconv's docx → odt writes them). |
  * | `span` with `runs` (odf lists the span's inner markup when it has at least one element child) | one IR `run` per mapped inner entry, in document order; the span's own flags are OR-ed onto each, so nested span flags add up | `value` is not used. The span's own `run/format-unresolved` rule is the one above (one loss for this span when it has no flag). `text`/`space`/`tab`/`line-break`/`link` entries map as at paragraph level; a nested `span` maps recursively (its own loss rule applies); a raw element entry follows the field-text rule below. |
  * | `link` | one IR `run` per inner run, each carrying that inner run's own text/flags PLUS `link: href` | `<text:a>` is now a typed paragraph/heading run (no longer routed through `_extras`, see below). An empty/missing `href` emits `link/target-missing` (reusing the pre-existing code — same situation, same code) and every produced run gets `link: null` instead. |
  *
@@ -132,6 +132,14 @@
  * reader reads a numbered heading as a heading too. Such a heading takes
  * no outline number (it is in a list).
  *
+ * A result read with `odt.read(bytes, { notes: true })` (what `oconv`
+ * itself does, since 2.0.0) carries each `text:note` as a note run: it
+ * reads as the IR `note` at its place (`class` its `noteClass`, `mark` its
+ * `label` or `null`, its children the note's body mapped as the body is),
+ * so a writer without notes drops it (`note/dropped`) instead of its text
+ * running into its paragraph (`inline/flattened`, 1.x). A note inside a
+ * code paragraph records `inline/dropped` (detail `text:note`).
+ *
  * A result read with `odt.read(bytes, { framesInRuns: true })` (what
  * `oconv` itself does) carries each frame as a `{ type: 'frame' }` run at
  * its place instead. An IMAGE frame becomes an IR `image` there: `name` =
@@ -178,7 +186,7 @@
  *   continuation of a colSpan/rowSpan) is skipped — no IR cell is emitted
  *   for it. A cell's `repeated` (`table:number-columns-repeated`) is
  *   expanded into that many IR cells with freshly mapped (not shared) content.
- *   `oconv-ir/v1`'s `table`/`row`/`cell` carry no span props (`ir.js`'s
+ *   `oconv-ir/v2`'s `table`/`row`/`cell` carry no span props (`ir.js`'s
  *   frozen v1 vocabulary), so a `colSpan`/`rowSpan` beyond the automatic
  *   skip-covered flattens to: the spanning cell's own content is kept, the
  *   covered continuation cells contribute nothing — no dedicated loss code,
@@ -324,6 +332,55 @@ export const oconvOdtToIr = {
          */
         const autoParentOf = new WeakMap();
 
+        /**
+         * `name → { text, parent }` of the call's defined styles (T84): the
+         * content automatic styles as read and the `styles.xml` styles and
+         * automatic styles, each its text properties and parent; keyed like
+         * {@link packageOf}.
+         */
+        const styleDefsOf = new WeakMap();
+
+        /** The text properties that state an emphasis (bold, italic, strike). */
+        const EMPHASIS_KEY = /^(fo:font-weight|fo:font-style|style:font-weight-(asian|complex)|style:font-style-(asian|complex)|style:text-line-through-(style|type))$/;
+
+        /**
+         * True when `name` is a defined style and neither it nor a style up
+         * its parent chain states an emphasis property (T84): a span of it
+         * carries no emphasis, and is not unresolved.
+         */
+        function statesNoEmphasis(losses, name) {
+            const defs = styleDefsOf.get(losses);
+            if (!defs || typeof name !== 'string' || !defs.has(name)) return false;
+            const seen = new Set();
+            for (let n = name; n !== undefined && !seen.has(n); ) {
+                seen.add(n);
+                const d = defs.get(n);
+                if (!d) return seen.size > 1;
+                if (Object.keys(d.text).some((k) => EMPHASIS_KEY.test(k))) return false;
+                n = d.parent;
+            }
+            return true;
+        }
+
+        /** The defined styles of a read result: its content automatic styles and its `styles.xml` styles. */
+        function styleDefs(readResult) {
+            const defs = new Map();
+            for (const s of (readResult && readResult.autoStyles && readResult.autoStyles.styles) || []) {
+                if (s && typeof s.name === 'string') {
+                    defs.set(s.name, { text: (s.properties && s.properties.text) || {}, parent: s.parentStyleName });
+                }
+            }
+            const st = readResult && readResult.styles;
+            for (const el of [...((st && st.styles) || []), ...((st && st.automaticStyles) || [])]) {
+                if (!el || el.type !== 'element' || el.name !== 'style:style') continue;
+                const a = el.attrs || {};
+                if (typeof a['style:name'] !== 'string' || defs.has(a['style:name'])) continue;
+                const tp = (el.children || []).find((c) => c && c.name === 'style:text-properties');
+                defs.set(a['style:name'], { text: (tp && tp.attrs) || {}, parent: a['style:parent-style-name'] });
+            }
+            return defs;
+        }
+
         /** Frozen paragraph-style names (display form, lower-cased) read as blocks. */
         const CODE_STYLES = new Set(['preformatted text']);
         const QUOTE_STYLES = new Set(['quotations']);
@@ -368,6 +425,7 @@ export const oconvOdtToIr = {
                     case 'link': s += codeTextOf(r.runs, losses); break;
                     case 'frame': losses.push({ code: 'inline/dropped', detail: 'draw:frame' }); break;
                     case 'element': losses.push({ code: 'inline/dropped', detail: r.name || 'unknown' }); break;
+                    case 'note': losses.push({ code: 'inline/dropped', detail: 'text:note' }); break;
                     default: break;
                 }
             }
@@ -529,7 +587,7 @@ export const oconvOdtToIr = {
                 strike: !!span.strike,
                 code: !!span.monospace
             };
-            if (!(flags.bold || flags.italic || flags.strike || flags.code)) {
+            if (!(flags.bold || flags.italic || flags.strike || flags.code) && !statesNoEmphasis(losses, span.styleName)) {
                 losses.push({
                     code: 'run/format-unresolved',
                     detail: span.styleName || '(unnamed)'
@@ -582,10 +640,12 @@ export const oconvOdtToIr = {
                             code: !!r.monospace
                         })];
                     }
-                    losses.push({
-                        code: 'run/format-unresolved',
-                        detail: r.styleName || '(unnamed)'
-                    });
+                    if (!statesNoEmphasis(losses, r.styleName)) {
+                        losses.push({
+                            code: 'run/format-unresolved',
+                            detail: r.styleName || '(unnamed)'
+                        });
+                    }
                     return r.value ? [oconvIr.node('run', { text: r.value })] : [];
                 }
                 case 'space': return [oconvIr.node('run', { text: ' '.repeat(r.count || 1) })];
@@ -618,6 +678,12 @@ export const oconvOdtToIr = {
                 }
                 case 'frame': return mapFrameRun(r, losses, false);
                 case 'element': return mapSpanElement(r, losses);
+                // A note (read with odf's `notes`, T82): the IR note, its
+                // body mapped as the body is.
+                case 'note': return [oconvIr.node('note', {
+                    class: r.noteClass === 'endnote' ? 'endnote' : 'footnote',
+                    mark: typeof r.label === 'string' && r.label ? r.label : null
+                }, mapBlocks(r.body || [], losses))];
                 default: return [];
             }
         }
@@ -953,7 +1019,7 @@ export const oconvOdtToIr = {
         }
 
         /**
-         * Convert an `odt.read(bytes)` result into `oconv-ir/v1`.
+         * Convert an `odt.read(bytes)` result into `oconv-ir/v2`.
          *
          * @param {object} readResult the value of `odt.read(bytes)`
          * @param {{include?: string[]}} [opts] `include` — the opt-in parts
@@ -976,6 +1042,7 @@ export const oconvOdtToIr = {
                 }
                 autoParentOf.set(losses, parents);
             }
+            styleDefsOf.set(losses, styleDefs(readResult));
             const levels = outlineLevels(readResult && readResult.styles);
             if (levels) outlineOf.set(losses, { levels, counters: [], listDepth: 0 });
             const body = (readResult && readResult.body) || [];

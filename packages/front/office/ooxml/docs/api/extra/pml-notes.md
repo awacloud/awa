@@ -57,6 +57,7 @@ r.notesSlides[0].cSld.spTree.children; // shape list
 
 - A notes slide owns a relationship back to its parent slide; the `rId` is preserved on round-trip.
 - The notes part is optional — only present if the slide has speaker notes.
+- A read never calls these codecs. Through [`pptx-full`](../bundles/pptx-full.md), [`pmlPackageParts`](./pml-package-parts.md) reads and writes the notes slides and the notes and handout masters with the core's slide parser (`pptxSlide.parseNotesSlide` …).
 
 ## See also
 

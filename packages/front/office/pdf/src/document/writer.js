@@ -18,7 +18,8 @@
  *    file requires `/ID` (ISO 32000-2 Table 15): when the caller gives
  *    none, both halves are the first 16 bytes of the SHA-256 of every byte
  *    written before the trailer, so the same input still gives the same
- *    bytes.
+ *    bytes. `opts.deriveId: true` derives it so for any version (a
+ *    PDF/A-2 file requires `/ID` too).
  *
  * @module pdf/document/writer
  */
@@ -158,7 +159,7 @@ export const pdfWriter = {
             push(buildXref(maxNum, offsets));
 
             const size = maxNum + 1;
-            const id = opts.id || (version === '2.0' && canDerive ? derivedId(concat(parts)) : undefined);
+            const id = opts.id || ((version === '2.0' || opts.deriveId === true) && canDerive ? derivedId(concat(parts)) : undefined);
             push(buildTrailer({
                 size,
                 root: opts.root,

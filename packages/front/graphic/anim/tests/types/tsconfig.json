@@ -1,0 +1,15 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "_comment": "Consumer type smoke (tests/types-consumer.integration.test.js): the fixture imports the package by its own name, resolved by self-reference through the exports map, and is compiled strictly with --noEmit. Library declarations are checked too (skipLibCheck false).",
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "noEmit": true,
+        "skipLibCheck": false,
+        "lib": ["ESNext", "DOM"],
+        "types": []
+    },
+    "files": ["consumer.ts"]
+}

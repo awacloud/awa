@@ -1,7 +1,7 @@
 ---
 module: cbc
 category: crypto/mode
-dependencies: [bitArray, aes]
+dependencies: [bitArray]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > AES-CBC (SP 800-38A §6.2) — confidentiality, padding is the caller's responsibility.
 
-**Module** `cbc` | **Source** `packages/front/fw/src/crypto/mode/cbc.js` | **Deps** `bitArray`, `aes` | **Worker-safe** yes
+**Module** `cbc` | **Source** `packages/front/fw/src/crypto/mode/cbc.js` | **Deps** `bitArray` | **Worker-safe** yes
 
 CBC is **unauthenticated**: use [`gcm`](./gcm.md) or [`chacha20poly1305`](./chacha20poly1305.md) for AEAD. If CBC is required, layer an explicit MAC (encrypt-then-MAC).
 

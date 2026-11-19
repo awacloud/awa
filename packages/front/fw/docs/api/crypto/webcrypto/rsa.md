@@ -46,8 +46,8 @@ const webcryptoRsa = runtime.resolve('webcryptoRsa');
 | `exportKey` | `(format: 'spki'\|'pkcs8'\|'jwk', key: CryptoKey) => Promise<Uint8Array\|object\|false>` | Export a key (DER → `Uint8Array`, JWK → object) |
 
 **Defaults**: `modulusBits = 2048` (also `3072`, `4096`), `hash = 'SHA-256'`
-(also `'SHA-384'`, `'SHA-512'`, `'SHA-1'`), `extractable = true` for
-`generateKey`. Public exponent is fixed at 65537. `importKey` `extractable`
+(also `'SHA-384'`, `'SHA-512'`, `'SHA-1'`), `extractable = false` for
+`generateKey` (the private key; pass `true` to export it). Public exponent is fixed at 65537. `importKey` `extractable`
 defaults to `true` for `spki` and `false` otherwise.
 
 **PSS salt length**: `sign`/`verify` default `saltLength` to the hash output
@@ -124,6 +124,7 @@ const worker = fw.createWorker(
 
 ## Notes
 
+- **Public exponent above 32 bits under Bun (measured).** Bun's WebCrypto verifies a valid PKCS#1 v1.5 signature to `false` when the public exponent exceeds 32 bits (an ACVP RSA-SigVer FIPS 186-5 key with a 6-byte `e`); Node verifies the same signature to `true`. Keys with `e = 65537` are unaffected.
 - **Schemes**: WebCrypto exposes exactly RSA-OAEP, RSA-PSS, and
   RSASSA-PKCS1-v1_5. **PKCS1-v1_5 encryption is not supported** (insecure and
   absent from the spec) — use OAEP for encryption.

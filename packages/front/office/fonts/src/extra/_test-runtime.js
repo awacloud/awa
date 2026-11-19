@@ -58,6 +58,9 @@ import { aatKerx } from './apple-aat/kerx.js';
 import { aatLcar } from './apple-aat/lcar.js';
 import { aatMorx } from './apple-aat/morx.js';
 import { aatProp } from './apple-aat/prop.js';
+import { aatLookup } from './apple-aat/lookup.js';
+import { aatMorxEngine } from './apple-aat/morx-engine.js';
+import { aatKerxEngine } from './apple-aat/kerx-engine.js';
 
 const _rt = new ModuleRuntime();
 
@@ -109,7 +112,10 @@ _rt.register(aatAnkr);
 _rt.register(aatFeat);
 _rt.register(aatKerx);
 _rt.register(aatLcar);
+_rt.register(aatLookup);
 _rt.register(aatMorx);
+_rt.register(aatMorxEngine);
+_rt.register(aatKerxEngine);
 _rt.register(aatProp);
 
 export const testRuntime = _rt;

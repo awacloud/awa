@@ -9,7 +9,7 @@
  * A thin, opt-in accelerator over the colocated `ecc` binary (vendored from
  * `@awacloud/fw-wasm-crypto`: fiat-crypto machine-verified field arithmetic framed by
  * BearSSL's EC layer), loaded BY NAME through the fw `wasmRuntime` adapter
- * (BATCH_11 ERRATA: no fw-local `.wasm.js`). Mirrors the pure-JS `crypto/pkc/ecc`
+ * (no fw-local `.wasm.js`). Mirrors the pure-JS `crypto/pkc/ecc`
  * surface for the recommended prime curves — keygen / ECDSA sign+verify / ECDH —
  * over `Uint8Array`, async, no-throw.
  *
@@ -126,13 +126,13 @@ export const wasmEcc = {
             'P-521': { id: 2, flen: 66 },
         };
 
-        /** Default curve (plan: P-256). */
+        /** Default curve (P-256). */
         const _DEFAULT_CURVE = 'P-256';
 
         /** Allowed ECDSA hash sizes (SHA-2 family the shim supports). */
         const _HASHES = { 256: true, 384: true, 512: true };
 
-        /** Default hash size (plan: SHA-256). */
+        /** Default hash size (SHA-256). */
         const _DEFAULT_HASH = 256;
 
         /** Entropy staged for `ecdsa_keygen` rejection sampling (generous). */

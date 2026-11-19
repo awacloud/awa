@@ -1425,7 +1425,8 @@ endstream`);
       "AF",
       "OutputIntents",
       "DPart",
-      "AssociatedFiles"
+      "AssociatedFiles",
+      "Hid"
     ]), has = (v) => !!v && v.type !== "null", isNum = (v) => !!v && (v.type === "int" || v.type === "real");
     function toBox(v) {
       if (!v || v.type !== "array" || v.items.length !== 4)
@@ -1514,6 +1515,8 @@ endstream`);
         out.b = e.B;
       if (isNum(e.Dur))
         out.dur = e.Dur.value;
+      if (isType(e.Hid, "bool"))
+        out.hid = e.Hid.value;
       if (has(e.Trans))
         out.trans = e.Trans;
       if (has(e.AA))
@@ -1794,7 +1797,7 @@ endstream`);
       return out;
     }
     function endedBeforeFinalBlock(e) {
-      return !!e && e.code === 0;
+      return !!e && e.code === "EEOF";
     }
     const limits = Object.freeze({ maxOutput: 268435456 }), SAFE_RATIO = 2048, CHUNK = 16384;
     function outputLimit(max, length) {
@@ -1803,7 +1806,7 @@ endstream`);
     function inflateChunked(bytes, max, final) {
       const chunks = [];
       let total = 0;
-      const stream = new fwZlib.UnzlibStream((chunk) => {
+      const stream = new fwZlib.UnzlibStream({ verify: !1 }, (chunk) => {
         total += chunk.length;
         if (max && total > max)
           throw outputLimit(max, bytes.length);
@@ -1828,7 +1831,7 @@ endstream`);
     }
     function inflate(bytes, max) {
       if (!max || bytes.length <= max / SAFE_RATIO || typeof fwZlib.UnzlibStream !== "function" || !plainZlibHeader(bytes))
-        return fwZlib.unzlibSync(bytes);
+        return fwZlib.unzlibSync(bytes, { verify: !1 });
       return inflateChunked(bytes, max, !0);
     }
     function isOutputLimit(e) {
@@ -2409,13 +2412,21 @@ endstream`);
         return new Uint8Array(v);
       return;
     }
+    function recipientsOf(v) {
+      if (v == null)
+        return;
+      const items = Array.isArray(v) ? v : typeof v === "object" && v.type === "array" && Array.isArray(v.items) ? v.items : null;
+      if (!items)
+        return;
+      return items.map((i) => asUint8(i && typeof i === "object" && i.type === "string" ? i.value : i)).filter(Boolean);
+    }
     function typeEncryptDict(dict) {
       if (dict == null || typeof dict !== "object")
         throw new EncryptionError("pdf/crypto/encrypt-dict/bad-input", "/Encrypt must be a dictionary");
-      const isNode = !(dict instanceof Map) && dict.type === "dict" && dict.entries !== null && typeof dict.entries === "object", plain = (n) => n && typeof n === "object" && (n.type === "int" || n.type === "real" || n.type === "bool" || n.type === "string") ? n.value : n, get = (k) => dict instanceof Map ? dict.get(k) : isNode ? plain(dict.entries[k]) : dict[k], V = get("V"), R = get("R"), Filter = get("Filter");
-      if (V === void 0 || R === void 0)
+      const isNode = !(dict instanceof Map) && dict.type === "dict" && dict.entries !== null && typeof dict.entries === "object", plain = (n) => n && typeof n === "object" && (n.type === "int" || n.type === "real" || n.type === "bool" || n.type === "string") ? n.value : n, get = (k) => dict instanceof Map ? dict.get(k) : isNode ? plain(dict.entries[k]) : dict[k], V = get("V"), R = get("R"), Filter = get("Filter"), filterName = Filter && typeof Filter === "object" && Filter.type === "name" ? Filter.value : Filter;
+      if (V === void 0 || R === void 0 && (filterName === void 0 || filterName === null || filterName === "Standard"))
         throw new EncryptionError("pdf/crypto/encrypt-dict/missing-V-R", "/Encrypt requires both /V and /R", { context: { V, R } });
-      if (typeof V !== "number" || typeof R !== "number")
+      if (typeof V !== "number" || R !== void 0 && typeof R !== "number")
         throw new EncryptionError("pdf/crypto/encrypt-dict/bad-V-R-type", "/V and /R must be integers", { context: { V, R } });
       return {
         V,
@@ -2433,6 +2444,7 @@ endstream`);
         UE: asUint8(get("UE")),
         Perms: asUint8(get("Perms")),
         EncryptMetadata: get("EncryptMetadata") !== !1,
+        Recipients: recipientsOf(get("Recipients")),
         P: get("P"),
         raw: dict
       };
@@ -3579,7 +3591,103 @@ endstream`);
       buildPerms
     };
   } });
-    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch","pdfSecurity","pdfStandardV4","pdfStandardV5","pdfStandardV6"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod, securityMod, v4Mod, v5Mod, v6Mod) {
+    __register({ name: "pdfInfo", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
+    const { ParseError, ContractError } = errors, { isType } = parser, PDFDOC = [];
+    for (let c = 0;c < 256; c++)
+      PDFDOC.push(c);
+    [728, 711, 710, 729, 733, 731, 730, 732].forEach((u, i) => {
+      PDFDOC[24 + i] = u;
+    });
+    PDFDOC[127] = 65533;
+    [
+      8226,
+      8224,
+      8225,
+      8230,
+      8212,
+      8211,
+      402,
+      8260,
+      8249,
+      8250,
+      8722,
+      8240,
+      8222,
+      8220,
+      8221,
+      8216,
+      8217,
+      8218,
+      8482,
+      64257,
+      64258,
+      321,
+      338,
+      352,
+      376,
+      381,
+      305,
+      322,
+      339,
+      353,
+      382,
+      65533,
+      8364
+    ].forEach((u, i) => {
+      PDFDOC[128 + i] = u;
+    });
+    PDFDOC[173] = 65533;
+    function decodeTextString(bytes) {
+      if (!(bytes instanceof Uint8Array))
+        throw new ContractError("pdf/info/bad-text-string", "decodeTextString expects a Uint8Array", { context: { typeof: typeof bytes } });
+      if (bytes.length >= 2 && bytes[0] === 254 && bytes[1] === 255) {
+        let s = "";
+        for (let i = 2;i + 1 < bytes.length; i += 2)
+          s += String.fromCharCode(bytes[i] << 8 | bytes[i + 1]);
+        return s.replace(/\u001b[^\u001b]*\u001b/g, "");
+      }
+      if (bytes.length >= 3 && bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191)
+        return new TextDecoder("utf-8").decode(bytes.subarray(3));
+      let s = "";
+      for (const c of bytes)
+        s += String.fromCharCode(PDFDOC[c]);
+      return s;
+    }
+    const STRINGY = ["Title", "Author", "Subject", "Keywords", "Creator", "Producer"], DATEY = ["CreationDate", "ModDate"], KNOWN = new Set(STRINGY.concat(DATEY, ["Trapped"]));
+    function lower(s) {
+      return s.charAt(0).toLowerCase() + s.slice(1);
+    }
+    function typeInfo(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/info/not-dict", "Info must be a dictionary", { context: { type: dict && dict.type } });
+      const e = dict.entries, out = { raw: dict, _extras: {} };
+      for (const k of STRINGY)
+        if (e[k] !== void 0) {
+          if (e[k].type !== "string")
+            throw new ParseError("pdf/info/bad-string", "/" + k + " must be a string", { context: { key: k, type: e[k].type } });
+          out[lower(k)] = e[k].value;
+        }
+      for (const k of DATEY)
+        if (e[k] !== void 0) {
+          if (e[k].type !== "string")
+            throw new ParseError("pdf/info/bad-date", "/" + k + " must be a date string", { context: { key: k, type: e[k].type } });
+          out[lower(k)] = e[k].value;
+        }
+      if (e.Trapped !== void 0)
+        if (e.Trapped.type === "name")
+          out.trapped = e.Trapped.value;
+        else if (e.Trapped.type === "bool")
+          out.trapped = e.Trapped.value ? "True" : "False";
+        else
+          throw new ParseError("pdf/info/bad-trapped", "/Trapped must be a name (True|False|Unknown)", { context: { type: e.Trapped.type } });
+      for (const k of Object.keys(e))
+        if (!KNOWN.has(k))
+          out._extras[k] = e[k];
+      return out;
+    }
+    return { typeInfo, decodeTextString };
+  } });
+    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch","pdfSecurity","pdfStandardV4","pdfStandardV5","pdfStandardV6","pdfInfo"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod, securityMod, v4Mod, v5Mod, v6Mod, infoMod) {
     const { ParseError, ContractError, EncryptionError } = errors, tokenize = tokenizerMod && tokenizerMod.tokenize, parseIndirect = parserMod && parserMod.parseIndirect, locateStartXref = xrefMod && xrefMod.locateStartXref, readStartXref = xrefMod && xrefMod.readStartXref, parseXrefTable = xrefMod && xrefMod.parseXrefTable, parseTrailerDict = xrefMod && xrefMod.parseTrailerDict, typeTrailer = trailerMod && trailerMod.typeTrailer, typeCatalog = catalogMod && catalogMod.typeCatalog, typePage = pageMod && pageMod.typePage, walkPageTree = pagesMod && pagesMod.walkPageTree, HEADER_PREFIX = new Uint8Array([37, 80, 68, 70, 45]), XREF_KEYWORD = new Uint8Array([120, 114, 101, 102]), PDF_NULL = Object.freeze({ type: "null" }), SECTION_LOCAL_KEYS = new Set([
       "Prev",
       "XRefStm",
@@ -3625,9 +3733,11 @@ endstream`);
       if (!crossRefStreamMod || !objStreamMod || !filterDispatchMod)
         throw new ParseError("pdf/document/xref-stream-unwired", "this pdfDocument was built without pdfCrossRefStream, " + "pdfObjStream and pdfFilterDispatch \u2014 cross-reference " + "streams and object streams cannot be read", { context: { offset } });
     }
-    function readXrefStreamSection(bytes, at) {
+    function readXrefStreamSection(bytes, at, end = !0) {
       requireStreamWiring(at);
-      const tok = tokenize(bytes, { start: at }), streamObj = parseIndirect(tok, refuseIndirectLength).value, typeEntry = streamObj && streamObj.dict && streamObj.dict.entries && streamObj.dict.entries.Type;
+      const tok = tokenize(bytes, { start: at }), streamObj = parseIndirect(tok, refuseIndirectLength).value;
+      checkStreamWindow(streamObj, bytes, end, null);
+      const typeEntry = streamObj && streamObj.dict && streamObj.dict.entries && streamObj.dict.entries.Type;
       if (!streamObj || streamObj.type !== "stream" || !typeEntry || typeEntry.type !== "name" || typeEntry.value !== "XRef")
         throw new ParseError("pdf/document/bad-xref-section", "neither an xref table nor a cross-reference stream at startxref", { context: { offset: at } });
       const decoded = filterDispatchMod.decode(streamObj);
@@ -3817,10 +3927,119 @@ endstream`);
         }
       };
     }
-    function readDocument(bytes, opts = {}) {
-      if (!(bytes instanceof Uint8Array))
-        throw new ParseError("pdf/document/bad-input", "readDocument expects a Uint8Array", { context: { typeof: typeof bytes } });
-      const password = opts.password;
+    const SOURCE_WINDOW = 65536, SOURCE_WINDOW_MIN = 16, SOURCE_WINDOW_SLACK = 65536, STARTXREF_TAIL = 8192;
+    function isSource(v) {
+      return !!v && typeof v === "object" && !(v instanceof Uint8Array) && Number.isSafeInteger(v.byteLength) && v.byteLength >= 0 && typeof v.read === "function";
+    }
+
+    class WindowShort extends Error {
+    }
+    function inputOf(input, first) {
+      if (!isSource(input)) {
+        const whole = { bytes: input, base: 0, end: !0 };
+        return { size: input.length, window: () => whole, run: (offset, parse) => parse(input, offset, !0) };
+      }
+      const size = input.byteLength;
+      function window(offset, length) {
+        const n = Math.max(0, Math.min(length, size - offset)), got = input.read(offset, n);
+        if (!(got instanceof Uint8Array))
+          throw new ContractError("pdf/document/bad-source-read", "a byte source read must return a Uint8Array", { context: { offset, length: n, typeof: typeof got } });
+        return { bytes: got, base: offset, end: offset + got.length >= size };
+      }
+      function run(offset, parse) {
+        const cap = parserMod.parserLimits.maxStreamBytes + SOURCE_WINDOW_SLACK;
+        let length = Math.min(first, cap);
+        for (;; ) {
+          const w = window(offset, length);
+          try {
+            return parse(w.bytes, 0, w.end);
+          } catch (err) {
+            if (w.end || !(err instanceof ParseError || err instanceof WindowShort))
+              throw err;
+          }
+          if (length >= cap)
+            throw new ParseError("pdf/document/source-window", "the object does not fit the largest window a byte source is read by", { context: { offset, window: length } });
+          length = Math.min(length * 2, cap);
+        }
+      }
+      return { size, window, run };
+    }
+    function checkStreamWindow(value, bytes, end, resolveRef) {
+      if (end || !value || value.type !== "stream")
+        return;
+      let len = value.dict && value.dict.entries && value.dict.entries.Length;
+      if (len && len.type === "ref" && resolveRef)
+        len = resolveRef(len);
+      if (len && len.type === "int" && len.value > value.raw.length)
+        throw new WindowShort("stream longer than its window");
+    }
+    const INFO_TEXT = [
+      ["Title", "title"],
+      ["Author", "author"],
+      ["Subject", "subject"],
+      ["Keywords", "keywords"],
+      ["Creator", "creator"],
+      ["Producer", "producer"],
+      ["CreationDate", "creationDate"],
+      ["ModDate", "modDate"]
+    ];
+    function infoText(node, resolve) {
+      let dict;
+      try {
+        dict = resolve(node);
+      } catch {
+        return null;
+      }
+      if (!dict || dict.type !== "dict")
+        return null;
+      const out = {};
+      for (const [key, name] of INFO_TEXT) {
+        let v;
+        try {
+          v = resolve(dict.entries[key]);
+        } catch {
+          continue;
+        }
+        if (v && v.type === "string" && v.value instanceof Uint8Array)
+          out[name] = infoMod.decodeTextString(v.value);
+      }
+      let t;
+      try {
+        t = resolve(dict.entries.Trapped);
+      } catch {
+        t = void 0;
+      }
+      if (t && t.type === "name")
+        out.trapped = t.value;
+      else if (t && t.type === "bool")
+        out.trapped = t.value ? "True" : "False";
+      return out;
+    }
+    function contentsOf(page, resolve) {
+      const parts = [];
+      for (const ref of page.contents || []) {
+        const s = resolve({ type: "ref", num: ref.num, gen: ref.gen });
+        if (!s || s.type !== "stream")
+          throw new ParseError("pdf/document/bad-contents", `content ${ref.num} ${ref.gen} R is not a stream`, { context: { num: ref.num, gen: ref.gen } });
+        parts.push(filterDispatchMod.decode(s));
+      }
+      const size = parts.reduce((n, x) => n + x.length, 0) + Math.max(0, parts.length - 1), out = new Uint8Array(size);
+      let at = 0;
+      parts.forEach((x, k) => {
+        if (k)
+          out[at++] = 10;
+        out.set(x, at);
+        at += x.length;
+      });
+      return out;
+    }
+    function readDocument(input, opts = {}) {
+      if (!(input instanceof Uint8Array) && !isSource(input))
+        throw new ParseError("pdf/document/bad-input", "readDocument expects a Uint8Array or a byte source { byteLength, read(offset, length) }", { context: { typeof: input === null ? "null" : typeof input } });
+      const sourceWindow = opts.sourceWindow;
+      if (sourceWindow !== void 0 && !(Number.isSafeInteger(sourceWindow) && sourceWindow >= SOURCE_WINDOW_MIN))
+        throw new ContractError("pdf/document/bad-source-window-option", `opts.sourceWindow must be an integer of at least ${SOURCE_WINDOW_MIN}`, { context: { typeof: typeof sourceWindow } });
+      const fromSource = isSource(input), src = inputOf(input, sourceWindow === void 0 ? SOURCE_WINDOW : sourceWindow), bytes = fromSource ? null : input, password = opts.password;
       if (password !== void 0 && typeof password !== "string" && !(password instanceof Uint8Array))
         throw new ContractError("pdf/document/bad-password-option", "opts.password must be a string or a Uint8Array", { context: { typeof: typeof password } });
       const legacyRc4 = opts.legacyRc4;
@@ -3834,12 +4053,12 @@ endstream`);
       const fastCipher = opts.fastCipher;
       if (fastCipher !== void 0 && typeof fastCipher !== "boolean")
         throw new ContractError("pdf/document/bad-fast-cipher-option", "opts.fastCipher must be a boolean", { context: { typeof: fastCipher === null ? "null" : typeof fastCipher } });
-      const { version, end: headerEnd } = readHeader(bytes), xref = { entries: {}, sections: [] }, losses = [];
+      const { version, end: headerEnd } = readHeader(fromSource ? src.window(0, SOURCE_WINDOW).bytes : bytes), xref = { entries: {}, sections: [] }, losses = [];
       function walkChain() {
-        const sxAt = locateStartXref(bytes);
+        const tail = fromSource ? src.window(Math.max(0, src.size - STARTXREF_TAIL), STARTXREF_TAIL).bytes : bytes, sxAt = locateStartXref(tail);
         if (sxAt < 0)
           throw new ParseError("pdf/document/no-startxref", "startxref keyword not found near EOF");
-        const xrefAt = readStartXref(bytes, sxAt), trailerDicts = [];
+        const xrefAt = readStartXref(tail, sxAt), trailerDicts = [];
         let cursor = xrefAt;
         const seenSections = new Set;
         function mergeSection(at, kind, entries) {
@@ -3853,8 +4072,23 @@ endstream`);
             break;
           seenSections.add(cursor);
           let dict;
-          if (startsXrefTable(bytes, skipWhitespace(bytes, cursor))) {
-            const section = parseXrefTable(bytes, cursor);
+          const read = src.run(cursor, (b, at, end) => {
+            if (startsXrefTable(b, skipWhitespace(b, at))) {
+              const section = parseXrefTable(b, at);
+              let trailerError = null, trailerDict;
+              try {
+                trailerDict = parseTrailerDict(b, section.end).dict;
+              } catch (err) {
+                if (!end)
+                  throw err;
+                trailerError = err;
+              }
+              return { table: section, dict: trailerDict, trailerError };
+            }
+            return { stream: readXrefStreamSection(b, at, end) };
+          });
+          if (read.table) {
+            const section = read.table;
             for (const shape of section.tolerated || [])
               losses.push({
                 code: "pdf/document/xref-tolerated",
@@ -3862,14 +4096,16 @@ endstream`);
                 context: { shape, at: cursor }
               });
             mergeSection(cursor, "table", section.entries);
-            dict = parseTrailerDict(bytes, section.end).dict;
+            if (read.trailerError)
+              throw read.trailerError;
+            dict = read.dict;
             const stmAt = dict && dict.entries && dict.entries.XRefStm;
-            if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < bytes.length) {
-              const hybrid = readXrefStreamSection(bytes, stmAt.value);
+            if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < src.size) {
+              const hybrid = src.run(stmAt.value, (b, at, end) => readXrefStreamSection(b, at, end));
               mergeSection(stmAt.value, "stream", hybrid.entries);
             }
           } else {
-            const section = readXrefStreamSection(bytes, cursor);
+            const section = read.stream;
             mergeSection(cursor, "stream", section.entries);
             dict = section.dict;
           }
@@ -3888,9 +4124,9 @@ endstream`);
       try {
         trailerTyped = walkChain();
       } catch (err) {
-        if (opts.recoverXref !== !0 || !(err instanceof ParseError))
+        if (opts.recoverXref === !1 || !(err instanceof ParseError))
           throw err;
-        const rebuilt = rebuildXref(bytes);
+        const rebuilt = rebuildXref(bytes || src.window(0, src.size).bytes);
         xref.entries = rebuilt.entries;
         xref.sections = [{ at: null, kind: "rebuilt", entries: xref.entries }];
         losses.push({
@@ -3900,9 +4136,25 @@ endstream`);
         });
         trailerTyped = typeTrailer(rebuilt.trailer);
       }
-      if (trailerTyped.encrypt && opts.allowEncrypted !== !0 && password === void 0)
-        throw new ParseError("pdf/document/encrypted", "document is encrypted (trailer /Encrypt present) \u2014 " + "no decrypt path is composed for readDocument; pass { allowEncrypted: true } to read the raw ciphertext container", { context: { encrypt: trailerTyped.encrypt } });
-      const indirects = new Map, lossKeys = new Set, freeKeys = new Set, objStmMembers = new Map;
+      if (trailerTyped.encrypt && opts.allowEncrypted !== !0 && password === void 0) {
+        const refused = new ParseError("pdf/document/encrypted", "document is encrypted (trailer /Encrypt present) and the empty password does not open it \u2014 " + "pass { password } to decrypt it, or { allowEncrypted: true } to read the raw ciphertext container", { context: { encrypt: trailerTyped.encrypt } });
+        if (opts.emptyPassword === !1)
+          throw refused;
+        let opened;
+        try {
+          opened = readDocument(input, { ...opts, password: "" });
+        } catch {
+          throw refused;
+        }
+        const er = opened.trailer.encrypt, encNode = er && er.type === "dict" ? er : opened._raw.resolve({ type: "ref", num: er.num, gen: er.gen }), p = encNode && encNode.type === "dict" && encNode.entries.P ? encNode.entries.P.value : null;
+        opened.losses.push({
+          code: "pdf/document/opened-with-empty-password",
+          message: "the document is encrypted; it was opened with the empty password",
+          context: { permissions: p }
+        });
+        return opened;
+      }
+      const indirects = new Map, lossKeys = new Set, freeKeys = new Set, objStmMembers = new Map, resolving = new Set;
       function resolve(ref) {
         if (!ref || ref.type !== "ref")
           return ref;
@@ -3912,6 +4164,24 @@ endstream`);
         const key = num + ":" + gen;
         if (indirects.has(key))
           return indirects.get(key).value;
+        if (resolving.has(key)) {
+          recordLoss("cycle:" + key, {
+            code: "pdf/document/reference-cycle",
+            message: `object ${num} ${gen} is referenced while it is being read; the reference reads as null`,
+            context: { num, gen }
+          });
+          return PDF_NULL;
+        }
+        if (resolving.size >= 32)
+          throw new ParseError("pdf/document/resolve-too-deep", `object ${num} ${gen} nests more than 32 objects being read`, { context: { num, gen, depth: resolving.size } });
+        resolving.add(key);
+        try {
+          return resolveUnguarded(num, gen, key);
+        } finally {
+          resolving.delete(key);
+        }
+      }
+      function resolveUnguarded(num, gen, key) {
         let entry = xref.entries[num];
         if (!entry)
           throw new ParseError("pdf/document/missing-xref", `object ${num} ${gen} not in xref`, { context: { num, gen } });
@@ -3926,9 +4196,15 @@ endstream`);
           return value;
         }
         const offset = entry.offset;
-        if (offset <= 0 || offset >= bytes.length)
-          throw new ParseError("pdf/document/bad-offset", `object ${num} ${gen} xref offset out of range`, { context: { num, gen, offset, total: bytes.length } });
-        const tok = tokenize(bytes, { start: offset }), def = parseIndirect(tok, resolve);
+        if (offset <= 0 || offset >= src.size)
+          throw new ParseError("pdf/document/bad-offset", `object ${num} ${gen} xref offset out of range`, { context: { num, gen, offset, total: src.size } });
+        const def = src.run(offset, (b, at, end) => {
+          const d = parseIndirect(tokenize(b, { start: at }), resolve);
+          checkStreamWindow(d.value, b, end, resolve);
+          if (fromSource && d.value && d.value.type === "stream")
+            d.value = { ...d.value, raw: d.value.raw.slice() };
+          return d;
+        });
         if (def.num !== num || def.gen !== gen)
           throw new ParseError("pdf/document/xref-mismatch", "xref points to a different object", { context: { expected: { num, gen }, found: { num: def.num, gen: def.gen } } });
         const value = decryptor ? decryptor.decrypt(num, gen, def.value) : def.value;
@@ -4015,12 +4291,14 @@ endstream`);
         trailer: trailerTyped,
         xref,
         losses,
-        _raw: {
-          resolve,
-          bytes,
-          headerEnd,
-          indirects
-        }
+        resolve,
+        info: () => trailerTyped && trailerTyped.info ? infoText({ type: "ref", num: trailerTyped.info.num, gen: trailerTyped.info.gen }, resolve) : null,
+        pageContents(i) {
+          if (!Number.isInteger(i) || i < 0 || i >= pages.length)
+            throw new ContractError("pdf/document/bad-page-index", `no page ${i} (the document has ${pages.length})`, { context: { index: i, pages: pages.length } });
+          return contentsOf(pages[i], resolve);
+        },
+        _raw: fromSource ? { resolve, source: input, headerEnd, indirects } : { resolve, bytes, headerEnd, indirects }
       };
     }
     return { readDocument, readHeader };
@@ -4125,7 +4403,7 @@ ${opts.xrefOffset}
       }
       const xrefOffset = cursor;
       push(buildXref(maxNum, offsets));
-      const size = maxNum + 1, id = opts.id || (version === "2.0" && canDerive ? derivedId(concat(parts)) : void 0);
+      const size = maxNum + 1, id = opts.id || ((version === "2.0" || opts.deriveId === !0) && canDerive ? derivedId(concat(parts)) : void 0);
       push(buildTrailer({
         size,
         root: opts.root,
@@ -4173,8 +4451,8 @@ ${opts.xrefOffset}
   } });
     __register({ name: "pdf", dependencies: ["pdfErrors","pdfShared","pdfTokenizer","pdfParserObj","pdfParser","pdfXref","pdfTrailer","pdfSerializer","pdfCatalog","pdfPages","pdfPage","pdfDocument","pdfWriter"], factory: function(errors, shared, tokenizer, parserObj, parser, xref, trailer, serializer, catalog, pages, page, docMod, writerMod) {
     const { ContractError } = errors, readDocument = docMod.readDocument, readHeader = docMod.readHeader, writeDocument = writerMod.writeDocument, assembleIndirects = writerMod.assembleIndirects, usedExtensions = new Set, api = {
-      read(bytes, opts) {
-        return readDocument(bytes, opts);
+      read(input, opts) {
+        return readDocument(input, opts);
       },
       header(bytes) {
         return readHeader(bytes);
@@ -5434,7 +5712,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfAOutputIntent", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
-    const { ParseError } = errors, { isType } = parser, PDFA_PROFILES = Object.freeze({
+    const { ParseError, ContractError } = errors, { isType } = parser, PDFA_PROFILES = Object.freeze({
       "1a": { part: 1, level: "a", iso: "ISO 19005-1:2005", notes: "accessible" },
       "1b": { part: 1, level: "b", iso: "ISO 19005-1:2005", notes: "basic" },
       "2a": { part: 2, level: "a", iso: "ISO 19005-2:2011", notes: "accessible" },
@@ -5483,23 +5761,33 @@ ${opts.xrefOffset}
       const tag = m[1].toLowerCase();
       return VALID_LEVELS.has(tag) ? tag : null;
     }
-    function validatePdfABasics(typedDoc) {
+    const METADATA_RULE = Object.freeze({ 1: "6.7.2-t1", 2: "6.6.2.1-t1", 3: "6.6.2.1-t1", 4: "6.7.2.1-t1" }), ENCRYPT_RULE = "6.1.3-t2";
+    function validatePdfABasics(typedDoc, opts) {
       if (!typedDoc || typeof typedDoc !== "object")
         throw new ParseError("pdf/extra/pdfa/lint/bad-doc", "validatePdfABasics requires a typed document object", { context: { type: typeof typedDoc } });
-      const errors = [], warnings = [], cat = typedDoc.catalog && typedDoc.catalog.entries;
-      if (typedDoc.encrypted)
-        errors.push("PDF/A forbids encryption");
+      const profile = opts && opts.profile !== void 0 ? opts.profile : null;
+      if (profile !== null && !VALID_LEVELS.has(profile))
+        throw new ContractError("pdf/extra/pdfa/bad-profile", "validatePdfABasics: opts.profile must be a PDFA_PROFILES key", { context: { received: typeof profile === "string" ? profile : typeof profile } });
+      const part = profile ? PDFA_PROFILES[profile].part : null, errors = [], warnings = [], findings = [], error = (rule, message) => {
+        errors.push(message);
+        findings.push({ rule, severity: "error", message });
+      }, warning = (rule, message) => {
+        warnings.push(message);
+        findings.push({ rule, severity: "warning", message });
+      }, resolver = typedDoc._raw && typeof typedDoc._raw.resolve === "function" ? typedDoc._raw.resolve : null, deref = (v) => resolver && v && v.type === "ref" ? resolver(v) : v, cat = typedDoc.catalog && (typedDoc.catalog.entries || typedDoc.catalog.raw && typedDoc.catalog.raw.entries);
+      if (typedDoc.encrypted || typedDoc.trailer && typedDoc.trailer.encrypt)
+        error(part ? ENCRYPT_RULE : null, "PDF/A forbids encryption");
       if (!cat) {
-        errors.push("catalog missing");
-        return { pass: !1, errors, warnings };
+        error(null, "catalog missing");
+        return { pass: !1, errors, warnings, findings };
       }
       if (!cat.Metadata)
-        errors.push("catalog requires /Metadata XMP stream");
-      if (cat.MarkInfo && !isType(cat.MarkInfo, "dict"))
-        errors.push("/MarkInfo must be a dictionary");
+        error(part ? METADATA_RULE[part] : null, "catalog requires /Metadata XMP stream");
+      if (cat.MarkInfo && !isType(deref(cat.MarkInfo), "dict"))
+        warning(null, "/MarkInfo must be a dictionary");
       if (!cat.OutputIntents)
-        warnings.push("catalog has no /OutputIntents array");
-      return { pass: errors.length === 0, errors, warnings };
+        warning(null, "catalog has no /OutputIntents array");
+      return { pass: errors.length === 0, errors, warnings, findings };
     }
     return {
       detectPdfAProfile,
@@ -5508,7 +5796,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfUaTagged", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
-    const { ParseError } = errors, { isType } = parser, UA_STRUCTURE = Object.freeze({
+    const { ParseError, ContractError } = errors, { isType } = parser, UA_STRUCTURE = Object.freeze({
       required: Object.freeze([
         "Document",
         "Part",
@@ -5529,39 +5817,61 @@ ${opts.xrefOffset}
       forbidden: Object.freeze(["Span"]),
       figure: Object.freeze(["Alt", "ActualText"]),
       headings: Object.freeze(["H", "H1", "H2", "H3", "H4", "H5", "H6"])
+    }), UA_RULES = Object.freeze({
+      1: Object.freeze({ structTree: "7.1-t11", marked: "6.2-t1", docTitle: "7.1-t10", lang: null, accessible: "7.16-t1" }),
+      2: Object.freeze({ structTree: "8.2.1-t1", marked: "6.2-t1", docTitle: "8.11.2-t1", lang: "8.4.4-t1", accessible: null })
     });
-    function validatePdfUa(typedDoc) {
+    function lintView(doc) {
+      const resolver = doc._raw && typeof doc._raw.resolve === "function" ? doc._raw.resolve : null, deref = (v) => resolver && v && v.type === "ref" ? resolver(v) : v, catalog = doc.catalog && (doc.catalog.entries || doc.catalog.raw && doc.catalog.raw.entries);
+      let p = typeof doc.p === "number" ? doc.p : void 0;
+      const enc = doc.trailer && doc.trailer.encrypt;
+      if (p === void 0 && enc) {
+        const e = deref(enc.type ? enc : { type: "ref", num: enc.num, gen: enc.gen }), P = isType(e, "dict") ? deref(e.entries.P) : null;
+        if (isType(P, "int"))
+          p = P.value;
+      }
+      return { catalog, deref, p };
+    }
+    function validatePdfUa(typedDoc, opts) {
       if (!typedDoc || typeof typedDoc !== "object")
         throw new ParseError("pdf/extra/pdfua/bad-doc", "validatePdfUa requires a typed document object", { context: { type: typeof typedDoc } });
-      const errors = [], warnings = [], cat = typedDoc.catalog && typedDoc.catalog.entries;
+      const part = opts && opts.part !== void 0 ? opts.part : 1;
+      if (part !== 1 && part !== 2)
+        throw new ContractError("pdf/extra/pdfua/bad-part", "validatePdfUa: opts.part must be 1 or 2", { context: { received: typeof part === "number" ? String(part) : typeof part } });
+      const rules = UA_RULES[part], errors = [], warnings = [], findings = [], error = (rule, message) => {
+        errors.push(message);
+        findings.push({ rule, severity: "error", message });
+      }, warning = (rule, message) => {
+        warnings.push(message);
+        findings.push({ rule, severity: "warning", message });
+      }, { catalog: cat, deref, p } = lintView(typedDoc);
       if (!cat) {
-        errors.push("catalog missing");
-        return { pass: !1, errors, warnings };
+        error(null, "catalog missing");
+        return { pass: !1, errors, warnings, findings };
       }
       if (!cat.StructTreeRoot)
-        errors.push("catalog requires /StructTreeRoot");
-      if (!cat.Lang || !isType(cat.Lang, "string"))
-        errors.push("catalog requires /Lang string");
-      if (!cat.MarkInfo)
-        errors.push("catalog requires /MarkInfo dictionary");
-      else if (!isType(cat.MarkInfo, "dict"))
-        errors.push("/MarkInfo must be a dictionary");
+        error(rules.structTree, "catalog requires /StructTreeRoot");
+      if (!isType(deref(cat.Lang), "string"))
+        if (part === 2)
+          error(rules.lang, "catalog requires /Lang string");
+        else
+          warning(rules.lang, "catalog has no /Lang string");
+      const markInfo = deref(cat.MarkInfo);
+      if (!markInfo)
+        error(rules.marked, "catalog requires /MarkInfo dictionary");
+      else if (!isType(markInfo, "dict"))
+        error(rules.marked, "/MarkInfo must be a dictionary");
       else {
-        const m = cat.MarkInfo.entries.Marked;
+        const m = deref(markInfo.entries.Marked);
         if (!isType(m, "bool") || m.value !== !0)
-          errors.push("/MarkInfo /Marked must be true");
+          error(rules.marked, "/MarkInfo /Marked must be true");
       }
-      if (cat.ViewerPreferences && isType(cat.ViewerPreferences, "dict")) {
-        const ddt = cat.ViewerPreferences.entries.DisplayDocTitle;
-        if (!isType(ddt, "bool") || ddt.value !== !0)
-          warnings.push("/ViewerPreferences /DisplayDocTitle should be true");
-      } else
-        warnings.push("catalog should have /ViewerPreferences");
-      if (typeof typedDoc.p === "number") {
-        if ((typedDoc.p & 512) === 0)
-          errors.push("permissions bit 10 (accessible) must be set");
-      }
-      return { pass: errors.length === 0, errors, warnings };
+      const prefs = deref(cat.ViewerPreferences), ddt = isType(prefs, "dict") ? deref(prefs.entries.DisplayDocTitle) : null;
+      if (!isType(ddt, "bool") || ddt.value !== !0)
+        error(rules.docTitle, "catalog requires /ViewerPreferences /DisplayDocTitle true");
+      if (rules.accessible && typeof p === "number" && (p & 512) === 0)
+        error(rules.accessible, "permissions bit 10 (accessible) must be set");
+      return { pass: errors.length === 0, errors, warnings, findings };
     }
     function validateUaStructElement(node) {
       if (!node || typeof node !== "object")
@@ -6696,7 +7006,8 @@ ${opts.xrefOffset}
       "Start",
       "End",
       "DPM",
-      "NodeNameTree"
+      "NodeNameTree",
+      "AF"
     ]), ROOT_KNOWN = new Set([
       "Type",
       "DPartRootNode",
@@ -6736,6 +7047,7 @@ ${opts.xrefOffset}
         end: pageRef(e.End),
         dpm: isType(e.DPM, "dict") ? typeDPM(e.DPM) : null,
         nodeNameTree: e.NodeNameTree || null,
+        af: e.AF || null,
         raw: dict,
         _extras: {}
       };
@@ -8431,7 +8743,8 @@ ${opts.xrefOffset}
       bool: (v) => isBool(v) ? v.value : null,
       array: (v) => isArr(v) || isRef(v) ? v : null,
       dict: (v) => isDict(v) || isRef(v) ? v : null,
-      stream: (v) => v && (v.type === "stream" || v.type === "ref") ? v : null
+      stream: (v) => v && (v.type === "stream" || v.type === "ref") ? v : null,
+      any: (v) => v === void 0 ? null : v
     });
     function readKey(type, v) {
       if (isRef(v))
@@ -8582,7 +8895,40 @@ ${opts.xrefOffset}
           out._extras[k] = v;
       return out;
     }
+    const SMALL_OBJECT_TYPES = Object.freeze({
+      alternateImage: keyTypes("Image:stream DefaultForPrinting:bool OC:dict"),
+      data: keyTypes("LastModified:text Private:any"),
+      destDict: keyTypes("D:array SD:array"),
+      fixedPrint: keyTypes("Type:name Matrix:array H:number V:number"),
+      markInfo: keyTypes("Marked:bool UserProperties:bool Suspects:bool"),
+      markedContentReference: keyTypes("Type:name Pg:dict Stm:stream StmOwn:array|dict|stream MCID:int"),
+      minimumBitDepth: keyTypes("Type:name V:int M:int"),
+      namespace: keyTypes("Type:name NS:text Schema:dict|text RoleMapNS:dict"),
+      objectReference: keyTypes("Type:name Pg:dict Obj:array|dict|stream"),
+      reference: keyTypes("F:dict|text Page:int|text ID:array"),
+      sourceInformation: keyTypes("AU:dict|text TS:text E:text S:int C:dict"),
+      timespan: keyTypes("Type:name S:name V:number"),
+      urlAlias: keyTypes("U:text C:array"),
+      userProperty: keyTypes("N:text V:any F:text H:bool"),
+      winLaunch: keyTypes("F:text D:text O:text P:text")
+    }), SMALL_OBJECT_KEYS = Object.freeze(Object.fromEntries(Object.entries(SMALL_OBJECT_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeSmallObject(value, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(SMALL_OBJECT_TYPES, kind))
+        throw new ContractError("pdf/misc/small-object/kind", "kind must be a key of SMALL_OBJECT_KEYS", { context: { kind } });
+      const dict = value && value.type === "stream" ? value.dict : value;
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/small-object/not-dict", "neither a stream nor a dictionary", { context: { type: value && value.type } });
+      const types = SMALL_OBJECT_TYPES[kind], out = { raw: value, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
     return {
+      typeSmallObject,
+      SMALL_OBJECT_KEYS,
       typeSpiderInfo,
       typeViewerPreferences,
       typeThreads,
@@ -9987,7 +10333,8 @@ ${opts.xrefOffset}
           bigEndian: !0,
           minCodeBits: 8,
           maxBits: 12,
-          useClearEnd: !0
+          useClearEnd: !0,
+          earlyChange: earlyChange === 1
         });
       } catch (cause) {
         throw new ParseError("pdf/lzw/decode-failed", "LZWDecode failed: " + cause.message, { cause });

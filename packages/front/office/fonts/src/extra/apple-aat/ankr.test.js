@@ -6,6 +6,7 @@
 import { describe, test, expect } from 'bun:test';
 import { aatAnkr } from './ankr.js';
 import { testRuntime } from '../_test-runtime.js';
+import { be16, be32, lookup6 } from './_test-aat.js';
 const { parseAnkr, readAnchorBlock } = testRuntime.resolve('aatAnkr');
 const { ParseError } = testRuntime.resolve('fontErrors');
 const { BinaryWriter } = testRuntime.resolve('fontWriter');
@@ -13,7 +14,7 @@ const { BinaryWriter } = testRuntime.resolve('fontWriter');
 describe('aatAnkr', () => {
     test('module metadata', () => {
         expect(aatAnkr.name).toBe('aatAnkr');
-        expect(aatAnkr.dependencies).toEqual(['fontErrors', 'fontReader']);
+        expect(aatAnkr.dependencies).toEqual(['fontErrors', 'fontReader', 'aatLookup']);
     });
 
     test('parses header and slices regions', () => {
@@ -63,5 +64,25 @@ describe('aatAnkr', () => {
         const w = new BinaryWriter();
         w.writeUint16(1).writeUint16(0).writeUint32(12).writeUint32(12);
         expect(() => parseAnkr(w.finalize())).toThrow(ParseError);
+    });
+});
+
+// T15 (c), D38: a glyph's anchors through the lookup.
+describe('aatAnkr — anchors (T15 c)', () => {
+    const ankr = (map, blocks) => {
+        const lk = lookup6(map);
+        const data = blocks.flatMap((pts) => [...be32(pts.length), ...pts.flatMap(([x, y]) => [...be16(x & 0xFFFF), ...be16(y & 0xFFFF)])]);
+        return new Uint8Array([...be16(0), ...be16(0), ...be32(12), ...be32(12 + lk.length), ...lk, ...data]);
+    };
+    test("anchors(glyph): the block at the glyph's lookup value; [] without one", () => {
+        const a = parseAnkr(ankr({ 3: 0, 4: 12 }, [[[10, -20], [30, 40]], [[5, 6]]]));
+        expect(a.anchors(3)).toEqual([{ x: 10, y: -20 }, { x: 30, y: 40 }]);
+        expect(a.anchors(4)).toEqual([{ x: 5, y: 6 }]);
+        expect(a.anchors(5)).toEqual([]);
+    });
+    test('a block or a lookup that does not decode gives []', () => {
+        expect(parseAnkr(ankr({ 3: 400 }, [[[1, 1]]])).anchors(3)).toEqual([]);
+        const bad = new Uint8Array([...be16(0), ...be16(0), ...be32(12), ...be32(16), 0, 3, 0, 0, 0, 0, 0, 0]);
+        expect(parseAnkr(bad).anchors(1)).toEqual([]);
     });
 });

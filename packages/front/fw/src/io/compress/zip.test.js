@@ -462,7 +462,7 @@ describe('zip module', () => {
                     caught = e;
                 }
                 expect(caught).toBeDefined();
-                expect(caught.code).toBe(10);
+                expect(caught.errno).toBe(10);
             });
 
             test('DOS-epoch clamp edge: a fixed mtime just inside 1980 does not throw', () => {

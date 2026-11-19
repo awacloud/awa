@@ -10,7 +10,7 @@
                     "dir": "./integrations/astro/",
                     "title": "Playground — Astro",
                     "description": "Multi-page Astro mini-site (SSG) with fw islands: a reactive counter, form validation, and hydrated SSR markup. Demonstrates @awacloud/fw/astro.",
-                    "run": "npm i && npm run dev",
+                    "run": "bun install && bun run dev",
                     "browser": false,
                     "install": true
                 },
@@ -19,7 +19,7 @@
                     "dir": "./integrations/bun/",
                     "title": "Playground — Bun consumer",
                     "description": "Runnable example of a third-party app consuming @awacloud/fw virtual presets via the official @awacloud/fw/bun plugin (default export fwBun).",
-                    "run": "bun build.ts && bun dist/app.js",
+                    "run": "bun run start",
                     "browser": false,
                     "install": true
                 },
@@ -27,7 +27,7 @@
                     "name": "deno",
                     "dir": "./integrations/deno/",
                     "title": "Playground — Deno",
-                    "description": "Consumer-style example: run @awacloud/fw under Deno using native Web APIs, via the npm:@awacloud/fw import map. See the integration doc:…",
+                    "description": "Consumer-style example: run @awacloud/fw under Deno using native Web APIs, through an import map onto the in-repo sources (no install, no build). See the…",
                     "run": "deno run --allow-read app.ts",
                     "browser": false,
                     "install": false
@@ -37,7 +37,7 @@
                     "dir": "./integrations/esbuild/",
                     "title": "Playground — esbuild",
                     "description": "Mini-app built with the esbuild.build API and the consumer plugin @awacloud/fw/esbuild (default export fwEsbuild).",
-                    "run": "npm i && node build.mjs && npx serve --no-clean-urls .",
+                    "run": "bun install && bun run start",
                     "browser": "./integrations/esbuild/index.html",
                     "install": true
                 },
@@ -46,7 +46,7 @@
                     "dir": "./integrations/eslint/",
                     "title": "Playground — ESLint (fw/no-factory-capture)",
                     "description": "Demonstrates the custom rule fw/no-factory-capture: a module factory() must be self-contained because runtime.serialize() ships factory.toString() into a…",
-                    "run": "npm i",
+                    "run": "bun install && bun run lint",
                     "browser": false,
                     "install": true
                 },
@@ -55,7 +55,7 @@
                     "dir": "./integrations/jest/",
                     "title": "Playground — Jest",
                     "description": "Mini-consumer running a bun:test-style test under Jest (native ESM).",
-                    "run": "npm i && node --experimental-vm-modules node_modules/jest/bin/jest.js -c jest.config.mjs",
+                    "run": "bun install && bun run test",
                     "browser": false,
                     "install": true
                 },
@@ -64,7 +64,7 @@
                     "dir": "./integrations/nest/",
                     "title": "Playground — NestJS consumer",
                     "description": "Runnable example of a NestJS backend reusing @awacloud/fw's hand-written crypto/codec primitives server-side, via the official @awacloud/fw/nest integration…",
-                    "run": "npm i && npm start",
+                    "run": "bun install && bun run start",
                     "browser": false,
                     "install": true
                 },
@@ -73,16 +73,16 @@
                     "dir": "./integrations/next/",
                     "title": "Playground — Next.js",
                     "description": "Multi-page Next.js App Router app using @awacloud/fw via Webpack: a hydrated SSR island, a reactive counter island, and a form-validation island.",
-                    "run": "npm i && npm run dev",
+                    "run": "bun install && bun run dev",
                     "browser": false,
                     "install": true
                 },
                 {
                     "name": "nodejs",
                     "dir": "./integrations/nodejs/",
-                    "title": "Playground — Node.js (\"à la carte\" consumption)",
+                    "title": "Playground — Node.js (pick-and-choose consumption)",
                     "description": "Runtime example: consuming @awacloud/fw under plain Node, without a bundler, by importing a few worker-safe modules by subpath then resolving them via the…",
-                    "run": "node app.mjs",
+                    "run": "bun install && bun run start",
                     "browser": false,
                     "install": true
                 },
@@ -91,7 +91,7 @@
                     "dir": "./integrations/rollup/",
                     "title": "Playground — Rollup",
                     "description": "Minimal Rollup consumer build for @awacloud/fw/rollup.",
-                    "run": "npm i && npx rollup -c && npx serve --no-clean-urls .",
+                    "run": "bun install && bun run start",
                     "browser": "./integrations/rollup/index.html",
                     "install": true
                 },
@@ -109,8 +109,8 @@
                     "dir": "./integrations/vite/",
                     "title": "Playground — Vite",
                     "description": "Minimal Vite consumer app for @awacloud/fw/vite.",
-                    "run": "npm i && npm run dev",
-                    "browser": "./integrations/vite/index.html",
+                    "run": "bun install && bun run dev",
+                    "browser": false,
                     "install": true
                 },
                 {
@@ -118,7 +118,7 @@
                     "dir": "./integrations/vitest/",
                     "title": "Playground — Vitest",
                     "description": "Mini-consumer running a test written in bun:test style under Vitest / Node, without touching the test. See the integration @awacloud/fw/vitest.",
-                    "run": "npm i && npx vitest run",
+                    "run": "bun install && bun run test",
                     "browser": false,
                     "install": true
                 },
@@ -127,9 +127,51 @@
                     "dir": "./integrations/webpack/",
                     "title": "Playground — Webpack",
                     "description": "Minimal Webpack 5 consumer build for @awacloud/fw using the official FwWebpackPlugin (scheme-based virtual modules, zero custom deps).",
-                    "run": "npm i && npx webpack && npx serve --no-clean-urls dist",
-                    "browser": "./integrations/webpack/index.html",
+                    "run": "bun install && bun run start",
+                    "browser": "./integrations/webpack/dist/index.html",
                     "install": true
+                }
+            ]
+        },
+        {
+            "id": "usecases",
+            "label": "Use cases",
+            "items": [
+                {
+                    "name": "crypto-workers",
+                    "dir": "./usecases/crypto-workers/",
+                    "title": "Use case — cryptography in a worker",
+                    "description": "Keys generated and used inside a Web Worker, behind an RPC API: Ed25519 signatures and ChaCha20-Poly1305 encryption. The page shows the verdicts, including…",
+                    "run": "node ../../_tools/serve.mjs ../../..",
+                    "browser": "./usecases/crypto-workers/index.html",
+                    "install": false
+                },
+                {
+                    "name": "progressive",
+                    "dir": "./usecases/progressive/",
+                    "title": "Use case — progressive enhancement",
+                    "description": "Two pages that are complete as plain HTML — links, content, a contact form that submits without JavaScript — and one module, enhance.js, that adds behaviour…",
+                    "run": "node ../../_tools/serve.mjs ../../..",
+                    "browser": "./usecases/progressive/index.html",
+                    "install": false
+                },
+                {
+                    "name": "pwa",
+                    "dir": "./usecases/pwa/",
+                    "title": "Use case — progressive web app",
+                    "description": "An installable, offline-capable page: a web app manifest, a module service worker that precaches the app (precache + cache), and IndexedDB counting the visits…",
+                    "run": "node ../../_tools/serve.mjs ../../..",
+                    "browser": "./usecases/pwa/index.html",
+                    "install": false
+                },
+                {
+                    "name": "web-app",
+                    "dir": "./usecases/web-app/",
+                    "title": "Use case — web app",
+                    "description": "A small single-page app on @awacloud/fw: hash routes (route), data loaded with ajax, a filtered keyed list (signal + uiSession.list), a detail view and a…",
+                    "run": "node ../../_tools/serve.mjs ../../..",
+                    "browser": "./usecases/web-app/index.html",
+                    "install": false
                 }
             ]
         }

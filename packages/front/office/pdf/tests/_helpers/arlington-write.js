@@ -468,6 +468,41 @@ export function pdfRuntime() {
  */
 export const LIBERATION_SANS = new URL('../../../oconv-fonts/vendor/liberation/LiberationSans-Regular.ttf', import.meta.url);
 
+/**
+ * Source Sans 3 Regular (a name-keyed CFF) and its variable upright (CFF2),
+ * reused by path from fonts' vendored OFL faces (SIL OFL 1.1; provenance:
+ * `fonts/tests/_fixtures/ofl-faces/vendor/source-sans/`).
+ */
+export const SOURCE_SANS = new URL('../../../fonts/tests/_fixtures/ofl-faces/vendor/source-sans/SourceSans3-Regular.otf', import.meta.url);
+export const SOURCE_SANS_VF = new URL('../../../fonts/tests/_fixtures/ofl-faces/vendor/source-sans/SourceSans3VF-Upright.otf', import.meta.url);
+
+/**
+ * A page of CFF-outline text (T76): Source Sans 3 as a simple `/Type1`
+ * font and as a `/CIDFontType0` composite one, Source Sans 3 VF (CFF2) as
+ * a composite one, each `FontFile3 /OpenType`.
+ */
+function cffPage(rt, make, id) {
+    const embed = rt.resolve('pdfFontEmbed');
+    const fonts = rt.resolve('fonts');
+    const sans = fonts.read(new Uint8Array(readFileSync(SOURCE_SANS)));
+    const vf = fonts.read(new Uint8Array(readFileSync(SOURCE_SANS_VF)));
+    const simpleText = 'Hello, world';
+    const cidText = 'Ἀθῆναι, Привет';
+    const vfText = 'Variable, 2026';
+    const simple = embed.embedSimple(sans, codePoints(simpleText));
+    const cid = embed.embedCid(sans, codePoints(cidText));
+    const vfCid = embed.embedCid(vf, codePoints(vfText));
+    return make()
+        .addPage()
+        .addFont({ name: 'F1', embedded: simple })
+        .addFont({ name: 'F2', embedded: cid })
+        .addFont({ name: 'F3', embedded: vfCid })
+        .addContent(`BT /F1 12 Tf 72 700 Td <${hex(simple.encode(simpleText))}> Tj /F2 12 Tf 0 -16 Td <${hex(cid.encode(cidText))}> Tj ` +
+            `/F3 12 Tf 0 -16 Td <${hex(vfCid.encode(vfText))}> Tj ET`)
+        .setId(id)
+        .build();
+}
+
 const hex = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 const codePoints = (s) => [...new Set([...s].map((c) => c.codePointAt(0)))];
 
@@ -475,11 +510,12 @@ const codePoints = (s) => [...new Set([...s].map((c) => c.codePointAt(0)))];
  * The documents the pdf package's writers emit for this measure, each
  * `{ id, writer, bytes }`: `pdfBuilder` from scratch, and `pdf.write` of
  * what `pdf.read` gives back for two of them. Reproducible: fixed `/ID`,
- * no clock. `metrics: true` registers every Standard 14 face of
- * `builder-standard-14` (so of `write-standard-14`) through the opt-in
- * metrics (`standard14` and `encodings`) — the sibling suite's documents.
+ * no clock. `legacy: true` registers every Standard 14 face of
+ * `builder-standard-14` (so of `write-standard-14`) with `standard14:
+ * false`, the 1.x dictionaries without their metrics — the legacy suite's
+ * documents (the builder writes the metrics by default since 2.0.0).
  */
-export function pdfDocuments(rt = pdfRuntime(), { metrics = false } = {}) {
+export function pdfDocuments(rt = pdfRuntime(), { legacy = false } = {}) {
     const pdf = rt.resolve('pdf');
     const { builder } = rt.resolve('pdfBuilder');
     const embed = rt.resolve('pdfFontEmbed');
@@ -489,7 +525,7 @@ export function pdfDocuments(rt = pdfRuntime(), { metrics = false } = {}) {
     const blank = builder().addPage().build();
 
     const lookup14 = rt.resolve('standard14Lookup');
-    const opt = metrics ? { standard14: lookup14, encodings: rt.resolve('encodingLookup') } : {};
+    const opt = legacy ? { standard14: false } : {};
     const standard14 = builder()
         .addPage({ mediaBox: [0, 0, 595, 842], cropBox: [10, 10, 585, 832], rotate: 90 })
         .addFont({ name: 'F1', baseFont: 'Helvetica', encoding: 'WinAnsiEncoding', ...opt })
@@ -539,13 +575,137 @@ export function pdfDocuments(rt = pdfRuntime(), { metrics = false } = {}) {
         .setId(id)
         .build();
 
+    const embeddedCff = cffPage(rt, () => builder(), id);
+
     return [
         { id: 'builder-blank', writer: 'pdfBuilder', bytes: blank },
         { id: 'builder-standard-14', writer: 'pdfBuilder', bytes: standard14 },
         { id: 'builder-standard-14-metrics', writer: 'pdfBuilder', bytes: standard14Metrics },
         { id: 'builder-embedded', writer: 'pdfBuilder', bytes: embedded },
         { id: 'builder-image', writer: 'pdfBuilder', bytes: image },
+        { id: 'builder-embedded-cff', writer: 'pdfBuilder', bytes: embeddedCff },
         { id: 'write-standard-14', writer: 'pdf.write', bytes: pdf.write(pdf.read(standard14)) },
-        { id: 'write-embedded', writer: 'pdf.write', bytes: pdf.write(pdf.read(embedded)) }
+        { id: 'write-embedded', writer: 'pdf.write', bytes: pdf.write(pdf.read(embedded)) },
+        { id: 'write-embedded-cff', writer: 'pdf.write', bytes: pdf.write(pdf.read(embeddedCff)) }
+    ];
+}
+
+/**
+ * The documents `pdfBuilder` writes claiming PDF/A `profile` (`'4'` or
+ * `'2b'`, through `builder({ pdfA: profile })`), each `{ id, writer,
+ * bytes }`: a blank page with every Info field, the embedded-font text of
+ * `builder-embedded` and of `builder-embedded-cff`, and the soft-masked
+ * image of `builder-image` — the
+ * documents of `pdfDocuments` that can conform (a Standard 14 face has no
+ * font program). Reproducible: fixed `/ID`, fixed dates, no clock.
+ */
+export function pdfaDocuments(rt = pdfRuntime(), profile = '4') {
+    const { builder } = rt.resolve('pdfBuilder');
+    const embed = rt.resolve('pdfFontEmbed');
+    const face = rt.resolve('fonts').read(new Uint8Array(readFileSync(LIBERATION_SANS)));
+    const id = '000102030405060708090a0b0c0d0e0f';
+    const make = () => builder({ pdfA: profile });
+
+    const blank = make()
+        .addPage()
+        .addMetadata({
+            Title: 'PDF/A conformance', Author: 'awa', Subject: 'veraPDF', Keywords: 'pdf, PDF/A',
+            Creator: 'pdfBuilder', Producer: '@awacloud/pdf',
+            CreationDate: 'D:20261103120000Z', ModDate: 'D:20261103120000Z'
+        })
+        .setId(id)
+        .build();
+
+    const simpleText = 'Hello, world';
+    const cidText = 'Привет, мир';
+    const simple = embed.embedSimple(face, codePoints(simpleText));
+    const cid = embed.embedCid(face, codePoints(cidText));
+    const embedded = make()
+        .addPage()
+        .addFont({ name: 'F1', embedded: simple })
+        .addFont({ name: 'F2', embedded: cid })
+        .addContent(`BT /F1 12 Tf 72 700 Td <${hex(simple.encode(simpleText))}> Tj /F2 12 Tf 0 -16 Td <${hex(cid.encode(cidText))}> Tj ET`)
+        .setId(id)
+        .build();
+
+    const image = make()
+        .addPage()
+        .addImage({
+            name: 'Im0', width: 2, height: 2, colorSpace: 'DeviceRGB', bitsPerComponent: 8,
+            data: new Uint8Array([255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255]),
+            sMask: { width: 2, height: 2, colorSpace: 'DeviceGray', bitsPerComponent: 8, data: new Uint8Array([255, 128, 64, 0]) }
+        })
+        .addContent('q 100 0 0 100 72 600 cm /Im0 Do Q')
+        .setId(id)
+        .build();
+
+    return [
+        { id: 'builder-blank', writer: 'pdfBuilder', bytes: blank },
+        { id: 'builder-embedded', writer: 'pdfBuilder', bytes: embedded },
+        { id: 'builder-image', writer: 'pdfBuilder', bytes: image },
+        { id: 'builder-embedded-cff', writer: 'pdfBuilder', bytes: cffPage(rt, make, id) }
+    ];
+}
+
+/**
+ * The documents `pdfBuilder` writes claiming PDF/UA `part` (1 or 2, through
+ * `builder({ pdfUA: part, lang: 'en-GB' })`), each `{ id, writer, bytes }`,
+ * tagged through the builder's structure API: `openElement(type, props?)`,
+ * `markContent()` (the next MCID of the current page, attached to the open
+ * element) and `closeElement()`, the caller writing the marked-content
+ * operators. A paragraph; a heading, a paragraph, a list item and a
+ * page-number artifact; a figure with alt text and a one-row table. The
+ * Liberation Sans face embedded; fixed `/ID`, no clock.
+ */
+export function pdfuaDocuments(rt = pdfRuntime(), part = 1) {
+    const { builder } = rt.resolve('pdfBuilder');
+    const embed = rt.resolve('pdfFontEmbed');
+    const face = rt.resolve('fonts').read(new Uint8Array(readFileSync(LIBERATION_SANS)));
+    const id = '000102030405060708090a0b0c0d0e0f';
+    const font = (texts) => embed.embedSimple(face, codePoints(texts.join('')));
+    const start = (title, f) => builder({ pdfUA: part, lang: 'en-GB' })
+        .addMetadata({ Title: title, Producer: '@awacloud/pdf' })
+        .addPage()
+        .addFont({ name: 'F1', embedded: f })
+        .openElement('Document');
+    const show = (f, size, x, y, text) => `BT /F1 ${size} Tf ${x} ${y} Td <${hex(f.encode(text))}> Tj ET`;
+    // One leaf: an element holding one marked-content sequence.
+    const leaf = (b, type, ops, props) => {
+        b.openElement(type, props);
+        const mcid = b.markContent();
+        b.addContent(`/${type} <</MCID ${mcid}>> BDC ${ops} EMC`);
+        b.closeElement();
+    };
+
+    const fPara = font(['Hello, tagged world.']);
+    const para = start('A tagged paragraph', fPara);
+    leaf(para, 'P', show(fPara, 12, 72, 720, 'Hello, tagged world.'));
+    para.closeElement();
+
+    const fRich = font(['A heading', 'Some text.', '-', 'One item', '1']);
+    const rich = start('A tagged heading and list', fRich);
+    leaf(rich, 'H1', show(fRich, 18, 72, 740, 'A heading'));
+    leaf(rich, 'P', show(fRich, 12, 72, 710, 'Some text.'));
+    rich.openElement('L', { attributes: [{ O: 'List', ListNumbering: 'Unordered' }] }).openElement('LI');
+    leaf(rich, 'Lbl', show(fRich, 12, 72, 690, '-'));
+    leaf(rich, 'LBody', show(fRich, 12, 86, 690, 'One item'));
+    rich.closeElement().closeElement();
+    rich.addContent(`/Artifact <</Type /Pagination>> BDC ${show(fRich, 9, 300, 30, '1')} EMC`);
+    rich.closeElement();
+
+    const fTable = font(['Name', 'Value']);
+    const table = start('A tagged figure and table', fTable)
+        .addImage({ name: 'Im0', width: 2, height: 2, colorSpace: 'DeviceRGB', bitsPerComponent: 8,
+            data: new Uint8Array([255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255]) });
+    leaf(table, 'Figure', 'q 100 0 0 100 72 600 cm /Im0 Do Q', { alt: 'A small coloured square' });
+    table.openElement('Table').openElement('TR');
+    leaf(table, 'TH', show(fTable, 12, 72, 560, 'Name'), { attributes: [{ O: 'Table', Scope: 'Column' }] });
+    leaf(table, 'TD', show(fTable, 12, 200, 560, 'Value'));
+    table.closeElement().closeElement().closeElement();
+
+    return [
+        { id: 'builder-paragraph', writer: 'pdfBuilder', bytes: para.setId(id).build() },
+        { id: 'builder-heading-list', writer: 'pdfBuilder', bytes: rich.setId(id).build() },
+        { id: 'builder-figure-table', writer: 'pdfBuilder', bytes: table.setId(id).build() }
     ];
 }

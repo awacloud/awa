@@ -15,7 +15,7 @@ when an export, a CLI verb or an MCP tool has no page or section here.
 | `isCoreError` | function | [isCoreError.md](./isCoreError.md) |
 | `assetFiles` | function | [assetFiles.md](./assetFiles.md) |
 | `TO_MD_FORMATS`, `FROM_MD_TARGETS`, `CONVERT_PAIRS` | constants | [types.md](./types.md#constants) |
-| `Loss`, `LossSummaryEntry`, `CoreError`, `ToMdInput`, `ArchiveLimits`, `OutputBudget`, `ToMdOutput`, `ToMdResult`, `Asset`, `SkippedAsset`, `FromMdInput`, `FromMdOutput`, `FromMdResult`, `ConvertInput`, `ConvertOutput`, `ConvertResult`, `ToHtmlInput`, `ToHtmlOutput`, `ToHtmlResult` | types | [types.md](./types.md) |
+| `Loss`, `LossSummaryEntry`, `CoreError`, `ToMdInput`, `ArchiveLimits`, `OutputBudget`, `ToMdOutput`, `ToMdResult`, `Asset`, `SkippedAsset`, `FromMdInput`, `PdfFonts`, `FromMdOutput`, `FromMdResult`, `ConvertInput`, `ConvertOutput`, `ConvertResult`, `ToHtmlInput`, `ToHtmlOutput`, `ToHtmlResult` | types | [types.md](./types.md) |
 
 ## CLI — `src/index.ts`
 

@@ -17,7 +17,7 @@
     --af-fg: #e6edf3;
     --af-muted: #9fb3c8;
     --af-accent: #b3dfef;      /* the awa sky, a P1 palette member */
-    --af-border: #003462;      /* awa navy-2 */
+    --af-border: #5c7f9e;      /* >= 3:1 on --af-bg and --af-surface */
     --af-code-bg: #00263D;     /* awa navy */
     --af-code-fg: #e6edf3;
     --af-surface: #16222e;     /* cards, table heads, callouts */
@@ -33,6 +33,13 @@
     --af-hero-grid: rgba(179, 223, 239, 0.07);
     --af-hero-cta-bg: #b3dfef;
     --af-hero-cta-fg: #00263D;
+    /* the home graph, drawn on the hero band (src/home-graph.js) — both schemes */
+    --af-graph-line: rgba(179, 223, 239, 0.34);      /* an edge at rest */
+    --af-graph-line-dim: rgba(179, 223, 239, 0.14);  /* an edge outside the lit closure */
+    --af-graph-node: #003462;                        /* a package pill (navy-2) */
+    --af-graph-node-line: rgba(179, 223, 239, 0.55); /* its outline */
+    --af-graph-boundary: #b3dfef;                    /* the closing boundary */
+    --af-graph-hot: #ffffff;                         /* the lit closure */
     /* the header band: text on --af-chrome-bg */
     --af-chrome-fg: #ffffff;
     --af-chrome-muted: #b3dfef;
@@ -77,7 +84,7 @@
         --af-fg: #212529;      /* awa ink */
         --af-muted: #003462;   /* awa navy-2 */
         --af-accent: #0078b3;  /* awa blue */
-        --af-border: #b3dfef;  /* awa sky */
+        --af-border: #0078b3;  /* awa blue — >= 3:1 on --af-bg and --af-surface */
         --af-code-bg: #eef6fa;
         --af-code-fg: #00263D;
         --af-surface: #f4f9fc;

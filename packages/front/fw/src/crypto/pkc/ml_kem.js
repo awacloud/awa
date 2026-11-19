@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -55,7 +55,6 @@ import { random } from '../utils/random.js';
  * @property {(seed?: Uint8Array) => ({ publicKey: Uint8Array, secretKey: Uint8Array }|false)} keygen Generate a key pair (deterministic for a 64-byte seed).
  * @property {(publicKey: Uint8Array, msg?: Uint8Array) => ({ cipherText: Uint8Array, sharedSecret: Uint8Array }|false)} encapsulate Encapsulate to a public key.
  * @property {(cipherText: Uint8Array, secretKey: Uint8Array) => (Uint8Array|false)} decapsulate Decapsulate; 32-byte shared secret.
- * @property {{ isValidEncapsulationKey: (ek: Uint8Array) => boolean, isValidDecapsulationKey: (dk: Uint8Array) => boolean }} _internal Validation helpers.
  */
 
 /**
@@ -64,15 +63,6 @@ import { random } from '../utils/random.js';
  * @property {MlKemInstance} ml_kem512 ML-KEM-512 instance.
  * @property {MlKemInstance} ml_kem768 ML-KEM-768 instance.
  * @property {MlKemInstance} ml_kem1024 ML-KEM-1024 instance.
- * @property {(f: Uint16Array) => Uint16Array} _ntt Test-only NTT.
- * @property {(f: Uint16Array) => Uint16Array} _nttInv Test-only inverse NTT.
- * @property {(out: Uint16Array, a: Uint16Array, b: Uint16Array) => Uint16Array} _multiplyNTTs Test-only pointwise product.
- * @property {(prfBytes: Uint8Array, eta: number) => Uint16Array} _sampleCBD Test-only CBD sampler.
- * @property {(rho: Uint8Array, j: number, i: number) => Uint16Array} _sampleNTT Test-only NTT sampler.
- * @property {(poly: Uint16Array, d: number) => Uint8Array} _byteEncode Test-only encoder.
- * @property {(bytes: Uint8Array, d: number) => Uint16Array} _byteDecode Test-only decoder.
- * @property {(x: number, d: number) => number} _compress Test-only compress.
- * @property {(y: number, d: number) => number} _decompress Test-only decompress.
  */
 
 export const ml_kem = {
@@ -572,10 +562,11 @@ export const ml_kem = {
                 return _ctEqual(h, ekHash);
             }
 
-            return {
-                lengths, keygen, encapsulate, decapsulate,
-                _internal: { isValidEncapsulationKey, isValidDecapsulationKey }
-            };
+            return Object.defineProperty({
+                lengths, keygen, encapsulate, decapsulate
+            }, Symbol.for('@awacloud/fw/internal'), {
+                value: { isValidEncapsulationKey, isValidDecapsulationKey }
+            });
         }
 
         const PARAMS = {
@@ -584,13 +575,16 @@ export const ml_kem = {
             1024: { K: 4, ETA1: 2, ETA2: 2, du: 11, dv: 5 }
         };
 
-        return {
+        return Object.defineProperty({
             ml_kem512:  _make(PARAMS[512]),
             ml_kem768:  _make(PARAMS[768]),
-            ml_kem1024: _make(PARAMS[1024]),
-            // exposed for testing
-            _ntt, _nttInv, _multiplyNTTs, _sampleCBD, _sampleNTT,
-            _byteEncode, _byteDecode, _compress, _decompress
-        };
+            ml_kem1024: _make(PARAMS[1024])
+        }, Symbol.for('@awacloud/fw/internal'), {
+            // Internal (test-only, outside the API).
+            value: {
+                ntt: _ntt, nttInv: _nttInv, multiplyNTTs: _multiplyNTTs, sampleCBD: _sampleCBD, sampleNTT: _sampleNTT,
+                byteEncode: _byteEncode, byteDecode: _byteDecode, compress: _compress, decompress: _decompress
+            }
+        });
     }
 };

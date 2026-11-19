@@ -82,6 +82,9 @@ export const wmlParagraphFormatting = {
         }
 
         function hydrate(pPr) {
+            return core.hydrateLossless(pPr, typeParagraph, dehydrate);
+        }
+        function typeParagraph(pPr) {
             if (!pPr || !pPr._extras) return pPr;
             const remaining = [];
             for (const c of pPr._extras) {

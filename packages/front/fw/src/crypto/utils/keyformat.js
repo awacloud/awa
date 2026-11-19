@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -12,6 +12,8 @@
  *   • SEC1    (RFC 5915)        - `ECPrivateKey` (used inside PKCS#8 for EC)
  *   • RFC 8410 - Ed25519 / X25519 wrappers (Ed448 / X448 NOT supported;
  *     add `1.3.101.112`/`113` entries with `RAW_LEN = 57` to extend.)
+ *   • PKCS#1  (RFC 8017 A.1)    - `RSAPublicKey` / `RSAPrivateKey`, and RSA
+ *     inside SPKI / PKCS#8 (rsaEncryption, NULL parameters)
  *
  * Curve OIDs supported:
  *   • Ed25519  1.3.101.112
@@ -25,6 +27,10 @@
  * @typedef {{ d: Uint8Array, curveOid?: string, publicKey?: Uint8Array }} EcSec1Decoded
  * @typedef {{ curveOid: string, d: Uint8Array, publicKey?: Uint8Array }} EcPkcs8Decoded
  * @typedef {{ curveOid: string, point: Uint8Array }} EcSpkiDecoded
+ * @typedef {{ n: Uint8Array, e: Uint8Array }} RsaPublicKeyParts
+ *   Unsigned big-endian integers (the shape `pkc/rsa.js` takes).
+ * @typedef {{ n: Uint8Array, e: Uint8Array, d: Uint8Array, p: Uint8Array, q: Uint8Array, dp: Uint8Array, dq: Uint8Array, qInv: Uint8Array }} RsaPrivateKeyParts
+ *   A two-prime RSA private key, every integer unsigned big-endian.
  *
  */
 
@@ -42,6 +48,14 @@
  * @property {(der: Uint8Array) => (EcPkcs8Decoded|false)} decodePkcs8Ec Decode a PKCS#8 EC private key.
  * @property {(curveOid: string, uncompressedPoint: Uint8Array) => (Uint8Array|false)} encodeSpkiEc Wrap an uncompressed EC public key as SPKI.
  * @property {(der: Uint8Array) => (EcSpkiDecoded|false)} decodeSpkiEc Decode an EC SPKI.
+ * @property {(key: RsaPublicKeyParts) => (Uint8Array|false)} encodeRsaPublicKey Encode a PKCS#1 `RSAPublicKey`.
+ * @property {(der: Uint8Array) => (RsaPublicKeyParts|false)} decodeRsaPublicKey Decode a PKCS#1 `RSAPublicKey`.
+ * @property {(key: RsaPrivateKeyParts) => (Uint8Array|false)} encodeRsaPrivateKey Encode a PKCS#1 `RSAPrivateKey` (version 0).
+ * @property {(der: Uint8Array) => (RsaPrivateKeyParts|false)} decodeRsaPrivateKey Decode a two-prime PKCS#1 `RSAPrivateKey`.
+ * @property {(key: RsaPublicKeyParts) => (Uint8Array|false)} encodeSpkiRsa Wrap an RSA public key as SPKI.
+ * @property {(der: Uint8Array) => (RsaPublicKeyParts|false)} decodeSpkiRsa Decode an RSA SPKI.
+ * @property {(key: RsaPrivateKeyParts) => (Uint8Array|false)} encodePkcs8Rsa Wrap an RSA private key as PKCS#8.
+ * @property {(der: Uint8Array) => (RsaPrivateKeyParts|false)} decodePkcs8Rsa Decode an RSA PKCS#8 private key.
  */
 
 import { asn1 } from './asn1.js';
@@ -289,6 +303,166 @@ export const keyformat = {
             return { curveOid, point: new Uint8Array(bs.bytes) };
         }
 
+        // ── RSA (RFC 8017 A.1, RFC 3279 §2.3.1) ───────────────────────
+
+        const RSA_PRIV_FIELDS = ['n', 'e', 'd', 'p', 'q', 'dp', 'dq', 'qInv'];
+
+        /** @param {string} why @returns {false} */
+        function _rsaBad(why) {
+            console.warn('[crypto] INVALID: keyformat: RSA ' + why);
+            return false;
+        }
+
+        /**
+         * Parse `der` as exactly one SEQUENCE and return its children.
+         * @param {unknown} der
+         * @returns {import('./asn1.js').Asn1Node[]|false}
+         */
+        function _seq(der) {
+            if (!(der instanceof Uint8Array)) return false;
+            const top = asn1.parseOne(der, 0);
+            if (!top || top.tag !== 0x30 || top.next !== der.length) return false;
+            return asn1.parseChildren(top.value);
+        }
+
+        /**
+         * A non-negative INTEGER node as unsigned big-endian bytes (the DER
+         * sign byte dropped).
+         * @returns {Uint8Array|false}
+         */
+        function _uint(node) {
+            const raw = asn1.readInteger(node);
+            if (raw === false || raw.length === 0 || (raw[0] & 0x80)) return false;
+            let i = 0;
+            while (i < raw.length - 1 && raw[i] === 0) i++;
+            return new Uint8Array(raw.subarray(i));
+        }
+
+        /** Whether every named field is a non-empty `Uint8Array`. */
+        function _hasInts(key, fields) {
+            return !!key && fields.every((f) => key[f] instanceof Uint8Array && key[f].length > 0);
+        }
+
+        /** The `{rsaEncryption, NULL}` AlgorithmIdentifier. */
+        function _rsaAlgId() {
+            return _algId(OID.RSA, asn1.encodeNull());
+        }
+
+        /** Whether an AlgorithmIdentifier node is `{rsaEncryption, NULL}`. */
+        function _isRsaAlgId(node) {
+            if (!node || node.tag !== 0x30) return false;
+            const k = asn1.parseChildren(node.value);
+            return !!k && k.length === 2 && asn1.readOid(k[0]) === OID.RSA
+                && k[1].tag === 0x05 && k[1].length === 0;
+        }
+
+        /**
+         * Encode a PKCS#1 `RSAPublicKey ::= SEQUENCE { modulus, publicExponent }`.
+         * @param {RsaPublicKeyParts} key
+         * @returns {Uint8Array|false}
+         */
+        function encodeRsaPublicKey(key) {
+            if (!_hasInts(key, ['n', 'e'])) return _rsaBad('public key needs n and e');
+            return asn1.encodeSequence([asn1.encodeInteger(key.n), asn1.encodeInteger(key.e)]);
+        }
+
+        /**
+         * Decode a PKCS#1 `RSAPublicKey`.
+         * @param {Uint8Array} der
+         * @returns {RsaPublicKeyParts|false}
+         */
+        function decodeRsaPublicKey(der) {
+            const kids = _seq(der);
+            if (!kids || kids.length !== 2) return _rsaBad('RSAPublicKey needs exactly modulus + exponent');
+            const n = _uint(kids[0]);
+            const e = _uint(kids[1]);
+            if (!n || !e) return _rsaBad('RSAPublicKey integers malformed');
+            return { n, e };
+        }
+
+        /**
+         * Encode a two-prime PKCS#1 `RSAPrivateKey` (version 0, RFC 8017 A.1.2).
+         * @param {RsaPrivateKeyParts} key
+         * @returns {Uint8Array|false}
+         */
+        function encodeRsaPrivateKey(key) {
+            if (!_hasInts(key, RSA_PRIV_FIELDS)) {
+                return _rsaBad('private key needs n, e, d, p, q, dp, dq and qInv');
+            }
+            return asn1.encodeSequence([asn1.encodeInteger(0), ...RSA_PRIV_FIELDS.map((f) => asn1.encodeInteger(key[f]))]);
+        }
+
+        /**
+         * Decode a PKCS#1 `RSAPrivateKey`. A multi-prime key (version 1) is
+         * refused.
+         * @param {Uint8Array} der
+         * @returns {RsaPrivateKeyParts|false}
+         */
+        function decodeRsaPrivateKey(der) {
+            const kids = _seq(der);
+            if (!kids || kids.length !== 9) return _rsaBad('RSAPrivateKey needs version + 8 integers (two-prime)');
+            const version = asn1.readInteger(kids[0]);
+            if (!version || version.length !== 1 || version[0] !== 0) return _rsaBad('RSAPrivateKey version must be 0');
+            /** @type {Record<string, Uint8Array>} */
+            const out = {};
+            for (let i = 0; i < RSA_PRIV_FIELDS.length; i++) {
+                const v = _uint(kids[i + 1]);
+                if (!v) return _rsaBad('RSAPrivateKey integer ' + RSA_PRIV_FIELDS[i] + ' malformed');
+                out[RSA_PRIV_FIELDS[i]] = v;
+            }
+            return /** @type {RsaPrivateKeyParts} */ (/** @type {unknown} */ (out));
+        }
+
+        /**
+         * Wrap an RSA public key as a SubjectPublicKeyInfo (rsaEncryption).
+         * @param {RsaPublicKeyParts} key
+         * @returns {Uint8Array|false}
+         */
+        function encodeSpkiRsa(key) {
+            const pkcs1 = encodeRsaPublicKey(key);
+            if (pkcs1 === false) return false;
+            return asn1.encodeSequence([_rsaAlgId(), asn1.encodeBitString(pkcs1, 0)]);
+        }
+
+        /**
+         * Decode an RSA SubjectPublicKeyInfo.
+         * @param {Uint8Array} der
+         * @returns {RsaPublicKeyParts|false}
+         */
+        function decodeSpkiRsa(der) {
+            const kids = _seq(der);
+            if (!kids || kids.length !== 2 || !_isRsaAlgId(kids[0])) return _rsaBad('not an RSA SPKI (rsaEncryption, NULL)');
+            const bs = asn1.readBitString(kids[1]);
+            if (!bs || bs.unusedBits !== 0) return _rsaBad('SPKI subjectPublicKey malformed');
+            return decodeRsaPublicKey(bs.bytes);
+        }
+
+        /**
+         * Wrap an RSA private key as PKCS#8 (version 0, rsaEncryption).
+         * @param {RsaPrivateKeyParts} key
+         * @returns {Uint8Array|false}
+         */
+        function encodePkcs8Rsa(key) {
+            const pkcs1 = encodeRsaPrivateKey(key);
+            if (pkcs1 === false) return false;
+            return asn1.encodeSequence([asn1.encodeInteger(0), _rsaAlgId(), asn1.encodeOctetString(pkcs1)]);
+        }
+
+        /**
+         * Decode an RSA PKCS#8 private key.
+         * @param {Uint8Array} der
+         * @returns {RsaPrivateKeyParts|false}
+         */
+        function decodePkcs8Rsa(der) {
+            const kids = _seq(der);
+            if (!kids || kids.length !== 3) return _rsaBad('PKCS#8 needs exactly version + algId + privateKey');
+            const version = asn1.readInteger(kids[0]);
+            if (!version || version.length !== 1 || version[0] !== 0) return _rsaBad('PKCS#8 version must be 0');
+            if (!_isRsaAlgId(kids[1])) return _rsaBad('not an RSA PKCS#8 key (rsaEncryption, NULL)');
+            if (kids[2].tag !== 0x04) return _rsaBad('PKCS#8 privateKey is not an OCTET STRING');
+            return decodeRsaPrivateKey(kids[2].value);
+        }
+
         return {
             OID,
             // Edwards (Ed25519 / X25519)
@@ -297,7 +471,12 @@ export const keyformat = {
             // EC (P-256/384/521)
             encodeSec1,         decodeSec1,
             encodePkcs8Ec,      decodePkcs8Ec,
-            encodeSpkiEc,       decodeSpkiEc
+            encodeSpkiEc,       decodeSpkiEc,
+            // RSA (PKCS#1, SPKI, PKCS#8)
+            encodeRsaPublicKey, decodeRsaPublicKey,
+            encodeRsaPrivateKey, decodeRsaPrivateKey,
+            encodeSpkiRsa,      decodeSpkiRsa,
+            encodePkcs8Rsa,     decodePkcs8Rsa
         };
     }
 };

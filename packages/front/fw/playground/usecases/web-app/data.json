@@ -1,0 +1,7 @@
+[
+    { "id": "signal",    "title": "signal",    "kind": "io",  "blurb": "Reactive cells: create / derived / effect." },
+    { "id": "eventBus",  "title": "eventBus",  "kind": "io",  "blurb": "App-level pub/sub keyed by topic." },
+    { "id": "uiSession", "title": "uiSession", "kind": "dom", "blurb": "Declarative session rendering + keyed lists." },
+    { "id": "route",     "title": "route",     "kind": "dom", "blurb": "Hash router with params and guards." },
+    { "id": "ajax",      "title": "ajax",      "kind": "dom", "blurb": "fetch-based HTTP client with JSON parsing." }
+]

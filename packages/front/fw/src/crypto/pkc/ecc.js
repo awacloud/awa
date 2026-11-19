@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -149,7 +149,6 @@
  * @property {{ publicKey: EccPublicKeyCtor, secretKey: EccSecretKeyCtor, generateKeys: (cn: string) => Function }} basicKey
  * @property {{ generateKeys: Function, publicKey: EccPublicKeyCtor, secretKey: EccSecretKeyCtor }} elGamal
  * @property {{ generateKeys: Function, publicKey: EccPublicKeyCtor, secretKey: EccSecretKeyCtor }} ecdsa
- * @property {object} _internal
  */
 
 import { bitArray } from '../utils/bitArray.js';
@@ -217,8 +216,7 @@ export const ecc = {
         // True (unrounded) bit-length of a positive integer encoded as a
         // big-endian byte array. SJCL `bn.bitLength()` rounds up to the next
         // multiple of 16 (storage radix), which breaks RFC 6979 for P-521
-        // where the curve order n has bit-length 521 (not 528). Iteration C2
-        // of the FIPS 140-3 upgrade plan - fixes the byte-exact divergence
+        // where the curve order n has bit-length 521 (not 528). This fixes the byte-exact divergence
         // against RFC 6979 §A.2.7 P-521 sample.
         function _trueBitLength(R) {
             const bytes = bitArray.ba_to_ui8(R.toBits());
@@ -804,7 +802,7 @@ export const ecc = {
             //   - boolean `fakeLegacyVersion` (back-compat), OR
             //   - object `opts = { fakeLegacyVersion?, strict? }`.
             //
-            // Iteration C3 of the FIPS 140-3 upgrade plan - `opts.strict = true`
+            // `opts.strict = true`
             // enables ECDSA "low-s" rejection (BIP62 / NIST strict mode):
             // a canonical signature has `s ∈ [1, ⌊n/2⌋]`. Any value of s
             // in (n/2, n) - including the malleable signature `s' = n - s` -
@@ -834,7 +832,7 @@ export const ecc = {
                 const hA = r.mul(s).mod(R);
                 const r2 = this._curve.G.mult2(hG, hA, this._point).x;
                 if (r.equals(0) || ss.equals(0) || r.greaterEquals(R) || ss.greaterEquals(R) || !r2.equals(r)) {
-                    console.error('[crypto] CORRUPT: ecdsa: signature did not verify');
+                    console.warn('[crypto] CORRUPT: ecdsa: signature did not verify');
                     return false;
                 }
                 if (strict) {
@@ -844,7 +842,7 @@ export const ecc = {
                     const halfR = R.copy().halveM();
                     const upperBoundExcl = halfR.add(new bn.bn(1));
                     if (ss.greaterEquals(upperBoundExcl)) {
-                        console.error('[crypto] CORRUPT: ecdsa: signature is malleable (s > n/2) under strict mode');
+                        console.warn('[crypto] CORRUPT: ecdsa: signature is malleable (s > n/2) under strict mode');
                         return false;
                     }
                 }
@@ -861,7 +859,7 @@ export const ecc = {
         ecc.ecdsa.secretKey.prototype = {
             // Sign `hash` (already-digested message bits) with this private key.
             //
-            // Iteration C3 of the FIPS 140-3 upgrade plan:
+            // Options:
             //   - `opts.hashForK` : explicit hash module for RFC 6979 §3.2 K
             //     derivation (default: `_hashForBits(curveBitLength)`,
             //     which ties H_K to the curve size instead of H_msg -
@@ -918,10 +916,10 @@ export const ecc = {
         };
 
         // ── Internal escape hatch (test-only) ────────────────────────
-        // Iteration C1 of the FIPS 140-3 upgrade plan - exposes the subgroup
+        // Exposes the subgroup
         // membership test for direct testing against ACVP KeyVer-FIPS186-5
         // negative vectors (where Q is on the curve but outside <G>).
-        ecc._internal = {
+        Object.defineProperty(ecc, Symbol.for('@awacloud/fw/internal'), { value: {
             coordsInRange: _coordsInRange,
             isInSubgroup: _isInSubgroup,
             isValidPublicKey(curveName, pointHex) {
@@ -933,7 +931,7 @@ export const ecc = {
                 if (point === false) return false;
                 return _isInSubgroup(point, curve);
             }
-        };
+        } });
 
         // @ts-ignore -- basicKey.generateKeys is assigned dynamically after construction
         return ecc;

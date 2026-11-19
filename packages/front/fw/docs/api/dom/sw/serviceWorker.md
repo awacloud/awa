@@ -56,8 +56,9 @@ if (serviceWorker.isSupported()) {
     console.log('SW registered:', reg.scope);
 
     serviceWorker.onUpdate((reg) => {
-        // Offer the user a page reload
-        if (confirm('Update available. Reload?')) location.reload();
+        // Offer the user a reload through the page's own UI: the sanity
+        // tiers block confirm() / alert(). swUpdate drives the whole flow.
+        showUpdateBanner(() => location.reload());
     });
 }
 ```

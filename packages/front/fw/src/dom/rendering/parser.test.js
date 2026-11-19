@@ -505,8 +505,10 @@ describe('parser module', () => {
                 expect(b.template.map(e => e.id)).toEqual(['p4', 'p5']);
 
                 // The reserved-set parse is never STORED either: a later bare
-                // call still gets the original cached entry.
-                expect(q.fromHTML(src)).toBe(a);
+                // call still gets (a copy of) the original cached entry.
+                const c = q.fromHTML(src);
+                expect(c).toEqual(a);
+                expect(c.template.map(e => e.id)).toEqual(['p0', 'p1']);
             });
 
             // ── Byte-stability locks for the accumulation layer ──────────────────
@@ -531,11 +533,34 @@ describe('parser module', () => {
         // ── ParseResult cache ─────────────────────────────────────────────────────
 
         describe('ParseResult cache', () => {
-            test('identical strings return the SAME ParseResult reference', () => {
+            test('identical strings return equal ParseResults, served from the cache', () => {
                 const p2 = parser.factory(sp());
+                p2.cache.clear();
                 const a = p2.fromHTML('<div>#{n}</div>');
                 const b = p2.fromHTML('<div>#{n}</div>');
-                expect(a).toBe(b);
+                expect(b).toEqual(a);
+                expect(p2.cache.stats().hits).toBe(1);
+            });
+
+            test("a caller's mutation never reaches the next caller (a copy on every call)", () => {
+                const p2 = parser.factory(sp());
+                p2.cache.clear();
+                const src = '<ul><!-- $row --><li class="r">#{v}</li><!-- row$ --></ul>';
+                const pristine = JSON.stringify(p2.fromHTML(src));
+                const a = p2.fromHTML(src);
+                a.template[0].tag = 'ol';
+                a.template.push({ id: 'x', tag: 'div' });
+                a.iterates.row[0].data = { class: 'hacked' };
+                a.iterates.row[0].map.length = 0;
+                const b = p2.fromHTML(src);
+                expect(b).not.toBe(a);
+                expect(JSON.stringify(b)).toBe(pristine);
+                // the miss path hands out a copy too: mutating the first result
+                // does not poison the cached entry
+                const p3 = parser.factory(sp());
+                const first = p3.fromHTML('<p>#{k}</p>');
+                first.template[0].tag = 'h1';
+                expect(p3.fromHTML('<p>#{k}</p>').template[0].tag).toBe('p');
             });
 
             test('different strings produce different ParseResult', () => {

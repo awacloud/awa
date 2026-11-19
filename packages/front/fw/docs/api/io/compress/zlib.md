@@ -22,14 +22,14 @@ const zlib = runtime.resolve('zlib');
 
 ## API
 
-### Synchrone
+### Synchronous
 
 ```js
 const compressed   = zlib.zlibSync(uint8Array, opts?);    // → Uint8Array
 const decompressed = zlib.unzlibSync(compressed, opts?);  // → Uint8Array
 ```
 
-### Asynchrone
+### Asynchronous
 
 ```js
 const compressed   = await zlib.zlib(uint8Array, opts?);
@@ -50,7 +50,14 @@ const output = [];
 const decomp = new zlib.UnzlibStream(opts?, (chunk) => output.push(chunk));
 decomp.push(zlibChunk);
 decomp.push(lastZlibChunk, true);
+// or, when the trailer may be missing: decomp.push(chunk); decomp.flush();
 ```
+
+`flush()` ends the stream when no trailer can be expected (a source that may
+be truncated, such as a PDF FlateDecode stream): the last bytes, held back
+until then as a presumed trailer, are decoded as payload and emitted. A
+`push` after `flush()` (or after `final`) throws `ESTREAMEND` (errno 4). A header split
+across chunks is fine: the stream waits until the whole header has arrived.
 
 ## Options
 
@@ -67,6 +74,8 @@ decomp.push(lastZlibChunk, true);
 |--------|------|-------------|
 | `out` | `Uint8Array` | Pre-allocated output buffer |
 | `dictionary` | `Uint8Array` | Matching dictionary |
+| `maxOutput` | `number` | Cap, in bytes, on the decoded output (a non-negative integer; absent = no cap). One byte more throws `EMAXOUT` (errno 7) before the buffer grows past the cap — the bound against a decompression bomb. On `UnzlibStream` it caps the stream's total |
+| `verify` | `boolean` | Check the Adler-32 trailer against the decoded bytes (RFC 1950 § 2.3); a mismatch throws `ECHECKSUM` (errno 16), a frame too short for a deflate stream and its trailer throws `EEOF` (errno 0). Default `true`; `false` skips both checks (the trailer is not read) |
 
 ## Internal format (RFC 1950)
 
@@ -78,9 +87,16 @@ CMF = `0x78` (CM=8 DEFLATE, CINFO=7 window 32K). FCHECK ensures `(CMF×256 + FLG
 
 ## Error codes
 
-| Code | Meaning |
-|------|---------|
-| 6 | Invalid zlib data |
+| `code` | `errno` | Meaning |
+|---|------|---------|
+| `EEOF` | 0 | Unexpected EOF — unless `verify: false`, a frame shorter than a deflate stream and its trailer (e.g. the header plus 0-4 bytes) |
+| `EBADFORMAT` | 6 | Invalid zlib data |
+| `EMAXOUT` | 7 | Output limit exceeded — the decoded output would pass `maxOutput` |
+| `ECHECKSUM` | 16 | Incorrect data check — unless `verify: false`, the Adler-32 trailer does not match the decoded bytes |
+
+`e.code` is the string in the first column; `e.errno` keeps the number of the
+earlier convention (the compressor family's one typed convention, shared
+with brotli).
 
 ## Example
 

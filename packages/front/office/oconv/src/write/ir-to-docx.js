@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `oconv-ir/v1` → `.docx` bytes writer — tier 2.
+ * @fileoverview `oconv-ir/v2` → `.docx` bytes writer — tier 2.
  *
  * Maps the FROZEN pivot IR (`oconvIr`, `../ir/ir.js`) onto `@awacloud/ooxml`'s
  * documented typed WordprocessingML model and produces bytes through the
@@ -118,6 +118,8 @@
  * | `block/degraded` | `blockquote:nested` | a quote nested in a quote was written as more-indented `BlockText` paragraphs — docx has no quote nesting, the return leg reads one flat quote (one loss per nested quote) |
  * | `block/degraded` | `blockquote-child:<kind>` | a non-paragraph, non-quote block inside a quote was written with its own mapping, outside the quote style |
  * | `image/placeholder` | the image `name` | NO bytes were reachable for the image — neither `opts.assets[name]` (or its percent-decoded form) nor a reader's `escapes.docx.bytes` / `escapes.odt.bytes` / `escapes.pdf.bytes` / `escapes.pptx.bytes` — so it keeps its place as a placeholder picture: a `wp:inline` drawing in a 2 in × 1.5 in box, named after it (`wp:docPr name`, its alt the `descr`), whose `a:blip` names no relationship (no media part); the docx reader reads it back as the image reference (`image/bytes-unavailable`). Before T32 (b3c) such an image was dropped (`image/dropped`) |
+ * | `layout/region-dropped` | `header` or `footer` | the IR states a header or a footer (`oconv-ir/v2`, T80), which this writer does not write; once per region. A `field` is written as its text (`oconvIr.withFieldsAsRuns`) |
+ * | `note/dropped` | `footnote` or `endnote` | the IR holds a note (`oconv-ir/v2`, T81), which this writer does not write (`oconvIr.withoutNotes`); one per note, the text around it kept |
  * | `image/size-defaulted` | the image `name` | bytes WERE reachable and the image is PLACED, but {@link imageExtent} reads no size from them (not a PNG, JPEG or GIF header, or a malformed one), so it sits in `@awacloud/ooxml`'s default 2 in × 4:3 box. A degrade, never a drop |
  *
  * ## Images
@@ -163,7 +165,7 @@
  */
 
 /**
- * `oconvIrToDocx` — writes an `oconv-ir/v1` document to `.docx` bytes.
+ * `oconvIrToDocx` — writes an `oconv-ir/v2` document to `.docx` bytes.
  *
  * Factory surface:
  * - `irToDocx(ir, opts?) → { bytes, losses }`
@@ -521,7 +523,7 @@ export const oconvIrToDocx = {
          * `MONO_FONTS` allowlist recognises it on the return leg), giving
          * `md → docx → md` a symmetric round-trip for inline code.
          *
-         * @param {Object} run An `oconv-ir/v1` `run` node.
+         * @param {Object} run An `oconv-ir/v2` `run` node.
          * @returns {Object|undefined}
          */
         function runFlags(run) {
@@ -534,7 +536,7 @@ export const oconvIrToDocx = {
         }
 
         /**
-         * Convert an `oconv-ir/v1` document to `.docx` bytes.
+         * Convert an `oconv-ir/v2` document to `.docx` bytes.
          *
          * @param {Object} ir The IR document (validated before mapping).
          * @param {{assets?: Object<string, Uint8Array>}} [opts] Optional
@@ -558,6 +560,14 @@ export const oconvIrToDocx = {
 
             /** @type {IrToDocxLoss[]} */
             const losses = [];
+            // T80: no header or footer is written, a field as its text.
+            for (const region of ['header', 'footer']) {
+                if (ir[region]) losses.push({ code: 'layout/region-dropped', detail: region });
+            }
+            // T81: no note is written, each recorded.
+            const unnoted = irApi.withoutNotes(ir);
+            for (const cls of unnoted.dropped) losses.push({ code: 'note/dropped', detail: cls });
+            ir = irApi.withFieldsAsRuns(unnoted.ir);
             // 1-based, document-order hyperlink counter (explicit `rId` for every link).
             let hyperlinkCount = 0;
             // Set as soon as a list is met anywhere in the tree.

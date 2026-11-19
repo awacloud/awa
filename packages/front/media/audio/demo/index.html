@@ -1,0 +1,93 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live audio codec</title>
+<!-- Served from the repository root by a static server on localhost: /packages/front/media/audio/demo/ -->
+<script type="importmap">
+{ "imports": { "@awacloud/fw/": "/packages/front/fw/src/", "@awacloud/media-stream/frame": "/packages/front/media/stream/src/frame/frame.js" } }
+</script>
+<style>
+  :root { --bg: #f7f6f2; --card: #fff; --ink: #1d1d1b; --soft: #66645e; --line: #dedbd2; --accent: #1f5f8b; --warn: #8b3a1f; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1b1b1a; --card: #252523; --ink: #ecebe6; --soft: #a8a59c; --line: #3a3935; --accent: #7fb2d8; --warn: #e0a184; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, sans-serif; }
+  main { max-width: 780px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .lede { color: var(--soft); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+  .warn { color: var(--warn); font-weight: 600; }
+  label { display: inline-flex; gap: 6px; align-items: center; margin: 4px 16px 4px 0; }
+  select, button { font: inherit; }
+  button { font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; }
+  button.quiet { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button[aria-pressed="true"] { outline: 3px solid var(--accent); outline-offset: 2px; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 4px 0; border-bottom: 1px solid var(--line); }
+  td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  #state { color: var(--soft); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Live audio codec</h1>
+  <p class="lede">Your microphone → a capture worklet → the codec in a worker (encoder, then decoder) → a playback worklet. Nothing leaves this computer.</p>
+
+  <div class="card">
+    <p class="warn">Use headphones: with loudspeakers the microphone picks the sound up again and feeds back.</p>
+    <p>The browser asks for the microphone. Its own processing (echo cancellation, noise suppression, automatic gain) is turned off: what you hear is the codec alone.</p>
+    <label>Preset
+      <select id="preset">
+        <option value="voice" selected>voice — speech, up to 6 kHz</option>
+        <option value="voice-low">voice-low — speech, fewer bytes</option>
+        <option value="music">music — up to 8.7 kHz</option>
+        <option value="full-fixed">full-fixed — the whole band, a fixed step</option>
+        <option value="full-low">full-low — the whole band, 7 bits</option>
+        <option value="full">full — the whole band, 9 bits</option>
+      </select>
+    </label>
+    <label>Reserve
+      <select id="depth">
+        <option value="2">2 frames (5.3 ms)</option>
+        <option value="3" selected>3 frames (8 ms)</option>
+        <option value="4">4 frames (10.7 ms)</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="trim" checked> Take back a delay that lasts (trim)</label>
+    <label><input type="checkbox" id="deflate"> Lossless stage (DEFLATE on each packet)</label>
+    <p>
+      <button id="start" type="button">Start</button>
+      <button id="stop" type="button" class="quiet">Stop</button>
+    </p>
+    <p>
+      <button id="via-codec" type="button" class="quiet" aria-pressed="true">Hear the codec</button>
+      <button id="direct" type="button" class="quiet" aria-pressed="false">Hear the microphone without it</button>
+    </p>
+    <p id="state">Stopped.</p>
+  </div>
+
+  <div class="card">
+    <strong>Live figures, every second</strong>
+    <table>
+      <tr><td>Rate</td><td id="m-rate">—</td></tr>
+      <tr><td>Rate on the wire (frames of four packets, headers in; DEFLATE kept only where it is smaller)</td><td id="m-deflated">—</td></tr>
+      <tr><td>Frames lost, packets concealed</td><td id="m-lost">—</td></tr>
+      <tr><td>Delay inside the graph (the reserve, one frame, the codec's own)</td><td id="m-delay">—</td></tr>
+      <tr><td>The browser's own buffer</td><td id="m-base">—</td></tr>
+      <tr><td>Playback underruns</td><td id="m-under">—</td></tr>
+      <tr><td>Frames taken back by trim</td><td id="m-trim">—</td></tr>
+      <tr><td>Encode, decode a frame (in the worker)</td><td id="m-time">—</td></tr>
+    </table>
+    <p class="lede">The delay shown leaves out the microphone's and the sound card's, which the browser does not report.</p>
+  </div>
+</main>
+<script type="module" src="./demo.js"></script>
+</body>
+</html>

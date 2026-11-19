@@ -16,13 +16,15 @@
  *   `.ENDNOTES`, `.HEADER`, `.FOOTER`, `.CUSTOM_XML`, `.CUSTOM_XML_PROPS`,
  *   `.CHART`, `.PACKAGE`, `.DRAWING`, `.TABLE`, `.SHEET`,
  *   `.SHARED_STRINGS`, `.VML_DRAWING`, `.THREADED_COMMENT`, `.PERSON`,
- *   `.SLIDE`, `.SLIDE_LAYOUT`, `.SLIDE_MASTER`, `.THEME`.
+ *   `.SLIDE`, `.SLIDE_LAYOUT`, `.SLIDE_MASTER`, `.THEME`, `.NOTES_SLIDE`,
+ *   `.NOTES_MASTER`, `.HANDOUT_MASTER`.
  * - **Content-type MIME strings** : `CT.DOCUMENT`, `.STYLES_W`, `.STYLES_X`,
  *   `.NUMBERING`, `.SETTINGS`, `.COMMENTS_W`, `.COMMENTS_X`, `.FOOTNOTES`,
  *   `.ENDNOTES`, `.HEADER`, `.FOOTER`, `.WORKBOOK`, `.SHEET`,
  *   `.SHARED_STRINGS`, `.DRAWING`, `.TABLE`, `.CHART`, `.EMBEDDED_XLSX`,
  *   `.PRESENTATION`, `.SLIDE`, `.SLIDE_LAYOUT`, `.SLIDE_MASTER`,
- *   `.THEME`, `.VML_DRAWING`.
+ *   `.THEME`, `.VML_DRAWING`, `.NOTES_SLIDE`, `.NOTES_MASTER`,
+ *   `.HANDOUT_MASTER`.
  * - **EMU constants** : `EMU_PER_INCH`, `_CM`, `_PT`, `_PX_96`.
  * - **Unit converter** : `toEmu(value)` accepting `number` or
  *   `'<n>(in|cm|mm|pt|px)?'` strings.
@@ -120,7 +122,10 @@ export const ooxmlShared = {
             SLIDE:             NS.R + '/slide',
             SLIDE_LAYOUT:      NS.R + '/slideLayout',
             SLIDE_MASTER:      NS.R + '/slideMaster',
-            THEME:             NS.R + '/theme'
+            THEME:             NS.R + '/theme',
+            NOTES_SLIDE:       NS.R + '/notesSlide',
+            NOTES_MASTER:      NS.R + '/notesMaster',
+            HANDOUT_MASTER:    NS.R + '/handoutMaster'
         });
 
         // --- Content-type MIME strings -------------------------------
@@ -149,7 +154,10 @@ export const ooxmlShared = {
             SLIDE_MASTER:    'application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml',
             THEME:           'application/vnd.openxmlformats-officedocument.theme+xml',
             VML_DRAWING:     'application/vnd.openxmlformats-officedocument.vmlDrawing',
-            CUSTOM_XML_PROPS:'application/vnd.openxmlformats-officedocument.customXmlProperties+xml'
+            CUSTOM_XML_PROPS:'application/vnd.openxmlformats-officedocument.customXmlProperties+xml',
+            NOTES_SLIDE:     'application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml',
+            NOTES_MASTER:    'application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml',
+            HANDOUT_MASTER:  'application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml'
         });
 
         // --- EMU (English Metric Unit) -------------------------------

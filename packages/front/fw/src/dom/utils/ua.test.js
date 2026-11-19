@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -152,15 +152,12 @@ describe('ua module', () => {
 
 // ── pinned detection table ───────────────────────────────────────────────────
 //
-// BL-1070: this table PINS the CURRENT, measured output of `_mobileRe` /
-// `_mobilePrefixRe` / the platform chain for a representative UA corpus. It
-// does not assert desired behaviour — rows marked "measured" below record
-// whatever the module actually returns today (e.g. an iPad UA without the
-// literal "iphone"/"ipod" substrings is NOT matched by `_mobileRe`, so
-// `mobile()` is `false` there even though an iPad is a mobile device; an
-// Android tablet UA lacking the "Mobile" token is likewise not matched).
-// The table exists to make any future change to the two pattern lists
-// (BL-1071, next program) visible as a diff against this pin.
+// This table PINS the output of the UA-string path (no UA-CH) for a
+// representative corpus. Since BL-1071 that path is MDN's: "Mobi" anywhere in
+// the UA means mobile, and a minimal chain names the platform. Two rows
+// changed when the pattern lists went (BL-1070 pinned them as measured): the
+// iPad Safari UA carries "Mobile/" and is now mobile; the SAMSUNG feature-phone
+// UA, matched only by the old 4-character prefix list, no longer is.
 
 describe('ua — pinned detection table', () => {
     const ORIGINAL_UA = 'Mozilla/5.0';
@@ -178,11 +175,10 @@ describe('ua — pinned detection table', () => {
             platform: 'ios',
         },
         {
-            // Measured: no literal "iphone"/"ipod" substring, so _mobileRe does
-            // not match — pins current behaviour, not desired behaviour.
-            label: 'iPad Safari (measured)',
+            // changed by BL-1071: "Mobile/15E148" carries "Mobi"
+            label: 'iPad Safari',
             uaString: 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-            mobile: false,
+            mobile: true,
             platform: 'ios',
         },
         {
@@ -192,9 +188,8 @@ describe('ua — pinned detection table', () => {
             platform: 'android',
         },
         {
-            // Measured: no "Mobile" token paired with android/bb/meego, so
-            // _mobileRe does not match — pins current behaviour.
-            label: 'Android tablet without "Mobile" token (measured)',
+            // a tablet: no "Mobi" token (MDN: tablets are not mobile)
+            label: 'Android tablet without "Mobile" token',
             uaString: 'Mozilla/5.0 (Linux; Android 13; SM-X200) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
             mobile: false,
             platform: 'android',
@@ -230,12 +225,17 @@ describe('ua — pinned detection table', () => {
             platform: 'unknown',
         },
         {
-            // 4-character-prefix-only hit: matched via `_mobilePrefixRe` on
-            // `_ua.substring(0, 4)` ("SAMS"), not via `_mobileRe`.
-            label: '4-char-prefix-only hit (SAMSUNG-GT-...)',
+            // changed by BL-1071: only the removed 4-character prefix list matched it
+            label: 'feature phone without "Mobi" (SAMSUNG-GT-...)',
             uaString: 'SAMSUNG-GT-S5230/S5230XXIF3 SHP/VPP/R5 Jasmine/1.0 Nextreaming SMM',
-            mobile: true,
+            mobile: false,
             platform: 'unknown',
+        },
+        {
+            label: 'Chrome OS',
+            uaString: 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            mobile: false,
+            platform: 'linux',
         },
         {
             label: 'Kindle',
@@ -256,5 +256,54 @@ describe('ua — pinned detection table', () => {
         const api = ua.factory();
         expect(api.mobile()).toBe(mobile);
         expect(api.platform()).toBe(platform);
+    });
+});
+
+describe('ua — UA-CH and feature detection first (BL-1071)', () => {
+    const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
+    const set = (prop, value) => Object.defineProperty(navigator, prop, { value, configurable: true });
+
+    afterEach(() => {
+        set('userAgent', 'Mozilla/5.0');
+        set('userAgentData', undefined);
+        set('maxTouchPoints', 0);
+    });
+
+    test('userAgentData wins over the UA string', () => {
+        set('userAgent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Mobile Safari/537.36');
+        set('userAgentData', { mobile: false, platform: 'Android', brands: [] });
+        const api = ua.factory();
+        expect(api.mobile()).toBe(false);
+        expect(api.platform()).toBe('android');
+    });
+
+    test.each([
+        ['Windows', 'windows'], ['macOS', 'mac'], ['Linux', 'linux'], ['Android', 'android'],
+        ['iOS', 'ios'], ['Chrome OS', 'linux'], ['Fuchsia', 'unknown'], ['', 'unknown'],
+    ])('userAgentData.platform %p -> %p', (hint, platform) => {
+        set('userAgentData', { mobile: true, platform: hint, brands: [] });
+        const api = ua.factory();
+        expect(api.platform()).toBe(platform);
+        expect(api.mobile()).toBe(true);
+    });
+
+    test('a Macintosh UA with more than one touch point is iPadOS in desktop mode', () => {
+        set('userAgent', MAC);
+        set('maxTouchPoints', 5);
+        expect(ua.factory().platform()).toBe('ios');
+        set('maxTouchPoints', 0);
+        expect(ua.factory().platform()).toBe('mac');
+    });
+
+    test('string() stays the raw UA even with UA-CH', () => {
+        set('userAgent', MAC);
+        set('userAgentData', { mobile: false, platform: 'macOS', brands: [] });
+        expect(ua.factory().string()).toBe(MAC);
+    });
+
+    test('the pattern lists are gone', async () => {
+        const src = await Bun.file(new URL('./ua.js', import.meta.url)).text();
+        expect(src).not.toContain('blackberry|blazer');
+        expect(src).not.toContain('_mobilePrefixRe');
     });
 });

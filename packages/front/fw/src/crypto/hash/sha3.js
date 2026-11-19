@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -111,73 +111,132 @@ export const sha3 = {
             18,  2, 61, 56, 14
         ];
 
+        // The round constants as int32 (a Uint32Array read returns the
+        // halves above 2^31 as doubles under JavaScriptCore).
+        const _RC_LO32 = Int32Array.from(_RC_LO), _RC_HI32 = Int32Array.from(_RC_HI);
+
+        /**
+         * Keccak-f[1600] (FIPS 202 §3.2) on int32 locals: 25 lanes as (lo, hi)
+         * halves, every step of the 24 rounds unrolled (generated), the
+         * rotation offsets and the π permutation resolved at generation.
+         * @param {Uint32Array} s 50 words, lane i at [2i] (lo) and [2i + 1] (hi)
+         */
         function _keccakF1600(s) {
-            const C = new Uint32Array(10);
-            const D = new Uint32Array(10);
-            const B = new Uint32Array(50);
-
+            let a0l = s[0] | 0, a0h = s[1] | 0, a1l = s[2] | 0, a1h = s[3] | 0, a2l = s[4] | 0, a2h = s[5] | 0, a3l = s[6] | 0, a3h = s[7] | 0, a4l = s[8] | 0, a4h = s[9] | 0, a5l = s[10] | 0, a5h = s[11] | 0, a6l = s[12] | 0, a6h = s[13] | 0, a7l = s[14] | 0, a7h = s[15] | 0, a8l = s[16] | 0, a8h = s[17] | 0, a9l = s[18] | 0, a9h = s[19] | 0, a10l = s[20] | 0, a10h = s[21] | 0, a11l = s[22] | 0, a11h = s[23] | 0, a12l = s[24] | 0, a12h = s[25] | 0, a13l = s[26] | 0, a13h = s[27] | 0, a14l = s[28] | 0, a14h = s[29] | 0, a15l = s[30] | 0, a15h = s[31] | 0, a16l = s[32] | 0, a16h = s[33] | 0, a17l = s[34] | 0, a17h = s[35] | 0, a18l = s[36] | 0, a18h = s[37] | 0, a19l = s[38] | 0, a19h = s[39] | 0, a20l = s[40] | 0, a20h = s[41] | 0, a21l = s[42] | 0, a21h = s[43] | 0, a22l = s[44] | 0, a22h = s[45] | 0, a23l = s[46] | 0, a23h = s[47] | 0, a24l = s[48] | 0, a24h = s[49] | 0;
+            let b0l, b0h, b1l, b1h, b2l, b2h, b3l, b3h, b4l, b4h, b5l, b5h, b6l, b6h, b7l, b7h, b8l, b8h, b9l, b9h, b10l, b10h, b11l, b11h, b12l, b12h, b13l, b13h, b14l, b14h, b15l, b15h, b16l, b16h, b17l, b17h, b18l, b18h, b19l, b19h, b20l, b20h, b21l, b21h, b22l, b22h, b23l, b23h, b24l, b24h;
             for (let round = 0; round < 24; round++) {
-                // θ
-                for (let x = 0; x < 5; x++) {
-                    C[2*x]   = s[2*x] ^ s[2*x + 10] ^ s[2*x + 20] ^ s[2*x + 30] ^ s[2*x + 40];
-                    C[2*x+1] = s[2*x+1] ^ s[2*x + 11] ^ s[2*x + 21] ^ s[2*x + 31] ^ s[2*x + 41];
-                }
-                for (let x = 0; x < 5; x++) {
-                    const xm1 = (x + 4) % 5;
-                    const xp1 = (x + 1) % 5;
-                    // D[x] = C[x-1] xor rot(C[x+1], 1)
-                    const lo = C[2*xp1];
-                    const hi = C[2*xp1 + 1];
-                    D[2*x]   = C[2*xm1]     ^ ((lo << 1) | (hi >>> 31));
-                    D[2*x+1] = C[2*xm1 + 1] ^ ((hi << 1) | (lo >>> 31));
-                }
-                for (let i = 0; i < 25; i++) {
-                    const x = i % 5;
-                    s[2*i]     ^= D[2*x];
-                    s[2*i + 1] ^= D[2*x + 1];
-                }
-
-                // ρ + π
-                for (let x = 0; x < 5; x++) {
-                    for (let y = 0; y < 5; y++) {
-                        const i = x + 5 * y;
-                        const ni = y + 5 * ((2 * x + 3 * y) % 5);
-                        const r = _R[i];
-                        const lo = s[2*i];
-                        const hi = s[2*i + 1];
-                        let nlo, nhi;
-                        if (r === 0) {
-                            nlo = lo; nhi = hi;
-                        } else if (r < 32) {
-                            nlo = (lo << r) | (hi >>> (32 - r));
-                            nhi = (hi << r) | (lo >>> (32 - r));
-                        } else if (r === 32) {
-                            nlo = hi; nhi = lo;
-                        } else {
-                            const r2 = r - 32;
-                            nlo = (hi << r2) | (lo >>> (32 - r2));
-                            nhi = (lo << r2) | (hi >>> (32 - r2));
-                        }
-                        B[2*ni]     = nlo;
-                        B[2*ni + 1] = nhi;
-                    }
-                }
-
-                // χ
-                for (let y = 0; y < 5; y++) {
-                    for (let x = 0; x < 5; x++) {
-                        const i = x + 5 * y;
-                        const i1 = ((x + 1) % 5) + 5 * y;
-                        const i2 = ((x + 2) % 5) + 5 * y;
-                        s[2*i]     = B[2*i]     ^ ((~B[2*i1])     & B[2*i2]);
-                        s[2*i + 1] = B[2*i + 1] ^ ((~B[2*i1 + 1]) & B[2*i2 + 1]);
-                    }
-                }
-
-                // ι
-                s[0] ^= _RC_LO[round];
-                s[1] ^= _RC_HI[round];
+                const c0l = a0l ^ a5l ^ a10l ^ a15l ^ a20l, c0h = a0h ^ a5h ^ a10h ^ a15h ^ a20h;
+                const c1l = a1l ^ a6l ^ a11l ^ a16l ^ a21l, c1h = a1h ^ a6h ^ a11h ^ a16h ^ a21h;
+                const c2l = a2l ^ a7l ^ a12l ^ a17l ^ a22l, c2h = a2h ^ a7h ^ a12h ^ a17h ^ a22h;
+                const c3l = a3l ^ a8l ^ a13l ^ a18l ^ a23l, c3h = a3h ^ a8h ^ a13h ^ a18h ^ a23h;
+                const c4l = a4l ^ a9l ^ a14l ^ a19l ^ a24l, c4h = a4h ^ a9h ^ a14h ^ a19h ^ a24h;
+                const d0l = c4l ^ ((c1l << 1) | (c1h >>> 31)), d0h = c4h ^ ((c1h << 1) | (c1l >>> 31));
+                const d1l = c0l ^ ((c2l << 1) | (c2h >>> 31)), d1h = c0h ^ ((c2h << 1) | (c2l >>> 31));
+                const d2l = c1l ^ ((c3l << 1) | (c3h >>> 31)), d2h = c1h ^ ((c3h << 1) | (c3l >>> 31));
+                const d3l = c2l ^ ((c4l << 1) | (c4h >>> 31)), d3h = c2h ^ ((c4h << 1) | (c4l >>> 31));
+                const d4l = c3l ^ ((c0l << 1) | (c0h >>> 31)), d4h = c3h ^ ((c0h << 1) | (c0l >>> 31));
+                a0l ^= d0l; a0h ^= d0h;
+                a1l ^= d1l; a1h ^= d1h;
+                a2l ^= d2l; a2h ^= d2h;
+                a3l ^= d3l; a3h ^= d3h;
+                a4l ^= d4l; a4h ^= d4h;
+                a5l ^= d0l; a5h ^= d0h;
+                a6l ^= d1l; a6h ^= d1h;
+                a7l ^= d2l; a7h ^= d2h;
+                a8l ^= d3l; a8h ^= d3h;
+                a9l ^= d4l; a9h ^= d4h;
+                a10l ^= d0l; a10h ^= d0h;
+                a11l ^= d1l; a11h ^= d1h;
+                a12l ^= d2l; a12h ^= d2h;
+                a13l ^= d3l; a13h ^= d3h;
+                a14l ^= d4l; a14h ^= d4h;
+                a15l ^= d0l; a15h ^= d0h;
+                a16l ^= d1l; a16h ^= d1h;
+                a17l ^= d2l; a17h ^= d2h;
+                a18l ^= d3l; a18h ^= d3h;
+                a19l ^= d4l; a19h ^= d4h;
+                a20l ^= d0l; a20h ^= d0h;
+                a21l ^= d1l; a21h ^= d1h;
+                a22l ^= d2l; a22h ^= d2h;
+                a23l ^= d3l; a23h ^= d3h;
+                a24l ^= d4l; a24h ^= d4h;
+                b0l = a0l; b0h = a0h;
+                b16l = (a5h << 4) | (a5l >>> 28); b16h = (a5l << 4) | (a5h >>> 28);
+                b7l = (a10l << 3) | (a10h >>> 29); b7h = (a10h << 3) | (a10l >>> 29);
+                b23l = (a15h << 9) | (a15l >>> 23); b23h = (a15l << 9) | (a15h >>> 23);
+                b14l = (a20l << 18) | (a20h >>> 14); b14h = (a20h << 18) | (a20l >>> 14);
+                b10l = (a1l << 1) | (a1h >>> 31); b10h = (a1h << 1) | (a1l >>> 31);
+                b1l = (a6h << 12) | (a6l >>> 20); b1h = (a6l << 12) | (a6h >>> 20);
+                b17l = (a11l << 10) | (a11h >>> 22); b17h = (a11h << 10) | (a11l >>> 22);
+                b8l = (a16h << 13) | (a16l >>> 19); b8h = (a16l << 13) | (a16h >>> 19);
+                b24l = (a21l << 2) | (a21h >>> 30); b24h = (a21h << 2) | (a21l >>> 30);
+                b20l = (a2h << 30) | (a2l >>> 2); b20h = (a2l << 30) | (a2h >>> 2);
+                b11l = (a7l << 6) | (a7h >>> 26); b11h = (a7h << 6) | (a7l >>> 26);
+                b2l = (a12h << 11) | (a12l >>> 21); b2h = (a12l << 11) | (a12h >>> 21);
+                b18l = (a17l << 15) | (a17h >>> 17); b18h = (a17h << 15) | (a17l >>> 17);
+                b9l = (a22h << 29) | (a22l >>> 3); b9h = (a22l << 29) | (a22h >>> 3);
+                b5l = (a3l << 28) | (a3h >>> 4); b5h = (a3h << 28) | (a3l >>> 4);
+                b21l = (a8h << 23) | (a8l >>> 9); b21h = (a8l << 23) | (a8h >>> 9);
+                b12l = (a13l << 25) | (a13h >>> 7); b12h = (a13h << 25) | (a13l >>> 7);
+                b3l = (a18l << 21) | (a18h >>> 11); b3h = (a18h << 21) | (a18l >>> 11);
+                b19l = (a23h << 24) | (a23l >>> 8); b19h = (a23l << 24) | (a23h >>> 8);
+                b15l = (a4l << 27) | (a4h >>> 5); b15h = (a4h << 27) | (a4l >>> 5);
+                b6l = (a9l << 20) | (a9h >>> 12); b6h = (a9h << 20) | (a9l >>> 12);
+                b22l = (a14h << 7) | (a14l >>> 25); b22h = (a14l << 7) | (a14h >>> 25);
+                b13l = (a19l << 8) | (a19h >>> 24); b13h = (a19h << 8) | (a19l >>> 24);
+                b4l = (a24l << 14) | (a24h >>> 18); b4h = (a24h << 14) | (a24l >>> 18);
+                a0l = b0l ^ (~b1l & b2l); a0h = b0h ^ (~b1h & b2h);
+                a1l = b1l ^ (~b2l & b3l); a1h = b1h ^ (~b2h & b3h);
+                a2l = b2l ^ (~b3l & b4l); a2h = b2h ^ (~b3h & b4h);
+                a3l = b3l ^ (~b4l & b0l); a3h = b3h ^ (~b4h & b0h);
+                a4l = b4l ^ (~b0l & b1l); a4h = b4h ^ (~b0h & b1h);
+                a5l = b5l ^ (~b6l & b7l); a5h = b5h ^ (~b6h & b7h);
+                a6l = b6l ^ (~b7l & b8l); a6h = b6h ^ (~b7h & b8h);
+                a7l = b7l ^ (~b8l & b9l); a7h = b7h ^ (~b8h & b9h);
+                a8l = b8l ^ (~b9l & b5l); a8h = b8h ^ (~b9h & b5h);
+                a9l = b9l ^ (~b5l & b6l); a9h = b9h ^ (~b5h & b6h);
+                a10l = b10l ^ (~b11l & b12l); a10h = b10h ^ (~b11h & b12h);
+                a11l = b11l ^ (~b12l & b13l); a11h = b11h ^ (~b12h & b13h);
+                a12l = b12l ^ (~b13l & b14l); a12h = b12h ^ (~b13h & b14h);
+                a13l = b13l ^ (~b14l & b10l); a13h = b13h ^ (~b14h & b10h);
+                a14l = b14l ^ (~b10l & b11l); a14h = b14h ^ (~b10h & b11h);
+                a15l = b15l ^ (~b16l & b17l); a15h = b15h ^ (~b16h & b17h);
+                a16l = b16l ^ (~b17l & b18l); a16h = b16h ^ (~b17h & b18h);
+                a17l = b17l ^ (~b18l & b19l); a17h = b17h ^ (~b18h & b19h);
+                a18l = b18l ^ (~b19l & b15l); a18h = b18h ^ (~b19h & b15h);
+                a19l = b19l ^ (~b15l & b16l); a19h = b19h ^ (~b15h & b16h);
+                a20l = b20l ^ (~b21l & b22l); a20h = b20h ^ (~b21h & b22h);
+                a21l = b21l ^ (~b22l & b23l); a21h = b21h ^ (~b22h & b23h);
+                a22l = b22l ^ (~b23l & b24l); a22h = b22h ^ (~b23h & b24h);
+                a23l = b23l ^ (~b24l & b20l); a23h = b23h ^ (~b24h & b20h);
+                a24l = b24l ^ (~b20l & b21l); a24h = b24h ^ (~b20h & b21h);
+                a0l ^= _RC_LO32[round]; a0h ^= _RC_HI32[round];
             }
+            s[0] = a0l; s[1] = a0h;
+            s[2] = a1l; s[3] = a1h;
+            s[4] = a2l; s[5] = a2h;
+            s[6] = a3l; s[7] = a3h;
+            s[8] = a4l; s[9] = a4h;
+            s[10] = a5l; s[11] = a5h;
+            s[12] = a6l; s[13] = a6h;
+            s[14] = a7l; s[15] = a7h;
+            s[16] = a8l; s[17] = a8h;
+            s[18] = a9l; s[19] = a9h;
+            s[20] = a10l; s[21] = a10h;
+            s[22] = a11l; s[23] = a11h;
+            s[24] = a12l; s[25] = a12h;
+            s[26] = a13l; s[27] = a13h;
+            s[28] = a14l; s[29] = a14h;
+            s[30] = a15l; s[31] = a15h;
+            s[32] = a16l; s[33] = a16h;
+            s[34] = a17l; s[35] = a17h;
+            s[36] = a18l; s[37] = a18h;
+            s[38] = a19l; s[39] = a19h;
+            s[40] = a20l; s[41] = a20h;
+            s[42] = a21l; s[43] = a21h;
+            s[44] = a22l; s[45] = a22h;
+            s[46] = a23l; s[47] = a23h;
+            s[48] = a24l; s[49] = a24h;
         }
 
         function _toBytes(data) {
@@ -193,12 +252,9 @@ export const sha3 = {
          * `_absorbInto` (incremental).
          */
         function _absorbFullBlock(s, block, rateBytes) {
-            for (let i = 0; i < rateBytes; i++) {
-                const lane = i >>> 3;
-                const byteInLane = i & 7;
-                const wordIdx = 2 * lane + (byteInLane < 4 ? 0 : 1);
-                const shift = (byteInLane & 3) * 8;
-                s[wordIdx] ^= (block[i] & 0xff) << shift;
+            // The rate is a whole number of 8-byte lanes: four bytes per word.
+            for (let i = 0, w = 0; i < rateBytes; i += 4, w++) {
+                s[w] ^= block[i] | (block[i + 1] << 8) | (block[i + 2] << 16) | (block[i + 3] << 24);
             }
             _keccakF1600(s);
         }

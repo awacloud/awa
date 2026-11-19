@@ -41,7 +41,7 @@ export const mdFullBundled = {
       "xlink:href",
       "data",
       "codebase"
-    ]), SCHEME_DANGEROUS_RE = /^(javascript|vbscript|file|jar|data:text|data:application)/, SAFE_SCHEMES = new Set(["http", "https", "mailto", "tel", "ftp"]), DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|svg\+xml|bmp|ico|avif|apng);/;
+    ]), SCHEME_DANGEROUS_RE = /^(javascript|vbscript|file|jar|data:text|data:application)/, SAFE_SCHEMES = new Set(["http", "https", "mailto", "tel", "ftp"]), DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|svg\+xml|bmp|ico|avif|apng)[;,]/;
     function isSafeUrl(url, schemes, allowDataImage) {
       if (typeof url !== "string")
         return !1;
@@ -63,7 +63,7 @@ export const mdFullBundled = {
       const slash = trimmed.indexOf("/");
       if (slash !== -1 && slash < colon)
         return !0;
-      const allowed = Array.isArray(schemes) ? schemes : SAFE_SCHEMES, scheme = trimmed.slice(0, colon);
+      const allowed = Array.isArray(schemes) || schemes instanceof Set ? schemes : SAFE_SCHEMES, scheme = trimmed.slice(0, colon);
       return allowed instanceof Set ? allowed.has(scheme) : allowed.includes(scheme);
     }
     const CLOBBER_ATTRS = new Set(["id", "name"]), CLOBBER_NAMES = new Set([
@@ -643,7 +643,8 @@ export const mdFullBundled = {
         emit(k, obj[k]);
       return pairs.join(delimiter);
     }
-    function parseURL(str, base) {
+    function parseURL(str, base, options) {
+      const space = options && options.space || "plus";
       if (typeof URL === "function") {
         const u = base ? new URL(str, base) : new URL(str);
         return {
@@ -658,10 +659,10 @@ export const mdFullBundled = {
           hash: u.hash,
           origin: u.origin,
           href: u.href,
-          query: parseQuery(u.search)
+          query: parseQuery(u.search, { space })
         };
       }
-      const m = /^(?:([a-z][a-z0-9+\-.]*:))?(?:\/\/((?:([^:@/]*)(?::([^@/]*))?@)?([^:/?#]*)(?::(\d+))?))?([^?#]*)(\?[^#]*)?(#.*)?$/i.exec(str);
+      const m = /^(?:([a-z][a-z0-9+\-.]*:))?(?:\/\/((?:([^:@/]*)(?::([^@/]*))?@)?(\[[^\]]*\]|[^:/?#]*)(?::(\d+))?))?([^?#]*)(\?[^#]*)?(#.*)?$/i.exec(str);
       if (!m)
         throw Error("url: cannot parse");
       const protocol = m[1] || "", username = m[3] || "", password = m[4] || "", hostname = m[5] || "", port = m[6] || "", pathname = m[7] || "", search = m[8] || "", hash = m[9] || "", host = hostname + (port ? ":" + port : ""), origin = protocol && hostname ? protocol + "//" + host : "";
@@ -677,9 +678,10 @@ export const mdFullBundled = {
         hash,
         origin,
         href: str,
-        query: parseQuery(search)
+        query: parseQuery(search, { space })
       };
     }
+    const SPECIAL_SCHEMES = new Set(["http", "https", "ws", "wss", "ftp", "file"]);
     function buildURL(parts) {
       if (!parts)
         return "";
@@ -688,7 +690,9 @@ export const mdFullBundled = {
         out += parts.protocol;
         if (!out.endsWith(":"))
           out += ":";
-        out += "//";
+        const scheme = out.slice(0, -1).toLowerCase();
+        if (parts.host || parts.hostname || SPECIAL_SCHEMES.has(scheme))
+          out += "//";
       }
       if (parts.username) {
         out += encodeURIComponent(parts.username);
@@ -3728,12 +3732,44 @@ export const mdFullBundled = {
           return "==" + inner + "==";
       }
     }
-    function indent(s, prefix) {
-      if (!s)
-        return "";
+    function toLines(s) {
       return s.split(`
-`).map((l, i) => i === 0 ? l : l.length ? prefix + l : prefix.replace(/\s+$/, "")).join(`
-`);
+`).map((t) => ({ pre: null, text: t, empty: t === "" }));
+    }
+    function lineText(l) {
+      return l.pre ? l.pre.slice().reverse().join("") + l.text : l.text;
+    }
+    function prefixLine(l, p) {
+      (l.pre || (l.pre = [])).push(p);
+      l.empty = !1;
+    }
+    function appendLines(dst, src, sep) {
+      if (sep || !dst.length) {
+        for (const l of src)
+          dst.push(l);
+        return dst;
+      }
+      const last = dst[dst.length - 1], first = src[0];
+      if (last.pre === null && last.text === "")
+        dst[dst.length - 1] = first;
+      else {
+        const t = lineText(last) + lineText(first);
+        dst[dst.length - 1] = { pre: null, text: t, empty: t === "" };
+      }
+      for (let i = 1;i < src.length; i++)
+        dst.push(src[i]);
+      return dst;
+    }
+    function joinLines(parts, sep) {
+      const out = [];
+      parts.forEach((part, i) => appendLines(out, part, i === 0 ? `
+` : sep));
+      return out.length ? out : toLines("");
+    }
+    function dropTrailingNewline(lines) {
+      if (lines.length > 1 && lines[lines.length - 1].empty)
+        lines.pop();
+      return lines;
     }
     function renderBlock(node) {
       if (!BLOCK_CONTAINERS.has(node.type))
@@ -3748,46 +3784,53 @@ export const mdFullBundled = {
           else if (BLOCK_CONTAINERS.has(child.type))
             stack.push({ node: child, item: !1, tight: !0, parts: [], child: child.firstChild });
           else
-            top.parts.push(renderLeafBlock(child));
+            top.parts.push(toLines(renderLeafBlock(child)));
           continue;
         }
         stack.pop();
         const out = finishBlock(top);
         if (stack.length === 0)
-          return out;
+          return out.map(lineText).join(`
+`);
         stack[stack.length - 1].parts.push(out);
       }
     }
     function finishBlock(frame) {
       const node = frame.node;
       if (frame.item)
-        return frame.parts.join(frame.tight ? "" : `
+        return joinLines(frame.parts, frame.tight ? "" : `
 `);
       switch (node.type) {
         case "document":
-          return frame.parts.join(`
+          return joinLines(frame.parts, `
 `);
-        case "block_quote":
-          return frame.parts.join(`
-`).replace(/\n$/, "").split(`
-`).map((l) => l.length ? "> " + l : ">").join(`
-`) + `
-`;
+        case "block_quote": {
+          const lines = dropTrailingNewline(joinLines(frame.parts, `
+`));
+          for (const l of lines)
+            prefixLine(l, l.empty ? ">" : "> ");
+          lines.push({ pre: null, text: "", empty: !0 });
+          return lines;
+        }
         default: {
-          const tight = node.listTight !== !1;
-          let out = "", item = node.firstChild, idx = 0;
+          const tight = node.listTight !== !1, out = toLines("");
+          let item = node.firstChild, idx = 0;
           while (item) {
-            const marker = node.listType === "ordered" ? (node.listStart || 1) + idx + (node.listDelimiter || ".") + " " : (node.listBulletChar || "-") + " ", itemBody = frame.parts[idx], prefix = " ".repeat(marker.length);
+            const marker = node.listType === "ordered" ? (node.listStart || 1) + idx + (node.listDelimiter || ".") + " " : (node.listBulletChar || "-") + " ", body = frame.parts[idx] || toLines(""), prefix = " ".repeat(marker.length);
+            for (let i = 1;i < body.length; i++)
+              if (!body[i].empty)
+                prefixLine(body[i], prefix);
+            dropTrailingNewline(body);
             let taskPrefix = "";
             if (item.checked === !0)
               taskPrefix = "[x] ";
             else if (item.checked === !1)
               taskPrefix = "[ ] ";
-            out += marker + taskPrefix + indent(itemBody, prefix).replace(/\n$/, "") + `
-`;
+            prefixLine(body[0], marker + taskPrefix);
+            body.push({ pre: null, text: "", empty: !0 });
+            appendLines(out, body, "");
             if (!tight && item.next)
-              out += `
-`;
+              out.push({ pre: null, text: "", empty: !0 });
             idx++;
             item = item.next;
           }

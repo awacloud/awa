@@ -1,22 +1,28 @@
 # @awacloud/fonts
 
+Read, write and subset OpenType and TrueType fonts in plain JavaScript, in the browser: SFNT tables, glyph outlines, WOFF, WOFF2 and TTC containers, and a subsetter for PDF embedding.
+
 Pure JavaScript library to read, write and subset **OpenType** and
 **TrueType** fonts in the browser. No runtime dependency beyond
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.2.0/packages/front/fw):
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/fonts@2.0.0/packages/front/fw):
 SFNT container and table directory, table parsing and serialization,
 quadratic TrueType outlines, composite glyphs, WOFF/WOFF2/TTC containers and a
 TrueType subsetter for PDF embedding.
 
 The core covers the required OpenType tables, CFF/CFF2, the layout tables
-(parsed, not applied), variable-font and colour-font tables. An opt-in layer
+(parsed, not applied), variable-font and colour-font tables, and Type 1
+programs (`fontType1`: PFB, PFA, a PDF `/FontFile`) and bare CFF programs
+(`fontCffProgram`: a PDF `/FontFile3` `Type1C` or `CIDFontType0C`). An opt-in layer
 (`extra/*`) adds the RM05 TrueType hinting VM, Apple AAT parsers, Arabic /
 Indic / CJK shaping helpers, WOFF2 write and the DSIG / MATH / JSTF tables,
 grouped into the bundles `fonts-large`, `fonts-full` and `fonts-apple-aat`.
 
 Known limits, so they are not a surprise:
 
-- GSUB and GPOS lookups are decoded, but there is no shaping engine that
-  applies them.
+- The opt-in extra `fontShaper` applies the GSUB lookups (types 1 to 8)
+  and the GPOS lookups (types 1 to 9) with the lookup flags and GDEF, but
+  not GPOS device tables or variations, and there is no script-specific
+  shaping (Arabic joining, Indic reordering) in it.
 - Colour and bitmap glyph tables (`COLR` / `CPAL`, `SVG `, `sbix`,
   `CBDT` / `CBLC`, `EBDT` / `EBLC` / `EBSC`) are parsed, not rendered:
   the parsers return the decoded records (paint graphs, palettes, SVG
@@ -26,11 +32,27 @@ Known limits, so they are not a surprise:
   decoded but a transformed `glyf` / `loca` / `hmtx` table not reversed;
   `fontWoff2.toSfnt` reassembles one SFNT with those transforms reversed
   (a WOFF2 collection is not reassembled).
-- `subsetForPdf` subsets TrueType (`glyf`) outlines only; CFF fonts are
-  rejected.
+- `subsetForPdf` subsets TrueType (`glyf`) outlines and, with the opt-in
+  `{ cff: true }`, a name-keyed or CID-keyed CFF font, or a one-FD CFF2
+  font to its default instance (an `OTTO` subset, `FontFile3`). A CFF2
+  font with several FDs is rejected. `@awacloud/pdf`'s embedder writes
+  TrueType fonts only and does not pass the option.
 - An `avar` version 2 table is read (its segment maps, and the offsets of
   its index map and variation store), but coordinate normalisation
   applies the segment maps only, not the version 2 variation-store step.
+- `varGlyph.glyphAt` draws a glyph at variation coordinates (`glyf` with
+  `gvar`, or CFF2 with one Font DICT; `HVAR`), and `fontShaper` shapes at
+  them (`opts.coords`); `cvar` is not applied, value-record device tables
+  neither. `varInstantiate.instantiate` writes a static TrueType instance
+  (a CFF2 instance is not produced, and the layout tables' variation data
+  are not baked in).
+- `fontCffProgram.readCff` reads a bare CFF as a font (its encoding,
+  names or CIDs, widths, `seac`); like `fontType1`, it is not an sfnt
+  font.
+- `fontType1.readType1` reads a Type 1 program and draws its glyphs
+  (flex, hint replacement and `seac` included); it is not an sfnt font
+  (`fonts.read` does not take it), the hints are ignored and Multiple
+  Master blending is not applied.
 - A TrueType contour starts where FreeType starts it (on point 0 when it is
   on-curve, else on the last point when that is on-curve, else on the midpoint
   of the last and first points), so `Path.commands` and `toSvgPath()` begin
@@ -38,8 +60,10 @@ Known limits, so they are not a surprise:
   on-curve point the outline drawn is the same, only the command order of a
   contour whose point 0 is off-curve differs from a renderer that starts
   elsewhere.
-- Apple AAT state-machine bodies (`morx`, non-format-0 `kerx`, `prop`) are
-  returned as `{ parsed: false }`; `ankr` and `lcar` expose raw lookup bytes.
+- Apple AAT: the `morx` and `kerx` subtables are decoded and run by the
+  opt-in `fontShaper` (`kerx` format 4's control points from simple
+  glyphs only); `prop` is decoded but not applied; `lcar` exposes raw
+  lookup bytes.
 
 ## Installation
 
@@ -143,10 +167,11 @@ try {
 }
 ```
 
-A font without a `name` table throws `fonts/missing-name`, because OpenType
-requires the table. A subset embedded in a PDF file may omit it: pass
-`{ allowMissingName: true }` (`api.read(bytes, opts)`) to read it with
-`name: null` and every `names` field `undefined`.
+A font without a `name` table reads, with `name: null` and every `names`
+field `undefined` (since 2.0.0): OpenType requires the table, but a subset
+embedded in a PDF file may omit it. Pass `{ allowMissingName: false }`
+(`api.read(bytes, opts)`) to refuse such a font with `fonts/missing-name`,
+as 1.x did by default.
 
 ### WOFF2: load the Brotli dictionary first
 
@@ -350,7 +375,7 @@ Copyright (c) 2026 AwaCloud SAS
 
 ## Project
 
-- Website: https://awaforge.eu
-- Source: [`packages/front/office/fonts`](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.2.0/packages/front/office/fonts)
+- Website: https://awaforge.eu/
+- Source: [`packages/front/office/fonts`](https://github.com/awacloud/awa/tree/@awacloud/fonts@2.0.0/packages/front/office/fonts)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/fonts@1.2.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/fonts@2.0.0/SECURITY.md

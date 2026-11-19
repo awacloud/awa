@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -68,6 +68,10 @@ export const hmac = {
 
             if (typeof key === 'string') {
                 key = bitArray.ui8_to_ba(utf8.toBytes(key));
+            } else if (key instanceof Uint8Array) {
+                // A byte key is read as its bytes: without this branch its
+                // elements were taken as 32-bit words, giving another MAC.
+                key = bitArray.ui8_to_ba(key);
             }
 
             const exKey = [[], []];

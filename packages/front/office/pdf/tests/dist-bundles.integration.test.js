@@ -39,7 +39,13 @@
  *     INVOKED here and asserted to not throw `pdf/use/bad-extension`, with a
  *     registered extra probed on the returned core — a real invocation, not
  *     an emit-string assertion (ai/memory/types/office.md, tools memory
- *     2026-08-26 re-lock lesson).
+ *     2026-08-26 re-lock lesson);
+ *   - the **fonts boundary** of the Read+Write family: the fw-variant `-rw`
+ *     roots declare `@awacloud/fonts`' `standard14Lookup` and
+ *     `encodingLookup` (recorded under the meta's `siblingDependencies`) and
+ *     no longer inline fonts' tables; `pdfRwPackage` resolves on a runtime
+ *     holding fonts' manifest and fails without it, while the standalone
+ *     `-rw` roots keep inlining and need nothing.
  *
  * The matrix rows are asserted from each root's `.meta.json` sidecar and from
  * the generated `.js` file TEXT — deliberately NOT by importing the eight new
@@ -47,8 +53,9 @@
  * coverage denominator the package gate reads (ai/memory/types/office.md,
  * BATCH_22: the eight already-imported dist roots are exactly why the canonical
  * aggregate sits ~39pp under the src-only figure); the matrix must not make
- * that worse. `pdfLargeBundled` and `pdfRwBundled` are the two deliberate
- * exceptions (below), traded for the invocation witness BL-334 requires.
+ * that worse. `pdfLargeBundled` and `pdfRwBundled` are deliberate
+ * exceptions (below), traded for the invocation witness BL-334 requires, and
+ * `pdfRwPackage` a third, traded for the fonts-boundary resolution witness.
  *
  * pdf had no `src/bundles/prebuilt/prebuilds.test.js` to relocate; this file
  * is authored fresh for the `dist/` layout.
@@ -61,6 +68,9 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
+import * as fontsPkg from '@awacloud/fonts';
+
 import { pdfBundled }       from '../dist/standalone/pdf.js';
 import { pdfLargeBundled }  from '../dist/standalone/pdf-large.js';
 import { pdfFullBundled }   from '../dist/standalone/pdf-full.js';
@@ -71,10 +81,21 @@ import { pdfPackage }        from '../dist/build/pdf.js';
 import { pdfLargePackage }   from '../dist/build/pdf-large.js';
 import { pdfFullPackage }    from '../dist/build/pdf-full.js';
 import { pdfLegacyPackage }  from '../dist/build/pdf-legacy.js';
+import { pdfRwPackage }      from '../dist/build/pdf-rw.js';
 
-import { fw_require } from '../src/main.js';
+import { fw_require, pkg_require } from '../src/main.js';
 
 const FW_NAMES = fw_require.map(m => m.name);
+
+/**
+ * The `@awacloud/fonts` modules every fw-variant `-rw` root DECLARES instead of
+ * inlining (`pdfBuilder`'s two Standard 14 lookups), in `dependencies` order
+ * after the fw names. The standalone `-rw` roots still inline them.
+ */
+const FONTS_DECLARED = ['standard14Lookup', 'encodingLookup'];
+
+/** Every name `@awacloud/fonts`' manifest registers (its `fw_require` + `modules`). */
+const FONTS_NAMES = new Set(pkg_require.map(m => m.name));
 
 const BUNDLED = [
     { name: 'pdfBundled',       desc: pdfBundled },
@@ -332,8 +353,11 @@ describe('dist matrix — Read × Read+Write families', () => {
                 expect(src).toContain(`export const ${exportName} = {`);
                 expect(src).toContain(`name: "${exportName}"`);
                 const deps = JSON.parse(src.match(/dependencies: (\[[^\]]*\])/)[1]);
-                expect(deps.length).toBe(fwCount);
-                if (fwCount > 0) expect(deps).toEqual(FW_NAMES);
+                // The fw variant declares the fw names, then the
+                // `@awacloud/fonts` lookups it no longer inlines; the
+                // standalone variant declares nothing.
+                if (fwCount > 0) expect(deps).toEqual([...FW_NAMES, ...FONTS_DECLARED]);
+                else expect(deps).toEqual([]);
             }
         }
     });
@@ -420,9 +444,117 @@ describe('additive doctrine — no existing bundle shrinks', () => {
         }
     });
 
-    test('the two surfaces of a root declare the same module list', () => {
-        for (const root of [...READ_ROOTS, ...RW_ROOTS]) {
+    test('the two surfaces of a Read root declare the same module list', () => {
+        for (const root of READ_ROOTS) {
             expect(readMeta('standalone', root).modules).toEqual(readMeta('build', root).modules);
         }
+    });
+
+    test('the fw surface of a `-rw` root lists the standalone closure minus the @awacloud/fonts modules', () => {
+        for (const root of RW_ROOTS) {
+            const standalone = readMeta('standalone', root).modules;
+            const fw         = readMeta('build', root).modules;
+            expect(fw).toEqual(standalone.filter(m => !FONTS_NAMES.has(m)));
+            // Non-vacuity: the standalone closure does carry fonts modules,
+            // the two declared lookups among them.
+            const inlined = standalone.filter(m => FONTS_NAMES.has(m));
+            for (const name of FONTS_DECLARED) expect(inlined).toContain(name);
+        }
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The fw-variant `-rw` roots keep `@awacloud/fonts` external (owner ruling):
+// declared and DI-injected, as for the unbundled modules. The standalone
+// variant keeps inlining and needs nothing.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('fw-variant `-rw` roots declare the @awacloud/fonts modules they use', () => {
+    test('each fw `-rw` meta records the declared fonts modules and lists none of fonts\' names', () => {
+        for (const root of RW_ROOTS) {
+            const meta = readMeta('build', root);
+            expect(meta.siblingDependencies).toEqual({ modules: FONTS_DECLARED, package: '@awacloud/fonts' });
+            expect(meta.modules.filter(m => FONTS_NAMES.has(m))).toEqual([]);
+            expect(meta.fwDependencies).toEqual(FW_NAMES);
+        }
+    });
+
+    test('no Read meta and no standalone meta carries a `siblingDependencies` key', () => {
+        for (const { dir } of SURFACES) {
+            for (const root of [...READ_ROOTS, ...RW_ROOTS]) {
+                if (dir === 'build' && RW_ROOTS.includes(root)) continue;
+                expect(Object.keys(readMeta(dir, root))).toEqual(
+                    ['kind', 'variant', 'name', 'package', 'modules', 'fwDependencies', 'bytes', 'builtBy']);
+            }
+        }
+    });
+
+    test('the Standard 14 tables are absent from the fw `-rw` files and present in the standalone ones', () => {
+        // `Helvetica-BoldOblique` is a face name only the fonts Standard 14
+        // tables carry (the builder names none of the 14 but the two symbolic
+        // faces); it survives minification as a string literal.
+        for (const root of RW_ROOTS) {
+            for (const ext of ['.js', '.min.js']) {
+                expect(readFileSync(join(DIST, 'build', `${root}${ext}`), 'utf8')).not.toContain('Helvetica-BoldOblique');
+                expect(readFileSync(join(DIST, 'standalone', `${root}${ext}`), 'utf8')).toContain('Helvetica-BoldOblique');
+            }
+        }
+    });
+
+    test('pdfRwPackage declares the fonts lookups in `dependencies`', () => {
+        expect(pdfRwPackage.name).toBe('pdfRwPackage');
+        expect(pdfRwPackage.dependencies).toEqual([...FW_NAMES, ...FONTS_DECLARED]);
+    });
+
+    test('with @awacloud/fonts\' manifest registered, pdfRwPackage resolves and addFont writes Widths and a FontDescriptor', () => {
+        const rt = new ModuleRuntime();
+        rt.registerAll(fw_require);
+        rt.registerAll([...fontsPkg.fw_require, ...fontsPkg.modules]);
+        rt.register(pdfRwPackage);
+        const core = rt.resolve('pdfRwPackage');
+        expect(core.usedExtension('pdfBuilder')).toBe(true);
+
+        const bytes = core.pdfBuilder.builder()
+            .addPage()
+            .addFont({ name: 'F1', baseFont: 'Helvetica' })
+            .build();
+        const doc = core.read(bytes);
+        const deref = (o) => ((o && o.type === 'ref') ? doc._raw.resolve(o) : o);
+        const resources = deref(doc.pages[0].resources);
+        const font = deref(resources.entries.Font.entries.F1).entries;
+        expect(font.Widths.type).toBe('array');
+        expect(font.Widths.items.length).toBeGreaterThan(0);
+        expect(font.FontDescriptor.type).toBe('ref');
+        expect(deref(font.FontDescriptor).entries.Type.value).toBe('FontDescriptor');
+    });
+
+    test('without @awacloud/fonts\' manifest, resolving pdfRwPackage fails with the runtime\'s missing-module error naming standard14Lookup', () => {
+        const rt = new ModuleRuntime();
+        rt.registerAll(fw_require);
+        rt.register(pdfRwPackage);
+        let caught;
+        try {
+            rt.resolve('pdfRwPackage');
+        } catch (e) {
+            caught = e;
+        }
+        // The fw runtime throws a plain `Error` for an unregistered module;
+        // the missing name is the first undeclared dependency, read off the
+        // error's tail.
+        expect(caught).toBeDefined();
+        expect(caught.constructor).toBe(Error);
+        expect(caught.message.split(': ').pop()).toBe('standard14Lookup');
+    });
+
+    test('the standalone `-rw` root resolves with nothing registered', () => {
+        const rt = new ModuleRuntime();
+        rt.register(pdfRwBundled);
+        const core = rt.resolve('pdfRwBundled');
+        expect(core.usedExtension('pdfBuilder')).toBe(true);
+        const bytes = core.pdfBuilder.builder()
+            .addPage()
+            .addFont({ name: 'F1', baseFont: 'Helvetica' })
+            .build();
+        expect(new TextDecoder('latin1').decode(bytes)).toContain('/FontDescriptor');
     });
 });

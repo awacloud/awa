@@ -49,7 +49,7 @@ if (!webcryptoAesKw.isAvailable()) {
     // Fall back to the pure-JS kw module
 }
 
-// Generate a 256-bit KEK (non-extractable by default in importKek; extractable here)
+// Generate a 256-bit KEK (non-extractable by default, as importKek's; pass true to export it)
 const kek = await webcryptoAesKw.generateKek(256, false);
 
 // The inner key must be extractable for wrapKey to succeed
@@ -109,7 +109,7 @@ const worker = fw.createWorker(
 
 - **RFC 3394 AES-KW**: WebCrypto exposes AES-KW only — KWP (with-pad, RFC 5649) is not available via `crypto.subtle`. Use the pure-JS `kw` module for KWP or for environments without `crypto.subtle`.
 - **Extractable inner key**: the key passed to `wrapKey` must be `extractable: true`; WebCrypto enforces this contract and rejects non-extractable keys — `wrapKey` returns `false` in that case.
-- **No-throw contract**: all methods are `async` and resolve to a value or `false`. `crypto.subtle` rejections (integrity failure, invalid parameters) are caught and logged via `console.error('[crypto] FAIL: webcryptoAesKw.<method>: …')`. They never propagate.
+- **No-throw contract**: all methods are `async` and resolve to a value or `false`. `crypto.subtle` rejections are caught: an integrity failure of `unwrapKey` (`OperationError`) is an expected outcome logged via `console.warn('[crypto] CORRUPT: …')`; any other rejection is logged via `console.error('[crypto] FAIL: webcryptoAesKw.<method>: …')`. They never propagate.
 - **KEK sizes**: AES-KW supports 128, 192, and 256-bit KEKs. `importKek` validates `raw.length ∈ {16, 24, 32}` and returns `false` for other sizes.
 - **Worker-safe**: `crypto.subtle` is available in Web Workers; this module has no DOM dependency and no main-thread closures.
 

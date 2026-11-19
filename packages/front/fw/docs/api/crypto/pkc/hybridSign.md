@@ -19,7 +19,7 @@ Composes vetted fw primitives into `draft-ietf-lamps-pq-composite-sigs` composit
 
 ```js
 const hybridSign = runtime.resolve('hybridSign');
-// Returns: { mldsa65_ed25519, mldsa65_ecdsaP256, _internal }
+// Returns: { mldsa65_ed25519, mldsa65_ecdsaP256 }
 ```
 
 ## Construction (frozen, vector-verified)
@@ -54,7 +54,9 @@ interop vectors.
 | `<variant>.lengths` | object | Component + container byte lengths |
 | `<variant>.keygen()` | `() => {publicKey, secretKey}` | TLV-encoded key pair (independent seeds) |
 | `<variant>.sign(sk, msg, ctx?)` | `(Uint8Array, Uint8Array, Uint8Array?) => Uint8Array \| false` | Composite signature |
-| `<variant>.verify(pk, msg, sig, ctx?)` | `(Uint8Array, Uint8Array, Uint8Array, Uint8Array?) => boolean` | AND of both components |
+| `<variant>.verify(pk, sig, msg, ctx?)` | `(Uint8Array, Uint8Array, Uint8Array, Uint8Array?) => boolean` | AND of both components |
+| `<variant>.fromComponents(kind, { pq, trad })` | `('publicKey' \| 'secretKey' \| 'signature', {pq: Uint8Array, trad: Uint8Array}) => Uint8Array \| false` | The container built from its two components (see [Components](#components)) |
+| `<variant>.toComponents(kind, bytes)` | `('publicKey' \| 'secretKey' \| 'signature', Uint8Array) => {pq, trad} \| false` | The two components of a container (copies) |
 
 Inputs/outputs are `Uint8Array`; any invalid input returns `false` (sign) or
 `false` (verify). `ctx` is an optional 0..255-byte application context bound
@@ -73,8 +75,33 @@ into `M'`.
   `mldsaSig(3309) || u16(derLen) || DER`.
 
 The official LAMPS vectors use a plain component concat; the vendored conformance
-tests re-frame the exact official component bytes into this container and verify
-through the real `verify()` path.
+tests build this container from the exact official component bytes with
+`fromComponents` and verify through the real `verify()` path.
+
+## Components
+
+`fromComponents(kind, { pq, trad })` builds a container from components made
+elsewhere — a key from a hardware or external ML-DSA key, the official wire form
+(plain concatenation) of a peer — and `toComponents(kind, bytes)` splits one.
+`pq` is the ML-DSA-65 component; `trad` the traditional one:
+
+| `kind` | `pq` | `trad` — Ed25519 | `trad` — ECDSA-P256 |
+|---|---|---|---|
+| `'publicKey'` | 1952 B | 32 B | 65 B, SEC1 uncompressed (`0x04` …) |
+| `'secretKey'` | 4032 B | 64 B (seed ‖ public key) | 32 B scalar |
+| `'signature'` | 3309 B | 64 B | DER `SEQUENCE { r, s }` |
+
+A wrong length or form, an unknown `kind` or a container that does not decode is
+`false`. Both return fresh arrays, never views of their input. The structural
+checks are not a key validation: a point off the curve still builds a public key
+that `verify` then rejects.
+
+```js
+const v = hybridSign.mldsa65_ed25519;
+// the official LAMPS wire form: mldsaPk(1952) || ed25519Pk(32)
+const publicKey = v.fromComponents('publicKey', { pq: wire.subarray(0, 1952), trad: wire.subarray(1952) });
+const { pq, trad } = v.toComponents('publicKey', publicKey);
+```
 
 ## Examples
 
@@ -85,13 +112,13 @@ const v = hybridSign.mldsa65_ed25519;
 const { publicKey, secretKey } = v.keygen();
 const msg = new TextEncoder().encode('hello');
 const sig = v.sign(secretKey, msg);
-v.verify(publicKey, msg, sig);            // true
+v.verify(publicKey, sig, msg);            // true
 
 // bind an application context
 const ctx = new TextEncoder().encode('app:v1');
 const sigCtx = v.sign(secretKey, msg, ctx);
-v.verify(publicKey, msg, sigCtx, ctx);    // true
-v.verify(publicKey, msg, sigCtx);         // false — ctx mismatch
+v.verify(publicKey, sigCtx, msg, ctx);    // true
+v.verify(publicKey, sigCtx, msg);         // false — ctx mismatch
 ```
 
 ## Worker Usage

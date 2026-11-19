@@ -43,7 +43,7 @@ callable; `.derive(...)` alias. `password`/`salt` accept `string`
 | RFC 7914 / PKCS #5 (de-facto) | TC 3 (c=4096) | `c=4096, dkLen=256 bits` | byte-exact KAT (nominal count) |
 | RFC 7914 / PKCS #5 (de-facto) | TC 4 (long P/S) | `c=4096, dkLen=320 bits` | byte-exact KAT, multi-block T_2 |
 | **PBKDF-1.0** | AFT 25/50 (sub-sample 1/2) | `pbkdf2 - PBKDF-1.0 / AFT` | byte-exact dkm (HMAC-SHA-224 × 25 vectors) |
-| **Cross-check against Python `hashlib.pbkdf2_hmac()`** (B4) | 9 families × 5 cases = 45 vectors | `pbkdf2 - iteration B4 (10-family cross-check)` | byte-exact against the `hashlib.pbkdf2_hmac()` reference (SHA-2-256/384/512, SHA-512/{224,256}, SHA-3-{224,256,384,512}) |
+| **Cross-check against Python `hashlib.pbkdf2_hmac()`** | 9 families × 5 cases = 45 vectors | `pbkdf2 - 10-family cross-check` | byte-exact against the `hashlib.pbkdf2_hmac()` reference (SHA-2-256/384/512, SHA-512/{224,256}, SHA-3-{224,256,384,512}) |
 
 #### AFT sub-sampling strategy
 
@@ -68,18 +68,18 @@ the other PRFs are absent from the v1.0 draft). Sub-sample applied:
   (2 RFC).
 - [x] **HMAC-SHA-256** (default PRF) — RFC 7914 vectors.
 - [x] **HMAC-SHA-224** (Prff override) — 25 byte-exact ACVP.
-- [x] **HMAC-SHA-{384,512}** ✅ B4 — 5 vectors/family cross-checked against Python `hashlib`.
-- [x] **HMAC-SHA-512/{224,256}** ✅ B4 — 5 vectors/family cross-checked against Python `hashlib`.
-- [x] **HMAC-SHA-3-{224,256,384,512}** ✅ B4 — 5 vectors/family cross-checked against Python `hashlib`.
+- [x] **HMAC-SHA-{384,512}** ✅ 5 vectors/family cross-checked against Python `hashlib`.
+- [x] **HMAC-SHA-512/{224,256}** ✅ 5 vectors/family cross-checked against Python `hashlib`.
+- [x] **HMAC-SHA-3-{224,256,384,512}** ✅ 5 vectors/family cross-checked against Python `hashlib`.
 - [x] **String → UTF-8 bytes** — handcrafted (`'password'` direct).
 - [x] **Default count 600 000 applied** — `pbkdf2('p', 's', undefined,
   128) === pbkdf2('p', 's', 600000, 128)`.
 - [x] **Warning if count < 100 000** — emits `console.warn('WEAK:')`;
   observed on 25/25 ACVP (all < 100 000) + 45 cross-check (same).
-- [x] **Bounds** — `count < 0` → `false`; `length < 0` → `false`.
-- [x] **Empty password** ✅ B4 — `pbkdf2('', 'salt', 10, 128)` covered
+- [x] **Bounds** — `count < 1` (or `NaN`) → `false`; `length < 0` → `false`.
+- [x] **Empty password** ✅ `pbkdf2('', 'salt', 10, 128)` covered
   for the 9 new families (degenerate PRF-over-zero-length-input case).
-- [x] **dkLen < HashLen (T_1 truncation)** ✅ B4 — `dkLen=160` bits with
+- [x] **dkLen < HashLen (T_1 truncation)** ✅ `dkLen=160` bits with
   HashLen=512 bits forces a single truncated `T_1` output; covered for
   the 9 new families.
 - [ ] **PBKDF-2.0 ACVP** — not published to date; the Python cross-check
@@ -91,8 +91,8 @@ the other PRFs are absent from the v1.0 draft). Sub-sample applied:
 | Requirement | Status | Evidence |
 |---|---|---|
 | Approved algorithm | ✅ | SP 800-132 (PBKDF) + PKCS #5 v2.1 |
-| Validated parameter sizes | ✅ | dkLen 112..560 bits × salt 16..32 B × password 8..32 B × iter 1..10000 + cross-check 9 PRF families (B4) |
-| Power-on KAT / self-test | ✅ | RFC 7914 + 25 ACVP SHA-224 + 45 cross-check (B4) executed on every `bun test` |
+| Validated parameter sizes | ✅ | dkLen 112..560 bits × salt 16..32 B × password 8..32 B × iter 1..10000 + cross-check 9 PRF families |
+| Power-on KAT / self-test | ✅ | RFC 7914 + 25 ACVP SHA-224 + 45 cross-check executed on every `bun test` |
 | CT comparisons (if secret) | N/A (PBKDF2 performs no comparison; delegated to the caller) | — |
 | No `throw` / timing leak | ✅ | Review: `console.warn` + `return false` |
 | Production hardening | ✅ | Default `count = 600 000` (OWASP 2023); warning below 100 000 |
@@ -101,13 +101,13 @@ the other PRFs are absent from the v1.0 draft). Sub-sample applied:
 
 - **PBKDF-1.0 covers only HMAC-SHA-224**: the 9 other families
   (SHA-256/384/512, SHA-512/{224,256}, SHA-3-{224,256,384,512}) are
-  validated in B4 via cross-check against Python **`hashlib.pbkdf2_hmac()`**
+  validated via cross-check against Python **`hashlib.pbkdf2_hmac()`**
   (5 vectors/family = 45 regression vectors). A future PBKDF-2.0
   ACVP would replace these snapshots with official NIST vectors.
 - **50% sub-sampling**: 25 ACVP vectors not exercised (out of 50). The
   even-index pattern uniformly covers the `iterationCount` range.
-- ~~**HMAC-SHA-3**~~ ✅ B4 — supported via the A1 streaming modules.
-- **B4 wall-time cost**: 6.3 s for the 80 tests (including 18 vectors
+- ~~**HMAC-SHA-3**~~ ✅ supported via the streaming modules.
+- **Wall-time cost**: 6.3 s for the 80 tests (including 18 vectors
   at `c=4096` across 9 families). For `count = 600 000` (default
   production), a single call = 30-60 s; the module is designed for
   off-critical-path usage (key wrapping/storage).
@@ -115,7 +115,7 @@ the other PRFs are absent from the v1.0 draft). Sub-sample applied:
 ## Cross references
 
 - Module: [`hash/pbkdf2.js`](./pbkdf2.js)
-- Tests: [`hash/pbkdf2.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/hash/pbkdf2.test.js) — 80 tests (35 baseline + 45 cross-check over 9 families since iteration B4)
+- Tests: [`hash/pbkdf2.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/hash/pbkdf2.test.js) — 80 tests (35 baseline + 45 cross-check over 9 families)
 - ACVP draft: `references/NIST/ACVP/src/draft-celi-acvp-pbkdf.adoc`
 - Vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/PBKDF-1.0/`
 - Underlying HMAC: [`hmac.acvp.md`](./hmac.acvp.md)

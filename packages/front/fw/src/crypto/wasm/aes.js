@@ -56,7 +56,7 @@
  * of the 128-bit counter block are the block index, started at 0 by the ABI),
  * matching the shim's J0-style counter and the package KAT (which references
  * WebCrypto AES-CTR with `counter = nonce(12)||be32(0)`, `length:32`). The
- * indicative "Expected ABI" in the task plan named a 16-byte full-width
+ * an earlier ABI draft named a 16-byte full-width
  * counter; the delivered binary (targets.json + shims/aes.c) is authoritative,
  * so `encryptCtr`/`decryptCtr` take a 12-byte nonce.
  *

@@ -1,6 +1,6 @@
 # @awacloud/tool-wasm-crypto
 
-> **Maturity: `L2` (real builder + verify gate)**
+Compile a package's C crypto sources to WebAssembly with the WASI SDK, verify them against pinned test vectors, and gate the committed .wasm bytes with a hash manifest.
 
 Build tool that compiles and verifies the WebAssembly crypto modules used by
 `@awacloud/fw`. Takes each package's own C sources (Argon2, BLAKE2, …, resolved via
@@ -15,17 +15,6 @@ crypto packages to define and gate their own build contract: define a
 `targets.json` in the package root, point the tool there, and the builder
 resolves all source paths relative to the package and emits to `<pkg>/dist/`.
 
-## Consumption shape
-
-**Autonomous — standalone `bin`.** This package ships its own `wasm-crypto`
-executable (`bin/wasm-crypto.ts`, a thin delegate to the `run()` function
-exported by `src/index.ts` — no argument parsing duplicated), so it runs
-directly once installed:
-
-```bash
-bunx wasm-crypto build --pkg packages/front/fw-wasm-crypto
-```
-
 ## Installation
 
 ```bash
@@ -34,22 +23,36 @@ npm install --save-dev @awacloud/tool-wasm-crypto
 
 Runs under Bun (the `bin` is TypeScript executed by Bun).
 
-## Quick Start
+## Quick start
+
+The commands that need no toolchain come first; `build` and `all` need a WASI SDK.
 
 ```bash
-# 1. Copy and edit the config
+# Print the subcommands and options (exit 0)
+bunx wasm-crypto --help
+
+# Verify a package's compiled modules against its pinned test vectors
+# (reads <dir>/targets.json and <dir>/dist/; no WASI SDK needed)
+bunx wasm-crypto verify --pkg path/to/crypto-package
+
+# Compile C → .wasm (needs a WASI SDK: copy the example config, set wasiSdkPath)
 cp node_modules/@awacloud/tool-wasm-crypto/wasm-crypto.config.example.json wasm-crypto.config.json
-# Set wasiSdkPath to your WASI SDK installation, e.g. /opt/wasi-sdk
+bunx wasm-crypto build --pkg path/to/crypto-package
 
-# 2. Compile to .wasm (package-relative sources under --pkg <dir>)
-bunx wasm-crypto build --pkg <dir>
-
-# 3. Verify against test vectors
-bunx wasm-crypto verify --pkg <dir>
-
-# — or run the whole pipeline:
-bunx wasm-crypto all --pkg <dir>
+# Run the whole pipeline: build, then verify
+bunx wasm-crypto all --pkg path/to/crypto-package
 ```
+
+`verify` reports `V verified / S skipped / F failed of T targets` and exits 1
+when no target was verified. Inside the monorepo checkout the package to point
+at is `packages/front/fw-wasm-crypto`.
+
+## Consumption shape
+
+**Autonomous — standalone `bin`.** This package ships its own `wasm-crypto`
+executable (`bin/wasm-crypto.ts`, a thin delegate to the `run()` function
+exported by `src/index.ts` — no argument parsing duplicated), so it runs
+directly once installed: `bunx wasm-crypto <command> …`.
 
 ## Subcommands
 
@@ -214,9 +217,8 @@ it owns its wasi-sdk pin table (`build-env/pins.ts`) and imports nothing from
 `src/`. The SDK itself is never committed — the default install directory
 `build-env/sdk/` is gitignored.
 
-From a linked git worktree, whose `build-env/sdk/` is empty (the SDK is no
-worktree asset since the owner ruling of 2026-10-22),
-`discoverWasiSdk` falls back to the MAIN checkout's `build-env/sdk/`, derived
+From a linked git worktree, whose `build-env/sdk/` is empty (the SDK is not
+a worktree asset), `discoverWasiSdk` falls back to the MAIN checkout's `build-env/sdk/`, derived
 from the git common dir (`.git` file → `gitdir` → `commondir`, no git spawn;
 `mainCheckoutSdkDir`). Search order: explicit `roots` (the whole scope when
 given), then this tree's `build-env/sdk/`, then the main checkout's. A tree
@@ -304,6 +306,32 @@ tools/wasm-crypto/
 - [`@awacloud/fw`](https://github.com/awacloud/awa/tree/main/packages/front/fw) — the browser framework whose `src/crypto/wasm/` is this tool's compiled-output destination.
 - [`@awacloud/fw-wasm-crypto`](https://github.com/awacloud/awa/tree/main/packages/front/fw-wasm-crypto) — the package that owns `targets.json` and consumes `build`/`copy`.
 
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | success (incl. `--help`, `--version`) |
+| 1 | generic error: unknown subcommand, runtime failure |
+| 2 | not implemented, or a configuration error |
+| 130 | SIGINT (Ctrl+C) |
+| 143 | SIGTERM |
+
+`copy` and `verify` add their own meanings, listed with each subcommand above.
+
+## Exposed sub-paths
+
+| Sub-path | Target | Usage |
+|---|---|---|
+| `.` | `./src/index.ts` | The CLI entry the `wasm-crypto` bin delegates to; exports `run(opts)` (returns the exit code), `extractPkgFlag`, `applyPkgDir` and the `WasmCryptoConfig` type. |
+| `./targets-schema` | `./src/targets.schema.ts` | The `Target` type, `cStdFor` and `validateTargets` for a package's `targets.json`. |
+| `./cmd/build` | `./src/cmd/build.ts` | The `build` subcommand: `run`, `resolveClang`, `resolveInputs`, `compileFlags`, `linkFlags` and the export checks. |
+| `./cmd/copy` | `./src/cmd/copy.ts` | The `copy` subcommand: `run`, `renderManifest`, `parseManifest`. |
+| `./cmd/verify` | `./src/cmd/verify.ts` | The `verify` subcommand: `run`. |
+
+## Maturity
+
+Level `L2` (`awa.maturity` in `package.json`): a real builder and a verify gate. `verify` covers 3 of the 17 algorithm families of `packages/front/fw-wasm-crypto/targets.json` (see "`verify` coverage" above).
+
 ## Licence
 
 Apache-2.0 — see [`LICENSE`](LICENSE) in this package.
@@ -312,7 +340,7 @@ Copyright (c) 2026 AwaCloud SAS
 
 ## Project
 
-- Website: https://awaforge.eu
+- Website: https://awaforge.eu/
 - Source: [`tools/wasm-crypto`](https://github.com/awacloud/awa/tree/main/tools/wasm-crypto)
 - Issues: this package's own repository has issues disabled — report at
   https://github.com/awacloud/awa/issues

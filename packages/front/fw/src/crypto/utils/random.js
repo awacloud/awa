@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -49,7 +49,7 @@
 
 /**
  * Low-level CTR_DRBG instance produced by the internal `_makeDrbg` factory
- * (exposed via `_internal.makeDrbg`). Caller drives the full SP 800-90A
+ * (exposed in the internal slot as `makeDrbg`). Caller drives the full SP 800-90A
  * lifecycle manually with explicit seed material.
  * @typedef {object} DrbgCore
  * @property {(entropyBytes: Uint8Array, personalisationBytes?: Uint8Array, nonceBytes?: Uint8Array) => boolean} instantiate Seed the DRBG.
@@ -96,7 +96,6 @@
  * @property {(n: number) => (number[] | false)} bits Random bit array of `n` bits (direct OS RBG).
  * @property {() => boolean} isReady Whether `crypto.getRandomValues` is available.
  * @property {() => boolean} selfTest Run / re-run the CTR_DRBG power-on self-test.
- * @property {{ makeDrbg: (opts?: { aesKeyBits?: 128|192|256, df?: boolean }) => (DrbgCore | false) }} _internal Test-only internal CTR_DRBG factory.
  * @property {RandomHealth} health Continuous health-test surface.
  * @property {(options?: { aesKeyBits?: 128|192|256, df?: boolean, personalisation?: Uint8Array }) => (Drbg | false)} drbg Build a fresh CTR_DRBG-AES-256 (no-df) instance.
  */
@@ -241,7 +240,7 @@ export const random = {
 
         // ── CTR_DRBG-AES-{128,192,256}, no-df + with-df - SP 800-90A §10.2 ──
         //
-        // Parameters (parametric since Iteration H4):
+        // Parameters (parametric):
         //   aesKeyBits ∈ {128, 192, 256}  → keylen = 16 / 24 / 32 bytes
         //   blocklen   = 16 bytes (AES)
         //   seedlen    = keylen + blocklen
@@ -599,7 +598,7 @@ export const random = {
 
         // ── Public API ───────────────────────────────────────────────────
 
-        const api = {
+        const api = Object.defineProperty({
 
             /**
              * Fill an existing typed array in-place with cryptographically
@@ -627,8 +626,9 @@ export const random = {
              * @returns {number|false}
              */
             float() {
-                // Route through _getRandomBytes so the dead-source health
-                // latch covers float() like the rest of the public API.
+                // Route through _getRandomBytes, like the rest of the direct
+                // API. Note: the RCT/APT health tests and their dead-source
+                // latch cover the DRBG entropy path (_getEntropy) only.
                 const bytes = _getRandomBytes(new Uint8Array(4));
                 if (bytes === false) return false;
                 const v = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
@@ -702,18 +702,6 @@ export const random = {
 
             /** Run / re-run the CTR_DRBG power-on self-test. */
             selfTest() { _selfTestPassed = _runSelfTest(); return _selfTestPassed; },
-
-            /**
-             * Test-only escape hatch exposing the internal CTR_DRBG factory
-             * with caller-controlled seed material. **Not for production
-             * use** - the public `drbg()` API auto-pulls OS entropy and is
-             * the only path with full FIPS 140-3 lifecycle (POST, RCT/APT
-             * health tests, OS NRBG seeding). This surface exists exclusively
-             * to replay NIST CAVP / ACVP DRBG vectors with deterministic
-             * entropy inputs, so the algorithm itself can be byte-exact
-             * validated against the reference vectors.
-             */
-            _internal: { makeDrbg: _makeDrbg },
 
             /**
              * SP 800-90B continuous health-test surface - primarily for
@@ -839,7 +827,18 @@ export const random = {
                     get securityStrength()  { return inst.securityStrength; }
                 };
             }
-        };
+        }, Symbol.for('@awacloud/fw/internal'), {
+            /**
+             * Internal (test-only, outside the API): the CTR_DRBG factory with
+             * caller-controlled seed material. **Not for production use** -
+             * the public `drbg()` API auto-pulls OS entropy and is the only
+             * path with full FIPS 140-3 lifecycle (POST, RCT/APT health
+             * tests, OS NRBG seeding). It exists to replay NIST CAVP / ACVP
+             * DRBG vectors with deterministic entropy inputs, so the algorithm
+             * itself can be byte-exact validated against the reference vectors.
+             */
+            value: { makeDrbg: _makeDrbg }
+        });
 
         return api;
     }

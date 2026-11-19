@@ -27,6 +27,7 @@ const xmp = runtime.resolve('pdfXmp');
 | Method | Signature | Returns |
 |---------|-----------|----------|
 | `typeXmpStream` | `(stream) => { type: 'Metadata', subtype: 'XML', bytes: Uint8Array, raw: PdfStream }` | Validation + extraction. |
+| `packet` | `(fields: { pdfaid?: { part?, rev?, conformance? }, pdfuaid?: { part?, rev? }, info?: InfoFields }) => Uint8Array` | Writes an XMP packet (UTF-8): the PDF/A and PDF/UA identifications and the Info fields — Title `dc:title`, Author `dc:creator`, Subject `dc:description`, Keywords `pdf:Keywords`, Creator `xmp:CreatorTool`, Producer `pdf:Producer`, CreationDate / ModDate (PDF dates) `xmp:CreateDate` / `xmp:ModifyDate` (ISO 8601); text escaped, other keys ignored. `pdfBuilder` writes it under `pdfA` and `pdfUA`. |
 
 ## Examples
 
@@ -56,6 +57,7 @@ An XMP packet typically carries:
 | `pdf/xmp/no-dict` | `ParseError` | Stream has no dict. |
 | `pdf/xmp/bad-type` | `ParseError` | `/Type` is not `/Metadata`. |
 | `pdf/xmp/bad-subtype` | `ParseError` | `/Subtype` is not `/XML`. |
+| `pdf/xmp/bad-date` | `ContractError` | `packet`: CreationDate or ModDate is not a PDF date. |
 
 ## See also
 

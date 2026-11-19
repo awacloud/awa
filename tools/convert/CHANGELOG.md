@@ -4,6 +4,86 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-19
+
+### Breaking
+
+- **`convert` carries tier 3 by default on docx → odt** (`@awacloud/oconv`
+  2.0.0's default). Without `--layout` (CLI) or `layout` (MCP, core), the
+  odt now gets the page, the paragraphs' alignment and page breaks, the
+  runs' values, the headers, footers, page fields and notes. The new
+  `--no-layout` (CLI) or `layout: false` (MCP, core) gives tier 2, the
+  output of 1.x. `--layout` with `--no-layout` is a usage error (exit 2),
+  as is `--no-layout` outside `convert`. Other pairs are unchanged.
+
+- **A document past 256 MiB of text fails by default** (`@awacloud/oconv`'s
+  default), on the CLI (exit 1), the MCP `to_md` tool and `convert`:
+  `oconv: output too large`, before any markdown is built, where 1.x
+  rendered until it ran out of memory. `--output-overflow truncate` alone
+  (and `outputBudget: { overflow: 'truncate' }`) now truncates at 256 MiB
+  instead of being a usage error. `--output-budget 9007199254740991` and
+  `outputBudget: { bytes: Number.MAX_SAFE_INTEGER }` render as 1.x did.
+
+- **A sheet past 5,000,000 padded cells takes the sparse form by
+  default** (`@awacloud/oconv`'s default), on the CLI, the MCP `to_md`
+  tool and `convert`: one `<A1 address>: <text>` line per value,
+  recorded `sheet/sparse-form`, where 1.x padded it.
+  `--sheet-cell-budget 9007199254740991` (the CLI) and
+  `sheetCellBudget: Number.MAX_SAFE_INTEGER` (MCP, the library) pad every
+  sheet as 1.x did.
+
+- **`to-md` opens an encrypted pdf with the empty password by default**
+  (`@awacloud/oconv`'s default), on the CLI, the MCP `to_md` tool and
+  `convert`, recorded `pdf/opened-with-empty-user-password`.
+  `--no-pdf-empty-password` (the CLI) and `pdfEmptyPassword: false`
+  (MCP, the library) keep the 1.x refusal.
+
+- **`to-md` converts a pdf whose cross-reference chain is broken**
+  (`@awacloud/pdf` rebuilds it by default), on the CLI, the MCP `to_md`
+  tool and `convert`. `--no-pdf-recover-xref` (the CLI) and
+  `pdfRecoverXref: false` (MCP, the library) read strictly, as 1.x did.
+
+- **`to-md` infers headings and tables on an untagged pdf by default**
+  (`@awacloud/oconv`'s `pdfInfer` default), on the CLI, the MCP
+  `to_md` tool and `convert`. `--pdf-infer none` (the CLI) and
+  `pdfInfer: []` (MCP, the library) read without inference, as 1.x did.
+
+### Added
+
+- **`convert --layout`** (CLI), `layout` (MCP, core): the opt-in tier 3 of
+  `@awacloud/oconv`'s `convert`. On docx → odt, the source page (size,
+  orientation, margins), its paragraphs' alignment and page breaks, and
+  its runs' size, font, colour, underline and script reach the odt. On another pair, or with a value
+  that is not a boolean, it is a usage error; outside `convert` (CLI),
+  too.
+
+- **PDF/UA from `from-md` and `convert`.** `--pdf-ua <1|2>` with
+  `--pdf-lang <tag>` (CLI), `pdfUA` with `pdfLang` (MCP, core) writes a
+  tagged pdf claiming PDF/UA-1 or PDF/UA-2 — headings, paragraphs, lists,
+  tables and pictures with their alt text tagged, every font embedded, the
+  title from the front matter or the first heading — with the faces of
+  `--pdf-fonts <dir>` / `pdfFonts`, or without them the Liberation faces of
+  the optional package `@awacloud/oconv-fonts`; without the language, with
+  another part, or a language without `--pdf-ua`, a usage error. veraPDF
+  1.30.3 judges the documents written so with the Liberation faces
+  conforming.
+- **PDF/A from `from-md` and `convert`.** `--pdf-a <4|2b>` (CLI), `pdfA`
+  (MCP, core) writes a pdf claiming PDF/A-4 or PDF/A-2b — XMP metadata, an
+  sRGB output intent, every font embedded — with the TrueType faces of
+  `--pdf-fonts <dir>` / `pdfFonts` (`regular.ttf`, `bold.ttf`, `italic.ttf`,
+  `boldItalic.ttf`, `mono.ttf`). `pdfFonts` alone embeds those faces in a
+  plain pdf. The new `PdfFonts` type; veraPDF 1.30.3 judges the documents
+  written so with the Liberation faces conforming.
+
+- **`--pdf-a` and `--pdf-ua` without `--pdf-fonts`.** With the optional
+  package `@awacloud/oconv-fonts` installed, the Liberation faces are
+  embedded; without it the error names the five faces and the install
+  command (`npm i @awacloud/oconv-fonts`), on the CLI (exit 2), the MCP
+  tools and the core. An explicit `--pdf-fonts` / `pdfFonts` wins and
+  never loads the package. A plain pdf (no `--pdf-a`, no `--pdf-ua`) is
+  unchanged. `@awacloud/oconv-fonts` is declared in
+  `optionalDependencies`.
+
 ## [1.2.0] - 2026-11-02
 
 ### Added

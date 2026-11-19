@@ -28,12 +28,12 @@
  * inject `import {applyBase} …; applyBase();`), so every tier prepends a
  * SELF-APPLYING subpath instead of the explicit-call ESM source — a bare
  * import of the latter is inert since the sanity tiers became explicit-call
- * ES modules (FINDINGS §c.1):
+ * ES modules:
  *   - `base` / `community` → the **built classic-artifact subpath**
  *     `@awacloud/fw/sanity/<tier>.classic` (e.g.
  *     `dist/build/sanity-base-classic.min.js`) ;
  *   - `lockdown` → `@awacloud/fw/sanity/lockdown.apply`, the self-applying
- *     ESM wrapper around `lockdown()` (BL-45: this branch used to prepend the
+ *     ESM wrapper around `lockdown()` (this branch used to prepend the
  *     bare `@awacloud/fw/sanity/lockdown` specifier and therefore applied
  *     NOTHING — `sanity: 'lockdown'` was silently a no-op). There is no
  *     `lockdown.classic` artifact; the wrapper is the ESM equivalent.
@@ -92,7 +92,7 @@ export class FwWebpackPlugin {
         //    tiers are explicit-call ES modules, so prepending their source
         //    subpath applies nothing at all (see file header).
         //    `base`/`community` → the built classic artifact ;
-        //    `lockdown`        → the `lockdown.apply` ESM wrapper (BL-45).
+        //    `lockdown`        → the `lockdown.apply` ESM wrapper.
         if (sanity) {
             const sanityMod = sanity === 'lockdown'
                 ? `${core.pkg}/sanity/lockdown.apply`

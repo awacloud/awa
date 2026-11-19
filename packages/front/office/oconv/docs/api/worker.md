@@ -11,9 +11,9 @@ status: complete
 
 > The `@awacloud/oconv` Worker entry — one conversion per message, three message kinds.
 
-**Module** `worker` (exported as the `./src/worker.js` sub-path — spawned by URL/path, DOM-free) | **Source** `packages/front/office/oconv/src/worker.js` | **Deps** — | **Worker-safe** yes
+**Module** `worker` (exported as the `./worker.js` sub-path — spawned by URL/path, DOM-free) | **Source** `packages/front/office/oconv/src/worker/entry.js`, bundled into `src/worker.js` | **Deps** — | **Worker-safe** yes
 
-`src/worker.js` builds its own `ModuleRuntime` from `./main.js`'s manifest and runs unmodified in a browser `Worker` and a Bun `Worker` — same file, same call. It is exported as the `./src/worker.js` sub-path (see the [boundary note](./README.md#boundary-note)) and is never reached through `runtime.resolve()`: a host spawns it by URL/path, or by the `@awacloud/oconv/src/worker.js` specifier resolved to a URL.
+The worker's source, `src/worker/entry.js`, builds its own `ModuleRuntime` from the package manifest; `bun run gen:worker` bundles it (browser, ESM, not minified) into `src/worker.js`, which imports nothing and runs unmodified in a browser `Worker` (no import map needed, as a static page has none for a worker) and a Bun `Worker` — same file, same call. It is exported as the `./worker.js` sub-path (see the [boundary note](./README.md#boundary-note)) and is never reached through `runtime.resolve()`: a host spawns it by URL/path (`/vendor/oconv/worker.js` when the package's `src/` is served at `/vendor/oconv/`), or by the `@awacloud/oconv/worker.js` specifier resolved to a URL.
 
 ## Resolve
 
@@ -22,7 +22,7 @@ status: complete
 // prefix-only import map (`@awacloud/oconv/` → the package root). Never
 // through ModuleRuntime.
 const worker = new Worker(
-    import.meta.resolve('@awacloud/oconv/src/worker.js'),
+    import.meta.resolve('@awacloud/oconv/worker.js'),
     { type: 'module' }
 );
 ```
@@ -40,7 +40,7 @@ Three message kinds, discriminated on the posted data shape — a `toMd` message
 |---|---|---|
 | `toMd` | `{id, name, bytes: ArrayBuffer, at?, sha256?}` (`bytes` transferred) | `{id, ms, error, chars, warnings, losses, markdown}` |
 | `fromMd` | `{id, name?, markdown, target?, opts?, assets?, defaultFaces?}` | `{id, ms, error, bytes, warnings, losses}` |
-| `convert` | `{id, name?, bytes: ArrayBuffer, format?, target, includeNotes?, opts?, defaultFaces?}` | `{id, ms, error, bytes, warnings, losses}` |
+| `convert` | `{id, name?, bytes: ArrayBuffer, format?, target, includeNotes?, opts?, defaultFaces?, layout?}` (`layout` forwarded only when present; absent is the facade's default, on for `docx → odt`) | `{id, ms, error, bytes, warnings, losses}` |
 
 `error` is a string, or `null` on success — every failure comes back as DATA, never a thrown exception across the worker boundary. `opts`, `assets` and `defaultFaces` are threaded onto the outgoing facade call only when the caller's message carried the key, so an older message without them produces exactly the call it made before any of the three existed.
 

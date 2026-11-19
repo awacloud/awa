@@ -126,14 +126,14 @@
         "version": "odfvalidator@0.13.0",
         "source": "https://github.com/tdf/odftoolkit/tree/b926a6134a2fee782076500dfc02c47c2d651cff"
       },
-      "date": "2026-10-15",
-      "commit": "31604fbdb8296b32912776b65d1ba8fe07a87af7",
+      "date": "2026-11-09",
+      "commit": "ca4fb2af30e853f5d7e01ef39b4384eaeeb232d0",
       "command": "bun cli.ts office-scorecard axis-c --suite odfvalidator-oconv",
       "result": {
         "kind": "pass-total",
-        "pass": 30,
-        "total": 30,
-        "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 30 (30 written, 0 round trips)"
+        "pass": 38,
+        "total": 38,
+        "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 38 (38 written, 0 round trips)"
       },
       "skipped": [
         {
@@ -149,12 +149,12 @@
         "version": "py-pdf/benchmarks@778e6c95a",
         "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
       },
-      "date": "2026-10-16",
-      "commit": "5a84a2cfca83ef4cc5ec8a2054459c67ab2bdc01",
+      "date": "2026-11-12",
+      "commit": "4c1763b9148a52363362b91f03371146249e9501",
       "command": "bun cli.ts office-scorecard axis-e --suite pypdf-benchmarks-read",
       "result": {
         "kind": "score",
-        "value": 0.9287,
+        "value": 0.9359,
         "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the plain text of oconv toMd (no OCR; Markdown parsed with @awacloud/md, its text kept), 0–1"
       },
       "skipped": []
@@ -166,12 +166,12 @@
         "version": "opendataloader-bench@7af1d8f4d",
         "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
       },
-      "date": "2026-10-16",
-      "commit": "cff19c43719318beabb87c1c79d14eda971b953f",
+      "date": "2026-11-13",
+      "commit": "3c218fac890c7566235a308c28f68d9fea790535",
       "command": "bun cli.ts office-scorecard axis-e --suite opendataloader-bench",
       "result": {
         "kind": "score",
-        "value": 0.5753,
+        "value": 0.8376,
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the benchmark's own scorers ported, on the Markdown body of oconv toMd (no OCR; the profile-v1 front matter removed)"
       },
       "skipped": []
@@ -183,12 +183,12 @@
         "version": "opendataloader-bench@7af1d8f4d",
         "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
       },
-      "date": "2026-10-25",
-      "commit": "f2bdbee3b1e0b29b62030ed523eeb7f6e33c530e",
+      "date": "2026-11-13",
+      "commit": "3c218fac890c7566235a308c28f68d9fea790535",
       "command": "bun cli.ts office-scorecard axis-e --suite opendataloader-bench-layout",
       "result": {
         "kind": "score",
-        "value": 0.7949,
+        "value": 0.8376,
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the benchmark's own scorers ported, on the Markdown body of oconv toMd read with pdfInfer: ['headings', 'tables'] (the opt-in inference of the untagged pdf path; no OCR; the profile-v1 front matter removed)"
       },
       "skipped": []
@@ -200,8 +200,8 @@
         "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
         "source": null
       },
-      "date": "2026-11-01",
-      "commit": "bb708e2c3b180c9863a4ab8d30c0ce1b1fb0fbd0",
+      "date": "2026-11-13",
+      "commit": "999d12e99cb7cabed985831438c0bc263ac09748",
       "command": "bun cli.ts office-scorecard axis-b --suite crossformat-docx-odt",
       "result": {
         "kind": "pass-total",
@@ -218,14 +218,104 @@
         "version": "libreoffice@26.8.0.3",
         "source": null
       },
-      "date": "2026-11-01",
-      "commit": "bb708e2c3b180c9863a4ab8d30c0ce1b1fb0fbd0",
+      "date": "2026-11-13",
+      "commit": "72655858c7c404e03e4cc37485d8c22304153b30",
       "command": "bun cli.ts office-scorecard axis-b --suite crossformat-odt-docx",
       "result": {
         "kind": "pass-total",
         "pass": 316,
         "total": 316,
         "criterion": "every wild odt (lo-odfexport, lo-ooxmlexport) whose oconv toMd reads is converted to docx with oconv convert and read back with toMd; it passes when the Markdown body of the return reading equals the direct one (the front matter removed: the cross-format harness's model equivalence); a throw of convert or of the return toMd fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "crossformat-docx-odt-layout",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-09",
+      "commit": "ca4fb2af30e853f5d7e01ef39b4384eaeeb232d0",
+      "command": "bun cli.ts office-scorecard axis-b --suite crossformat-docx-odt-layout",
+      "result": {
+        "kind": "pass-total",
+        "pass": 1469,
+        "total": 1469,
+        "criterion": "every wild docx (poi, lo-ooxmlexport, lo-odfexport) whose oconv toMd reads is converted to odt with oconv convert and its opt-in layout; it passes when the odt's page (the layout of its Standard master page, read by @awacloud/odf: size, orientation, margins) equals the docx's (its body sectPr, read by @awacloud/ooxml: twips / 20, a margin as its absolute value, the orientation stated or from the size) within 0.01 mm, or when neither states a page; a throw of convert fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "crossformat-docx-odt-paragraphs",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-13",
+      "commit": "0c42f9e38dac7fd9f4162ad77a60c2aad05cd5a6",
+      "command": "bun cli.ts office-scorecard axis-b --suite crossformat-docx-odt-paragraphs",
+      "result": {
+        "kind": "pass-total",
+        "pass": 1469,
+        "total": 1469,
+        "criterion": "every wild docx (poi, lo-ooxmlexport, lo-odfexport) whose oconv toMd reads is converted to odt with oconv convert and its opt-in layout; its paragraphs that hold text (read by @awacloud/ooxml, in body order, tables and content controls included) are matched in order to the odt's paragraphs and headings by their text, whitespace collapsed (an unmatched one is not compared); it passes when every matched pair has the same alignment (the docx's effective one: direct, up the basedOn chain, then docDefaults; the odt's up its style chain to the default style; unstated reads as start) and the same page break before (the docx's pageBreakBefore, a page break ahead of its text, or one alone in or at the end of a paragraph before it, a table between them dropping it; the odt's fo:break-before page); a throw of convert fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "crossformat-docx-odt-runs",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-13",
+      "commit": "0c42f9e38dac7fd9f4162ad77a60c2aad05cd5a6",
+      "command": "bun cli.ts office-scorecard axis-b --suite crossformat-docx-odt-runs",
+      "result": {
+        "kind": "pass-total",
+        "pass": 1469,
+        "total": 1469,
+        "criterion": "every wild docx (poi, lo-ooxmlexport, lo-odfexport) whose oconv toMd reads is converted to odt with oconv convert and its opt-in layout; its paragraphs that hold text are matched as in crossformat-docx-odt-paragraphs, and in each matched pair whose non-whitespace characters are the same, each character's values the docx states (its run's effective size, font, colour, underline and super- or subscript: rPr, the character style's basedOn chain, the paragraph style's chain, docDefaults, a theme font read from the theme part) must be the odt's (its innermost span up the text style chains, then its paragraph's style chain, then the default style): a size within 0.05 pt, a font by name, a colour by hex, an underline, a script by the sign of style:text-position; a throw of convert fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "crossformat-docx-odt-headers",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-13",
+      "commit": "9e023c52a3c5b0241610ba99e9d80eecbe30160a",
+      "command": "bun cli.ts office-scorecard axis-b --suite crossformat-docx-odt-headers",
+      "result": {
+        "kind": "pass-total",
+        "pass": 1469,
+        "total": 1469,
+        "criterion": "every wild docx (poi, lo-ooxmlexport, lo-odfexport) whose oconv toMd reads is converted to odt with oconv convert and its opt-in layout; for each region (header, footer) and slot (default, first, even) it passes when the docx's paragraphs that hold text equal the odt's as multisets, whitespace collapsed, and so do their counts of page and page-count fields: the docx's read by @awacloud/ooxml from the body's last sectPr (the first page's part under titlePg, the even pages' under the settings' evenAndOddHeaders, else the default part; a slot without a part is empty), tables, content controls and text boxes included, a table of contents control and deletions left out, PAGE, NUMPAGES and SECTIONPAGES fields counted (one inside a page field not); the odt's from its Standard master page's style:header, style:header-first and style:header-left (an absent one the default) and the footers', a frame's text left out, text:page-number and text:page-count counted; a throw of convert fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "crossformat-docx-odt-notes",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-13",
+      "commit": "0c42f9e38dac7fd9f4162ad77a60c2aad05cd5a6",
+      "command": "bun cli.ts office-scorecard axis-b --suite crossformat-docx-odt-notes",
+      "result": {
+        "kind": "pass-total",
+        "pass": 1469,
+        "total": 1469,
+        "criterion": "every wild docx (poi, lo-ooxmlexport, lo-odfexport) whose oconv toMd reads is converted to odt with oconv convert and its opt-in layout; it passes when the docx's notes equal the odt's as multisets, each compared by class, custom mark and paragraph texts (whitespace collapsed): the docx's read by @awacloud/ooxml, each footnote and endnote reference of the body (tables, content controls and text boxes included, a table of contents control and deletions left out; the custom mark the run's next text under customMarkFollows) resolved to its note's paragraphs that hold text, a reference whose note did not read left out; the odt's each text:note of content.xml, its text:note-class, its citation's text:label, its body's paragraphs and headings that hold text; a throw of convert fails it"
       },
       "skipped": []
     }
@@ -245,7 +335,7 @@
         "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
       },
       "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
-      "date": "2026-10-16"
+      "date": "2026-11-12"
     },
     {
       "axis": "E",
@@ -261,7 +351,7 @@
         "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
       },
       "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
-      "date": "2026-10-16"
+      "date": "2026-11-12"
     },
     {
       "axis": "E",
@@ -277,7 +367,7 @@
         "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
       },
       "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
-      "date": "2026-10-16"
+      "date": "2026-11-12"
     },
     {
       "axis": "E",
@@ -293,7 +383,7 @@
         "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
       },
       "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
-      "date": "2026-10-16"
+      "date": "2026-11-12"
     },
     {
       "axis": "E",
@@ -309,7 +399,7 @@
         "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
       },
       "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
-      "date": "2026-10-16"
+      "date": "2026-11-12"
     },
     {
       "axis": "E",
@@ -325,7 +415,7 @@
         "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
       },
       "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
-      "date": "2026-10-16"
+      "date": "2026-11-12"
     },
     {
       "axis": "E",
@@ -341,7 +431,7 @@
         "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
       },
       "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
-      "date": "2026-10-16"
+      "date": "2026-11-12"
     },
     {
       "axis": "E",
@@ -357,7 +447,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/opendataloader-hybrid/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -373,7 +463,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/nutrient/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -389,7 +479,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/docling/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -405,7 +495,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/marker/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -421,7 +511,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/unstructured-hires/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -437,7 +527,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/edgeparse/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -453,7 +543,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/opendataloader/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -469,7 +559,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/mineru/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -485,7 +575,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/pymupdf4llm/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -501,7 +591,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/unstructured/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -517,7 +607,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/markitdown/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -533,7 +623,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/liteparse/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     }
   ]
 }

@@ -34,7 +34,7 @@ dispatcher, never called directly by a consumer.
 |---|---|---|---|
 | `render` | `(node: object, ctx: object) => {items: object[], losses: object[], height: number, keepTogether: boolean}` | block-local laid-out items (the renderer contract) | — |
 
-`node` is an `oconv-ir/v1` `table` node (`row`/`cell` children, `row.header`
+`node` is an `oconv-ir/v2` `table` node (`row`/`cell` children, `row.header`
 the only structural flag the frozen IR carries). `ctx` is the stack's
 child context plus `flowChildren` — used to re-flow each cell's block
 content at its resolved column width.

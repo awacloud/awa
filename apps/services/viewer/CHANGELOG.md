@@ -9,41 +9,7 @@ See [`README.md`](./README.md) for the usage guide.
 
 ## [Unreleased]
 
-### Added
-
-- **Copy with formatting.** The toolbar's new button (and `Ctrl+Shift+C` /
-  `Cmd+Shift+C`) copies the open document to the clipboard with its headings,
-  emphasis, lists, tables, links and, from Word and OpenDocument text,
-  pictures, ready to paste into a word processor; the Help page lists it.
-  Fonts, colours, page layout and PDF pictures are not carried. A card over
-  the document confirms the copy (or says why it failed) for a few seconds.
-  `tests/copy.e2e.mjs` proves it in Chromium against the real page.
-- **Icons Windows draws without downsampling.** The manifest lists 16, 32,
-  48 and 256 px icons beside 192 and 512 px, for the `.ico` Chrome writes
-  when the app is installed on Windows, and the pages link a multi-size
-  `favicon.ico` (16 to 256 px). All drawn by `bun run icons` from the
-  shapes of `icon.svg`. The README says what this does and does not prove
-  about the lost-icon symptom, and how to repair a lost icon.
-
-### Changed
-
-- **Precompressed JavaScript.** `bun run build` now ends with the demos'
-  `gzip-dist` step: every file of 512 B or more that is not already
-  compressed gets a gzip-9 `.gz` twin (`src/main.js` 2,193,424 B →
-  629,241 B), which the site host serves to a client that accepts gzip.
-  The service worker's pre-cache list is unchanged (no `.gz`).
-- The embeddable core (`mountViewer`, `<awa-viewer>`, the painters and the
-  stylesheets) now lives in `@awacloud/oview`. This package is the standalone
-  PWA over it.
-- The install prompt, the update flow and the service worker now use
-  `@awacloud/fw`'s `installPrompt`, `swUpdate` and `precache`.
-
-### Removed
-
-- The `@awacloud/viewer` exports (`.`, `./element.js`, `./viewer.css`,
-  `./tokens.css`): import `@awacloud/oview` instead.
-
-## [0.1.0] — 2026-10-19
+## [0.1.0] - 2026-11-19
 
 ### Added
 
@@ -92,5 +58,46 @@ See [`README.md`](./README.md) for the usage guide.
 - **Showcase samples.** Six sample documents (PDF, Word, OpenDocument,
   Excel, PowerPoint, Markdown) in the reader's language, opened on demand
   from the page under the dropzone.
+- **Copy with formatting.** The toolbar's new button (and `Ctrl+Shift+C` /
+  `Cmd+Shift+C`) copies the open document to the clipboard with its headings,
+  emphasis, lists, tables, links and, from Word and OpenDocument text,
+  pictures, ready to paste into a word processor; the Help page lists it.
+  Fonts, colours, page layout and PDF pictures are not carried. A card over
+  the document confirms the copy (or says why it failed) for a few seconds.
+  `tests/copy.e2e.mjs` proves it in Chromium against the real page.
+- **Icons Windows draws without downsampling.** The manifest lists 16, 32,
+  48 and 256 px icons beside 192 and 512 px, for the `.ico` Chrome writes
+  when the app is installed on Windows, and the pages link a multi-size
+  `favicon.ico` (16 to 256 px). All drawn by `bun run icons` from the
+  shapes of `icon.svg`. The README says what this does and does not prove
+  about the lost-icon symptom, and how to repair a lost icon.
+- **File name in the header.** While a document is open, the header line shows
+  its file name (cut with an ellipsis on one line, the full name on hover),
+  also on small screens; with no document the tagline is back, and a language
+  change keeps the name.
+
+### Changed
+
+- **Precompressed JavaScript.** `bun run build` now ends with the demos'
+  `gzip-dist` step: every file of 512 B or more that is not already
+  compressed gets a gzip-9 `.gz` twin (`src/main.js` 2,193,424 B →
+  629,241 B), which the site host serves to a client that accepts gzip.
+  The service worker's pre-cache list is unchanged (no `.gz`).
+- The embeddable core (`mountViewer`, `<awa-viewer>`, the painters and the
+  stylesheets) now lives in `@awacloud/oview`. This package is the standalone
+  PWA over it.
+- The install prompt, the update flow and the service worker now use
+  `@awacloud/fw`'s `installPrompt`, `swUpdate` and `precache`.
+- **About in the Help form.** The About dialog takes the Help dialog's look, its height fitted to
+  its content (long content scrolls inside):
+  the title with the version under it and a `×` close button in the head, a
+  scrollable body (copyright, check for updates, offline line, "Made by
+  AwaCloud", licences) and the Close button after it; the focus returns to
+  the About button.
+
+### Removed
+
+- The `@awacloud/viewer` exports (`.`, `./element.js`, `./viewer.css`,
+  `./tokens.css`): import `@awacloud/oview` instead.
 
 Live on `viewer.awacloud.com` since 2026-10-19.

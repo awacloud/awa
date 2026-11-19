@@ -2383,7 +2383,7 @@ export const fontsPackage = {
         throw new ParseError("fonts/missing-hmtx", "font is missing the required `hmtx` table");
       if (!sfnt.tables.cmap)
         throw new ParseError("fonts/missing-cmap", "font is missing the required `cmap` table");
-      if (!sfnt.tables.name && !(opts && opts.allowMissingName))
+      if (!sfnt.tables.name && opts && opts.allowMissingName === !1)
         throw new ParseError("fonts/missing-name", "font is missing the required `name` table");
       const head = parseHead(sfnt.tables.head.bytes), maxp = parseMaxp(sfnt.tables.maxp.bytes), hhea = parseHhea(sfnt.tables.hhea.bytes), hmtx = parseHmtx(sfnt.tables.hmtx.bytes, hhea.numberOfHMetrics, maxp.numGlyphs), cmap = parseCmap(sfnt.tables.cmap.bytes), nameTable = sfnt.tables.name ? parseName(sfnt.tables.name.bytes) : null, os2 = sfnt.tables["OS/2"] ? parseOs2(sfnt.tables["OS/2"].bytes) : null, post = sfnt.tables.post ? parsePost(sfnt.tables.post.bytes, maxp.numGlyphs) : null;
       let loca = null, glyphTable = null;

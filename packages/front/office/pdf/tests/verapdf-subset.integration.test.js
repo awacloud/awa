@@ -118,13 +118,17 @@ describe('veraPDF subset — read and round-trip through the base reader', () =>
         }
     });
 
-    test('every file reads and round-trips except the encrypted one', () => {
+    // T30 (c): the encrypted file's user password is empty, so the default read
+    // opens it (recorded) and it round-trips like every other file.
+    test('every file reads and round-trips, the encrypted one opened with the empty password', () => {
         const misses = outcomes.filter((o) => o.read !== 'ok' || o.roundtrip !== 'ok');
-        expect(misses).toEqual([{ path: ENCRYPTED, read: 'pdf/document/encrypted' }]);
+        expect(misses).toEqual([]);
     });
 
-    test('the encrypted file is refused by default, and its compressed page tree is refused on opt-in', () => {
-        expect(() => api.read(bytesOf(ENCRYPTED))).toThrow(expect.objectContaining({ code: 'pdf/document/encrypted' }));
+    test('the encrypted file opens by default, is refused with emptyPassword: false, and its compressed page tree is refused raw', () => {
+        const doc = api.read(bytesOf(ENCRYPTED));
+        expect(doc.losses.some((l) => l.code === 'pdf/document/opened-with-empty-password')).toBe(true);
+        expect(() => api.read(bytesOf(ENCRYPTED), { emptyPassword: false })).toThrow(expect.objectContaining({ code: 'pdf/document/encrypted' }));
         // The raw container (`allowEncrypted`) cannot reach objects held in an
         // object stream of an encrypted file: its page tree lives in one.
         expect(() => api.read(bytesOf(ENCRYPTED), { allowEncrypted: true }))

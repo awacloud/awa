@@ -11,9 +11,18 @@ status: complete
 
 > Adapter between `@awacloud/fonts/embed-pdf` and PDF dicts — ISO 32000-2 §9.6 / §9.7 / §9.10.
 
-**Module** `pdfFontEmbed` | **Source** `packages/front/office/pdf/src/font/embed.js` | **Deps** `pdfErrors`, `embedSubsetForPdf`, `embedFontDescriptor`, `embedCidSystemInfo`, `embedToUnicodeBuilder` | **Worker-safe** yes
+**Module** `pdfFontEmbed` | **Source** `packages/front/office/pdf/src/font/embed.js` | **Deps** `pdfErrors`, `embedSubsetForPdf`, `embedFontDescriptor`, `embedCidSystemInfo`, `embedToUnicodeBuilder`, `fontSfnt`, `fontCffProgram` | **Worker-safe** yes
 
-The only file in `@awacloud/pdf` that knows about `@awacloud/fonts/embed-pdf`. It takes an already-parsed font (the output of `fonts.read(bytes)`) plus a set of code points, and produces the PDF dicts needed to embed a **subset** of that font — either simple (`/TrueType` + `/WinAnsiEncoding`) or composite (`/Type0` + `/Identity-H` + `/CIDFontType2`). The subsetting itself is delegated to `subsetForPdf`; this module exists so the writer's call sites don't re-derive the wiring.
+The only file in `@awacloud/pdf` that knows about `@awacloud/fonts/embed-pdf`. It takes an already-parsed font (the output of `fonts.read(bytes)`) plus a set of code points, and produces the PDF dicts needed to embed a **subset** of that font — either simple (`/WinAnsiEncoding`) or composite (`/Type0` + `/Identity-H`). The subsetting itself is delegated to `subsetForPdf`; this module exists so the writer's call sites don't re-derive the wiring.
+
+The dictionaries follow the font's outlines (ISO 32000-2 Table 124):
+
+| Outlines | Program | Simple font | Composite font |
+|----------|---------|-------------|----------------|
+| TrueType (`glyf`) | `FontFile2` | `/TrueType` | `/CIDFontType2`, `/CIDToGIDMap /Identity` |
+| CFF, CFF2 (`OTTO`) | `FontFile3 /OpenType` | `/Type1`: `/Encoding << /BaseEncoding /WinAnsiEncoding /Differences [code /glyphName …] >>`, each code's glyph name in the subset program (§9.6.5.2, §9.9.1) | `/CIDFontType0`, no `/CIDToGIDMap` (§9.7.4.2): the codes are the program's CIDs |
+
+`subsetForPdf` is always asked for `{ cff: true }` (a no-op on a `glyf` font). A CID-keyed program — a CID-keyed CFF, whose subset keeps the source CIDs, or a CFF2 font, whose subset is CID-keyed with CID = new glyph id — has no simple form: `embedSimple` refuses it with `ContractError('pdf/embed/cid-keyed-simple')`; `embedCid` keys its codes, `/W` and `/ToUnicode` by those CIDs.
 
 ## Resolve
 
@@ -26,10 +35,10 @@ const emb = runtime.resolve('pdfFontEmbed');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `embedSimple` | `(parsedFont, codePoints, opts?) => SimpleEmbed` | `/TrueType` + `/WinAnsiEncoding`. Every code point must be CP1252-representable. |
-| `embedCid` | `(parsedFont, codePoints, opts?) => CidEmbed` | `/Type0` + `/Identity-H` with a `/CIDFontType2` descendant. Any Unicode code point. |
+| `embedSimple` | `(parsedFont, codePoints, opts?) => SimpleEmbed` | `/TrueType` (TrueType outlines) or `/Type1` (CFF outlines) + `/WinAnsiEncoding`. Every code point must be CP1252-representable. |
+| `embedCid` | `(parsedFont, codePoints, opts?) => CidEmbed` | `/Type0` + `/Identity-H` with a `/CIDFontType2` (TrueType outlines) or `/CIDFontType0` (CFF outlines) descendant. Any Unicode code point. |
 
-`parsedFont` must be a real parsed `Font` — `unicodeMap`, `glyphIndexForCodePoint`, `advanceWidth` and a numeric `unitsPerEm` are all read. `codePoints` is any iterable of integers; it is de-duplicated and sorted, and the sorted array is echoed back as `codePoints`. `opts` is forwarded to `subsetForPdf` (`embedCid` adds `{ cid: true }`).
+`parsedFont` must be a real parsed `Font` — `unicodeMap`, `glyphIndexForCodePoint`, `advanceWidth` and a numeric `unitsPerEm` are all read. `codePoints` is any iterable of integers; it is de-duplicated and sorted, and the sorted array is echoed back as `codePoints`. `opts` is forwarded to `subsetForPdf` with `{ cff: true }` (`embedCid` adds `{ cid: true }` too).
 
 The factory validates at construction that its four injected `@awacloud/fonts/embed-pdf` helpers (`subsetForPdf`, `buildFontDescriptor`, `buildCidSystemInfo`, `embedBuildToUnicode`) are functions, throwing `ContractError` otherwise.
 
@@ -46,7 +55,7 @@ Two conversions happen here and nowhere else:
 
 `buildFontDescriptor` puts the raw subset bytes in `FontFile2` (TrueType) or `FontFile3` (CFF). The adapter **lifts them out**: the returned `descriptor` dict has no font-program key, and the bytes come back as `fontFile` with the key name in `fontFileKey`. The consumer must:
 
-1. allocate the font program as a **stream indirect** whose dict carries `/Length1 = fontFile.length` (the serializer adds `/Length`), and set `descriptor.entries[fontFileKey]` to that ref;
+1. allocate the font program as a **stream indirect** whose dict carries `/Length1 = fontFile.length` for a `FontFile2`, or `/Subtype /OpenType` (and no `/Length1`, a key of `FontFile` and `FontFile2` only) for a `FontFile3` (the serializer adds `/Length`), and set `descriptor.entries[fontFileKey]` to that ref;
 2. allocate `toUnicodeStream` as a stream indirect too and set the font dict's `ToUnicode` to that ref — `pdfSerializer` refuses an inline stream (`pdf/serializer/inline-stream`).
 
 The font dict itself may be written inline or as an indirect; the descriptor nests fine inside it.

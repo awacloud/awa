@@ -29,7 +29,7 @@ first, ties broken by symbol order. See RFC 1951 §3.2.2.
 
 ```js
 const hf = runtime.resolve('huffman');
-// { buildMap, buildTree }
+// { buildMap, buildTree, kraft }
 ```
 
 ## API
@@ -38,6 +38,7 @@ const hf = runtime.resolve('huffman');
 |--------|-----------|---------|
 | `buildMap` | `(codeLengths: Uint8Array, maxBits: number, reversed: 0\|1) => Uint16Array` | encode table (`reversed=0`) or decode table (`reversed=1`) |
 | `buildTree` | `(freqs: Uint16Array \| number[], maxBits: number) => { t: Uint8Array, l: number }` | `t` = code lengths, `l` = max bits used |
+| `kraft` | `(codeLengths: Uint8Array \| number[]) => { oversubscribed: boolean, incomplete: boolean }` | Kraft check of a code-length set: more codes than exist, or codes left unused. RFC 1951 § 3.2.7 allows one incomplete set (a single distance code); the caller decides. `buildMap` does not check |
 
 ### `buildMap(cd, mb, reversed)`
 

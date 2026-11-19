@@ -12,7 +12,6 @@ export interface ModuleInstanceMap {
     adf: ReturnType<typeof import('../dist/types/crypto/hash/adf')['adf']['factory']>;
     adler32: ReturnType<typeof import('../dist/types/io/calc/adler32')['adler32']['factory']>;
     aes: ReturnType<typeof import('../dist/types/crypto/cipher/aes')['aes']['factory']>;
-    aes_ctr: ReturnType<typeof import('../dist/types/crypto/utils/aes_ctr')['aes_ctr']['factory']>;
     aes_modes: ReturnType<typeof import('../dist/types/crypto/utils/aes_modes')['aes_modes']['factory']>;
     ajax: ReturnType<typeof import('../dist/types/dom/net/ajax')['ajax']['factory']>;
     animate: ReturnType<typeof import('../dist/types/dom/display/animate')['animate']['factory']>;
@@ -152,10 +151,12 @@ export interface ModuleInstanceMap {
     sharedWorker: ReturnType<typeof import('../dist/types/dom/sw/sharedWorker')['sharedWorker']['factory']>;
     signal: ReturnType<typeof import('../dist/types/io/utils/signal')['signal']['factory']>;
     slh_dsa: ReturnType<typeof import('../dist/types/crypto/pkc/slh_dsa')['slh_dsa']['factory']>;
+    sound: ReturnType<typeof import('../dist/types/dom/query/sound')['sound']['factory']>;
     sse: ReturnType<typeof import('../dist/types/dom/net/sse')['sse']['factory']>;
     stats: ReturnType<typeof import('../dist/types/io/math/stats')['stats']['factory']>;
     storage: ReturnType<typeof import('../dist/types/dom/fs/storage')['storage']['factory']>;
     str: ReturnType<typeof import('../dist/types/io/text/str')['str']['factory']>;
+    styleSheet: ReturnType<typeof import('../dist/types/dom/rendering/styleSheet')['styleSheet']['factory']>;
     swUpdate: ReturnType<typeof import('../dist/types/dom/sw/swUpdate')['swUpdate']['factory']>;
     template: ReturnType<typeof import('../dist/types/dom/rendering/template')['template']['factory']>;
     themeTokens: ReturnType<typeof import('../dist/types/dom/rendering/themeTokens')['themeTokens']['factory']>;
@@ -210,6 +211,7 @@ export interface ModuleInstanceMap {
     workerPool: ReturnType<typeof import('../dist/types/process/workerPool')['workerPool']['factory']>;
     ws: ReturnType<typeof import('../dist/types/dom/net/ws')['ws']['factory']>;
     x25519: ReturnType<typeof import('../dist/types/crypto/pkc/x25519')['x25519']['factory']>;
+    x509: ReturnType<typeof import('../dist/types/crypto/utils/x509')['x509']['factory']>;
     xml: ReturnType<typeof import('../dist/types/io/codec/xml')['xml']['factory']>;
     zip: ReturnType<typeof import('../dist/types/io/compress/zip')['zip']['factory']>;
     zlib: ReturnType<typeof import('../dist/types/io/compress/zlib')['zlib']['factory']>;

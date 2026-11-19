@@ -72,8 +72,9 @@ describe('webcryptoDigest — API shape', () => {
         expect(typeof _d.sha512).toBe('function');
     });
 
-    test('sha1 is a function', () => {
-        expect(typeof _d.sha1).toBe('function');
+    test('the deprecated `sha1` shorthand is gone; `digest(\'SHA-1\', …)` stays (D9 G3)', () => {
+        expect(_d.sha1).toBeUndefined();
+        expect(typeof _d.digest).toBe('function');
     });
 
     test('isAvailable returns boolean', () => {
@@ -255,33 +256,10 @@ describe('webcryptoDigest — unsupported algorithm → false', () => {
 
 // ── sha1 — deprecation warning ───────────────────────────────────────────────
 
-describe('webcryptoDigest — sha1 deprecation', () => {
-    test('sha1 emits deprecation warning', async () => {
-        const warnings = [];
-        const orig = console.warn;
-        console.warn = (...args) => warnings.push(args.join(' '));
-        try {
-            const result = await _d.sha1(enc('abc'));
-            expect(warnings.some(w => w.includes('DEPRECATED'))).toBe(true);
-            expect(warnings.some(w => w.includes('SHA-1'))).toBe(true);
-            // Still returns a digest
-            expect(result).toBeInstanceOf(Uint8Array);
-            expect(result.byteLength).toBe(20); // SHA-1 = 160 bits
-        } finally {
-            console.warn = orig;
-        }
-    });
-
-    test('sha1("abc") → correct SHA-1 digest (FIPS 180-4)', async () => {
-        const orig = console.warn;
-        console.warn = () => {};
-        try {
-            const result = await _d.sha1(enc('abc'));
-            // SHA-1("abc") = a9993e364706816aba3e25717850c26c9cd0d89d
-            expect(toHex(result)).toBe('a9993e364706816aba3e25717850c26c9cd0d89d');
-        } finally {
-            console.warn = orig;
-        }
+describe('webcryptoDigest — SHA-1 through digest()', () => {
+    test("digest('SHA-1', 'abc') gives the FIPS 180-4 digest", async () => {
+        const out = await _d.digest('SHA-1', new TextEncoder().encode('abc'));
+        expect(Buffer.from(out).toString('hex')).toBe('a9993e364706816aba3e25717850c26c9cd0d89d');
     });
 });
 

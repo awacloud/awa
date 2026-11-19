@@ -58,6 +58,12 @@ result.document.body[0].rows[0].cells[0].tcPr.borders.top; // { val:'single', sz
 
 ## Notes
 
+- **Lossless.** The table, row and cell hooks type an element only when it is written
+  back as read (`docxProperties.hydrateLossless`, and `sameElement` for a
+  whole `tblPr` / `trPr`): an attribute the typed field does not keep, an
+  empty element or a name held twice leaves the element in `_extras` as
+  read, so a save-back through the bundle writes what the core's writes.
+
 - Border bags share the shape `{ val, sz, color, space?, themeColor? }`.
 - `tblpPr` carries floating-table positioning (relative anchors).
 

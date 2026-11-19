@@ -97,6 +97,9 @@ const mod = await import(${BASE_URL});
 // The element is created BEFORE the lock (post-lock DOM construction is
 // unreliable under happy-dom, see the header).
 const el = document.createElement('div');
+const adj = document.createElement('div');
+const range = document.createRange();
+T('before_range_fragment_parses', range.createContextualFragment('<b>x</b>').childNodes.length === 1);
 
 // ── "Before": observable only because the module is explicit-call. ──
 T('before_Math_random_ok', typeof Math.random() === 'number');
@@ -107,6 +110,7 @@ T('before_JSON_parse_reviver_ok', JSON.parse('{"a":1}', (k, v) => v).a === 1);
 const r1 = mod.applyBase();
 T('apply_returns_applied_true', r1.applied === true);
 T('apply_has_no_reason', r1.reason === undefined);
+T('apply_reports_failures_array', Array.isArray(r1.failures));
 
 // ── "After": the documented base guarantees. ──
 THROWS('after_Math_random_throws', () => Math.random());
@@ -115,17 +119,27 @@ T('after_JSON_frozen', Object.isFrozen(JSON));
 THROWS('after_JSON_parse_reviver_throws', () => JSON.parse('{"a":1}', (k, v) => v));
 THROWS('after_setTimeout_string_throws', () => setTimeout('x', 0));
 THROWS('after_document_write_throws', () => document.write('<b>x</b>'));
+THROWS('after_range_contextual_fragment_throws', () => range.createContextualFragment('<b>x</b>'));
 T('after_Date_now_rounded', Date.now() % 100 === 0);
 
 // innerHTML → innerText redirect (never via querySelector — see the header).
 el.innerHTML = '<b>bold</b>';
 T('after_innerHTML_redirected_to_text', el.textContent === '<b>bold</b>' && el.childElementCount === 0);
 
+// The __proto__ guard must not break the accessor on prototypes that do not
+// own it, and insertAdjacentHTML must insert text as documented.
+T('after_array_proto_accessor_intact', [].__proto__ === Array.prototype);
+T('after_object_proto_accessor_intact', ({}).__proto__ === Object.prototype);
+THROWS('after_proto_set_throws', () => { ({}).__proto__ = {}; });
+let adjOk = false;
+try { adj.insertAdjacentHTML('beforeend', '<b>x</b>'); adjOk = adj.textContent === '<b>x</b>' && adj.childElementCount === 0; } catch { adjOk = false; }
+T('after_insertAdjacentHTML_inserts_text', adjOk);
+
 // ── Idempotence: a second call is a no-op that says so. ──
 const r2 = mod.applyBase();
 T('second_call_is_noop', r2.applied === false && r2.reason === 'already-applied');
 T('second_call_reports_empty_steps', Array.isArray(r2.steps) && r2.steps.length === 0);
-finish({ realm: 'B', steps: r1.steps });
+finish({ realm: 'B', steps: r1.steps, failures: r1.failures });
 `;
 
 function runProbe(src) {
@@ -245,6 +259,25 @@ describe('sanity/base', () => {
             assertProbeRan(realmB, 'B');
             expect(realmB.parsed.checks.after_Date_now_rounded).toBe(true);
             expect(realmB.parsed.checks.after_innerHTML_redirected_to_text).toBe(true);
+        });
+
+        test('after applyBase(): the __proto__ accessor still reads, writes still throw', () => {
+            assertProbeRan(realmB, 'B');
+            expect(realmB.parsed.checks.after_array_proto_accessor_intact).toBe(true);
+            expect(realmB.parsed.checks.after_object_proto_accessor_intact).toBe(true);
+            expect(realmB.parsed.checks.after_proto_set_throws).toBe(true);
+        });
+
+        test('after applyBase(): insertAdjacentHTML inserts text, as documented', () => {
+            assertProbeRan(realmB, 'B');
+            expect(realmB.parsed.checks.after_insertAdjacentHTML_inserts_text).toBe(true);
+        });
+
+        test('applyBase() reports the failures it swallows', () => {
+            assertProbeRan(realmB, 'B');
+            expect(realmB.parsed.checks.apply_reports_failures_array).toBe(true);
+            expect(realmB.parsed.failures.every((f) => typeof f.step === 'string'
+                && typeof f.target === 'string' && typeof f.message === 'string')).toBe(true);
         });
 
         test('applyBase() returns the frozen 15-step order', () => {

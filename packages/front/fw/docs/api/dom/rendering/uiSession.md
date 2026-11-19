@@ -31,7 +31,7 @@ const ui = uiSession('myContext');
 
 ```js
 const tpl = runtime.resolve('template');
-tpl.init('content', { to: '#app' });
+tpl.init('content', { to: '#app', main: true });   // main: the shared tag catalogue
 
 const ui = uiSession('content');
 ```
@@ -88,7 +88,7 @@ Alias for `add` — semantically explicit for appending.
 
 ### `ui.prepend(items[])` → this
 
-Inserts blocks **before** existing content.
+Inserts blocks **before** existing content — before the first existing child of each item's target (the session container, or the slot of an `attach`). Several prepended items keep their order: `ui.prepend([a, b])` gives `a, b, …existing`. `ui.add([{ …, prepend: true }])` does the same for that item.
 
 ```js
 ui.prepend([{ id: 'banner', block: b, data: { msg: 'Header' } }]);
@@ -120,6 +120,7 @@ ui.hydrate(
 - All subsequent operations (`ui.text/attr/on/list/clear/remove/...`) work normally.
 - `ui.clear(blockId)` removes the block from the DOM with its usual cascade.
 - Throws with an explicit message if an expected `data-fw-id` is missing (template ↔ SSR HTML mismatch).
+- The rows of an SSR iterate block share their `data-fw-id` values and carry `data-fw-row="<i>"` (their index); `ui.list(…).adopt(rows)` takes them over by position.
 
 **v1 limitations**:
 - Iterate blocks (`<!-- $name -->`) are not auto-reconnected to a `ui.list`. The wrapper is adopted, but to react to the array, call `ui.list(parent, slot, …).sync(items)` after hydrate.
@@ -349,9 +350,9 @@ ui.list(parent, slot, {
 For each `sync(items)` call:
 
 1. **Remove**: every key present before and absent after → `ui.clear(itemId)` (releases DOM + managed listeners).
-2. **Add**: every new key → mount at the end (will be reordered in phase 3).
+2. **Add**: every new key → mount at the end (will be reordered in step 3).
 3. **Update**: key present and `eqFn(old, new) === false` → `clear+add` of the item block (re-render), unless `onUpdate` is `'patch'`/`'none'`/a custom function — see [Update modes](#update-modes-onupdate). Otherwise, no change.
-4. **Reorder**: `dom.reorder` reorders existing nodes with minimal moves whenever the current key order differs from `newKeys`, **or** whenever phase 3 replaced at least one item (a `'replace'`d row is a fresh DOM node freshly mounted at the slot's end, regardless of its position in the key sequence — the key-sequence diff alone can't see that the row moved). `delta.reordered` reflects whichever condition fired.
+4. **Reorder**: `dom.reorder` reorders existing nodes with minimal moves whenever the current key order differs from `newKeys`, **or** whenever step 3 replaced at least one item (a `'replace'`d row is a fresh DOM node freshly mounted at the slot's end, regardless of its position in the key sequence — the key-sequence diff alone can't see that the row moved). `delta.reordered` reflects whichever condition fired.
 
 `upsert(item)` and `update(key, item)` apply the same rule for a single key: a `'replaced'` outcome from `_replaceItem` restores the row's position via the same reorder pass, even though the key's index in the list didn't change. A `'patched'` or `'unchanged'` outcome never moves the node, so no reorder runs for it.
 
@@ -468,6 +469,18 @@ Guarantees:
 
 For individual **list** items, see `ui.list(parent, slot, { onRemove })` which covers the same need per item.
 
+---
+
+### `ui.portal(name, opts?)` → UISession · `ui.closePortal(name)` → this
+
+Opens a side session rendered outside the session's container — a modal, a toast, a menu — typically on `document.body` (the default `opts.to`). The portal renders into a host it owns, `<div data-fw-portal="<name>">`, appended to the target: `portal.clear()` empties that host and `ui.closePortal(name)` removes it, so neither ever touches the target or the target's other children. `portal(name)` is idempotent by name; a closed portal reopens as a fresh session with a fresh host. A full `ui.clear()` closes every portal.
+
+```js
+const modal = ui.portal('modal');                 // into document.body
+modal.add([{ id: 'dlg', block: dialogTpl, data: { title: 'Save?' } }]);
+ui.closePortal('modal');                          // body and the page stay
+```
+
 ## Examples
 
 ### Basic example
@@ -481,7 +494,7 @@ domReady.loaded(() => {
     const uiSession = runtime.resolve('uiSession');
     const dom = runtime.resolve('dom');
 
-    tpl.init('app', { to: '#root' });
+    tpl.init('app', { to: '#root', main: true });
     const ui = uiSession('app');
 
     const b = ui.parse('<div><h1>#{title}</h1><p>#{body}</p></div>');

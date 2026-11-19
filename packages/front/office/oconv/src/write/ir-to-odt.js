@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `oconvIrToOdt` — `oconv-ir/v1` → `.odt` bytes (tier 2),
+ * @fileoverview `oconvIrToOdt` — `oconv-ir/v2` → `.odt` bytes (tier 2),
  * composing `@awacloud/odf`'s documented typed body model and producing
  * bytes through `odt.write({ body }, { styles })` ONLY: the typed body plus
  * one fixed, typed named-styles object (§ Styles part below).
@@ -25,8 +25,9 @@
  *
  * | IR | odt typed node | Loss |
  * |---|---|---|
- * | `heading{level}` | `{type:'heading', outlineLevel:level, styleName:'Heading_20_'+level, runs}` — the name is presentation only; the read leg recovers the level from `outlineLevel` | — |
- * | `paragraph` | `{type:'paragraph', runs}` | — |
+ * | `heading{level}` | `{type:'heading', outlineLevel:level, styleName:'Heading_20_'+level, runs}` — the name is presentation only; the read leg recovers the level from `outlineLevel`. With an `align` or a `breakBefore` (v2), the style is an automatic `P<n>` child of `Heading_20_<level>` | — |
+ * | `run` (v2 values) | a run with a `size`, `font`, `color`, `underline` or `script` puts its text in a span naming an automatic text style `T<n>` (`fo:font-size`, `fo:font-family`, `fo:color`, a solid underline, `style:text-position`), inside its flags span when it has one | — |
+ * | `paragraph` | `{type:'paragraph', runs}`; with an `align` or a `breakBefore` (v2), `styleName` an automatic `P<n>` (`fo:text-align`, `fo:break-before="page"`; no parent, a quote's `Quotations`) | — |
  * | `list` (bullet or ordered) | `{type:'list', ordered, items:[{children:[…]}]}` — nesting PRESERVED; ordered lists also carry `numFormat:'1'` (md ordered lists are decimal) | — |
  * | `listItem` | one `items[]` entry, children = mapped blocks; a GFM task item (`escapes.md.task`, set by the md reader) gets a plain leading `☐ ` (U+2610, unchecked) or `☒ ` (U+2612, checked) text run in its first paragraph | `{code:'list/task-marker-dropped', detail:'[x]'\|'[ ]'}` only when a task item's first block is not a paragraph (the md reader never builds one) |
  * | `table` | typed `{type:'table', grid:true, columns, headerRows, rows:[{type:'row', cells:[{type:'cell', children:[…typed blocks]}]}]}` — leading IR rows with `header:true` become `headerRows`; cell content is fully typed by recursing `mapBlock`; `grid:true` makes `@awacloud/odf` synthesise bordered cells (`awa-c-b`) and a margins-aligned table (`awa-tb-m`); a table without a row is not written (ODF needs one) | — |
@@ -34,6 +35,8 @@
  * | `blockquote` | each `paragraph` child → `{type:'paragraph', styleName:'Quotations', runs}`; a nested quote's paragraphs too; any other child keeps its own mapping, emitted in place | `{code:'block/degraded', detail:'blockquote:nested'}` per nested quote; `{code:'block/degraded', detail:'blockquote-child:<kind>'}` per non-paragraph child |
  * | `hr` | an EMPTY `{type:'paragraph', styleName:'Horizontal_20_Line', runs:[]}` | — |
  * | `image` (bytes reachable) | an odt `frame` run `{type:'frame', anchorType:'as-char', width, height, child:{kind:'image', href:'Pictures/image<k>.<ext>'}}` — its intrinsic size, else `5.08cm` × `3.81cm`; a non-empty `alt` as an `svg:title` raw child (`_extras.children`) — inline in place within its paragraph's runs, or as its own `{type:'paragraph', runs:[<frame run>]}` at block position; the bytes become the package part `href` names (§ Images below) | `{code:'image/size-defaulted', detail:name}` only when no size is read |
+ * | `field` (v2, T80) | a raw run of the paragraph model: `text:page-number` (`text:select-page="current"`) for `page`, `text:page-count` for `pages`, holding its `text`; inside its flags span and its `T<n>` span as a run's text is | — |
+ * | `note` (v2, T81) | `@awacloud/odf`'s typed note run (`text:note`): `id` `ftn<k>` / `edn<k>` (k counting each class in document order), `noteClass` its `class`, the citation its `mark` (also its `label`) or its number among its class's automatic notes, its body its blocks mapped as the body's are | `{code:'note/dropped', detail:'nested'}` for a note inside a note's body, not written |
  * | `image` (no bytes reachable) | an odt `frame` run with no content child (`{type:'frame', anchorType:'as-char', width:'5.08cm', height:'3.81cm'}`), its name and alt written as for a placed image, at the same place | `{code:'image/placeholder', detail:name}` |
  *
  * ## Styles part
@@ -68,6 +71,21 @@
  * `odfStyles.serialize`; the table borders
  * and the margins alignment come from the `grid` seam of `odf`'s body
  * table model, never from a style built here.
+ *
+ * ## Headers and footers (T80)
+ *
+ * `document.header` and `document.footer` (v2) are written in the master
+ * page `Standard` of `styles.xml`, in the schema's order: `style:header`
+ * (the default slot), `style:header-left` (`even`, when not `null`),
+ * `style:header-first` (`first`, when not `null`), then the footer's
+ * three. The master page is written when the page or a region is stated;
+ * a region without a page names a page layout `pm1` with no properties.
+ * Each slot's blocks are mapped as the body's are (images placed in the
+ * same `Pictures/`, frame names unique across the document) and given to
+ * `@awacloud/odf` as the element's `content`, which `odt.write` renders
+ * (the write side of its `headerFooterContent`). Their alignment, breaks
+ * and run values are automatic styles of `styles.xml`, `MP<n>` and
+ * `MT<n>`, as `content.xml`'s are `P<n>` and `T<n>`.
  *
  * ## Images and `opts.assets`
  *
@@ -181,15 +199,57 @@ export const oconvIrToOdt = {
         }
 
         /**
-         * Map one IR `run` node to one odt run, appended to `runs`. A
-         * non-empty `link` target wraps the flags-mapped run in a `link`
-         * run (`text:a`). NO loss.
+         * The automatic text style of a run's tier-3 props (T27 c), or
+         * `null` when it states none: `T<n>` in first-use order, one per
+         * distinct set, with `fo:font-size`, `fo:font-family`, `fo:color`,
+         * a solid underline and `style:text-position`.
+         */
+        function runStyle(n, ctx) {
+            const prefix = ctx.prefix || '';
+            const text = {};
+            if (typeof n.size === 'number') text['fo:font-size'] = `${Number(n.size.toFixed(4))}pt`;
+            if (typeof n.font === 'string' && n.font) text['fo:font-family'] = `'${n.font.replace(/'/g, '')}'`;
+            if (typeof n.color === 'string') text['fo:color'] = n.color;
+            if (n.underline === true) {
+                text['style:text-underline-style'] = 'solid';
+                text['style:text-underline-width'] = 'auto';
+                text['style:text-underline-color'] = 'font-color';
+            }
+            if (n.script === 'super' || n.script === 'sub') text['style:text-position'] = `${n.script} 58%`;
+            const keys = Object.keys(text);
+            if (!keys.length) return null;
+            const key = keys.map((k) => `${k}=${text[k]}`).join('|');
+            let name = ctx.runStyles.get(key);
+            if (!name) {
+                name = prefix + 'T' + (ctx.runStyles.size + 1);
+                ctx.runStyles.set(key, name);
+                ctx.autoStyles.push({ name, family: 'text', properties: { text } });
+            }
+            return name;
+        }
+
+        /**
+         * Map one IR `run` node to one odt run, appended to `runs`. A run
+         * stating a size, a font, a colour, an underline or a script (v2)
+         * puts its text in a span naming its `T<n>` style, inside the
+         * flags span when it has one. A
+         * non-empty `link` target wraps it in a `link` run (`text:a`). NO
+         * loss.
          *
          * @param {object} n IR run node
          * @param {object[]} runs odt runs accumulator
+         * @param {object} [ctx] the writer's context (its automatic styles)
          */
-        function mapRun(n, runs) {
-            const inner = mapRunFlags(n);
+        function mapRun(n, runs, ctx) {
+            let inner = mapRunFlags(n);
+            const styleName = ctx ? runStyle(n, ctx) : null;
+            if (styleName) {
+                // The T<n> span is the innermost: its font wins over a code
+                // run's monospace face, which stays on the flags span.
+                const styled = { type: 'span', styleName, value: inner.value };
+                inner = inner.type === 'span' ? { ...inner, value: undefined, runs: [styled] } : styled;
+                if (inner.value === undefined) delete inner.value;
+            }
             if (typeof n.link === 'string' && n.link) {
                 runs.push({ type: 'link', href: n.link, runs: [inner] });
             } else {
@@ -399,9 +459,15 @@ export const oconvIrToOdt = {
             const runs = [];
             for (const n of children || []) {
                 if (!n || typeof n !== 'object') continue;
-                if (n.kind === 'run') { mapRun(n, runs); continue; }
+                if (n.kind === 'run') { mapRun(n, runs, ctx); continue; }
                 if (n.kind === 'image') {
                     const run = placeImage(n, losses, ctx);
+                    if (run) runs.push(run);
+                    continue;
+                }
+                if (n.kind === 'field') { runs.push(styledField(n, ctx)); continue; }
+                if (n.kind === 'note') {
+                    const run = mapNote(n, losses, ctx);
                     if (run) runs.push(run);
                     continue;
                 }
@@ -410,8 +476,91 @@ export const oconvIrToOdt = {
         }
 
         /**
+         * A page field (v2, T80) as a raw run of odf's paragraph model:
+         * `text:page-number` (the current page) or `text:page-count`,
+         * holding the text the source showed.
+         */
+        function fieldRun(n) {
+            const pages = n.name === 'pages';
+            const text = typeof n.text === 'string' ? n.text : '';
+            return {
+                type: 'element',
+                name: pages ? 'text:page-count' : 'text:page-number',
+                attrs: pages ? {} : { 'text:select-page': 'current' },
+                children: text ? [{ type: 'text', value: text }] : []
+            };
+        }
+
+        /**
+         * A `note` (T81) as odf's typed note run: its id (`ftn<k>`,
+         * `edn<k>`), class, citation (its mark, else its number among its
+         * class's automatic notes; the mark is the label too) and body, the
+         * note's blocks mapped as the body's are. A note inside a note's
+         * body is not written (`note/dropped`, detail `nested`).
+         */
+        function mapNote(n, losses, ctx) {
+            if (ctx.inNote) {
+                losses.push({ code: 'note/dropped', detail: 'nested' });
+                return null;
+            }
+            const cls = n.class === 'endnote' ? 'endnote' : 'footnote';
+            const k = ++ctx.notes[cls];
+            const mark = typeof n.mark === 'string' && n.mark ? n.mark : null;
+            const citation = mark || String(++ctx.notes.auto[cls]);
+            const inner = { ...ctx, inNote: true };
+            const body = [];
+            for (const block of n.children || []) for (const m of mapBlock(block, losses, inner)) body.push(m);
+            const run = { type: 'note', id: (cls === 'endnote' ? 'edn' : 'ftn') + k, noteClass: cls, citation, body };
+            if (mark) run.label = mark;
+            return run;
+        }
+
+        /**
+         * A field inside the spans a run of the same props gets: its
+         * `T<n>` span innermost, its flags span around it.
+         */
+        function styledField(n, ctx) {
+            let inner = fieldRun(n);
+            const styleName = runStyle(n, ctx);
+            if (styleName) inner = { type: 'span', styleName, runs: [inner] };
+            const flags = mapRunFlags({ ...n, text: '' });
+            if (flags.type === 'span') {
+                delete flags.value;
+                flags.runs = [inner];
+                inner = flags;
+            }
+            return inner;
+        }
+
+        /**
+         * The style a paragraph or heading names (T27 b): `parent` itself
+         * when the block states no `align` and no `breakBefore`; else an
+         * automatic paragraph style `P<n>` (first-use order, one per
+         * distinct parent, alignment and break) with `fo:text-align` and
+         * `fo:break-before="page"`, child of `parent` (none for a plain
+         * paragraph: the default style).
+         */
+        function blockStyle(n, parent, ctx) {
+            const align = n && typeof n.align === 'string' ? n.align : null;
+            const brk = !!(n && n.breakBefore === true);
+            if (!align && !brk) return parent;
+            const key = `${parent || ''}|${align || ''}|${brk ? 'page' : ''}`;
+            let name = ctx.blockStyles.get(key);
+            if (!name) {
+                name = (ctx.prefix || '') + 'P' + (ctx.blockStyles.size + 1);
+                ctx.blockStyles.set(key, name);
+                const paragraph = {};
+                if (align) paragraph['fo:text-align'] = align;
+                if (brk) paragraph['fo:break-before'] = 'page';
+                ctx.autoStyles.push({ name, family: 'paragraph', ...(parent ? { parentStyleName: parent } : {}), properties: { paragraph } });
+            }
+            return name;
+        }
+
+        /**
          * `heading` → a typed heading naming the fixed `Heading_20_<level>`
-         * style (level clamped to 1..6; the IR validates 1..6 already).
+         * style (level clamped to 1..6; the IR validates 1..6 already), or
+         * its `P<n>` child when it states an alignment or a break.
          */
         function mapHeading(n, losses, ctx) {
             let level = Number.isInteger(n.level) ? n.level : 1;
@@ -420,7 +569,7 @@ export const oconvIrToOdt = {
             return {
                 type: 'heading',
                 outlineLevel: level,
-                styleName: 'Heading_20_' + level,
+                styleName: blockStyle(n, 'Heading_20_' + level, ctx),
                 runs: mapInlines(n.children, losses, ctx)
             };
         }
@@ -434,7 +583,9 @@ export const oconvIrToOdt = {
          */
         function mapParagraph(n, losses, ctx) {
             const runs = mapInlines(n.children, losses, ctx);
-            return runs.length === 0 ? [] : [{ type: 'paragraph', runs }];
+            if (runs.length === 0) return [];
+            const styleName = blockStyle(n, undefined, ctx);
+            return [styleName ? { type: 'paragraph', styleName, runs } : { type: 'paragraph', runs }];
         }
 
         /**
@@ -528,7 +679,7 @@ export const oconvIrToOdt = {
             for (const child of n.children || []) {
                 if (child && child.kind === 'paragraph') {
                     const runs = mapInlines(child.children, losses, ctx);
-                    if (runs.length) out.push({ type: 'paragraph', styleName: 'Quotations', runs });
+                    if (runs.length) out.push({ type: 'paragraph', styleName: blockStyle(child, 'Quotations', ctx), runs });
                     continue;
                 }
                 if (child && child.kind === 'blockquote') {
@@ -624,15 +775,60 @@ export const oconvIrToOdt = {
             }
         }
 
+        /** A length in points as an ODF measure: at most 4 decimals, no trailing zeros. */
+        function points(v) {
+            return `${Number(v.toFixed(4))}pt`;
+        }
+
         /**
-         * Build the single `styles` object this writer ever emits —
-         * deterministic, input-free, caller-invisible: the typed named
-         * paragraph styles `Standard`, `Text_20_body`, `Heading` and
-         * `Heading_20_1`..`Heading_20_6` (see "Styles part" above).
+         * `oconv-ir/v2`'s `document.page` (T27 a): one automatic page
+         * layout `pm1` (size, orientation, and the four margins when
+         * given) used by one master page `Standard`, which a reader applies
+         * to every paragraph naming no master page; the master page holds
+         * `regions`, the headers' and footers' elements (T80). A `null`
+         * page and no region (or a v1-shaped document) writes neither; a
+         * region without a page names a `pm1` with no properties.
          *
+         * @param {object|null} page
+         * @param {object[]} [regions] the master page's header and footer elements.
+         */
+        function pageStyles(page, regions) {
+            const el = (name, a, children) => ({ type: 'element', name, attrs: a, children: children || [] });
+            const kids = regions || [];
+            if (!page && !kids.length) return { automaticStyles: [], masterStyles: [] };
+            if (!page) {
+                return {
+                    automaticStyles: [el('style:page-layout', { 'style:name': 'pm1' })],
+                    masterStyles: [el('style:master-page', { 'style:name': 'Standard', 'style:page-layout-name': 'pm1' }, kids)]
+                };
+            }
+            const attrs = {
+                'fo:page-width': points(page.width),
+                'fo:page-height': points(page.height),
+                'style:print-orientation': page.orientation
+            };
+            if (page.margins) {
+                for (const side of ['top', 'right', 'bottom', 'left']) attrs[`fo:margin-${side}`] = points(page.margins[side]);
+            }
+            return {
+                automaticStyles: [el('style:page-layout', { 'style:name': 'pm1' }, [el('style:page-layout-properties', attrs)])],
+                masterStyles: [el('style:master-page', { 'style:name': 'Standard', 'style:page-layout-name': 'pm1' }, kids)]
+            };
+        }
+
+        /**
+         * Build the `styles` object this writer emits — deterministic,
+         * caller-invisible: the typed named paragraph styles `Standard`,
+         * `Text_20_body`, `Heading` and `Heading_20_1`..`Heading_20_6` (see
+         * "Styles part" above), the page of `page` and the master page's
+         * `regions` (`pageStyles`), and the regions' automatic styles.
+         *
+         * @param {object|null} [page] `oconv-ir/v2` `document.page`.
+         * @param {object[]} [regions] the header and footer elements (T80).
+         * @param {object[]} [regionStyles] their typed automatic styles (`MP<n>`, `MT<n>`).
          * @returns {{styles: object[], automaticStyles: object[], masterStyles: object[]}}
          */
-        function buildStyles() {
+        function buildStyles(page, regions, regionStyles) {
             const HEADING_SIZES = ['16pt', '14pt', '13pt', '12pt', '11pt', '11pt'];
             const specs = [
                 { name: 'Standard', family: 'paragraph', class: 'text' },
@@ -720,13 +916,15 @@ export const oconvIrToOdt = {
                     }
                 }
             });
-            return { styles: specs, automaticStyles: [], masterStyles: [] };
+            const pageParts = pageStyles(page, regions);
+            return { styles: specs, ...pageParts, automaticStyles: [...pageParts.automaticStyles, ...(regionStyles || [])] };
         }
 
         /**
-         * Convert an `oconv-ir/v1` document to `.odt` bytes.
+         * Convert an `oconv-ir/v2` document to `.odt` bytes (its
+         * `document.page`, when given, as the page layout).
          *
-         * @param {object} ir `oconv-ir/v1` document node.
+         * @param {object} ir `oconv-ir/v2` document node.
          * @param {{assets?: Object<string, Uint8Array>}} [opts] Same
          *   `assets` manifest as `oconvIrToDocx.irToDocx` /
          *   `oconvIrToPdf.irToPdf`. An image whose bytes are reachable
@@ -741,7 +939,12 @@ export const oconvIrToOdt = {
          *   as `oconvIrToDocx`: `oconv: invalid ir (<code> at <path>)`.
          */
         function irToOdt(ir, opts) {
-            const ctx = { assets: opts && opts.assets, paths: new Map(), pictures: {}, frameNames: new Set() };
+            const ctx = {
+                assets: opts && opts.assets, paths: new Map(), pictures: {}, frameNames: new Set(),
+                blockStyles: new Map(), runStyles: new Map(), autoStyles: [],
+                // T81: the notes written per class, and the automatic ones.
+                notes: { footnote: 0, endnote: 0, auto: { footnote: 0, endnote: 0 } }
+            };
             const v = irApi.validate(ir);
             if (!v.ok) {
                 const first = v.errors[0];
@@ -753,9 +956,26 @@ export const oconvIrToOdt = {
                 const mapped = mapBlock(block, losses, ctx);
                 for (const m of mapped) body.push(m);
             }
+            // T80: the headers and footers, mapped as the body is, their
+            // automatic styles `MP<n>` / `MT<n>` in styles.xml.
+            const rctx = { ...ctx, blockStyles: new Map(), runStyles: new Map(), autoStyles: [], prefix: 'M' };
+            const regions = [];
+            for (const [region, tags] of [['header', ['style:header', 'style:header-left', 'style:header-first']],
+                ['footer', ['style:footer', 'style:footer-left', 'style:footer-first']]]) {
+                const r = ir && ir[region];
+                if (!r) continue;
+                ['default', 'even', 'first'].forEach((slot, k) => {
+                    if (!Array.isArray(r[slot])) return;
+                    const content = [];
+                    for (const block of r[slot]) for (const m of mapBlock(block, losses, rctx)) content.push(m);
+                    regions.push({ type: 'element', name: tags[k], attrs: {}, children: [], content });
+                });
+            }
             // No placed image → the `pictures` key is omitted altogether.
             const doc = ctx.paths.size > 0 ? { body, pictures: ctx.pictures } : { body };
-            const bytes = odtApi.write(doc, { styles: buildStyles() });
+            // The paragraphs' and headings' alignment and breaks (T27 b).
+            if (ctx.autoStyles.length) doc.autoStyles = { styles: ctx.autoStyles };
+            const bytes = odtApi.write(doc, { styles: buildStyles(ir.page, regions, rctx.autoStyles) });
             return { bytes, losses };
         }
 

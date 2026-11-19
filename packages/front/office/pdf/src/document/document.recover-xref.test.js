@@ -4,10 +4,9 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `readDocument(bytes, { recoverXref: true })` — the
- * cross-reference table rebuilt from the file's bytes when the
- * `startxref` / `/Prev` chain cannot be used; without the option every
- * read is today's.
+ * @fileoverview `readDocument` rebuilds the cross-reference table from the
+ * file's bytes when the `startxref` / `/Prev` chain cannot be used — by
+ * default since T30 (b); `recoverXref: false` keeps the walk's error.
  */
 
 import { describe, test, expect } from 'bun:test';
@@ -62,9 +61,10 @@ function codeOf(fn) {
 describe('readDocument — recoverXref', () => {
     const wrongStartxref = build(BASE, classicTail(3, '<< /Size 4 /Root 1 0 R >>', 7));
 
-    test('a wrong startxref throws today; with the option the table is rebuilt', () => {
-        expect(codeOf(() => readDocument(wrongStartxref))).toMatch(/^pdf\//);
-        const doc = readDocument(wrongStartxref, { recoverXref: true });
+    test('a wrong startxref is rebuilt by default; recoverXref: false keeps the error', () => {
+        expect(codeOf(() => readDocument(wrongStartxref, { recoverXref: false }))).toMatch(/^pdf\//);
+        expect(rebuilt(readDocument(wrongStartxref, { recoverXref: true })).length).toBe(1);
+        const doc = readDocument(wrongStartxref);
         expect(doc.pages.length).toBe(1);
         expect(doc.catalog.pages).toEqual({ num: 2, gen: 0 });
         expect(rebuilt(doc).length).toBe(1);
@@ -73,11 +73,25 @@ describe('readDocument — recoverXref', () => {
         expect(doc.xref.sections).toEqual([{ at: null, kind: 'rebuilt', entries: doc.xref.entries }]);
     });
 
-    test('only true enables it: any other value reads as today', () => {
-        const today = codeOf(() => readDocument(wrongStartxref));
-        for (const v of [false, 1, 'yes', {}, null]) {
-            expect(codeOf(() => readDocument(wrongStartxref, { recoverXref: v }))).toBe(today);
+    test('only false turns it off: any other value rebuilds', () => {
+        expect(codeOf(() => readDocument(wrongStartxref, { recoverXref: false }))).toMatch(/^pdf\//);
+        for (const v of [true, undefined, 1, 'yes', {}, null]) {
+            expect(rebuilt(readDocument(wrongStartxref, { recoverXref: v })).length).toBe(1);
         }
+    });
+
+    test('a byte source whose chain fails is read whole and rebuilt, as its bytes are', () => {
+        const source = {
+            byteLength: wrongStartxref.length,
+            read: (offset, length) => wrongStartxref.slice(offset, offset + length)
+        };
+        const fromSource = readDocument(source);
+        const fromBytes = readDocument(wrongStartxref);
+        expect(fromSource.pages.length).toBe(fromBytes.pages.length);
+        expect(fromSource.xref.entries).toEqual(fromBytes.xref.entries);
+        expect(rebuilt(fromSource)).toEqual(rebuilt(fromBytes));
+        expect(codeOf(() => readDocument(source, { recoverXref: false })))
+            .toBe(codeOf(() => readDocument(wrongStartxref, { recoverXref: false })));
     });
 
     test('a readable chain is not rebuilt: no loss, the sections as read', () => {
@@ -92,8 +106,8 @@ describe('readDocument — recoverXref', () => {
             num: 4,
             body: '<< /Type /XRef /Size 5 /W [1 2 1] /Root 1 0 R /Filter /XXXDecode /Length 4 >>\nstream\nxxxx\nendstream'
         }], (offsets) => `startxref\n${offsets[4]}\n%%EOF\n`);
-        expect(codeOf(() => readDocument(bytes))).toBe('pdf/filter/unsupported');
-        const doc = readDocument(bytes, { recoverXref: true });
+        expect(codeOf(() => readDocument(bytes, { recoverXref: false }))).toBe('pdf/filter/unsupported');
+        const doc = readDocument(bytes);
         expect(doc.pages.length).toBe(1);
         expect(doc.trailer.root).toEqual({ num: 1, gen: 0 });
         expect(rebuilt(doc)[0].context.cause).toBe('pdf/filter/unsupported');
@@ -128,8 +142,8 @@ describe('readDocument — recoverXref', () => {
 
     test('no trailer anywhere: the last catalog found is the root', () => {
         const bytes = build(BASE, () => '%%EOF\n');
-        expect(codeOf(() => readDocument(bytes))).toBe('pdf/document/no-startxref');
-        const doc = readDocument(bytes, { recoverXref: true });
+        expect(codeOf(() => readDocument(bytes, { recoverXref: false }))).toBe('pdf/document/no-startxref');
+        const doc = readDocument(bytes);
         expect(doc.trailer.root).toEqual({ num: 1, gen: 0 });
         expect(doc.pages.length).toBe(1);
         expect(rebuilt(doc)[0].context.cause).toBe('pdf/document/no-startxref');

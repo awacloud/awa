@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -12,7 +12,7 @@
  * Block size: 512 bits (identical to SHA-256, required for HMAC-SHA-224).
  *
  * **Architecture (post-upgrade audit)**: this module is now a thin wrapper
- * over `sha256._internal.makeSha(_INIT_224, 7)` - previously it duplicated
+ * over the `makeSha(_INIT_224, 7)` of sha256's internal slot - previously it duplicated
  * the 80 LOC of the compression function. Mirrors the
  * `sha512_224.js` / `sha512_256.js` pattern.
  *
@@ -33,7 +33,7 @@ import { sha256 } from './sha256.js';
  */
 
 /**
- * Object returned by `sha224.factory()` (delegates to `sha256._internal.makeSha`).
+ * Object returned by `sha224.factory()` (delegates to the `makeSha` of sha256's internal slot).
  * @typedef {object} Sha224API
  * @property {new (hash?: Sha224Hasher) => Sha224Hasher} fn Streaming hasher constructor (optional arg clones an existing instance).
  * @property {(data: number[]|string) => number[]} hash One-shot hash; returns the 224-bit digest as a bitArray.
@@ -55,6 +55,6 @@ export const sha224 = {
         ];
 
         // outWords = 7 → 7 × 32-bit = 224 bits (FIPS 180-4 §6.3 truncation).
-        return sha256._internal.makeSha(_INIT_224, 7);
+        return sha256[Symbol.for('@awacloud/fw/internal')].makeSha(_INIT_224, 7);
     }
 };

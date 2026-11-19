@@ -6,16 +6,18 @@ Runnable examples for `@awacloud/fw`. Each subfolder has a `README.md`
 | Axis | Folder | Purpose |
 |---|---|---|
 | **Integrations** | [`integrations/`](./integrations/README.md) | one example per integration (bundlers, frameworks, runners, runtimes) |
+| **Use cases** | [`usecases/`](./usecases/README.md) | small realistic apps: a web app, progressive enhancement, crypto in a worker, a PWA |
 
-`starters/` and `usecases/` return after the first publication, rewritten at
-the monorepo quality bar.
+The starter templates (`hello`, `todo`, `vite-ts`, `worker-rpc`) live with
+the scaffolding CLI, in the monorepo's `tools/create-fw-app/templates/`:
+`bun cli.ts create-fw-app <template> <dir>` from the monorepo root.
 
 ## Navigable index
 
 [`index.html`](./index.html) renders [`examples.json`](./examples.json), a
 dynamic index built with `@awacloud/fw` itself. Serve the **package root**,
-then open `/playground/`: `npx serve --no-clean-urls .` (from
-`packages/front/fw`).
+then open `/playground/`: `node playground/_tools/serve.mjs .` (from
+`packages/front/fw`; http://127.0.0.1:4800/playground/).
 
 Regenerate `examples.json` after adding/renaming an example:
 `node playground/_tools/gen-index.mjs`.

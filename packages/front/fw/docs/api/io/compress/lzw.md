@@ -22,13 +22,17 @@ decode, requires no window, and performs well on locally repeated data.
 
 ## Wire-format profiles
 
-| Family | `bigEndian` | `useClearEnd` | `minCodeBits` | Used by |
-|--------|-------------|---------------|---------------|---------|
-| GIF | `false` (LSB-first) | `true` (CLEAR + END) | 8 (variable) | `image/gif` |
-| TIFF | `true` (MSB-first) | `true` | 8 | `image/tiff` |
-| `compress` / `.Z` | `false` | `false` | 8 | Unix |
+| Family | `bigEndian` | `earlyChange` | `useClearEnd` | `minCodeBits` | Used by |
+|--------|-------------|---------------|---------------|---------------|---------|
+| GIF | `false` (LSB-first) | `false` | `true` (CLEAR + END) | 2–8, the image's | `image/gif` |
+| TIFF, PDF `LZWDecode` | `true` (MSB-first) | `true` | `true` | 8 | `image/tiff`, `application/pdf` |
+| `compress` / `.Z` | `false` | `false` | `false` | 8 | Unix |
 
-**Defaults match the GIF profile**. Override `bigEndian: true` for TIFF.
+**Defaults match the GIF profile**; `bigEndian: true` alone is the TIFF / PDF
+profile (`earlyChange` defaults to `bigEndian`). `earlyChange` is when the
+code width grows: GIF widens once the table holds `2^n` entries, TIFF and PDF
+(`/EarlyChange 1`, its default) one code sooner. Both are checked against a
+foreign encoder and decoder (GDI+).
 
 ## Resolve
 
@@ -51,6 +55,7 @@ const lzw = runtime.resolve('lzw');
 | `minCodeBits` | `number` (2-12) | `8` | log2 of the initial alphabet (`1 << minCodeBits` first codes) |
 | `maxBits` | `number` (9-16) | `12` | Max code width before dictionary growth stops |
 | `bigEndian` | `boolean` | `false` | `false` = LSB-first packing (GIF/Z); `true` = MSB-first (TIFF) |
+| `earlyChange` | `boolean` | `bigEndian` | `true` = widen the code one code early (TIFF, PDF `/EarlyChange 1`); `false` = at `2^n` entries (GIF, .Z; PDF `/EarlyChange 0`) |
 | `useClearEnd` | `boolean` | `true` | Emit the `CLEAR = 1 << minCodeBits` and `END = CLEAR + 1` markers |
 
 > Options **must match** between encode and decode — the LZW container
@@ -106,7 +111,7 @@ const worker = fw.createWorker(
 
 ## Notes
 
-- The decoder incorporates the classic **lag** compensation of one entry relative to the encoder: code-width widening at `nextCode === (1 << codeBits) - 1` (instead of `=== (1 << codeBits)` on the encoder side).
+- The decoder lags the encoder by one entry (it adds nothing after the first code), so each side tests its own count: GIF widens at `2^n` entries on the decoder side (`2^n + 1` on the encoder's), early change one entry sooner on both.
 - Handles the **KwKwK** case (code referring to the entry being created) — tested via the canonical sequence `"TOBEORNOTTOBEORTOBEORNOT"`.
 - Once `nextCode > (1 << maxBits) - 1`, the dictionary stops growing; existing codes continue to be emitted at `maxBits`. No automatic reset (compress "block mode" / GIF "CLEAR on full" strategy is left to the consumer, which can manually insert a CLEAR via options).
 - Edge case: empty input → stream containing only `CLEAR + END` (if `useClearEnd`), otherwise empty.

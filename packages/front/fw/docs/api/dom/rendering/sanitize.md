@@ -1,4 +1,4 @@
-﻿---
+---
 module: sanitize
 category: dom/rendering
 dependencies: [secPolicy]

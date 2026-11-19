@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -289,6 +289,14 @@ describe('sanitize module', () => {
             test('opt-in: a data:image src on img is kept byte for byte', () => {
                 expect(s.sanitizeHtml(IMG, { allowDataImage: true }))
                     .toBe('<img src="' + PNG + '" alt="x" />');
+            });
+
+            test('opt-in: the parameter-less RFC 2397 form is kept on img src, dropped by default', () => {
+                const svg = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E';
+                expect(s.sanitizeHtml('<img src="' + svg + '" />', { allowDataImage: true }))
+                    .toBe('<img src="' + svg + '" />');
+                expect(s.sanitizeHtml('<img src="' + svg + '" />')).toBe('<img />');
+                expect(s.sanitizeHtml('<a href="' + svg + '">x</a>', { allowDataImage: true })).toBe('<a>x</a>');
             });
 
             test('opt-in: every DATA_IMAGE_RE type is kept on img src', () => {

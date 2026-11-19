@@ -81,10 +81,16 @@ export const oconvPdfBox = {
         /**
          * Keys accepted on `opts.pdf` that this module does NOT consume:
          * `fonts` carries the caller's embedded font bytes and belongs to
-         * `oconvPdfMetrics.createMeasurer`. Listing it here is what
-         * lets the facade forward one object to one validator.
+         * `oconvPdfMetrics.createMeasurer`; `pdfA` (checked here) is the
+         * PDF/A profile the document claims, `pdfUA` and `lang` (checked
+         * here) the PDF/UA part and the document language, for `pdfBuilder`.
+         * Listing them here is what lets the facade forward one object to
+         * one validator.
          */
-        const FORWARDED_KEYS = Object.freeze(['fonts']);
+        const FORWARDED_KEYS = Object.freeze(['fonts', 'pdfA', 'pdfUA', 'lang']);
+
+        /** The PDF/A profiles `opts.pdf.pdfA` may claim. */
+        const PDFA_PROFILES = Object.freeze(['4', '2b']);
 
         /** `oconv: bad pdf option <key>` — the ONE option-error shape. */
         function badOption(key) {
@@ -119,7 +125,10 @@ export const oconvPdfBox = {
          * Validated: `pageSize` ∈ {@link PAGE_SIZES} names or a positive
          * `[w, h]` pair; `margin` ≥ 0 with `2·margin < min(w, h)`;
          * `baseSize` > 0; `leadingRatio` > 0; `codeSize` > 0; `headingScale`
-         * = six positive numbers; `pageNumbers` boolean. Any key outside
+         * = six positive numbers; `pageNumbers` boolean; `pdfA` `'4'` or
+         * `'2b'`; `pdfUA` `1` or `2`, not with `pdfA`; `lang` a non-empty
+         * string, required with `pdfUA` and refused without it (the last
+         * three forwarded, not in the layout). Any key outside
          * {@link DEFAULTS} + {@link FORWARDED_KEYS} throws
          * `oconv: bad pdf option <key>`.
          *
@@ -138,6 +147,10 @@ export const oconvPdfBox = {
                 if (!Object.prototype.hasOwnProperty.call(DEFAULTS, key)
                     && !FORWARDED_KEYS.includes(key)) throw badOption(key);
             }
+            if (opts.pdfA !== undefined && !PDFA_PROFILES.includes(opts.pdfA)) throw badOption('pdfA');
+            const ua = opts.pdfUA !== undefined;
+            if (ua && ((opts.pdfUA !== 1 && opts.pdfUA !== 2) || opts.pdfA !== undefined)) throw badOption('pdfUA');
+            if (ua ? typeof opts.lang !== 'string' || opts.lang === '' : opts.lang !== undefined) throw badOption('lang');
 
             const pick = (key) => (opts[key] === undefined ? DEFAULTS[key] : opts[key]);
 

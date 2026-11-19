@@ -126,7 +126,7 @@ const worker = fw.createWorker(
 
 ## Notes
 
-- Aliasing safe: `add(a, a, b)` is valid — operations read inputs before writing.
+- Aliasing safe: `out` may be one of the inputs in every vector and matrix operation (`add(a, a, b)`, `mat3.transpose(m, m)`, `mat4.multiply(m, m, n)`) — each reads its inputs before writing, and a test checks every operation under both aliases.
 - Column-major: the 4th column of mat4 contains the translation (`m[12]`, `m[13]`, `m[14]`). Pass directly to `gl.uniformMatrix4fv(loc, false, mat4)`.
 - No quaternions — for chained rotations without gimbal lock, see the separate `linalg-quat` plan.
 - `Float32Array` precision: for high-precision computation, use `Float64Array` + adapted functions.

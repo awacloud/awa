@@ -378,6 +378,8 @@ describe('readDocument — hybrid-reference files (/XRefStm)', () => {
     });
 });
 
+// T30 (b): the reader rebuilds a broken chain by default; these legs test
+// its typed refusals, so they read strictly (`recoverXref: false`).
 describe('readDocument — new error codes', () => {
     function codeOf(fn) {
         try { fn(); } catch (e) { return e.code; }
@@ -396,8 +398,8 @@ describe('readDocument — new error codes', () => {
         parts.push('5 0 obj\n<< /Type /Nonsense >>\nendobj\n');
         parts.push(`startxref\n${decoyOffset}\n%%EOF\n`);
         const bytes = concat(parts);
-        expect(codeOf(() => readDocument(bytes))).toBe('pdf/document/bad-xref-section');
-        expect(() => readDocument(bytes))
+        expect(codeOf(() => readDocument(bytes, { recoverXref: false }))).toBe('pdf/document/bad-xref-section');
+        expect(() => readDocument(bytes, { recoverXref: false }))
             .toThrow(/neither an xref table nor a cross-reference stream/);
     });
 
@@ -417,7 +419,7 @@ describe('readDocument — new error codes', () => {
         triples.push({ num: 6, type: 1, f2: offsets[6], f3: 0 });
         parts.push(xrefStreamObj(5, triples, ' /Root 1 0 R', { lengthRef: 6, size: 7 }));
         parts.push(`startxref\n${xrefOffset}\n%%EOF\n`);
-        expect(codeOf(() => readDocument(concat(parts))))
+        expect(codeOf(() => readDocument(concat(parts), { recoverXref: false })))
             .toBe('pdf/document/xrefstm-indirect-length');
     });
 
@@ -439,7 +441,7 @@ describe('readDocument — new error codes', () => {
         expect(legacy.readDocument(buildDocument({ pages: ['x'] })).pages.length).toBe(1);
         // …but the stream path fails loud instead of raising a TypeError.
         let err = null;
-        try { legacy.readDocument(bytes); } catch (e) { err = e; }
+        try { legacy.readDocument(bytes, { recoverXref: false }); } catch (e) { err = e; }
         expect(err).not.toBe(null);
         expect(err instanceof TypeError).toBe(false);
         expect(err.code).toBe('pdf/document/xref-stream-unwired');

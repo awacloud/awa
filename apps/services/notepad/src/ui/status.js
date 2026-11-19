@@ -24,6 +24,8 @@ export function createStatus({ id, t, tn, number, onEol, onEncoding }) {
     const position = h('span', { class: 'awn-status-item awn-status-pos' });
     const chars = h('span', { class: 'awn-status-item' });
     const zoom = h('span', { class: 'awn-status-item' });
+    // What Tab does in the text (Ctrl+M switches it): a polite live region, so a change is read out.
+    const tab = h('span', { class: 'awn-status-item awn-status-tab', role: 'status', 'aria-live': 'polite' });
     const eol = /** @type {HTMLSelectElement} */ (h('select', { class: 'awn-field awn-status-select', id: `${id}-eol` }));
     const encoding = /** @type {HTMLSelectElement} */ (h('select', { class: 'awn-field awn-status-select', id: `${id}-encoding` }));
     const eolLabel = h('label', { class: 'awn-visually-hidden', for: eol.id });
@@ -36,7 +38,7 @@ export function createStatus({ id, t, tn, number, onEol, onEncoding }) {
     let onNoticeAction = null;
     noticeAction.addEventListener('click', () => { if (onNoticeAction) onNoticeAction(); });
     const element = h('div', { class: 'awn-status' }, [
-        notice, position, chars, zoom,
+        notice, position, chars, zoom, tab,
         h('span', { class: 'awn-status-item awn-status-end' }, [eolLabel, eol]),
         h('span', { class: 'awn-status-item' }, [encodingLabel, encoding])
     ]);
@@ -46,7 +48,11 @@ export function createStatus({ id, t, tn, number, onEol, onEncoding }) {
     /** @type {{line: number, col: number, length: number, zoom: number, eol: string, encoding: string}} */
     let shown = { line: 1, col: 1, length: 0, zoom: 1, eol: 'lf', encoding: 'utf-8' };
 
+    /** @type {'insert'|'focus'} */
+    let tabMode = 'insert';
+
     function label() {
+        tab.textContent = t(tabMode === 'insert' ? 'status.tabInsert' : 'status.tabFocus');
         element.setAttribute('aria-label', t('status.label'));
         eolLabel.textContent = t('status.eol');
         encodingLabel.textContent = t('status.encoding');
@@ -79,6 +85,15 @@ export function createStatus({ id, t, tn, number, onEol, onEncoding }) {
         onNoticeAction = action ? action.run : null;
     }
 
+    /**
+     * Say what Tab does now: `insert` a tab in the text, or `focus` (move the focus on).
+     * @param {'insert'|'focus'} mode
+     */
+    function setTab(mode) {
+        tabMode = mode;
+        tab.textContent = t(mode === 'insert' ? 'status.tabInsert' : 'status.tabFocus');
+    }
+
     label();
-    return { element, label, update, note, selects: { eol, encoding } };
+    return { element, label, update, note, setTab, selects: { eol, encoding } };
 }

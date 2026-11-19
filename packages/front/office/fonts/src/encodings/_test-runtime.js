@@ -24,6 +24,7 @@ import { encodingSymbol } from './symbol.js';
 import { encodingZapfDingbats } from './zapfDingbats.js';
 import { encodingLookup } from './lookup.js';
 import { encodingAglTable } from './aglTable.js';
+import { encodingZapfDingbatsGlyphs } from './zapfDingbatsGlyphs.js';
 import { encodingAgl } from './agl.js';
 
 const _rt = new ModuleRuntime();
@@ -32,7 +33,7 @@ for (const m of [
     encodingWinAnsi, encodingMacRoman, encodingMacExpert,
     encodingStandard, encodingSymbol, encodingZapfDingbats,
     encodingLookup,
-    encodingAglTable, encodingAgl
+    encodingAglTable, encodingZapfDingbatsGlyphs, encodingAgl
 ]) _rt.register(m);
 
 export const testRuntime = _rt;

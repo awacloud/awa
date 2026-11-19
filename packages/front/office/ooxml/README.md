@@ -1,6 +1,8 @@
 # @awacloud/ooxml
 
-Pure-JavaScript reader and writer for Office Open XML documents (ECMA-376: `.docx`, `.xlsx`, `.pptx`) in the browser. ZIP, XML parsing and serialization, OPC packaging, DrawingML and Office Math are either implemented in the package or consumed from [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.2.0/packages/front/fw); there is no other runtime dependency, and no Node API is used (binaries are `Uint8Array`).
+Read and write Word, Excel and PowerPoint files (`.docx`, `.xlsx`, `.pptx`) in plain JavaScript, in the browser, through a typed model. No dependency beyond `@awacloud/fw`.
+
+Pure-JavaScript reader and writer for Office Open XML documents (ECMA-376: `.docx`, `.xlsx`, `.pptx`) in the browser. ZIP, XML parsing and serialization, OPC packaging, DrawingML and Office Math are either implemented in the package or consumed from [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.3.0/packages/front/fw); there is no other runtime dependency, and no Node API is used (binaries are `Uint8Array`).
 
 The core types the structures most documents use and keeps every other element of the parts it models verbatim in `_extras`, so an untouched element inside a modelled part is re-emitted on write. Whole parts outside the model (a theme, document properties, pivot tables, speaker notes, …) are not: `write()` produces the parts its model carries; a part `read()` did not model is not written back — `read()` lists it in `unmodelledParts` — unless `docx.write` is given the read result as its `carry` option. Opt-in `extra/*` modules name more of the schema and are grouped into `*-large` and `*-full` bundles. Only five extras (`wmlRunFormatting`, `wmlParagraphFormatting`, `wmlTableProperties`, `wmlSettings` and `dmlWpDrawing`, all wired by `docx-large`) type a read through a walker hook; the others are parse / render toolkits one calls on raw nodes, which a read never calls, and the `*-misc` extras only catalogue the rarest elements (flagged `_passthrough`, not modelled). The measured coverage figures are in the [coverage guide](./docs/guide/coverage.md).
 
@@ -259,7 +261,7 @@ See [`docs/api/bundles/README.md`](./docs/api/bundles/README.md) for the details
 
 ## Project
 
-- Website: https://awaforge.eu
-- Source: [`packages/front/office/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.2.0/packages/front/office/ooxml)
+- Website: https://awaforge.eu/
+- Source: [`packages/front/office/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/ooxml@1.3.0/packages/front/office/ooxml)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/SECURITY.md)
+- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.3.0/SECURITY.md)

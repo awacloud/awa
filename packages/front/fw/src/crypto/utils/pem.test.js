@@ -60,3 +60,19 @@ describe('pem module (RFC 7468)', () => {
         expect(_pem.decode('not a pem')).toBe(false);
     });
 });
+
+// ── node:crypto oracle: PEM text written and read like node's own export ──
+describe('pem - node:crypto oracle', () => {
+    test('encode(der) equals node:crypto PEM and decode(pem) equals its DER', async () => {
+        const nodeCrypto = await import('node:crypto');
+        const { publicKey, privateKey } = nodeCrypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+        for (const [key, type, label] of [[publicKey, 'spki', 'PUBLIC KEY'], [privateKey, 'pkcs8', 'PRIVATE KEY']]) {
+            const der = new Uint8Array(key.export({ type, format: 'der' }));
+            const nodePem = key.export({ type, format: 'pem' });
+            expect(_pem.encode(der, label).trim()).toBe(String(nodePem).trim());
+            const back = _pem.decode(String(nodePem), label);
+            expect(back.label).toBe(label);
+            expect(Buffer.from(back.bytes).toString('hex')).toBe(Buffer.from(der).toString('hex'));
+        }
+    });
+});

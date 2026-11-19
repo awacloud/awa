@@ -59,17 +59,17 @@ describe('oconvOdsToIr — table -> heading + table mapping (tier 2)', () => {
         ({ ir, losses } = odsToIr(back));
     });
 
-    test('validates against the frozen oconv-ir/v1 schema', () => {
+    test('validates against the oconv-ir/v2 schema', () => {
         expect(validate(ir).errors).toEqual([]);
         expect(validate(ir).ok).toBe(true);
     });
 
     test('emits one level-1 heading with the table name, then one table', () => {
         expect(ir.children[0]).toEqual({
-            kind: 'heading', level: 1,
+            kind: 'heading', level: 1, align: null, breakBefore: false,
             children: [{
                 kind: 'run', text: 'Data',
-                bold: false, italic: false, strike: false, code: false, link: null
+                bold: false, italic: false, strike: false, code: false, link: null, size: null, font: null, color: null, underline: false, script: null
             }]
         });
         expect(ir.children[1].kind).toBe('table');
@@ -233,7 +233,7 @@ describe('oconvOdsToIr — empty sheet', () => {
         const { ir, losses } = odsToIr(back);
 
         expect(validate(ir).ok).toBe(true);
-        expect(ir).toEqual({ kind: 'document', children: [] });
+        expect(ir).toEqual({ kind: 'document', page: null, header: null, footer: null, children: [] });
         expect(losses).toEqual([]);
     });
 });
@@ -369,5 +369,32 @@ describe('oconvOdsToIr — cellBudget: a sheet past the budget is not padded (T4
                 expect(lines).toEqual(sparseLines(shape));
             }
         }
+    });
+});
+
+describe('oconvOdsToIr — a 5,000,000 cell budget by default (T30 (d), D46)', () => {
+    /** 1,000 rows × 6,002 columns padded (6,002,000 cells; a repeat caps at 1,000): a value in A1 and in the last cell. */
+    function pastDefault() {
+        const gaps = Array.from({ length: 6 }, () => { const g = ods.cell(''); g.repeated = 1000; return g; });
+        const rows = [{ type: 'row', cells: [ods.cell('a')] }];
+        for (let i = 0; i < 998; i++) rows.push({ type: 'row', cells: [ods.cell('')] });
+        rows.push({ type: 'row', cells: [ods.cell(''), ...gaps, ods.cell('z')] });
+        return ods.read(ods.write({ spreadsheet: { tables: [{ type: 'table', name: 'Wide', columns: [], rows }] } }));
+    }
+
+    test('with no option, a sheet past 5 M padded cells takes the sparse form', () => {
+        const { ir, losses } = odsToIr(pastDefault());
+        expect(ir.children.some((n) => n.kind === 'table')).toBe(false);
+        const lines = ir.children.filter((n) => n.kind === 'paragraph').map((p) => p.children[0].text);
+        expect(lines).toEqual(['A1: a', 'HVV1000: z']);
+        expect(losses).toEqual([{ code: 'sheet/sparse-form', detail: 'Wide: 6002000 padded cells, 2 kept' }]);
+    });
+
+    test('Number.MAX_SAFE_INTEGER, the way back to 1.x, is a budget like any other', () => {
+        const back = ods.read(ods.write({ spreadsheet: { tables: [{ type: 'table', name: 'G', columns: [],
+            rows: [{ type: 'row', cells: [ods.cell('a'), ods.cell('b')] }] }] } }));
+        const { ir, losses } = odsToIr(back, { cellBudget: Number.MAX_SAFE_INTEGER });
+        expect(ir.children.some((n) => n.kind === 'table')).toBe(true);
+        expect(losses.filter((l) => l.code === 'sheet/sparse-form')).toEqual([]);
     });
 });

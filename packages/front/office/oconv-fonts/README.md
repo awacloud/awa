@@ -1,5 +1,7 @@
 # @awacloud/oconv-fonts
 
+The optional font companion of `@awacloud/oconv`: the Liberation 2.1.5 families (12 faces, SIL OFL) as an `@awacloud/fw` descriptor, so Markdown-to-PDF embeds real faces.
+
 The SIL OFL companion of `@awacloud/oconv`: the Liberation 2.1.5
 Sans/Serif/Mono families (Regular/Bold/Italic/BoldItalic — 12 faces),
 vendored byte-identical, registered as an `@awacloud/fw` descriptor so
@@ -207,7 +209,7 @@ AwaCloud SAS. The vendored fonts keep their own licences, the SIL OFL 1.1
 
 ## Project
 
-- Website: https://awaforge.eu
+- Website: https://awaforge.eu/
 - Source: [`packages/front/office/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv-fonts@1.1.0/packages/front/office/oconv-fonts)
 - Issues: https://github.com/awacloud/awa/issues
 - Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/oconv-fonts@1.1.0/SECURITY.md)

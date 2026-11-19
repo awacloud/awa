@@ -124,7 +124,7 @@ function run(text, flags) {
  * The spike's synthetic document (ported verbatim from `corpus.js`).
  *
  * @param {{edges?: boolean, paragraphs?: number}} [opts]
- * @returns {object} `oconv-ir/v1` document.
+ * @returns {object} `oconv-ir/v2` document.
  */
 function syntheticDocument(opts = {}) {
     const edges = opts.edges !== false;
@@ -161,7 +161,7 @@ function syntheticDocument(opts = {}) {
 /**
  * A document with ONE paragraph taller than a whole A4 page (1 400 words).
  *
- * @returns {object} `oconv-ir/v1` document.
+ * @returns {object} `oconv-ir/v2` document.
  */
 function oversizedBlockDocument() {
     const words = [];

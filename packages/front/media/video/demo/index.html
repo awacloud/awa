@@ -1,0 +1,113 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live video codec</title>
+<!-- Served from the repository root by a static server on localhost: /packages/front/media/video/demo/ -->
+<script type="importmap">
+{ "imports": { "@awacloud/fw/": "/packages/front/fw/src/", "@awacloud/media-stream/frame": "/packages/front/media/stream/src/frame/frame.js" } }
+</script>
+<style>
+  :root { --bg: #f7f6f2; --card: #fff; --ink: #1d1d1b; --soft: #66645e; --line: #dedbd2; --accent: #1f5f8b; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1b1b1a; --card: #252523; --ink: #ecebe6; --soft: #a8a59c; --line: #3a3935; --accent: #7fb2d8; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .lede { color: var(--soft); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+  label { display: inline-flex; gap: 6px; align-items: center; margin: 4px 16px 4px 0; }
+  select, button, input { font: inherit; }
+  button { font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; }
+  button.quiet { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; }
+  .stage video, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .stage canvas { clip-path: inset(0 0 0 var(--split, 50%)); }
+  .split { position: absolute; top: 0; bottom: 0; left: var(--split, 50%); width: 2px; background: #fff; box-shadow: 0 0 4px #000; pointer-events: none; }
+  .tags { display: flex; justify-content: space-between; color: var(--soft); font-size: .85rem; margin-top: 4px; }
+  #split { width: 100%; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 4px 0; border-bottom: 1px solid var(--line); }
+  td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  #state { color: var(--soft); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Live video codec</h1>
+  <p class="lede">Your camera or a screen → the frames read in a worker → the codec (encoder, then decoder) → the picture drawn on the GPU in that worker. Nothing leaves this computer.</p>
+
+  <div class="card">
+    <label>Source
+      <select id="source">
+        <option value="camera" selected>camera</option>
+        <option value="screen">a screen or a window</option>
+      </select>
+    </label>
+    <label>Size
+      <select id="size">
+        <option value="640x360" selected>640 × 360</option>
+        <option value="1280x720">1280 × 720</option>
+      </select>
+    </label>
+    <label>Preset
+      <select id="preset">
+        <option value="quality">quality</option>
+        <option value="standard" selected>standard</option>
+        <option value="economy">economy — 15 frames a second</option>
+        <option value="low">low — half the size</option>
+        <option value="minimal">minimal — half the size, 10 frames a second</option>
+        <option value="screen">screen — documents and scrolling</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="gpu" checked> Draw on the GPU</label>
+    <label><input type="checkbox" id="deflate"> Lossless stage (DEFLATE on each packet)</label>
+    <p>
+      <button id="start" type="button">Start</button>
+      <button id="stop" type="button" class="quiet">Stop</button>
+    </p>
+    <p><strong>Layers a relay drops</strong> (the stream sent is unchanged; the decoder gets less):</p>
+    <label>Detail levels dropped
+      <select id="details">
+        <option value="0" selected>none</option>
+        <option value="1">the finest</option>
+        <option value="2">all of them</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="colour"> Drop the colour</label>
+    <p id="state">Stopped.</p>
+  </div>
+
+  <div class="card">
+    <div class="stage" id="stage">
+      <video id="before" muted playsinline autoplay></video>
+      <div id="after"></div>
+      <div class="split"></div>
+    </div>
+    <div class="tags"><span>← the source</span><span>through the codec →</span></div>
+    <input type="range" id="split" min="0" max="100" value="50" aria-label="Where the source ends and the coded picture begins">
+  </div>
+
+  <div class="card">
+    <strong>Live figures, every second</strong>
+    <table>
+      <tr><td>The codec's rate (its packets, before any framing)</td><td id="m-sent">—</td></tr>
+      <tr><td>Rate on the wire (a frame a layer, headers in; DEFLATE kept where it is smaller)</td><td id="m-sent-deflated">—</td></tr>
+      <tr><td>Rate past the relay (after the layers dropped)</td><td id="m-kept-deflated">—</td></tr>
+      <tr><td>Frames lost, late</td><td id="m-kept">—</td></tr>
+      <tr><td>Frames read, skipped, shown (a second)</td><td id="m-fps">—</td></tr>
+      <tr><td>Encode a frame, decode and draw a picture (in the worker)</td><td id="m-time">—</td></tr>
+      <tr><td>Coded size, drawn on, frames read by</td><td id="m-shape">—</td></tr>
+    </table>
+  </div>
+</main>
+<script type="module" src="./demo.js"></script>
+</body>
+</html>

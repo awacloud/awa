@@ -2,16 +2,16 @@
 
 Pre-wired collections of [extra modules](../extra/README.md), exposed as pure fw factory descriptors. Each bundle declares the core format module (`docx` / `xlsx` / `pptx`) plus the relevant extras as dependencies. Register the descriptor in a `ModuleRuntime` and resolve it — the runtime wires every dependency transitively and the factory returns the enriched core instance.
 
-**Reading the Coverage column.** A bundle's extras are of two kinds: those that **type a read** (a walker hook runs on every `read()` / `write()`) and **toolkits** (parse / render functions one calls on raw nodes, which a read never calls). Today only `docx-large` has extras of the first kind — `wmlRunFormatting`, `wmlParagraphFormatting`, `wmlTableProperties`, `wmlSettings` and `dmlWpDrawing`; every other extra of the six bundles is a toolkit, so a read through `xlsx-*` or `pptx-*` types what the core types. What the core does not type it keeps verbatim (`_extras`, kept sources), so a round trip loses little either way — the coverage scorecards measure it.
+**Reading the Coverage column.** A bundle's extras are of two kinds: those that **type a read** (a walker hook runs on every `read()` / `write()`) and **toolkits** (parse / render functions one calls on raw nodes, which a read never calls). The extras of the first kind are `docx-large`'s `wmlRunFormatting`, `wmlParagraphFormatting`, `wmlTableProperties`, `wmlSettings` and `dmlWpDrawing`, `docx-full`'s `wmlStyleDetails` and `wmlDocumentDetails`, `pptx-full`'s `dmlTextDetails`, `pmlPartDetails` and `pmlPackageParts`, and `xlsx-full`'s `smlWorkbookDetails`, `dmlTextDetails` and `smlPackageParts`; every other extra of the six bundles is a toolkit, so a read through `xlsx-large` or `pptx-large` types what the core types. What the core does not type it keeps verbatim (`_extras`, kept sources), so a round trip loses little either way — the coverage scorecards measure it.
 
 | Bundle | Coverage | Resolve key | Source |
 |--------|----------|-------------|--------|
 | [`docx-large`](./docx-large.md) | docx: 5 extras type a read + toolkits | `'docxLargeBundle'` | [`src/bundles/docx-large.js`](../../../src/bundles/docx-large.js) |
-| [`docx-full`](./docx-full.md) | `docx-large` + further toolkits | `'docxFullBundle'` | [`src/bundles/docx-full.js`](../../../src/bundles/docx-full.js) |
+| [`docx-full`](./docx-full.md) | `docx-large` + 2 extras that type a read (styles and numbering; body, sections, settings) + further toolkits | `'docxFullBundle'` | [`src/bundles/docx-full.js`](../../../src/bundles/docx-full.js) |
 | [`xlsx-large`](./xlsx-large.md) | xlsx: toolkits only | `'xlsxLargeBundle'` | [`src/bundles/xlsx-large.js`](../../../src/bundles/xlsx-large.js) |
-| [`xlsx-full`](./xlsx-full.md) | `xlsx-large` + further toolkits | `'xlsxFullBundle'` | [`src/bundles/xlsx-full.js`](../../../src/bundles/xlsx-full.js) |
+| [`xlsx-full`](./xlsx-full.md) | `xlsx-large` + 3 extras that type a read (workbook details; a drawing's text; the calculation chain, external links, XML maps, connections, query tables, pivot caches and tables) + further toolkits | `'xlsxFullBundle'` | [`src/bundles/xlsx-full.js`](../../../src/bundles/xlsx-full.js) |
 | [`pptx-large`](./pptx-large.md) | pptx: toolkits only | `'pptxLargeBundle'` | [`src/bundles/pptx-large.js`](../../../src/bundles/pptx-large.js) |
-| [`pptx-full`](./pptx-full.md) | `pptx-large` + further toolkits | `'pptxFullBundle'` | [`src/bundles/pptx-full.js`](../../../src/bundles/pptx-full.js) |
+| [`pptx-full`](./pptx-full.md) | `pptx-large` + 3 extras that type a read (text details, theme script fonts; part-level transition, timing, header / footer; notes slides, notes and handout masters, unused layouts) + further toolkits | `'pptxFullBundle'` | [`src/bundles/pptx-full.js`](../../../src/bundles/pptx-full.js) |
 
 > **Looking for a single-factory entrypoint that does not require registering 40+ ooxml modules first?** See [pre-built bundles](./prebuilt/README.md) — each logical bundle ships in two pre-built surfaces under `dist/`: `dist/standalone/<root>.js` (`-bundled`, everything inlined) and `dist/build/<root>.js` (`-package`, the 6 fw modules injected by DI).
 
@@ -51,4 +51,4 @@ resolves the extras it actually declares, so nothing else is instantiated.
 
 - [Extra modules](../extra/README.md)
 - [Getting started](../../guide/getting-started.md)
-- [`@awacloud/fw` runtime](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/packages/front/fw/docs/api/core/runtime.md)
+- [`@awacloud/fw` runtime](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.3.0/packages/front/fw/docs/api/core/runtime.md)

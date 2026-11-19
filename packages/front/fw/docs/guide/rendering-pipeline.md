@@ -124,7 +124,7 @@ Encapsulates all 4 stages. The simplest API to use.
 const uiSession = runtime.resolve('uiSession');
 
 // Initialise on an existing template context
-const ui = uiSession('contenu'); // template context name
+const ui = uiSession('content'); // template context name
 
 // Parse HTML
 const b1 = ui.parse('<div><h1>#{title}</h1>${content}</div>');
@@ -284,6 +284,13 @@ render.toHTML(tpl, data, { hydrate: false });    // markers OFF (clean output)
 render.toHTML(tpl, data, { idPrefix: 'app' });   // → data-fw-id="app:title"
 ```
 
+The rows of an iterate block are rendered from one sub-template, so they
+**share** their `data-fw-id` values (`UIList.adopt` finds each node inside
+its own row). Each row root also carries `data-fw-row="<i>"`, its 0-based
+index (every root of a multi-root row gets it; no `idPrefix`), so one row is
+addressable on its own: `[data-fw-id="app:item"][data-fw-row="2"]`. With
+`hydrate: false`, neither marker is emitted.
+
 ### Slots and iterations
 
 ```js
@@ -330,7 +337,7 @@ After receiving the SSR HTML, the client creates a `uiSession` on the container 
 //    Container: <div id="app">…</div>
 
 // 2. Client: create the session on the SSR container.
-tpl.init('app', { to: '#app' });
+tpl.init('app', { to: '#app', main: true });   // the first context builds the shared catalogue
 const ui = uiSession('app');
 
 // 3. Hydrate with the SAME items (template + data + opts) as SSR.
@@ -384,8 +391,8 @@ domReady.loaded(() => {
     tpl.elm('page', { id: 'app', tag: 'div', attrs: ['style'],
         data: { style: 'padding:20px' } });
 
-    tpl.init('contenu', { to: '#app' });
-    const ui = uiSession('contenu');
+    tpl.init('content', { to: '#app' });
+    const ui = uiSession('content');
 
     // Main layout
     const layout = ui.parse(`

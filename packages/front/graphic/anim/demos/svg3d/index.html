@@ -1,0 +1,96 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — svg3d demo</title>
+
+    <!-- 1. IMPORT MAP — first, strictly before any module script tag
+         (Firefox discards an import map that arrives after a module load has
+         started; the real-browser baseline). This page needs no key: `main.js`
+         reaches the composed `graphic.svg3d` through its `dist/build` root and
+         the fw `events` module by relative import, so it writes no bare
+         specifier. -->
+    <script type="importmap">
+    {
+        "imports": {}
+    }
+    </script>
+
+    <!-- 2. SANITY LOCKDOWN — before any application module runs. -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 3. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 3bis. Surface-local layout only (no palette redeclaration). -->
+    <style>
+        #mount { width: 100%; height: 420px; background: #1a1a1a; }
+    </style>
+</head>
+
+<body data-demo="svg3d">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to demos</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>svg3d — heightmap terrain, drag to look</h1>
+        <p class="demo-lede">
+            A software-3D terrain (4 608 triangles, procedurally generated, a sea
+            level) rendered entirely in SVG through the composed
+            <code>graphic.svg3d</code> (<code>dist/build/graphic-svg3d.*</code>):
+            face colours (olive valleys, green peaks, water at sea level, each face
+            shaded), the camera standing at the centre at peak height. It orbits
+            slowly until you drag the terrain; then the drag turns the camera. No
+            Canvas.
+        </p>
+    </header>
+
+    <p class="demo-note" style="margin-top:0;">Variant: <code id="variant-label">…</code></p>
+
+    <div class="demo-stage">
+        <svg id="mount" viewBox="0 0 1280 800" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <p class="demo-note">
+        Running the <code id="variant-label2">standalone</code> build. Append
+        <code>?variant=fw</code> to the URL to run it registered on an
+        <code>@awacloud/fw</code> runtime instead.
+    </p>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/demos/svg3d/</code></p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+
+<!-- 4. ENTRY — the `run()` contract. -->
+<script type="module">
+    import { boot } from '../_boot.js';
+    import { run } from './main.js';
+
+    const mount = document.getElementById('mount');
+    const { anim, variant } = await boot();
+    document.getElementById('variant-label').textContent = variant;
+    document.getElementById('variant-label2').textContent = variant;
+    await run({ mount, anim, variant });
+    // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+</script>
+</body>
+</html>

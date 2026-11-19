@@ -76,7 +76,7 @@ direction × 3 keyLen) and 6 MCT. AFT strategy:
 
 ## Known limitations
 
-- ~~**MCT not integrated**~~ ✅ **Iteration D4** — implemented.
+- ~~**MCT not integrated**~~ ✅ implemented.
   6 MCT testGroups from ACVP-AES-CBC-1.0 (37-42, encrypt + decrypt × AES-128/192/256)
   integrated. Each MCT runs 100 outer × 1000 inner AES-CBC ops with:
   1. Per-iter key transition (`Key[j+1] = Key[j] XOR last(keyLen, CT[998]||CT[999])`).
@@ -99,7 +99,7 @@ direction × 3 keyLen) and 6 MCT. AFT strategy:
 ## Cross-references
 
 - Module: [`mode/cbc.js`](./cbc.js)
-- Tests: [`mode/cbc.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/cbc.test.js) — 163 tests (157 baseline + 6 MCT [D4]: 3 encrypt + 3 decrypt × AES-128/192/256, byte-exact iter0 + iter99)
+- Tests: [`mode/cbc.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/cbc.test.js) — 163 tests (157 baseline + 6 MCT: 3 encrypt + 3 decrypt × AES-128/192/256, byte-exact iter0 + iter99)
 - ACVP draft: `references/NIST/ACVP/src/draft-celi-acvp-symmetric.adoc`
 - Vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ACVP-AES-CBC-1.0/`
 - Overall conformance: [`NIST_CONFORMANCE.md`](../NIST_CONFORMANCE.md)

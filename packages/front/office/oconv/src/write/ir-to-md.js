@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `oconvIrToMd` — `oconv-ir/v1` → **structured-markdown
+ * @fileoverview `oconvIrToMd` — `oconv-ir/v2` → **structured-markdown
  * profile v1**, the FROZEN wire contract of the sovereign/air-gap RAG
  * offer.
  *
@@ -21,7 +21,7 @@
  * ```yaml
  * ---
  * profile: v1                 # wire-profile version (independent of `ir`)
- * ir: oconv-ir/v1             # pivot version, from the `oconvIr` dependency
+ * ir: oconv-ir/v2             # pivot version, from the `oconvIr` dependency
  * sourceFormat: docx          # ┐
  * sourceName: report.docx     # │
  * title: "Annual report"      # │ the source's own title, when it states one
@@ -97,7 +97,12 @@
  * written back as `[ ]` / `[x]` — whose first block is not a paragraph) and
  * `inline/flattened` (a list or a table inside a table cell, written
  * inline: its pieces joined by `; `, the text kept, the structure not;
- * `detail` `table cell list` / `table cell table`).
+ * `detail` `table cell list` / `table cell table`), `layout/region-dropped`
+ * (the IR states a header or a footer, `oconv-ir/v2` T80, which markdown
+ * does not hold; `detail` `header` / `footer`, once each), `note/dropped` (a
+ * footnote or endnote, `oconv-ir/v2` T81, which this writer does not write
+ * yet; `detail` its class, one per note). A `field` is written as its text
+ * (`oconvIr.withFieldsAsRuns`).
  *
  * @typedef {Object} OconvLoss
  * @property {string} code
@@ -569,11 +574,105 @@ export const oconvIrToMd = {
             return lines.join('\n');
         }
 
+        // The text, in UTF-8 bytes, past which a document is not rendered
+        // when `opts.outputBudget` (or its `bytes`) is absent (since 2.0.0).
+        const DEFAULT_OUTPUT_BYTES = 268435456;
+
         /**
-         * Convert one `oconv-ir/v1` document to a profile-v1 structured
+         * `opts.outputBudget` as `{ bytes, overflow }`: absent, the default
+         * (`DEFAULT_OUTPUT_BYTES`, `'throw'`); `bytes` absent, the default
+         * bytes; else a positive safe integer and `'throw'` or `'truncate'`.
+         * @throws {Error} `oconv: bad output budget`
+         */
+        function outputBudgetOf(opts) {
+            const v = opts ? opts.outputBudget : undefined;
+            if (v === undefined) return { bytes: DEFAULT_OUTPUT_BYTES, overflow: 'throw' };
+            if (!v || typeof v !== 'object' || Array.isArray(v)
+                || !Object.keys(v).every((k) => k === 'bytes' || k === 'overflow')
+                || (v.bytes !== undefined && (!Number.isSafeInteger(v.bytes) || v.bytes < 1))
+                || (v.overflow !== undefined && v.overflow !== 'throw' && v.overflow !== 'truncate')) {
+                throw new Error('oconv: bad output budget');
+            }
+            return { bytes: v.bytes === undefined ? DEFAULT_OUTPUT_BYTES : v.bytes, overflow: v.overflow || 'throw' };
+        }
+
+        /** The UTF-8 length of `s`, or `Infinity` once it passes `room`. */
+        function utf8Within(s, room) {
+            if (s.length > room) return Infinity;
+            let n = 0;
+            for (let i = 0; i < s.length; i++) {
+                const c = s.charCodeAt(i);
+                // A surrogate half counts 2, so a pair counts its 4 bytes.
+                n += c < 0x80 ? 1 : c < 0x800 ? 2 : c >= 0xd800 && c < 0xe000 ? 2 : 3;
+                if (n > room) return Infinity;
+            }
+            return n;
+        }
+
+        /**
+         * The UTF-8 size of the text an IR node carries (its own string
+         * properties, `escapes` aside, and its children's), or `Infinity`
+         * once it passes `room`: the early stop keeps the walk bounded.
+         */
+        function textSize(n, room) {
+            let size = 0;
+            for (const key of Object.keys(n)) {
+                if (key === 'kind' || key === 'escapes') continue;
+                const v = n[key];
+                if (typeof v === 'string') size += utf8Within(v, room - size);
+                else if (key === 'children') {
+                    for (const c of v) {
+                        size += textSize(c, room - size);
+                        if (size > room) return Infinity;
+                    }
+                }
+                if (size > room) return Infinity;
+            }
+            return size;
+        }
+
+        /**
+         * The document cut at `budget` bytes of text: top-level blocks kept
+         * in order while they fit; a table that crosses keeps its leading
+         * rows that fit (none: the table is dropped); the first other block
+         * that does not fit, and every block after it, is dropped.
+         */
+        function truncateIr(ir, budget) {
+            const kept = [];
+            let used = 0;
+            let droppedBlocks = 0;
+            let droppedRows = 0;
+            let full = false;
+            for (const block of ir.children) {
+                if (full) { droppedBlocks++; continue; }
+                const size = textSize(block, budget - used);
+                if (size !== Infinity) { kept.push(block); used += size; continue; }
+                full = true;
+                const rows = [];
+                if (block.kind === 'table') {
+                    for (const row of block.children) {
+                        const rowSize = textSize(row, budget - used);
+                        if (rowSize === Infinity) break;
+                        rows.push(row);
+                        used += rowSize;
+                    }
+                }
+                if (rows.length) {
+                    kept.push({ ...block, children: rows });
+                    droppedRows += block.children.length - rows.length;
+                } else droppedBlocks++;
+            }
+            return {
+                ir: { ...ir, children: kept },
+                loss: { code: 'doc/truncated', detail: `kept ${used} bytes of text; ${droppedBlocks} blocks and ${droppedRows} table rows dropped` }
+            };
+        }
+
+        /**
+         * Convert one `oconv-ir/v2` document to a profile-v1 structured
          * markdown document. Pure: no I/O, no clock, no crypto.
          *
-         * @param {object} ir `oconv-ir/v1` document node.
+         * @param {object} ir `oconv-ir/v2` document node.
          * @param {OconvMeta} meta Caller-supplied provenance (+ reader losses).
          * @param {{frontMatter?: 'full'|'compact'|'none'}} [opts]
          *   `frontMatter` (A46): `'full'` (the default) writes the front
@@ -583,19 +682,46 @@ export const oconvIrToMd = {
          *   profile-v1 document; the result's fields are the sidecar). The
          *   result's `losses` is the full ledger in every form. Other keys
          *   are ignored.
+         *   `outputBudget` (since 2.0.0; `toMd` forwards its own) —
+         *   `{ bytes?, overflow? }`, a bound on the IR's text measured before
+         *   the render: past `bytes` (a positive safe integer, **256 MiB
+         *   when absent**; `Number.MAX_SAFE_INTEGER` renders everything),
+         *   `overflow` `'throw'` (also when absent) throws `oconv: output
+         *   too large` before any markdown is built, `'truncate'` keeps the
+         *   top-level blocks that fit and a crossing table's leading rows,
+         *   recorded `doc/truncated` (the first render loss). With no
+         *   `outputBudget`, a document past 256 MiB of text throws.
          * @throws {Error} `oconv: bad front matter` when `opts.frontMatter`
-         *   is present and is not one of the three forms.
+         *   is present and is not one of the three forms; `oconv: bad output
+         *   budget` when `opts.outputBudget` has another shape; `oconv:
+         *   output too large` past the budget under `'throw'`.
          * @returns {OconvMdResult}
          */
         function irToMd(ir, meta, opts) {
             const form = frontMatterForm(opts);
+            const budget = outputBudgetOf(opts);
             const m = meta || {};
             const ctx = {
                 losses: [], assets: [], assetNames: new Set(),
                 anchors: [], slugs: new Map()
             };
+            // A field as its text (T80): markdown has none.
+            // T81: no note is written, each recorded.
+            const unnoted = ir && typeof ir === 'object' ? irApi.withoutNotes(ir) : { ir, dropped: [] };
+            const src = unnoted.ir && typeof unnoted.ir === 'object' ? irApi.withFieldsAsRuns(unnoted.ir) : unnoted.ir;
+            let doc = src;
+            if (src && textSize(src, budget.bytes) === Infinity) {
+                if (budget.overflow !== 'truncate') throw new Error('oconv: output too large');
+                const cut = truncateIr(src, budget.bytes);
+                doc = cut.ir;
+                ctx.losses.push(cut.loss);
+            }
+            for (const region of ['header', 'footer']) {
+                if (src && src[region]) ctx.losses.push({ code: 'layout/region-dropped', detail: region });
+            }
+            for (const cls of unnoted.dropped) ctx.losses.push({ code: 'note/dropped', detail: cls });
             const root = new Node('document');
-            const blocks = (ir && Array.isArray(ir.children)) ? ir.children : [];
+            const blocks = (doc && Array.isArray(doc.children)) ? doc.children : [];
             appendBlocks(root, blocks, ctx);
             const body = mdApi.renderMarkdown(root);
 

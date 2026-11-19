@@ -218,7 +218,10 @@ export const xlsxPackage = {
       SLIDE: NS.R + "/slide",
       SLIDE_LAYOUT: NS.R + "/slideLayout",
       SLIDE_MASTER: NS.R + "/slideMaster",
-      THEME: NS.R + "/theme"
+      THEME: NS.R + "/theme",
+      NOTES_SLIDE: NS.R + "/notesSlide",
+      NOTES_MASTER: NS.R + "/notesMaster",
+      HANDOUT_MASTER: NS.R + "/handoutMaster"
     }), CT = Object.freeze({
       DOCUMENT: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
       STYLES_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
@@ -244,7 +247,10 @@ export const xlsxPackage = {
       SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
       THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
       VML_DRAWING: "application/vnd.openxmlformats-officedocument.vmlDrawing",
-      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"
+      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml",
+      NOTES_SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+      NOTES_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+      HANDOUT_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml"
     });
     function toEmu(v) {
       if (typeof v === "number")
@@ -1524,13 +1530,19 @@ export const xlsxPackage = {
         out.totalsRowLabel = cEl.attrs.totalsRowLabel;
       if (cEl.attrs.totalsRowFunction)
         out.totalsRowFunction = cEl.attrs.totalsRowFunction;
+      const other = {};
+      for (const [k, v] of Object.entries(cEl.attrs || {}))
+        if (!COLUMN_ATTRS.has(k))
+          other[k] = v;
+      if (Object.keys(other).length)
+        out.extraAttrs = other;
       const extras = cEl.children.filter((n) => n.type === "element");
       if (extras.length)
         out._extras = extras;
       return out;
     }
     function renderColumn(c) {
-      const a = { id: String(c.id), name: c.name };
+      const a = { ...stringAttrs(c.extraAttrs), id: String(c.id), name: c.name };
       if (c.totalsRowLabel)
         a.totalsRowLabel = c.totalsRowLabel;
       if (c.totalsRowFunction)
@@ -1565,6 +1577,29 @@ export const xlsxPackage = {
           a[k] = writeBoolAttr(s[k]);
       return xml.el("tableStyleInfo", a);
     }
+    const COLUMN_ATTRS = new Set(["id", "name", "totalsRowLabel", "totalsRowFunction"]), ROOT_ATTRS = new Set([
+      "xmlns",
+      "id",
+      "name",
+      "displayName",
+      "ref",
+      "headerRowCount",
+      "totalsRowCount",
+      "totalsRowShown"
+    ]), TYPED_CHILDREN = new Set(["autoFilter", "tableColumns", "tableStyleInfo"]), TABLE_SEQ = shared.sequence ? shared.sequence([
+      "autoFilter",
+      "sortState",
+      "tableColumns",
+      "tableStyleInfo",
+      "extLst"
+    ]) : null, ordered = (children) => TABLE_SEQ && shared.orderBySequence ? shared.orderBySequence(children, TABLE_SEQ) : children;
+    function stringAttrs(map) {
+      const out = {};
+      for (const [k, v] of Object.entries(map && typeof map === "object" ? map : {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
+    }
     function parse(input) {
       const text = typeof input === "string" ? input : decodeText(input), root = xml.parse(text);
       if (root.name !== "table")
@@ -1582,9 +1617,25 @@ export const xlsxPackage = {
         out.totalsRowCount = Number(root.attrs.totalsRowCount);
       if (root.attrs.totalsRowShown != null)
         out.totalsRowShown = readBoolAttr(root.attrs.totalsRowShown);
+      const rootAttrs = {};
+      for (const [k, v] of Object.entries(root.attrs || {}))
+        if (!ROOT_ATTRS.has(k))
+          rootAttrs[k] = v;
+      if (Object.keys(rootAttrs).length)
+        out.rootAttrs = rootAttrs;
       const af = xml.findChild(root, "autoFilter");
-      if (af)
+      if (af) {
         out.autoFilter = { ref: af.attrs.ref };
+        const afOther = {};
+        for (const [k, v] of Object.entries(af.attrs || {}))
+          if (k !== "ref")
+            afOther[k] = v;
+        if (Object.keys(afOther).length)
+          out.autoFilter.extraAttrs = afOther;
+        const kids = af.children.filter((n) => n.type === "element");
+        if (kids.length)
+          out.autoFilter._extras = kids;
+      }
       const cols = xml.findChild(root, "tableColumns");
       if (cols)
         for (const cEl of xml.findAll(cols, "tableColumn"))
@@ -1592,10 +1643,14 @@ export const xlsxPackage = {
       const tsi = xml.findChild(root, "tableStyleInfo");
       if (tsi)
         out.tableStyleInfo = parseTableStyleInfo(tsi);
+      const extras = root.children.filter((n) => n.type === "element" && !TYPED_CHILDREN.has(n.name));
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function serialize(obj) {
       const a = {
+        ...stringAttrs(obj.rootAttrs),
         xmlns: SS_NS,
         id: String(obj.id),
         name: obj.name,
@@ -1610,14 +1665,14 @@ export const xlsxPackage = {
         a.totalsRowShown = writeBoolAttr(obj.totalsRowShown);
       const children = [];
       if (obj.autoFilter)
-        children.push(xml.el("autoFilter", { ref: obj.autoFilter.ref }));
+        children.push(xml.el("autoFilter", { ...stringAttrs(obj.autoFilter.extraAttrs), ref: obj.autoFilter.ref }, Array.isArray(obj.autoFilter._extras) ? obj.autoFilter._extras : []));
       children.push(xml.el("tableColumns", { count: String((obj.columns || []).length) }, (obj.columns || []).map(renderColumn)));
       if (obj.tableStyleInfo)
         children.push(renderTableStyleInfo(obj.tableStyleInfo));
       if (obj._extras)
         for (const ex of obj._extras)
           children.push(ex);
-      return xml.serialize(xml.el("table", a, children));
+      return xml.serialize(xml.el("table", a, ordered(children)));
     }
     function bytesOf(obj) {
       return encodeText(serialize(obj));
@@ -2337,7 +2392,19 @@ export const xlsxPackage = {
       }
       return null;
     }
-    function parseLine(lnEl) {
+    function lineColor(solidFill, opts) {
+      if (!(opts && opts.typedLineColors)) {
+        const col = parseColorChild(solidFill);
+        return col && col.rgb ? col.rgb : void 0;
+      }
+      const el = solidFill.children.find((n) => n.type === "element");
+      if (!el)
+        return;
+      if (el.name === "a:srgbClr" && !el.children.some((n) => n.type === "element"))
+        return el.attrs.val;
+      return typedColor.parse(el) || void 0;
+    }
+    function parseLine(lnEl, opts) {
       if (!lnEl)
         return;
       const out = {};
@@ -2362,9 +2429,9 @@ export const xlsxPackage = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:solidFill") {
-          const col = parseColorChild(c);
-          if (col && col.rgb)
-            out.color = col.rgb;
+          const col = lineColor(c, opts);
+          if (col !== void 0)
+            out.color = col;
           else
             extras.push(c);
         } else if (c.name === "a:prstDash")
@@ -2398,8 +2465,11 @@ export const xlsxPackage = {
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
-      else if (line.color)
-        children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
+      else if (line.color) {
+        const el = typeof line.color === "object" ? typedColor.render(line.color) : renderSrgbClr(line.color);
+        if (el)
+          children.push(xml.el("a:solidFill", {}, [el]));
+      }
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
       if (!line._extras)
@@ -2413,10 +2483,13 @@ export const xlsxPackage = {
       }
       return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
-    function parseShapeProperties(spPrEl) {
+    function parseShapeProperties(spPrEl, opts) {
       if (!spPrEl)
         return;
-      const out = {}, xfrmEl = xml.findChild(spPrEl, "a:xfrm");
+      const out = {};
+      if (spPrEl.attrs && spPrEl.attrs.bwMode)
+        out.bwMode = spPrEl.attrs.bwMode;
+      const xfrmEl = xml.findChild(spPrEl, "a:xfrm");
       Object.assign(out, parseXfrm(xfrmEl));
       const prst = xml.findChild(spPrEl, "a:prstGeom");
       if (prst) {
@@ -2429,7 +2502,7 @@ export const xlsxPackage = {
         out.fill = fill;
       const ln = xml.findChild(spPrEl, "a:ln");
       if (ln) {
-        const lineProps = parseLine(ln);
+        const lineProps = parseLine(ln, opts);
         if (lineProps !== void 0)
           out.line = lineProps;
       }
@@ -2464,11 +2537,12 @@ export const xlsxPackage = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
+      const attrs = props.bwMode ? { bwMode: String(props.bwMode) } : {};
       if (!props._extras)
-        return xml.el(tag, {}, children);
+        return xml.el(tag, attrs, children);
       for (const ex of props._extras)
         children.push(ex);
-      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
+      return xml.el(tag, attrs, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -3072,7 +3146,21 @@ export const xlsxPackage = {
       "a:hlinkMouseOver",
       "a:rtl",
       "a:extLst"
-    ]);
+    ]), RPR_TYPED_ATTRS = new Set(["lang", "sz", "b", "i", "strike", "u", "baseline"]), PPR_TYPED_ATTRS = new Set(["lvl", "algn", "indent", "marL"]), LATIN_TYPED_ATTRS = new Set(["typeface"]);
+    function otherAttrs(attrs, typed) {
+      const out = {};
+      for (const [k, v] of Object.entries(attrs || {}))
+        if (!typed.has(k))
+          out[k] = v;
+      return Object.keys(out).length ? out : void 0;
+    }
+    function stringAttrs(o) {
+      const out = {};
+      for (const [k, v] of Object.entries(o || {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
+    }
     function runColor(solidFill, opts) {
       if (!(opts && opts.typedRunColors)) {
         const cl = solidFill.children.find((n) => n.type === "element" && n.name === "a:srgbClr");
@@ -3103,6 +3191,9 @@ export const xlsxPackage = {
         out.underline = a.u;
       if (a.baseline != null)
         out.baseline = Number(a.baseline);
+      const extraAttrs = otherAttrs(a, RPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of rPrEl.children) {
         if (c.type !== "element")
@@ -3113,9 +3204,12 @@ export const xlsxPackage = {
             out.color = color;
           else
             extras.push(c);
-        } else if (c.name === "a:latin")
+        } else if (c.name === "a:latin") {
           out.font = c.attrs.typeface;
-        else
+          const fontAttrs = otherAttrs(c.attrs, LATIN_TYPED_ATTRS);
+          if (fontAttrs)
+            out.fontAttrs = fontAttrs;
+        } else
           extras.push(c);
       }
       if (extras.length)
@@ -3125,7 +3219,7 @@ export const xlsxPackage = {
     function renderRunProperties(rPr) {
       if (!rPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(rPr.extraAttrs) };
       if (rPr.lang)
         a.lang = rPr.lang;
       if (rPr.size != null)
@@ -3147,7 +3241,7 @@ export const xlsxPackage = {
           children.push(xml.el("a:solidFill", {}, [el]));
       }
       if (rPr.font)
-        children.push(xml.el("a:latin", { typeface: rPr.font }));
+        children.push(xml.el("a:latin", { typeface: rPr.font, ...stringAttrs(rPr.fontAttrs) }));
       if (rPr._extras)
         for (const ex of rPr._extras)
           children.push(ex);
@@ -3165,6 +3259,9 @@ export const xlsxPackage = {
         out.indent = Number(a.indent);
       if (a.marL != null)
         out.marL = Number(a.marL);
+      const extraAttrs = otherAttrs(a, PPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of pPrEl.children) {
         if (c.type !== "element")
@@ -3173,9 +3270,11 @@ export const xlsxPackage = {
           out.bullet = "none";
         else if (c.name === "a:buChar")
           out.bullet = { char: c.attrs.char };
-        else if (c.name === "a:buAutoNum")
+        else if (c.name === "a:buAutoNum") {
           out.bullet = { autoNumType: c.attrs.type };
-        else if (c.name === "a:defRPr")
+          if (c.attrs.startAt != null)
+            out.bullet.startAt = Number(c.attrs.startAt);
+        } else if (c.name === "a:defRPr")
           out.defRPr = parseRunProperties(c, opts);
         else
           extras.push(c);
@@ -3187,7 +3286,7 @@ export const xlsxPackage = {
     function renderParagraphProperties(pPr) {
       if (!pPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(pPr.extraAttrs) };
       if (pPr.level != null)
         a.lvl = String(pPr.level);
       if (pPr.align)
@@ -3201,8 +3300,12 @@ export const xlsxPackage = {
         children.push(xml.el("a:buNone", {}));
       else if (pPr.bullet && pPr.bullet.char)
         children.push(xml.el("a:buChar", { char: pPr.bullet.char }));
-      else if (pPr.bullet && pPr.bullet.autoNumType)
-        children.push(xml.el("a:buAutoNum", { type: pPr.bullet.autoNumType }));
+      else if (pPr.bullet && pPr.bullet.autoNumType) {
+        const ba = { type: pPr.bullet.autoNumType };
+        if (pPr.bullet.startAt != null)
+          ba.startAt = String(pPr.bullet.startAt);
+        children.push(xml.el("a:buAutoNum", ba));
+      }
       if (pPr.defRPr) {
         const dpr = renderRunProperties(pPr.defRPr);
         if (dpr)
@@ -3211,8 +3314,6 @@ export const xlsxPackage = {
       if (pPr._extras)
         for (const ex of pPr._extras)
           children.push(ex);
-      if (!Object.keys(a).length && !children.length)
-        return null;
       return xml.el("a:pPr", a, ordered(children, PPR_SEQ));
     }
     function parseRun(rEl, opts) {
@@ -3238,6 +3339,9 @@ export const xlsxPackage = {
       const rPrEl = xml.findChild(fEl, "a:rPr"), tEl = xml.findChild(fEl, "a:t"), rPr = parseRunProperties(rPrEl, opts);
       if (rPr)
         out.rPr = rPr;
+      const pPr = parseParagraphProperties(xml.findChild(fEl, "a:pPr"), opts);
+      if (pPr)
+        out.pPr = pPr;
       if (tEl)
         out.value = xml.textContent(tEl);
       return out;
@@ -3249,6 +3353,9 @@ export const xlsxPackage = {
       const children = [], rPrEl = renderRunProperties(f.rPr);
       if (rPrEl)
         children.push(rPrEl);
+      const pPrEl = renderParagraphProperties(f.pPr);
+      if (pPrEl)
+        children.push(pPrEl);
       if (f.value != null)
         children.push(xml.el("a:t", {}, [xml.text(f.value)]));
       return xml.el("a:fld", a, children);
@@ -3320,12 +3427,15 @@ export const xlsxPackage = {
         else if (c.name === "a:p")
           out.paragraphs.push(parseParagraph(c, opts));
       }
+      if (out.lstStyle === void 0)
+        out.lstStyle = null;
       return out;
     }
     function renderTextBody(tb, rootTag = "a:txBody") {
       const children = [];
       children.push(tb.bodyPr || xml.el("a:bodyPr", {}));
-      children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
+      if (tb.lstStyle !== null)
+        children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
       for (const p of tb.paragraphs || [])
         children.push(renderParagraph(p));
       return xml.el(rootTag, {}, children);
@@ -3603,7 +3713,7 @@ export const xlsxPackage = {
       }
       const spPr = xml.findChild(spEl, "xdr:spPr");
       if (spPr) {
-        const typed = shapeMod.parseShapeProperties(spPr);
+        const typed = shapeMod.parseShapeProperties(spPr, opts);
         if (typed)
           out.shapeProps = typed;
       }
@@ -4306,19 +4416,67 @@ export const xlsxPackage = {
           }
         return value;
       }
+      function walkText(tb, phase) {
+        if (!tb || !Array.isArray(tb.paragraphs))
+          return;
+        const hydrate = phase === "hydrate", hr = hydrate ? "hydrateRunProperties" : "dehydrateRunProperties", hp = hydrate ? "hydrateParagraphProperties" : "dehydrateParagraphProperties", hpara = hydrate ? "hydrateParagraph" : "dehydrateParagraph";
+        tb.paragraphs.forEach((p, i) => {
+          if (!p || typeof p !== "object")
+            return;
+          if (!hydrate)
+            p = tb.paragraphs[i] = applyHook(hpara, p);
+          if (p.pPr)
+            p.pPr = applyHook(hp, p.pPr);
+          for (const r of p.runs || []) {
+            if (r && r.rPr)
+              r.rPr = applyHook(hr, r.rPr);
+            if (r && r.pPr)
+              r.pPr = applyHook(hp, r.pPr);
+          }
+          if (hydrate)
+            tb.paragraphs[i] = applyHook(hpara, p);
+        });
+      }
+      function walkDrawingText(workbook, phase) {
+        for (const sheet of Array.isArray(workbook.sheets) ? workbook.sheets : []) {
+          const list = sheet && Array.isArray(sheet.drawings) ? sheet.drawings : [];
+          for (const d of list)
+            if (d && typeof d === "object")
+              walkText(d.txBody, phase);
+        }
+      }
       function applyExtensions(workbook, phase) {
         if (!_exts.length || !workbook)
           return workbook;
+        if (phase === "hydrate")
+          walkDrawingText(workbook, phase);
         const sName = phase === "hydrate" ? "hydrateSettings" : "dehydrateSettings", wbName = phase === "hydrate" ? "hydrateWorkbook" : "dehydrateWorkbook", shName = phase === "hydrate" ? "hydrateSheet" : "dehydrateSheet", wb2 = applyHook(wbName, workbook);
         if (wb2 && wb2 !== workbook)
           Object.assign(workbook, wb2);
         applyHook(sName, workbook);
         for (const sheet of workbook.sheets || [])
           applyHook(shName, sheet);
+        if (phase !== "hydrate")
+          walkDrawingText(workbook, phase);
+        return workbook;
+      }
+      function applyPackage(name, workbook, ctx) {
+        for (const ext of _exts)
+          if (typeof ext[name] === "function") {
+            const r = ext[name](workbook, ctx);
+            if (r !== void 0)
+              workbook = r;
+          }
         return workbook;
       }
       return {
         use,
+        applyPackageHydrate(workbook, ctx) {
+          return applyPackage("hydratePackage", workbook, ctx);
+        },
+        applyPackageDehydrate(workbook, ctx) {
+          return applyPackage("dehydratePackage", workbook, ctx);
+        },
         applyHydrate(workbook) {
           applyExtensions(workbook, "hydrate");
         },
@@ -4743,6 +4901,16 @@ export const xlsxPackage = {
         Type: REL_TYPE_DOC,
         Target: "xl/workbook.xml"
       }]);
+      if (walker.hasExtensions)
+        walker.applyPackageDehydrate(workbook, {
+          package: pkg,
+          wbPart: "/xl/workbook.xml",
+          sheetParts: sheets.map((_, i) => `/xl/worksheets/sheet${i + 1}.xml`),
+          tablePartOf(t) {
+            const name = t && t.id != null ? `/xl/tables/table${t.id}.xml` : null;
+            return name && pkg.parts[name] ? name : null;
+          }
+        });
       return opc.write(pkg);
     }
     function renderWorksheet(sheet, sheetIdx, internString, hyperlinkRels, extraRels) {
@@ -4764,8 +4932,11 @@ export const xlsxPackage = {
             a.bestFit = "1";
           return xml.el("col", a);
         })));
+      let prevNum = 0;
       const rows = (sheet.rows || []).map((row, r) => {
-        const cells = row.map((val, c) => renderCell(val, r, c, internString)), a = { r: String(r + 1) }, p = sheet.rowProps && sheet.rowProps[r];
+        const given = Array.isArray(sheet.rowNumbers) ? sheet.rowNumbers[r] : void 0, num = Number.isInteger(given) && given > prevNum ? given : prevNum + 1;
+        prevNum = num;
+        const cells = row.map((val, c) => renderCell(val, num - 1, c, internString)), a = { r: String(num) }, p = sheet.rowProps && sheet.rowProps[r];
         if (p) {
           if (p.height != null)
             a.ht = String(p.height);
@@ -4891,8 +5062,8 @@ export const xlsxPackage = {
       const ref = cellRef(r, c), cell = normalizeCell(val), a = { r: ref };
       if (cell.s != null)
         a.s = String(cell.s);
-      if (cell.formula) {
-        const inner = [xml.el("f", {}, [xml.text(cell.formula)])];
+      if (hasFormula(cell)) {
+        const inner = [renderFormula(cell)];
         if (cell.value != null && cell.value !== "")
           inner.push(xml.el("v", {}, [xml.text(String(cell.value))]));
         if (cell.t && cell.t !== "n")
@@ -4920,11 +5091,29 @@ export const xlsxPackage = {
         return xml.el("c", a, []);
       return xml.el("c", a, [xml.el("v", {}, [xml.text(String(cell.value))])]);
     }
+    function hasFormula(cell) {
+      return cell.formula != null && (cell.formula !== "" || cell.formulaType != null);
+    }
+    function renderFormula(cell) {
+      const a = {};
+      if (cell.formulaAttrs && typeof cell.formulaAttrs === "object") {
+        for (const [k, v] of Object.entries(cell.formulaAttrs))
+          if (v != null)
+            a[k] = String(v);
+      }
+      if (cell.formulaType != null)
+        a.t = String(cell.formulaType);
+      if (cell.formulaRef != null)
+        a.ref = String(cell.formulaRef);
+      if (cell.sharedIndex != null)
+        a.si = String(cell.sharedIndex);
+      return xml.el("f", a, cell.formula !== "" ? [xml.text(String(cell.formula))] : []);
+    }
     function normalizeCell(val) {
       if (val == null)
         return { value: null, t: "n" };
       if (typeof val === "object" && val.type === "cell") {
-        if (val.formula)
+        if (hasFormula(val))
           return { ...val, t: val.t || "n" };
         if (val.t)
           return val;
@@ -4947,9 +5136,9 @@ export const xlsxPackage = {
       return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio, maxDepth: o.maxDepth } : void 0;
     }
     function read(bytes, readOpts) {
-      const pkg = opc.read(bytes, archiveLimits(readOpts)), { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
+      const pkg = opc.read(bytes, archiveLimits(readOpts)), plainParts = pkg.parts, { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
         try {
-          return readPackage(p, readOpts);
+          return readPackage(p, readOpts, plainParts);
         } catch (e) {
           throw typedPartXml(e);
         }
@@ -4962,7 +5151,7 @@ export const xlsxPackage = {
         return e;
       return new ParseError("xlsx/invalid-part-xml", `xlsx: failed to parse a part's XML (${e.message})`, { cause: e });
     }
-    function readPackage(pkg, readOpts) {
+    function readPackage(pkg, readOpts, plainParts) {
       const docRel = (pkg.rels["/"] || []).find((r) => r.Type.endsWith("/officeDocument"));
       if (!docRel)
         throw new ParseError("xlsx/missing-officeDocument-rel", "xlsx: no officeDocument relationship");
@@ -5012,7 +5201,7 @@ export const xlsxPackage = {
             dn.hidden = !0;
           definedNames.push(dn);
         }
-      const sheets = [], tables = [], sheetsEl = xml.findChild(wbRoot, "sheets");
+      const sheets = [], tables = [], sheetParts = [], sheetIds = [], tableParts = [], sheetsEl = xml.findChild(wbRoot, "sheets");
       if (sheetsEl) {
         const sheetEls = xml.findAll(sheetsEl, "sheet");
         if (limits.maxSheets && sheetEls.length > limits.maxSheets)
@@ -5043,6 +5232,7 @@ export const xlsxPackage = {
                 continue;
               const t = tablesMod.parse(decodeText(tBytes));
               tables.push(t);
+              tableParts.push(tPart);
               sheet.tableRefs.push(t.id);
             }
             delete sheet._tableRefs;
@@ -5069,13 +5259,18 @@ export const xlsxPackage = {
             if (drawingRel) {
               const drawingPart = relsMod.resolveTarget(wsPart, drawingRel.Target), dBytes = pkg.parts[drawingPart];
               if (dBytes) {
-                const parsed = drawingsMod.parse(decodeText(dBytes), { typedRunColors: !!(readOpts && readOpts.typedRunColors) }), drawingRels = pkg.rels[drawingPart] || [];
+                const parsed = drawingsMod.parse(decodeText(dBytes), {
+                  typedRunColors: !!(readOpts && readOpts.typedRunColors),
+                  typedLineColors: !!(readOpts && readOpts.typedLineColors)
+                }), drawingRels = pkg.rels[drawingPart] || [];
                 sheet.drawings = resolveDrawingEntries(parsed.entries, drawingPart, drawingRels, pkg);
               }
             }
           }
           delete sheet._drawingRid;
           sheets.push(sheet);
+          sheetParts.push(wsPart);
+          sheetIds.push(sEl.attrs.sheetId);
         }
       }
       const workbook = { type: "workbook", sheets, sharedStrings };
@@ -5087,8 +5282,23 @@ export const xlsxPackage = {
         workbook.tables = tables;
       if (persons && persons.length)
         workbook.persons = persons;
-      walker.applyHydrate(workbook);
-      return { workbook, package: pkg };
+      const hydrated = walker.applyPackageHydrate(workbook, {
+        package: pkg,
+        parts: plainParts,
+        rels: pkg.rels,
+        wbPart,
+        wbRoot,
+        wbRels,
+        sheetParts,
+        sheetIds,
+        tableParts,
+        readOpts,
+        consume(partName) {
+          return pkg.parts[partName];
+        }
+      });
+      walker.applyHydrate(hydrated);
+      return { workbook: hydrated, package: pkg };
     }
     function resolveDrawingEntries(entries, drawingPart, drawingRels, pkg) {
       const out = [];
@@ -5186,8 +5396,10 @@ export const xlsxPackage = {
         sheet.cols = xml.findAll(cols, "col").map(parseColEl);
       const data = xml.findChild(root, "sheetData");
       if (data) {
-        const budget = { max: limits.maxCellsPerSheet, used: 0, partName };
+        const budget = { max: limits.maxCellsPerSheet, used: 0, partName }, rowNumbers = [];
         for (const rEl of xml.findAll(data, "row")) {
+          const prevNum = rowNumbers.length ? rowNumbers[rowNumbers.length - 1] : 0, given = /^\d+$/.test(rEl.attrs.r || "") ? Number(rEl.attrs.r) : 0;
+          rowNumbers.push(given > prevNum ? given : prevNum + 1);
           if (limits.maxRowsPerSheet && sheet.rows.length >= limits.maxRowsPerSheet)
             throw limitExceeded("maxRowsPerSheet", limits.maxRowsPerSheet, sheet.rows.length + 1, partName);
           const props = parseRowProps(rEl, sheet.rows.length + 1);
@@ -5195,6 +5407,8 @@ export const xlsxPackage = {
             (sheet.rowProps || (sheet.rowProps = {}))[sheet.rows.length] = props;
           sheet.rows.push(parseRow(rEl, sharedStrings, budget));
         }
+        if (rowNumbers.some((n, i) => n !== i + 1))
+          sheet.rowNumbers = rowNumbers;
       }
       const af = xml.findChild(root, "autoFilter");
       if (af)
@@ -5370,6 +5584,22 @@ export const xlsxPackage = {
       const out = { type: "cell", value, t };
       if (formula)
         out.formula = formula;
+      if (fEl) {
+        const other = {};
+        for (const [k, v] of Object.entries(fEl.attrs || {}))
+          if (k === "t")
+            out.formulaType = v;
+          else if (k === "ref")
+            out.formulaRef = v;
+          else if (k === "si")
+            out.sharedIndex = Number(v);
+          else
+            other[k] = v;
+        if (Object.keys(other).length)
+          out.formulaAttrs = other;
+        if (!formula && out.formulaType != null)
+          out.formula = "";
+      }
       if (ref)
         out.ref = ref;
       if (s !== void 0)

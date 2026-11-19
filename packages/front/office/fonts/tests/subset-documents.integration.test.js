@@ -44,15 +44,14 @@ describe('subset documents — sources', () => {
 });
 
 describe('subset documents — documents', () => {
-    test('two documents per glyf face; the CFF faces skipped with the typed refusal', () => {
-        expect(set.docs.length).toBe(42);
-        expect(set.docs.every((d) => d.ext === 'ttf')).toBe(true);
-        expect(new Set(set.docs.map((d) => d.id)).size).toBe(42);
-        expect(set.skipped.map((s) => s.case)).toEqual([
-            'source-sans-3-regular/text.ttf', 'source-sans-3-regular/full.ttf',
-            'source-sans-3-vf-upright/text.ttf', 'source-sans-3-vf-upright/full.ttf',
+    test('two documents per glyf face and per CFF or CFF2 face (.otf); none skipped', () => {
+        expect(set.docs.length).toBe(46);
+        expect(set.docs.filter((d) => d.ext === 'otf').map((d) => d.id)).toEqual([
+            'source-sans-3-regular/text', 'source-sans-3-regular/full', 'source-sans-3-vf-upright/text', 'source-sans-3-vf-upright/full'
         ]);
-        expect(set.skipped.every((s) => s.reason.includes('fonts/subset-bad-font'))).toBe(true);
+        expect(set.docs.filter((d) => d.ext === 'ttf')).toHaveLength(42);
+        expect(new Set(set.docs.map((d) => d.id)).size).toBe(46);
+        expect(set.skipped).toEqual([]);
     });
 
     test('each subset reads back and maps every code point of its set; its source is the face', () => {

@@ -123,9 +123,36 @@ export const tableCff2 = {
                 const [size, offset] = priv;
                 checkRange(bytes, offset, size, 'fonts/cff2-private-range', 'Private DICT');
                 const pb = new Uint8Array(bytes.buffer, bytes.byteOffset + offset, size);
+                const pdict = parseDict(pb, { cff2: true });
+                // Its local subroutines (`Subrs`, relative to the Private
+                // DICT) and its `vsindex` (0 when absent).
+                const subrs = pdict.get(19);
+                let localSubrIndex = null;
+                if (subrs && subrs.length === 1) {
+                    const at = offset + subrs[0];
+                    checkRange(bytes, at, 4, 'fonts/cff2-subrs-range', 'local Subr INDEX');
+                    localSubrIndex = parseCff2Index(new BinaryReader(bytes, at, bytes.length - at));
+                }
+                const vs = pdict.get(22);
                 return { fontDict,
-                    private: { size, offset, bytes: pb, dict: parseDict(pb, { cff2: true }) } };
+                    private: { size, offset, bytes: pb, dict: pdict, localSubrIndex, vsindex: vs && vs.length === 1 ? vs[0] : 0 } };
             });
+        }
+
+        /**
+         * The region count of each ItemVariationData of an Item Variation
+         * Store (`vstore.data`): what a `blend` under `vsindex` i takes
+         * per value. Malformed data throws `fonts/cff2-vstore-range`.
+         * @param {Uint8Array} data
+         * @returns {number[]}
+         */
+        function regionCounts(data) {
+            const u16 = (at) => { checkRange(data, at, 2, 'fonts/cff2-vstore-range', 'Item Variation Store'); return (data[at] << 8) | data[at + 1]; };
+            const u32 = (at) => { checkRange(data, at, 4, 'fonts/cff2-vstore-range', 'Item Variation Store'); return ((data[at] << 24) | (data[at + 1] << 16) | (data[at + 2] << 8) | data[at + 3]) >>> 0; };
+            const count = u16(6);
+            const out = [];
+            for (let i = 0; i < count; i++) out.push(u16(u32(8 + 4 * i) + 4));
+            return out;
         }
 
         function parseCff2(bytes) {
@@ -173,7 +200,7 @@ export const tableCff2 = {
             return out;
         }
 
-        return { parseCff2, parseCff2Index, CFF2_TOP_DICT_OPS };
+        return { parseCff2, parseCff2Index, regionCounts, CFF2_TOP_DICT_OPS };
     }
 };
 

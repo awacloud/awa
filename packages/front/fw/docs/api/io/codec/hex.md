@@ -67,8 +67,16 @@ const worker = fw.createWorker(
 ## Notes
 
 - Output is always **lowercase** (`0-9a-f`).
-- `toBytes`: hex input parsed 2 characters at a time. Odd length → last character ignored.
-- No validation: invalid hex characters produce `NaN` bytes silently.
+- `toBytes` is strict: an odd-length input throws `hex: odd-length input`,
+  a character outside `0-9a-fA-F` throws `hex: invalid character at index N`.
+- `fromBytes` on a `Uint8Array` uses the platform's
+  `Uint8Array.prototype.toHex` where the realm has it (JavaScriptCore —
+  Safari, Bun — and Firefox); elsewhere (V8: Chrome, Node) a JS path writes
+  the digit pairs into a buffer and decodes it with `TextDecoder`
+  (`String.fromCharCode` in a realm without one). Same string either way;
+  1 MiB encodes in about 0.6 ms (Bun) / 1.2 ms (Node).
+- An array of numbers encodes each element's low 8 bits (`NaN` and holes
+  as `00`).
 
 ## See also
 

@@ -368,3 +368,26 @@ describe('msgpack module', () => {
         });
     });
 });
+
+describe('msgpack: a "__proto__" key never sets the result prototype', () => {
+    const codec = msgpack.factory(utf8.factory());
+    const payload = () => JSON.parse('{"__proto__": {"polluted": 1}, "a": 2, "z": {"__proto__": [1, 2]}}');
+
+    test('it decodes to an own enumerable property; nothing is inherited', () => {
+        const r = codec.decode(codec.encode(payload()));
+        expect(Object.getPrototypeOf(r)).toBe(null);   // null prototype (D9 G7)
+        expect(r.polluted).toBeUndefined();
+        const d = Object.getOwnPropertyDescriptor(r, '__proto__');
+        expect(d && d.enumerable).toBe(true);
+        expect(d.value).toEqual({ polluted: 1 });
+        expect(Object.keys(r)).toEqual(['__proto__', 'a', 'z']);
+        expect(Object.getPrototypeOf(r.z)).toBe(null);
+        expect(Object.getOwnPropertyDescriptor(r.z, '__proto__').value).toEqual([1, 2]);
+        expect(({}).polluted).toBeUndefined();
+    });
+
+    test('a re-encode gives the same bytes back', () => {
+        const bytes = codec.encode(payload());
+        expect(codec.encode(codec.decode(bytes))).toEqual(bytes);
+    });
+});

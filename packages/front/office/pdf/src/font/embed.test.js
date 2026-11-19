@@ -488,7 +488,8 @@ describe('pdfFontEmbed module', () => {
         expect(pdfFontEmbed.dependencies).toEqual([
             'pdfErrors',
             'embedSubsetForPdf', 'embedFontDescriptor',
-            'embedCidSystemInfo', 'embedToUnicodeBuilder'
+            'embedCidSystemInfo', 'embedToUnicodeBuilder',
+            'fontSfnt', 'fontCffProgram'
         ]);
         expect(pdfFontEmbed.factory.toString()).toContain('function');
         const m = createEmbed();

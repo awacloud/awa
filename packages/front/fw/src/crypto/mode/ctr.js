@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -31,7 +31,6 @@ import { bitArray } from '../utils/bitArray.js';
  * @typedef {object} CtrAPI
  * @property {(prf: {encrypt: Function}, plaintext: number[], iv: number[]) => (number[]|false)} encrypt Encrypt in CTR mode.
  * @property {(prf: {encrypt: Function}, ciphertext: number[], iv: number[]) => (number[]|false)} decrypt Decrypt in CTR mode (identical to encrypt).
- * @property {(prf: {encrypt: Function}, data: number[], iv: number[]) => (number[]|false)} _calculate Internal CTR core.
  * @property {(ui8a: (Uint8Array|number[]), pos: number) => (Uint8Array|number[])} ui8_increase Advance a 16-byte counter by ⌊pos/16⌋ blocks.
  * @property {(ui8a: (Uint8Array|number[]), pos: number) => (Uint8Array|number[])} ui8_increase_384 As `ui8_increase` over the last 16 bytes of a 48-byte buffer.
  */
@@ -166,7 +165,6 @@ export const ctr = {
                 return _calculate(prf, ciphertext, iv);
             },
 
-            _calculate,
             ui8_increase,
             ui8_increase_384
         };

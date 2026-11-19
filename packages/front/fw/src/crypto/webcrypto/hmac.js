@@ -115,10 +115,10 @@ export const webcryptoHmac = {
          *
          * @param {string} [hash='SHA-256']
          * @param {number} [lengthBits] Optional key length in bits (platform default when omitted).
-         * @param {boolean} [extractable=true]
+         * @param {boolean} [extractable=false]
          * @returns {Promise<CryptoKey|false>}
          */
-        async function generateKey(hash = 'SHA-256', lengthBits, extractable = true) {
+        async function generateKey(hash = 'SHA-256', lengthBits, extractable = false) {
             if (!_hasSubtle) {
                 console.error('[crypto] NOT READY: crypto.subtle unavailable');
                 return false;

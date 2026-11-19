@@ -67,7 +67,10 @@ const worker = fw.createWorker(
 
 - Each `new Crc32()` instance is independent — no shared internal state.
 - `get()` always returns a **unsigned** 32-bit integer (via `>>> 0`).
-- Pre-computed lookup table algorithm (256 entries) — fast for large volumes.
+- Slicing-by-16 on `Uint8Array` input: one 16 KiB table set, sixteen bytes
+  folded per step (1 MiB in about 0.3-0.5 ms under Bun, 0.6 ms under Node);
+  an array of numbers and the last 0-15 bytes take the byte-at-a-time loop,
+  which reads each element's low 8 bits.
 
 ## See also
 

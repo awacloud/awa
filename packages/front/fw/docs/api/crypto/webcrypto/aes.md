@@ -39,7 +39,7 @@ const webcryptoAes = runtime.resolve('webcryptoAes');
 | `encryptCtr` | `(key: CryptoKey, counter: Uint8Array, counterBits: number, data: Uint8Array) => Promise<Uint8Array\|false>` | Encrypted bytes or `false` |
 | `decryptCtr` | `(key: CryptoKey, counter: Uint8Array, counterBits: number, data: Uint8Array) => Promise<Uint8Array\|false>` | Decrypted bytes or `false` |
 
-**Defaults**: `lengthBits` = 256, `extractable` for `generateKey` = `true`, `extractable` for `importKey` = `false`, `tagBits` = 128.
+**Defaults**: `lengthBits` = 256, `extractable` = `false` for `generateKey` and `importKey` (pass `true` to export the key), `tagBits` = 128.
 
 **IV / counter length requirements**:
 - GCM: any length; 12 bytes (96-bit) strongly recommended (NIST SP 800-38D §8.2).

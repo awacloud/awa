@@ -1,0 +1,31 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "graphic-svg3d",
+  "package": "@awacloud/graphic-anim",
+  "root": "graphic.svg3d",
+  "modules": [
+    "svg3d.vec3",
+    "svg3d.mesh",
+    "svg3d.project",
+    "svg3d.apply",
+    "graphic.svgBuild",
+    "graphic.scopedIds",
+    "graphic.timeline",
+    "graphic.tween",
+    "graphic.svgApply",
+    "graphic.scheduler"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 97212,
+    "min": 52242
+  },
+  "domBound": true,
+  "workerSafeSlice": [
+    "svg3d.vec3",
+    "svg3d.mesh",
+    "svg3d.project"
+  ],
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

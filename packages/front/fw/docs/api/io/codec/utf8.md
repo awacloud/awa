@@ -75,9 +75,9 @@ const worker = fw.createWorker(
 
 ## Notes
 
-- Implemented via `encodeURI` (encoding) and manual decoding (decoding).
-- Supports 1, 2 and 3-byte sequences — covers the Unicode BMP (U+0000 to U+FFFF).
-- Non-BMP characters (emoji, etc.): represented as surrogate pairs via `encodeURI`.
+- Implemented with the platform `TextEncoder` / `TextDecoder` (`fatal: false`) when present, and a manual encoder / decoder otherwise.
+- 1- to 4-byte sequences: a surrogate pair (emoji and every non-BMP character) encodes to its 4-byte sequence.
+- Malformed input never throws: an unpaired surrogate (high or low, at any position) encodes to U+FFFD (`EF BF BD`), as `TextEncoder` does; an invalid or truncated byte sequence decodes to U+FFFD.
 
 ## See also
 

@@ -133,7 +133,7 @@ const worker = fw.createWorker(
 - The `opts._ext` channel consumed by `brotli` is internal — `brotliShared` is the only site that constructs it (`_buildExt(opts)`). Do not manipulate it directly from application code.
 - `_makeResolveStaticDictRef(customDict)` captures the multi-dict + contextMap configuration in a closure passed as a hook to the decoder. Resolution iterates in the order `[contextMap[cidL], 0, 1, ...]` (the context-pointed dict comes first).
 - WBITS 51..62 requires BigInt for distance arithmetic and a chunked buffer (Uint8Array caps at 4 GiB) — remains out of scope.
-- `_internal` exposes the helpers `ferment`, `shiftStep`, `shiftAddend`, `shiftFirst`, `shiftAll`, `applyCustomTransform`, `customLookupWord` for tests and tooling. Same conventions as `brotli._internal`.
+- The internal slot (`internalOf(brotliShared)`, tests only, not API) holds the helpers `ferment`, `shiftStep`, `shiftAddend`, `shiftFirst`, `shiftAll`, `applyCustomTransform`, `customLookupWord` for tests and tooling. Same convention as `brotli`.
 - Tests: 14 cases (`parseSharedDictionary` happy/error paths + codec wrappers + `sharedDictionary` integration + large-window round-trips).
 
 ## See also

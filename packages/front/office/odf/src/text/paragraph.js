@@ -32,6 +32,8 @@
  *   place (read side only when the read ctx carries `parseFrame`; see below)
  * - `{ type: 'element', name, attrs, children }`         — a raw XML element
  *   kept at its position inside a span's `runs`
+ * - `{ type: 'note', id?, noteClass?, citation, label?, body }` — text:note
+ *   (write side; read side only when the read ctx carries `parseNote`)
  *
  * **Span runs** — `value` is the flattened character data of the whole
  * `<text:span>` subtree. When the span has an element child, `runs` lists
@@ -54,6 +56,17 @@
  * through `ctx.renderFrame(run)` at its position (no sink: it emits nothing).
  * `textOf` reads it as it reads the raw frame: no text at paragraph or link
  * level, its character data inside a span.
+ *
+ * **Note runs** (write side) are rendered through `ctx.renderNote(run)` —
+ * the sink `odt` builds: a `text:note` (`text:id` the `id` when given,
+ * `text:note-class` the `noteClass`, `footnote` by default), its
+ * `text:note-citation` (the `citation`, `text:label` the `label` when
+ * given) and its `text:note-body`, `body` typed blocks rendered with the
+ * write's style registry. Without a sink the run emits nothing. On read a
+ * `text:note` stays untyped, as before, unless the read ctx carries
+ * `parseNote` (`odt.read(bytes, { notes: true })`): every `text:note` of a
+ * paragraph, heading, span or link body is then that note run at its
+ * place.
  *
  * **Emphasis flags** (`bold`/`italic`/`strike`/`monospace`) are booleans and
  * are meaningful on `span` runs only. Precedence on write: an explicit
@@ -223,6 +236,9 @@ export const textParagraph = {
                     } else if (c.name === 'draw:frame' && ctx
                         && typeof ctx.parseFrame === 'function') {
                         runs.push(ctx.parseFrame(c));
+                    } else if (c.name === 'text:note' && ctx
+                        && typeof ctx.parseNote === 'function') {
+                        runs.push(ctx.parseNote(c));
                     } else if (inPlace) {
                         runs.push(c);
                     } else {
@@ -365,6 +381,7 @@ export const textParagraph = {
                 }
                 case 'image': return (ctx && typeof ctx.renderImage === 'function') ? ctx.renderImage(r) : xml.text('');
                 case 'frame': return (ctx && typeof ctx.renderFrame === 'function') ? ctx.renderFrame(r) : xml.text('');
+                case 'note': return (ctx && typeof ctx.renderNote === 'function') ? ctx.renderNote(r) : xml.text('');
                 // A raw XML element kept at its position (span bodies).
                 case 'element':    return r;
                 default:            return xml.text('');

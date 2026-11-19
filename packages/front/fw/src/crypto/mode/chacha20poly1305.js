@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -113,13 +113,13 @@ export const chacha20poly1305 = {
             const polyKey = _polyKey(key, nonce);
             if (polyKey === false) return false;
             if (!poly1305.verify(polyKey, _macInput(aad, ciphertext), tag)) {
-                console.error('[crypto] CORRUPT: chacha20poly1305: authentication tag mismatch');
+                console.warn('[crypto] CORRUPT: chacha20poly1305: authentication tag mismatch');
                 return false;
             }
             return chacha20.xor(key, nonce, ciphertext, 1);
         }
 
-        // ── Iteration G2 - Nonce-uniqueness tracker (opt-in) ─────────────
+        // ── Nonce-uniqueness tracker (opt-in) ─────────────
         //
         // ChaCha20-Poly1305 (RFC 8439) requires the (key, nonce) pair to be
         // unique : reuse leaks the Poly1305 key (forgery + plaintext recovery

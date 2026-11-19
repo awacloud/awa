@@ -30,7 +30,7 @@ status: complete|stub
 
 ## Canonical skeleton
 
-```markdown
+````markdown
 ---
 module: <name>
 category: <path>
@@ -115,6 +115,7 @@ const worker = fw.createWorker(
 
 Relative links, one per line — `[<related-module>](./<related-module>.md) — relationship`
 and `[<relevant-guide>](../../guide/<guide>.md)`.
+````
 
 ## Sections — required vs optional
 
@@ -222,7 +223,7 @@ docs/README.md
 
 ### Leaf category `README.md` format (`io/codec/README.md`)
 
-```markdown
+````markdown
 # IO / Codec
 
 1-2 sentence description of the category's role.
@@ -239,7 +240,7 @@ docs/README.md
 ```js
 // typical resolution snippet for this category
 ```
-```
+````
 
 ### Section `README.md` format (`io/README.md`)
 

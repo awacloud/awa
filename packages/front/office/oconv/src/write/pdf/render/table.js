@@ -399,11 +399,13 @@ export const oconvPdfRenderTable = {
             const baseIndent = Number.isFinite(ctx.indent) ? ctx.indent : 0;
             const column = Number.isFinite(ctx.column) ? ctx.column : layout.column;
             const delta = column - baseIndent - inner;
-            const flowed = ctx.flowChildren(blocks, {
+            const flowOpts = {
                 indentDelta: delta,
                 styleOverride: spec.override || undefined,
                 ruleX: null
-            }) || {};
+            };
+            if (spec.tagPath) flowOpts.tagPath = spec.tagPath;
+            const flowed = ctx.flowChildren(blocks, flowOpts) || {};
             const flowedBlocks = flowed.blocks || [];
             const dx = spec.x + CELL_PAD - (layout.margin + baseIndent + delta);
             const right = spec.x + spec.width - CELL_PAD;
@@ -420,7 +422,7 @@ export const oconvPdfRenderTable = {
                         const fitted = placeTokens(line.tokens || [], x0, right, b.sizePt, ctx);
                         if (fitted.clipped) clipped = true;
                         if (fitted.tokens.length === 0) return;
-                        items.push({
+                        const item = {
                             x: x0,
                             y: spec.y0 + y + (n + 1) * leading,
                             style: fitted.tokens[0].style || 'regular',
@@ -428,7 +430,9 @@ export const oconvPdfRenderTable = {
                             tokens: fitted.tokens,
                             index: ctx.index,
                             kind: 'table'
-                        });
+                        };
+                        if (b.tag) item.tag = b.tag;
+                        items.push(item);
                     });
                 } else {
                     for (const it of b.items || []) items.push(translate(it, dx, spec.y0 + y, ctx));
@@ -467,7 +471,7 @@ export const oconvPdfRenderTable = {
         /**
          * Render one `table` block.
          *
-         * @param {object} node `oconv-ir/v1` `table` node.
+         * @param {object} node `oconv-ir/v2` `table` node.
          * @param {object} ctx Stack child context + `flowChildren`.
          * @returns {{items: object[], losses: object[], height: number,
          *   keepTogether: boolean}} `height` is the BODY height — the stack
@@ -552,17 +556,25 @@ export const oconvPdfRenderTable = {
             let y = 0;
             items.push(ruleItem(tableX, y, tableWidth, BOX_RULE, sizePt, ctx));
             y += BOX_RULE;
+            // A tagged document: the `Table`, each row's `TR`, each cell's
+            // `TH` (a header row's, scoped to its column) or `TD`.
+            const tablePath = Array.isArray(ctx.tagPath)
+                ? [...ctx.tagPath, { key: String(ctx.index), type: 'Table' }] : null;
 
             rows.forEach((row, r) => {
                 const cells = cellsOf(row);
                 const top = y;
                 let body = 0;
                 for (let j = 0; j < colCount; j += 1) {
+                    const cellTag = !tablePath ? null : row.header
+                        ? { key: `c${j}`, type: 'TH', props: { attributes: [{ O: 'Table', Scope: 'Column' }] } }
+                        : { key: `c${j}`, type: 'TD' };
                     const laid = layoutCell(cells[j], {
                         x: left[j],
                         width: widths[j],
                         y0: top + CELL_PAD,
-                        override: overrides[r][j]
+                        override: overrides[r][j],
+                        tagPath: tablePath ? [...tablePath, { key: `r${r}`, type: 'TR' }, cellTag] : null
                     }, ctx);
                     if (laid.height > body) body = laid.height;
                     if (laid.clipped) clippedCells.push({ row: r, column: j });

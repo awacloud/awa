@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `odp` → `oconv-ir/v1` reader — tier 1 (the frozen fidelity
+ * @fileoverview `odp` → `oconv-ir/v2` reader — tier 1 (the frozen fidelity
  * matrix: "slide order, title + body text as `##` + prose"), same contract as
  * `pptx-to-ir.js`.
  *
@@ -17,7 +17,7 @@
  *
  * ## Tier-1 mapping — one slide → one heading + N paragraphs
  *
- * There is no "section" node in the frozen `oconv-ir/v1` vocabulary
+ * There is no "section" node in the `oconv-ir/v2` vocabulary
  * (`../ir/ir.js`), so each slide contributes a flat run of top-level
  * blocks in slide order: an optional `heading{level:2}` for its title,
  * then one `paragraph` per non-empty body-frame paragraph, then an
@@ -174,7 +174,7 @@ export const oconvOdpToIr = {
 
         /**
          * Convert `readResult` (the value of `odp.read(bytes)`) into an
-         * `oconv-ir/v1` document plus its loss ledger.
+         * `oconv-ir/v2` document plus its loss ledger.
          *
          * @param {object} readResult Value of `odp.read(bytes)`.
          * @param {{includeNotes?: boolean}} [opts] `includeNotes` defaults

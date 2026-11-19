@@ -19,7 +19,7 @@
  * same list, which is what makes the whole document byte-reproducible.
  *
  * Pure module: no imports, no I/O, no `@awacloud/*` coupling — it walks plain
- * `oconv-ir/v1` node objects (`{kind, …, children?}`) structurally.
+ * `oconv-ir/v2` node objects (`{kind, …, children?}`) structurally.
  *
  * > **Duplication note (deliberate).** `oconvIrToMd`'s factory carries its
  * > own copy of this algorithm because an fw factory may not capture
@@ -58,7 +58,7 @@ export function slugify(text) {
  * Concatenated text of an IR subtree — the `run.text` leaves, in document
  * order. Images contribute nothing (their `alt` is not heading text).
  *
- * @param {object} node Any `oconv-ir/v1` node.
+ * @param {object} node Any `oconv-ir/v2` node.
  * @returns {string}
  */
 export function inlineText(node) {
@@ -81,7 +81,7 @@ export function inlineText(node) {
  * produces no `#`-heading in the body, hence no addressable anchor. Indexing
  * it would put a dangling entry in the frozen wire contract.
  *
- * @param {object} ir `oconv-ir/v1` document (or any subtree).
+ * @param {object} ir `oconv-ir/v2` document (or any subtree).
  * @returns {{level: number, anchor: string}[]}
  */
 export function anchorIndex(ir) {

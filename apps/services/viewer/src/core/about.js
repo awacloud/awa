@@ -5,12 +5,14 @@
 
 /**
  * @fileoverview The standalone page's About panel (`dialog#app-about` in
- * `public/index.html`): the release, the legal notices — copyright and
- * author as plain text, the licence, its texts and the third-party notices
- * (cached with the release, so they open offline) — "Check for updates",
- * and the one line about AwaCloud (how to install is in Help). Opened from the header's
- * About button; a modal dialog, so the focus stays inside and returns to
- * the button on close. The page markup holds the text; this module only
+ * `public/index.html`), in the Help panel's form: a head with the title,
+ * the release under it and the x; a scrollable body — copyright and author
+ * as plain text, "Check for updates", the offline line, the one line about
+ * AwaCloud (how to install is in Help), the licence, its texts and the
+ * third-party notices (cached with the release, so they open offline); the
+ * closing button after it. Opened from the header's About button; a modal
+ * dialog, so the focus stays inside; the x, the button and Escape close it
+ * and the focus returns to the About button. The page markup holds the text; this module only
  * opens, closes, asks the PWA adapter and reports.
  *
  * @module viewer/core/about
@@ -24,6 +26,7 @@ export function mountAbout({ doc, t, pwa, onReady }) {
     const dialog = /** @type {HTMLDialogElement} */ (doc.getElementById('app-about'));
     const opener = /** @type {HTMLButtonElement} */ (doc.getElementById('app-about-open'));
     const closer = /** @type {HTMLButtonElement} */ (doc.getElementById('app-about-close'));
+    const closerX = /** @type {HTMLButtonElement} */ (doc.getElementById('app-about-close-x'));
     const check = /** @type {HTMLButtonElement} */ (doc.getElementById('app-about-check'));
     const status = /** @type {HTMLElement} */ (doc.getElementById('app-about-status'));
     const build = /** @type {HTMLElement} */ (doc.getElementById('app-about-build'));
@@ -34,6 +37,8 @@ export function mountAbout({ doc, t, pwa, onReady }) {
     let release;
 
     function label() {
+        closerX.setAttribute('aria-label', t('help.close'));
+        closerX.title = t('help.close');
         status.textContent = statusKey ? t(statusKey) : '';
         if (release === undefined || release === null) build.textContent = '';
         else build.textContent = release === 'dev' ? `(${t('about.dev')})` : `(${t('about.build', { version: release })})`;
@@ -51,6 +56,7 @@ export function mountAbout({ doc, t, pwa, onReady }) {
     function close() {
         if (typeof dialog.close === 'function') dialog.close();
         else dialog.removeAttribute('open');
+        opener.focus();
     }
 
     async function checkForUpdates() {
@@ -69,7 +75,11 @@ export function mountAbout({ doc, t, pwa, onReady }) {
 
     opener.addEventListener('click', () => { void open(); });
     closer.addEventListener('click', close);
+    closerX.addEventListener('click', close);
+    // Escape closes a modal dialog natively; the focus returns to the opener either way.
+    dialog.addEventListener('close', () => { opener.focus(); });
     check.addEventListener('click', () => { void checkForUpdates(); });
 
+    label();
     return { open, close, checkForUpdates, label };
 }

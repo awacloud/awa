@@ -6,9 +6,12 @@
 /**
  * @fileoverview `ankr` — Anchor Points (Apple TT RM06).
  *
- * Strict factory body. The AAT lookup table is not decoded: `parseAnkr`
- * returns its raw `lookupBytes` and `lookupFormat`; `readAnchorBlock`
- * decodes one anchor block at a given offset.
+ * Strict factory body. `parseAnkr(bytes, opts?)` returns the raw
+ * `lookupBytes` and `lookupFormat`, and `anchors(glyph)`: the glyph's
+ * anchor points `[{ x, y }]` through the lookup (decoded by `aatLookup`;
+ * its values are offsets into the glyph data), `[]` when the glyph has
+ * none, the lookup does not decode, or the block does not.
+ * `readAnchorBlock` decodes one anchor block at a given offset.
  *
  * @module fonts/extra/apple-aat/ankr
  */
@@ -26,12 +29,13 @@
 
 import { fontErrors } from '../../errors.js';
 import { fontReader } from '../../primitives/reader.js';
+import { aatLookup } from './lookup.js';
 
 export const aatAnkr = {
     name: 'aatAnkr',
-    dependencies: ['fontErrors', 'fontReader'],
-    deps: [fontErrors, fontReader],
-    factory(errors, reader) {
+    dependencies: ['fontErrors', 'fontReader', 'aatLookup'],
+    deps: [fontErrors, fontReader, aatLookup],
+    factory(errors, reader, lookups) {
         const HEADER_SIZE = 12;
         const { ParseError } = errors;
         const { BinaryReader } = reader;
@@ -40,9 +44,10 @@ export const aatAnkr = {
          * Parse an `ankr` table.
          *
          * @param {Uint8Array} bytes
-         * @returns {AnkrTable}
+         * @param {{numGlyphs?: number}} [opts]
+         * @returns {AnkrTable & {anchors: (glyph: number) => {x: number, y: number}[]}}
          */
-        function parseAnkr(bytes) {
+        function parseAnkr(bytes, opts) {
             if (!(bytes instanceof Uint8Array))
                 throw new ParseError('fonts/ankr-input', 'parseAnkr expects Uint8Array',
                     { context: { actual: typeof bytes } });
@@ -74,6 +79,7 @@ export const aatAnkr = {
                     { context: { length: lookupBytes.length } });
 
             const lookupFormat = (lookupBytes[0] << 8) | lookupBytes[1];
+            let table;
 
             return {
                 version,
@@ -82,7 +88,23 @@ export const aatAnkr = {
                 glyphDataTableOffset,
                 lookupFormat,
                 lookupBytes,
-                glyphDataBytes
+                glyphDataBytes,
+                anchors(glyph) {
+                    if (table === undefined) {
+                        try {
+                            table = lookups.parseLookup(lookupBytes, 0, opts && opts.numGlyphs !== undefined ? { numGlyphs: opts.numGlyphs } : undefined);
+                        } catch (e) {
+                            if (!(e instanceof ParseError)) throw e;
+                            table = null;
+                        }
+                    }
+                    const off = table ? table.get(glyph) : null;
+                    if (off === null) return [];
+                    try { return readAnchorBlock(glyphDataBytes, off); } catch (e) {
+                        if (!(e instanceof ParseError)) throw e;
+                        return [];
+                    }
+                }
             };
         }
 

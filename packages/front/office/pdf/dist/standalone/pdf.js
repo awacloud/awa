@@ -217,7 +217,19 @@ export const pdfBundled = {
         t[symbols[i]] = lengths[i];
       return { t, l: lengths[0] };
     }
-    return { buildTree, buildMap };
+    function kraft(codeLengths) {
+      const perLength = new Int32Array(16);
+      for (let s = 0;s < codeLengths.length; ++s)
+        perLength[codeLengths[s]]++;
+      let left = 1;
+      for (let len = 1;len < 16; ++len) {
+        left = left * 2 - perLength[len];
+        if (left < 0)
+          return { oversubscribed: !0, incomplete: !1 };
+      }
+      return { oversubscribed: !1, incomplete: left > 0 };
+    }
+    return { buildTree, buildMap, kraft };
   } });
     __register({ name: "lz77", dependencies: [], factory: function() {
     const u8 = Uint8Array, i32 = Int32Array, DEFAULT = Object.freeze({
@@ -341,30 +353,18 @@ export const pdfBundled = {
         }
       }
     }
-    function encodeTokens(data, opts) {
-      if (!(data instanceof u8))
-        throw Error("lz77.encodeTokens: data must be Uint8Array");
-      const o = _resolveOpts(opts), len = data.length, cap = 2 * Math.max(0, len - o.start), provided = opts && opts.tokens;
-      let tokens;
-      if (provided) {
-        if (provided.length < cap)
-          throw Error("lz77.encodeTokens: tokens buffer too small");
-        tokens = provided;
-      } else
-        tokens = new i32(cap);
+    function _fill(st, tokens, max) {
+      const { data, len, head, prev, hash, maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip, wndSize } = st, wndMask = wndSize - 1, lastKey = st.lastKey, atLeast = st.atLeast, cap = 2 * max;
       let p = 0;
-      if (o.start >= len)
-        return { tokens, count: 0 };
-      const { maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip } = o, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, head = new i32(1 << o.hashBits).fill(-1), prev = new i32(Math.min(wndSize, len)).fill(-1), hash = _hasherFor(o), lastKey = len - o.minMatch, atLeast = o.minMatch - 1;
-      for (let k = 0;k < o.start && k <= lastKey; ++k) {
-        const h = hash(data, k);
-        prev[k & wndMask] = head[h];
-        head[h] = k;
+      if (st.heldLen) {
+        tokens[p++] = st.heldLen;
+        tokens[p++] = st.heldDist;
+        st.heldLen = 0;
       }
-      let i = o.start;
-      while (i <= lastKey) {
-        const h = hash(data, i);
-        let matchLen = _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
+      let i = st.at;
+      while (p < cap && i <= lastKey) {
+        const h = hash(data, i), newest = head[h];
+        let matchLen = newest === -1 || i - newest >= wndSize ? 0 : _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
         prev[i & wndMask] = head[h];
         head[h] = i;
         if (matchLen === 0) {
@@ -374,7 +374,7 @@ export const pdfBundled = {
           continue;
         }
         if (lazy && matchLen < maxLazy && i < lastKey) {
-          const h1 = hash(data, i + 1), nextLen = _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
+          const h1 = hash(data, i + 1), newest1 = head[h1], nextLen = newest1 === -1 || i + 1 - newest1 >= wndSize ? 0 : _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
           if (nextLen) {
             tokens[p++] = 0;
             tokens[p++] = data[i];
@@ -385,8 +385,13 @@ export const pdfBundled = {
             head[h1] = i;
           }
         }
-        tokens[p++] = matchLen;
-        tokens[p++] = dist;
+        if (p < cap) {
+          tokens[p++] = matchLen;
+          tokens[p++] = dist;
+        } else {
+          st.heldLen = matchLen;
+          st.heldDist = dist;
+        }
         const end = i + matchLen;
         for (let k = i + 1;k < end && k <= lastKey; ++k) {
           const hk = hash(data, k);
@@ -395,12 +400,67 @@ export const pdfBundled = {
         }
         i = end;
       }
-      while (i < len) {
+      while (p < cap && i < len) {
         tokens[p++] = 0;
         tokens[p++] = data[i];
         i++;
       }
-      return { tokens, count: p / 2 };
+      st.at = i;
+      return p >> 1;
+    }
+    function createScanner(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.createScanner: data must be Uint8Array");
+      const o = _resolveOpts(opts), len = data.length, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, empty = o.start >= len, hash = _hasherFor(o), lastKey = len - o.minMatch, head = empty ? null : new i32(1 << o.hashBits).fill(-1), prev = empty ? null : new i32(Math.min(wndSize, len)).fill(-1);
+      if (!empty)
+        for (let k = 0;k < o.start && k <= lastKey; ++k) {
+          const h = hash(data, k);
+          prev[k & wndMask] = head[h];
+          head[h] = k;
+        }
+      const st = {
+        data,
+        len,
+        hash,
+        lastKey,
+        wndSize,
+        head,
+        prev,
+        maxMatch: o.maxMatch,
+        niceLength: o.niceLength,
+        chainDepth: o.chainDepth,
+        lazy: o.lazy,
+        goodLength: o.goodLength,
+        maxLazy: o.maxLazy,
+        chainSkip: o.chainSkip,
+        atLeast: o.minMatch - 1,
+        at: empty ? len : o.start,
+        heldLen: 0,
+        heldDist: 0
+      };
+      return {
+        fill(tokens, max) {
+          return _fill(st, tokens, max);
+        },
+        get done() {
+          return st.at >= st.len && st.heldLen === 0;
+        }
+      };
+    }
+    function encodeTokens(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.encodeTokens: data must be Uint8Array");
+      const n = Math.max(0, data.length - Math.max(0, (opts && opts.start) | 0)), cap = 2 * n, provided = opts && opts.tokens;
+      let tokens;
+      if (provided) {
+        if (provided.length < cap)
+          throw Error("lz77.encodeTokens: tokens buffer too small");
+        tokens = provided;
+      } else
+        tokens = new i32(cap);
+      if (n === 0)
+        return { tokens, count: 0 };
+      return { tokens, count: createScanner(data, opts).fill(tokens, n) };
     }
     function decodeStream(dst, ops) {
       let p = 0;
@@ -417,6 +477,7 @@ export const pdfBundled = {
     return {
       encode,
       encodeTokens,
+      createScanner,
       findMatch,
       decodeStream,
       DEFAULT
@@ -431,7 +492,7 @@ export const pdfBundled = {
       byteOffset,
       slice,
       max
-    } = bitstream, { buildMap, buildTree } = huffman, ERROR_MESSAGES = [
+    } = bitstream, { buildMap, buildTree } = huffman, CODE_NAMES = { 0: "EEOF", 1: "EBADBLOCK", 2: "EBADSYMBOL", 3: "EBADDISTANCE", 4: "ESTREAMEND", 5: "ENOHANDLER", 6: "EBADFORMAT", 7: "EMAXOUT", 8: "EBADSTREAM", 9: "EEXTRATOOLONG", 10: "EBADDATE", 11: "ENAMETOOLONG", 12: "ENOENCODER", 13: "EBADFORMAT", 14: "EBADMETHOD", 15: "EUNSAFEPATH", 16: "ECHECKSUM" }, ERROR_MESSAGES = [
       "unexpected EOF",
       "invalid block type",
       "invalid length/literal",
@@ -439,12 +500,13 @@ export const pdfBundled = {
       "stream finished",
       "no stream handler",
       null,
-      null,
+      "output limit exceeded",
       "invalid data"
     ];
     function fail(code, message) {
       const e = Error(message ?? ERROR_MESSAGES[code] ?? "unknown error");
-      e.code = code;
+      e.code = CODE_NAMES[code];
+      e.errno = code;
       throw e;
     }
     const u8 = Uint8Array, u16 = Uint16Array, u32 = Uint32Array, i32 = Int32Array, WINDOW_SIZE = 32768;
@@ -532,8 +594,10 @@ export const pdfBundled = {
       return sym < 29 && dist >= DIST_BASE[sym + 1] ? sym + 1 : sym;
     }
     const PHASE_HEADER = 0, PHASE_STORED = 1, PHASE_CODES = 2, PHASE_DONE = 3, NEED_INPUT = 0, COMPLETE = 1;
-    function createInflateState(dictionary) {
+    function createInflateState(dictionary, maxOutput) {
       const dict = dictionary && dictionary.length ? dictionary.subarray(Math.max(0, dictionary.length - WINDOW_SIZE)) : null;
+      if (maxOutput !== void 0 && maxOutput !== null && !(Number.isSafeInteger(maxOutput) && maxOutput >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
       return {
         bitPos: 0,
         finalBlock: 0,
@@ -547,7 +611,10 @@ export const pdfBundled = {
         outLen: 0,
         emitted: 0,
         dictionary: dict,
-        fixedOut: !1
+        fixedOut: !1,
+        base: 0,
+        limit: maxOutput !== void 0 && maxOutput !== null ? (dict ? dict.length : 0) + maxOutput : 1 / 0,
+        end: 0
       };
     }
     function initOutput(state, inputLength, providedOut) {
@@ -556,24 +623,29 @@ export const pdfBundled = {
         state.out = providedOut;
         state.fixedOut = !0;
       } else
-        state.out = new u8(Math.max(65536, inputLength * 3));
+        state.out = new u8(Math.min(Math.max(65536, inputLength * 3), state.limit));
       if (dictLen) {
         state.out.set(state.dictionary);
         state.outLen = dictLen;
         state.emitted = dictLen;
       }
+      state.end = Math.min(state.out.length, state.limit - state.base);
     }
     function reserveOutput(state, needed) {
-      if (needed <= state.out.length)
+      if (needed <= state.end)
         return;
+      if (state.base + needed > state.limit)
+        fail(7);
       if (state.fixedOut)
         fail(8, "output exceeds provided buffer");
       let size = state.out.length || 65536;
       while (size < needed)
         size *= 2;
+      size = Math.min(size, state.limit - state.base);
       const grown = new u8(size);
       grown.set(state.out.subarray(0, state.outLen));
       state.out = grown;
+      state.end = Math.min(size, state.limit - state.base);
     }
     function readDynamicTables(state, input) {
       const totalBits = input.length * 8;
@@ -791,6 +863,8 @@ export const pdfBundled = {
       const start = state.outLen - WINDOW_SIZE;
       state.out.set(state.out.subarray(start, state.outLen), 0);
       state.outLen = WINDOW_SIZE;
+      state.base += start;
+      state.end = Math.min(state.out.length, state.limit - state.base);
       state.emitted = Math.max(0, state.emitted - start);
     }
     const WINDOW_BITS = 15, MIN_MATCH = 3, MAX_MATCH = 258, BLOCK_TOKENS = 16384, STREAM_FLUSH_BYTES = 65536, LEVELS = [
@@ -821,15 +895,7 @@ export const pdfBundled = {
         return Math.imul(data[i] | data[i + 1] << 8 | data[i + 2] << 16, 2654435761) >>> shift;
       };
     }
-    const TOKEN_SCRATCH_MAX = 2097152;
-    let tokenScratch = null;
-    function tokenBuffer(capacity) {
-      if (capacity > TOKEN_SCRATCH_MAX)
-        return new i32(capacity);
-      if (!tokenScratch || tokenScratch.length < capacity)
-        tokenScratch = new i32(capacity);
-      return tokenScratch;
-    }
+    const blockTokens = new i32(2 * BLOCK_TOKENS);
     function createTokenBuffer(tokens, start) {
       return {
         tokens,
@@ -1054,7 +1120,7 @@ export const pdfBundled = {
       if (params.level === 0)
         writeStoredRun(w, input, start, params.final);
       else {
-        const scan = lz77.encodeTokens(input, {
+        const scan = lz77.createScanner(input, {
           windowBits: WINDOW_BITS,
           minMatch: MIN_MATCH,
           maxMatch: MAX_MATCH,
@@ -1063,12 +1129,11 @@ export const pdfBundled = {
           hashFn: makeHashFn(params.hashBits),
           lazy: params.lazy,
           chainSkip: !0,
-          ...LEVELS[params.level],
-          tokens: tokenBuffer(2 * Math.max(0, input.length - start))
-        }), tb = createTokenBuffer(scan.tokens, start), count = scan.count;
-        for (let from = 0;; from += BLOCK_TOKENS) {
-          const to = Math.min(count, from + BLOCK_TOKENS), covered = tallyBlock(tb, from, to);
-          if (to === count) {
+          ...LEVELS[params.level]
+        }), tb = createTokenBuffer(blockTokens, start);
+        for (;; ) {
+          const covered = tallyBlock(tb, 0, scan.fill(blockTokens, BLOCK_TOKENS));
+          if (scan.done) {
             tb.blockLen = input.length - tb.blockStart;
             writeBlock(w, tb, input, params.final);
             break;
@@ -1156,7 +1221,7 @@ export const pdfBundled = {
         opts = {};
       }
       this.ondata = ondata;
-      this._state = createInflateState((opts || {}).dictionary);
+      this._state = createInflateState((opts || {}).dictionary, (opts || {}).maxOutput);
       initOutput(this._state, 0, void 0);
       this._pending = new u8(0);
       this._done = !1;
@@ -1189,6 +1254,16 @@ export const pdfBundled = {
       this._pending = slice(this._pending, state.bitPos >> 3);
       state.bitPos &= 7;
     };
+    Object.defineProperty(InflateStream.prototype, "ended", {
+      get() {
+        return this._state.phase === PHASE_DONE;
+      }
+    });
+    InflateStream.prototype.rest = function() {
+      if (this._state.phase !== PHASE_DONE)
+        return null;
+      return this._pending.subarray(this._state.bitPos ? 1 : 0);
+    };
     function deflateSync(data, opts = {}) {
       let input = data, start = 0;
       const dict = opts.dictionary;
@@ -1212,9 +1287,11 @@ export const pdfBundled = {
     function inflateSync(data, opts = {}) {
       if (!data.length)
         return opts.out ? opts.out.subarray(0, 0) : new u8(0);
-      const state = createInflateState(opts.dictionary), dictLen = state.dictionary ? state.dictionary.length : 0;
+      const state = createInflateState(opts.dictionary, opts.maxOutput), dictLen = state.dictionary ? state.dictionary.length : 0;
       initOutput(state, data.length, opts.out);
       runInflate(state, data, !1);
+      if (typeof opts.onEnd === "function")
+        opts.onEnd(byteOffset(state.bitPos));
       if (state.fixedOut)
         return state.out.subarray(0, state.outLen);
       if (opts.out) {
@@ -1285,9 +1362,6 @@ export const pdfBundled = {
     const byteToB64 = [];
     for (let m = 0;m < 64; m++)
       byteToB64["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".charCodeAt(m)] = m;
-    function _numTob64(num) {
-      return "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[num >> 18 & 63] + "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[num >> 12 & 63] + "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[num >> 6 & 63] + "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[num & 63];
-    }
     function _b64ToNum(a, b, c, d) {
       return byteToB64[a.charCodeAt(0)] << 18 | byteToB64[b.charCodeAt(0)] << 12 | byteToB64[c.charCodeAt(0)] << 6 | byteToB64[d.charCodeAt(0)];
     }
@@ -1301,17 +1375,6 @@ export const pdfBundled = {
       arr.push("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[remain >> 4 & 63]);
       arr.push("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[remain << 2 & 63]);
       arr.push("=");
-    }
-    function _encode(bytes, arr, len, remain) {
-      len = len - remain;
-      for (let i = 0;i < len; i += 3)
-        arr.push(_numTob64((bytes[i] << 16) + (bytes[i + 1] << 8) + bytes[i + 2]));
-      len = bytes.length;
-      if (remain === 1)
-        _enc_remain1(arr, bytes[len - 1]);
-      else if (remain === 2)
-        _enc_remain2(arr, (bytes[len - 2] << 8) + bytes[len - 1]);
-      return arr.join("");
     }
     function _dec_remain1(arr, remain) {
       arr.push(remain >> 8 & 255);
@@ -1336,13 +1399,115 @@ export const pdfBundled = {
         _dec_remain1(arr, byteToB64[str.charCodeAt(i)] << 10 | byteToB64[str.charCodeAt(i + 1)] << 4 | byteToB64[str.charCodeAt(i + 2)] >> 2);
       return new Uint8Array(arr);
     }
-    return { fromBytes: function(bytes) {
-      return _encode(bytes, [], bytes.length, bytes.length % 3);
-    }, toBytes: function(str) {
-      return _decode(str, [], 0, str.length, 0);
-    }, test: function(str) {
+    const b64Code = Uint8Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", (c) => c.charCodeAt(0)), little = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1, pairCode = new Uint16Array(4096);
+    for (let v = 0;v < 4096; v++) {
+      const a = b64Code[v >> 6], b = b64Code[v & 63];
+      pairCode[v] = little ? a | b << 8 : a << 8 | b;
+    }
+    const sextet = new Uint8Array(256).fill(64);
+    for (let m = 0;m < 64; m++)
+      sextet["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".charCodeAt(m)] = m;
+    const U8 = Uint8Array, nativeTo = typeof U8.prototype.toBase64 === "function" ? U8.prototype.toBase64 : null, nativeFrom = typeof U8.fromBase64 === "function" ? U8.fromBase64 : null, ascii = typeof TextDecoder === "function" ? new TextDecoder : null, CHUNK = 8192;
+    function _codesToString(codes) {
+      if (ascii)
+        return ascii.decode(codes);
+      if (codes.length <= CHUNK)
+        return String.fromCharCode.apply(null, codes);
+      const parts = [];
+      for (let k = 0;k < codes.length; k += CHUNK)
+        parts.push(String.fromCharCode.apply(null, codes.subarray(k, k + CHUNK)));
+      return parts.join("");
+    }
+    function _encodeFast(bytes) {
+      const len = bytes.length, remain = len % 3, whole = len - remain, pairs = new Uint16Array(whole / 3 * 2);
+      for (let i = 0, j = 0;i < whole; i += 3, j += 2) {
+        const num = (bytes[i] << 16) + (bytes[i + 1] << 8) + bytes[i + 2];
+        pairs[j] = pairCode[num >> 12 & 4095];
+        pairs[j + 1] = pairCode[num & 4095];
+      }
+      const body = _codesToString(new Uint8Array(pairs.buffer));
+      if (remain === 0)
+        return body;
+      const tail = [];
+      if (remain === 1)
+        _enc_remain1(tail, bytes[len - 1]);
+      else
+        _enc_remain2(tail, (bytes[len - 2] << 8) + bytes[len - 1]);
+      return body + tail.join("");
+    }
+    function _decodeFast(str) {
+      const len = str.length;
+      if (len % 4 !== 0)
+        return null;
+      if (len === 0)
+        return new Uint8Array(0);
+      let pad = 0;
+      if (str.charCodeAt(len - 1) === 61)
+        pad = str.charCodeAt(len - 2) === 61 ? 2 : 1;
+      else if (str.charCodeAt(len - 2) === 61)
+        return null;
+      const out = new Uint8Array(len / 4 * 3 - pad), full = pad ? len - 4 : len;
+      let bad = 0, wide = 0, j = 0;
+      for (let i = 0;i < full; i += 4) {
+        const a = str.charCodeAt(i), b = str.charCodeAt(i + 1), c = str.charCodeAt(i + 2), d = str.charCodeAt(i + 3);
+        wide |= a | b | c | d;
+        const sa = sextet[a], sb = sextet[b], sc = sextet[c], sd = sextet[d];
+        bad |= sa | sb | sc | sd;
+        const num = sa << 18 | sb << 12 | sc << 6 | sd;
+        out[j++] = num >> 16;
+        out[j++] = num >> 8;
+        out[j++] = num;
+      }
+      if (pad) {
+        const a = str.charCodeAt(full), b = str.charCodeAt(full + 1), c = pad === 1 ? str.charCodeAt(full + 2) : 65;
+        wide |= a | b | c;
+        const sa = sextet[a], sb = sextet[b], sc = sextet[c];
+        bad |= sa | sb | sc;
+        out[j++] = sa << 2 | sb >> 4;
+        if (pad === 1)
+          out[j] = sb << 4 | sc >> 2;
+      }
+      return bad & 64 || wide > 255 ? null : out;
+    }
+    const fromBytes = function(bytes) {
+      if (nativeTo && bytes instanceof Uint8Array)
+        return nativeTo.call(bytes);
+      return _encodeFast(bytes);
+    }, toBytes = function(str) {
+      if (typeof str !== "string")
+        return _decode(str, [], 0, str.length, 0);
+      const len = str.length;
+      if (nativeFrom && len % 4 === 0 && len > 0) {
+        const last = str.charCodeAt(len - 1) === 61, prev = str.charCodeAt(len - 2) === 61;
+        if (last || !prev)
+          try {
+            const r = nativeFrom(str);
+            if (r.length === len / 4 * 3 - (last ? prev ? 2 : 1 : 0))
+              return r;
+          } catch {}
+      }
+      return _decodeFast(str) || _decode(str, [], 0, len, 0);
+    }, test = function(str) {
       return /^(?=(.{4})*$)[A-Za-z0-9+/]*={0,2}$/.test(str);
-    } };
+    }, _B64U = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", urlFromBytes = function(bytes) {
+      return fromBytes(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }, urlTest = function(s) {
+      if (typeof s !== "string" || !/^[A-Za-z0-9\-_]*$/.test(s))
+        return !1;
+      const rem = s.length % 4;
+      if (rem === 1)
+        return !1;
+      if (rem === 0)
+        return !0;
+      const unusedBits = rem === 2 ? 4 : 2;
+      return (_B64U.indexOf(s[s.length - 1]) & (1 << unusedBits) - 1) === 0;
+    };
+    return { fromBytes, toBytes, test, url: { fromBytes: urlFromBytes, toBytes: function(s) {
+      if (!urlTest(s))
+        return !1;
+      const std = s.replace(/-/g, "+").replace(/_/g, "/");
+      return toBytes(std + "=".repeat((4 - s.length % 4) % 4));
+    }, test: urlTest } };
   } });
     __register({ name: "hex", dependencies: [], factory: function() {
     const charToNibble = new Int8Array(128).fill(-1);
@@ -1350,6 +1515,22 @@ export const pdfBundled = {
       charToNibble["0123456789abcdef".charCodeAt(i)] = i;
       if (i >= 10)
         charToNibble["ABCDEF".charCodeAt(i - 10)] = i;
+    }
+    const hexCode = Uint8Array.from("0123456789abcdef", (c) => c.charCodeAt(0)), little = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1, pairCode = new Uint16Array(256);
+    for (let b = 0;b < 256; b++) {
+      const hi = hexCode[b >> 4], lo = hexCode[b & 15];
+      pairCode[b] = little ? hi | lo << 8 : hi << 8 | lo;
+    }
+    const U8P = Uint8Array.prototype, nativeToHex = typeof U8P.toHex === "function" ? U8P.toHex : null, ascii = typeof TextDecoder === "function" ? new TextDecoder : null, CHUNK = 8192;
+    function _codesToString(codes) {
+      if (ascii)
+        return ascii.decode(codes);
+      if (codes.length <= CHUNK)
+        return String.fromCharCode.apply(null, codes);
+      const parts = [];
+      for (let k = 0;k < codes.length; k += CHUNK)
+        parts.push(String.fromCharCode.apply(null, codes.subarray(k, k + CHUNK)));
+      return parts.join("");
     }
     return { toBytes: (text) => {
       const len = text.length;
@@ -1364,10 +1545,12 @@ export const pdfBundled = {
       }
       return arr;
     }, fromBytes: (bytes) => {
-      const arr = Array(bytes.length);
-      for (let i = 0;i < bytes.length; i++)
-        arr[i] = "0123456789abcdef"[(bytes[i] & 240) >> 4] + "0123456789abcdef"[bytes[i] & 15];
-      return arr.join("");
+      if (nativeToHex && bytes instanceof Uint8Array)
+        return nativeToHex.call(bytes);
+      const n = bytes.length, pairs = new Uint16Array(n);
+      for (let i = 0;i < n; i++)
+        pairs[i] = pairCode[bytes[i] & 255];
+      return _codesToString(new Uint8Array(pairs.buffer));
     }, test: (str) => {
       if (typeof str !== "string")
         return !1;
@@ -1399,15 +1582,23 @@ export const pdfBundled = {
       }
     }
     function _payloadStart(d, dict) {
+      if (d.length < 2 || (d[1] >> 3 & 4) + 2 > d.length) {
+        const e = Error("invalid zlib data: truncated header");
+        e.code = "EBADFORMAT";
+        e.errno = 6;
+        throw e;
+      }
       if ((d[0] & 15) !== 8 || d[0] >> 4 > 7 || (d[0] << 8 | d[1]) % 31) {
         const e = Error("invalid zlib data");
-        e.code = 6;
+        e.code = "EBADFORMAT";
+        e.errno = 6;
         throw e;
       }
       const hasDict = d[1] >> 5 & 1;
       if (hasDict === +!dict) {
         const e = Error("invalid zlib data: " + (hasDict ? "need" : "unexpected") + " dictionary");
-        e.code = 6;
+        e.code = "EBADFORMAT";
+        e.errno = 6;
         throw e;
       }
       return (d[1] >> 3 & 4) + 2;
@@ -1421,12 +1612,34 @@ export const pdfBundled = {
       _w32be(out, hl + compressed.length, a.get());
       return out;
     }
+    const CODE_NAMES = { 0: "EEOF", 1: "EBADBLOCK", 2: "EBADSYMBOL", 3: "EBADDISTANCE", 4: "ESTREAMEND", 5: "ENOHANDLER", 6: "EBADFORMAT", 7: "EMAXOUT", 8: "EBADSTREAM", 9: "EEXTRATOOLONG", 10: "EBADDATE", 11: "ENAMETOOLONG", 12: "ENOENCODER", 13: "EBADFORMAT", 14: "EBADMETHOD", 15: "EUNSAFEPATH", 16: "ECHECKSUM" };
+    function _codeErr(code, message) {
+      const e = Error(message);
+      e.code = CODE_NAMES[code];
+      e.errno = code;
+      return e;
+    }
+    function _r32be(d, at) {
+      return (d[at] << 24 | d[at + 1] << 16 | d[at + 2] << 8 | d[at + 3]) >>> 0;
+    }
+    function _checkAdler(out, data, trailerAt) {
+      const a = new Adler32;
+      a.append(out);
+      if (a.get() !== _r32be(data, trailerAt))
+        throw _codeErr(16, "zlib: incorrect data check (Adler-32 mismatch)");
+    }
     function unzlibSync(data, opts = {}) {
       const start = _payloadStart(data, opts.dictionary);
-      return inflateSync(data.subarray(start, -4), {
+      if (opts.verify !== !1 && data.length < start + 2 + 4)
+        throw _codeErr(0, "zlib: unexpected EOF (frame shorter than a deflate stream and its trailer)");
+      const out = inflateSync(data.subarray(start, -4), {
         out: opts.out,
-        dictionary: opts.dictionary
+        dictionary: opts.dictionary,
+        maxOutput: opts.maxOutput
       });
+      if (opts.verify !== !1)
+        _checkAdler(out, data, data.length - 4);
+      return out;
     }
     function _concat2(a, b) {
       const out = new Uint8Array(a.length + b.length);
@@ -1479,8 +1692,18 @@ export const pdfBundled = {
       this._inf = null;
       this._tail = new Uint8Array(4);
       this._tailLen = 0;
+      this._sum = this._opts.verify !== !1 ? new Adler32 : null;
+      this._ended = !1;
     }
     UnzlibStream.prototype.push = function(chunk, final) {
+      if (this._ended) {
+        const e = Error("stream finished");
+        e.code = "ESTREAMEND";
+        e.errno = 4;
+        throw e;
+      }
+      if (final)
+        this._ended = !0;
       if (this._hdr === -1) {
         this._buf.push(chunk);
         this._bufLen += chunk.length;
@@ -1502,6 +1725,8 @@ export const pdfBundled = {
         this._buf = null;
         const self = this;
         this._inf = new InflateStream(this._opts, function(data, fin) {
+          if (self._sum)
+            self._sum.append(data);
           if (self.ondata)
             self.ondata(data, fin);
         });
@@ -1517,13 +1742,27 @@ export const pdfBundled = {
         const feedLen = total.length > 4 ? total.length - 4 : 0;
         if (feedLen > 0)
           this._inf.push(total.subarray(0, feedLen), !1);
+        this._fed = (this._fed || 0) + feedLen;
         const newTailLen = total.length - feedLen;
         this._tailLen = newTailLen;
         this._tail.set(total.subarray(feedLen));
       } else {
         const feedLen = Math.max(0, total.length - 4);
+        if (this._sum && (this._fed || 0) + feedLen < 2)
+          throw _codeErr(0, "zlib: unexpected EOF (stream shorter than a deflate stream and its trailer)");
         this._inf.push(total.subarray(0, feedLen), !0);
+        if (this._sum && this._sum.get() !== _r32be(total, feedLen))
+          throw _codeErr(16, "zlib: incorrect data check (Adler-32 mismatch)");
       }
+    };
+    UnzlibStream.prototype.flush = function() {
+      if (this._ended)
+        throw _codeErr(4, "stream finished");
+      this._ended = !0;
+      if (this._hdr === -1 || this._tailLen === 0)
+        return;
+      this._inf.push(this._tail.subarray(0, this._tailLen), !1);
+      this._tailLen = 0;
     };
     const _mt = typeof queueMicrotask === "function" ? queueMicrotask : (fn) => Promise.resolve().then(fn);
     function zlibAsync(data, opts = {}) {
@@ -1558,15 +1797,20 @@ export const pdfBundled = {
     };
   } });
     __register({ name: "lzw", dependencies: [], factory: function() {
+    function _codedError(code, message) {
+      const e = Error(message);
+      e.code = code;
+      return e;
+    }
     const u8 = Uint8Array;
     function _resolveOpts(opts) {
       opts = opts || {};
-      const minCodeBits = opts.minCodeBits ?? 8, maxBits = opts.maxBits ?? 12, bigEndian = !!opts.bigEndian, useClearEnd = opts.useClearEnd ?? !0;
+      const minCodeBits = opts.minCodeBits ?? 8, maxBits = opts.maxBits ?? 12, bigEndian = !!opts.bigEndian, useClearEnd = opts.useClearEnd ?? !0, earlyChange = opts.earlyChange ?? bigEndian;
       if (minCodeBits < 2 || minCodeBits > 12)
-        throw Error("lzw: minCodeBits must be in [2, 12]");
+        throw _codedError("EBADARG", "lzw: minCodeBits must be in [2, 12]");
       if (maxBits < minCodeBits + 1 || maxBits > 16)
-        throw Error("lzw: maxBits must be in [minCodeBits+1, 16]");
-      return { minCodeBits, maxBits, bigEndian, useClearEnd };
+        throw _codedError("EBADARG", "lzw: maxBits must be in [minCodeBits+1, 16]");
+      return { minCodeBits, maxBits, bigEndian, useClearEnd, earlyChange: !!earlyChange };
     }
     function _makeBitWriter(bigEndian) {
       let buf = new u8(256), len = 0, acc = 0, nAcc = 0;
@@ -1644,7 +1888,7 @@ export const pdfBundled = {
     }
     function encode(data, opts) {
       if (!(data instanceof u8))
-        throw Error("lzw.encode: data must be Uint8Array");
+        throw _codedError("EBADARG", "lzw.encode: data must be Uint8Array");
       const o = _resolveOpts(opts), initialSize = 1 << o.minCodeBits, clearCode = o.useClearEnd ? initialSize : -1, endCode = o.useClearEnd ? initialSize + 1 : -1, firstFree = o.useClearEnd ? initialSize + 2 : initialSize, w = _makeBitWriter(o.bigEndian);
       let codeBits = o.minCodeBits + 1, nextCode = firstFree;
       const maxCode = (1 << o.maxBits) - 1, dict = new Map;
@@ -1667,7 +1911,7 @@ export const pdfBundled = {
           w.writeCode(dict.get(cur), codeBits);
           if (nextCode <= maxCode) {
             dict.set(candidate, nextCode++);
-            if (nextCode === 1 << codeBits && codeBits < o.maxBits)
+            if (nextCode === (1 << codeBits) + (o.earlyChange ? 0 : 1) && codeBits < o.maxBits)
               codeBits++;
           }
           cur = nextChar;
@@ -1681,7 +1925,7 @@ export const pdfBundled = {
     }
     function decode(data, opts) {
       if (!(data instanceof u8))
-        throw Error("lzw.decode: data must be Uint8Array");
+        throw _codedError("EBADARG", "lzw.decode: data must be Uint8Array");
       const o = _resolveOpts(opts), initialSize = 1 << o.minCodeBits, clearCode = o.useClearEnd ? initialSize : -1, endCode = o.useClearEnd ? initialSize + 1 : -1, firstFree = o.useClearEnd ? initialSize + 2 : initialSize, r = _makeBitReader(data, o.bigEndian);
       let out = new u8(Math.max(data.length * 2, 256)), outLen = 0;
       function append(arr) {
@@ -1720,20 +1964,20 @@ export const pdfBundled = {
         if (code < nextCode) {
           seq = dict[code];
           if (!seq)
-            throw Error("lzw.decode: invalid code " + code + " (unassigned)");
+            throw _codedError("EBADSTREAM", "lzw.decode: invalid code " + code + " (unassigned)");
         } else if (code === nextCode && prevSeq) {
           seq = new u8(prevSeq.length + 1);
           seq.set(prevSeq, 0);
           seq[prevSeq.length] = prevSeq[0];
         } else
-          throw Error("lzw.decode: code " + code + " out of range (nextCode=" + nextCode + ")");
+          throw _codedError("EBADSTREAM", "lzw.decode: code " + code + " out of range (nextCode=" + nextCode + ")");
         append(seq);
         if (prevSeq && nextCode <= maxCode) {
           const ent = new u8(prevSeq.length + 1);
           ent.set(prevSeq, 0);
           ent[prevSeq.length] = seq[0];
           dict[nextCode++] = ent;
-          if (nextCode === (1 << codeBits) - 1 && codeBits < o.maxBits)
+          if (nextCode === (1 << codeBits) - (o.earlyChange ? 1 : 0) && codeBits < o.maxBits)
             codeBits++;
         }
         prevSeq = seq;
@@ -1752,8 +1996,8 @@ export const pdfBundled = {
       let p = 0;
       for (let i = 0;i < len; i++) {
         let cp = text.charCodeAt(i);
-        if (cp >= 55296 && cp <= 56319 && i + 1 < len) {
-          const next = text.charCodeAt(i + 1);
+        if (cp >= 55296 && cp <= 56319) {
+          const next = i + 1 < len ? text.charCodeAt(i + 1) : -1;
           if (next >= 56320 && next <= 57343) {
             cp = 65536 + (cp - 55296 << 10) + (next - 56320);
             i++;
@@ -1896,142 +2140,238 @@ export const pdfBundled = {
       }
       return out;
     }
-    function _sboxCT(b, sbox) {
-      let result = 0;
-      const bx = b & 255;
-      for (let i = 0;i < 256; i++) {
-        const mask = -(((i ^ bx) >>> 0) - 1 >>> 8 & 1) & 255;
-        result |= sbox[i] & mask;
+    const LANES = 65535;
+    function _bsMul(a, b, out) {
+      const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7], b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3], b4 = b[4], b5 = b[5], b6 = b[6], b7 = b[7];
+      let p0 = a0 & b0, p1 = a0 & b1 ^ a1 & b0, p2 = a0 & b2 ^ a1 & b1 ^ a2 & b0, p3 = a0 & b3 ^ a1 & b2 ^ a2 & b1 ^ a3 & b0, p4 = a0 & b4 ^ a1 & b3 ^ a2 & b2 ^ a3 & b1 ^ a4 & b0, p5 = a0 & b5 ^ a1 & b4 ^ a2 & b3 ^ a3 & b2 ^ a4 & b1 ^ a5 & b0, p6 = a0 & b6 ^ a1 & b5 ^ a2 & b4 ^ a3 & b3 ^ a4 & b2 ^ a5 & b1 ^ a6 & b0, p7 = a0 & b7 ^ a1 & b6 ^ a2 & b5 ^ a3 & b4 ^ a4 & b3 ^ a5 & b2 ^ a6 & b1 ^ a7 & b0, p8 = a1 & b7 ^ a2 & b6 ^ a3 & b5 ^ a4 & b4 ^ a5 & b3 ^ a6 & b2 ^ a7 & b1, p9 = a2 & b7 ^ a3 & b6 ^ a4 & b5 ^ a5 & b4 ^ a6 & b3 ^ a7 & b2, p10 = a3 & b7 ^ a4 & b6 ^ a5 & b5 ^ a6 & b4 ^ a7 & b3, p11 = a4 & b7 ^ a5 & b6 ^ a6 & b5 ^ a7 & b4, p12 = a5 & b7 ^ a6 & b6 ^ a7 & b5, p13 = a6 & b7 ^ a7 & b6, p14 = a7 & b7;
+      p10 ^= p14;
+      p9 ^= p14;
+      p7 ^= p14;
+      p6 ^= p14;
+      p9 ^= p13;
+      p8 ^= p13;
+      p6 ^= p13;
+      p5 ^= p13;
+      p8 ^= p12;
+      p7 ^= p12;
+      p5 ^= p12;
+      p4 ^= p12;
+      p7 ^= p11;
+      p6 ^= p11;
+      p4 ^= p11;
+      p3 ^= p11;
+      p6 ^= p10;
+      p5 ^= p10;
+      p3 ^= p10;
+      p2 ^= p10;
+      p5 ^= p9;
+      p4 ^= p9;
+      p2 ^= p9;
+      p1 ^= p9;
+      p4 ^= p8;
+      p3 ^= p8;
+      p1 ^= p8;
+      p0 ^= p8;
+      out[0] = p0;
+      out[1] = p1;
+      out[2] = p2;
+      out[3] = p3;
+      out[4] = p4;
+      out[5] = p5;
+      out[6] = p6;
+      out[7] = p7;
+    }
+    function _bsSq(a, out) {
+      const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7];
+      out[0] = a0 ^ a4 ^ a6;
+      out[1] = a4 ^ a6 ^ a7;
+      out[2] = a1 ^ a5;
+      out[3] = a4 ^ a5 ^ a6 ^ a7;
+      out[4] = a2 ^ a4 ^ a7;
+      out[5] = a5 ^ a6;
+      out[6] = a3 ^ a5;
+      out[7] = a6 ^ a7;
+    }
+    const _x2 = new Int32Array(8), _x3 = new Int32Array(8), _x12 = new Int32Array(8), _acc = new Int32Array(8), _aff = new Int32Array(8);
+    function _bsInv(x) {
+      _bsSq(x, _x2);
+      _bsMul(_x2, x, _x3);
+      _bsSq(_x3, _x12);
+      _bsSq(_x12, _x12);
+      _bsMul(_x12, _x3, _acc);
+      _bsSq(_acc, _acc);
+      _bsSq(_acc, _acc);
+      _bsSq(_acc, _acc);
+      _bsSq(_acc, _acc);
+      _bsMul(_acc, _x12, _acc);
+      _bsMul(_acc, _x2, x);
+    }
+    function _bsSubPlanes(s) {
+      _bsInv(s);
+      for (let k = 0;k < 8; k++)
+        _aff[k] = s[k];
+      for (let k = 0;k < 8; k++)
+        s[k] = _aff[k] ^ _aff[k + 4 & 7] ^ _aff[k + 5 & 7] ^ _aff[k + 6 & 7] ^ _aff[k + 7 & 7] ^ (99 >> k & 1 ? LANES : 0);
+    }
+    function _bsInvSubPlanes(s) {
+      for (let k = 0;k < 8; k++)
+        _aff[k] = s[k];
+      for (let k = 0;k < 8; k++)
+        s[k] = _aff[k + 2 & 7] ^ _aff[k + 5 & 7] ^ _aff[k + 7 & 7] ^ (5 >> k & 1 ? LANES : 0);
+      _bsInv(s);
+    }
+    function _bsShift(s, inv) {
+      for (let k = 0;k < 8; k++) {
+        const x = s[k];
+        let y = x & 4369;
+        for (let r = 1;r < 4; r++) {
+          const m = 4369 << r, v = x & m, n = 4 * r, rot = inv ? v << n | v >>> 16 - n : v >>> n | v << 16 - n;
+          y |= rot & m;
+        }
+        s[k] = y;
       }
-      return result & 255;
     }
-    function _xtime(b) {
-      return (b << 1 ^ (b >> 7) * 27) & 255;
+    const _c1 = new Int32Array(8), _u = new Int32Array(8);
+    function _bsMix(s) {
+      for (let k = 0;k < 8; k++) {
+        const x = s[k], x1 = x >>> 1 & 30583 | (x & 4369) << 3, x2 = x1 >>> 1 & 30583 | (x1 & 4369) << 3, x3 = x2 >>> 1 & 30583 | (x2 & 4369) << 3;
+        _c1[k] = x ^ x1 ^ x2 ^ x3;
+        _u[k] = x ^ x1;
+      }
+      const u = _u, xt0 = u[7], xt1 = u[0] ^ u[7], xt2 = u[1], xt3 = u[2] ^ u[7], xt4 = u[3] ^ u[7], xt5 = u[4], xt6 = u[5], xt7 = u[6];
+      s[0] ^= _c1[0] ^ xt0;
+      s[1] ^= _c1[1] ^ xt1;
+      s[2] ^= _c1[2] ^ xt2;
+      s[3] ^= _c1[3] ^ xt3;
+      s[4] ^= _c1[4] ^ xt4;
+      s[5] ^= _c1[5] ^ xt5;
+      s[6] ^= _c1[6] ^ xt6;
+      s[7] ^= _c1[7] ^ xt7;
     }
-    function _mixColumnCT(c0, c1, c2, c3) {
-      const t = c0 ^ c1 ^ c2 ^ c3, r0 = c0 ^ t ^ _xtime(c0 ^ c1), r1 = c1 ^ t ^ _xtime(c1 ^ c2), r2 = c2 ^ t ^ _xtime(c2 ^ c3), r3 = c3 ^ t ^ _xtime(c3 ^ c0);
-      return [r0, r1, r2, r3];
+    function _bsInvMix(s) {
+      _bsMix(s);
+      _bsMix(s);
+      _bsMix(s);
     }
-    function _invMixColumnCT(c0, c1, c2, c3) {
-      const m02 = _xtime, m04 = (b) => m02(m02(b)), m08 = (b) => m02(m04(b)), m09 = (b) => m08(b) ^ b, m0b = (b) => m08(b) ^ m02(b) ^ b, m0d = (b) => m08(b) ^ m04(b) ^ b, m0e = (b) => m08(b) ^ m04(b) ^ m02(b);
-      return [
-        (m0e(c0) ^ m0b(c1) ^ m0d(c2) ^ m09(c3)) & 255,
-        (m09(c0) ^ m0e(c1) ^ m0b(c2) ^ m0d(c3)) & 255,
-        (m0d(c0) ^ m09(c1) ^ m0e(c2) ^ m0b(c3)) & 255,
-        (m0b(c0) ^ m0d(c1) ^ m09(c2) ^ m0e(c3)) & 255
-      ];
+    function _bsPack(words, out) {
+      out.fill(0);
+      for (let c = 0;c < 4; c++) {
+        const w = words[c];
+        for (let r = 0;r < 4; r++) {
+          const byte = w >>> 24 - 8 * r & 255, lane = r + 4 * c;
+          for (let k = 0;k < 8; k++)
+            out[k] |= (byte >>> k & 1) << lane;
+        }
+      }
     }
-    function _cryptCT(input, dir, keys) {
-      if (input.length !== 4) {
+    function _bsUnpack(s) {
+      const out = [0, 0, 0, 0];
+      for (let c = 0;c < 4; c++) {
+        let w = 0;
+        for (let r = 0;r < 4; r++) {
+          const lane = r + 4 * c;
+          let byte = 0;
+          for (let k = 0;k < 8; k++)
+            byte |= (s[k] >>> lane & 1) << k;
+          w |= byte << 24 - 8 * r;
+        }
+        out[c] = w;
+      }
+      return out;
+    }
+    const _state = new Int32Array(8);
+    function _subWordCT(w) {
+      _bsPack([w, 0, 0, 0], _state);
+      _bsSubPlanes(_state);
+      return _bsUnpack(_state)[0];
+    }
+    function _expandKeyCT(key) {
+      const n = key.length, w = key.slice(0);
+      let rcon = 1;
+      for (let i = n;i < 4 * n + 28; i++) {
+        let tmp = w[i - 1];
+        if (i % n === 0) {
+          tmp = _subWordCT(tmp << 8 | tmp >>> 24) ^ rcon << 24;
+          rcon = rcon << 1 ^ (rcon >> 7) * 283;
+        } else if (n === 8 && i % n === 4)
+          tmp = _subWordCT(tmp);
+        w[i] = w[i - n] ^ tmp;
+      }
+      return w;
+    }
+    function _expandKeyTable(key) {
+      const sbox = tables[0][4], n = key.length, w = key.slice(0);
+      let rcon = 1;
+      for (let i = n;i < 4 * n + 28; i++) {
+        let tmp = w[i - 1];
+        if (i % n === 0 || n === 8 && i % n === 4) {
+          tmp = sbox[tmp >>> 24] << 24 ^ sbox[tmp >> 16 & 255] << 16 ^ sbox[tmp >> 8 & 255] << 8 ^ sbox[tmp & 255];
+          if (i % n === 0) {
+            tmp = tmp << 8 ^ tmp >>> 24 ^ rcon << 24;
+            rcon = rcon << 1 ^ (rcon >> 7) * 283;
+          }
+        }
+        w[i] = w[i - n] ^ tmp;
+      }
+      return w;
+    }
+    function _bsRoundKeys(words) {
+      const rk = [];
+      for (let r = 0;r < words.length / 4; r++) {
+        const p = new Int32Array(8);
+        _bsPack(words.slice(4 * r, 4 * r + 4), p);
+        rk.push(p);
+      }
+      return rk;
+    }
+    const _addKey = (s, k) => {
+      for (let i = 0;i < 8; i++)
+        s[i] ^= k[i];
+    };
+    function _bsCrypt(input, dir, rk) {
+      if (!input || input.length !== 4) {
         console.warn("[crypto] INVALID: aes: invalid block size");
         return !1;
       }
-      const sbox = tables[0][4], sboxInv = tables[1][4], sb = dir ? sboxInv : sbox, enc = !dir, state = new Uint8Array(16);
-      for (let j = 0;j < 4; j++) {
-        const w = input[j];
-        state[j * 4] = w >>> 24 & 255;
-        state[j * 4 + 1] = w >>> 16 & 255;
-        state[j * 4 + 2] = w >>> 8 & 255;
-        state[j * 4 + 3] = w & 255;
-      }
-      const encWords = keys[0], Nr = encWords.length / 4 - 1, ks = new Uint8Array(encWords.length * 4);
-      for (let i = 0;i < encWords.length; i++) {
-        ks[i * 4] = encWords[i] >>> 24 & 255;
-        ks[i * 4 + 1] = encWords[i] >>> 16 & 255;
-        ks[i * 4 + 2] = encWords[i] >>> 8 & 255;
-        ks[i * 4 + 3] = encWords[i] & 255;
-      }
-      if (enc) {
-        for (let i = 0;i < 16; i++)
-          state[i] ^= ks[i];
-        for (let r = 1;r < Nr; r++) {
-          for (let i = 0;i < 16; i++)
-            state[i] = _sboxCT(state[i], sb);
-          const tmp = new Uint8Array(state);
-          for (let row = 0;row < 4; row++)
-            for (let col = 0;col < 4; col++)
-              state[col * 4 + row] = tmp[(col + row & 3) * 4 + row];
-          for (let col = 0;col < 4; col++) {
-            const o = col * 4, m = _mixColumnCT(state[o], state[o + 1], state[o + 2], state[o + 3]);
-            state[o] = m[0];
-            state[o + 1] = m[1];
-            state[o + 2] = m[2];
-            state[o + 3] = m[3];
-          }
-          for (let i = 0;i < 16; i++)
-            state[i] ^= ks[r * 16 + i];
+      const s = _state, nr = rk.length - 1;
+      _bsPack(input, s);
+      if (!dir) {
+        _addKey(s, rk[0]);
+        for (let r = 1;r < nr; r++) {
+          _bsSubPlanes(s);
+          _bsShift(s, !1);
+          _bsMix(s);
+          _addKey(s, rk[r]);
         }
-        for (let i = 0;i < 16; i++)
-          state[i] = _sboxCT(state[i], sb);
-        {
-          const tmp = new Uint8Array(state);
-          for (let row = 0;row < 4; row++)
-            for (let col = 0;col < 4; col++)
-              state[col * 4 + row] = tmp[(col + row & 3) * 4 + row];
-        }
-        for (let i = 0;i < 16; i++)
-          state[i] ^= ks[Nr * 16 + i];
+        _bsSubPlanes(s);
+        _bsShift(s, !1);
+        _addKey(s, rk[nr]);
       } else {
-        for (let i = 0;i < 16; i++)
-          state[i] ^= ks[Nr * 16 + i];
-        for (let r = Nr - 1;r >= 1; r--) {
-          const tmp = new Uint8Array(state);
-          for (let row = 0;row < 4; row++)
-            for (let col = 0;col < 4; col++)
-              state[col * 4 + row] = tmp[(col - row + 4 & 3) * 4 + row];
-          for (let i = 0;i < 16; i++)
-            state[i] = _sboxCT(state[i], sb);
-          for (let i = 0;i < 16; i++)
-            state[i] ^= ks[r * 16 + i];
-          for (let col = 0;col < 4; col++) {
-            const o = col * 4, m = _invMixColumnCT(state[o], state[o + 1], state[o + 2], state[o + 3]);
-            state[o] = m[0];
-            state[o + 1] = m[1];
-            state[o + 2] = m[2];
-            state[o + 3] = m[3];
-          }
+        _addKey(s, rk[nr]);
+        for (let r = nr - 1;r >= 1; r--) {
+          _bsShift(s, !0);
+          _bsInvSubPlanes(s);
+          _addKey(s, rk[r]);
+          _bsInvMix(s);
         }
-        {
-          const tmp = new Uint8Array(state);
-          for (let row = 0;row < 4; row++)
-            for (let col = 0;col < 4; col++)
-              state[col * 4 + row] = tmp[(col - row + 4 & 3) * 4 + row];
-        }
-        for (let i = 0;i < 16; i++)
-          state[i] = _sboxCT(state[i], sb);
-        for (let i = 0;i < 16; i++)
-          state[i] ^= ks[i];
+        _bsShift(s, !0);
+        _bsInvSubPlanes(s);
+        _addKey(s, rk[0]);
       }
-      const out = [0, 0, 0, 0];
-      for (let j = 0;j < 4; j++)
-        out[j] = state[j * 4] << 24 | state[j * 4 + 1] << 16 | state[j * 4 + 2] << 8 | state[j * 4 + 3];
-      return out;
+      return _bsUnpack(s);
     }
-    const api = {};
+    const _bsEncrypt = (input, rk) => _bsCrypt(input, 0, rk), api = {};
     api.fn = function(input_key, full = !0) {
       const keyLen = input_key.length;
       if (keyLen !== 4 && keyLen !== 6 && keyLen !== 8) {
         console.warn("[crypto] INVALID: aes: invalid key size");
         return !1;
       }
-      const sbox = tables[0][4], encKey = input_key.slice(0);
-      let rcon = 1, i, tmp;
-      for (i = keyLen;i < 4 * keyLen + 28; i++) {
-        tmp = encKey[i - 1];
-        if (i % keyLen === 0 || keyLen === 8 && i % keyLen === 4) {
-          tmp = sbox[tmp >>> 24] << 24 ^ sbox[tmp >> 16 & 255] << 16 ^ sbox[tmp >> 8 & 255] << 8 ^ sbox[tmp & 255];
-          if (i % keyLen === 0) {
-            tmp = tmp << 8 ^ tmp >>> 24 ^ rcon << 24;
-            rcon = rcon << 1 ^ (rcon >> 7) * 283;
-          }
-        }
-        encKey[i] = encKey[i - keyLen] ^ tmp;
-      }
-      const key = [encKey], ret = { encrypt(data) {
-        return _cryptCT(data, 0, key);
+      const rk = _bsRoundKeys(_expandKeyCT(input_key)), ret = { encrypt(data) {
+        return _bsCrypt(data, 0, rk);
       } };
       if (full)
-        ret.decrypt = (data) => _cryptCT(data, 1, key);
+        ret.decrypt = (data) => _bsCrypt(data, 1, rk);
       return ret;
     };
     api.ttable = {
@@ -2074,7 +2414,39 @@ export const pdfBundled = {
         return ret;
       }
     };
-    api.bitsliced = { fn: api.fn };
+    Object.defineProperty(api, Symbol.for("@awacloud/fw/internal"), { value: {
+      sbox: tables[0][4],
+      sboxInv: tables[1][4],
+      bsSub(bytes) {
+        const p = new Int32Array(8);
+        for (let i = 0;i < 16; i++)
+          for (let k = 0;k < 8; k++)
+            p[k] |= (bytes[i] >>> k & 1) << i;
+        _bsSubPlanes(p);
+        return Uint8Array.from({ length: 16 }, (_, i) => {
+          let v = 0;
+          for (let k = 0;k < 8; k++)
+            v |= (p[k] >>> i & 1) << k;
+          return v;
+        });
+      },
+      bsInvSub(bytes) {
+        const p = new Int32Array(8);
+        for (let i = 0;i < 16; i++)
+          for (let k = 0;k < 8; k++)
+            p[k] |= (bytes[i] >>> k & 1) << i;
+        _bsInvSubPlanes(p);
+        return Uint8Array.from({ length: 16 }, (_, i) => {
+          let v = 0;
+          for (let k = 0;k < 8; k++)
+            v |= (p[k] >>> i & 1) << k;
+          return v;
+        });
+      },
+      expandKey: _expandKeyCT,
+      expandKeyTable: _expandKeyTable,
+      bsEncrypt: _bsEncrypt
+    } });
     return api;
   } });
     __register({ name: "cbc", dependencies: ["bitArray"], factory: function(bitArray) {
@@ -2262,7 +2634,7 @@ export const pdfBundled = {
         return !1;
       const H = prf.encrypt([0, 0, 0, 0]), J0 = _j0(H, iv), expected = _authTag(prf, H, J0, adata, ciphertext, tlen);
       if (!bitArray.equal(bitArray.clamp(tag, tlen), expected)) {
-        console.error("[crypto] CORRUPT: gcm: authentication tag mismatch");
+        console.warn("[crypto] CORRUPT: gcm: authentication tag mismatch");
         return !1;
       }
       return _gctr(prf, _incCb(J0), ciphertext);
@@ -2302,14 +2674,15 @@ export const pdfBundled = {
         }
       };
     }
-    return {
+    return Object.defineProperty({
       encrypt,
       decrypt,
       gmac,
       gmacVerify,
-      nonceTracker,
-      _internal: { ghash: _ghash, gctr: _gctr }
-    };
+      nonceTracker
+    }, Symbol.for("@awacloud/fw/internal"), {
+      value: { ghash: _ghash, gctr: _gctr }
+    });
   } });
     __register({ name: "sha256", dependencies: ["bitArray","utf8"], factory: function(bitArray, utf8) {
     const _INIT = [
@@ -2386,7 +2759,537 @@ export const pdfBundled = {
       2756734187,
       3204031479,
       3329325298
-    ];
+    ], _K32 = Int32Array.from(_KEY), _BW = new Int32Array(16), _W64 = new Int32Array(64);
+    function _compress(h, w) {
+      const k = _K32, W = _W64;
+      for (let i = 0;i < 16; i++)
+        W[i] = w[i] | 0;
+      for (let i = 16;i < 64; i++) {
+        const a = W[i - 15], b = W[i - 2], s0 = (a >>> 7 | a << 25) ^ (a >>> 18 | a << 14) ^ a >>> 3, s1 = (b >>> 17 | b << 15) ^ (b >>> 19 | b << 13) ^ b >>> 10;
+        W[i] = (s0 + W[i - 16] | 0) + (s1 + W[i - 7] | 0) | 0;
+      }
+      let a = h[0] | 0, b = h[1] | 0, c = h[2] | 0, d = h[3] | 0, e = h[4] | 0, f = h[5] | 0, g = h[6] | 0, hh = h[7] | 0, t1, t2, s0, s1, ch, mj;
+      s1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      ch = g ^ e & (f ^ g);
+      t1 = ((hh + s1 | 0) + ch | 0) + (k[0] + W[0] | 0) | 0;
+      s0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      mj = a & b ^ c & (a ^ b);
+      t2 = s0 + mj | 0;
+      d = d + t1 | 0;
+      hh = t1 + t2 | 0;
+      s1 = (d >>> 6 | d << 26) ^ (d >>> 11 | d << 21) ^ (d >>> 25 | d << 7);
+      ch = f ^ d & (e ^ f);
+      t1 = ((g + s1 | 0) + ch | 0) + (k[1] + W[1] | 0) | 0;
+      s0 = (hh >>> 2 | hh << 30) ^ (hh >>> 13 | hh << 19) ^ (hh >>> 22 | hh << 10);
+      mj = hh & a ^ b & (hh ^ a);
+      t2 = s0 + mj | 0;
+      c = c + t1 | 0;
+      g = t1 + t2 | 0;
+      s1 = (c >>> 6 | c << 26) ^ (c >>> 11 | c << 21) ^ (c >>> 25 | c << 7);
+      ch = e ^ c & (d ^ e);
+      t1 = ((f + s1 | 0) + ch | 0) + (k[2] + W[2] | 0) | 0;
+      s0 = (g >>> 2 | g << 30) ^ (g >>> 13 | g << 19) ^ (g >>> 22 | g << 10);
+      mj = g & hh ^ a & (g ^ hh);
+      t2 = s0 + mj | 0;
+      b = b + t1 | 0;
+      f = t1 + t2 | 0;
+      s1 = (b >>> 6 | b << 26) ^ (b >>> 11 | b << 21) ^ (b >>> 25 | b << 7);
+      ch = d ^ b & (c ^ d);
+      t1 = ((e + s1 | 0) + ch | 0) + (k[3] + W[3] | 0) | 0;
+      s0 = (f >>> 2 | f << 30) ^ (f >>> 13 | f << 19) ^ (f >>> 22 | f << 10);
+      mj = f & g ^ hh & (f ^ g);
+      t2 = s0 + mj | 0;
+      a = a + t1 | 0;
+      e = t1 + t2 | 0;
+      s1 = (a >>> 6 | a << 26) ^ (a >>> 11 | a << 21) ^ (a >>> 25 | a << 7);
+      ch = c ^ a & (b ^ c);
+      t1 = ((d + s1 | 0) + ch | 0) + (k[4] + W[4] | 0) | 0;
+      s0 = (e >>> 2 | e << 30) ^ (e >>> 13 | e << 19) ^ (e >>> 22 | e << 10);
+      mj = e & f ^ g & (e ^ f);
+      t2 = s0 + mj | 0;
+      hh = hh + t1 | 0;
+      d = t1 + t2 | 0;
+      s1 = (hh >>> 6 | hh << 26) ^ (hh >>> 11 | hh << 21) ^ (hh >>> 25 | hh << 7);
+      ch = b ^ hh & (a ^ b);
+      t1 = ((c + s1 | 0) + ch | 0) + (k[5] + W[5] | 0) | 0;
+      s0 = (d >>> 2 | d << 30) ^ (d >>> 13 | d << 19) ^ (d >>> 22 | d << 10);
+      mj = d & e ^ f & (d ^ e);
+      t2 = s0 + mj | 0;
+      g = g + t1 | 0;
+      c = t1 + t2 | 0;
+      s1 = (g >>> 6 | g << 26) ^ (g >>> 11 | g << 21) ^ (g >>> 25 | g << 7);
+      ch = a ^ g & (hh ^ a);
+      t1 = ((b + s1 | 0) + ch | 0) + (k[6] + W[6] | 0) | 0;
+      s0 = (c >>> 2 | c << 30) ^ (c >>> 13 | c << 19) ^ (c >>> 22 | c << 10);
+      mj = c & d ^ e & (c ^ d);
+      t2 = s0 + mj | 0;
+      f = f + t1 | 0;
+      b = t1 + t2 | 0;
+      s1 = (f >>> 6 | f << 26) ^ (f >>> 11 | f << 21) ^ (f >>> 25 | f << 7);
+      ch = hh ^ f & (g ^ hh);
+      t1 = ((a + s1 | 0) + ch | 0) + (k[7] + W[7] | 0) | 0;
+      s0 = (b >>> 2 | b << 30) ^ (b >>> 13 | b << 19) ^ (b >>> 22 | b << 10);
+      mj = b & c ^ d & (b ^ c);
+      t2 = s0 + mj | 0;
+      e = e + t1 | 0;
+      a = t1 + t2 | 0;
+      s1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      ch = g ^ e & (f ^ g);
+      t1 = ((hh + s1 | 0) + ch | 0) + (k[8] + W[8] | 0) | 0;
+      s0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      mj = a & b ^ c & (a ^ b);
+      t2 = s0 + mj | 0;
+      d = d + t1 | 0;
+      hh = t1 + t2 | 0;
+      s1 = (d >>> 6 | d << 26) ^ (d >>> 11 | d << 21) ^ (d >>> 25 | d << 7);
+      ch = f ^ d & (e ^ f);
+      t1 = ((g + s1 | 0) + ch | 0) + (k[9] + W[9] | 0) | 0;
+      s0 = (hh >>> 2 | hh << 30) ^ (hh >>> 13 | hh << 19) ^ (hh >>> 22 | hh << 10);
+      mj = hh & a ^ b & (hh ^ a);
+      t2 = s0 + mj | 0;
+      c = c + t1 | 0;
+      g = t1 + t2 | 0;
+      s1 = (c >>> 6 | c << 26) ^ (c >>> 11 | c << 21) ^ (c >>> 25 | c << 7);
+      ch = e ^ c & (d ^ e);
+      t1 = ((f + s1 | 0) + ch | 0) + (k[10] + W[10] | 0) | 0;
+      s0 = (g >>> 2 | g << 30) ^ (g >>> 13 | g << 19) ^ (g >>> 22 | g << 10);
+      mj = g & hh ^ a & (g ^ hh);
+      t2 = s0 + mj | 0;
+      b = b + t1 | 0;
+      f = t1 + t2 | 0;
+      s1 = (b >>> 6 | b << 26) ^ (b >>> 11 | b << 21) ^ (b >>> 25 | b << 7);
+      ch = d ^ b & (c ^ d);
+      t1 = ((e + s1 | 0) + ch | 0) + (k[11] + W[11] | 0) | 0;
+      s0 = (f >>> 2 | f << 30) ^ (f >>> 13 | f << 19) ^ (f >>> 22 | f << 10);
+      mj = f & g ^ hh & (f ^ g);
+      t2 = s0 + mj | 0;
+      a = a + t1 | 0;
+      e = t1 + t2 | 0;
+      s1 = (a >>> 6 | a << 26) ^ (a >>> 11 | a << 21) ^ (a >>> 25 | a << 7);
+      ch = c ^ a & (b ^ c);
+      t1 = ((d + s1 | 0) + ch | 0) + (k[12] + W[12] | 0) | 0;
+      s0 = (e >>> 2 | e << 30) ^ (e >>> 13 | e << 19) ^ (e >>> 22 | e << 10);
+      mj = e & f ^ g & (e ^ f);
+      t2 = s0 + mj | 0;
+      hh = hh + t1 | 0;
+      d = t1 + t2 | 0;
+      s1 = (hh >>> 6 | hh << 26) ^ (hh >>> 11 | hh << 21) ^ (hh >>> 25 | hh << 7);
+      ch = b ^ hh & (a ^ b);
+      t1 = ((c + s1 | 0) + ch | 0) + (k[13] + W[13] | 0) | 0;
+      s0 = (d >>> 2 | d << 30) ^ (d >>> 13 | d << 19) ^ (d >>> 22 | d << 10);
+      mj = d & e ^ f & (d ^ e);
+      t2 = s0 + mj | 0;
+      g = g + t1 | 0;
+      c = t1 + t2 | 0;
+      s1 = (g >>> 6 | g << 26) ^ (g >>> 11 | g << 21) ^ (g >>> 25 | g << 7);
+      ch = a ^ g & (hh ^ a);
+      t1 = ((b + s1 | 0) + ch | 0) + (k[14] + W[14] | 0) | 0;
+      s0 = (c >>> 2 | c << 30) ^ (c >>> 13 | c << 19) ^ (c >>> 22 | c << 10);
+      mj = c & d ^ e & (c ^ d);
+      t2 = s0 + mj | 0;
+      f = f + t1 | 0;
+      b = t1 + t2 | 0;
+      s1 = (f >>> 6 | f << 26) ^ (f >>> 11 | f << 21) ^ (f >>> 25 | f << 7);
+      ch = hh ^ f & (g ^ hh);
+      t1 = ((a + s1 | 0) + ch | 0) + (k[15] + W[15] | 0) | 0;
+      s0 = (b >>> 2 | b << 30) ^ (b >>> 13 | b << 19) ^ (b >>> 22 | b << 10);
+      mj = b & c ^ d & (b ^ c);
+      t2 = s0 + mj | 0;
+      e = e + t1 | 0;
+      a = t1 + t2 | 0;
+      s1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      ch = g ^ e & (f ^ g);
+      t1 = ((hh + s1 | 0) + ch | 0) + (k[16] + W[16] | 0) | 0;
+      s0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      mj = a & b ^ c & (a ^ b);
+      t2 = s0 + mj | 0;
+      d = d + t1 | 0;
+      hh = t1 + t2 | 0;
+      s1 = (d >>> 6 | d << 26) ^ (d >>> 11 | d << 21) ^ (d >>> 25 | d << 7);
+      ch = f ^ d & (e ^ f);
+      t1 = ((g + s1 | 0) + ch | 0) + (k[17] + W[17] | 0) | 0;
+      s0 = (hh >>> 2 | hh << 30) ^ (hh >>> 13 | hh << 19) ^ (hh >>> 22 | hh << 10);
+      mj = hh & a ^ b & (hh ^ a);
+      t2 = s0 + mj | 0;
+      c = c + t1 | 0;
+      g = t1 + t2 | 0;
+      s1 = (c >>> 6 | c << 26) ^ (c >>> 11 | c << 21) ^ (c >>> 25 | c << 7);
+      ch = e ^ c & (d ^ e);
+      t1 = ((f + s1 | 0) + ch | 0) + (k[18] + W[18] | 0) | 0;
+      s0 = (g >>> 2 | g << 30) ^ (g >>> 13 | g << 19) ^ (g >>> 22 | g << 10);
+      mj = g & hh ^ a & (g ^ hh);
+      t2 = s0 + mj | 0;
+      b = b + t1 | 0;
+      f = t1 + t2 | 0;
+      s1 = (b >>> 6 | b << 26) ^ (b >>> 11 | b << 21) ^ (b >>> 25 | b << 7);
+      ch = d ^ b & (c ^ d);
+      t1 = ((e + s1 | 0) + ch | 0) + (k[19] + W[19] | 0) | 0;
+      s0 = (f >>> 2 | f << 30) ^ (f >>> 13 | f << 19) ^ (f >>> 22 | f << 10);
+      mj = f & g ^ hh & (f ^ g);
+      t2 = s0 + mj | 0;
+      a = a + t1 | 0;
+      e = t1 + t2 | 0;
+      s1 = (a >>> 6 | a << 26) ^ (a >>> 11 | a << 21) ^ (a >>> 25 | a << 7);
+      ch = c ^ a & (b ^ c);
+      t1 = ((d + s1 | 0) + ch | 0) + (k[20] + W[20] | 0) | 0;
+      s0 = (e >>> 2 | e << 30) ^ (e >>> 13 | e << 19) ^ (e >>> 22 | e << 10);
+      mj = e & f ^ g & (e ^ f);
+      t2 = s0 + mj | 0;
+      hh = hh + t1 | 0;
+      d = t1 + t2 | 0;
+      s1 = (hh >>> 6 | hh << 26) ^ (hh >>> 11 | hh << 21) ^ (hh >>> 25 | hh << 7);
+      ch = b ^ hh & (a ^ b);
+      t1 = ((c + s1 | 0) + ch | 0) + (k[21] + W[21] | 0) | 0;
+      s0 = (d >>> 2 | d << 30) ^ (d >>> 13 | d << 19) ^ (d >>> 22 | d << 10);
+      mj = d & e ^ f & (d ^ e);
+      t2 = s0 + mj | 0;
+      g = g + t1 | 0;
+      c = t1 + t2 | 0;
+      s1 = (g >>> 6 | g << 26) ^ (g >>> 11 | g << 21) ^ (g >>> 25 | g << 7);
+      ch = a ^ g & (hh ^ a);
+      t1 = ((b + s1 | 0) + ch | 0) + (k[22] + W[22] | 0) | 0;
+      s0 = (c >>> 2 | c << 30) ^ (c >>> 13 | c << 19) ^ (c >>> 22 | c << 10);
+      mj = c & d ^ e & (c ^ d);
+      t2 = s0 + mj | 0;
+      f = f + t1 | 0;
+      b = t1 + t2 | 0;
+      s1 = (f >>> 6 | f << 26) ^ (f >>> 11 | f << 21) ^ (f >>> 25 | f << 7);
+      ch = hh ^ f & (g ^ hh);
+      t1 = ((a + s1 | 0) + ch | 0) + (k[23] + W[23] | 0) | 0;
+      s0 = (b >>> 2 | b << 30) ^ (b >>> 13 | b << 19) ^ (b >>> 22 | b << 10);
+      mj = b & c ^ d & (b ^ c);
+      t2 = s0 + mj | 0;
+      e = e + t1 | 0;
+      a = t1 + t2 | 0;
+      s1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      ch = g ^ e & (f ^ g);
+      t1 = ((hh + s1 | 0) + ch | 0) + (k[24] + W[24] | 0) | 0;
+      s0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      mj = a & b ^ c & (a ^ b);
+      t2 = s0 + mj | 0;
+      d = d + t1 | 0;
+      hh = t1 + t2 | 0;
+      s1 = (d >>> 6 | d << 26) ^ (d >>> 11 | d << 21) ^ (d >>> 25 | d << 7);
+      ch = f ^ d & (e ^ f);
+      t1 = ((g + s1 | 0) + ch | 0) + (k[25] + W[25] | 0) | 0;
+      s0 = (hh >>> 2 | hh << 30) ^ (hh >>> 13 | hh << 19) ^ (hh >>> 22 | hh << 10);
+      mj = hh & a ^ b & (hh ^ a);
+      t2 = s0 + mj | 0;
+      c = c + t1 | 0;
+      g = t1 + t2 | 0;
+      s1 = (c >>> 6 | c << 26) ^ (c >>> 11 | c << 21) ^ (c >>> 25 | c << 7);
+      ch = e ^ c & (d ^ e);
+      t1 = ((f + s1 | 0) + ch | 0) + (k[26] + W[26] | 0) | 0;
+      s0 = (g >>> 2 | g << 30) ^ (g >>> 13 | g << 19) ^ (g >>> 22 | g << 10);
+      mj = g & hh ^ a & (g ^ hh);
+      t2 = s0 + mj | 0;
+      b = b + t1 | 0;
+      f = t1 + t2 | 0;
+      s1 = (b >>> 6 | b << 26) ^ (b >>> 11 | b << 21) ^ (b >>> 25 | b << 7);
+      ch = d ^ b & (c ^ d);
+      t1 = ((e + s1 | 0) + ch | 0) + (k[27] + W[27] | 0) | 0;
+      s0 = (f >>> 2 | f << 30) ^ (f >>> 13 | f << 19) ^ (f >>> 22 | f << 10);
+      mj = f & g ^ hh & (f ^ g);
+      t2 = s0 + mj | 0;
+      a = a + t1 | 0;
+      e = t1 + t2 | 0;
+      s1 = (a >>> 6 | a << 26) ^ (a >>> 11 | a << 21) ^ (a >>> 25 | a << 7);
+      ch = c ^ a & (b ^ c);
+      t1 = ((d + s1 | 0) + ch | 0) + (k[28] + W[28] | 0) | 0;
+      s0 = (e >>> 2 | e << 30) ^ (e >>> 13 | e << 19) ^ (e >>> 22 | e << 10);
+      mj = e & f ^ g & (e ^ f);
+      t2 = s0 + mj | 0;
+      hh = hh + t1 | 0;
+      d = t1 + t2 | 0;
+      s1 = (hh >>> 6 | hh << 26) ^ (hh >>> 11 | hh << 21) ^ (hh >>> 25 | hh << 7);
+      ch = b ^ hh & (a ^ b);
+      t1 = ((c + s1 | 0) + ch | 0) + (k[29] + W[29] | 0) | 0;
+      s0 = (d >>> 2 | d << 30) ^ (d >>> 13 | d << 19) ^ (d >>> 22 | d << 10);
+      mj = d & e ^ f & (d ^ e);
+      t2 = s0 + mj | 0;
+      g = g + t1 | 0;
+      c = t1 + t2 | 0;
+      s1 = (g >>> 6 | g << 26) ^ (g >>> 11 | g << 21) ^ (g >>> 25 | g << 7);
+      ch = a ^ g & (hh ^ a);
+      t1 = ((b + s1 | 0) + ch | 0) + (k[30] + W[30] | 0) | 0;
+      s0 = (c >>> 2 | c << 30) ^ (c >>> 13 | c << 19) ^ (c >>> 22 | c << 10);
+      mj = c & d ^ e & (c ^ d);
+      t2 = s0 + mj | 0;
+      f = f + t1 | 0;
+      b = t1 + t2 | 0;
+      s1 = (f >>> 6 | f << 26) ^ (f >>> 11 | f << 21) ^ (f >>> 25 | f << 7);
+      ch = hh ^ f & (g ^ hh);
+      t1 = ((a + s1 | 0) + ch | 0) + (k[31] + W[31] | 0) | 0;
+      s0 = (b >>> 2 | b << 30) ^ (b >>> 13 | b << 19) ^ (b >>> 22 | b << 10);
+      mj = b & c ^ d & (b ^ c);
+      t2 = s0 + mj | 0;
+      e = e + t1 | 0;
+      a = t1 + t2 | 0;
+      s1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      ch = g ^ e & (f ^ g);
+      t1 = ((hh + s1 | 0) + ch | 0) + (k[32] + W[32] | 0) | 0;
+      s0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      mj = a & b ^ c & (a ^ b);
+      t2 = s0 + mj | 0;
+      d = d + t1 | 0;
+      hh = t1 + t2 | 0;
+      s1 = (d >>> 6 | d << 26) ^ (d >>> 11 | d << 21) ^ (d >>> 25 | d << 7);
+      ch = f ^ d & (e ^ f);
+      t1 = ((g + s1 | 0) + ch | 0) + (k[33] + W[33] | 0) | 0;
+      s0 = (hh >>> 2 | hh << 30) ^ (hh >>> 13 | hh << 19) ^ (hh >>> 22 | hh << 10);
+      mj = hh & a ^ b & (hh ^ a);
+      t2 = s0 + mj | 0;
+      c = c + t1 | 0;
+      g = t1 + t2 | 0;
+      s1 = (c >>> 6 | c << 26) ^ (c >>> 11 | c << 21) ^ (c >>> 25 | c << 7);
+      ch = e ^ c & (d ^ e);
+      t1 = ((f + s1 | 0) + ch | 0) + (k[34] + W[34] | 0) | 0;
+      s0 = (g >>> 2 | g << 30) ^ (g >>> 13 | g << 19) ^ (g >>> 22 | g << 10);
+      mj = g & hh ^ a & (g ^ hh);
+      t2 = s0 + mj | 0;
+      b = b + t1 | 0;
+      f = t1 + t2 | 0;
+      s1 = (b >>> 6 | b << 26) ^ (b >>> 11 | b << 21) ^ (b >>> 25 | b << 7);
+      ch = d ^ b & (c ^ d);
+      t1 = ((e + s1 | 0) + ch | 0) + (k[35] + W[35] | 0) | 0;
+      s0 = (f >>> 2 | f << 30) ^ (f >>> 13 | f << 19) ^ (f >>> 22 | f << 10);
+      mj = f & g ^ hh & (f ^ g);
+      t2 = s0 + mj | 0;
+      a = a + t1 | 0;
+      e = t1 + t2 | 0;
+      s1 = (a >>> 6 | a << 26) ^ (a >>> 11 | a << 21) ^ (a >>> 25 | a << 7);
+      ch = c ^ a & (b ^ c);
+      t1 = ((d + s1 | 0) + ch | 0) + (k[36] + W[36] | 0) | 0;
+      s0 = (e >>> 2 | e << 30) ^ (e >>> 13 | e << 19) ^ (e >>> 22 | e << 10);
+      mj = e & f ^ g & (e ^ f);
+      t2 = s0 + mj | 0;
+      hh = hh + t1 | 0;
+      d = t1 + t2 | 0;
+      s1 = (hh >>> 6 | hh << 26) ^ (hh >>> 11 | hh << 21) ^ (hh >>> 25 | hh << 7);
+      ch = b ^ hh & (a ^ b);
+      t1 = ((c + s1 | 0) + ch | 0) + (k[37] + W[37] | 0) | 0;
+      s0 = (d >>> 2 | d << 30) ^ (d >>> 13 | d << 19) ^ (d >>> 22 | d << 10);
+      mj = d & e ^ f & (d ^ e);
+      t2 = s0 + mj | 0;
+      g = g + t1 | 0;
+      c = t1 + t2 | 0;
+      s1 = (g >>> 6 | g << 26) ^ (g >>> 11 | g << 21) ^ (g >>> 25 | g << 7);
+      ch = a ^ g & (hh ^ a);
+      t1 = ((b + s1 | 0) + ch | 0) + (k[38] + W[38] | 0) | 0;
+      s0 = (c >>> 2 | c << 30) ^ (c >>> 13 | c << 19) ^ (c >>> 22 | c << 10);
+      mj = c & d ^ e & (c ^ d);
+      t2 = s0 + mj | 0;
+      f = f + t1 | 0;
+      b = t1 + t2 | 0;
+      s1 = (f >>> 6 | f << 26) ^ (f >>> 11 | f << 21) ^ (f >>> 25 | f << 7);
+      ch = hh ^ f & (g ^ hh);
+      t1 = ((a + s1 | 0) + ch | 0) + (k[39] + W[39] | 0) | 0;
+      s0 = (b >>> 2 | b << 30) ^ (b >>> 13 | b << 19) ^ (b >>> 22 | b << 10);
+      mj = b & c ^ d & (b ^ c);
+      t2 = s0 + mj | 0;
+      e = e + t1 | 0;
+      a = t1 + t2 | 0;
+      s1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      ch = g ^ e & (f ^ g);
+      t1 = ((hh + s1 | 0) + ch | 0) + (k[40] + W[40] | 0) | 0;
+      s0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      mj = a & b ^ c & (a ^ b);
+      t2 = s0 + mj | 0;
+      d = d + t1 | 0;
+      hh = t1 + t2 | 0;
+      s1 = (d >>> 6 | d << 26) ^ (d >>> 11 | d << 21) ^ (d >>> 25 | d << 7);
+      ch = f ^ d & (e ^ f);
+      t1 = ((g + s1 | 0) + ch | 0) + (k[41] + W[41] | 0) | 0;
+      s0 = (hh >>> 2 | hh << 30) ^ (hh >>> 13 | hh << 19) ^ (hh >>> 22 | hh << 10);
+      mj = hh & a ^ b & (hh ^ a);
+      t2 = s0 + mj | 0;
+      c = c + t1 | 0;
+      g = t1 + t2 | 0;
+      s1 = (c >>> 6 | c << 26) ^ (c >>> 11 | c << 21) ^ (c >>> 25 | c << 7);
+      ch = e ^ c & (d ^ e);
+      t1 = ((f + s1 | 0) + ch | 0) + (k[42] + W[42] | 0) | 0;
+      s0 = (g >>> 2 | g << 30) ^ (g >>> 13 | g << 19) ^ (g >>> 22 | g << 10);
+      mj = g & hh ^ a & (g ^ hh);
+      t2 = s0 + mj | 0;
+      b = b + t1 | 0;
+      f = t1 + t2 | 0;
+      s1 = (b >>> 6 | b << 26) ^ (b >>> 11 | b << 21) ^ (b >>> 25 | b << 7);
+      ch = d ^ b & (c ^ d);
+      t1 = ((e + s1 | 0) + ch | 0) + (k[43] + W[43] | 0) | 0;
+      s0 = (f >>> 2 | f << 30) ^ (f >>> 13 | f << 19) ^ (f >>> 22 | f << 10);
+      mj = f & g ^ hh & (f ^ g);
+      t2 = s0 + mj | 0;
+      a = a + t1 | 0;
+      e = t1 + t2 | 0;
+      s1 = (a >>> 6 | a << 26) ^ (a >>> 11 | a << 21) ^ (a >>> 25 | a << 7);
+      ch = c ^ a & (b ^ c);
+      t1 = ((d + s1 | 0) + ch | 0) + (k[44] + W[44] | 0) | 0;
+      s0 = (e >>> 2 | e << 30) ^ (e >>> 13 | e << 19) ^ (e >>> 22 | e << 10);
+      mj = e & f ^ g & (e ^ f);
+      t2 = s0 + mj | 0;
+      hh = hh + t1 | 0;
+      d = t1 + t2 | 0;
+      s1 = (hh >>> 6 | hh << 26) ^ (hh >>> 11 | hh << 21) ^ (hh >>> 25 | hh << 7);
+      ch = b ^ hh & (a ^ b);
+      t1 = ((c + s1 | 0) + ch | 0) + (k[45] + W[45] | 0) | 0;
+      s0 = (d >>> 2 | d << 30) ^ (d >>> 13 | d << 19) ^ (d >>> 22 | d << 10);
+      mj = d & e ^ f & (d ^ e);
+      t2 = s0 + mj | 0;
+      g = g + t1 | 0;
+      c = t1 + t2 | 0;
+      s1 = (g >>> 6 | g << 26) ^ (g >>> 11 | g << 21) ^ (g >>> 25 | g << 7);
+      ch = a ^ g & (hh ^ a);
+      t1 = ((b + s1 | 0) + ch | 0) + (k[46] + W[46] | 0) | 0;
+      s0 = (c >>> 2 | c << 30) ^ (c >>> 13 | c << 19) ^ (c >>> 22 | c << 10);
+      mj = c & d ^ e & (c ^ d);
+      t2 = s0 + mj | 0;
+      f = f + t1 | 0;
+      b = t1 + t2 | 0;
+      s1 = (f >>> 6 | f << 26) ^ (f >>> 11 | f << 21) ^ (f >>> 25 | f << 7);
+      ch = hh ^ f & (g ^ hh);
+      t1 = ((a + s1 | 0) + ch | 0) + (k[47] + W[47] | 0) | 0;
+      s0 = (b >>> 2 | b << 30) ^ (b >>> 13 | b << 19) ^ (b >>> 22 | b << 10);
+      mj = b & c ^ d & (b ^ c);
+      t2 = s0 + mj | 0;
+      e = e + t1 | 0;
+      a = t1 + t2 | 0;
+      s1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      ch = g ^ e & (f ^ g);
+      t1 = ((hh + s1 | 0) + ch | 0) + (k[48] + W[48] | 0) | 0;
+      s0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      mj = a & b ^ c & (a ^ b);
+      t2 = s0 + mj | 0;
+      d = d + t1 | 0;
+      hh = t1 + t2 | 0;
+      s1 = (d >>> 6 | d << 26) ^ (d >>> 11 | d << 21) ^ (d >>> 25 | d << 7);
+      ch = f ^ d & (e ^ f);
+      t1 = ((g + s1 | 0) + ch | 0) + (k[49] + W[49] | 0) | 0;
+      s0 = (hh >>> 2 | hh << 30) ^ (hh >>> 13 | hh << 19) ^ (hh >>> 22 | hh << 10);
+      mj = hh & a ^ b & (hh ^ a);
+      t2 = s0 + mj | 0;
+      c = c + t1 | 0;
+      g = t1 + t2 | 0;
+      s1 = (c >>> 6 | c << 26) ^ (c >>> 11 | c << 21) ^ (c >>> 25 | c << 7);
+      ch = e ^ c & (d ^ e);
+      t1 = ((f + s1 | 0) + ch | 0) + (k[50] + W[50] | 0) | 0;
+      s0 = (g >>> 2 | g << 30) ^ (g >>> 13 | g << 19) ^ (g >>> 22 | g << 10);
+      mj = g & hh ^ a & (g ^ hh);
+      t2 = s0 + mj | 0;
+      b = b + t1 | 0;
+      f = t1 + t2 | 0;
+      s1 = (b >>> 6 | b << 26) ^ (b >>> 11 | b << 21) ^ (b >>> 25 | b << 7);
+      ch = d ^ b & (c ^ d);
+      t1 = ((e + s1 | 0) + ch | 0) + (k[51] + W[51] | 0) | 0;
+      s0 = (f >>> 2 | f << 30) ^ (f >>> 13 | f << 19) ^ (f >>> 22 | f << 10);
+      mj = f & g ^ hh & (f ^ g);
+      t2 = s0 + mj | 0;
+      a = a + t1 | 0;
+      e = t1 + t2 | 0;
+      s1 = (a >>> 6 | a << 26) ^ (a >>> 11 | a << 21) ^ (a >>> 25 | a << 7);
+      ch = c ^ a & (b ^ c);
+      t1 = ((d + s1 | 0) + ch | 0) + (k[52] + W[52] | 0) | 0;
+      s0 = (e >>> 2 | e << 30) ^ (e >>> 13 | e << 19) ^ (e >>> 22 | e << 10);
+      mj = e & f ^ g & (e ^ f);
+      t2 = s0 + mj | 0;
+      hh = hh + t1 | 0;
+      d = t1 + t2 | 0;
+      s1 = (hh >>> 6 | hh << 26) ^ (hh >>> 11 | hh << 21) ^ (hh >>> 25 | hh << 7);
+      ch = b ^ hh & (a ^ b);
+      t1 = ((c + s1 | 0) + ch | 0) + (k[53] + W[53] | 0) | 0;
+      s0 = (d >>> 2 | d << 30) ^ (d >>> 13 | d << 19) ^ (d >>> 22 | d << 10);
+      mj = d & e ^ f & (d ^ e);
+      t2 = s0 + mj | 0;
+      g = g + t1 | 0;
+      c = t1 + t2 | 0;
+      s1 = (g >>> 6 | g << 26) ^ (g >>> 11 | g << 21) ^ (g >>> 25 | g << 7);
+      ch = a ^ g & (hh ^ a);
+      t1 = ((b + s1 | 0) + ch | 0) + (k[54] + W[54] | 0) | 0;
+      s0 = (c >>> 2 | c << 30) ^ (c >>> 13 | c << 19) ^ (c >>> 22 | c << 10);
+      mj = c & d ^ e & (c ^ d);
+      t2 = s0 + mj | 0;
+      f = f + t1 | 0;
+      b = t1 + t2 | 0;
+      s1 = (f >>> 6 | f << 26) ^ (f >>> 11 | f << 21) ^ (f >>> 25 | f << 7);
+      ch = hh ^ f & (g ^ hh);
+      t1 = ((a + s1 | 0) + ch | 0) + (k[55] + W[55] | 0) | 0;
+      s0 = (b >>> 2 | b << 30) ^ (b >>> 13 | b << 19) ^ (b >>> 22 | b << 10);
+      mj = b & c ^ d & (b ^ c);
+      t2 = s0 + mj | 0;
+      e = e + t1 | 0;
+      a = t1 + t2 | 0;
+      s1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      ch = g ^ e & (f ^ g);
+      t1 = ((hh + s1 | 0) + ch | 0) + (k[56] + W[56] | 0) | 0;
+      s0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      mj = a & b ^ c & (a ^ b);
+      t2 = s0 + mj | 0;
+      d = d + t1 | 0;
+      hh = t1 + t2 | 0;
+      s1 = (d >>> 6 | d << 26) ^ (d >>> 11 | d << 21) ^ (d >>> 25 | d << 7);
+      ch = f ^ d & (e ^ f);
+      t1 = ((g + s1 | 0) + ch | 0) + (k[57] + W[57] | 0) | 0;
+      s0 = (hh >>> 2 | hh << 30) ^ (hh >>> 13 | hh << 19) ^ (hh >>> 22 | hh << 10);
+      mj = hh & a ^ b & (hh ^ a);
+      t2 = s0 + mj | 0;
+      c = c + t1 | 0;
+      g = t1 + t2 | 0;
+      s1 = (c >>> 6 | c << 26) ^ (c >>> 11 | c << 21) ^ (c >>> 25 | c << 7);
+      ch = e ^ c & (d ^ e);
+      t1 = ((f + s1 | 0) + ch | 0) + (k[58] + W[58] | 0) | 0;
+      s0 = (g >>> 2 | g << 30) ^ (g >>> 13 | g << 19) ^ (g >>> 22 | g << 10);
+      mj = g & hh ^ a & (g ^ hh);
+      t2 = s0 + mj | 0;
+      b = b + t1 | 0;
+      f = t1 + t2 | 0;
+      s1 = (b >>> 6 | b << 26) ^ (b >>> 11 | b << 21) ^ (b >>> 25 | b << 7);
+      ch = d ^ b & (c ^ d);
+      t1 = ((e + s1 | 0) + ch | 0) + (k[59] + W[59] | 0) | 0;
+      s0 = (f >>> 2 | f << 30) ^ (f >>> 13 | f << 19) ^ (f >>> 22 | f << 10);
+      mj = f & g ^ hh & (f ^ g);
+      t2 = s0 + mj | 0;
+      a = a + t1 | 0;
+      e = t1 + t2 | 0;
+      s1 = (a >>> 6 | a << 26) ^ (a >>> 11 | a << 21) ^ (a >>> 25 | a << 7);
+      ch = c ^ a & (b ^ c);
+      t1 = ((d + s1 | 0) + ch | 0) + (k[60] + W[60] | 0) | 0;
+      s0 = (e >>> 2 | e << 30) ^ (e >>> 13 | e << 19) ^ (e >>> 22 | e << 10);
+      mj = e & f ^ g & (e ^ f);
+      t2 = s0 + mj | 0;
+      hh = hh + t1 | 0;
+      d = t1 + t2 | 0;
+      s1 = (hh >>> 6 | hh << 26) ^ (hh >>> 11 | hh << 21) ^ (hh >>> 25 | hh << 7);
+      ch = b ^ hh & (a ^ b);
+      t1 = ((c + s1 | 0) + ch | 0) + (k[61] + W[61] | 0) | 0;
+      s0 = (d >>> 2 | d << 30) ^ (d >>> 13 | d << 19) ^ (d >>> 22 | d << 10);
+      mj = d & e ^ f & (d ^ e);
+      t2 = s0 + mj | 0;
+      g = g + t1 | 0;
+      c = t1 + t2 | 0;
+      s1 = (g >>> 6 | g << 26) ^ (g >>> 11 | g << 21) ^ (g >>> 25 | g << 7);
+      ch = a ^ g & (hh ^ a);
+      t1 = ((b + s1 | 0) + ch | 0) + (k[62] + W[62] | 0) | 0;
+      s0 = (c >>> 2 | c << 30) ^ (c >>> 13 | c << 19) ^ (c >>> 22 | c << 10);
+      mj = c & d ^ e & (c ^ d);
+      t2 = s0 + mj | 0;
+      f = f + t1 | 0;
+      b = t1 + t2 | 0;
+      s1 = (f >>> 6 | f << 26) ^ (f >>> 11 | f << 21) ^ (f >>> 25 | f << 7);
+      ch = hh ^ f & (g ^ hh);
+      t1 = ((a + s1 | 0) + ch | 0) + (k[63] + W[63] | 0) | 0;
+      s0 = (b >>> 2 | b << 30) ^ (b >>> 13 | b << 19) ^ (b >>> 22 | b << 10);
+      mj = b & c ^ d & (b ^ c);
+      t2 = s0 + mj | 0;
+      e = e + t1 | 0;
+      a = t1 + t2 | 0;
+      h[0] = h[0] + a | 0;
+      h[1] = h[1] + b | 0;
+      h[2] = h[2] + c | 0;
+      h[3] = h[3] + d | 0;
+      h[4] = h[4] + e | 0;
+      h[5] = h[5] + f | 0;
+      h[6] = h[6] + g | 0;
+      h[7] = h[7] + hh | 0;
+    }
     function _makeSha(init, outWords) {
       const sha = {};
       sha.fn = function(hash) {
@@ -2411,14 +3314,33 @@ export const pdfBundled = {
           return this;
         },
         update(data) {
+          if (data instanceof Uint8Array && this._buffer.length === 0 && data.length >= 64) {
+            const whole = data.length - (data.length & 63);
+            if (this._length + whole * 8 > 9007199254740991) {
+              console.warn("[crypto] INVALID: sha256: cannot hash more than 2^53 - 1 bits");
+              return !1;
+            }
+            const words = _BW;
+            for (let off = 0;off < whole; off += 64) {
+              for (let j = 0, o = off;j < 16; j++, o += 4)
+                words[j] = data[o] << 24 | data[o + 1] << 16 | data[o + 2] << 8 | data[o + 3];
+              _compress(this._h, words);
+            }
+            this._length += whole * 8;
+            if (whole === data.length)
+              return this;
+            data = data.subarray(whole);
+          }
           if (typeof data === "string")
             data = bitArray.ui8_to_ba(utf8.toBytes(data));
+          else if (data instanceof Uint8Array)
+            data = bitArray.ui8_to_ba(data);
           const b = this._buffer = bitArray.concat(this._buffer, data), ol = this._length, nl = this._length = ol + bitArray.bitLength(data);
           if (nl > 9007199254740991) {
             console.warn("[crypto] INVALID: sha256: cannot hash more than 2^53 - 1 bits");
             return !1;
           }
-          const c = new Uint32Array(b);
+          const c = new Int32Array(b);
           let j = 0;
           for (let i = 512 + ol - (512 + ol & 511);i <= nl; i += 512) {
             this._block(c.subarray(16 * j, 16 * (j + 1)));
@@ -2441,44 +3363,18 @@ export const pdfBundled = {
           return outWords < 8 ? h.slice(0, outWords) : h;
         },
         _block(w) {
-          const h = this._h, k = this._key;
-          let h0 = h[0], h1 = h[1], h2 = h[2], h3 = h[3], h4 = h[4], h5 = h[5], h6 = h[6], h7 = h[7], tmp, a, b;
-          for (let i = 0;i < 64; i++) {
-            if (i < 16)
-              tmp = w[i];
-            else {
-              a = w[i + 1 & 15];
-              b = w[i + 14 & 15];
-              tmp = w[i & 15] = (a >>> 7 ^ a >>> 18 ^ a >>> 3 ^ a << 25 ^ a << 14) + (b >>> 17 ^ b >>> 19 ^ b >>> 10 ^ b << 15 ^ b << 13) + w[i & 15] + w[i + 9 & 15] | 0;
-            }
-            tmp = tmp + h7 + (h4 >>> 6 ^ h4 >>> 11 ^ h4 >>> 25 ^ h4 << 26 ^ h4 << 21 ^ h4 << 7) + (h6 ^ h4 & (h5 ^ h6)) + k[i];
-            h7 = h6;
-            h6 = h5;
-            h5 = h4;
-            h4 = h3 + tmp | 0;
-            h3 = h2;
-            h2 = h1;
-            h1 = h0;
-            h0 = tmp + (h1 & h2 ^ h3 & (h1 ^ h2)) + (h1 >>> 2 ^ h1 >>> 13 ^ h1 >>> 22 ^ h1 << 30 ^ h1 << 19 ^ h1 << 10) | 0;
-          }
-          h[0] = h[0] + h0 | 0;
-          h[1] = h[1] + h1 | 0;
-          h[2] = h[2] + h2 | 0;
-          h[3] = h[3] + h3 | 0;
-          h[4] = h[4] + h4 | 0;
-          h[5] = h[5] + h5 | 0;
-          h[6] = h[6] + h6 | 0;
-          h[7] = h[7] + h7 | 0;
+          _compress(this._h, w);
         }
       };
       return sha;
     }
     const _sha256 = _makeSha(_INIT, 8);
-    return {
+    return Object.defineProperty({
       fn: _sha256.fn,
-      hash: _sha256.hash,
-      _internal: { makeSha: _makeSha }
-    };
+      hash: _sha256.hash
+    }, Symbol.for("@awacloud/fw/internal"), {
+      value: { makeSha: _makeSha, compress: _compress }
+    });
   } });
     __register({ name: "sha384", dependencies: ["sha512"], factory: function(sha512) {
     const _INIT_384 = [
@@ -2499,7 +3395,7 @@ export const pdfBundled = {
       1203062813,
       3204075428
     ];
-    return sha512._internal.makeSha(_INIT_384, 12);
+    return sha512[Symbol.for("@awacloud/fw/internal")].makeSha(_INIT_384, 12);
   } });
     __register({ name: "sha512", dependencies: ["bitArray","utf8"], factory: function(bitArray, utf8) {
     const _INIT = [
@@ -2680,7 +3576,7 @@ export const pdfBundled = {
       987167468,
       1816402316,
       1246189591
-    ];
+    ], _K32 = Int32Array.from(_KEY), _W = new Int32Array(160), _BW = new Int32Array(32);
     function _makeSha(init, outWords) {
       const sha = {};
       sha.fn = function(hash) {
@@ -2706,8 +3602,27 @@ export const pdfBundled = {
           return this;
         },
         update(data) {
+          if (data instanceof Uint8Array && this._buffer.length === 0 && data.length >= 128) {
+            const whole = data.length - (data.length & 127);
+            if (this._length + whole * 8 > 9007199254740991) {
+              console.warn("[crypto] INVALID: sha512: cannot hash more than 2^53 - 1 bits");
+              return !1;
+            }
+            const words = _BW;
+            for (let off = 0;off < whole; off += 128) {
+              for (let j = 0, o = off;j < 32; j++, o += 4)
+                words[j] = data[o] << 24 | data[o + 1] << 16 | data[o + 2] << 8 | data[o + 3];
+              this._block(words);
+            }
+            this._length += whole * 8;
+            if (whole === data.length)
+              return this;
+            data = data.subarray(whole);
+          }
           if (typeof data === "string")
             data = bitArray.ui8_to_ba(utf8.toBytes(data));
+          else if (data instanceof Uint8Array)
+            data = bitArray.ui8_to_ba(data);
           const b = this._buffer = bitArray.concat(this._buffer, data), ol = this._length, nl = this._length = ol + bitArray.bitLength(data);
           if (nl > 9007199254740991) {
             console.warn("[crypto] INVALID: sha512: cannot hash more than 2^53 - 1 bits");
@@ -2738,34 +3653,31 @@ export const pdfBundled = {
           return outWords < 16 ? h.slice(0, outWords) : h;
         },
         _block(words) {
-          const h = this._h, k = this._key, h0h = h[0], h0l = h[1], h1h = h[2], h1l = h[3], h2h = h[4], h2l = h[5], h3h = h[6], h3l = h[7], h4h = h[8], h4l = h[9], h5h = h[10], h5l = h[11], h6h = h[12], h6l = h[13], h7h = h[14], h7l = h[15], w = Array(160);
+          const h = this._h, k = _K32, w = _W;
           for (let j = 0;j < 32; j++)
-            w[j] = words[j];
-          let ah = h0h, al = h0l, bh = h1h, bl = h1l, ch = h2h, cl = h2l, dh = h3h, dl = h3l, eh = h4h, el = h4l, fh = h5h, fl = h5l, gh = h6h, gl = h6l, hh = h7h, hl = h7l, wrh, wrl;
+            w[j] = words[j] | 0;
+          for (let i = 16;i < 80; i++) {
+            const xh = w[(i - 15) * 2], xl = w[(i - 15) * 2 + 1], g0h = (xl << 31 | xh >>> 1) ^ (xl << 24 | xh >>> 8) ^ xh >>> 7, g0l = (xh << 31 | xl >>> 1) ^ (xh << 24 | xl >>> 8) ^ (xh << 25 | xl >>> 7), yh = w[(i - 2) * 2], yl = w[(i - 2) * 2 + 1], g1h = (yl << 13 | yh >>> 19) ^ (yh << 3 | yl >>> 29) ^ yh >>> 6, g1l = (yh << 13 | yl >>> 19) ^ (yl << 3 | yh >>> 29) ^ (yh << 26 | yl >>> 6), w7h = w[(i - 7) * 2], w7l = w[(i - 7) * 2 + 1], w16h = w[(i - 16) * 2], w16l = w[(i - 16) * 2 + 1], l1 = g0l + w7l | 0;
+            let hi = g0h + w7h + ((g0l & w7l | (g0l | w7l) & ~l1) >>> 31) | 0;
+            const l2 = l1 + g1l | 0;
+            hi = hi + g1h + ((l1 & g1l | (l1 | g1l) & ~l2) >>> 31) | 0;
+            const l3 = l2 + w16l | 0;
+            hi = hi + w16h + ((l2 & w16l | (l2 | w16l) & ~l3) >>> 31) | 0;
+            w[i * 2] = hi;
+            w[i * 2 + 1] = l3;
+          }
+          let ah = h[0] | 0, al = h[1] | 0, bh = h[2] | 0, bl = h[3] | 0, ch = h[4] | 0, cl = h[5] | 0, dh = h[6] | 0, dl = h[7] | 0, eh = h[8] | 0, el = h[9] | 0, fh = h[10] | 0, fl = h[11] | 0, gh = h[12] | 0, gl = h[13] | 0, hh = h[14] | 0, hl = h[15] | 0;
           for (let i = 0;i < 80; i++) {
-            if (i < 16) {
-              wrh = w[i * 2];
-              wrl = w[i * 2 + 1];
-            } else {
-              const gamma0xh = w[(i - 15) * 2], gamma0xl = w[(i - 15) * 2 + 1], gamma0h = (gamma0xl << 31 | gamma0xh >>> 1) ^ (gamma0xl << 24 | gamma0xh >>> 8) ^ gamma0xh >>> 7, gamma0l = (gamma0xh << 31 | gamma0xl >>> 1) ^ (gamma0xh << 24 | gamma0xl >>> 8) ^ (gamma0xh << 25 | gamma0xl >>> 7), gamma1xh = w[(i - 2) * 2], gamma1xl = w[(i - 2) * 2 + 1], gamma1h = (gamma1xl << 13 | gamma1xh >>> 19) ^ (gamma1xh << 3 | gamma1xl >>> 29) ^ gamma1xh >>> 6, gamma1l = (gamma1xh << 13 | gamma1xl >>> 19) ^ (gamma1xl << 3 | gamma1xh >>> 29) ^ (gamma1xh << 26 | gamma1xl >>> 6), wr7h = w[(i - 7) * 2], wr7l = w[(i - 7) * 2 + 1], wr16h = w[(i - 16) * 2], wr16l = w[(i - 16) * 2 + 1];
-              wrl = gamma0l + wr7l;
-              wrh = gamma0h + wr7h + (wrl >>> 0 < gamma0l >>> 0 ? 1 : 0);
-              wrl += gamma1l;
-              wrh += gamma1h + (wrl >>> 0 < gamma1l >>> 0 ? 1 : 0);
-              wrl += wr16l;
-              wrh += wr16h + (wrl >>> 0 < wr16l >>> 0 ? 1 : 0);
-            }
-            w[i * 2] = wrh |= 0;
-            w[i * 2 + 1] = wrl |= 0;
-            const chh = eh & fh ^ ~eh & gh, chl = el & fl ^ ~el & gl, majh = ah & bh ^ ah & ch ^ bh & ch, majl = al & bl ^ al & cl ^ bl & cl, sigma0h = (al << 4 | ah >>> 28) ^ (ah << 30 | al >>> 2) ^ (ah << 25 | al >>> 7), sigma0l = (ah << 4 | al >>> 28) ^ (al << 30 | ah >>> 2) ^ (al << 25 | ah >>> 7), sigma1h = (el << 18 | eh >>> 14) ^ (el << 14 | eh >>> 18) ^ (eh << 23 | el >>> 9), sigma1l = (eh << 18 | el >>> 14) ^ (eh << 14 | el >>> 18) ^ (el << 23 | eh >>> 9), krh = k[i * 2], krl = k[i * 2 + 1];
-            let t1l = hl + sigma1l, t1h = hh + sigma1h + (t1l >>> 0 < hl >>> 0 ? 1 : 0);
-            t1l += chl;
-            t1h += chh + (t1l >>> 0 < chl >>> 0 ? 1 : 0);
-            t1l += krl;
-            t1h += krh + (t1l >>> 0 < krl >>> 0 ? 1 : 0);
-            t1l = t1l + wrl | 0;
-            t1h += wrh + (t1l >>> 0 < wrl >>> 0 ? 1 : 0);
-            const t2l = sigma0l + majl, t2h = sigma0h + majh + (t2l >>> 0 < sigma0l >>> 0 ? 1 : 0);
+            const chh = eh & fh ^ ~eh & gh, chl = el & fl ^ ~el & gl, majh = ah & bh ^ ah & ch ^ bh & ch, majl = al & bl ^ al & cl ^ bl & cl, s0h = (al << 4 | ah >>> 28) ^ (ah << 30 | al >>> 2) ^ (ah << 25 | al >>> 7), s0l = (ah << 4 | al >>> 28) ^ (al << 30 | ah >>> 2) ^ (al << 25 | ah >>> 7), s1h = (el << 18 | eh >>> 14) ^ (el << 14 | eh >>> 18) ^ (eh << 23 | el >>> 9), s1l = (eh << 18 | el >>> 14) ^ (eh << 14 | el >>> 18) ^ (el << 23 | eh >>> 9);
+            let tl = hl + s1l | 0, th = hh + s1h + ((hl & s1l | (hl | s1l) & ~tl) >>> 31) | 0, nl = tl + chl | 0;
+            th = th + chh + ((tl & chl | (tl | chl) & ~nl) >>> 31) | 0;
+            const kl = k[i * 2 + 1];
+            tl = nl + kl | 0;
+            th = th + k[i * 2] + ((nl & kl | (nl | kl) & ~tl) >>> 31) | 0;
+            const wl = w[i * 2 + 1];
+            nl = tl + wl | 0;
+            th = th + w[i * 2] + ((tl & wl | (tl | wl) & ~nl) >>> 31) | 0;
+            const t1l = nl, t1h = th, t2l = s0l + majl | 0, t2h = s0h + majh + ((s0l & majl | (s0l | majl) & ~t2l) >>> 31) | 0;
             hh = gh;
             hl = gl;
             gh = fh;
@@ -2773,7 +3685,7 @@ export const pdfBundled = {
             fh = eh;
             fl = el;
             el = dl + t1l | 0;
-            eh = dh + t1h + (el >>> 0 < dl >>> 0 ? 1 : 0) | 0;
+            eh = dh + t1h + ((dl & t1l | (dl | t1l) & ~el) >>> 31) | 0;
             dh = ch;
             dl = cl;
             ch = bh;
@@ -2781,34 +3693,50 @@ export const pdfBundled = {
             bh = ah;
             bl = al;
             al = t1l + t2l | 0;
-            ah = t1h + t2h + (al >>> 0 < t1l >>> 0 ? 1 : 0) | 0;
+            ah = t1h + t2h + ((t1l & t2l | (t1l | t2l) & ~al) >>> 31) | 0;
           }
-          const nh0l = h[1] = h0l + al | 0;
-          h[0] = h0h + ah + (nh0l >>> 0 < al >>> 0 ? 1 : 0) | 0;
-          const nh1l = h[3] = h1l + bl | 0;
-          h[2] = h1h + bh + (nh1l >>> 0 < bl >>> 0 ? 1 : 0) | 0;
-          const nh2l = h[5] = h2l + cl | 0;
-          h[4] = h2h + ch + (nh2l >>> 0 < cl >>> 0 ? 1 : 0) | 0;
-          const nh3l = h[7] = h3l + dl | 0;
-          h[6] = h3h + dh + (nh3l >>> 0 < dl >>> 0 ? 1 : 0) | 0;
-          const nh4l = h[9] = h4l + el | 0;
-          h[8] = h4h + eh + (nh4l >>> 0 < el >>> 0 ? 1 : 0) | 0;
-          const nh5l = h[11] = h5l + fl | 0;
-          h[10] = h5h + fh + (nh5l >>> 0 < fl >>> 0 ? 1 : 0) | 0;
-          const nh6l = h[13] = h6l + gl | 0;
-          h[12] = h6h + gh + (nh6l >>> 0 < gl >>> 0 ? 1 : 0) | 0;
-          const nh7l = h[15] = h7l + hl | 0;
-          h[14] = h7h + hh + (nh7l >>> 0 < hl >>> 0 ? 1 : 0) | 0;
+          let x = h[1] | 0, y = x + al | 0;
+          h[0] = (h[0] | 0) + ah + ((x & al | (x | al) & ~y) >>> 31) | 0;
+          h[1] = y;
+          x = h[3] | 0;
+          y = x + bl | 0;
+          h[2] = (h[2] | 0) + bh + ((x & bl | (x | bl) & ~y) >>> 31) | 0;
+          h[3] = y;
+          x = h[5] | 0;
+          y = x + cl | 0;
+          h[4] = (h[4] | 0) + ch + ((x & cl | (x | cl) & ~y) >>> 31) | 0;
+          h[5] = y;
+          x = h[7] | 0;
+          y = x + dl | 0;
+          h[6] = (h[6] | 0) + dh + ((x & dl | (x | dl) & ~y) >>> 31) | 0;
+          h[7] = y;
+          x = h[9] | 0;
+          y = x + el | 0;
+          h[8] = (h[8] | 0) + eh + ((x & el | (x | el) & ~y) >>> 31) | 0;
+          h[9] = y;
+          x = h[11] | 0;
+          y = x + fl | 0;
+          h[10] = (h[10] | 0) + fh + ((x & fl | (x | fl) & ~y) >>> 31) | 0;
+          h[11] = y;
+          x = h[13] | 0;
+          y = x + gl | 0;
+          h[12] = (h[12] | 0) + gh + ((x & gl | (x | gl) & ~y) >>> 31) | 0;
+          h[13] = y;
+          x = h[15] | 0;
+          y = x + hl | 0;
+          h[14] = (h[14] | 0) + hh + ((x & hl | (x | hl) & ~y) >>> 31) | 0;
+          h[15] = y;
         }
       };
       return sha;
     }
     const _sha512 = _makeSha(_INIT, 16);
-    return {
+    return Object.defineProperty({
       fn: _sha512.fn,
-      hash: _sha512.hash,
-      _internal: { makeSha: _makeSha }
-    };
+      hash: _sha512.hash
+    }, Symbol.for("@awacloud/fw/internal"), {
+      value: { makeSha: _makeSha }
+    });
   } });
     __register({ name: "bitArray", dependencies: [], factory: function() {
     const bitArray = {
@@ -2836,7 +3764,7 @@ export const pdfBundled = {
         return out;
       },
       bitSlice: function(a, bstart, bend) {
-        a = bitArray._shiftRight(a.slice(bstart / 32), 32 - (bstart & 31)).slice(1);
+        a = _shiftRight(a.slice(bstart / 32), 32 - (bstart & 31)).slice(1);
         return bend === void 0 ? a : bitArray.clamp(a, bend - bstart);
       },
       extract: function(a, bstart, blength) {
@@ -2854,7 +3782,7 @@ export const pdfBundled = {
         if (shift === 32)
           return a1.concat(a2);
         else
-          return bitArray._shiftRight(a2, shift, last | 0, a1.slice(0, a1.length - 1));
+          return _shiftRight(a2, shift, last | 0, a1.slice(0, a1.length - 1));
       },
       bitLength: function(a) {
         let l = a.length, x;
@@ -2889,28 +3817,6 @@ export const pdfBundled = {
           x |= a[i] ^ b[i];
         return x === 0;
       },
-      _shiftRight: function(a, shift, carry, out) {
-        let i, last2, shift2;
-        if (out === void 0)
-          out = [];
-        for (;shift >= 32; shift -= 32) {
-          out.push(carry);
-          carry = 0;
-        }
-        if (shift === 0)
-          return out.concat(a);
-        for (i = 0;i < a.length; i++) {
-          out.push(carry | a[i] >>> shift);
-          carry = a[i] << 32 - shift;
-        }
-        last2 = a.length ? a[a.length - 1] : 0;
-        shift2 = bitArray.getPartial(last2);
-        out.push(bitArray.partial(shift + shift2 & 31, shift + shift2 > 32 ? carry : out.pop(), 1));
-        return out;
-      },
-      _xor4: function(x, y) {
-        return [x[0] ^ y[0], x[1] ^ y[1], x[2] ^ y[2], x[3] ^ y[3]];
-      },
       byteswapM: function(a) {
         if (a.length > 0 && bitArray.getPartial(a[a.length - 1]) !== 32) {
           console.warn("[crypto] INVALID: bitArray.byteswapM: partial words not supported");
@@ -2924,6 +3830,25 @@ export const pdfBundled = {
         return a;
       }
     };
+    function _shiftRight(a, shift, carry, out) {
+      let i, last2, shift2;
+      if (out === void 0)
+        out = [];
+      for (;shift >= 32; shift -= 32) {
+        out.push(carry);
+        carry = 0;
+      }
+      if (shift === 0)
+        return out.concat(a);
+      for (i = 0;i < a.length; i++) {
+        out.push(carry | a[i] >>> shift);
+        carry = a[i] << 32 - shift;
+      }
+      last2 = a.length ? a[a.length - 1] : 0;
+      shift2 = bitArray.getPartial(last2);
+      out.push(bitArray.partial(shift + shift2 & 31, shift + shift2 > 32 ? carry : out.pop(), 1));
+      return out;
+    }
     return bitArray;
   } });
     __register({ name: "asn1", dependencies: [], factory: function() {
@@ -3785,7 +4710,7 @@ ${_wrapLines(body, 64)}-----END ${label}-----
         _selfTestPassed = _runSelfTest();
       return _selfTestPassed;
     }
-    const api = {
+    const api = Object.defineProperty({
       fill(array) {
         return _getRandomBytes(array);
       },
@@ -3846,7 +4771,6 @@ ${_wrapLines(body, 64)}-----END ${label}-----
         _selfTestPassed = _runSelfTest();
         return _selfTestPassed;
       },
-      _internal: { makeDrbg: _makeDrbg },
       health: {
         feed(buf) {
           return _healthCheck(buf instanceof Uint8Array ? buf : new Uint8Array(buf));
@@ -3951,7 +4875,9 @@ ${_wrapLines(body, 64)}-----END ${label}-----
           }
         };
       }
-    };
+    }, Symbol.for("@awacloud/fw/internal"), {
+      value: { makeDrbg: _makeDrbg }
+    });
     return api;
   } });
     __register({ name: "bn", dependencies: ["bitArray","random"], factory: function(bitArray, random) {
@@ -4493,6 +5419,8 @@ ${_wrapLines(body, 64)}-----END ${label}-----
       this._hash = Hash || sha256;
       if (typeof key === "string")
         key = bitArray.ui8_to_ba(utf8.toBytes(key));
+      else if (key instanceof Uint8Array)
+        key = bitArray.ui8_to_ba(key);
       const exKey = [[], []], bs = this._hash.fn.prototype.blockSize / 32;
       this._baseHash = [new this._hash.fn, new this._hash.fn];
       if (key.length > bs)
@@ -4665,7 +5593,7 @@ ${_wrapLines(body, 64)}-----END ${label}-----
       }
       bad |= badPad | 1 - found;
       if (bad !== 0) {
-        console.error("[crypto] CORRUPT: rsa: OAEP decryption failed");
+        console.warn("[crypto] CORRUPT: rsa: OAEP decryption failed");
         return !1;
       }
       return new Uint8Array(db.subarray(onePos + 1));
@@ -4739,33 +5667,14 @@ ${_wrapLines(body, 64)}-----END ${label}-----
         sLen = mHash.length;
       return _pssVerify(mHash, em, emBits, hashMod, sLen);
     }
-    function pkcs1v15Sign() {
-      console.warn("[crypto] DEPRECATED: rsa: PKCS#1 v1.5 signature scheme (RFC 8017 \xA78.2) is deprecated by NIST SP 800-131A Rev.2 (Table 5). Use pssSign() instead.");
-      return !1;
-    }
-    function pkcs1v15Verify() {
-      console.warn("[crypto] DEPRECATED: rsa: PKCS#1 v1.5 signature verification (RFC 8017 \xA78.2) is deprecated by NIST SP 800-131A Rev.2 (Table 5). Use pssVerify() instead.");
-      return !1;
-    }
-    function pkcs1v15Encrypt() {
-      console.warn("[crypto] DEPRECATED|UNSAFE: rsa: PKCS#1 v1.5 encryption (RFC 8017 \xA77.2) is vulnerable to Bleichenbacher padding oracle attacks. Use oaepEncrypt() instead.");
-      return !1;
-    }
-    function pkcs1v15Decrypt() {
-      console.warn("[crypto] DEPRECATED|UNSAFE: rsa: PKCS#1 v1.5 decryption (RFC 8017 \xA77.2) is vulnerable to Bleichenbacher padding oracle attacks. Use oaepDecrypt() instead.");
-      return !1;
-    }
-    return {
+    return Object.defineProperty({
       oaepEncrypt,
       oaepDecrypt,
       pssSign,
-      pssVerify,
-      pkcs1v15Sign,
-      pkcs1v15Verify,
-      pkcs1v15Encrypt,
-      pkcs1v15Decrypt,
-      _internal: { rsaep: _rsaep, rsadp: _rsadp, mgf1: _mgf1 }
-    };
+      pssVerify
+    }, Symbol.for("@awacloud/fw/internal"), {
+      value: { rsaep: _rsaep, rsadp: _rsadp, mgf1: _mgf1 }
+    });
   } });
     __register({ name: "ecc", dependencies: ["bitArray","hex","bn","sha256","sha384","sha512","hmac"], factory: function(bitArray, hex, bn, sha256, sha384, sha512, hmac) {
     const hashes = { 256: sha256, 384: sha384, 512: sha512 };
@@ -5210,13 +6119,13 @@ ${_wrapLines(body, 64)}-----END ${label}-----
           hash = bitArray.clamp(hash, this._curveBitLength);
         const R = this._curve.r, l = this._curveBitLength, r = bn.fromBits(bitArray.bitSlice(rs, 0, l)), ss = bn.fromBits(bitArray.bitSlice(rs, l, 2 * l)), s = fakeLegacyVersion ? ss : ss.inverseMod(R), hG = bn.fromBits(hash).mul(s).mod(R), hA = r.mul(s).mod(R), r2 = this._curve.G.mult2(hG, hA, this._point).x;
         if (r.equals(0) || ss.equals(0) || r.greaterEquals(R) || ss.greaterEquals(R) || !r2.equals(r)) {
-          console.error("[crypto] CORRUPT: ecdsa: signature did not verify");
+          console.warn("[crypto] CORRUPT: ecdsa: signature did not verify");
           return !1;
         }
         if (strict) {
           const upperBoundExcl = R.copy().halveM().add(new bn.bn(1));
           if (ss.greaterEquals(upperBoundExcl)) {
-            console.error("[crypto] CORRUPT: ecdsa: signature is malleable (s > n/2) under strict mode");
+            console.warn("[crypto] CORRUPT: ecdsa: signature is malleable (s > n/2) under strict mode");
             return !1;
           }
         }
@@ -5263,7 +6172,7 @@ ${_wrapLines(body, 64)}-----END ${label}-----
         return "ecdsa";
       }
     };
-    ecc._internal = {
+    Object.defineProperty(ecc, Symbol.for("@awacloud/fw/internal"), { value: {
       coordsInRange: _coordsInRange,
       isInSubgroup: _isInSubgroup,
       isValidPublicKey(curveName, pointHex) {
@@ -5278,7 +6187,7 @@ ${_wrapLines(body, 64)}-----END ${label}-----
           return !1;
         return _isInSubgroup(point, curve);
       }
-    };
+    } });
     return ecc;
   } });
     __register({ name: "ed25519", dependencies: ["sha512","bitArray"], factory: function(sha512, bitArray) {
@@ -5442,50 +6351,332 @@ ${_wrapLines(body, 64)}-----END ${label}-----
         o[i] = a[i] - b[i];
     }
     function _M(o, a, b) {
-      const t = new Float64Array(31);
-      for (let i = 0;i < 16; i++)
-        for (let j = 0;j < 16; j++)
-          t[i + j] += a[i] * b[j];
-      for (let i = 0;i < 15; i++)
-        t[i] += 38 * t[i + 16];
-      for (let i = 0;i < 16; i++)
-        o[i] = t[i];
-      _car25519(o);
-      _car25519(o);
+      const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7], a8 = a[8], a9 = a[9], a10 = a[10], a11 = a[11], a12 = a[12], a13 = a[13], a14 = a[14], a15 = a[15], b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3], b4 = b[4], b5 = b[5], b6 = b[6], b7 = b[7], b8 = b[8], b9 = b[9], b10 = b[10], b11 = b[11], b12 = b[12], b13 = b[13], b14 = b[14], b15 = b[15];
+      let t0 = a0 * b0, t1 = a0 * b1 + a1 * b0, t2 = a0 * b2 + a1 * b1 + a2 * b0, t3 = a0 * b3 + a1 * b2 + a2 * b1 + a3 * b0, t4 = a0 * b4 + a1 * b3 + a2 * b2 + a3 * b1 + a4 * b0, t5 = a0 * b5 + a1 * b4 + a2 * b3 + a3 * b2 + a4 * b1 + a5 * b0, t6 = a0 * b6 + a1 * b5 + a2 * b4 + a3 * b3 + a4 * b2 + a5 * b1 + a6 * b0, t7 = a0 * b7 + a1 * b6 + a2 * b5 + a3 * b4 + a4 * b3 + a5 * b2 + a6 * b1 + a7 * b0, t8 = a0 * b8 + a1 * b7 + a2 * b6 + a3 * b5 + a4 * b4 + a5 * b3 + a6 * b2 + a7 * b1 + a8 * b0, t9 = a0 * b9 + a1 * b8 + a2 * b7 + a3 * b6 + a4 * b5 + a5 * b4 + a6 * b3 + a7 * b2 + a8 * b1 + a9 * b0, t10 = a0 * b10 + a1 * b9 + a2 * b8 + a3 * b7 + a4 * b6 + a5 * b5 + a6 * b4 + a7 * b3 + a8 * b2 + a9 * b1 + a10 * b0, t11 = a0 * b11 + a1 * b10 + a2 * b9 + a3 * b8 + a4 * b7 + a5 * b6 + a6 * b5 + a7 * b4 + a8 * b3 + a9 * b2 + a10 * b1 + a11 * b0, t12 = a0 * b12 + a1 * b11 + a2 * b10 + a3 * b9 + a4 * b8 + a5 * b7 + a6 * b6 + a7 * b5 + a8 * b4 + a9 * b3 + a10 * b2 + a11 * b1 + a12 * b0, t13 = a0 * b13 + a1 * b12 + a2 * b11 + a3 * b10 + a4 * b9 + a5 * b8 + a6 * b7 + a7 * b6 + a8 * b5 + a9 * b4 + a10 * b3 + a11 * b2 + a12 * b1 + a13 * b0, t14 = a0 * b14 + a1 * b13 + a2 * b12 + a3 * b11 + a4 * b10 + a5 * b9 + a6 * b8 + a7 * b7 + a8 * b6 + a9 * b5 + a10 * b4 + a11 * b3 + a12 * b2 + a13 * b1 + a14 * b0, t15 = a0 * b15 + a1 * b14 + a2 * b13 + a3 * b12 + a4 * b11 + a5 * b10 + a6 * b9 + a7 * b8 + a8 * b7 + a9 * b6 + a10 * b5 + a11 * b4 + a12 * b3 + a13 * b2 + a14 * b1 + a15 * b0, t16 = a1 * b15 + a2 * b14 + a3 * b13 + a4 * b12 + a5 * b11 + a6 * b10 + a7 * b9 + a8 * b8 + a9 * b7 + a10 * b6 + a11 * b5 + a12 * b4 + a13 * b3 + a14 * b2 + a15 * b1, t17 = a2 * b15 + a3 * b14 + a4 * b13 + a5 * b12 + a6 * b11 + a7 * b10 + a8 * b9 + a9 * b8 + a10 * b7 + a11 * b6 + a12 * b5 + a13 * b4 + a14 * b3 + a15 * b2, t18 = a3 * b15 + a4 * b14 + a5 * b13 + a6 * b12 + a7 * b11 + a8 * b10 + a9 * b9 + a10 * b8 + a11 * b7 + a12 * b6 + a13 * b5 + a14 * b4 + a15 * b3, t19 = a4 * b15 + a5 * b14 + a6 * b13 + a7 * b12 + a8 * b11 + a9 * b10 + a10 * b9 + a11 * b8 + a12 * b7 + a13 * b6 + a14 * b5 + a15 * b4, t20 = a5 * b15 + a6 * b14 + a7 * b13 + a8 * b12 + a9 * b11 + a10 * b10 + a11 * b9 + a12 * b8 + a13 * b7 + a14 * b6 + a15 * b5, t21 = a6 * b15 + a7 * b14 + a8 * b13 + a9 * b12 + a10 * b11 + a11 * b10 + a12 * b9 + a13 * b8 + a14 * b7 + a15 * b6, t22 = a7 * b15 + a8 * b14 + a9 * b13 + a10 * b12 + a11 * b11 + a12 * b10 + a13 * b9 + a14 * b8 + a15 * b7, t23 = a8 * b15 + a9 * b14 + a10 * b13 + a11 * b12 + a12 * b11 + a13 * b10 + a14 * b9 + a15 * b8, t24 = a9 * b15 + a10 * b14 + a11 * b13 + a12 * b12 + a13 * b11 + a14 * b10 + a15 * b9, t25 = a10 * b15 + a11 * b14 + a12 * b13 + a13 * b12 + a14 * b11 + a15 * b10, t26 = a11 * b15 + a12 * b14 + a13 * b13 + a14 * b12 + a15 * b11, t27 = a12 * b15 + a13 * b14 + a14 * b13 + a15 * b12, t28 = a13 * b15 + a14 * b14 + a15 * b13, t29 = a14 * b15 + a15 * b14, t30 = a15 * b15;
+      t0 += 38 * t16;
+      t1 += 38 * t17;
+      t2 += 38 * t18;
+      t3 += 38 * t19;
+      t4 += 38 * t20;
+      t5 += 38 * t21;
+      t6 += 38 * t22;
+      t7 += 38 * t23;
+      t8 += 38 * t24;
+      t9 += 38 * t25;
+      t10 += 38 * t26;
+      t11 += 38 * t27;
+      t12 += 38 * t28;
+      t13 += 38 * t29;
+      t14 += 38 * t30;
+      let c = 0, v;
+      v = t0 + c;
+      c = Math.floor(v / 65536);
+      t0 = v - c * 65536;
+      v = t1 + c;
+      c = Math.floor(v / 65536);
+      t1 = v - c * 65536;
+      v = t2 + c;
+      c = Math.floor(v / 65536);
+      t2 = v - c * 65536;
+      v = t3 + c;
+      c = Math.floor(v / 65536);
+      t3 = v - c * 65536;
+      v = t4 + c;
+      c = Math.floor(v / 65536);
+      t4 = v - c * 65536;
+      v = t5 + c;
+      c = Math.floor(v / 65536);
+      t5 = v - c * 65536;
+      v = t6 + c;
+      c = Math.floor(v / 65536);
+      t6 = v - c * 65536;
+      v = t7 + c;
+      c = Math.floor(v / 65536);
+      t7 = v - c * 65536;
+      v = t8 + c;
+      c = Math.floor(v / 65536);
+      t8 = v - c * 65536;
+      v = t9 + c;
+      c = Math.floor(v / 65536);
+      t9 = v - c * 65536;
+      v = t10 + c;
+      c = Math.floor(v / 65536);
+      t10 = v - c * 65536;
+      v = t11 + c;
+      c = Math.floor(v / 65536);
+      t11 = v - c * 65536;
+      v = t12 + c;
+      c = Math.floor(v / 65536);
+      t12 = v - c * 65536;
+      v = t13 + c;
+      c = Math.floor(v / 65536);
+      t13 = v - c * 65536;
+      v = t14 + c;
+      c = Math.floor(v / 65536);
+      t14 = v - c * 65536;
+      v = t15 + c;
+      c = Math.floor(v / 65536);
+      t15 = v - c * 65536;
+      t0 += 38 * c;
+      c = 0;
+      v = t0 + c;
+      c = Math.floor(v / 65536);
+      t0 = v - c * 65536;
+      v = t1 + c;
+      c = Math.floor(v / 65536);
+      t1 = v - c * 65536;
+      v = t2 + c;
+      c = Math.floor(v / 65536);
+      t2 = v - c * 65536;
+      v = t3 + c;
+      c = Math.floor(v / 65536);
+      t3 = v - c * 65536;
+      v = t4 + c;
+      c = Math.floor(v / 65536);
+      t4 = v - c * 65536;
+      v = t5 + c;
+      c = Math.floor(v / 65536);
+      t5 = v - c * 65536;
+      v = t6 + c;
+      c = Math.floor(v / 65536);
+      t6 = v - c * 65536;
+      v = t7 + c;
+      c = Math.floor(v / 65536);
+      t7 = v - c * 65536;
+      v = t8 + c;
+      c = Math.floor(v / 65536);
+      t8 = v - c * 65536;
+      v = t9 + c;
+      c = Math.floor(v / 65536);
+      t9 = v - c * 65536;
+      v = t10 + c;
+      c = Math.floor(v / 65536);
+      t10 = v - c * 65536;
+      v = t11 + c;
+      c = Math.floor(v / 65536);
+      t11 = v - c * 65536;
+      v = t12 + c;
+      c = Math.floor(v / 65536);
+      t12 = v - c * 65536;
+      v = t13 + c;
+      c = Math.floor(v / 65536);
+      t13 = v - c * 65536;
+      v = t14 + c;
+      c = Math.floor(v / 65536);
+      t14 = v - c * 65536;
+      v = t15 + c;
+      c = Math.floor(v / 65536);
+      t15 = v - c * 65536;
+      t0 += 38 * c;
+      o[0] = t0;
+      o[1] = t1;
+      o[2] = t2;
+      o[3] = t3;
+      o[4] = t4;
+      o[5] = t5;
+      o[6] = t6;
+      o[7] = t7;
+      o[8] = t8;
+      o[9] = t9;
+      o[10] = t10;
+      o[11] = t11;
+      o[12] = t12;
+      o[13] = t13;
+      o[14] = t14;
+      o[15] = t15;
     }
     function _S(o, a) {
-      _M(o, a, a);
+      const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7], a8 = a[8], a9 = a[9], a10 = a[10], a11 = a[11], a12 = a[12], a13 = a[13], a14 = a[14], a15 = a[15], d0 = 2 * a0, d1 = 2 * a1, d2 = 2 * a2, d3 = 2 * a3, d4 = 2 * a4, d5 = 2 * a5, d6 = 2 * a6, d7 = 2 * a7, d8 = 2 * a8, d9 = 2 * a9, d10 = 2 * a10, d11 = 2 * a11, d12 = 2 * a12, d13 = 2 * a13, d14 = 2 * a14;
+      let t0 = a0 * a0, t1 = d0 * a1, t2 = d0 * a2 + a1 * a1, t3 = d0 * a3 + d1 * a2, t4 = d0 * a4 + d1 * a3 + a2 * a2, t5 = d0 * a5 + d1 * a4 + d2 * a3, t6 = d0 * a6 + d1 * a5 + d2 * a4 + a3 * a3, t7 = d0 * a7 + d1 * a6 + d2 * a5 + d3 * a4, t8 = d0 * a8 + d1 * a7 + d2 * a6 + d3 * a5 + a4 * a4, t9 = d0 * a9 + d1 * a8 + d2 * a7 + d3 * a6 + d4 * a5, t10 = d0 * a10 + d1 * a9 + d2 * a8 + d3 * a7 + d4 * a6 + a5 * a5, t11 = d0 * a11 + d1 * a10 + d2 * a9 + d3 * a8 + d4 * a7 + d5 * a6, t12 = d0 * a12 + d1 * a11 + d2 * a10 + d3 * a9 + d4 * a8 + d5 * a7 + a6 * a6, t13 = d0 * a13 + d1 * a12 + d2 * a11 + d3 * a10 + d4 * a9 + d5 * a8 + d6 * a7, t14 = d0 * a14 + d1 * a13 + d2 * a12 + d3 * a11 + d4 * a10 + d5 * a9 + d6 * a8 + a7 * a7, t15 = d0 * a15 + d1 * a14 + d2 * a13 + d3 * a12 + d4 * a11 + d5 * a10 + d6 * a9 + d7 * a8, t16 = d1 * a15 + d2 * a14 + d3 * a13 + d4 * a12 + d5 * a11 + d6 * a10 + d7 * a9 + a8 * a8, t17 = d2 * a15 + d3 * a14 + d4 * a13 + d5 * a12 + d6 * a11 + d7 * a10 + d8 * a9, t18 = d3 * a15 + d4 * a14 + d5 * a13 + d6 * a12 + d7 * a11 + d8 * a10 + a9 * a9, t19 = d4 * a15 + d5 * a14 + d6 * a13 + d7 * a12 + d8 * a11 + d9 * a10, t20 = d5 * a15 + d6 * a14 + d7 * a13 + d8 * a12 + d9 * a11 + a10 * a10, t21 = d6 * a15 + d7 * a14 + d8 * a13 + d9 * a12 + d10 * a11, t22 = d7 * a15 + d8 * a14 + d9 * a13 + d10 * a12 + a11 * a11, t23 = d8 * a15 + d9 * a14 + d10 * a13 + d11 * a12, t24 = d9 * a15 + d10 * a14 + d11 * a13 + a12 * a12, t25 = d10 * a15 + d11 * a14 + d12 * a13, t26 = d11 * a15 + d12 * a14 + a13 * a13, t27 = d12 * a15 + d13 * a14, t28 = d13 * a15 + a14 * a14, t29 = d14 * a15, t30 = a15 * a15;
+      t0 += 38 * t16;
+      t1 += 38 * t17;
+      t2 += 38 * t18;
+      t3 += 38 * t19;
+      t4 += 38 * t20;
+      t5 += 38 * t21;
+      t6 += 38 * t22;
+      t7 += 38 * t23;
+      t8 += 38 * t24;
+      t9 += 38 * t25;
+      t10 += 38 * t26;
+      t11 += 38 * t27;
+      t12 += 38 * t28;
+      t13 += 38 * t29;
+      t14 += 38 * t30;
+      let c = 0, v;
+      v = t0 + c;
+      c = Math.floor(v / 65536);
+      t0 = v - c * 65536;
+      v = t1 + c;
+      c = Math.floor(v / 65536);
+      t1 = v - c * 65536;
+      v = t2 + c;
+      c = Math.floor(v / 65536);
+      t2 = v - c * 65536;
+      v = t3 + c;
+      c = Math.floor(v / 65536);
+      t3 = v - c * 65536;
+      v = t4 + c;
+      c = Math.floor(v / 65536);
+      t4 = v - c * 65536;
+      v = t5 + c;
+      c = Math.floor(v / 65536);
+      t5 = v - c * 65536;
+      v = t6 + c;
+      c = Math.floor(v / 65536);
+      t6 = v - c * 65536;
+      v = t7 + c;
+      c = Math.floor(v / 65536);
+      t7 = v - c * 65536;
+      v = t8 + c;
+      c = Math.floor(v / 65536);
+      t8 = v - c * 65536;
+      v = t9 + c;
+      c = Math.floor(v / 65536);
+      t9 = v - c * 65536;
+      v = t10 + c;
+      c = Math.floor(v / 65536);
+      t10 = v - c * 65536;
+      v = t11 + c;
+      c = Math.floor(v / 65536);
+      t11 = v - c * 65536;
+      v = t12 + c;
+      c = Math.floor(v / 65536);
+      t12 = v - c * 65536;
+      v = t13 + c;
+      c = Math.floor(v / 65536);
+      t13 = v - c * 65536;
+      v = t14 + c;
+      c = Math.floor(v / 65536);
+      t14 = v - c * 65536;
+      v = t15 + c;
+      c = Math.floor(v / 65536);
+      t15 = v - c * 65536;
+      t0 += 38 * c;
+      c = 0;
+      v = t0 + c;
+      c = Math.floor(v / 65536);
+      t0 = v - c * 65536;
+      v = t1 + c;
+      c = Math.floor(v / 65536);
+      t1 = v - c * 65536;
+      v = t2 + c;
+      c = Math.floor(v / 65536);
+      t2 = v - c * 65536;
+      v = t3 + c;
+      c = Math.floor(v / 65536);
+      t3 = v - c * 65536;
+      v = t4 + c;
+      c = Math.floor(v / 65536);
+      t4 = v - c * 65536;
+      v = t5 + c;
+      c = Math.floor(v / 65536);
+      t5 = v - c * 65536;
+      v = t6 + c;
+      c = Math.floor(v / 65536);
+      t6 = v - c * 65536;
+      v = t7 + c;
+      c = Math.floor(v / 65536);
+      t7 = v - c * 65536;
+      v = t8 + c;
+      c = Math.floor(v / 65536);
+      t8 = v - c * 65536;
+      v = t9 + c;
+      c = Math.floor(v / 65536);
+      t9 = v - c * 65536;
+      v = t10 + c;
+      c = Math.floor(v / 65536);
+      t10 = v - c * 65536;
+      v = t11 + c;
+      c = Math.floor(v / 65536);
+      t11 = v - c * 65536;
+      v = t12 + c;
+      c = Math.floor(v / 65536);
+      t12 = v - c * 65536;
+      v = t13 + c;
+      c = Math.floor(v / 65536);
+      t13 = v - c * 65536;
+      v = t14 + c;
+      c = Math.floor(v / 65536);
+      t14 = v - c * 65536;
+      v = t15 + c;
+      c = Math.floor(v / 65536);
+      t15 = v - c * 65536;
+      t0 += 38 * c;
+      o[0] = t0;
+      o[1] = t1;
+      o[2] = t2;
+      o[3] = t3;
+      o[4] = t4;
+      o[5] = t5;
+      o[6] = t6;
+      o[7] = t7;
+      o[8] = t8;
+      o[9] = t9;
+      o[10] = t10;
+      o[11] = t11;
+      o[12] = t12;
+      o[13] = t13;
+      o[14] = t14;
+      o[15] = t15;
+    }
+    function _pow22501(z, o, z11) {
+      const t0 = _gf(), t1 = _gf(), t2 = _gf();
+      _S(t0, z);
+      _S(t1, t0);
+      _S(t1, t1);
+      _M(t1, t1, z);
+      _M(z11, t1, t0);
+      _S(t0, z11);
+      _M(t0, t0, t1);
+      _S(t1, t0);
+      for (let i = 1;i < 5; i++)
+        _S(t1, t1);
+      _M(t0, t1, t0);
+      _S(t1, t0);
+      for (let i = 1;i < 10; i++)
+        _S(t1, t1);
+      _M(t1, t1, t0);
+      _S(t2, t1);
+      for (let i = 1;i < 20; i++)
+        _S(t2, t2);
+      _M(t1, t2, t1);
+      for (let i = 0;i < 10; i++)
+        _S(t1, t1);
+      _M(t0, t1, t0);
+      _S(t1, t0);
+      for (let i = 1;i < 50; i++)
+        _S(t1, t1);
+      _M(t1, t1, t0);
+      _S(t2, t1);
+      for (let i = 1;i < 100; i++)
+        _S(t2, t2);
+      _M(t1, t2, t1);
+      for (let i = 0;i < 50; i++)
+        _S(t1, t1);
+      _M(o, t1, t0);
     }
     function _inv25519(o, i) {
-      const c = _gf();
-      for (let a = 0;a < 16; a++)
-        c[a] = i[a];
-      for (let a = 253;a >= 0; a--) {
-        _S(c, c);
-        if (a !== 2 && a !== 4)
-          _M(c, c, i);
-      }
-      for (let a = 0;a < 16; a++)
-        o[a] = c[a];
+      const t = _gf(), z11 = _gf();
+      _pow22501(i, t, z11);
+      for (let k = 0;k < 5; k++)
+        _S(t, t);
+      _M(o, t, z11);
     }
     function _pow2523(o, i) {
-      const c = _gf();
-      for (let a = 0;a < 16; a++)
-        c[a] = i[a];
-      for (let a = 250;a >= 0; a--) {
-        _S(c, c);
-        if (a !== 1)
-          _M(c, c, i);
-      }
-      for (let a = 0;a < 16; a++)
-        o[a] = c[a];
+      const t = _gf(), z11 = _gf();
+      _pow22501(i, t, z11);
+      _S(t, t);
+      _S(t, t);
+      _M(o, t, i);
     }
     function _set25519(r, a) {
       for (let i = 0;i < 16; i++)
         r[i] = a[i];
     }
+    const _ga = _gf(), _gb = _gf(), _gc = _gf(), _gd = _gf(), _ge = _gf(), _gff = _gf(), _gg = _gf(), _gh = _gf(), _gt = _gf();
     function _add(p, q) {
-      const a = _gf(), b = _gf(), c = _gf(), d = _gf(), e = _gf(), f = _gf(), g = _gf(), h = _gf(), t = _gf();
+      const a = _ga, b = _gb, c = _gc, d = _gd, e = _ge, f = _gff, g = _gg, h = _gh, t = _gt;
       _Z(a, p[1], p[0]);
       _Z(t, q[1], q[0]);
       _M(a, a, t);
@@ -5505,9 +6696,39 @@ ${_wrapLines(body, 64)}-----END ${label}-----
       _M(p[2], g, f);
       _M(p[3], e, h);
     }
-    function _cswap(p, q, b) {
-      for (let i = 0;i < 4; i++)
-        _sel25519(p[i], q[i], b);
+    function _dbl(p) {
+      const a = _ga, b = _gb, c = _gc, e = _ge, f = _gff, g = _gg, h = _gh, t = _gt;
+      _S(a, p[0]);
+      _S(b, p[1]);
+      _S(c, p[2]);
+      _A(c, c, c);
+      _A(h, a, b);
+      _A(t, p[0], p[1]);
+      _S(t, t);
+      _Z(e, h, t);
+      _Z(g, a, b);
+      _A(f, c, g);
+      _M(p[0], e, f);
+      _M(p[1], g, h);
+      _M(p[2], f, g);
+      _M(p[3], e, h);
+    }
+    function _addNiels(p, n) {
+      const a = _ga, b = _gb, c = _gc, d = _gd, e = _ge, f = _gff, g = _gg, h = _gh;
+      _Z(a, p[1], p[0]);
+      _M(a, a, n[1]);
+      _A(b, p[0], p[1]);
+      _M(b, b, n[0]);
+      _M(c, p[3], n[2]);
+      _A(d, p[2], p[2]);
+      _Z(e, b, a);
+      _Z(f, d, c);
+      _A(g, d, c);
+      _A(h, b, a);
+      _M(p[0], e, f);
+      _M(p[1], h, g);
+      _M(p[2], g, f);
+      _M(p[3], e, h);
     }
     function _pack(r, p) {
       const tx = _gf(), ty = _gf(), zi = _gf();
@@ -5517,26 +6738,140 @@ ${_wrapLines(body, 64)}-----END ${label}-----
       _pack25519(r, ty);
       r[31] ^= _par25519(tx) << 7;
     }
-    function _scalarmult(p, q, s) {
+    function _canon(o, a) {
+      const bytes = new Uint8Array(32);
+      _pack25519(bytes, a);
+      for (let i = 0;i < 16; i++)
+        o[i] = bytes[2 * i] + (bytes[2 * i + 1] << 8);
+    }
+    let _baseTable = null;
+    function _buildBaseTable() {
+      const points = [], P = [_gf(), _gf(), _gf(), _gf()];
+      _set25519(P[0], _X);
+      _set25519(P[1], _Y);
+      _set25519(P[2], _gf1);
+      _M(P[3], _X, _Y);
+      for (let i = 0;i < 32; i++) {
+        const Q = P.map((c) => Float64Array.from(c));
+        for (let j = 1;j <= 8; j++) {
+          points.push(Q.map((c) => Float64Array.from(c)));
+          if (j < 8)
+            _add(Q, P);
+        }
+        if (i < 31)
+          for (let k = 0;k < 8; k++)
+            _dbl(P);
+      }
+      const n = points.length, prefix = Array(n);
+      prefix[0] = Float64Array.from(points[0][2]);
+      for (let k = 1;k < n; k++) {
+        prefix[k] = _gf();
+        _M(prefix[k], prefix[k - 1], points[k][2]);
+      }
+      const inv = _gf();
+      _inv25519(inv, prefix[n - 1]);
+      const table = [];
+      for (let i = 0;i < 32; i++)
+        table.push(Array(8));
+      const zi = _gf(), x = _gf(), y = _gf(), t = _gf();
+      for (let k = n - 1;k >= 0; k--) {
+        if (k > 0) {
+          _M(zi, inv, prefix[k - 1]);
+          _M(inv, inv, points[k][2]);
+        } else
+          _set25519(zi, inv);
+        _M(x, points[k][0], zi);
+        _M(y, points[k][1], zi);
+        const yPx = _gf(), yMx = _gf(), xy2d = _gf();
+        _A(t, y, x);
+        _canon(yPx, t);
+        _Z(t, y, x);
+        _canon(yMx, t);
+        _M(t, x, y);
+        _M(t, t, _D2);
+        _canon(xy2d, t);
+        table[k >> 3][k & 7] = [yPx, yMx, xy2d];
+      }
+      return table;
+    }
+    function _cmov(a, b, bit) {
+      const m = -bit;
+      for (let i = 0;i < 16; i++)
+        a[i] ^= m & (a[i] ^ b[i]);
+    }
+    const _sel = [_gf(), _gf(), _gf()], _negXy2d = _gf();
+    function _selectBase(i, digit) {
+      const row = _baseTable[i], negMask = digit >> 31, abs = (digit ^ negMask) - negMask, s0 = _sel[0], s1 = _sel[1], s2 = _sel[2];
+      for (let k = 0;k < 16; k++) {
+        s0[k] = 0;
+        s1[k] = 0;
+        s2[k] = 0;
+      }
+      s0[0] = 1;
+      s1[0] = 1;
+      for (let j = 1;j <= 8; j++) {
+        const eq = (abs ^ j) - 1 >>> 31, e = row[j - 1];
+        _cmov(s0, e[0], eq);
+        _cmov(s1, e[1], eq);
+        _cmov(s2, e[2], eq);
+      }
+      const neg = negMask & 1;
+      _sel25519(s0, s1, neg);
+      _Z(_negXy2d, _gf0, s2);
+      _cmov(s2, _negXy2d, neg);
+      return _sel;
+    }
+    const _digits = new Int32Array(64);
+    function _scalarbase(p, s) {
+      if (_baseTable === null)
+        _baseTable = _buildBaseTable();
+      const e = _digits;
+      for (let i = 0;i < 32; i++) {
+        e[2 * i] = s[i] & 15;
+        e[2 * i + 1] = s[i] >> 4 & 15;
+      }
+      let carry = 0;
+      for (let i = 0;i < 63; i++) {
+        e[i] += carry;
+        carry = e[i] + 8 >> 4;
+        e[i] -= carry << 4;
+      }
+      e[63] += carry;
       _set25519(p[0], _gf0);
       _set25519(p[1], _gf1);
       _set25519(p[2], _gf1);
       _set25519(p[3], _gf0);
-      for (let i = 255;i >= 0; --i) {
-        const b = s[i / 8 | 0] >> (i & 7) & 1;
-        _cswap(p, q, b);
-        _add(q, p);
-        _add(p, p);
-        _cswap(p, q, b);
-      }
+      for (let i = 1;i < 64; i += 2)
+        _addNiels(p, _selectBase(i >> 1, e[i]));
+      _dbl(p);
+      _dbl(p);
+      _dbl(p);
+      _dbl(p);
+      for (let i = 0;i < 64; i += 2)
+        _addNiels(p, _selectBase(i >> 1, e[i]));
+      for (let i = 0;i < 64; i++)
+        e[i] = 0;
     }
-    function _scalarbase(p, s) {
-      const q = [_gf(), _gf(), _gf(), _gf()];
-      _set25519(q[0], _X);
-      _set25519(q[1], _Y);
-      _set25519(q[2], _gf1);
-      _M(q[3], _X, _Y);
-      _scalarmult(p, q, s);
+    function _scalarmultPublic(p, q, s) {
+      const win = [[_gf(), _gf1.slice(), _gf1.slice(), _gf()]];
+      for (let j = 1;j < 16; j++) {
+        const w = win[j - 1].map((c) => Float64Array.from(c));
+        _add(w, q);
+        win.push(w);
+      }
+      _set25519(p[0], _gf0);
+      _set25519(p[1], _gf1);
+      _set25519(p[2], _gf1);
+      _set25519(p[3], _gf0);
+      for (let i = 63;i >= 0; i--) {
+        if (i < 63) {
+          _dbl(p);
+          _dbl(p);
+          _dbl(p);
+          _dbl(p);
+        }
+        _add(p, win[s[i >> 1] >> ((i & 1) << 2) & 15]);
+      }
     }
     const _L = new Float64Array([
       237,
@@ -5822,7 +7157,7 @@ ${_wrapLines(body, 64)}-----END ${label}-----
       const R = signature.subarray(0, 32), k = dom ? _h(dom, R, publicKey, message) : _h(R, publicKey, message);
       _reduce(k);
       const p = [_gf(), _gf(), _gf(), _gf()];
-      _scalarmult(p, q, k);
+      _scalarmultPublic(p, q, k);
       const Rcheck = [_gf(), _gf(), _gf(), _gf()];
       _scalarbase(Rcheck, signature.subarray(32, 64));
       _add(p, Rcheck);
@@ -5833,17 +7168,17 @@ ${_wrapLines(body, 64)}-----END ${label}-----
         diff |= signature[i] ^ t[i];
       return diff === 0;
     }
-    function verify(publicKey, message, signature) {
+    function verify(publicKey, signature, message) {
       return _verifyCore(publicKey, message, signature, null);
     }
-    function verifyPh(publicKey, message, signature, context) {
+    function verifyPh(publicKey, signature, message, context) {
       const dom = _dom2(1, context);
       if (dom === !1)
         return !1;
       const ph = _h(message);
       return _verifyCore(publicKey, ph, signature, dom);
     }
-    function verifyCtx(publicKey, message, signature, context) {
+    function verifyCtx(publicKey, signature, message, context) {
       if (!(context instanceof Uint8Array) || context.length === 0 || context.length > 255) {
         console.warn("[crypto] INVALID: ed25519: verifyCtx context must be 1..255 bytes");
         return !1;
@@ -5853,35 +7188,40 @@ ${_wrapLines(body, 64)}-----END ${label}-----
         return !1;
       return _verifyCore(publicKey, message, signature, dom);
     }
-    function _ed448Reject(method) {
-      console.warn("[crypto] NOT-IMPLEMENTED: ed25519: Ed448 (FIPS 186-5 \xA77.7 / RFC 8032 \xA75.2) is a separate curve (edwards448 + SHAKE-256, 57-byte pk / 114-byte sig) and is NOT implemented in this module. Use Ed25519 (" + method + "() instead) or implement a separate ed448.js module if Ed448 is required for CMVP / interop.");
-      return !1;
-    }
-    return {
+    return Object.defineProperty({
       keyPair,
       sign,
       verify,
       signPh,
       verifyPh,
       signCtx,
-      verifyCtx,
-      ed448: {
-        keyPair: () => _ed448Reject("keyPair"),
-        sign: () => _ed448Reject("sign"),
-        verify: () => _ed448Reject("verify"),
-        signPh: () => _ed448Reject("signPh"),
-        verifyPh: () => _ed448Reject("verifyPh")
-      },
-      _internal: {
+      verifyCtx
+    }, Symbol.for("@awacloud/fw/internal"), {
+      value: {
         isValidPublicKey(pk) {
           if (!(pk instanceof Uint8Array) || pk.length !== 32)
             return !1;
           const q = [_gf(), _gf(), _gf(), _gf()];
           return _unpackneg(q, pk) === 0;
         },
-        dom2: _dom2
+        dom2: _dom2,
+        baseMulBoth(sc) {
+          const B = [_gf(), _gf(), _gf(), _gf()];
+          _set25519(B[0], _X);
+          _set25519(B[1], _Y);
+          _set25519(B[2], _gf1);
+          _M(B[3], _X, _Y);
+          const p1 = [_gf(), _gf(), _gf(), _gf()], p2 = [_gf(), _gf(), _gf(), _gf()];
+          _scalarbase(p1, sc);
+          _scalarmultPublic(p2, B, sc);
+          const t = new Uint8Array(32), w = new Uint8Array(32);
+          _pack(t, p1);
+          _pack(w, p2);
+          return { table: t, window: w };
+        },
+        baseMulSource: () => String(_selectBase) + String(_scalarbase)
       }
-    };
+    });
   } });
 
     // pdf-local factories — inlined and topo-ordered.
@@ -7251,7 +8591,8 @@ endstream`);
       "AF",
       "OutputIntents",
       "DPart",
-      "AssociatedFiles"
+      "AssociatedFiles",
+      "Hid"
     ]), has = (v) => !!v && v.type !== "null", isNum = (v) => !!v && (v.type === "int" || v.type === "real");
     function toBox(v) {
       if (!v || v.type !== "array" || v.items.length !== 4)
@@ -7340,6 +8681,8 @@ endstream`);
         out.b = e.B;
       if (isNum(e.Dur))
         out.dur = e.Dur.value;
+      if (isType(e.Hid, "bool"))
+        out.hid = e.Hid.value;
       if (has(e.Trans))
         out.trans = e.Trans;
       if (has(e.AA))
@@ -7620,7 +8963,7 @@ endstream`);
       return out;
     }
     function endedBeforeFinalBlock(e) {
-      return !!e && e.code === 0;
+      return !!e && e.code === "EEOF";
     }
     const limits = Object.freeze({ maxOutput: 268435456 }), SAFE_RATIO = 2048, CHUNK = 16384;
     function outputLimit(max, length) {
@@ -7629,7 +8972,7 @@ endstream`);
     function inflateChunked(bytes, max, final) {
       const chunks = [];
       let total = 0;
-      const stream = new fwZlib.UnzlibStream((chunk) => {
+      const stream = new fwZlib.UnzlibStream({ verify: !1 }, (chunk) => {
         total += chunk.length;
         if (max && total > max)
           throw outputLimit(max, bytes.length);
@@ -7654,7 +8997,7 @@ endstream`);
     }
     function inflate(bytes, max) {
       if (!max || bytes.length <= max / SAFE_RATIO || typeof fwZlib.UnzlibStream !== "function" || !plainZlibHeader(bytes))
-        return fwZlib.unzlibSync(bytes);
+        return fwZlib.unzlibSync(bytes, { verify: !1 });
       return inflateChunked(bytes, max, !0);
     }
     function isOutputLimit(e) {
@@ -8235,13 +9578,21 @@ endstream`);
         return new Uint8Array(v);
       return;
     }
+    function recipientsOf(v) {
+      if (v == null)
+        return;
+      const items = Array.isArray(v) ? v : typeof v === "object" && v.type === "array" && Array.isArray(v.items) ? v.items : null;
+      if (!items)
+        return;
+      return items.map((i) => asUint8(i && typeof i === "object" && i.type === "string" ? i.value : i)).filter(Boolean);
+    }
     function typeEncryptDict(dict) {
       if (dict == null || typeof dict !== "object")
         throw new EncryptionError("pdf/crypto/encrypt-dict/bad-input", "/Encrypt must be a dictionary");
-      const isNode = !(dict instanceof Map) && dict.type === "dict" && dict.entries !== null && typeof dict.entries === "object", plain = (n) => n && typeof n === "object" && (n.type === "int" || n.type === "real" || n.type === "bool" || n.type === "string") ? n.value : n, get = (k) => dict instanceof Map ? dict.get(k) : isNode ? plain(dict.entries[k]) : dict[k], V = get("V"), R = get("R"), Filter = get("Filter");
-      if (V === void 0 || R === void 0)
+      const isNode = !(dict instanceof Map) && dict.type === "dict" && dict.entries !== null && typeof dict.entries === "object", plain = (n) => n && typeof n === "object" && (n.type === "int" || n.type === "real" || n.type === "bool" || n.type === "string") ? n.value : n, get = (k) => dict instanceof Map ? dict.get(k) : isNode ? plain(dict.entries[k]) : dict[k], V = get("V"), R = get("R"), Filter = get("Filter"), filterName = Filter && typeof Filter === "object" && Filter.type === "name" ? Filter.value : Filter;
+      if (V === void 0 || R === void 0 && (filterName === void 0 || filterName === null || filterName === "Standard"))
         throw new EncryptionError("pdf/crypto/encrypt-dict/missing-V-R", "/Encrypt requires both /V and /R", { context: { V, R } });
-      if (typeof V !== "number" || typeof R !== "number")
+      if (typeof V !== "number" || R !== void 0 && typeof R !== "number")
         throw new EncryptionError("pdf/crypto/encrypt-dict/bad-V-R-type", "/V and /R must be integers", { context: { V, R } });
       return {
         V,
@@ -8259,6 +9610,7 @@ endstream`);
         UE: asUint8(get("UE")),
         Perms: asUint8(get("Perms")),
         EncryptMetadata: get("EncryptMetadata") !== !1,
+        Recipients: recipientsOf(get("Recipients")),
         P: get("P"),
         raw: dict
       };
@@ -9405,7 +10757,103 @@ endstream`);
       buildPerms
     };
   } });
-    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch","pdfSecurity","pdfStandardV4","pdfStandardV5","pdfStandardV6"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod, securityMod, v4Mod, v5Mod, v6Mod) {
+    __register({ name: "pdfInfo", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
+    const { ParseError, ContractError } = errors, { isType } = parser, PDFDOC = [];
+    for (let c = 0;c < 256; c++)
+      PDFDOC.push(c);
+    [728, 711, 710, 729, 733, 731, 730, 732].forEach((u, i) => {
+      PDFDOC[24 + i] = u;
+    });
+    PDFDOC[127] = 65533;
+    [
+      8226,
+      8224,
+      8225,
+      8230,
+      8212,
+      8211,
+      402,
+      8260,
+      8249,
+      8250,
+      8722,
+      8240,
+      8222,
+      8220,
+      8221,
+      8216,
+      8217,
+      8218,
+      8482,
+      64257,
+      64258,
+      321,
+      338,
+      352,
+      376,
+      381,
+      305,
+      322,
+      339,
+      353,
+      382,
+      65533,
+      8364
+    ].forEach((u, i) => {
+      PDFDOC[128 + i] = u;
+    });
+    PDFDOC[173] = 65533;
+    function decodeTextString(bytes) {
+      if (!(bytes instanceof Uint8Array))
+        throw new ContractError("pdf/info/bad-text-string", "decodeTextString expects a Uint8Array", { context: { typeof: typeof bytes } });
+      if (bytes.length >= 2 && bytes[0] === 254 && bytes[1] === 255) {
+        let s = "";
+        for (let i = 2;i + 1 < bytes.length; i += 2)
+          s += String.fromCharCode(bytes[i] << 8 | bytes[i + 1]);
+        return s.replace(/\u001b[^\u001b]*\u001b/g, "");
+      }
+      if (bytes.length >= 3 && bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191)
+        return new TextDecoder("utf-8").decode(bytes.subarray(3));
+      let s = "";
+      for (const c of bytes)
+        s += String.fromCharCode(PDFDOC[c]);
+      return s;
+    }
+    const STRINGY = ["Title", "Author", "Subject", "Keywords", "Creator", "Producer"], DATEY = ["CreationDate", "ModDate"], KNOWN = new Set(STRINGY.concat(DATEY, ["Trapped"]));
+    function lower(s) {
+      return s.charAt(0).toLowerCase() + s.slice(1);
+    }
+    function typeInfo(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/info/not-dict", "Info must be a dictionary", { context: { type: dict && dict.type } });
+      const e = dict.entries, out = { raw: dict, _extras: {} };
+      for (const k of STRINGY)
+        if (e[k] !== void 0) {
+          if (e[k].type !== "string")
+            throw new ParseError("pdf/info/bad-string", "/" + k + " must be a string", { context: { key: k, type: e[k].type } });
+          out[lower(k)] = e[k].value;
+        }
+      for (const k of DATEY)
+        if (e[k] !== void 0) {
+          if (e[k].type !== "string")
+            throw new ParseError("pdf/info/bad-date", "/" + k + " must be a date string", { context: { key: k, type: e[k].type } });
+          out[lower(k)] = e[k].value;
+        }
+      if (e.Trapped !== void 0)
+        if (e.Trapped.type === "name")
+          out.trapped = e.Trapped.value;
+        else if (e.Trapped.type === "bool")
+          out.trapped = e.Trapped.value ? "True" : "False";
+        else
+          throw new ParseError("pdf/info/bad-trapped", "/Trapped must be a name (True|False|Unknown)", { context: { type: e.Trapped.type } });
+      for (const k of Object.keys(e))
+        if (!KNOWN.has(k))
+          out._extras[k] = e[k];
+      return out;
+    }
+    return { typeInfo, decodeTextString };
+  } });
+    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch","pdfSecurity","pdfStandardV4","pdfStandardV5","pdfStandardV6","pdfInfo"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod, securityMod, v4Mod, v5Mod, v6Mod, infoMod) {
     const { ParseError, ContractError, EncryptionError } = errors, tokenize = tokenizerMod && tokenizerMod.tokenize, parseIndirect = parserMod && parserMod.parseIndirect, locateStartXref = xrefMod && xrefMod.locateStartXref, readStartXref = xrefMod && xrefMod.readStartXref, parseXrefTable = xrefMod && xrefMod.parseXrefTable, parseTrailerDict = xrefMod && xrefMod.parseTrailerDict, typeTrailer = trailerMod && trailerMod.typeTrailer, typeCatalog = catalogMod && catalogMod.typeCatalog, typePage = pageMod && pageMod.typePage, walkPageTree = pagesMod && pagesMod.walkPageTree, HEADER_PREFIX = new Uint8Array([37, 80, 68, 70, 45]), XREF_KEYWORD = new Uint8Array([120, 114, 101, 102]), PDF_NULL = Object.freeze({ type: "null" }), SECTION_LOCAL_KEYS = new Set([
       "Prev",
       "XRefStm",
@@ -9451,9 +10899,11 @@ endstream`);
       if (!crossRefStreamMod || !objStreamMod || !filterDispatchMod)
         throw new ParseError("pdf/document/xref-stream-unwired", "this pdfDocument was built without pdfCrossRefStream, " + "pdfObjStream and pdfFilterDispatch \u2014 cross-reference " + "streams and object streams cannot be read", { context: { offset } });
     }
-    function readXrefStreamSection(bytes, at) {
+    function readXrefStreamSection(bytes, at, end = !0) {
       requireStreamWiring(at);
-      const tok = tokenize(bytes, { start: at }), streamObj = parseIndirect(tok, refuseIndirectLength).value, typeEntry = streamObj && streamObj.dict && streamObj.dict.entries && streamObj.dict.entries.Type;
+      const tok = tokenize(bytes, { start: at }), streamObj = parseIndirect(tok, refuseIndirectLength).value;
+      checkStreamWindow(streamObj, bytes, end, null);
+      const typeEntry = streamObj && streamObj.dict && streamObj.dict.entries && streamObj.dict.entries.Type;
       if (!streamObj || streamObj.type !== "stream" || !typeEntry || typeEntry.type !== "name" || typeEntry.value !== "XRef")
         throw new ParseError("pdf/document/bad-xref-section", "neither an xref table nor a cross-reference stream at startxref", { context: { offset: at } });
       const decoded = filterDispatchMod.decode(streamObj);
@@ -9643,10 +11093,119 @@ endstream`);
         }
       };
     }
-    function readDocument(bytes, opts = {}) {
-      if (!(bytes instanceof Uint8Array))
-        throw new ParseError("pdf/document/bad-input", "readDocument expects a Uint8Array", { context: { typeof: typeof bytes } });
-      const password = opts.password;
+    const SOURCE_WINDOW = 65536, SOURCE_WINDOW_MIN = 16, SOURCE_WINDOW_SLACK = 65536, STARTXREF_TAIL = 8192;
+    function isSource(v) {
+      return !!v && typeof v === "object" && !(v instanceof Uint8Array) && Number.isSafeInteger(v.byteLength) && v.byteLength >= 0 && typeof v.read === "function";
+    }
+
+    class WindowShort extends Error {
+    }
+    function inputOf(input, first) {
+      if (!isSource(input)) {
+        const whole = { bytes: input, base: 0, end: !0 };
+        return { size: input.length, window: () => whole, run: (offset, parse) => parse(input, offset, !0) };
+      }
+      const size = input.byteLength;
+      function window(offset, length) {
+        const n = Math.max(0, Math.min(length, size - offset)), got = input.read(offset, n);
+        if (!(got instanceof Uint8Array))
+          throw new ContractError("pdf/document/bad-source-read", "a byte source read must return a Uint8Array", { context: { offset, length: n, typeof: typeof got } });
+        return { bytes: got, base: offset, end: offset + got.length >= size };
+      }
+      function run(offset, parse) {
+        const cap = parserMod.parserLimits.maxStreamBytes + SOURCE_WINDOW_SLACK;
+        let length = Math.min(first, cap);
+        for (;; ) {
+          const w = window(offset, length);
+          try {
+            return parse(w.bytes, 0, w.end);
+          } catch (err) {
+            if (w.end || !(err instanceof ParseError || err instanceof WindowShort))
+              throw err;
+          }
+          if (length >= cap)
+            throw new ParseError("pdf/document/source-window", "the object does not fit the largest window a byte source is read by", { context: { offset, window: length } });
+          length = Math.min(length * 2, cap);
+        }
+      }
+      return { size, window, run };
+    }
+    function checkStreamWindow(value, bytes, end, resolveRef) {
+      if (end || !value || value.type !== "stream")
+        return;
+      let len = value.dict && value.dict.entries && value.dict.entries.Length;
+      if (len && len.type === "ref" && resolveRef)
+        len = resolveRef(len);
+      if (len && len.type === "int" && len.value > value.raw.length)
+        throw new WindowShort("stream longer than its window");
+    }
+    const INFO_TEXT = [
+      ["Title", "title"],
+      ["Author", "author"],
+      ["Subject", "subject"],
+      ["Keywords", "keywords"],
+      ["Creator", "creator"],
+      ["Producer", "producer"],
+      ["CreationDate", "creationDate"],
+      ["ModDate", "modDate"]
+    ];
+    function infoText(node, resolve) {
+      let dict;
+      try {
+        dict = resolve(node);
+      } catch {
+        return null;
+      }
+      if (!dict || dict.type !== "dict")
+        return null;
+      const out = {};
+      for (const [key, name] of INFO_TEXT) {
+        let v;
+        try {
+          v = resolve(dict.entries[key]);
+        } catch {
+          continue;
+        }
+        if (v && v.type === "string" && v.value instanceof Uint8Array)
+          out[name] = infoMod.decodeTextString(v.value);
+      }
+      let t;
+      try {
+        t = resolve(dict.entries.Trapped);
+      } catch {
+        t = void 0;
+      }
+      if (t && t.type === "name")
+        out.trapped = t.value;
+      else if (t && t.type === "bool")
+        out.trapped = t.value ? "True" : "False";
+      return out;
+    }
+    function contentsOf(page, resolve) {
+      const parts = [];
+      for (const ref of page.contents || []) {
+        const s = resolve({ type: "ref", num: ref.num, gen: ref.gen });
+        if (!s || s.type !== "stream")
+          throw new ParseError("pdf/document/bad-contents", `content ${ref.num} ${ref.gen} R is not a stream`, { context: { num: ref.num, gen: ref.gen } });
+        parts.push(filterDispatchMod.decode(s));
+      }
+      const size = parts.reduce((n, x) => n + x.length, 0) + Math.max(0, parts.length - 1), out = new Uint8Array(size);
+      let at = 0;
+      parts.forEach((x, k) => {
+        if (k)
+          out[at++] = 10;
+        out.set(x, at);
+        at += x.length;
+      });
+      return out;
+    }
+    function readDocument(input, opts = {}) {
+      if (!(input instanceof Uint8Array) && !isSource(input))
+        throw new ParseError("pdf/document/bad-input", "readDocument expects a Uint8Array or a byte source { byteLength, read(offset, length) }", { context: { typeof: input === null ? "null" : typeof input } });
+      const sourceWindow = opts.sourceWindow;
+      if (sourceWindow !== void 0 && !(Number.isSafeInteger(sourceWindow) && sourceWindow >= SOURCE_WINDOW_MIN))
+        throw new ContractError("pdf/document/bad-source-window-option", `opts.sourceWindow must be an integer of at least ${SOURCE_WINDOW_MIN}`, { context: { typeof: typeof sourceWindow } });
+      const fromSource = isSource(input), src = inputOf(input, sourceWindow === void 0 ? SOURCE_WINDOW : sourceWindow), bytes = fromSource ? null : input, password = opts.password;
       if (password !== void 0 && typeof password !== "string" && !(password instanceof Uint8Array))
         throw new ContractError("pdf/document/bad-password-option", "opts.password must be a string or a Uint8Array", { context: { typeof: typeof password } });
       const legacyRc4 = opts.legacyRc4;
@@ -9660,12 +11219,12 @@ endstream`);
       const fastCipher = opts.fastCipher;
       if (fastCipher !== void 0 && typeof fastCipher !== "boolean")
         throw new ContractError("pdf/document/bad-fast-cipher-option", "opts.fastCipher must be a boolean", { context: { typeof: fastCipher === null ? "null" : typeof fastCipher } });
-      const { version, end: headerEnd } = readHeader(bytes), xref = { entries: {}, sections: [] }, losses = [];
+      const { version, end: headerEnd } = readHeader(fromSource ? src.window(0, SOURCE_WINDOW).bytes : bytes), xref = { entries: {}, sections: [] }, losses = [];
       function walkChain() {
-        const sxAt = locateStartXref(bytes);
+        const tail = fromSource ? src.window(Math.max(0, src.size - STARTXREF_TAIL), STARTXREF_TAIL).bytes : bytes, sxAt = locateStartXref(tail);
         if (sxAt < 0)
           throw new ParseError("pdf/document/no-startxref", "startxref keyword not found near EOF");
-        const xrefAt = readStartXref(bytes, sxAt), trailerDicts = [];
+        const xrefAt = readStartXref(tail, sxAt), trailerDicts = [];
         let cursor = xrefAt;
         const seenSections = new Set;
         function mergeSection(at, kind, entries) {
@@ -9679,8 +11238,23 @@ endstream`);
             break;
           seenSections.add(cursor);
           let dict;
-          if (startsXrefTable(bytes, skipWhitespace(bytes, cursor))) {
-            const section = parseXrefTable(bytes, cursor);
+          const read = src.run(cursor, (b, at, end) => {
+            if (startsXrefTable(b, skipWhitespace(b, at))) {
+              const section = parseXrefTable(b, at);
+              let trailerError = null, trailerDict;
+              try {
+                trailerDict = parseTrailerDict(b, section.end).dict;
+              } catch (err) {
+                if (!end)
+                  throw err;
+                trailerError = err;
+              }
+              return { table: section, dict: trailerDict, trailerError };
+            }
+            return { stream: readXrefStreamSection(b, at, end) };
+          });
+          if (read.table) {
+            const section = read.table;
             for (const shape of section.tolerated || [])
               losses.push({
                 code: "pdf/document/xref-tolerated",
@@ -9688,14 +11262,16 @@ endstream`);
                 context: { shape, at: cursor }
               });
             mergeSection(cursor, "table", section.entries);
-            dict = parseTrailerDict(bytes, section.end).dict;
+            if (read.trailerError)
+              throw read.trailerError;
+            dict = read.dict;
             const stmAt = dict && dict.entries && dict.entries.XRefStm;
-            if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < bytes.length) {
-              const hybrid = readXrefStreamSection(bytes, stmAt.value);
+            if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < src.size) {
+              const hybrid = src.run(stmAt.value, (b, at, end) => readXrefStreamSection(b, at, end));
               mergeSection(stmAt.value, "stream", hybrid.entries);
             }
           } else {
-            const section = readXrefStreamSection(bytes, cursor);
+            const section = read.stream;
             mergeSection(cursor, "stream", section.entries);
             dict = section.dict;
           }
@@ -9714,9 +11290,9 @@ endstream`);
       try {
         trailerTyped = walkChain();
       } catch (err) {
-        if (opts.recoverXref !== !0 || !(err instanceof ParseError))
+        if (opts.recoverXref === !1 || !(err instanceof ParseError))
           throw err;
-        const rebuilt = rebuildXref(bytes);
+        const rebuilt = rebuildXref(bytes || src.window(0, src.size).bytes);
         xref.entries = rebuilt.entries;
         xref.sections = [{ at: null, kind: "rebuilt", entries: xref.entries }];
         losses.push({
@@ -9726,9 +11302,25 @@ endstream`);
         });
         trailerTyped = typeTrailer(rebuilt.trailer);
       }
-      if (trailerTyped.encrypt && opts.allowEncrypted !== !0 && password === void 0)
-        throw new ParseError("pdf/document/encrypted", "document is encrypted (trailer /Encrypt present) \u2014 " + "no decrypt path is composed for readDocument; pass { allowEncrypted: true } to read the raw ciphertext container", { context: { encrypt: trailerTyped.encrypt } });
-      const indirects = new Map, lossKeys = new Set, freeKeys = new Set, objStmMembers = new Map;
+      if (trailerTyped.encrypt && opts.allowEncrypted !== !0 && password === void 0) {
+        const refused = new ParseError("pdf/document/encrypted", "document is encrypted (trailer /Encrypt present) and the empty password does not open it \u2014 " + "pass { password } to decrypt it, or { allowEncrypted: true } to read the raw ciphertext container", { context: { encrypt: trailerTyped.encrypt } });
+        if (opts.emptyPassword === !1)
+          throw refused;
+        let opened;
+        try {
+          opened = readDocument(input, { ...opts, password: "" });
+        } catch {
+          throw refused;
+        }
+        const er = opened.trailer.encrypt, encNode = er && er.type === "dict" ? er : opened._raw.resolve({ type: "ref", num: er.num, gen: er.gen }), p = encNode && encNode.type === "dict" && encNode.entries.P ? encNode.entries.P.value : null;
+        opened.losses.push({
+          code: "pdf/document/opened-with-empty-password",
+          message: "the document is encrypted; it was opened with the empty password",
+          context: { permissions: p }
+        });
+        return opened;
+      }
+      const indirects = new Map, lossKeys = new Set, freeKeys = new Set, objStmMembers = new Map, resolving = new Set;
       function resolve(ref) {
         if (!ref || ref.type !== "ref")
           return ref;
@@ -9738,6 +11330,24 @@ endstream`);
         const key = num + ":" + gen;
         if (indirects.has(key))
           return indirects.get(key).value;
+        if (resolving.has(key)) {
+          recordLoss("cycle:" + key, {
+            code: "pdf/document/reference-cycle",
+            message: `object ${num} ${gen} is referenced while it is being read; the reference reads as null`,
+            context: { num, gen }
+          });
+          return PDF_NULL;
+        }
+        if (resolving.size >= 32)
+          throw new ParseError("pdf/document/resolve-too-deep", `object ${num} ${gen} nests more than 32 objects being read`, { context: { num, gen, depth: resolving.size } });
+        resolving.add(key);
+        try {
+          return resolveUnguarded(num, gen, key);
+        } finally {
+          resolving.delete(key);
+        }
+      }
+      function resolveUnguarded(num, gen, key) {
         let entry = xref.entries[num];
         if (!entry)
           throw new ParseError("pdf/document/missing-xref", `object ${num} ${gen} not in xref`, { context: { num, gen } });
@@ -9752,9 +11362,15 @@ endstream`);
           return value;
         }
         const offset = entry.offset;
-        if (offset <= 0 || offset >= bytes.length)
-          throw new ParseError("pdf/document/bad-offset", `object ${num} ${gen} xref offset out of range`, { context: { num, gen, offset, total: bytes.length } });
-        const tok = tokenize(bytes, { start: offset }), def = parseIndirect(tok, resolve);
+        if (offset <= 0 || offset >= src.size)
+          throw new ParseError("pdf/document/bad-offset", `object ${num} ${gen} xref offset out of range`, { context: { num, gen, offset, total: src.size } });
+        const def = src.run(offset, (b, at, end) => {
+          const d = parseIndirect(tokenize(b, { start: at }), resolve);
+          checkStreamWindow(d.value, b, end, resolve);
+          if (fromSource && d.value && d.value.type === "stream")
+            d.value = { ...d.value, raw: d.value.raw.slice() };
+          return d;
+        });
         if (def.num !== num || def.gen !== gen)
           throw new ParseError("pdf/document/xref-mismatch", "xref points to a different object", { context: { expected: { num, gen }, found: { num: def.num, gen: def.gen } } });
         const value = decryptor ? decryptor.decrypt(num, gen, def.value) : def.value;
@@ -9841,12 +11457,14 @@ endstream`);
         trailer: trailerTyped,
         xref,
         losses,
-        _raw: {
-          resolve,
-          bytes,
-          headerEnd,
-          indirects
-        }
+        resolve,
+        info: () => trailerTyped && trailerTyped.info ? infoText({ type: "ref", num: trailerTyped.info.num, gen: trailerTyped.info.gen }, resolve) : null,
+        pageContents(i) {
+          if (!Number.isInteger(i) || i < 0 || i >= pages.length)
+            throw new ContractError("pdf/document/bad-page-index", `no page ${i} (the document has ${pages.length})`, { context: { index: i, pages: pages.length } });
+          return contentsOf(pages[i], resolve);
+        },
+        _raw: fromSource ? { resolve, source: input, headerEnd, indirects } : { resolve, bytes, headerEnd, indirects }
       };
     }
     return { readDocument, readHeader };
@@ -9951,7 +11569,7 @@ ${opts.xrefOffset}
       }
       const xrefOffset = cursor;
       push(buildXref(maxNum, offsets));
-      const size = maxNum + 1, id = opts.id || (version === "2.0" && canDerive ? derivedId(concat(parts)) : void 0);
+      const size = maxNum + 1, id = opts.id || ((version === "2.0" || opts.deriveId === !0) && canDerive ? derivedId(concat(parts)) : void 0);
       push(buildTrailer({
         size,
         root: opts.root,
@@ -9999,8 +11617,8 @@ ${opts.xrefOffset}
   } });
     __register({ name: "pdf", dependencies: ["pdfErrors","pdfShared","pdfTokenizer","pdfParserObj","pdfParser","pdfXref","pdfTrailer","pdfSerializer","pdfCatalog","pdfPages","pdfPage","pdfDocument","pdfWriter"], factory: function(errors, shared, tokenizer, parserObj, parser, xref, trailer, serializer, catalog, pages, page, docMod, writerMod) {
     const { ContractError } = errors, readDocument = docMod.readDocument, readHeader = docMod.readHeader, writeDocument = writerMod.writeDocument, assembleIndirects = writerMod.assembleIndirects, usedExtensions = new Set, api = {
-      read(bytes, opts) {
-        return readDocument(bytes, opts);
+      read(input, opts) {
+        return readDocument(input, opts);
       },
       header(bytes) {
         return readHeader(bytes);

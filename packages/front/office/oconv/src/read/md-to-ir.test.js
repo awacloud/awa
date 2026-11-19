@@ -41,7 +41,8 @@ function run(text, flags) {
     return {
         kind: 'run', text,
         bold: !!f.bold, italic: !!f.italic, strike: !!f.strike, code: !!f.code,
-        link: f.link === undefined ? null : f.link
+        link: f.link === undefined ? null : f.link,
+        size: null, font: null, color: null, underline: false, script: null
     };
 }
 
@@ -61,7 +62,7 @@ describe('oconvMdToIr — throw / empty input', () => {
     test('empty string → empty IR document, no throw', () => {
         const { ir, losses, frontmatter } = mdToIr('');
         expect(validate(ir).ok).toBe(true);
-        expect(ir).toEqual({ kind: 'document', children: [] });
+        expect(ir).toEqual({ kind: 'document', page: null, header: null, footer: null, children: [] });
         expect(losses).toEqual([]);
         expect(frontmatter).toBeNull();
     });
@@ -109,7 +110,7 @@ describe('oconvMdToIr — composite structural fixture', () => {
         ({ ir, losses } = mdToIr(FULL_MD));
     });
 
-    test('validates against the frozen oconv-ir/v1 schema', () => {
+    test('validates against the oconv-ir/v2 schema', () => {
         const res = validate(ir);
         expect(res.errors).toEqual([]);
         expect(res.ok).toBe(true);
@@ -121,19 +122,19 @@ describe('oconvMdToIr — composite structural fixture', () => {
 
     test('maps h1/h2/h3 headings by level', () => {
         expect(ir.children[0]).toEqual({
-            kind: 'heading', level: 1, children: [run('Doc Title')]
+            kind: 'heading', level: 1, align: null, breakBefore: false, children: [run('Doc Title')]
         });
         expect(ir.children[1]).toEqual({
-            kind: 'heading', level: 2, children: [run('Section Two')]
+            kind: 'heading', level: 2, align: null, breakBefore: false, children: [run('Section Two')]
         });
         expect(ir.children[2]).toEqual({
-            kind: 'heading', level: 3, children: [run('Section Three')]
+            kind: 'heading', level: 3, align: null, breakBefore: false, children: [run('Section Three')]
         });
     });
 
     test('flattens nested emphasis/strike/code into per-run flag sets', () => {
         expect(ir.children[3]).toEqual({
-            kind: 'paragraph',
+            kind: 'paragraph', align: null, breakBefore: false,
             children: [
                 run('Plain '),
                 run('bold', { bold: true }),
@@ -150,7 +151,7 @@ describe('oconvMdToIr — composite structural fixture', () => {
 
     test('resolves the link target onto the run(s) inside it', () => {
         expect(ir.children[4]).toEqual({
-            kind: 'paragraph',
+            kind: 'paragraph', align: null, breakBefore: false,
             children: [
                 run('A '),
                 run('link', { link: 'https://example.test/' }),
@@ -166,19 +167,19 @@ describe('oconvMdToIr — composite structural fixture', () => {
         expect(list1.children).toHaveLength(2);
         expect(list1.children[0]).toEqual({
             kind: 'listItem',
-            children: [{ kind: 'paragraph', children: [run('bullet one')] }]
+            children: [{ kind: 'paragraph', align: null, breakBefore: false, children: [run('bullet one')] }]
         });
         const item2 = list1.children[1];
         expect(item2.kind).toBe('listItem');
         expect(item2.children).toHaveLength(2);
         expect(item2.children[0]).toEqual({
-            kind: 'paragraph', children: [run('bullet two')]
+            kind: 'paragraph', align: null, breakBefore: false, children: [run('bullet two')]
         });
         expect(item2.children[1]).toEqual({
             kind: 'list', ordered: false,
             children: [{
                 kind: 'listItem',
-                children: [{ kind: 'paragraph', children: [run('nested bullet')] }]
+                children: [{ kind: 'paragraph', align: null, breakBefore: false, children: [run('nested bullet')] }]
             }]
         });
     });
@@ -188,8 +189,8 @@ describe('oconvMdToIr — composite structural fixture', () => {
         expect(list2.kind).toBe('list');
         expect(list2.ordered).toBe(true);
         expect(list2.children).toEqual([
-            { kind: 'listItem', children: [{ kind: 'paragraph', children: [run('ordered one')] }] },
-            { kind: 'listItem', children: [{ kind: 'paragraph', children: [run('ordered two')] }] }
+            { kind: 'listItem', children: [{ kind: 'paragraph', align: null, breakBefore: false, children: [run('ordered one')] }] },
+            { kind: 'listItem', children: [{ kind: 'paragraph', align: null, breakBefore: false, children: [run('ordered two')] }] }
         ]);
     });
 
@@ -201,8 +202,8 @@ describe('oconvMdToIr — composite structural fixture', () => {
         expect(header.kind).toBe('row');
         expect(header.header).toBe(true);
         expect(header.children).toEqual([
-            { kind: 'cell', children: [{ kind: 'paragraph', children: [run('Name')] }] },
-            { kind: 'cell', children: [{ kind: 'paragraph', children: [run('Score')] }] }
+            { kind: 'cell', children: [{ kind: 'paragraph', align: null, breakBefore: false, children: [run('Name')] }] },
+            { kind: 'cell', children: [{ kind: 'paragraph', align: null, breakBefore: false, children: [run('Score')] }] }
         ]);
         expect(row1.header).toBe(false);
         expect(row1.children[0].children[0].children[0].text).toBe('Alice');
@@ -214,7 +215,7 @@ describe('oconvMdToIr — composite structural fixture', () => {
 
     test('maps the standalone image reference, wrapped in its paragraph', () => {
         expect(ir.children[8]).toEqual({
-            kind: 'paragraph',
+            kind: 'paragraph', align: null, breakBefore: false,
             children: [{ kind: 'image', name: 'figure.png', alt: 'A figure' }]
         });
     });
@@ -227,7 +228,7 @@ describe('oconvMdToIr — front matter', () => {
         expect(frontmatter.lang).toBe('yaml');
         expect(frontmatter.content.trim()).toBe('title: X');
         expect(losses).toEqual([{ code: 'frontmatter/stripped', detail: 'yaml' }]);
-        expect(ir.children).toEqual([{ kind: 'heading', level: 1, children: [run('Body')] }]);
+        expect(ir.children).toEqual([{ kind: 'heading', level: 1, align: null, breakBefore: false, children: [run('Body')] }]);
     });
 
     test('toml fence (+++) is stripped, lang recorded', () => {
@@ -253,7 +254,7 @@ describe('oconvMdToIr — front matter', () => {
         expect(frontmatter).toBeNull();
         expect(losses).toEqual([]);
         expect(ir.children).toEqual([
-            { kind: 'paragraph', children: [run('Body text')] },
+            { kind: 'paragraph', align: null, breakBefore: false, children: [run('Body text')] },
             { kind: 'hr' }
         ]);
     });
@@ -281,7 +282,7 @@ describe('oconvMdToIr — loss ledger falsification', () => {
         const { ir, losses } = mdToIr('line one  \nline two\n');
         expect(losses).toEqual([{ code: 'inline/linebreak-degraded', detail: 'hard break' }]);
         expect(ir.children[0]).toEqual({
-            kind: 'paragraph', children: [run('line one line two')]
+            kind: 'paragraph', align: null, breakBefore: false, children: [run('line one line two')]
         });
     });
 
@@ -325,7 +326,7 @@ describe('oconvMdToIr — loss ledger falsification', () => {
         const { ir, losses } = mdToIr('A [link](https://example.test/ "a title") here.\n');
         expect(losses).toEqual([{ code: 'inline/dropped', detail: 'link-title' }]);
         expect(ir.children[0]).toEqual({
-            kind: 'paragraph',
+            kind: 'paragraph', align: null, breakBefore: false,
             children: [
                 run('A '),
                 run('link', { link: 'https://example.test/' }),

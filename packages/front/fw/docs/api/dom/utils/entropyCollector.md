@@ -1,7 +1,7 @@
 ---
 module: entropyCollector
 category: dom/utils
-dependencies: ['sensors']
+dependencies: [sensors]
 returns: function
 worker-safe: false
 status: complete

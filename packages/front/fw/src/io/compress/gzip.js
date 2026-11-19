@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -44,6 +44,7 @@
  * @typedef {object} GunzipStreamInstance
  * @property {((chunk: Uint8Array, isFinal: boolean) => void)|null} ondata
  * @property {(chunk: Uint8Array, final?: boolean) => void} push
+ * @property {() => void} flush End the stream without a trailer: decode and emit the held-back bytes.
  */
 
 /**
@@ -100,7 +101,7 @@ export const gzip = {
                         if (c > 0x7F) {
                             const e = new Error('gzip filename contains non-ASCII characters but TextEncoder is unavailable');
                             // @ts-ignore - Error.code is a non-standard but widely-used extension
-                            e.code = 12;
+                            e.code = 'ENOENCODER'; e.errno = 12;
                             throw e;
                         }
                         out[i] = c;
@@ -112,7 +113,7 @@ export const gzip = {
             if (bytes.length > 65535) {
                 const e = new Error('gzip filename too long');
                 // @ts-ignore - Error.code is a non-standard but widely-used extension
-                e.code = 12;
+                e.code = 'ENOENCODER'; e.errno = 12;
                 throw e;
             }
             // The encoded bytes themselves must not contain NUL (would short-
@@ -121,7 +122,7 @@ export const gzip = {
                 if (bytes[i] === 0) {
                     const e = new Error('gzip filename contains NUL byte');
                     // @ts-ignore - Error.code is a non-standard but widely-used extension
-                    e.code = 12;
+                    e.code = 'ENOENCODER'; e.errno = 12;
                     throw e;
                 }
             }
@@ -169,23 +170,34 @@ export const gzip = {
             if (d[0] !== 0x1F || d[1] !== 0x8B || d[2] !== 0x08) {
                 const e = new Error('invalid gzip data');
                 // @ts-ignore - Error.code is a non-standard but widely-used extension
-                e.code = 6;
+                e.code = 'EBADFORMAT'; e.errno = 6;
                 throw e;
             }
             const flg = d[3];
+            // A header that runs past the bytes at hand is reported, never
+            // guessed: a stream waits for more bytes, a one-shot call fails.
+            const truncated = () => {
+                const e = new Error('invalid gzip data: truncated header');
+                // @ts-ignore - Error.code is a non-standard but widely-used extension
+                e.code = 'EBADFORMAT'; e.errno = 6;
+                return e;
+            };
+            if (d.length < 10) throw truncated();
             let st = 10;
-            if (flg & 0x04) st += (d[10] | (d[11] << 8)) + 2; // FEXTRA
-            // Skip FNAME (bit 3) and FCOMMENT (bit 4) - both are null-terminated
-            // @ts-ignore - boolean !d[st++] is coerced to 0/1 in arithmetic: intentional compact idiom
-            for (let zs = ((flg >> 3) & 1) + ((flg >> 4) & 1); zs > 0; zs -= /** @type {number} */ (/** @type {*} */ (!d[st++])));
-            if (flg & 0x02) st += 2; // FHCRC
+            if (flg & 0x04) {                                   // FEXTRA
+                if (d.length < 12) throw truncated();
+                st += (d[10] | (d[11] << 8)) + 2;
+            }
+            // FNAME (bit 3) then FCOMMENT (bit 4), each null-terminated.
+            for (const bit of [0x08, 0x10]) {
+                if (!(flg & bit)) continue;
+                while (st < d.length && d[st] !== 0) st++;
+                if (st >= d.length) throw truncated();
+                st++;
+            }
+            if (flg & 0x02) st += 2;                            // FHCRC
+            if (st > d.length) throw truncated();
             return st;
-        }
-
-        // Read original (uncompressed) size from the gzip footer
-        function _originalSize(d) {
-            const l = d.length;
-            return (d[l - 4] | (d[l - 3] << 8) | (d[l - 2] << 16) | (d[l - 1] << 24)) >>> 0;
         }
 
         // --- Public API ---
@@ -219,18 +231,86 @@ export const gzip = {
          * @param {object} [opts] - `{ out?: Uint8Array }`
          * @returns {Uint8Array}
          */
+        // The typed string `code` of the compressor family (D9 G6); the
+        // number of the earlier convention stays in `errno`.
+        const CODE_NAMES = { 0: 'EEOF', 1: 'EBADBLOCK', 2: 'EBADSYMBOL', 3: 'EBADDISTANCE', 4: 'ESTREAMEND', 5: 'ENOHANDLER', 6: 'EBADFORMAT', 7: 'EMAXOUT', 8: 'EBADSTREAM', 9: 'EEXTRATOOLONG', 10: 'EBADDATE', 11: 'ENAMETOOLONG', 12: 'ENOENCODER', 13: 'EBADFORMAT', 14: 'EBADMETHOD', 15: 'EUNSAFEPATH', 16: 'ECHECKSUM' };
+        /** An `Error` carrying the family's string `code` and numeric `errno`. */
+        function _codeErr(code, message) {
+            const e = new Error(message);
+            // @ts-ignore - Error.code / errno are non-standard but widely-used extensions
+            e.code = CODE_NAMES[code]; e.errno = code;
+            return e;
+        }
+
+        /** Are all bytes of `d` from `at` on zero (padding after the last member)? */
+        function _zerosFrom(d, at) {
+            for (let k = at; k < d.length; k++) if (d[k] !== 0) return false;
+            return true;
+        }
+
+        /**
+         * Decompress Gzip data: every member (RFC 1952 § 2.2), concatenated.
+         * Trailing zero bytes after the last member are ignored. Each
+         * member's CRC-32 and ISIZE are checked (code 16 on a mismatch);
+         * `verify: false` skips the check.
+         *
+         * @param {Uint8Array} data
+         * @param {object} [opts] - `{ out?: Uint8Array, dictionary?: Uint8Array, verify?: boolean, maxOutput?: number }`
+         *   (`maxOutput`: cap on the bytes decoded over every member, code 7 past it)
+         * @returns {Uint8Array}
+         */
         function gunzipSync(data, opts = {}) {
-            const st = _payloadStart(data);
-            if (st + 8 > data.length) {
-                const e = new Error('invalid gzip data');
+            const st0 = _payloadStart(data);
+            if (st0 + 8 > data.length) throw _codeErr(6, 'invalid gzip data');
+            const parts = [];
+            let total = 0;
+            let off = 0;
+            let first = true;
+            while (first || (off < data.length && !_zerosFrom(data, off))) {
+                const st = first ? st0 : off + _payloadStart(data.subarray(off));
+                let used = -1;
+                const out = inflateSync(data.subarray(st), {
+                    // a caller buffer receives the members one after the other
+                    out: opts.out ? opts.out.subarray(total) : undefined,
+                    dictionary: opts.dictionary,
+                    // the cap holds over the members: each gets what is left
+                    maxOutput: opts.maxOutput === undefined || opts.maxOutput === null ? undefined : opts.maxOutput - total,
+                    onEnd: (n) => { used = n; },
+                });
+                const trailer = st + used;
+                if (used < 0 || trailer + 8 > data.length) throw _codeErr(0, 'gzip: unexpected EOF (member without its trailer)');
+                if (opts.verify !== false) _checkTrailer(out, out.length, data, trailer);
+                parts.push(out);
+                total += out.length;
+                off = trailer + 8;
+                first = false;
+            }
+            if (opts.out) return opts.out.subarray(0, total);
+            if (parts.length === 1) return parts[0];
+            const all = new Uint8Array(total);
+            let o = 0;
+            for (const part of parts) { all.set(part, o); o += part.length; }
+            return all;
+        }
+
+        /** Read a little-endian 32-bit trailer field at `at`. */
+        function _r32le(d, at) {
+            return (d[at] | (d[at + 1] << 8) | (d[at + 2] << 16) | (d[at + 3] << 24)) >>> 0;
+        }
+
+        /**
+         * Unless `verify: false`: throw code 16 unless the 8-byte trailer at `at`
+         * holds the CRC-32 of `out` and its size mod 2^32 (`size`).
+         */
+        function _checkTrailer(out, size, d, at, crc) {
+            let sum = crc;
+            if (sum === undefined) { const c = new Crc32(); c.append(out); sum = c.get(); }
+            if (sum !== _r32le(d, at) || (size >>> 0) !== _r32le(d, at + 4)) {
+                const e = new Error('gzip: incorrect data check (CRC-32 or ISIZE mismatch)');
                 // @ts-ignore - Error.code is a non-standard but widely-used extension
-                e.code = 6;
+                e.code = 'ECHECKSUM'; e.errno = 16;
                 throw e;
             }
-            return inflateSync(data.subarray(st, -8), {
-                out: opts.out ?? new Uint8Array(_originalSize(data)),
-                dictionary: opts.dictionary,
-            });
         }
 
         // Concatenate two Uint8Arrays
@@ -294,71 +374,104 @@ export const gzip = {
         /**
          * Streaming Gzip decompressor.
          *
-         * Buffers input until the Gzip header is parsed, then feeds the DEFLATE
-         * payload to `InflateStream` while holding back the 8-byte footer.
+         * Reads every member (RFC 1952 § 2.2): a header (which may arrive in
+         * pieces), the DEFLATE payload — fed to `InflateStream`, which knows
+         * where the final block ends — then the 8-byte trailer, and so on.
+         * Trailing zero bytes after the last member are ignored.
          *
-         * @param {object|function} [opts]
+         * @param {object|function} [opts] - `{ dictionary?, verify? }` or `ondata`
          * @param {function} [ondata] - callback(chunk: Uint8Array, isFinal: boolean)
          */
         function GunzipStream(opts, ondata) {
             if (typeof opts === 'function') { ondata = opts; opts = {}; }
             this.ondata = ondata || null;
             this._opts = opts || {};
-            this._buf = [];         // input chunks before header is resolved
-            this._bufLen = 0;
-            this._hdr = -1;         // payload start offset (-1 = not yet parsed)
+            this._phase = 'header';   // 'header' | 'body' | 'trailer'
+            this._pending = new Uint8Array(0);  // header or trailer bytes so far
             this._inf = null;
-            this._tail = new Uint8Array(8);  // held-back footer bytes
-            this._tailLen = 0;
+            this._members = 0;
+            // Unless `verify: false`: CRC-32 and size of the current member, checked
+            // against its trailer.
+            this._crc = null;
+            this._size = 0;
+            this._ended = false;
+            // `maxOutput` holds over every member: bytes emitted so far.
+            this._produced = 0;
         }
 
-        GunzipStream.prototype.push = function(chunk, final) {
-            if (this._hdr === -1) {
-                this._buf.push(chunk);
-                this._bufLen += chunk.length;
-
-                // Reconstruct buffer to attempt header parse
-                const combined = new Uint8Array(this._bufLen);
-                let off = 0;
-                for (const c of this._buf) { combined.set(c, off); off += c.length; }
-
-                let hdrEnd;
-                try { hdrEnd = _payloadStart(combined); } catch (e) {
-                    if (final) throw e;
-                    return; // need more bytes
-                }
-
-                this._hdr = hdrEnd;
-                this._buf = null;
-                const self = this;
-                this._inf = new InflateStream(this._opts, function(data, fin) {
-                    if (self.ondata) self.ondata(data, fin);
-                });
-                this._feedPayload(combined.subarray(hdrEnd), !!final);
-            } else {
-                this._feedPayload(chunk, !!final);
-            }
+        /** Append `b` to the pending header / trailer bytes. */
+        GunzipStream.prototype._take = function(b) {
+            if (!this._pending.length) { this._pending = b; return; }
+            const m = new Uint8Array(this._pending.length + b.length);
+            m.set(this._pending);
+            m.set(b, this._pending.length);
+            this._pending = m;
         };
 
-        GunzipStream.prototype._feedPayload = function(chunk, final) {
-            const FOOTER = 8;
-            // Merge currently held tail bytes with the new chunk
-            const total = new Uint8Array(this._tailLen + chunk.length);
-            total.set(this._tail.subarray(0, this._tailLen));
-            total.set(chunk, this._tailLen);
-
-            if (!final) {
-                // Feed everything except the last FOOTER bytes to inflate
-                const feedLen = total.length > FOOTER ? total.length - FOOTER : 0;
-                if (feedLen > 0) this._inf.push(total.subarray(0, feedLen), false);
-                const newTailLen = total.length - feedLen;
-                this._tailLen = newTailLen;
-                this._tail.set(total.subarray(feedLen));
-            } else {
-                // Strip the 8-byte footer and close the inflate stream
-                const feedLen = Math.max(0, total.length - FOOTER);
-                this._inf.push(total.subarray(0, feedLen), true);
+        GunzipStream.prototype.push = function(chunk, final) {
+            if (this._ended) throw _codeErr(4, 'stream finished');
+            if (final) this._ended = true;
+            let data = chunk;
+            for (;;) {
+                if (this._phase === 'header') {
+                    this._take(data);
+                    if (this._members > 0 && _zerosFrom(this._pending, 0)) break;   // padding
+                    let hdrEnd;
+                    try { hdrEnd = _payloadStart(this._pending); } catch (e) {
+                        if (final) throw e;
+                        return; // need more bytes
+                    }
+                    const self = this;
+                    this._crc = this._opts.verify !== false ? new Crc32() : null;
+                    this._size = 0;
+                    const cap = this._opts.maxOutput;
+                    const memberOpts = cap === undefined || cap === null
+                        ? this._opts
+                        : Object.assign({}, this._opts, { maxOutput: cap - this._produced });
+                    this._inf = new InflateStream(memberOpts, function(out) {
+                        self._produced += out.length;
+                        if (self._crc) { self._crc.append(out); self._size += out.length; }
+                        if (self.ondata && out.length) self.ondata(out, false);
+                    });
+                    data = this._pending.subarray(hdrEnd);
+                    this._pending = new Uint8Array(0);
+                    this._phase = 'body';
+                }
+                if (this._phase === 'body') {
+                    this._inf.push(data, false);
+                    if (!this._inf.ended) {
+                        if (final) throw _codeErr(0, 'gzip: unexpected EOF (inside a member)');
+                        return;
+                    }
+                    data = this._inf.rest();
+                    this._phase = 'trailer';
+                }
+                // trailer
+                this._take(data);
+                if (this._pending.length < 8) {
+                    if (final) throw _codeErr(0, 'gzip: unexpected EOF (member without its trailer)');
+                    return;
+                }
+                if (this._crc) _checkTrailer(null, this._size, this._pending, 0, this._crc.get());
+                data = this._pending.subarray(8);
+                this._pending = new Uint8Array(0);
+                this._members++;
+                this._phase = 'header';
+                if (!data.length) break;
             }
+            if (final && this.ondata) this.ondata(new Uint8Array(0), true);
+        };
+
+        /**
+         * End the stream WITHOUT a trailer: for a source that may be truncated.
+         * Every byte pushed so far has been decoded and emitted; this marks
+         * the end (`ondata(empty, true)`) without requiring a trailer. A later
+         * `push` throws code 4.
+         */
+        GunzipStream.prototype.flush = function() {
+            if (this._ended) throw _codeErr(4, 'stream finished');
+            this._ended = true;
+            if (this.ondata) this.ondata(new Uint8Array(0), true);
         };
 
         // Async wrappers (microtask-deferred)

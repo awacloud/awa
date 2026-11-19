@@ -42,7 +42,7 @@ function makeCtx(over = {}) {
 }
 
 /**
- * `oconv-ir/v1` `codeBlock` node.
+ * `oconv-ir/v2` `codeBlock` node.
  *
  * @param {string} text
  * @param {string} [info]

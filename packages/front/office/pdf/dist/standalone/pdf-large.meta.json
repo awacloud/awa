@@ -27,6 +27,7 @@
     "pdfAesGcm",
     "pdfStandardV5",
     "pdfStandardV6",
+    "pdfInfo",
     "pdfDocument",
     "pdfWriter",
     "pdf",
@@ -55,8 +56,8 @@
   ],
   "fwDependencies": [],
   "bytes": {
-    "dev": 524159,
-    "min": 294641
+    "dev": 592077,
+    "min": 331675
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

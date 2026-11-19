@@ -46,6 +46,7 @@
     "extraShaperCjk",
     "extraWoff2Write",
     "extraDsig",
+    "aatLookup",
     "aatMorx",
     "aatKerx",
     "aatAnkr",
@@ -55,8 +56,8 @@
   ],
   "fwDependencies": [],
   "bytes": {
-    "dev": 316065,
-    "min": 157226
+    "dev": 348377,
+    "min": 172921
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

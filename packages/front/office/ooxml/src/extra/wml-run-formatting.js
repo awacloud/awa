@@ -143,6 +143,9 @@ export const wmlRunFormatting = {
          * Uses explicit case dispatch so each element name appears in source.
          */
         function hydrate(rPr) {
+            return core.hydrateLossless(rPr, typeRun, dehydrate);
+        }
+        function typeRun(rPr) {
             if (!rPr || !rPr._extras) return rPr;
             const remaining = [];
             for (const c of rPr._extras) {

@@ -51,10 +51,10 @@ the strict RFC 6979 contract (which requires H_K = H_msg).
 |---|---|---|---|
 | NIST CAVP / ACVP | `ECDSA-KeyGen-FIPS186-5/expectedResults.json` (24/72) | `ECDSA-KeyGen-FIPS186-5 (...validator-style, 24/72 vectors)` | `Q == d·G` byte-exact (4 NIST curves × 6 tcId) |
 | NIST CAVP / ACVP | `ECDSA-KeyVer-FIPS186-5/expectedResults.json` (4 positive) | `ECDSA-KeyVer-FIPS186-5 (...4 vectors)` | `deserialize` accepts valid Q values (P-224/256/384/521) |
-| **NIST CAVP / ACVP (C1)** | `ECDSA-KeyVer-FIPS186-5` 12/12 (4 pos + 8 neg) across 4 NIST P-curves | `ecc - ACVP ECDSA-KeyVer-FIPS186-5 (subgroup check, itération C1)` | Full §A.4.2 validation: x/y range + on-curve + non-identity + n·Q == O. Covers the 8 negative cases (off-curve point, x/y out of field range — incl. P-521 tg=4 tc=11 where qx ≥ p). |
-| **C1 deserialize integration** | pos + neg smoke test | `deserialize integrates subgroup check` | `ecc.deserialize` returns `false` for an out-of-subgroup point |
+| **NIST CAVP / ACVP** | `ECDSA-KeyVer-FIPS186-5` 12/12 (4 pos + 8 neg) across 4 NIST P-curves | `ecc - ACVP ECDSA-KeyVer-FIPS186-5 (subgroup check)` | Full §A.4.2 validation: x/y range + on-curve + non-identity + n·Q == O. Covers the 8 negative cases (off-curve point, x/y out of field range — incl. P-521 tg=4 tc=11 where qx ≥ p). |
+| **deserialize integration** | pos + neg smoke test | `deserialize integrates subgroup check` | `ecc.deserialize` returns `false` for an out-of-subgroup point |
 | NIST CAVP / ACVP | `ECDSA-SigVer-FIPS186-5/expectedResults.json` (8 sub-sampled positives) | `ECDSA-SigVer-FIPS186-5 (...8 sub-sampled vectors)` | `verify(H, r||s)` byte-exact (P-{224,256,384,521} × {SHA-256, SHA-512}) |
-| NIST CAVP / ACVP | `DetECDSA-SigGen-FIPS186-5/internalProjection.json` (16 vectors) | `DetECDSA-SigGen-FIPS186-5 (...RFC 6979 byte-exact)` | RFC 6979 §3.2 byte-exact on 4 (curve, hash) pairs: (P-224, SHA-256), (P-256, SHA-256), (P-384, SHA-384), **(P-521, SHA-512) — iteration C2** × [first/mid/last] |
+| NIST CAVP / ACVP | `DetECDSA-SigGen-FIPS186-5/internalProjection.json` (16 vectors) | `DetECDSA-SigGen-FIPS186-5 (...RFC 6979 byte-exact)` | RFC 6979 §3.2 byte-exact on 4 (curve, hash) pairs: (P-224, SHA-256), (P-256, SHA-256), (P-384, SHA-384), **(P-521, SHA-512)** × [first/mid/last] |
 | FIPS 186-3 SigVer.rsp | P-256/SHA-256 vector + tampering | `NIST CAVP ECDSA verify` | historical KAT + tampering rejection |
 | Pre-existing | round-trip | `ECDSA sign/verify` (P-256, P-384, P-521) | basic round-trip |
 | Pre-existing | round-trip | `elGamal DH`, `kem` | commutative DH + KEM round-trip |
@@ -89,16 +89,16 @@ compare byte-exact against `(qx, qy)`. This simultaneously validates:
 - [x] **Round-trip sign/verify** — P-256/P-384/P-521 (pre-existing +
       implicit DetECDSA).
 - [x] **Public validation §A.4.2 / SP 800-56A Rev.3 §5.6.2.3.3** ✅
-      **Iteration C1** — implemented in `ecc.deserialize`:
+      implemented in `ecc.deserialize`:
       (1) x, y coordinates in field range (< p), (2) point on curve via
       `isValid()`, (3) non-identity, (4) subgroup membership via
-      `n·Q == O`. Exposed via `_internal.{coordsInRange, isInSubgroup,
+      `n·Q == O`. Exposed via `internalOf(ecc).{coordsInRange, isInSubgroup,
       isValidPublicKey}`. **8 negative ACVP KeyVer vectors byte-exact**
       (off-curve + out-of-range, incl. P-521 tg=4 tc=11 where qx ≥ p — a
       typical oversize-encoding case not caught by the plain curve
       equation modulo p).
 - [x] **Strict ECDSA malleability (s > n/2 rejection)** ✅
-      **Iteration C3** — implemented. `verify(rs, { strict: true })`
+      implemented. `verify(rs, { strict: true })`
       rejects signatures with `s > ⌊n/2⌋` (BIP62 / NIST strict mode).
       `sign({ strict: true })` always produces a canonical low-s `s`
       (replaces `s` with `n − s` if needed). Test: generate a
@@ -108,7 +108,7 @@ compare byte-exact against `(qx, qy)`. This simultaneously validates:
       dedicated low-s vectors (negatives are *modify r/s*,
       *zero r/s*, *modify message/key*) — covered by synthetic
       counter-signature tests instead.
-- [x] **RFC 6979 byte-exact P-521** ✅ **Iteration C2** — fixed.
+- [x] **RFC 6979 byte-exact P-521** ✅ fixed.
       Cause: SJCL `bn.bitLength()` returns 528 (rounded up to a multiple
       of 16) instead of 521. Helper `_trueBitLength(R)` added, which
       walks the byte representation to find the true MSB. The RFC 6979
@@ -116,7 +116,7 @@ compare byte-exact against `(qx, qy)`. This simultaneously validates:
       (modulo the 65 vs 66-byte encoding — RFC uses minimal-length,
       FIPS uses 66 fixed bytes), and 4 ACVP P-521+SHA-512 DetECDSA
       sub-samples pass.
-- [x] **K-hash decoupled from message-hash** ✅ **Iteration C3** —
+- [x] **K-hash decoupled from message-hash** ✅
       `sign({ hashForK: <hashMod> })` lets the caller make the K
       derivation hash explicit (strict RFC 6979 requires H_K = H_msg).
       The default remains `_hashForBits(curveBitLength)` so as not to
@@ -132,16 +132,16 @@ compare byte-exact against `(qx, qy)`. This simultaneously validates:
 |---|---|---|
 | Approved algorithm | ✅ | FIPS 186-5 §6 + ACVP folders |
 | Approved curves | ✅ | P-{192,224,256,384,521} (FIPS 186-5 §3.1) |
-| RFC 6979 deterministic generation | ✅ | **Iteration C2**: byte-exact OK for the 4 NIST P-curves (incl. P-521 now; `_trueBitLength` bug fixed) |
+| RFC 6979 deterministic generation | ✅ | byte-exact OK for the 4 NIST P-curves (incl. P-521 now; `_trueBitLength` bug fixed) |
 | ECDSA verification | ✅ | 8 ACVP vectors + tampering test |
 | Q ∈ G validation (point on curve) | ✅ | `point.isValid()` in `curve.fromBits` |
-| Q ∈ <G> validation (subgroup) | ✅ | **Iteration C1**: `n·Q == O` verified + range check x,y < p; 12 ACVP `KeyVer-FIPS186-5` vectors (4 pos + 8 neg) byte-exact |
+| Q ∈ <G> validation (subgroup) | ✅ | `n·Q == O` verified + range check x,y < p; 12 ACVP `KeyVer-FIPS186-5` vectors (4 pos + 8 neg) byte-exact |
 | CT comparisons (if secret) | ⚠️ | `verify` is not constant-time (early return on r, s bounds; OK for pub-key path); `sign` uses non-CT `bn` (SJCL-derived, see docs/dev/provenance.md) |
 | No `throw` / timing leak | ✅ | Review: `console.error/warn` + `return false`; no `throw` |
 
 ## Known limitations
 
-- ~~**P-521 RFC 6979 byte-exact**~~ ✅ **Iteration C2** — fixed.
+- ~~**P-521 RFC 6979 byte-exact**~~ ✅ fixed.
   Root cause: SJCL `bn.bitLength()` rounds up to a multiple of 16 (528
   for the 521-bit P-521 order value), which truncated
   `_bitsToInt(T, 528)` instead of `_bitsToInt(T, 521)` — a 7-bit offset
@@ -150,12 +150,12 @@ compare byte-exact against `(qx, qy)`. This simultaneously validates:
   P-521/SHA-512 sample vector is now reproduced byte-exact, and 3 ACVP
   P-521+SHA-512 DetECDSA sub-samples pass (previously filtered out at
   iteration 18).
-- ~~**Missing subgroup check**~~ ✅ **Iteration C1** — implemented.
+- ~~**Missing subgroup check**~~ ✅ implemented.
   `deserialize` now performs the full §A.4.2 validation: x/y < p range +
   on-curve + non-identity + n·Q == O. 12 ACVP KeyVer vectors (4 pos + 8
   neg) byte-exact. Cost: ~1-3 ms/mult on P-256, acceptable for one-shot
   deserialize.
-- ~~**K-hash coupled to `curveBitLength`**~~ ✅ **Iteration C3** —
+- ~~**K-hash coupled to `curveBitLength`**~~ ✅
   the `sign({ hashForK })` option now lets H_K be set explicitly
   (strict RFC 6979). The default (`_hashForBits(curveBitLength)`) is
   unchanged to preserve existing ACVP DetECDSA coverage; callers who

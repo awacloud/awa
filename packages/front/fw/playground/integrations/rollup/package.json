@@ -6,10 +6,14 @@
     "scripts": {
         "postinstall": "node ../../_tools/link-fw.mjs",
         "setup": "node ../../_tools/link-fw.mjs",
-        "build": "rollup -c"
+        "build": "rollup -c",
+        "start": "rollup -c && node ../../_tools/serve.mjs ."
     },
     "devDependencies": {
         "@rollup/plugin-node-resolve": "^16.0.3",
         "rollup": "^4.61.1"
+    },
+    "playground": {
+        "page": "index.html"
     }
 }

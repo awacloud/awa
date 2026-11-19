@@ -19,11 +19,11 @@ padding. Capacity = 2 × security level (448, 512, 768, 1024 bits). Worker-
 serializable factory API. Six one-shot functions exposed: `sha3_{224,256,384,512}`
 (fixed digest) and `shake{128,256}(data, outBits)` (XOF, `outBits` must be a multiple of 8).
 
-**Iteration A1 (FIPS 140-3 upgrade)**: added four streaming sub-modules
+Added four streaming sub-modules
 `sha3_{224,256,384,512}_hash` exposing the `{ name, fn, hash }` contract with
 `fn.prototype.{blockSize, update, finalize}` and clone constructor `new fn(other)`.
-This unlocks HMAC-SHA-3, HKDF-SHA-3, and PBKDF2-HMAC-SHA-3 composition (Phase B
-of the upgrade plan) without breaking the existing one-shot API.
+This unlocks HMAC-SHA-3, HKDF-SHA-3, and PBKDF2-HMAC-SHA-3 composition
+without breaking the existing one-shot API.
 
 ## Test coverage
 
@@ -36,13 +36,13 @@ of the upgrade plan) without breaking the existing one-shot API.
 | NIST CAVP | 200 × 0xa3 (1600-bit) | `200 bytes of 0xa3` | byte-exact KAT (covers 1 full absorption + tail) |
 | FIPS 202 | SHAKE empty input (256-bit / 512-bit out) | `SHAKE empty input` | byte-exact XOF |
 | **ACVP-SHA3-224-2.0** | AFT sub-sample (15/163 byte-aligned, 1258 total) | `ACVP SHA3-224-2.0 / AFT vectors` | byte-exact KAT |
-| **ACVP-SHA3-224-2.0** | MCT standard (100 outer × 1000 inner) | `MCT (standard)` | **100/100 byte-exact results** (Iteration H2) |
+| **ACVP-SHA3-224-2.0** | MCT standard (100 outer × 1000 inner) | `MCT (standard)` | **100/100 byte-exact results** |
 | **ACVP-SHA3-256-2.0** | AFT sub-sample (16/151 byte-aligned, 1194 total) | `ACVP SHA3-256-2.0 / AFT vectors` | byte-exact KAT |
 | **ACVP-SHA3-256-2.0** | MCT standard (100 outer × 1000 inner) | `MCT (standard)` | **100/100 byte-exact results** |
 | **ACVP-SHA3-384-2.0** | AFT sub-sample (13/118 byte-aligned, 938 total) | `ACVP SHA3-384-2.0 / AFT vectors` | byte-exact KAT |
-| **ACVP-SHA3-384-2.0** | MCT standard (100 outer × 1000 inner) | `MCT (standard)` | **100/100 byte-exact results** (Iteration H2) |
+| **ACVP-SHA3-384-2.0** | MCT standard (100 outer × 1000 inner) | `MCT (standard)` | **100/100 byte-exact results** |
 | **ACVP-SHA3-512-2.0** | AFT sub-sample (13/86 byte-aligned, 682 total) | `ACVP SHA3-512-2.0 / AFT vectors` | byte-exact KAT |
-| **ACVP-SHA3-512-2.0** | MCT standard (100 outer × 1000 inner) | `MCT (standard)` | **100/100 byte-exact results** (Iteration H2) |
+| **ACVP-SHA3-512-2.0** | MCT standard (100 outer × 1000 inner) | `MCT (standard)` | **100/100 byte-exact results** |
 | **ACVP-SHAKE-128-FIPS202** | AFT sub-sample (29/269 byte-aligned in/out) | `ACVP SHAKE128-FIPS202 / AFT vectors` | byte-exact XOF, variable outLen |
 | **ACVP-SHAKE-256-FIPS202** | AFT sub-sample (6/41 byte-aligned in/out, 237 total) | `ACVP SHAKE256-FIPS202 / AFT vectors` | byte-exact XOF, variable outLen |
 
@@ -74,7 +74,7 @@ of the upgrade plan) without breaking the existing one-shot API.
   (SHAKE128 rate = 1344 bits; SHAKE AFT `outLen` spans several blocks).
 - [x] **Long-chain stability** — standard MCT for SHA3-{224,256,384,512}:
   100,000 consecutive hashes per variant validated **byte-exact across all 100
-  iters** (Iteration H2; previously only SHA3-256 was fully byte-exact,
+  iters** (previously only SHA3-256 was fully byte-exact,
   SHA3-{224,384,512} tested only iter0 + iter99). Any drift deviates
   `resultsArray[j]` at any iteration.
 - [x] **XOF outLen guard** — `SHAKE rejects non-byte-aligned output`:
@@ -83,7 +83,7 @@ of the upgrade plan) without breaking the existing one-shot API.
   HMAC-SHA-3 usage handled by `hmac.js`).
 - [ ] **Bit-level inputs (non-byte-aligned)** — **NOT SUPPORTED** by
   the current implementation (see *Known limitations*).
-- [x] **Streaming API for HMAC/HKDF/PBKDF2** (upgrade plan iteration A1) —
+- [x] **Streaming API for HMAC/HKDF/PBKDF2** —
   4 sub-modules `sha3_{224,256,384,512}_hash` exposing `{ name, fn, hash }`
   with `fn.prototype.{blockSize, update, finalize}` and clone constructor
   `new fn(other)`. **40 dedicated tests**: streaming = one-shot (3-chunk,
@@ -127,7 +127,7 @@ of the upgrade plan) without breaking the existing one-shot API.
 ## Cross references
 
 - Module: [`hash/sha3.js`](./sha3.js)
-- Tests: [`hash/sha3.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/hash/sha3.test.js) — 150 tests (110 ACVP/FIPS 202 + 40 streaming API since upgrade plan iteration A1)
+- Tests: [`hash/sha3.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/hash/sha3.test.js) — 150 tests (110 ACVP/FIPS 202 + 40 streaming API)
 - ACVP draft: `references/NIST/ACVP/src/sha3/`
 - Vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SHA3-*-2.0/` + `SHAKE-{128,256}-FIPS202/`
 - Overall conformance: [`NIST_CONFORMANCE.md`](../NIST_CONFORMANCE.md)

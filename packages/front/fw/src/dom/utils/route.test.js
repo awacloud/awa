@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -180,6 +180,35 @@ describe('route module', () => {
                 expect(n).toBe(1);
                 r.go('/');   // same hash - must still fire
                 expect(n).toBe(2);
+            });
+            test('go to a new hash dispatches once (its own hashchange is consumed)', async () => {
+                let n = 0;
+                r.on('a', '/a', () => { n++; });
+                r.start();
+                const ok = await r.go('/a');
+                await new Promise(res => setTimeout(res, 30));
+                expect(ok).toBe(true);
+                expect(n).toBe(1);
+            });
+            test('a later real hashchange still dispatches, back to the go() hash too', async () => {
+                const seen = [];
+                r.on('a', '/a', () => { seen.push('a'); });
+                r.on('b', '/b', () => { seen.push('b'); });
+                r.start();
+                await r.go('/a');
+                await new Promise(res => setTimeout(res, 30));
+                location.hash = '#/b';
+                await new Promise(res => setTimeout(res, 30));
+                location.hash = '#/a';
+                await new Promise(res => setTimeout(res, 30));
+                expect(seen).toEqual(['a', 'b', 'a']);
+            });
+            test('go before start dispatches once', async () => {
+                let n = 0;
+                r.on('a', '/a', () => { n++; });
+                await r.go('/a');
+                await new Promise(res => setTimeout(res, 30));
+                expect(n).toBe(1);
             });
             test('replace updates hash without throwing', () => {
                 let p = null;

@@ -438,6 +438,8 @@ const xobjectEntries = (kind) => b('pdfMisc.typeXObjectEntries', (fn, v) => fn(v
 const fieldEntries = b('pdfFormActionsExtended.typeFieldEntries');
 // the companion of the core typers that read keys without exposing them
 const companion = (kind) => b('pdfMisc.typeObjectEntries', (fn, v) => fn(v, kind));
+/** A small object no other typer is bound to (T1): `pdfMisc.typeSmallObject` of the given kind. */
+const small = (kind) => b('pdfMisc.typeSmallObject', (fn, v) => fn(v, kind));
 
 /** A parser value as the plain object `typeEncryptDict` reads (the package's own `_plainOf` in `sig/sign.js`). */
 function plainOf(node) {
@@ -701,6 +703,26 @@ export const BINDINGS = withStreamEntries({
     EncryptionStandard: [encryptDict, b('pdfSigAesGcm.typeEncryptForGcm')],
     EncryptionPublicKey: [encryptDict, b('pdfSigAesGcm.typeEncryptForGcm')],
     CryptFilter: [b('pdfSigAesGcm.typeCfEntry')],
+    CryptFilterPublicKey: [b('pdfCryptPublicKey.typeCryptFilterPublicKey')],
+    CryptFilterPublicKeyMap: [b('pdfCryptPublicKey.typeCryptFilterPublicKeyMap')],
+    CryptFilterMap: [b('pdfCryptPublicKey.typeCryptFilterMap')],
+    EncryptedPayload: [b('pdfCryptPublicKey.typeEncryptedPayload')],
+    // The small objects of the Arlington tail (T1)
+    AlternateImage: [small('alternateImage')],
+    Data: [small('data')],
+    DestDict: [small('destDict')],
+    FixedPrint: [small('fixedPrint')],
+    MarkInfo: [small('markInfo')],
+    MarkedContentReference: [small('markedContentReference')],
+    MicrosoftWindowsLaunchParam: [small('winLaunch')],
+    MinimumBitDepth: [small('minimumBitDepth')],
+    Namespace: [small('namespace')],
+    ObjectReference: [small('objectReference')],
+    Reference: [small('reference')],
+    SourceInformation: [small('sourceInformation')],
+    Timespan: [small('timespan')],
+    URLAlias: [small('urlAlias')],
+    UserProperty: [small('userProperty')],
     Signature: [b('pdfSignature.typeSignature')],
     DocTimeStamp: [b('pdfSignature.typeSignature')],
     // Signature build properties and data

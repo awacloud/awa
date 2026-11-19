@@ -1,6 +1,6 @@
 # Form — ISO 32000-2 §12.7 / §12.5.5
 
-Interactive forms (AcroForm) layer: root dict typing, field-tree walk, typing by `/FT`, and `/AP` appearance streams.
+Interactive forms (AcroForm) layer: root dict typing, field-tree walk, typing by `/FT`, `/AP` appearance streams, and the fill-and-save.
 
 | Module | Returns | Deps | Description |
 |--------|----------|------|-------------|
@@ -10,6 +10,7 @@ Interactive forms (AcroForm) layer: root dict typing, field-tree walk, typing by
 | [`pdfTextField`](./text.md) | `{ typeTextField }` | `pdfErrors`, `pdfParser` | `/FT /Tx`, §12.7.5.3. |
 | [`pdfChoiceField`](./choice.md) | `{ typeChoiceField }` | `pdfErrors`, `pdfParser` | `/FT /Ch`, §12.7.5.4. |
 | [`pdfSignatureField`](./signature.md) | `{ typeSignatureField }` | `pdfErrors`, `pdfParser` | `/FT /Sig`, §12.7.5.5. |
+| [`pdfFormFill`](./fill.md) | `{ fill }` | `pdfErrors`, `pdfDocument`, `pdfFieldTree`, `pdfIncrementalWriter` | Fill the fields and save, an incremental update (§12.7, §7.5.6). |
 | [`pdfAppearance`](./appearance.md) | `{ typeAppearanceStreams, listPopulatedSlots }` | `pdfErrors`, `pdfParser` | `/AP`, §12.5.5. |
 
 ## Common pattern

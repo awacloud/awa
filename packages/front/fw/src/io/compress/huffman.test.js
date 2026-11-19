@@ -450,3 +450,34 @@ describe('huffman module', () => {
         });
     });
 });
+
+describe('huffman.kraft', () => {
+    const h = huffman.factory(bs);
+
+    test('a complete code', () => {
+        expect(h.kraft([1, 2, 3, 3])).toEqual({ oversubscribed: false, incomplete: false });
+        expect(h.kraft([2, 2, 2, 2])).toEqual({ oversubscribed: false, incomplete: false });
+    });
+
+    test('an over-subscribed set', () => {
+        expect(h.kraft([1, 1, 1])).toEqual({ oversubscribed: true, incomplete: false });
+        expect(h.kraft([2, 2, 2, 2, 2])).toEqual({ oversubscribed: true, incomplete: false });
+    });
+
+    test('an incomplete set (a single code is one: RFC 1951 allows it for distances)', () => {
+        expect(h.kraft([2])).toEqual({ oversubscribed: false, incomplete: true });
+        expect(h.kraft([0, 1, 0])).toEqual({ oversubscribed: false, incomplete: true });
+        expect(h.kraft([1, 2])).toEqual({ oversubscribed: false, incomplete: true });
+    });
+
+    test('zero lengths are unused symbols; an empty set is incomplete', () => {
+        expect(h.kraft([0, 1, 0, 1])).toEqual({ oversubscribed: false, incomplete: false });
+        expect(h.kraft([0, 0])).toEqual({ oversubscribed: false, incomplete: true });
+    });
+
+    test('the DEFLATE fixed literal/length code is complete', () => {
+        const fixed = [];
+        for (let i = 0; i < 288; i++) fixed.push(i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8);
+        expect(h.kraft(fixed)).toEqual({ oversubscribed: false, incomplete: false });
+    });
+});

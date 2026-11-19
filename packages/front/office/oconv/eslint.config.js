@@ -14,4 +14,6 @@
 
 import officeEslintPreset from '../_eslint/preset.mjs';
 
-export default officeEslintPreset(import.meta.url);
+// src/worker.js is generated (`bun run gen:worker`, a bundle of
+// src/worker/entry.js): lint the source, not the bundle.
+export default [...officeEslintPreset(import.meta.url), { ignores: ['src/worker.js'] }];

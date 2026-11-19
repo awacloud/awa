@@ -199,14 +199,17 @@ describe('fonts top-level', () => {
         expect(() => api.read(bytes)).not.toThrow();
     });
 
-    test('a font without a name table: refused by default, read with allowMissingName', () => {
+    // T30 (f), D48: re-pinned. 1.x refused a name-less font unless
+    // allowMissingName; 2.0.0 reads it, and `false` keeps the refusal.
+    test('a font without a name table: read by default, refused with allowMissingName: false', () => {
         const bytes = buildMinimalFont({ drop: ['name'] });
         let caught;
-        try { api.read(bytes); } catch (e) { caught = e; }
+        try { api.read(bytes, { allowMissingName: false }); } catch (e) { caught = e; }
         expect(caught).toBeInstanceOf(ParseError);
         expect(caught.code).toBe('fonts/missing-name');
-        expect(() => api.read(bytes, { allowMissingName: false })).toThrow(ParseError);
-        const font = api.read(bytes, { allowMissingName: true });
+        expect(api.read(bytes).name).toBe(null);
+        expect(api.read(bytes, { allowMissingName: true }).name).toBe(null);
+        const font = api.read(bytes);
         expect(font.name).toBe(null);
         expect(Object.values(font.names).every((v) => v === undefined)).toBe(true);
         expect(Object.keys(font.names)).toEqual(Object.keys(api.read(buildMinimalFont()).names));

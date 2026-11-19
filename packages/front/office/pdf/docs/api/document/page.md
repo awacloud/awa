@@ -60,6 +60,7 @@ const page = runtime.resolve('pdfPage');
     pieceInfo?: PdfObject, structParents?: number, id?: Uint8Array, pz?: number,
     separationInfo?: PdfObject, templateInstantiated?: string,
     presSteps?: PdfObject, vp?: PdfObject, af?: PdfObject,
+    hid?: boolean,   // /Hid: hidden in a presentation (PDF 1.1, deprecated in 1.3)
     outputIntents?: PdfObject, dPart?: PdfObject,
     raw:       PdfDict,
     _extras:   Object<string, PdfObject>

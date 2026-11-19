@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -46,7 +46,6 @@
  * @typedef {object} RsaKeygenAPI
  * @property {(options?: {bits?: number, e?: number, drbg?: object}) => (RsaKeyPair|false)} generate Generate an RSA key pair.
  * @property {(nbits: number, eBn: unknown, drbg: object) => (unknown|false)} generateProbablePrime Generate a probable prime (`bn` instance) coprime with `e`.
- * @property {{ millerRabin: Function, smallPrimes: number[], divmod: Function, lcm: Function, inverseModAny: Function }} _internal Internal primitives exposed for KAT tests only; not API.
  */
 
 import { bitArray } from './bitArray.js';
@@ -432,17 +431,18 @@ export const rsaKeygen = {
             };
         }
 
-        return {
+        return Object.defineProperty({
             generate,
-            generateProbablePrime,
+            generateProbablePrime
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal primitives - exposed for KAT tests only. Not API.
-            _internal: {
+            value: {
                 millerRabin: _millerRabin,
                 smallPrimes: _SMALL_PRIMES,
                 divmod: _divmod,
                 lcm: _lcm,
                 inverseModAny: _inverseModAny
             }
-        };
+        });
     }
 };

@@ -219,9 +219,9 @@ export const pdfFlate = {
         }
 
         // fw's inflate reports "input exhausted before the final block" as
-        // error code 0 ('unexpected EOF'); every other failure has its own code.
+        // error code 'EEOF' (errno 0, 'unexpected EOF'); every other failure has its own code.
         function endedBeforeFinalBlock(e) {
-            return !!e && e.code === 0;
+            return !!e && e.code === 'EEOF';
         }
 
         // Output ceiling per decoded stream (decompression bomb guard), the
@@ -247,7 +247,7 @@ export const pdfFlate = {
         function inflateChunked(bytes, max, final) {
             const chunks = [];
             let total = 0;
-            const stream = new fwZlib.UnzlibStream((chunk) => {
+            const stream = new fwZlib.UnzlibStream({ verify: false }, (chunk) => {
                 total += chunk.length;
                 if (max && total > max) throw outputLimit(max, bytes.length);
                 chunks.push(chunk);
@@ -274,7 +274,7 @@ export const pdfFlate = {
             if (!max || bytes.length <= max / SAFE_RATIO
                     || typeof fwZlib.UnzlibStream !== 'function'
                     || !plainZlibHeader(bytes)) {
-                return fwZlib.unzlibSync(bytes);
+                return fwZlib.unzlibSync(bytes, { verify: false });
             }
             return inflateChunked(bytes, max, true);
         }

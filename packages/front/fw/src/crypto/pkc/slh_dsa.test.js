@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -18,6 +18,7 @@ import { aes } from '../cipher/aes.js';
 import { hex } from '../../io/codec/hex.js';
 import { utf8 } from '../../io/codec/utf8.js';
 import { SLH_DSA_SHAKE_128F_KAT_SIG, SLH_DSA_SHA2_128F_KAT_SIG } from './slh_dsa.kat.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _bitArray = bitArray.factory();
 const _utf8 = utf8.factory(_bitArray);
@@ -72,9 +73,9 @@ describe('slh_dsa module', () => {
         expect(Array.from(secretKey.subarray(32, 64))).toEqual(Array.from(publicKey));
     }, 120000);
 
-    test('SLH-DSA-SHAKE-128f KAT - sign(msg, sk, ctx="", extraEntropy=false) reproduces noble signature byte-for-byte', () => {
+    test('SLH-DSA-SHAKE-128f KAT - sign(sk, msg, ctx="", extraEntropy=false) reproduces noble signature byte-for-byte', () => {
         const { secretKey } = S.slh_dsa_shake_128f.keygen(KAT_SEED);
-        const sig = S.slh_dsa_shake_128f.sign(KAT_MSG, secretKey, { extraEntropy: false });
+        const sig = S.slh_dsa_shake_128f.sign(secretKey, KAT_MSG, { extraEntropy: false });
         expect(sig).not.toBe(false);
         expect(sig.length).toBe(17088);
         expect(_hex.fromBytes(sig)).toBe(SLH_DSA_SHAKE_128F_KAT_SIG);
@@ -83,25 +84,25 @@ describe('slh_dsa module', () => {
     test('SLH-DSA-SHAKE-128f KAT - verify noble signature against derived pk', () => {
         const { publicKey } = S.slh_dsa_shake_128f.keygen(KAT_SEED);
         const sig = _hex.toBytes(SLH_DSA_SHAKE_128F_KAT_SIG);
-        expect(S.slh_dsa_shake_128f.verify(sig, KAT_MSG, publicKey)).toBe(true);
+        expect(S.slh_dsa_shake_128f.verify(publicKey, sig, KAT_MSG)).toBe(true);
     }, 120000);
 
     test('SLH-DSA-SHAKE-128f deterministic sign+verify round-trip', () => {
         const seed = new Uint8Array(48); for (let i = 0; i < 48; i++) seed[i] = (i * 7 + 1) & 0xff;
         const { publicKey, secretKey } = S.slh_dsa_shake_128f.keygen(seed);
         const msg = new TextEncoder().encode('Hello SLH-DSA');
-        const sig = S.slh_dsa_shake_128f.sign(msg, secretKey, { extraEntropy: false });
+        const sig = S.slh_dsa_shake_128f.sign(secretKey, msg, { extraEntropy: false });
         expect(sig).not.toBe(false);
         expect(sig.length).toBe(17088);
-        expect(S.slh_dsa_shake_128f.verify(sig, msg, publicKey)).toBe(true);
+        expect(S.slh_dsa_shake_128f.verify(publicKey, sig, msg)).toBe(true);
     }, 300000);
 
     test('SLH-DSA-SHAKE-128f deterministic sign is reproducible', () => {
         const seed = new Uint8Array(48); for (let i = 0; i < 48; i++) seed[i] = (i * 7 + 1) & 0xff;
         const { secretKey } = S.slh_dsa_shake_128f.keygen(seed);
         const msg = new TextEncoder().encode('repro');
-        const sigA = S.slh_dsa_shake_128f.sign(msg, secretKey, { extraEntropy: false });
-        const sigB = S.slh_dsa_shake_128f.sign(msg, secretKey, { extraEntropy: false });
+        const sigA = S.slh_dsa_shake_128f.sign(secretKey, msg, { extraEntropy: false });
+        const sigB = S.slh_dsa_shake_128f.sign(secretKey, msg, { extraEntropy: false });
         expect(Array.from(sigA.subarray(0, 64))).toEqual(Array.from(sigB.subarray(0, 64)));
         expect(sigA.length).toBe(sigB.length);
     }, 600000);
@@ -110,9 +111,9 @@ describe('slh_dsa module', () => {
         const seed = new Uint8Array(48); for (let i = 0; i < 48; i++) seed[i] = (i * 7 + 1) & 0xff;
         const { publicKey, secretKey } = S.slh_dsa_shake_128f.keygen(seed);
         const msg = new TextEncoder().encode('tamper');
-        const sig = S.slh_dsa_shake_128f.sign(msg, secretKey, { extraEntropy: false });
+        const sig = S.slh_dsa_shake_128f.sign(secretKey, msg, { extraEntropy: false });
         sig[1000] ^= 0x01;
-        expect(S.slh_dsa_shake_128f.verify(sig, msg, publicKey)).toBe(false);
+        expect(S.slh_dsa_shake_128f.verify(publicKey, sig, msg)).toBe(false);
     }, 300000);
 
     test('lengths (FIPS 205 Table 2 - SHA2 family)', () => {
@@ -132,9 +133,9 @@ describe('slh_dsa module', () => {
         expect(Array.from(secretKey.subarray(32, 64))).toEqual(Array.from(publicKey));
     }, 120000);
 
-    test('SLH-DSA-SHA2-128f KAT - sign(msg, sk, extraEntropy=false) reproduces noble signature byte-for-byte', () => {
+    test('SLH-DSA-SHA2-128f KAT - sign(sk, msg, extraEntropy=false) reproduces noble signature byte-for-byte', () => {
         const { secretKey } = S.slh_dsa_sha2_128f.keygen(KAT_SEED);
-        const sig = S.slh_dsa_sha2_128f.sign(KAT_MSG, secretKey, { extraEntropy: false });
+        const sig = S.slh_dsa_sha2_128f.sign(secretKey, KAT_MSG, { extraEntropy: false });
         expect(sig).not.toBe(false);
         expect(sig.length).toBe(17088);
         expect(_hex.fromBytes(sig)).toBe(SLH_DSA_SHA2_128F_KAT_SIG);
@@ -143,14 +144,14 @@ describe('slh_dsa module', () => {
     test('SLH-DSA-SHA2-128f KAT - verify noble signature against derived pk', () => {
         const { publicKey } = S.slh_dsa_sha2_128f.keygen(KAT_SEED);
         const sig = _hex.toBytes(SLH_DSA_SHA2_128F_KAT_SIG);
-        expect(S.slh_dsa_sha2_128f.verify(sig, KAT_MSG, publicKey)).toBe(true);
+        expect(S.slh_dsa_sha2_128f.verify(publicKey, sig, KAT_MSG)).toBe(true);
     }, 120000);
 
     test('SLH-DSA-SHA2-128f verify rejects tampered signature', () => {
         const { publicKey, secretKey } = S.slh_dsa_sha2_128f.keygen(KAT_SEED);
-        const sig = S.slh_dsa_sha2_128f.sign(KAT_MSG, secretKey, { extraEntropy: false });
+        const sig = S.slh_dsa_sha2_128f.sign(secretKey, KAT_MSG, { extraEntropy: false });
         sig[1000] ^= 0x01;
-        expect(S.slh_dsa_sha2_128f.verify(sig, KAT_MSG, publicKey)).toBe(false);
+        expect(S.slh_dsa_sha2_128f.verify(publicKey, sig, KAT_MSG)).toBe(false);
     }, 600000);
 
     test('SLH-DSA-SHA2-192f KAT - keygen exercises SHA-512 h1 lane', () => {
@@ -163,19 +164,19 @@ describe('slh_dsa module', () => {
     test('SLH-DSA-SHA2-192f sign+verify round-trip (SHA-512 h1 lane)', () => {
         const { publicKey, secretKey } = S.slh_dsa_sha2_192f.keygen(KAT_SEED_192);
         const msg = new TextEncoder().encode('Hello SHA2-192f');
-        const sig = S.slh_dsa_sha2_192f.sign(msg, secretKey, { extraEntropy: false });
+        const sig = S.slh_dsa_sha2_192f.sign(secretKey, msg, { extraEntropy: false });
         expect(sig).not.toBe(false);
         expect(sig.length).toBe(35664);
-        expect(S.slh_dsa_sha2_192f.verify(sig, msg, publicKey)).toBe(true);
+        expect(S.slh_dsa_sha2_192f.verify(publicKey, sig, msg)).toBe(true);
     }, 900000);
 
     test('SLH-DSA-SHAKE-128f verify rejects modified message', () => {
         const seed = new Uint8Array(48); for (let i = 0; i < 48; i++) seed[i] = (i * 7 + 1) & 0xff;
         const { publicKey, secretKey } = S.slh_dsa_shake_128f.keygen(seed);
         const msg = new TextEncoder().encode('original');
-        const sig = S.slh_dsa_shake_128f.sign(msg, secretKey, { extraEntropy: false });
+        const sig = S.slh_dsa_shake_128f.sign(secretKey, msg, { extraEntropy: false });
         const tampered = new TextEncoder().encode('Original');
-        expect(S.slh_dsa_shake_128f.verify(sig, tampered, publicKey)).toBe(false);
+        expect(S.slh_dsa_shake_128f.verify(publicKey, sig, tampered)).toBe(false);
     }, 300000);
 });
 
@@ -301,12 +302,12 @@ describe('SLH-DSA-keyGen-FIPS205 (NIST CAVP, 36 sub-samples / 120 total)', () =>
 
 describe('SLH-DSA-sigGen-FIPS205 / external+pure deterministic (NIST CAVP, 2 byte-exact 128f vectors)', () => {
     test.each(_SG_SLH)(
-        'tgId=$tg tcId=$tc ($ps): sign(msg, sk, {context, extraEntropy:false}) == signature',
+        'tgId=$tg tcId=$tc ($ps): sign(sk, msg, {context, extraEntropy:false}) == signature',
         (v) => {
             const sk  = _hex.toBytes(v.sk);
             const msg = _hex.toBytes(v.msg);
             const ctx = v.ctx ? _hex.toBytes(v.ctx) : new Uint8Array(0);
-            const sig = _SLH[v.ps].sign(msg, sk, { context: ctx, extraEntropy: false });
+            const sig = _SLH[v.ps].sign(sk, msg, { context: ctx, extraEntropy: false });
             expect(sig).not.toBe(false);
             expect(_hex.fromBytes(sig)).toBe(v.sig.toLowerCase());
         },
@@ -316,13 +317,13 @@ describe('SLH-DSA-sigGen-FIPS205 / external+pure deterministic (NIST CAVP, 2 byt
 
 describe('SLH-DSA-sigVer-FIPS205 / external+pure (NIST CAVP, 18 sub-samples on f-variants)', () => {
     test.each(_SV_SLH)(
-        'tgId=$tg tcId=$tc ($ps, expected=$pass, reason=$reason): verify(sig, msg, pk, {context})',
+        'tgId=$tg tcId=$tc ($ps, expected=$pass, reason=$reason): verify(pk, sig, msg, {context})',
         (v) => {
             const pk  = _hex.toBytes(v.pk);
             const msg = _hex.toBytes(v.msg);
             const sig = _hex.toBytes(v.sig);
             const ctx = v.ctx ? _hex.toBytes(v.ctx) : new Uint8Array(0);
-            const ok = _SLH[v.ps].verify(sig, msg, pk, { context: ctx });
+            const ok = _SLH[v.ps].verify(pk, sig, msg, { context: ctx });
             expect(ok).toBe(v.pass);
         },
         120_000
@@ -426,7 +427,7 @@ describe('SLH-DSA-sigGen / external+preHash (HashSLH-DSA, iteration E4)', () => 
             const msg = _hex.toBytes(v.msg);
             const ctx = v.ctx ? _hex.toBytes(v.ctx) : new Uint8Array(0);
             const hashMod = _SLH_HASH_E4[v.hashAlg];
-            const sig = _SLH_E4[v.ps].signPh(msg, sk, v.hashAlg, hashMod, { context: ctx, extraEntropy: false });
+            const sig = _SLH_E4[v.ps].signPh(sk, msg, v.hashAlg, hashMod, { context: ctx, extraEntropy: false });
             expect(sig).not.toBe(false);
             expect(_hex.fromBytes(sig)).toBe(v.sig.toLowerCase());
         },
@@ -440,7 +441,7 @@ describe('SLH-DSA-sigGen / internal (FIPS 205 §6 raw, iteration E4)', () => {
         (v) => {
             const sk = _hex.toBytes(v.sk);
             const Mraw = _hex.toBytes(v.msg);
-            const sig = _SLH_E4[v.ps]._internal.signInternal(Mraw, sk, { extraEntropy: false });
+            const sig = _SLH_E4[v.ps][INTERNAL].signInternal(Mraw, sk, { extraEntropy: false });
             expect(sig).not.toBe(false);
             expect(_hex.fromBytes(sig)).toBe(v.sig.toLowerCase());
         },
@@ -457,7 +458,7 @@ describe('SLH-DSA-sigVer / external+preHash (HashSLH-DSA, iteration E4)', () => 
             const sig = _hex.toBytes(v.sig);
             const ctx = v.ctx ? _hex.toBytes(v.ctx) : new Uint8Array(0);
             const hashMod = _SLH_HASH_E4[v.hashAlg];
-            const ok = _SLH_E4[v.ps].verifyPh(sig, msg, pk, v.hashAlg, hashMod, { context: ctx });
+            const ok = _SLH_E4[v.ps].verifyPh(pk, sig, msg, v.hashAlg, hashMod, { context: ctx });
             expect(ok).toBe(v.pass);
         },
         120_000
@@ -471,7 +472,7 @@ describe('SLH-DSA-sigVer / internal (FIPS 205 §6 raw, iteration E4)', () => {
             const pk = _hex.toBytes(v.pk);
             const Mraw = _hex.toBytes(v.msg);
             const sig = _hex.toBytes(v.sig);
-            const ok = _SLH_E4[v.ps]._internal.verifyInternal(sig, Mraw, pk);
+            const ok = _SLH_E4[v.ps][INTERNAL].verifyInternal(sig, Mraw, pk);
             expect(ok).toBe(v.pass);
         },
         120_000
@@ -528,7 +529,7 @@ if (RUN_FULL_H3) {
         const ALL = _load('SLH-DSA-sigVer-FIPS205').filter(v => v.preHash === 'pure' && v.sigInterface === 'external');
         test.each(ALL)('tgId=$tg tcId=$tc ($ps, expected=$testPassed)', (v) => {
             const ctx = v.context ? _hex.toBytes(v.context) : new Uint8Array(0);
-            const ok = _SLH[v.ps].verify(_hex.toBytes(v.signature), _hex.toBytes(v.message), _hex.toBytes(v.pk), { context: ctx });
+            const ok = _SLH[v.ps].verify(_hex.toBytes(v.pk), _hex.toBytes(v.signature), _hex.toBytes(v.message), { context: ctx });
             expect(ok).toBe(v.testPassed);
         }, 300_000);
     });

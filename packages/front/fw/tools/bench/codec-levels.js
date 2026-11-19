@@ -24,15 +24,13 @@
  * without the third argument. The mode is echoed as `lz4Mode` in the JSON
  * (`null` for the other codecs).
  *
- * KNOWN EXCLUSION — brotli + `random` + `--baseline`: with a baseline whose
- * materialised `huffman.js` predates BL-1110's frequency-ceiling fix
- * (task 03), `brotli.brotliCompressSync` on the 256 KiB `random` corpus
- * drives `huffman.buildTree`'s internal histogram past its fixed sentinel
- * frequency and throws (`undefined is not an object (evaluating
- * 't[i2].f')`) — a real, out-of-perimeter `huffman.js` defect, not a bug in
- * this harness (see `ai/batches/types/fw/BATCH_34/01-report.md`). Until
- * task 03 lands, pass `--corpora text,source,json,repeat,small` (i.e.
- * everything but `random`) for brotli runs against a pre-BL-1110 baseline;
+ * KNOWN EXCLUSION — brotli + `random` + `--baseline`: with a baseline older
+ * than `835ca33fb` (the clean-room `huffman.js`), `brotli.brotliCompressSync`
+ * on the 256 KiB `random` corpus drives that old `huffman.buildTree` past
+ * its fixed sentinel frequency and it throws (`undefined is not an object
+ * (evaluating 't[i2].f')`) — a defect of the baseline's `huffman.js`, not of
+ * this harness. For brotli against such a baseline, pass
+ * `--corpora text,source,json,repeat,small` (everything but `random`);
  * every other corpus x codec combination is unaffected.
  *
  * `--baseline <ref>` resolves the ref to a full sha (`git rev-parse`) and
@@ -92,6 +90,22 @@
  *                              (`readBits`/`readBits16` matching the write
  *                              choice) and asserting equality (throws on
  *                              mismatch); `decMs`/`bytes` unused.
+ *
+ * ## Per-process timing (the CLI default)
+ *
+ * Timing both engines in one process biases them: they share the call sites
+ * of this file and of the live codec body, and JSC's polymorphic dispatch
+ * then moved two byte-identical copies of one primitive by 10-15 %. The CLI
+ * therefore runs `--procs N` (default 3) child processes per engine, the
+ * order alternating (old, new, then new, old …); a child given
+ * `--side old|new` builds BOTH sides from that one engine, so it runs only
+ * that engine's code. The parent runs the correctness legs once and merges:
+ * per cell the median of the children's medians, each side's spread
+ * ((max − min) / median), a gate threshold `max(--floor, both spreads)` and a
+ * verdict (`faster` / `slower` / `within noise`) for encode and decode. A run
+ * without `--baseline` is the A/A calibration: its spreads say which cells
+ * can gate a given change. `--procs 1`, and `runBench()` called directly,
+ * keep the in-process timing, marked `timing: 'in-process'`.
  *
  * This module has no side effects on import: the CLI (print + optional
  * JSON write) runs only under `import.meta.main`. It does NOT assert a
@@ -365,16 +379,11 @@ function runCorrectnessLegs(codec, oldEngine, newEngine, corpusName, corpusData,
 
 // ── micro (huffman/bitstream primitives) ────────────────────────────────────
 
-// `huffman.buildTree`'s package-merge-style construction uses a fixed
-// sentinel frequency (25001, `huffman.js:121`) as a stand-in for "+Infinity"
-// once the real-leaf queue is exhausted; a real per-symbol frequency at or
-// above that value breaks the merge-order invariant (observed: OOB access /
-// `undefined` dereference in `buildTree`, out-of-perimeter — never
-// written by this batch). A 16 KiB prefix keeps every one of the six
-// corpora's per-byte counts comfortably under that bound (measured max
-// 4917, corpus 'source'/'small') while still exercising a realistic,
-// DEFLATE-block-scale histogram (production blocks are far smaller than a
-// whole 256 KiB corpus).
+// A 16 KiB prefix: a DEFLATE-block-scale histogram (production blocks are far
+// smaller than a whole 256 KiB corpus) whose per-byte counts stay low enough
+// (measured max 4917, corpus 'source'/'small') for a baseline older than
+// `835ca33fb`, whose `buildTree` fails on large frequencies (see the KNOWN
+// EXCLUSION above).
 const HIST_SAMPLE_BYTES = 16384;
 
 function literalHistogram(corpusName, data) {
@@ -593,10 +602,15 @@ export async function runBench(options = {}) {
         throw new Error("codec-levels: unknown lz4 mode '" + lz4Mode + "' (expected speed|ratio)");
     }
 
-    const oldPrimitives = options.baseline
+    const livePrimitives = { bitstream: liveBitstream, huffman: liveHuffman, lz4: liveLz4 };
+    let oldPrimitives = options.baseline
         ? await loadMaterialized(materializeBaseline(options.baseline).dir)
-        : { bitstream: liveBitstream, huffman: liveHuffman, lz4: liveLz4 };
-    const newPrimitives = { bitstream: liveBitstream, huffman: liveHuffman, lz4: liveLz4 };
+        : livePrimitives;
+    let newPrimitives = livePrimitives;
+    // A per-process child times ONE engine: both sides are built from it.
+    if (options.side === 'old') newPrimitives = oldPrimitives;
+    else if (options.side === 'new') oldPrimitives = newPrimitives;
+    else if (options.side !== undefined) throw new Error("codec-levels: unknown side '" + options.side + "' (expected old|new)");
 
     if (codec === 'micro') {
         const oldEngine = buildMicroEngine(oldPrimitives);
@@ -633,7 +647,9 @@ export async function runBench(options = {}) {
         for (const name of corporaNames) {
             const data = getCorpus(name);
             const cell = measureCodecCell(codec, oldEngine, newEngine, name, data, cellLevel, reps, warmup, interleave);
-            const oracle = runCorrectnessLegs(codec, oldEngine, newEngine, name, data, cellLevel, codec + ' level=' + level + ' corpus=' + name);
+            const oracle = options.side
+                ? null   // a child: the parent runs the legs once, on both real engines
+                : runCorrectnessLegs(codec, oldEngine, newEngine, name, data, cellLevel, codec + ' level=' + level + ' corpus=' + name);
             corporaOut[name] = { ...cell, oracle };
             aggOldEnc += cell.oldEncMs; aggNewEnc += cell.newEncMs;
             aggOldDec += cell.oldDecMs; aggNewDec += cell.newDecMs;
@@ -652,10 +668,96 @@ export async function runBench(options = {}) {
         host: hostInfo(),
         baseline: options.baseline || null,
         interleave,
+        timing: 'in-process',
         lz4Mode: codec === 'lz4' ? lz4Mode : null,
         generatedAt: new Date().toISOString(),
         levels: levelsOut,
     };
+}
+
+/** (max − min) / median of per-process medians; `null` below two values. */
+export function spreadOf(meds) {
+    if (meds.length < 2) return null;
+    const m = median(meds);
+    return m > 0 ? (Math.max(...meds) - Math.min(...meds)) / m : null;
+}
+
+/** `faster` / `slower` / `within noise` for one measured pair. */
+export function verdictOf(oldMs, newMs, threshold) {
+    if (!(oldMs > 0)) return 'within noise';
+    const d = newMs / oldMs - 1;
+    return Math.abs(d) <= threshold ? 'within noise' : d < 0 ? 'faster' : 'slower';
+}
+
+/**
+ * Merge per-process child results into one: per cell the median of the
+ * children's medians, both sides' spreads, a threshold and a verdict for
+ * encode and decode. `legs` is the parent's in-process run (bytes, oracle).
+ * @param {object[]} oldRuns results of `--side old` children
+ * @param {object[]} newRuns results of `--side new` children
+ * @param {object} legs the parent's correctness run
+ * @param {{ procs: number, floor: number }} meta
+ */
+export function mergePerProcess(oldRuns, newRuns, legs, meta) {
+    const levels = {};
+    for (const [lk, lv] of Object.entries(legs.levels)) {
+        const corpora = {};
+        let aOE = 0, aNE = 0, aOD = 0, aND = 0;
+        for (const [ck, cv] of Object.entries(lv.corpora)) {
+            const pick = (runs, field) => runs.map((r) => r.levels[lk].corpora[ck][field]);
+            const oE = pick(oldRuns, 'oldEncMs'), nE = pick(newRuns, 'newEncMs');
+            const oD = pick(oldRuns, 'oldDecMs'), nD = pick(newRuns, 'newDecMs');
+            const oldEncMs = median(oE), newEncMs = median(nE), oldDecMs = median(oD), newDecMs = median(nD);
+            const sp = { oldEnc: spreadOf(oE), newEnc: spreadOf(nE), oldDec: spreadOf(oD), newDec: spreadOf(nD) };
+            const thrEnc = Math.max(meta.floor, sp.oldEnc || 0, sp.newEnc || 0);
+            const thrDec = Math.max(meta.floor, sp.oldDec || 0, sp.newDec || 0);
+            corpora[ck] = {
+                ...cv,
+                oldEncMs, newEncMs, deltaEncPct: pct(oldEncMs, newEncMs),
+                oldDecMs, newDecMs, deltaDecPct: pct(oldDecMs, newDecMs),
+                spreadPct: Object.fromEntries(Object.entries(sp).map(([k, v]) => [k, v === null ? null : v * 100])),
+                thresholdEncPct: thrEnc * 100, thresholdDecPct: thrDec * 100,
+                verdictEnc: verdictOf(oldEncMs, newEncMs, thrEnc),
+                verdictDec: oldDecMs > 0 ? verdictOf(oldDecMs, newDecMs, thrDec) : null,
+            };
+            aOE += oldEncMs; aNE += newEncMs; aOD += oldDecMs; aND += newDecMs;
+        }
+        levels[lk] = {
+            ...lv, corpora,
+            oldEncMs: aOE, newEncMs: aNE, deltaEncPct: pct(aOE, aNE),
+            oldDecMs: aOD, newDecMs: aND, deltaDecPct: pct(aOD, aND),
+        };
+    }
+    return { ...legs, timing: 'per-process', procs: meta.procs, floorPct: meta.floor * 100, levels };
+}
+
+/**
+ * The per-process run the CLI does: `procs` children per engine, the order
+ * alternating, then the parent's correctness legs and the merge.
+ * @param {object} options the `runBench` options
+ * @param {{ procs?: number, floor?: number, argv: string[] }} pp
+ */
+export async function runBenchPerProcess(options, pp) {
+    const procs = pp.procs ?? 3;
+    const floor = pp.floor ?? 0.03;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codec-levels-'));
+    const child = (side, i) => {
+        const out = path.join(dir, side + '-' + i + '.json');
+        const res = Bun.spawnSync([process.execPath, fileURLToPath(import.meta.url), ...pp.argv, '--procs', '1', '--side', side, '--json', out], { cwd: REPO_ROOT, stdout: 'pipe', stderr: 'pipe' });
+        if (!fs.existsSync(out)) throw new Error('codec-levels: the ' + side + ' child #' + i + ' wrote no result: ' + res.stderr.toString().slice(0, 400));
+        return JSON.parse(fs.readFileSync(out, 'utf8'));
+    };
+    const oldRuns = [], newRuns = [];
+    try {
+        for (let i = 0; i < procs; i++) {
+            if (i % 2 === 0) { oldRuns.push(child('old', i)); newRuns.push(child('new', i)); }
+            else { newRuns.push(child('new', i)); oldRuns.push(child('old', i)); }
+        }
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
+    const legs = await runBench({ ...options, reps: 1, warmup: 0 });
+    return mergePerProcess(oldRuns, newRuns, legs, { procs, floor });
 }
 
 // ── CLI ──────────────────────────────────────────────────────────────────────
@@ -685,6 +787,9 @@ function parseArgv(argv) {
             case '--corpora':       opts.corpora = argv[++i].split(',').map(s => s.trim()).filter(Boolean); break;
             case '--json':          opts.jsonOut = argv[++i]; break;
             case '--lz4-mode':      opts.lz4Mode = argv[++i]; break;
+            case '--procs':         opts.procs = parseInt(argv[++i], 10); break;
+            case '--floor':         opts.floor = Number(argv[++i]) / 100; break;
+            case '--side':          opts.side = argv[++i]; break;
             default: break; // unrecognized flags are ignored by this dev harness
         }
     }
@@ -699,6 +804,10 @@ function formatMarkdown(result) {
     const lines = [];
     lines.push('# codec-levels — ' + result.codec + (result.lz4Mode ? ' mode=' + result.lz4Mode : '') + (result.baseline ? ' (baseline ' + result.baseline + ')' : ' (live vs live)'));
     lines.push('');
+    lines.push(result.timing === 'per-process'
+        ? 'Timing: per process (' + result.procs + ' per engine, alternating); gate threshold = max(' + fmtNum(result.floorPct) + ' %, both spreads).'
+        : 'Timing: in process (both engines share call sites — biased up to 10-15 %; use the CLI default --procs 3 for a verdict).');
+    lines.push('');
     lines.push('## Aggregates');
     lines.push('');
     lines.push('| Level | Old encMs | New encMs | Δenc % | Old decMs | New decMs | Δdec % | Old B | New B | Δbytes % |');
@@ -712,24 +821,40 @@ function formatMarkdown(result) {
     lines.push('');
     lines.push('## Cells');
     lines.push('');
-    lines.push('| Level | Corpus | Old encMs | New encMs | Δenc % | Old decMs | New decMs | Δdec % | Old B | New B | Δbytes % | Oracle |');
-    lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
+    const pp = result.timing === 'per-process';
+    lines.push('| Level | Corpus | Old encMs | New encMs | Δenc % | Old decMs | New decMs | Δdec % | Old B | New B | Δbytes % | Oracle |' + (pp ? ' Gate enc | Gate dec |' : ''));
+    lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|' + (pp ? '---|---|' : ''));
     for (const levelKey of Object.keys(result.levels)) {
         const lvl = result.levels[levelKey];
         for (const corpusName of Object.keys(lvl.corpora)) {
             const c = lvl.corpora[corpusName];
             lines.push('| ' + levelKey + ' | ' + corpusName + ' | ' + fmtNum(c.oldEncMs) + ' | ' + fmtNum(c.newEncMs) + ' | ' + fmtNum(c.deltaEncPct) +
                 ' | ' + fmtNum(c.oldDecMs) + ' | ' + fmtNum(c.newDecMs) + ' | ' + fmtNum(c.deltaDecPct) +
-                ' | ' + c.oldBytes + ' | ' + c.newBytes + ' | ' + fmtNum(c.deltaBytesPct) + ' | ' + c.oracle + ' |');
+                ' | ' + c.oldBytes + ' | ' + c.newBytes + ' | ' + fmtNum(c.deltaBytesPct) + ' | ' + c.oracle + ' |' +
+                (pp ? ' ' + c.verdictEnc + ' (±' + fmtNum(c.thresholdEncPct) + ' %) | ' + (c.verdictDec ? c.verdictDec + ' (±' + fmtNum(c.thresholdDecPct) + ' %)' : '') + ' |' : ''));
         }
     }
     return lines.join('\n');
 }
 
+/** The argv a child repeats: everything but the per-process and output flags. */
+function childArgv(argv) {
+    const out = [];
+    for (let i = 0; i < argv.length; i++) {
+        if (['--procs', '--floor', '--json', '--side'].includes(argv[i])) { i++; continue; }
+        out.push(argv[i]);
+    }
+    return out;
+}
+
 async function main() {
-    const opts = parseArgv(process.argv.slice(2));
+    const argv = process.argv.slice(2);
+    const opts = parseArgv(argv);
+    const procs = opts.procs ?? 3;
     try {
-        const result = await runBench(opts);
+        const result = opts.side || procs <= 1
+            ? await runBench(opts)
+            : await runBenchPerProcess(opts, { procs, floor: opts.floor, argv: childArgv(argv) });
         if (opts.jsonOut) fs.writeFileSync(opts.jsonOut, JSON.stringify(result, null, 2));
         console.log(formatMarkdown(result));
     } catch (err) {

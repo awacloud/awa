@@ -43,7 +43,7 @@ export const pdfPage = {
             'Annots', 'AA', 'Metadata', 'PieceInfo', 'StructParents',
             'ID', 'PZ', 'SeparationInfo', 'Tabs', 'TemplateInstantiated',
             'PresSteps', 'UserUnit', 'VP', 'AF', 'OutputIntents',
-            'DPart', 'AssociatedFiles'
+            'DPart', 'AssociatedFiles', 'Hid'
         ]);
 
         // A present value (a PDF null is the entry's absence, §7.3.9).
@@ -130,6 +130,8 @@ export const pdfPage = {
             if (has(e.Thumb))          out.thumb          = e.Thumb;
             if (has(e.B))              out.b              = e.B;
             if (isNum(e.Dur))          out.dur            = e.Dur.value;
+            // A page hidden in a presentation (PDF 1.1, deprecated in 1.3).
+            if (isType(e.Hid, 'bool')) out.hid            = e.Hid.value;
             if (has(e.Trans))          out.trans          = e.Trans;
             if (has(e.AA))             out.aa             = e.AA;
             if (has(e.PieceInfo))      out.pieceInfo      = e.PieceInfo;

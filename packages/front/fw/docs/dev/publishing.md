@@ -4,11 +4,11 @@
 
 ## Applied
 
-`package.json#files` publishes a **lean** tarball: `src/**/*.{js,md,bin}` (code, excluding tests/kat), `types/**/*.d.ts`, `dist/types/**/*.d.ts(.map)`, `dist/build/*.min.js` + `*.meta.json` + `*.bin` (no dev bundles nor JS-side `.map`), `tools/rendering/**/*.js` + `tools/_lib/cli-help.js` (fw-private tooling only — the mutualized `fw-bundler`/`fw-codegen` tools ship in their own packages, not here), `integrations/**/*.{js,d.ts,md,json}` (excluding `_e2e`), `docs` (excluding `api-generated`), `fw.config.json`, `README.md`, `CHANGELOG.md` — every `*.test.js`/`*.kat.js`/`*.test.html`/`_fixtures/**` excluded throughout. Measured (`npm pack --dry-run`, `packages/front/fw`): **2.4 MB compressed / 8.4 MB uncompressed, 1065 files** (vs 44 MB / 106 MB for the full tree).
+`package.json#files` publishes a **lean** tarball: `src/**/*.{js,md,bin}` (code, excluding tests/kat), `types/**/*.d.ts`, `dist/types/**/*.d.ts(.map)`, `dist/build/*.min.js` + `*.meta.json` + `*.bin` (no dev bundles nor JS-side `.map`), `tools/rendering/**/*.js` + `tools/_lib/cli-help.js` (fw-private tooling only — the mutualized `fw-bundler`/`fw-codegen` tools ship in their own packages, not here), `integrations/**/*.{js,d.ts,md,json}` (excluding `_e2e`), `docs` (excluding `api-generated`), `fw.config.json`, `README.md`, `CHANGELOG.md` — every `*.test.js`/`*.kat.js`/`*.reference.js`/`*.test.html`/`_fixtures/**` excluded throughout. A `<module>.reference.js` is the logical (rolled) implementation kept beside a flattened crypto module; it lives in the git repository only. Measured (`npm pack --dry-run`, `packages/front/fw`): **2.4 MB compressed / 8.4 MB uncompressed, 1065 files** (vs 44 MB / 106 MB for the full tree).
 
 ## Publication status
 
-`@awacloud/fw` is ratified in the publishable set (lot 1, `Apache-2.0`, owner ruling #2) with `notice.required: false`. The repo has not published anything yet — the monorepo's export-pipeline and licence-stamp tooling is dry-run-only, used to gate and measure the export tree ahead of any real publication decision.
+`@awacloud/fw` is in the monorepo's publishable set (`Apache-2.0`), with no NOTICE requirement of its own. The repo has not published anything yet — the monorepo's export-pipeline and licence-stamp tooling is dry-run-only, used to gate and measure the export tree ahead of any real publication decision.
 
 **Transparency (tests, `tests/_vectors`, KAT)** — outside the npm tarball, accessible:
 
@@ -24,8 +24,8 @@
 
 ## Decision record
 
-Option A (lean npm package, transparency via git + jsDelivr-GitHub) **and**
-Option C (`dist/build` ships `.min.js`/`.meta.json` only, no dev bundles or
-`.map`) were both applied to `package.json#files`, 2026-08. The original
-investigation (44 MB / 106 MB full-tree measurement, Option A/B/C tradeoffs)
-is superseded by the ratified data in `docs/publication/` (§ Publication status above).
+Two choices shape `package.json#files` (2026-08): the npm package stays lean,
+with transparency through git and jsDelivr-GitHub; and `dist/build` ships
+`.min.js` / `.meta.json` only, no dev bundles or `.map`. The full-tree
+measurement behind them (44 MB / 106 MB) is superseded by the publication
+data of the source repository (§ Publication status above).

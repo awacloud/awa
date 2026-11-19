@@ -93,6 +93,18 @@ worker global, so `delete globalThis.fetch` works there. The portable form walks
 the prototype chain and deletes the property from whichever object actually owns
 it:
 
+Since `createWorker` gained the `revoke` option, this is built in — it walks the
+chain, then fails closed if a name is still reachable:
+
+```js
+const worker = fw.createWorker(workerFn, {
+    dependencies: ['hex'],
+    revoke: ['fetch', 'WebSocket', 'Worker', 'BroadcastChannel', 'XMLHttpRequest'],
+});
+```
+
+The same, by hand in a `workerFw` (what the option does, minus the check):
+
 ```js
 const confinedWorkerFw = function (runtime, moduleNames, args) {
     // Self-contained by contract: no closure over main-thread bindings.
@@ -124,22 +136,23 @@ Two authorities survive any property-level revocation, because they are
 
 ## Applying lockdown inside the worker — status
 
-**fw does not wire `lockdown()` into the worker realm.** That is a measured
-statement about the current code, not a policy: `lockdown` is not a DI module
-(it is absent from `src/core/modules.js`), it is not part of `runtimeSource`, and
-`workerFw` — the only pre-user-code hook — is synchronous
-(`core/worker-helper.js:207`), so it cannot `await` the dynamic `import()` that
-would be needed to obtain the module inside a `blob:` worker.
+**`createWorker(fn, { lockdown: true })` runs `lockdown()` inside the worker
+realm** before the user function, after `workerFw` and after `revoke`. The
+worker becomes a **module** worker whose program starts with a static `import`
+of `sanity/lockdown.js` (resolved next to `core/worker-helper.js`; pass
+`lockdown: { url }` with an absolute URL when fw is bundled or served from
+elsewhere). A static import is evaluated before the body, so no top-level
+`await` stands between `new Worker` and the message handler: a message posted
+right after `createWorker` returns is still received.
 
-A worker that needs its own intrinsics frozen must therefore do it itself:
-`import()` `sanity/lockdown` at the top of `workerFn` and call `lockdown()`
-before touching `libs`. The module URL has to travel through `args`, because a
-`blob:` worker has no notion of the package root and cannot resolve a bare or
-relative specifier.
+Measured in headless Chromium 148 and in Bun 1.3.13 (`src/core/worker-confine.test.js`),
+the user function then meets `eval` and `Function` blocked and
+`Object.prototype` frozen, with the granted `libs` working; combined with
+`revoke`, `fetch`, `XMLHttpRequest` and `WebSocket` are gone as well. A module
+worker has no `importScripts`.
 
-This leg is measured green in both realms — see [Example 2](#example-2--freezing-the-workers-own-intrinsics)
-below. Productising it (a first-class `lockdown: true` worker option) is **not**
-part of this guide's contract; it is tracked separately.
+Without the option the worker is unchanged. [Example 2](#example-2--freezing-the-workers-own-intrinsics)
+below shows the same freeze done by hand in `workerFn`, which still works.
 
 ## Runnable example
 
@@ -287,8 +300,8 @@ before it runs unhardened.
   after the freeze. Chrome is unaffected (its `Worker` constructor is native).
   Under Bun, spawn the workers you need before locking down the parent realm, or
   keep the parent lockdown to browser deployments.
-- **The DOM step never runs in a worker.** `lockdown()`'s step 6 is gated on
-  `window` + `document` (`sanity/lockdown.js:383`), so a worker realm gets the
+- **The DOM step never runs in a worker.** `lockdown()`'s step 5 is gated on
+  `window` + `document` (`sanity/lockdown.js:411`), so a worker realm gets the
   intrinsic tier only — which is all a worker realm has to harden anyway.
 
 ## See also
@@ -297,5 +310,5 @@ before it runs unhardened.
 - [Security guide](./security.md) — the tier spectrum, the recommended default, integrity vs confinement
 - [Web Workers guide](./workers.md) — `createWorker`, serialisation, the RPC pattern
 - [`core/worker-helper` — API reference](../api/core/worker-helper.md) — `WorkerOptions`, `workerFw`, the patched `terminate`
-- [Worker confinement spike (2026-06-15)](../notes/worker-confinement-spike.md) — the historical investigation this guide supersedes for guidance
+- [Worker confinement investigation (2026-06-15)](../notes/worker-confinement-spike.md) — the historical investigation this guide supersedes for guidance
 - `src/core/worker-confinement.poc.test.js` — the regression suite backing every claim above

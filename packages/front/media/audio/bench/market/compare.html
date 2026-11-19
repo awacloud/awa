@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>media-audio — against Opus</title>
+<!-- Served by evidence/media-codecs/serve-m1.ts (it adds the /audio/ route): /packages/front/media/audio/bench/market/compare.html -->
+<script type="importmap">
+{ "imports": { "@awacloud/fw/": "/packages/front/fw/src/", "@awacloud/media-stream/frame": "/packages/front/media/stream/src/frame/frame.js" } }
+</script>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; }
+  pre { background: #f3f3f0; padding: 12px; border-radius: 6px; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>media-audio — against Opus (WebCodecs), row M1</h1>
+<p id="state">Running…</p>
+<pre id="report"></pre>
+<script type="module" src="./compare.js"></script>
+</body>
+</html>

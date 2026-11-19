@@ -323,7 +323,7 @@ export const xlsxDrawings = {
             // a:* children).
             const spPr = xml.findChild(spEl, 'xdr:spPr');
             if (spPr) {
-                const typed = shapeMod.parseShapeProperties(spPr);
+                const typed = shapeMod.parseShapeProperties(spPr, opts);
                 if (typed) out.shapeProps = typed;
             }
             const txBody = xml.findChild(spEl, 'xdr:txBody');
@@ -393,7 +393,8 @@ export const xlsxDrawings = {
             return renderAnchor(entry.anchor || { kind: 'twoCell' }, content);
         }
 
-        // `opts.typedRunColors`: see `drawingml.parseTextBody`.
+        // `opts.typedRunColors`: see `drawingml.parseTextBody`;
+        // `opts.typedLineColors`: see `drawingmlShape.parseShapeProperties`.
         function parse(input, opts) {
             const text = typeof input === 'string' ? input : decodeText(input);
             const root = xml.parse(text);

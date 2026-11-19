@@ -201,18 +201,22 @@ describe('oconv.toMd — BL-1546 opt-in real document (references/ANSSI/)', () =
 
     // Measured 2026-09-23 on top of task 04 (/DecodeParms marshalling):
     // BEFORE the fix 4 438 text/font-unresolved + 4 438 text/undecodable
-    // (unchanged by task 04); AFTER 0 + 60. The 60 are honest losses — codes
-    // of six embedded Computer Modern Type1 math fonts (CMSY10, CMMI10,
-    // CMR10, CMSY8, CMSY5, CMMI8) that neither the font's ToUnicode nor its
-    // /Encoding maps to Unicode.
+    // (unchanged by task 04); AFTER 0 + 60. The 60 were codes of six
+    // embedded Computer Modern Type1 math fonts (CMSY10, CMMI10, CMR10, CMSY8,
+    // CMSY5, CMMI8) with no ToUnicode and no /Encoding: since T17 (d)
+    // (2026-11-10) they decode through the programs' built-in encodings.
+    // The 13 left were one glyph, `a73`, of a symbolic Type1C Dingbats
+    // subset: a Zapf Dingbats glyph name, which since T25 (f) reads through
+    // the vendored ITC Zapf Dingbats Glyph List (U+25A0).
     test.skipIf(!corpus.present)(
-        'anssi-guide-selection_crypto-1.0.pdf: font-unresolved 4438 → 0, undecodable 4438 → 60, readable French',
+        'anssi-guide-selection_crypto-1.0.pdf: font-unresolved 4438 → 0, undecodable 4438 → 0, readable French',
         async () => {
             const bytes = new Uint8Array(readFileSync(corpus.docs.selectionCrypto));
             const result = await oconv.toMd({ name: 'anssi-guide-selection_crypto-1.0.pdf', bytes, convertedAt: FIXED_AT });
             const count = (code) => result.losses.filter(l => l.code === code).length;
             expect(count('text/font-unresolved')).toBe(0);
-            expect(count('text/undecodable')).toBe(60);
+            expect(count('text/undecodable')).toBe(0);
+            expect(result.markdown).toContain('\u25A0');
             // Spot check: readable French prose from the licence notice.
             expect(result.markdown).toContain('Il est par conséquent');
             expect(result.markdown).toContain('GUIDE DE SÉLECTION');

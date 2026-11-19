@@ -52,6 +52,61 @@ describe('About panel', () => {
         expect($('app-about-open').getAttribute('aria-controls')).toBe('app-about');
     });
 
+    test('the help form: head with title, version and the x; body in the owner order; the closing button after it', () => {
+        const dialog = $('app-about');
+        expect(dialog.classList.contains('app-help')).toBe(true);
+        const head = /** @type {HTMLElement} */ (dialog.querySelector('.app-help-head'));
+        expect(head.querySelector('#app-about-title')?.getAttribute('data-i18n')).toBe('about.title');
+        expect(head.querySelector('.app-about-version')?.textContent).toContain('@awacloud/notepad');
+        expect(head.querySelector('#app-about-build')).not.toBe(null);
+        const x = /** @type {HTMLElement} */ (head.querySelector('#app-about-close-x'));
+        expect(x.classList.contains('app-help-close')).toBe(true);
+        expect(x.getAttribute('aria-label')).toBe('Close (Escape)');
+        const bodyEl = $('app-about-body');
+        expect(bodyEl.classList.contains('app-help-body')).toBe(true);
+        const order = ['.app-about-legal', '#app-about-check', '#app-offline', '.app-about-promo', '.app-about-licence', '#app-about-files']
+            .map((sel) => /** @type {Element} */ (bodyEl.querySelector(sel)));
+        expect(order.every((el) => el)).toBe(true);
+        for (let i = 1; i < order.length; i++) {
+            expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING, String(i)).toBeTruthy();
+        }
+        const bottom = $('app-about-close');
+        expect(bodyEl.contains(bottom)).toBe(false);
+        expect(bodyEl.compareDocumentPosition(bottom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect($('app-offline').hasAttribute('hidden')).toBe(true);   // the PWA adapter reveals it, unchanged
+    });
+
+    test('its height follows its content, capped as the Help panel is (owner answer 2026-11-18)', () => {
+        const css = readFileSync(fileURLToPath(new URL('../styles/app.css', import.meta.url)), 'utf8');
+        expect(css).toContain('.app-about.app-help { height: fit-content; max-height: min(52rem, calc(100dvh - 2 * var(--fw-space-4))); }');
+        const help = /^\.app-help \{[^}]*\}/m.exec(css)?.[0] ?? '';
+        expect(help).toContain('height: calc(100dvh - 2 * var(--fw-space-4));');
+        expect(help).toContain('max-height: 52rem;');
+    });
+
+    test('the x and the bottom button both close, Escape closes, and the focus returns to the opener', async () => {
+        const about = mountAbout({ doc: document, t, pwa: pwa('current', 'dev') });
+        const dialog = /** @type {HTMLDialogElement} */ ($('app-about'));
+        for (const id of ['app-about-close-x', 'app-about-close']) {
+            await about.open();
+            expect(dialog.open).toBe(true);
+            $(id).click();
+            expect(dialog.open).toBe(false);
+            expect(document.activeElement).toBe($('app-about-open'));
+            $('app-about-check').focus();
+        }
+        await about.open();
+        dialog.close();   // what Escape does to a modal dialog
+        expect(document.activeElement).toBe($('app-about-open'));
+    });
+
+    test('the x is worded in the page language', () => {
+        const about = mountAbout({ doc: document, t: (k) => (k === 'help.close' ? 'Fermer (Échap)' : k), pwa: pwa('current', null) });
+        about.label();
+        expect($('app-about-close-x').getAttribute('aria-label')).toBe('Fermer (Échap)');
+        expect($('app-about-close-x').title).toBe('Fermer (Échap)');
+    });
+
     test('opens as a modal with the release, closes', async () => {
         const about = mountAbout({ doc: document, t, pwa: pwa('current', 'abc123def456') });
         await about.open();

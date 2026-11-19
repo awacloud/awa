@@ -1,7 +1,7 @@
 ---
 module: virtualScroll
 category: dom/rendering
-dependencies: [dom, events]
+dependencies: [dom]
 returns: object
 worker-safe: false
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > Virtualised list — renders only visible items for 10⁴–10⁶ entries.
 
-**Module** `virtualScroll` | **Source** `packages/front/fw/src/dom/rendering/virtualScroll.js` | **Deps** `dom`, `events` | **Worker-safe** no
+**Module** `virtualScroll` | **Source** `packages/front/fw/src/dom/rendering/virtualScroll.js` | **Deps** `dom` | **Worker-safe** no
 
 Virtualises the rendering of a long list: only items within the visible window plus a configurable overscan are materialised in the DOM. The rest is represented by a CSS spacer of calculated height, avoiding any memory cost for off-screen nodes.
 

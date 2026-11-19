@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/tool-fw-bundler",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "description": "Production build tools for @awacloud/fw-shaped packages: bundles presets and variants into distributable output, generates self-contained standalone factories, and emits a deterministic module-catalog artifact.",
   "private": true,

@@ -110,6 +110,23 @@ const files = zip.unzipSync(archive, {
 });
 ```
 
+Entry names are read with `/` as the separator: a `\` (written by .NET Framework's `ZipFile.CreateFromDirectory`, against APPNOTE 4.4.17) becomes `/`, as Info-ZIP, 7-Zip and CPython present it; the zip-slip check runs on the normalised name. An entry named `__proto__` is extracted as an own property of the result (and written as an entry by `zipSync`); the result has a `null` prototype (no inherited key; use `Object.hasOwn`).
+
+### Extraction (`maxOutput`)
+
+`unzipSync(archive, { maxOutput })` (and `unzip`, `ZipStreamReader`) caps the
+bytes extracted over every entry. Each entry's size as the central directory
+declares it is checked against what is left **before** its buffer is
+allocated, so an archive declaring a 4 GiB entry fails with `EMAXOUT` instead of
+allocating it. Absent, there is no cap.
+
+### Extraction (`verify`)
+
+`unzipSync(archive)` checks each extracted entry against the CRC-32 and the
+uncompressed size the central directory records; a mismatch throws `ECHECKSUM` (errno 16)
+naming the entry. `{ verify: false }` skips the check. The streaming reader
+(`ZipStreamReader`) does not take the option.
+
 ## Deterministic / reproducible archives
 
 Fixing the writer-level `mtime` makes two writes of an identical payload
@@ -134,7 +151,7 @@ const stream = new zip.ZipStream({ mtime: MTIME }, (chunk) => parts.push(chunk))
   the `[data, opts]` tuple, or `openEntry`/`add`'s own `opts`) always
   wins over the writer-level default.
 - The valid range stays 1980-2099 (MS-DOS date/time) — a fixed `mtime`
-  outside that range throws error code 10 just like the per-entry form;
+  outside that range throws `EBADDATE` just like the per-entry form;
   the writer-level option does not relax or clamp the range.
 - **Claim boundary**: `zip` only provides the option. A consumer built on
   top of it (e.g. a document-format writer producing DOCX/ODT/PPTX,
@@ -153,14 +170,21 @@ const stream = new zip.ZipStream({ mtime: MTIME }, (chunk) => parts.push(chunk))
 
 ## Error codes
 
-| Code | Meaning |
-|------|---------|
-| 6 | Invalid ZIP data |
-| 9 | Extra field too long |
-| 10 | Date out of range (before 1980 or after 2099) |
-| 11 | Filename too long |
-| 13 | Invalid ZIP |
-| 14 | Unknown compression method |
+| `code` | `errno` | Meaning |
+|---|------|---------|
+| `EBADFORMAT` | 6 | Invalid ZIP data |
+| `EMAXOUT` | 7 | Output limit exceeded — an entry's declared size passes what `maxOutput` leaves |
+| `EEXTRATOOLONG` | 9 | Extra field too long |
+| `EBADDATE` | 10 | Date out of range (before 1980 or after 2099) |
+| `ENAMETOOLONG` | 11 | Filename too long |
+| `EBADFORMAT` | 13 | Invalid ZIP |
+| `EBADMETHOD` | 14 | Unknown compression method |
+| `EUNSAFEPATH` | 15 | Unsafe entry path (zip-slip: `..` segment or absolute path) — unless `safe: false` |
+| `ECHECKSUM` | 16 | Incorrect data check — unless `verify: false`, an entry's CRC-32 or size does not match the central directory |
+
+`e.code` is the string in the first column; `e.errno` keeps the number of the
+earlier convention (the compressor family's one typed convention, shared
+with brotli).
 
 ## Full example
 
@@ -200,8 +224,10 @@ const worker = fw.createWorker(
 ## Notes
 
 - ZIP64 automatic: ZIP64 extensions are used as soon as a file exceeds 4 GB or the archive exceeds 4 GB / 65535 entries.
-- Dates are stored in MS-DOS format (2-second resolution) — range 1980–2099; out-of-range dates → error code 10.
+- Dates are stored in MS-DOS format (2-second resolution) — range 1980–2099; out-of-range dates → `EBADDATE`.
 - Store mode (method 0): useful for already-compressed files (PNG, JPEG, MP4) — avoids double compression with no gain.
+- Methods: stored (0) and deflate (8). Any other — Deflate64 (9, 7-Zip's `-mm=Deflate64`), bzip2, LZMA, zstd — is refused with `EBADMETHOD`, never misread.
+- Read against archives from CPython, .NET Framework, 7-Zip and libarchive (data descriptors on stored entries, NTFS and Unix extras included); what fw writes is checked by Info-ZIP UnZip where it is installed.
 
 ## See also
 

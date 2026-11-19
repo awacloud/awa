@@ -19,11 +19,11 @@ describe('pdf-full bundle', () => {
         expect(typeof bundle.pdfFullBundle.factory).toBe('function');
     });
 
-    test('declares core pdf + 21 P0/P1 + 6 P2/P3 tail extras as deps', () => {
+    test('declares core pdf + 21 P0/P1 + 7 P2/P3 tail extras as deps', () => {
         const deps = bundle.pdfFullBundle.dependencies;
         expect(deps[0]).toBe('pdf');
-        // 21 P0/P1 + 6 tail (= 27) + 1 core = 28
-        expect(deps.length).toBe(28);
+        // 21 P0/P1 + 7 tail (= 28) + 1 core = 29
+        expect(deps.length).toBe(29);
         // Tail (P2/P3) entries
         expect(deps).toContain('pdfLinearizationWrite');
         expect(deps).toContain('pdf3dRichMedia');
@@ -31,6 +31,7 @@ describe('pdf-full bundle', () => {
         expect(deps).toContain('pdfMisc');
         expect(deps).toContain('pdfInfoDictDeprecated');
         expect(deps).toContain('pdfSandbox');
+        expect(deps).toContain('pdfCryptPublicKey');
         // Pulls in pdf-large coverage as well
         expect(deps).toContain('pdfContentOpsExtended');
         expect(deps).toContain('pdfXmpExtended');

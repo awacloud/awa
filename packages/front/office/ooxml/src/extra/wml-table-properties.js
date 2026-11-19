@@ -274,6 +274,22 @@ export const wmlTableProperties = {
         }
 
         function hydrateTcPr(tcPr) {
+            return core.hydrateLossless(tcPr, typeTcPr, untypeTcPr);
+        }
+        // The guard's writer: this extension's fields, and the cell width
+        // the core writes from `width`.
+        function untypeTcPr(tcPr) {
+            const out = dehydrateTcPr(tcPr);
+            if (out.width) {
+                const a = {};
+                if (out.width.w != null) a['w:w'] = String(out.width.w);
+                if (out.width.type != null) a['w:type'] = String(out.width.type);
+                out._extras = [...(out._extras || []), xml.el('w:tcW', a)];
+                delete out.width;
+            }
+            return out;
+        }
+        function typeTcPr(tcPr) {
             if (!tcPr || !tcPr._extras) return tcPr;
             const remaining = [];
             for (const c of tcPr._extras) {
@@ -322,13 +338,18 @@ export const wmlTableProperties = {
         // `parseTblPr`, giving the exact shape it produced before core typed `tblPr`.
         // `extShaped` marks bags this factory already produced, so a second
         // hydrate never re-derives (and lossily narrows) an extension-shaped bag.
+        // A bag this extension's shape would not write back as read stays
+        // in the core's shape (`coreKept`), which the core writes.
         const extShaped = new WeakSet();
+        const coreKept = new WeakSet();
         function adoptCoreTblPr(table) {
             const t = table && table.tblPr;
-            if (!t || extShaped.has(t)) return;
+            if (!t || extShaped.has(t) || coreKept.has(t)) return;
             const el = core.renderTableProperties(t);
             const typed = el ? parseTblPr(el) : undefined;
-            if (typed) { extShaped.add(typed); table.tblPr = typed; }
+            const back = typed ? renderTblPr(typed) : null;
+            if (typed && back && core.sameElement(back, el)) { extShaped.add(typed); table.tblPr = typed; }
+            else coreKept.add(t);
         }
         function hydrateTable(table) {
             adoptCoreTblPr(table);
@@ -338,10 +359,10 @@ export const wmlTableProperties = {
             }
             const remaining = [];
             for (const c of table._extras) {
-                if (c.type === 'element' && c.name === 'w:tblPr') {
+                if (c.type === 'element' && c.name === 'w:tblPr' && table.tblPr === undefined) {
                     const t = parseTblPr(c);
-                    if (t) { extShaped.add(t); table.tblPr = t; }
-                    continue;
+                    const back = t ? renderTblPr(t) : null;
+                    if (t && back && core.sameElement(back, c)) { extShaped.add(t); table.tblPr = t; continue; }
                 }
                 remaining.push(c);
             }
@@ -354,10 +375,10 @@ export const wmlTableProperties = {
             if (row && row._extras) {
                 const remaining = [];
                 for (const c of row._extras) {
-                    if (c.type === 'element' && c.name === 'w:trPr') {
+                    if (c.type === 'element' && c.name === 'w:trPr' && row.trPr === undefined) {
                         const t = parseTrPr(c);
-                        if (t) row.trPr = t;
-                        continue;
+                        const back = t ? renderTrPr(t) : null;
+                        if (t && back && core.sameElement(back, c)) { row.trPr = t; continue; }
                     }
                     remaining.push(c);
                 }
@@ -374,7 +395,7 @@ export const wmlTableProperties = {
             if (!table) return table;
             const out = { ...table };
             const extras = out._extras ? [...out._extras] : [];
-            if (out.tblPr) {
+            if (out.tblPr && !coreKept.has(out.tblPr)) {
                 const el = renderTblPr(out.tblPr);
                 if (el) extras.unshift(el); // tblPr first per schema
                 delete out.tblPr;

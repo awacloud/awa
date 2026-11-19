@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +7,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 
 import { createWorkerRuntime } from './worker-helper.js';
 import { ModuleRuntime, runtimeSource } from './runtime.js';
+import { processMessage } from '../process/message.js';
 
 // ─── Mocks globaux (Blob / URL.createObjectURL / URL.revokeObjectURL / Worker) ─
 
@@ -235,6 +236,35 @@ describe('worker-helper - createWorkerRuntime', () => {
             expect(selfMock.__capture.hasProcess).toBe(true);
             // Safeguard against regression - no canonicalized keys.
             expect(selfMock.__capture.libsKeys).not.toContain('hex@0.0.0');
+        });
+
+        test('ENV.LOG without ENV.DEV builds the worker (the logger gets false)', () => {
+            const rt = makeRuntime();
+            const workerRuntime = createWorkerRuntime({ LOG: true }, rt, runtimeSource, makeLogStub(), logFnStub.toString());
+            expect(() => workerRuntime(function () {})).not.toThrow();
+            const selfMock = runInSandbox(captured.blobs.at(-1).content);
+            expect(selfMock.__loggerInstalled).toEqual({ dev: false });
+        });
+
+        test("the documented workerFw: runtime.resolve('processMessage').workerFramework", () => {
+            const rt = makeRuntime(processMessage);
+            const workerRuntime = createWorkerRuntime(buildEnv(), rt, runtimeSource, makeLogStub(), logFnStub.toString());
+            // the descriptor has no workerFramework: the instance does
+            expect(processMessage.workerFramework).toBeUndefined();
+            const workerFw = rt.resolve('processMessage').workerFramework;
+            expect(typeof workerFw).toBe('function');
+
+            const workerFn = function (ctx) {
+                self.__capture = {
+                    hasProcess: !!ctx.process && typeof ctx.process.postMessage === 'function',
+                    libs: Object.keys(ctx.libs),
+                };
+            };
+            workerRuntime(workerFn, { dependencies: ['processMessage'], workerFw });
+            const selfMock = runInSandbox(captured.blobs.at(-1).content, {
+                postMessage() {}, addEventListener() {}, removeEventListener() {},
+            });
+            expect(selfMock.__capture).toEqual({ hasProcess: true, libs: ['processMessage'] });
         });
 
         test('custom workerFw replaces default resolution', () => {

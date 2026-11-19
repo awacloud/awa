@@ -128,7 +128,7 @@ export const oconvPdfRenderCode = {
          * Render one `codeBlock` block: one item per source line, monospace,
          * unwrapped.
          *
-         * @param {object} node `oconv-ir/v1` `codeBlock` node
+         * @param {object} node `oconv-ir/v2` `codeBlock` node
          *   (`{info, text}`).
          * @param {object} ctx Stack child context (see the module header).
          * @returns {{items: object[], losses: object[], height?: number}}
@@ -149,6 +149,9 @@ export const oconvPdfRenderCode = {
             const items = [];
             const losses = [];
             let y = CODE_SPACE_BEFORE;
+            // A tagged document: the block is a `P` holding its `Code`.
+            const tag = Array.isArray(ctx.tagPath)
+                ? [...ctx.tagPath, { key: String(ctx.index), type: 'P' }, { key: 'code', type: 'Code' }] : null;
 
             lines.forEach((line) => {
                 y += leadingPt;
@@ -161,7 +164,7 @@ export const oconvPdfRenderCode = {
                         }
                     });
                 }
-                items.push({
+                const item = {
                     x,
                     y,
                     style: 'code',
@@ -169,7 +172,9 @@ export const oconvPdfRenderCode = {
                     tokens: [{ kind: 'word', text: line, style: 'code', width, link: null }],
                     index: ctx.index,
                     kind: 'codeBlock'
-                });
+                };
+                if (tag) item.tag = tag;
+                items.push(item);
             });
 
             return { items, losses, height: y + CODE_SPACE_AFTER };

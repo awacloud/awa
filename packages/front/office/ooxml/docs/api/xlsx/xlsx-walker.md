@@ -54,6 +54,32 @@ An extension is a plain object implementing any subset of the hooks; a member th
 
 Extensions run in registration order within one hook. Only the first of the three hooks has a return contract; the other two are in-place mutations.
 
+The walker also dispatches the DrawingML text hooks over the text body (`txBody`) of every entry of each sheet's `drawings`, with the pptx walker's contract (a returned value replaces the visited one):
+
+| Hook pair | Receives |
+|-----------|----------|
+| `hydrateParagraphProperties` / `dehydrateParagraphProperties` | a paragraph's `pPr`, and a field's own `pPr` |
+| `hydrateRunProperties` / `dehydrateRunProperties` | a run's `rPr` |
+| `hydrateParagraph` / `dehydrateParagraph` | a paragraph; on hydrate after its `pPr` and runs, on dehydrate before them |
+
+On hydrate the text is walked before the three hooks above, on dehydrate after them.
+
+### Package hooks
+
+`hydratePackage(workbook, ctx)` / `dehydratePackage(workbook, ctx)` run once per read or write, outside the walk; a result other than `undefined` replaces the model.
+
+- **On read**, `xlsx.read` calls them inside its pass, before the walk, so the walk reaches what they add. Their `ctx`:
+  - `parts` (the package's parts, read without marking a part modelled) and `consume(partName)` (marks one modelled: it leaves `unmodelledParts`);
+  - `package`, `rels`, `wbPart`, `wbRoot`, `wbRels`;
+  - `sheetParts` and `sheetIds` (aligned with `workbook.sheets`);
+  - `tableParts` (aligned with `workbook.tables`);
+  - `readOpts`.
+- **On write**, `xlsx.write` calls them after the core has built its package and before it is zipped. Their `ctx`:
+  - `package` (to add or change parts, relationships and content types);
+  - `wbPart`;
+  - the written `sheetParts`;
+  - `tablePartOf(table)`: the part a table of the model was written to, or `null`.
+
 ## Examples
 
 ```js
@@ -81,9 +107,9 @@ sheet.use({ hydrateSheet(s) { s.seen = true; } });   // forwarded to this instan
 
 ## Notes
 
-- Unlike the [docx walker](../docx/docx-walker.md) there is no per-hook index and no per-property traversal: an `xlsx` extension sees whole objects (workbook, sheets), not individual cell or style properties.
+- Unlike the [docx walker](../docx/docx-walker.md) there is no per-hook index and no per-property traversal of cells or styles: an `xlsx` extension sees whole objects (workbook, sheets), and the text of drawings.
 - A hook that throws is not caught: the error reaches the caller of `xlsx.read` / `xlsx.write`.
-- None of the shipped `extra/*` modules implements the xlsx hooks today; `use` is the integration point for your own modules — see [Extending](../../guide/extending.md).
+- Three shipped extras implement them, all registered by [`xlsx-full`](../bundles/xlsx-full.md): [`smlWorkbookDetails`](../extra/sml-workbook-details.md) (`hydrateWorkbook`), [`dmlTextDetails`](../extra/dml-text-details.md) (the text hooks) and [`smlPackageParts`](../extra/sml-package-parts.md) (the package hooks). `use` is also the integration point for your own modules — see [Extending](../../guide/extending.md).
 
 ## See also
 

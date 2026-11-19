@@ -1124,3 +1124,169 @@ describe('oconvIrToOdt — a table without a row', () => {
         expect(body.map((n) => n.type)).toEqual(['paragraph', 'paragraph']);
     });
 });
+
+// T27 (a), D36 B: oconv-ir/v2's document.page written as one page layout,
+// used by the master page Standard.
+describe('oconvIrToOdt — the page (T27 a)', () => {
+    const body = [node('paragraph', {}, [node('run', { text: 'x' })])];
+    const stylesOf = (bytes) => odfStyles.parse(partText(bytes, 'styles.xml'));
+    const layoutOf = (bytes) => {
+        const s = stylesOf(bytes);
+        const pl = (s.automaticStyles || []).filter((e) => e.type === 'element' && e.name === 'style:page-layout');
+        const mp = (s.masterStyles || []).filter((e) => e.type === 'element' && e.name === 'style:master-page');
+        return { pl, mp };
+    };
+
+    test('a page: one page layout with the size, orientation and margins in points, one master page Standard', () => {
+        const page = { width: 595.3, height: 841.9, orientation: 'portrait', margins: { top: 70.85, right: 70.85, bottom: 56.7, left: 72 } };
+        const { bytes, losses } = irToOdt(doc(body, { page }));
+        const { pl, mp } = layoutOf(bytes);
+        expect(pl).toHaveLength(1);
+        const props = pl[0].children.find((c) => c.name === 'style:page-layout-properties');
+        expect(props.attrs).toEqual({
+            'fo:page-width': '595.3pt', 'fo:page-height': '841.9pt', 'style:print-orientation': 'portrait',
+            'fo:margin-top': '70.85pt', 'fo:margin-right': '70.85pt', 'fo:margin-bottom': '56.7pt', 'fo:margin-left': '72pt'
+        });
+        expect(mp).toHaveLength(1);
+        expect(mp[0].attrs).toEqual({ 'style:name': 'Standard', 'style:page-layout-name': pl[0].attrs['style:name'] });
+        expect(losses).toEqual([]);
+        expect(odt.read(bytes).body[0].runs).toEqual([{ type: 'text', value: 'x' }]);
+    });
+
+    test('landscape, and no margins: the size and the orientation only', () => {
+        const { bytes } = irToOdt(doc(body, { page: { width: 841.9, height: 595.3, orientation: 'landscape', margins: null } }));
+        const props = layoutOf(bytes).pl[0].children.find((c) => c.name === 'style:page-layout-properties');
+        expect(props.attrs).toEqual({ 'fo:page-width': '841.9pt', 'fo:page-height': '595.3pt', 'style:print-orientation': 'landscape' });
+    });
+
+    test('no page: the bytes of a v1-shaped document, no page layout, no master page', () => {
+        const withNull = irToOdt(doc(body)).bytes;
+        const v1Shaped = irToOdt({ kind: 'document', children: body }).bytes;
+        expect(withNull).toEqual(v1Shaped);
+        expect(layoutOf(withNull)).toEqual({ pl: [], mp: [] });
+    });
+
+    test('an invalid page is refused like any invalid IR', () => {
+        expect(() => irToOdt({ kind: 'document', page: { width: 0 }, children: [] })).toThrow('oconv: invalid ir (bad-prop at $)');
+    });
+});
+
+// T27 (b), D36 B: oconv-ir/v2's align and breakBefore written as automatic
+// paragraph styles P<n>.
+describe('oconvIrToOdt — alignment and page breaks (T27 b)', () => {
+    const r = (text) => node('run', { text });
+    const content = (bytes) => xmlApi.parse(partText(bytes, 'content.xml'));
+    const autoStyles = (bytes) => descendants(content(bytes), 'style:style').map((s) => {
+        const pp = (s.children || []).find((c) => c.name === 'style:paragraph-properties');
+        return [s.attrs['style:name'], s.attrs['style:family'], s.attrs['style:parent-style-name'] || null, pp ? pp.attrs : null];
+    }).filter(([, family]) => family === 'paragraph');
+    const blocksOf = (bytes) => [...descendants(content(bytes), 'text:p'), ...descendants(content(bytes), 'text:h')]
+        .map((p) => [p.name, p.attrs['text:style-name'] || null]);
+
+    test('one P<n> per distinct parent, alignment and break, in first-use order', () => {
+        const { bytes, losses } = irToOdt(doc([
+            node('heading', { level: 1, align: 'center', breakBefore: true }, [r('Title')]),
+            node('paragraph', { align: 'justify' }, [r('a')]),
+            node('paragraph', { align: 'justify' }, [r('b')]),
+            node('paragraph', { breakBefore: true }, [r('c')]),
+            node('paragraph', { align: 'start' }, [r('d')]),
+            node('paragraph', {}, [r('e')])
+        ]));
+        expect(autoStyles(bytes)).toEqual([
+            ['P1', 'paragraph', 'Heading_20_1', { 'fo:text-align': 'center', 'fo:break-before': 'page' }],
+            ['P2', 'paragraph', null, { 'fo:text-align': 'justify' }],
+            ['P3', 'paragraph', null, { 'fo:break-before': 'page' }],
+            ['P4', 'paragraph', null, { 'fo:text-align': 'start' }]
+        ]);
+        const read = odt.read(bytes);
+        expect(read.body.map((b) => [b.type, b.styleName || null])).toEqual([
+            ['heading', 'P1'], ['paragraph', 'P2'], ['paragraph', 'P2'], ['paragraph', 'P3'], ['paragraph', 'P4'], ['paragraph', null]
+        ]);
+        expect(read.body[0].outlineLevel).toBe(1);
+        expect(losses).toEqual([]);
+    });
+
+    test('a quote paragraph keeps Quotations as its parent; a list item and a cell paragraph get their style', () => {
+        const { bytes } = irToOdt(doc([
+            node('blockquote', {}, [node('paragraph', { align: 'end' }, [r('q')])]),
+            node('list', {}, [node('listItem', {}, [node('paragraph', { align: 'center' }, [r('i')])])]),
+            node('table', {}, [node('row', {}, [node('cell', {}, [node('paragraph', { align: 'center' }, [r('c')])])])])
+        ]));
+        expect(autoStyles(bytes).map(([n, , parent, props]) => [n, parent, props])).toEqual([
+            ['P1', 'Quotations', { 'fo:text-align': 'end' }],
+            ['P2', null, { 'fo:text-align': 'center' }]
+        ]);
+        expect(blocksOf(bytes).filter(([, s]) => s && /^P\d$/.test(s)).map(([, s]) => s)).toEqual(['P1', 'P2', 'P2']);
+    });
+
+    test('no align and no break anywhere: the bytes of a v1-shaped document', () => {
+        const plain = irToOdt(doc([node('heading', { level: 2 }, [r('H')]), node('paragraph', {}, [r('p')])])).bytes;
+        const v1 = irToOdt({ kind: 'document', children: [
+            { kind: 'heading', level: 2, children: [{ kind: 'run', text: 'H', bold: false, italic: false, strike: false, code: false, link: null }] },
+            { kind: 'paragraph', children: [{ kind: 'run', text: 'p', bold: false, italic: false, strike: false, code: false, link: null }] }
+        ] }).bytes;
+        expect(plain).toEqual(v1);
+        expect(autoStyles(plain)).toEqual([]);
+    });
+});
+
+// T27 (c), D36 B: a run's size, font, colour, underline and script written
+// as a span naming an automatic text style T<n>, around today's span.
+describe('oconvIrToOdt — run properties (T27 c)', () => {
+    const content = (bytes) => xmlApi.parse(partText(bytes, 'content.xml'));
+    const textStyles = (bytes) => descendants(content(bytes), 'style:style')
+        .filter((s) => s.attrs['style:family'] === 'text' && /^T\d+$/.test(s.attrs['style:name']))
+        .map((s) => [s.attrs['style:name'], (s.children || []).find((c) => c.name === 'style:text-properties').attrs]);
+    const outerSpans = (bytes) => descendants(content(bytes), 'text:span')
+        .filter((s) => /^T\d+$/.test(s.attrs['text:style-name'] || ''))
+        .map((s) => [s.attrs['text:style-name'], (s.children || []).map((c) => (c.type === 'text' ? c.value : `${c.name}${c.attrs && c.attrs['text:style-name'] ? '' : ''}`))]);
+
+    test('one T<n> per distinct set of values, in first-use order, with each property', () => {
+        const { bytes, losses } = irToOdt(doc([node('paragraph', {}, [
+            node('run', { text: 'big', size: 16, font: 'Times New Roman', color: '#1f4e79' }),
+            node('run', { text: ' same', size: 16, font: 'Times New Roman', color: '#1f4e79' }),
+            node('run', { text: ' under', underline: true }),
+            node('run', { text: '2', script: 'super' }),
+            node('run', { text: 'i', script: 'sub', size: 8 }),
+            node('run', { text: ' plain' })
+        ])]));
+        expect(textStyles(bytes)).toEqual([
+            ['T1', { 'fo:font-size': '16pt', 'fo:font-family': "'Times New Roman'", 'fo:color': '#1f4e79' }],
+            ['T2', { 'style:text-underline-style': 'solid', 'style:text-underline-width': 'auto', 'style:text-underline-color': 'font-color' }],
+            ['T3', { 'style:text-position': 'super 58%' }],
+            ['T4', { 'fo:font-size': '8pt', 'style:text-position': 'sub 58%' }]
+        ]);
+        expect(outerSpans(bytes).map(([n]) => n)).toEqual(['T1', 'T1', 'T2', 'T3', 'T4']);
+        expect(losses).toEqual([]);
+        const read = odt.read(bytes);
+        const text = (runs) => runs.map((r) => (r.value !== undefined ? r.value : text(r.runs || []))).join('');
+        expect(text(read.body[0].runs)).toBe('big same under2i plain');
+    });
+
+    test('bold, italic and code stay on their span, around the T<n> span; a link wraps them', () => {
+        const { bytes } = irToOdt(doc([node('paragraph', {}, [
+            node('run', { text: 'b', bold: true, size: 12 }),
+            node('run', { text: 'k', link: 'https://example.test/', color: '#ff0000' })
+        ])]));
+        const spans = descendants(content(bytes), 'text:span');
+        const flags = spans.find((s) => (s.children || []).some((c) => c.name === 'text:span'));
+        expect(flags.attrs['text:style-name']).not.toMatch(/^T\d+$/);
+        const styled = flags.children.find((c) => c.name === 'text:span');
+        expect([styled.attrs['text:style-name'], styled.children[0].value]).toEqual(['T1', 'b']);
+        const link = descendants(content(bytes), 'text:a')[0];
+        expect(link.attrs['xlink:href']).toBe('https://example.test/');
+        expect([(link.children || [])[0].attrs['text:style-name'], link.children[0].children[0].value]).toEqual(['T2', 'k']);
+        const read = odt.read(bytes, { semanticStyles: true });
+        expect(JSON.stringify(read.body[0].runs)).toContain('"bold":true');
+    });
+
+    test('runs with none of them: the bytes of v1-shaped runs, no T<n>', () => {
+        const plain = irToOdt(doc([node('paragraph', {}, [node('run', { text: 'a', bold: true }), node('run', { text: 'b' })])])).bytes;
+        const v1 = irToOdt({ kind: 'document', children: [{ kind: 'paragraph', children: [
+            { kind: 'run', text: 'a', bold: true, italic: false, strike: false, code: false, link: null },
+            { kind: 'run', text: 'b', bold: false, italic: false, strike: false, code: false, link: null }
+        ] }] }).bytes;
+        expect(plain).toEqual(v1);
+        expect(textStyles(plain)).toEqual([]);
+    });
+});

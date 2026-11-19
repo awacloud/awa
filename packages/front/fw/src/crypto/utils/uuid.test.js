@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -33,9 +33,16 @@ describe('uuid module', () => {
         });
 
         describe('v1', () => {
-            test('should generate hex string by default (compact format, back-compat)', () => {
+            test('returns the canonical RFC 4122 form by default, as v4 (D34)', () => {
                 const id = api.v1();
                 expect(typeof id).toBe('string');
+                expect(id.length).toBe(36);
+                expect(id).toMatch(_RFC4122_REGEX);
+                expect(id[14]).toBe('1');
+            });
+
+            test("format='compact' returns 32 hex without dashes", () => {
+                const id = api.v1(false, false, 'compact');
                 expect(id.length).toBe(32);
                 expect(id).toMatch(_COMPACT_REGEX);
             });
@@ -89,11 +96,14 @@ describe('uuid module', () => {
         });
 
         describe('v4', () => {
-            test('should generate hex string by default (compact format, back-compat)', () => {
+            test('generates the canonical 8-4-4-4-12 string by default (D9 G4); compact as an option', () => {
                 const id = api.v4();
                 expect(typeof id).toBe('string');
-                expect(id.length).toBe(32);
-                expect(id).toMatch(_COMPACT_REGEX);
+                expect(id.length).toBe(36);
+                expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+                const compact = api.v4(false, false, 'compact');
+                expect(compact.length).toBe(32);
+                expect(compact).toMatch(_COMPACT_REGEX);
             });
 
             test('should generate raw bytes when raw=true', () => {
@@ -134,8 +144,8 @@ describe('uuid module', () => {
                     0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10
                 ]);
                 const prng = (b) => { for (let i = 0; i < 16; i++) b[i] = fixed[i]; };
-                const compact = api.v4(false, prng);
-                const rfc     = api.v4(false, prng, 'rfc4122');
+                const compact = api.v4(false, prng, 'compact');
+                const rfc     = api.v4(false, prng);
                 expect(compact.replace(/-/g, '')).toBe(compact);  // sanity
                 expect(rfc.replace(/-/g, '')).toBe(compact);
             });

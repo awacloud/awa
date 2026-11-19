@@ -44,7 +44,7 @@
   },
   "scripts": {
     "test": "bun test .",
-    "build": "bun ../../../cli.ts site-kit app-dist --app . && bun ../../demo/_build/bundle-js.js --dist dist --label @awacloud/viewer && bun tools/build-csp.js && bun tools/build-sw.js && bun ../../demo/_build/gzip-dist.js --dist dist",
+    "build": "bun ../../../cli.ts site-kit app-dist --app . && bun ../../demo/_build/bundle-js.js --dist dist --label @awacloud/viewer && bun ../tools/ship-lockdown.js --dist dist && bun tools/build-csp.js && bun tools/build-sw.js && bun ../../demo/_build/gzip-dist.js --dist dist",
     "icons": "bun tools/build-icons.js",
     "samples": "bun tools/build-samples.js",
     "lint": "bunx eslint --no-warn-ignored ."

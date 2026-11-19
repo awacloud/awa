@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -272,7 +272,8 @@ describe('parser - SSR tokenizer (no DOMParser)', () => {
         const b = p.fromHTML(src, { reserveIds: ['p2', 'p3'] });
         expect(b).not.toBe(a);
         expect(b.template.map(e => e.id)).toEqual(['p4', 'p5']);
-        expect(p.fromHTML(src)).toBe(a);
+        // a copy of the original cached entry, not the reserved-set parse
+        expect(p.fromHTML(src)).toEqual(a);
     });
 
     test('stability: no reservation at all keeps the exact BATCH_22 ids', () => {

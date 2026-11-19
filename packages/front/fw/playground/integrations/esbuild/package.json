@@ -6,9 +6,13 @@
     "scripts": {
         "postinstall": "node ../../_tools/link-fw.mjs",
         "setup": "node ../../_tools/link-fw.mjs",
-        "build": "node build.mjs"
+        "build": "node build.mjs",
+        "start": "node build.mjs && node ../../_tools/serve.mjs ."
     },
     "devDependencies": {
         "esbuild": "^0.28.1"
+    },
+    "playground": {
+        "page": "index.html"
     }
 }

@@ -671,7 +671,10 @@ export function mountNotepad(root, opts = {}) {
         }
         pending = { start: text.selectionStart, end: text.selectionEnd, type };
     });
+    /** True while the Tab key's own edit dispatches its `input` event (the handler below has recorded it). */
+    let scripted = false;
     text.addEventListener('input', () => {
+        if (scripted) return;
         const was = current;
         const now = text.value;
         const p = pending;
@@ -700,9 +703,85 @@ export function mountNotepad(root, opts = {}) {
     });
     // A caret moved by hand ends the typing step.
     text.addEventListener('pointerup', () => history.seal());
+
+    // ── Tab in the text ────────────────────────────────────────────────
+    // Tab inserts a tab (indents the selected lines); Shift+Tab outdents. Two ways out of the editor
+    // by keyboard: Escape, then Tab (or Shift+Tab) moves the focus as in a page; Ctrl+M switches Tab
+    // between "inserts" and "moves the focus" for the rest of the session (in memory, not stored).
+    /** Outdent removes a leading tab, or up to this many leading spaces, per line. */
+    const TAB_WIDTH = 4;
+    /** Ctrl+M: whether Tab inserts (true) or moves the focus (false). */
+    let tabInserts = true;
+    /** Escape released the keyboard: the next Tab moves the focus. Any other key, a click or a focus re-arms. */
+    let released = false;
+    const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'AltGraph', 'CapsLock']);
+
+    /**
+     * Tab / Shift+Tab as one edit, so one undo step. A caret or a selection within one line: Tab
+     * puts a tab there (replacing the selection); a selection over several lines, or Shift+Tab,
+     * works on whole lines (the line of the caret, or every line the selection touches).
+     * @param {boolean} outdent
+     */
+    function indent(outdent) {
+        const value = text.value;
+        const s = text.selectionStart;
+        const e = text.selectionEnd;
+        if (!outdent && !value.slice(s, e).includes('\n')) {
+            edit(s, e, '\t', [s + 1, s + 1]);
+        } else {
+            const from = value.lastIndexOf('\n', s - 1) + 1;
+            // A selection that ends at the start of a line leaves that line alone.
+            const last = e > s && value[e - 1] === '\n' ? e - 1 : e;
+            const found = value.indexOf('\n', last);
+            const to = found < 0 ? value.length : found;
+            /** @type {{start: number, delta: number, cut: number}[]} */
+            const lines = [];
+            let offset = from;
+            const block = value.slice(from, to).split('\n').map((line) => {
+                let cut = 0;
+                let add = 0;
+                if (outdent) cut = line[0] === '\t' ? 1 : (new RegExp(`^ {1,${TAB_WIDTH}}`).exec(line)?.[0].length ?? 0);
+                else if (line) add = 1;
+                lines.push({ start: offset, delta: add - cut, cut });
+                offset += line.length + 1;
+                return outdent ? line.slice(cut) : (add ? `\t${line}` : line);
+            }).join('\n');
+            if (block === value.slice(from, to)) return;
+            // A position moves with the lines up to it; a selection start at column 0 stays before the
+            // new tab, and a position inside what was cut goes to the start of the line.
+            /** @param {number} pos @param {boolean} isStart */
+            const moved = (pos, isStart) => {
+                let shift = 0;
+                for (const l of lines) {
+                    if (l.start > pos) break;
+                    const col = pos - l.start;
+                    if (outdent) shift -= Math.min(l.cut, col);
+                    else if (!(isStart && col === 0)) shift += l.delta;
+                }
+                return pos + shift;
+            };
+            edit(from, to, block, [moved(s, true), moved(e, false)]);
+        }
+        revealRange(text, text.selectionStart, text.selectionEnd);
+        // The edit was made from script: say so to whoever listens for `input`, as a keystroke would.
+        scripted = true;
+        try { text.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: outdent ? null : '\t' })); }
+        finally { scripted = false; }
+    }
+
     text.addEventListener('keydown', (e) => {
         if (/^(Arrow|Home|End|Page)/.test(e.key)) history.seal();
+        if (MODIFIER_KEYS.has(e.key)) return;   // Shift on its way to Shift+Tab is not "another key"
+        if (e.key === 'Escape') { if (!e.isComposing) released = true; return; }
+        const was = released;
+        released = false;
+        if (e.key !== 'Tab' || e.ctrlKey || e.altKey || e.metaKey || e.isComposing) return;
+        if (was || !tabInserts || e.defaultPrevented) return;   // the browser moves the focus
+        e.preventDefault();
+        indent(e.shiftKey);
     });
+    text.addEventListener('pointerdown', () => { released = false; });
+    text.addEventListener('focus', () => { released = false; });
 
     // ── find, replace, go to ───────────────────────────────────────────
     /** @param {'find'|'replace'|'goto'} which */
@@ -901,6 +980,11 @@ export function mountNotepad(root, opts = {}) {
         e.preventDefault();
         closePanel();
     }, noDefault);
+    keys.bind('Ctrl+m', () => {
+        tabInserts = !tabInserts;
+        released = false;
+        status.setTab(tabInserts ? 'insert' : 'focus');
+    });
     keys.attach();
 
     /** Ctrl + wheel sizes the text, not the page. @param {WheelEvent} e */

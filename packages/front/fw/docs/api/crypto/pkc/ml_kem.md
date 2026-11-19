@@ -19,7 +19,7 @@ NIST-standardised post-quantum KEM (Key Encapsulation Mechanism). Replaces ECDH 
 
 ```js
 const ml_kem = runtime.resolve('ml_kem');
-// Returns: { ml_kem512, ml_kem768, ml_kem1024, _internal }
+// Returns: { ml_kem512, ml_kem768, ml_kem1024 }
 ```
 
 ## API
@@ -35,7 +35,7 @@ const ml_kem = runtime.resolve('ml_kem');
 | `ml_kem<N>.keygen(seed?)` | `(Uint8Array(64)?) => {publicKey, secretKey}` | Keypair (random if seed absent) |
 | `ml_kem<N>.encapsulate(publicKey, m?)` | `(Uint8Array, Uint8Array(32)?) => {cipherText, sharedSecret}` | Encapsulate; m random if absent |
 | `ml_kem<N>.decapsulate(cipherText, secretKey)` | `(Uint8Array, Uint8Array) => Uint8Array(32)` | Shared secret (constant-time, implicit reject) |
-| `_internal.{ntt, nttInv, isValidEncapsulationKey, isValidDecapsulationKey}` | — | Primitives + key check FIPS 203 §7.2/§7.3 |
+| `internalOf(ml_kem).{ntt, nttInv, isValidEncapsulationKey, isValidDecapsulationKey}` | — | Primitives + key check FIPS 203 §7.2/§7.3 |
 
 ## Examples
 
@@ -80,7 +80,7 @@ const worker = fw.createWorker(
 
 - **Implicit reject** on invalid ciphertext: `decapsulate` returns a pseudo-random sharedSecret (not `false`) per FIPS 203 §6.3 — the caller must NOT distinguish.
 - **Constant-time**: final Khat/Kbar selection by mask, no short-circuit.
-- **Key check** opt-in: `_internal.isValidEncapsulationKey(ek)` (modulus q check) + `isValidDecapsulationKey(dk)` (hash consistency).
+- **Key check** opt-in: `internalOf(ml_kem).isValidEncapsulationKey(ek)` (modulus q check) + `isValidDecapsulationKey(dk)` (hash consistency).
 
 ## See also
 

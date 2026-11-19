@@ -72,7 +72,8 @@ const hex = runtime.resolve('hex');
 | [API / DOM](./api/dom/README.md) | Rendering, query, storage, network |
 | [API / Process](./api/process/README.md) | Inter-context messages, RPC |
 | [API / Sanity](./api/sanity/base.md) | Security lockdown — base, community, lockdown (all three ESM, explicit call) · default tier: `lockdown()` |
-| [Evidence (`docs/evidence/`)](./evidence/pqc-hybrid-evidence.md) | Evaluation-evidence dossiers — pqc-hybrid combiners (vectors, provenance, reproducibility) |
+| [Evidence (`docs/evidence/`)](./evidence/l4-evidence.md) | Evidence dossiers — [L4](./evidence/l4-evidence.md) (frozen API, conformance vectors, production) and the [pqc-hybrid combiners](./evidence/pqc-hybrid-evidence.md) (vectors, provenance, reproducibility) |
+| [API stability](./guide/stability.md) | The public surface, SemVer rules, deprecation cycle and the snapshot gate |
 
 > **Generated API reference** (HTML, exhaustive signatures from types): `bun run docs:api` → `docs/api-generated/` (generated on demand, distinct from the editorial pages `docs/api/`). See [`../integrations/typedoc`](../integrations/typedoc/README.md).
 
@@ -120,7 +121,7 @@ const hex = runtime.resolve('hex');
 | `tokenBucket` | io/sync | Token bucket rate limiter (HTTP, backpressure) |
 | `binaryReader` | io/binary | Cursor reader over Uint8Array, endianness-aware — typed primitives, strings, zero-copy sub-reader |
 | `binaryWriter` | io/binary | Auto-growing endianness-aware writer — typed primitives, strings, seek-based patch |
-| `easing` | io/calc | Easing functions for animations |
+| `easing` | io/calc | Easing functions for animations — origin: [docs/dev/provenance.md](./dev/provenance.md) |
 | `crc32` | io/calc | CRC-32 checksum (incremental) |
 | `adler32` | io/calc | Adler-32 checksum (incremental) |
 | `bigint` | io/calc | BigInt conversions + modular arithmetic + Miller-Rabin |
@@ -189,6 +190,7 @@ const hex = runtime.resolve('hex');
 | `secPolicy` | dom/rendering | Low-level security primitives shared by the rendering pipeline — URL safety, DOM-clobbering, `on*` attributes, blocked tags, dangerous CSS |
 | `template` | dom/rendering | DOM engine: elm-array materialisation |
 | `themeTokens` | dom/rendering | CSS Custom Properties design tokens (light/dark/highContrast/reducedMotion variants) |
+| `styleSheet` | dom/rendering | Attach CSS text as a `<style>` element or a constructable stylesheet (`adoptedStyleSheets`, CSP `style-src 'self'`) |
 | `devtools` | dom/rendering | Read-only introspection of a uiSession + lightweight profiler + readable elm-array dump |
 | `devtoolsUI` | dom/rendering | Opt-in read-only inspector — session, module-registry and signal-graph views |
 | `uiSession` | dom/rendering | High-level facade (parse+render+template+dom) |
@@ -201,6 +203,7 @@ const hex = runtime.resolve('hex');
 | `events` | dom/query | Named event manager |
 | `gesture` | dom/query | Unified touch/pointer gestures (tap, swipe, pan, pinch) |
 | `media` | dom/query | Camera, microphone, screen access, stream management |
+| `sound` | dom/query | Short sound clips: record, trim / normalize, WAV bytes, play at any rate (Web Audio) |
 | `animate` | dom/display | Animation utilities |
 | `fullscreen` | dom/display | Fullscreen API |
 | `download` | dom/fs | File download |
@@ -222,10 +225,9 @@ const hex = runtime.resolve('hex');
 | `bn` | crypto/utils | Big Number (SJCL-derived) — ECDSA/RSA arithmetic — origin: [docs/dev/provenance.md](./dev/provenance.md) |
 | `pad` | crypto/utils | PKCS#7 padding (RFC 5652 §6.3) |
 | `random` | crypto/utils | CTR_DRBG-AES-256 (SP 800-90A) + RCT/APT (SP 800-90B) |
-| `aes_ctr` | crypto/utils | **`@deprecated`** legacy AES-CTR + PKCS#7 wrapper |
-| `sha256` | crypto/hash | SHA-256 (FIPS 180-4 §6.2) |
+| `sha256` | crypto/hash | SHA-256 (FIPS 180-4 §6.2) — origin: [docs/dev/provenance.md](./dev/provenance.md) |
 | `sha224` | crypto/hash | SHA-224 (FIPS 180-4 §6.3) — sha256 wrapper |
-| `sha512` | crypto/hash | SHA-512 (FIPS 180-4 §6.4) + parametric builder |
+| `sha512` | crypto/hash | SHA-512 (FIPS 180-4 §6.4) + parametric builder — origin: [docs/dev/provenance.md](./dev/provenance.md) |
 | `sha512_224` | crypto/hash | SHA-512/224 (FIPS 180-4 §5.3.6.1) |
 | `sha512_256` | crypto/hash | SHA-512/256 (FIPS 180-4 §5.3.6.2) |
 | `sha384` | crypto/hash | SHA-384 (FIPS 180-4 §6.5) — sha512 wrapper |
@@ -237,7 +239,7 @@ const hex = runtime.resolve('hex');
 | `poly1305` | crypto/hash | Poly1305 (RFC 8439 §2.5) — one-time MAC |
 | `blake2b` | crypto/hash | BLAKE2b (RFC 7693); salt/person; keyed mode |
 | `argon2` | crypto/hash | Argon2id (RFC 9106); Argon2d/i explicit reject |
-| `aes` | crypto/cipher | AES-128/192/256 (FIPS 197) + constant-time bitsliced variant |
+| `aes` | crypto/cipher | AES-128/192/256 (FIPS 197), constant-time by default + opt-in T-table path — origin: [docs/dev/provenance.md](./dev/provenance.md) |
 | `chacha20` | crypto/cipher | ChaCha20 IETF (RFC 8439) — stream cipher |
 | `ctr` | crypto/mode | AES-CTR (SP 800-38A §6.5) — stream |
 | `cbc` | crypto/mode | AES-CBC (SP 800-38A §6.2) |
@@ -245,9 +247,9 @@ const hex = runtime.resolve('hex');
 | `cmac` | crypto/mode | AES-CMAC (SP 800-38B / RFC 4493); TDES rejected |
 | `kw` | crypto/mode | AES-KW + KWP (SP 800-38F / RFC 3394 / RFC 5649) |
 | `chacha20poly1305` | crypto/mode | AEAD ChaCha20-Poly1305 (RFC 8439 §2.8) |
-| `ecc` | crypto/pkc | ECDSA P-{224,256,384,521}+K-curves (FIPS 186-5 + RFC 6979) |
-| `x25519` | crypto/pkc | X25519 DH (RFC 7748) + isLowOrderPoint helper |
-| `ed25519` | crypto/pkc | Ed25519 + ph + ctx (RFC 8032 / FIPS 186-5 §7.6) |
+| `ecc` | crypto/pkc | ECDSA P-{224,256,384,521}+K-curves (FIPS 186-5 + RFC 6979) — origin: [docs/dev/provenance.md](./dev/provenance.md) |
+| `x25519` | crypto/pkc | X25519 DH (RFC 7748) + isLowOrderPoint helper — origin: [docs/dev/provenance.md](./dev/provenance.md) |
+| `ed25519` | crypto/pkc | Ed25519 + ph + ctx (RFC 8032 / FIPS 186-5 §7.6) — origin: [docs/dev/provenance.md](./dev/provenance.md) |
 | `rsa` | crypto/pkc | RSA-OAEP + RSA-PSS (FIPS 186-5); PKCS#1 v1.5 reject |
 | `ml_kem` | crypto/pkc | ML-KEM Kyber post-quantum KEM (FIPS 203) |
 | `ml_dsa` | crypto/pkc | ML-DSA Dilithium post-quantum signatures (FIPS 204) |
@@ -256,7 +258,8 @@ const hex = runtime.resolve('hex');
 | `hybridSign` | crypto/pkc | Composite signatures (LAMPS, AND-verify): MLDSA65-Ed25519 + MLDSA65-ECDSA-P256 |
 | `rsaKeygen` | crypto/utils | RSA 2048+ key generation (FIPS 186-5 §A.1.3) |
 | `jws` | crypto/utils | JSON Web Signature (RFC 7515) — HS*/EdDSA |
-| `keyformat` | crypto/utils | EC/Ed/X/RSA key serialisation (PKCS#8 + SPKI + SEC1) |
+| `keyformat` | crypto/utils | EC/Ed/X/RSA key serialisation (PKCS#8 + SPKI + SEC1 + PKCS#1) |
+| `x509` | crypto/utils | X.509 v3 certificates (RFC 5280) — Ed25519 / ECDSA P-256, create + parse + verify |
 | `totp` | crypto/utils | TOTP RFC 6238 + HOTP RFC 4226 — time-based OTP codes |
 | `webcryptoDigest` | crypto/webcrypto | Opt-in async SHA-1/256/384/512 over `crypto.subtle.digest` |
 | `webcryptoHmac` | crypto/webcrypto | Opt-in async HMAC sign/verify (SHA-256/384/512 + SHA-1 legacy) |

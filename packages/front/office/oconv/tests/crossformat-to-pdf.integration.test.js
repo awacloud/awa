@@ -363,12 +363,15 @@ function sourceWords(ir, mapUnencodable) {
 
 /** Decoded words: `toMd` the emitted PDF, drop `---` lines, split on whitespace. */
 function decodedWords(markdown) {
+    // Tokens that are Markdown markup only — a heading's `#`s, a table's
+    // pipes and delimiter row — are not words of the text (T30 (a): the pdf
+    // read infers headings and tables by default).
     return bodyOf(markdown)
         .split('\n')
         .filter((line) => line.trim() !== '---')
         .join(' ')
         .split(/\s+/)
-        .filter(Boolean);
+        .filter((w) => w && !/^(#{1,6}|[|:-]*\|[|:-]*|:?-{3,}:?)$/.test(w));
 }
 
 /** Length of the longest in-order prefix of `src` consumed while scanning `dec`. */
@@ -492,12 +495,18 @@ describe('crossformat → pdf — leg 3: word-stream return leg (MEASURED, not a
         expect(latin1(numbering.bytes)).toContain('1 0 0 1 61.519 686.197 Tm (1.) Tj');
         expect(latin1(numbering.bytes)).toContain('1 0 0 1 74.693 686.197 Tm (Level1) Tj');
 
+        // The cells' spacing is the text-first read's (`pdfInfer: []`); by
+        // default (T30 (a)) the same cells come back as a GFM table.
         const table = await toPdf(FIXTURES[4]);
         const tableMd = bodyOf((await oconv.toMd({
-            name: 'x.pdf', bytes: table.bytes, convertedAt: FIXED_AT
+            name: 'x.pdf', bytes: table.bytes, convertedAt: FIXED_AT, pdfInfer: []
         })).markdown);
         expect(tableMd).toContain('Loren Ipsum Dolor');
         expect(tableMd).not.toContain('LorenIpsumDolor');
+        const inferred = bodyOf((await oconv.toMd({
+            name: 'x.pdf', bytes: table.bytes, convertedAt: FIXED_AT
+        })).markdown);
+        expect(inferred).toContain('| Loren | Ipsum | Dolor |');
     });
 
     // Root cause (b), pinned directly on its fix: the Standard 14 font dict

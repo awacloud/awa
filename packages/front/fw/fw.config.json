@@ -55,7 +55,7 @@
                 "linalg", "geom", "stats", "fixedPoint",
                 "binaryReader", "binaryWriter",
                 "processMessage", "processRPC",
-                "dnd", "media"
+                "dnd", "media", "sound"
             ]
         },
         "pwa": {
@@ -87,7 +87,7 @@
         "crypto-identity": {
             "description": "Passkeys, signatures, key formats.",
             "modules": [
-                "webauthn", "jws", "keyformat",
+                "webauthn", "jws", "keyformat", "x509",
                 "ed25519", "x25519", "ecc",
                 "pem", "asn1", "asn1Oid", "bitArray", "bn"
             ]

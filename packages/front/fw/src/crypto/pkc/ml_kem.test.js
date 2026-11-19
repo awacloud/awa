@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -11,6 +11,7 @@ import { bitArray } from '../utils/bitArray.js';
 import { random } from '../utils/random.js';
 import { utf8 } from '../../io/codec/utf8.js';
 import { hex } from '../../io/codec/hex.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _bitArray = bitArray.factory();
 const _utf8 = utf8.factory(_bitArray);
@@ -55,8 +56,8 @@ describe('ml_kem module', () => {
         const f = new Uint16Array(256);
         for (let i = 0; i < 256; i++) f[i] = (i * 7 + 11) % 3329;
         const orig = new Uint16Array(f);
-        M._ntt(f);
-        M._nttInv(f);
+        M[INTERNAL].ntt(f);
+        M[INTERNAL].nttInv(f);
         for (let i = 0; i < 256; i++) expect(f[i]).toBe(orig[i]);
     });
 
@@ -294,7 +295,7 @@ describe('ML-KEM-encapDecap-FIPS203 / decapsulationKeyCheck (NIST CAVP, 30/30 ve
     test.each(_DKC)(
         'tgId=$tg tcId=$tc ($ps, expected=$pass): _internal.isValidDecapsulationKey(dk)',
         (v) => {
-            const ok = _MLKEM[v.ps]._internal.isValidDecapsulationKey(_hex.toBytes(v.dk));
+            const ok = _MLKEM[v.ps][INTERNAL].isValidDecapsulationKey(_hex.toBytes(v.dk));
             expect(ok).toBe(v.pass);
         }
     );
@@ -304,7 +305,7 @@ describe('ML-KEM-encapDecap-FIPS203 / encapsulationKeyCheck (NIST CAVP, 30/30 ve
     test.each(_EKC)(
         'tgId=$tg tcId=$tc ($ps, expected=$pass): _internal.isValidEncapsulationKey(ek)',
         (v) => {
-            const ok = _MLKEM[v.ps]._internal.isValidEncapsulationKey(_hex.toBytes(v.ek));
+            const ok = _MLKEM[v.ps][INTERNAL].isValidEncapsulationKey(_hex.toBytes(v.ek));
             expect(ok).toBe(v.pass);
         }
     );
@@ -365,11 +366,11 @@ if (RUN_FULL_H3) {
                 }, 30_000);
             } else if (fn === 'decapsulationKeyCheck') {
                 test(`tgId=${v.tg} tcId=${v.tc} (${v.ps}) decapKeyCheck → ${v.testPassed}`, () => {
-                    expect(_MLKEM[v.ps]._internal.isValidDecapsulationKey(_hex.toBytes(v.dk))).toBe(v.testPassed);
+                    expect(_MLKEM[v.ps][INTERNAL].isValidDecapsulationKey(_hex.toBytes(v.dk))).toBe(v.testPassed);
                 });
             } else if (fn === 'encapsulationKeyCheck') {
                 test(`tgId=${v.tg} tcId=${v.tc} (${v.ps}) encapKeyCheck → ${v.testPassed}`, () => {
-                    expect(_MLKEM[v.ps]._internal.isValidEncapsulationKey(_hex.toBytes(v.ek))).toBe(v.testPassed);
+                    expect(_MLKEM[v.ps][INTERNAL].isValidEncapsulationKey(_hex.toBytes(v.ek))).toBe(v.testPassed);
                 });
             }
         }

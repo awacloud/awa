@@ -96,6 +96,8 @@ import { wmlRunFormatting }       from './extra/wml-run-formatting.js';
 import { wmlParagraphFormatting } from './extra/wml-paragraph-formatting.js';
 import { wmlTableProperties }     from './extra/wml-table-properties.js';
 import { wmlNumberingDetails }    from './extra/wml-numbering-details.js';
+import { wmlStyleDetails }        from './extra/wml-style-details.js';
+import { wmlDocumentDetails }     from './extra/wml-document-details.js';
 import { wmlSettings }            from './extra/wml-settings.js';
 import { wmlFields }              from './extra/wml-fields.js';
 import { wmlTrackedChanges }      from './extra/wml-tracked-changes.js';
@@ -117,6 +119,11 @@ import { dmlChartOtherTypes }     from './extra/dml-chart-other-types.js';
 import { mathAdvanced }           from './extra/math-advanced.js';
 import { dmlEffects }             from './extra/dml-effects.js';
 import { dmlFillsAdvanced }       from './extra/dml-fills-advanced.js';
+import { dmlTextDetails }         from './extra/dml-text-details.js';
+import { pmlPartDetails }         from './extra/pml-part-details.js';
+import { pmlPackageParts }        from './extra/pml-package-parts.js';
+import { smlWorkbookDetails }     from './extra/sml-workbook-details.js';
+import { smlPackageParts }        from './extra/sml-package-parts.js';
 import { dmlShapesAdvanced }      from './extra/dml-shapes-advanced.js';
 import { dmlWpPositioning }       from './extra/dml-wp-positioning.js';
 import { dmlXdrAdvanced }         from './extra/dml-xdr-advanced.js';
@@ -132,12 +139,12 @@ import { mathMisc }               from './extra/math-misc.js';
 
 export const extras = [
     wmlRunFormatting, wmlParagraphFormatting, wmlTableProperties,
-    wmlNumberingDetails, wmlSettings, wmlFields, wmlTrackedChanges,
+    wmlNumberingDetails, wmlStyleDetails, wmlDocumentDetails, wmlSettings, wmlFields, wmlTrackedChanges,
     wmlVmlLegacy, smlPivotTables, smlCalculation, smlSheetConfig,
     smlWorkbookConfig, smlFormControls, pmlAnimations, pmlTransitions,
-    pmlNotes, pmlLayoutsTyped, dmlChartDataLabels, dmlChartTrendlines,
+    pmlNotes, pmlLayoutsTyped, pmlPartDetails, pmlPackageParts, smlWorkbookDetails, smlPackageParts, dmlChartDataLabels, dmlChartTrendlines,
     dmlChartAxesAdvanced, dmlChart3d, dmlChartOtherTypes, mathAdvanced,
-    dmlEffects, dmlFillsAdvanced, dmlShapesAdvanced, dmlWpPositioning,
+    dmlEffects, dmlFillsAdvanced, dmlTextDetails, dmlShapesAdvanced, dmlWpPositioning,
     dmlXdrAdvanced, dmlWpDrawing, transitional, legacyVml,
     wmlMisc, smlMisc, pmlMisc, dmlMainMisc, dmlChartMisc, mathMisc
 ];

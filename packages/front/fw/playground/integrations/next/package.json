@@ -5,8 +5,8 @@
     "scripts": {
         "postinstall": "node ../../_tools/link-fw.mjs",
         "setup": "node ../../_tools/link-fw.mjs",
-        "dev": "next telemetry disable && next dev",
-        "build": "next telemetry disable && next build",
+        "dev": "next dev",
+        "build": "next build",
         "start": "next start"
     },
     "dependencies": {
@@ -19,5 +19,8 @@
         "@types/react": "^19.2.17",
         "@types/react-dom": "^19.2.3",
         "typescript": "^5.9.3"
+    },
+    "playground": {
+        "page": false
     }
 }

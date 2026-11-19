@@ -330,3 +330,70 @@ describe('webcryptoEcc invalid arguments', () => {
         expect(await _wc.exportKey('der', pair.publicKey)).toBe(false);
     });
 });
+
+// ── ACVP ECDSA-SigVer-FIPS186-5 (vendored) ─────────────────────────────────
+// Source: references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ECDSA-SigVer-FIPS186-5/
+// (copied byte-exact into tests/_vectors/, provenance in its README). The
+// groups WebCrypto can run: P-256 / P-384 / P-521 with SHA2-256 or SHA2-512,
+// 6 groups x 7 cases, valid and invalid. Each case must verify to exactly
+// its `testPassed` value; a key that does not import counts as `false`.
+describe('webcryptoEcc — ACVP ECDSA-SigVer-FIPS186-5', () => {
+    const FIELD_BYTES = { 'P-256': 32, 'P-384': 48, 'P-521': 66 };
+    const HASH = { 'SHA2-256': 'SHA-256', 'SHA2-512': 'SHA-512' };
+    const hexToBytes = (h, len) => {
+        const s = h.length % 2 ? '0' + h : h;
+        const raw = Uint8Array.from(s.match(/../g) || [], (b) => parseInt(b, 16));
+        if (len === undefined || raw.length >= len) return raw;
+        const out = new Uint8Array(len);
+        out.set(raw, len - raw.length);
+        return out;
+    };
+    let groups = [];
+
+    beforeAll(async () => {
+        const { readFileSync } = await import('node:fs');
+        const url = new URL('../../../tests/_vectors/ECDSA-SigVer-FIPS186-5/internalProjection.json', import.meta.url);
+        const p = JSON.parse(readFileSync(url, 'utf8'));
+        groups = p.testGroups.filter((g) => FIELD_BYTES[g.curve] && HASH[g.hashAlg]);
+    });
+
+    test('the supported subset is the expected size (non-vacuity)', () => {
+        expect(groups.length).toBe(6);
+        expect(groups.reduce((n, g) => n + g.tests.length, 0)).toBe(42);
+        // both outcomes are exercised
+        const all = groups.flatMap((g) => g.tests);
+        expect(all.some((t) => t.testPassed)).toBe(true);
+        expect(all.some((t) => !t.testPassed)).toBe(true);
+    });
+
+    test('every case verifies to its ACVP testPassed value', async () => {
+        const mismatches = [];
+        const warn = console.warn, error = console.error;
+        console.warn = () => {}; console.error = () => {};
+        try {
+            for (const g of groups) {
+                const n = FIELD_BYTES[g.curve];
+                for (const t of g.tests) {
+                    const raw = new Uint8Array(1 + 2 * n);
+                    raw[0] = 0x04;
+                    raw.set(hexToBytes(t.qx, n).slice(-n), 1);
+                    raw.set(hexToBytes(t.qy, n).slice(-n), 1 + n);
+                    const sig = new Uint8Array(2 * n);
+                    const r = hexToBytes(t.r, n), s = hexToBytes(t.s, n);
+                    const fits = r.length === n && s.length === n;
+                    let ok = false;
+                    if (fits) {
+                        sig.set(r, 0);
+                        sig.set(s, n);
+                        const pub = await _wc.importKey('raw', raw, 'ECDSA', g.curve, ['verify']);
+                        ok = pub ? await _wc.verify(pub, sig, hexToBytes(t.message), HASH[g.hashAlg]) : false;
+                    }
+                    if (ok !== t.testPassed) mismatches.push(`tg${g.tgId}/tc${t.tcId}`);
+                }
+            }
+        } finally {
+            console.warn = warn; console.error = error;
+        }
+        expect(mismatches).toEqual([]);
+    }, 60000);
+});

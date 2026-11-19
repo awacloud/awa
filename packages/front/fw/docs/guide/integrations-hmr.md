@@ -69,7 +69,7 @@ anything.
 
 ## The Vite exception, precisely
 
-Task 04 of this batch closed a real gap: before it, editing `fw.config.json`
+One gap is closed: before, editing `fw.config.json`
 or regenerating the committed module catalog while `vite dev` was running
 required killing and restarting the dev server for the change to take
 effect, because the plugin's internal state was built once at construction

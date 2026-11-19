@@ -1,7 +1,7 @@
 ---
 module: pdfDocument
 category: pdf/document
-dependencies: [pdfErrors, pdfTokenizer, pdfParser, pdfXref, pdfTrailer, pdfCatalog, pdfPage, pdfPages, pdfCrossRefStream, pdfObjStream, pdfFilterDispatch, pdfSecurity, pdfStandardV4, pdfStandardV5, pdfStandardV6]
+dependencies: [pdfErrors, pdfTokenizer, pdfParser, pdfXref, pdfTrailer, pdfCatalog, pdfPage, pdfPages, pdfCrossRefStream, pdfObjStream, pdfFilterDispatch, pdfSecurity, pdfStandardV4, pdfStandardV5, pdfStandardV6, pdfInfo]
 returns: object
 worker-safe: true
 status: complete
@@ -11,11 +11,23 @@ status: complete
 
 > Top-level read orchestrator — `Uint8Array` → navigable typed model.
 
-**Module** `pdfDocument` | **Source** `packages/front/office/pdf/src/document/document.js` | **Deps** `pdfErrors`, `pdfTokenizer`, `pdfParser`, `pdfXref`, `pdfTrailer`, `pdfCatalog`, `pdfPage`, `pdfPages`, `pdfCrossRefStream`, `pdfObjStream`, `pdfFilterDispatch`, `pdfSecurity`, `pdfStandardV4`, `pdfStandardV5`, `pdfStandardV6` | **Worker-safe** yes
+**Module** `pdfDocument` | **Source** `packages/front/office/pdf/src/document/document.js` | **Deps** `pdfErrors`, `pdfTokenizer`, `pdfParser`, `pdfXref`, `pdfTrailer`, `pdfCatalog`, `pdfPage`, `pdfPages`, `pdfCrossRefStream`, `pdfObjStream`, `pdfFilterDispatch`, `pdfSecurity`, `pdfStandardV4`, `pdfStandardV5`, `pdfStandardV6`, `pdfInfo` | **Worker-safe** yes
 
 Full pipeline: header → xref (chaining `/Prev`, at most 32 sections) → trailer →
-catalog → pages. It builds an **indirect resolver** (`doc._raw.resolve`) backed
-by a `Map<'num:gen'>` cache.
+catalog → pages. It builds an **indirect resolver** (`doc.resolve`, also at
+`doc._raw.resolve`) backed by a `Map<'num:gen'>` cache.
+
+**The read document's public reach.** Beside `{ version, catalog, pages,
+trailer, xref, losses }` the result carries:
+
+| Member | Signature | Description |
+|---|---|---|
+| `resolve` | `(node) => value` | A reference to its object (decrypted as every read object), any other value itself. |
+| `info` | `() => object \| null` | The Info dictionary as text: `{ title, author, subject, keywords, creator, producer, creationDate, modDate, trapped }`, each string decoded as a PDF text string (UTF-16BE, UTF-8, PDFDocEncoding), a missing or non-string entry left out, `trapped` a name's value or `'True'` / `'False'` for a boolean; `null` when the trailer has no Info dictionary. It never throws on a malformed entry. |
+| `pageContents` | `(i) => Uint8Array` | Page `i`'s content: its streams resolved, decoded through their filters and joined with a newline between two (ISO 32000 §7.8.2); empty bytes without `/Contents`. A stream that does not resolve or decode throws its error (`pdf/document/bad-contents` when a reference is not a stream); an index that is no page's throws `ContractError` `pdf/document/bad-page-index`. |
+
+`_raw` (`{ resolve, bytes | source, headerEnd, indirects }`) stays for the
+callers that need the bytes.
 
 Both cross-reference forms are read automatically. At each `startxref` /
 `/Prev` offset the walk looks at the bytes: an `xref` keyword takes the
@@ -55,6 +67,14 @@ still defines the object, and records `pdf/document/free-entry-fallback` in
 `/Root` that is free in every section is still refused with
 `pdf/document/free-object`.
 
+**Reference cycles.** A stream's indirect `/Length` is resolved while the
+stream is read. When it names the stream itself, or an object stream names
+one of its own members, the reference reads as the null object and the
+resolver records `pdf/document/reference-cycle` (context `num`, `gen`) in
+`doc.losses`; the stream's data then ends at its `endstream`. A nesting of
+more than 32 objects being read at once throws
+`pdf/document/resolve-too-deep`.
+
 ## Resolve
 
 ```js
@@ -66,8 +86,38 @@ const docMod = runtime.resolve('pdfDocument');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `readDocument` | `(bytes: Uint8Array, opts?: { allowEncrypted?: boolean, recoverXref?: boolean, password?: string \| Uint8Array, legacyRc4?: object, fastCipher?: boolean }) => Document` | Full model; `password` opens an encrypted document (see [Encrypted documents](#encrypted-documents)); `recoverXref: true` rebuilds an unusable cross-reference table from the bytes (see [Cross-reference recovery](#cross-reference-recovery)). |
+| `readDocument` | `(input: Uint8Array \| { byteLength: number, read(offset: number, length: number): Uint8Array }, opts?: { allowEncrypted?: boolean, recoverXref?: boolean, password?: string \| Uint8Array, legacyRc4?: object, fastCipher?: boolean, sourceWindow?: number }) => Document` | Full model; the input may be a byte source, read by windows (see [A byte source](#a-byte-source)); `password` opens an encrypted document (see [Encrypted documents](#encrypted-documents)); `recoverXref: true` rebuilds an unusable cross-reference table from the bytes (see [Cross-reference recovery](#cross-reference-recovery)). |
 | `readHeader` | `(bytes: Uint8Array) => { version, end }` | Header only. |
+
+### A byte source
+
+`readDocument` also takes a byte source `{ byteLength, read(offset, length) }`: `read` is synchronous and returns a `Uint8Array` of up to `length` bytes from `offset` (Bun / Node's `readSync`, a worker's `FileReaderSync` over a `Blob`). The file is then never held whole. The reader reads windows:
+
+- the header from the file's start;
+- `startxref` from the last 8,192 bytes;
+- each xref section with its trailer, and each object as it is resolved, from a window at its offset.
+
+A window starts at 64 KiB, or `opts.sourceWindow` (an integer of at least 16, else `ContractError` `pdf/document/bad-source-window-option`). It doubles while a parse runs out of it, a stream whose `/Length` passes the window's end included, never cut at an `endstream` inside it. Past the parser's `maxStreamBytes` plus 64 KiB it is refused with `ParseError` `pdf/document/source-window`.
+
+A resolved stream keeps a copy of its bytes, not its window. The result is the document a read of the same bytes gives, except that `_raw` carries `source` in place of `bytes`.
+
+One refusal is specific to a source: a `read` that returns no `Uint8Array` throws `ContractError` `pdf/document/bad-source-read`. A source whose cross-reference chain fails is read whole once, since the rebuild scans the whole file, so a source and its bytes give one outcome.
+
+A `Uint8Array` input is one window over the whole file: the same code path as before.
+
+```js
+import { openSync, fstatSync, readSync } from 'node:fs';
+const fd = openSync('large.pdf', 'r');
+const source = {
+    byteLength: fstatSync(fd).size,
+    read(offset, length) {
+        const out = new Uint8Array(Math.max(0, Math.min(length, this.byteLength - offset)));
+        readSync(fd, out, 0, out.length, offset);
+        return out;
+    }
+};
+const doc = docMod.readDocument(source);
+```
 
 ### `Document` shape
 
@@ -133,12 +183,14 @@ and 19-byte entries (a one-byte EOL). Each shape met records one
 `'subsection-header-space'` or `'entry-eol-one-byte'`, `context.at` the
 section's offset).
 
-By default the reader follows `startxref` and the `/Prev` chain and
-throws on the first section it cannot use (a wrong offset, a
-cross-reference stream whose filter it cannot decode, no `startxref`).
-With `{ recoverXref: true }` (only `true` enables it), such a failure —
-any `pdf/…` `ParseError` of the walk, or a trailer without `/Root` —
-rebuilds the table from the file's bytes instead:
+The reader follows `startxref` and the `/Prev` chain. A section it
+cannot use (a wrong offset, a cross-reference stream whose filter it
+cannot decode, no `startxref`) — any `pdf/…` `ParseError` of the walk, or
+a trailer without `/Root` — rebuilds the table from the file's bytes, by
+default; `{ recoverXref: false }` (only `false` turns it off) throws the
+walk's error instead. The paths that append an incremental update to
+the file read it with `recoverXref: false`: `pdfSign` (the signing base
+and the DSS update) and `pdfFormFill`. The rebuild:
 
 - every `N G obj` definition, in file order, the later one winning (an
   incremental update);
@@ -157,17 +209,22 @@ still throws `pdf/trailer/missing-root`. A readable chain is never
 rebuilt.
 
 ```js
-const doc = docMod.readDocument(bytes, { recoverXref: true });
+const doc = docMod.readDocument(bytes); // rebuilt; { recoverXref: false } throws
 doc.losses.some((l) => l.code === 'pdf/document/xref-rebuilt'); // true when it was rebuilt
 ```
 
 ## Encrypted documents
 
-`readDocument` fails loud on an encrypted input: when the
-trailer carries `/Encrypt` (`/Encrypt null` is no entry, so a plaintext
-document), it throws `pdf/document/encrypted` instead
-of silently returning a model whose strings and streams are still
-ciphertext.
+When the trailer carries `/Encrypt` (`/Encrypt null` is no entry, so a
+plaintext document) and no `password` is given, `readDocument` tries the
+empty password, as the user then as the owner: a document it opens reads,
+with one `pdf/document/opened-with-empty-password` loss (context:
+`permissions`, the `/P` bits). One it does not open throws
+`pdf/document/encrypted` instead of silently returning a model whose
+strings and streams are still ciphertext. `{ emptyPassword: false }`
+throws it on every encrypted document read with no password. `pdfSign` and
+`pdfFormFill` read with `allowEncrypted`; `pdfMerge` refuses an encrypted
+source (`pdf/merge/encrypted-source`).
 
 `{ password }` (a string or a `Uint8Array`; `''` is the empty user
 password most protected files carry) opens it: the `/Encrypt` dictionary
@@ -212,7 +269,7 @@ try {
     docMod.readDocument(bytes);
 } catch (e) {
     if (e.code === 'pdf/document/encrypted') {
-        // bytes are encrypted; no decrypt path is composed here.
+        // encrypted, and the empty password does not open it: pass { password }.
     }
 }
 
@@ -234,7 +291,7 @@ const doc = docMod.readDocument(bytes, { password: '' });
 | `pdf/document/no-startxref` | `ParseError` | No `startxref` at the end of the file. |
 | `pdf/document/no-trailer` | `ParseError` | No usable trailer. |
 | `pdf/document/bad-fast-cipher-option` | `ContractError` | `opts.fastCipher` is present and not a boolean. |
-| `pdf/document/encrypted` | `ParseError` | Trailer carries `/Encrypt`, and neither `opts.password` nor `opts.allowEncrypted: true` is given. |
+| `pdf/document/encrypted` | `ParseError` | Trailer carries `/Encrypt`, neither `opts.password` nor `opts.allowEncrypted: true` is given, and the empty password does not open it (or `opts.emptyPassword` is `false`). |
 | `pdf/document/bad-password-option` | `ContractError` | `opts.password` is neither a string nor a `Uint8Array`. |
 | `pdf/document/bad-legacy-rc4-option` | `ContractError` | `opts.legacyRc4` is not the `pdfLegacyRc4Read` instance (`validateUserPassword`, `validateOwnerPassword`, `decryptString`, `decryptStream`). |
 | `pdf/document/bad-password` | `EncryptionError` | `opts.password` opens the document neither as its user nor as its owner password. |
@@ -242,6 +299,7 @@ const doc = docMod.readDocument(bytes, { password: '' });
 | `pdf/document/missing-xref` | `ParseError` | Reference absent from the table. |
 | `pdf/document/free-object` | `ParseError` | The catalog (`/Root`) is free in every xref section. Any other free reference is recorded in `doc.losses` instead of thrown. |
 | `pdf/document/bad-offset` | `ParseError` | Xref offset out of range. |
+| `pdf/document/resolve-too-deep` | `ParseError` | Resolving a reference nests more than 32 objects being read at once (a chain of indirect `/Length` entries). A reference to an object already being read is recorded as `pdf/document/reference-cycle` in `doc.losses` instead. |
 | `pdf/document/xref-mismatch` | `ParseError` | The definition at the offset does not match the expected `num gen`. |
 | `pdf/document/bad-xref-section` | `ParseError` | The bytes at a `startxref` / `/Prev` / `/XRefStm` offset are neither an `xref` table nor a `/Type /XRef` stream. |
 | `pdf/document/xrefstm-indirect-length` | `ParseError` | A cross-reference stream uses an indirect `/Length`, which cannot be resolved before the xref exists. |

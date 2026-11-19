@@ -33,7 +33,11 @@ const FIXTURE = resolve(HERE, 'fixture', 'app.js');
 const TMP = resolve(HERE, '.tmp');
 
 const CORE_MODULES = ['errors', 'eventBus', 'signal', 'valid', 'ui8', 'abort', 'clock'];
-const SANITY_TOKEN = 'BLOCKED_WINDOW_APIS';
+// String literals survive minification (identifiers do not): base's
+// Math.random refusal message is present in the source and in the minified
+// classic artifact the webpack plugin injects.
+const SANITY_TOKEN = 'use crypto.getRandomValues instead';
+const LOCKDOWN_TOKEN = 'lockdown: evaluator removed';
 
 /**
  * Ensure `@awacloud/fw` resolves to this package, so bundlers resolve the emitted
@@ -171,6 +175,24 @@ async function runWebpack() {
         assertMarkers(code, 'webpack');
         if (!code.includes(SANITY_TOKEN)) throw new Error('webpack: sanity layer not injected');
         record('webpack', 'PASS', 'built (markers + sanity ✓)');
+
+        // sanity: 'lockdown' prepends the self-applying `lockdown.apply`
+        // wrapper; the bundle must carry the lockdown tier itself.
+        const outLock = resolve(TMP, 'webpack-lockdown');
+        const codeLock = await new Promise((res, rej) => {
+            webpack({
+                mode: 'development', target: 'web', entry: FIXTURE,
+                output: { path: outLock, filename: 'bundle.js' },
+                plugins: [new FwWebpackPlugin({ preset: 'core', sanity: 'lockdown' })],
+            }, (err, stats) => {
+                if (err) return rej(err);
+                if (stats.hasErrors()) return rej(new Error(stats.toString({ all: false, errors: true })));
+                try { res(readFileSync(resolve(outLock, 'bundle.js'), 'utf8')); }
+                catch (e) { rej(e); }
+            });
+        });
+        if (!codeLock.includes(LOCKDOWN_TOKEN)) throw new Error('webpack: lockdown tier not injected');
+        record('webpack-lockdown', 'PASS', 'built (lockdown tier ✓)');
     });
 }
 
@@ -207,7 +229,10 @@ async function runVite() {
         if (/@awacloud\/fw\/sanity/.test(devHtml)) throw new Error('dev: bare "@awacloud/fw/sanity" specifier leaked into served HTML');
         const proxy = devHtml.match(/src="([^"]*html-proxy[^"]*)"/);
         if (!proxy) throw new Error('dev: sanity script not injected (no processed module)');
-        const res = await server.transformRequest(proxy[1]);
+        // The src is an HTML attribute: Vite >= 8 escapes its `&` as `&amp;`,
+        // and requesting the raw attribute text loses the `index` query
+        // (Vite then serves index.html itself as JS). Decode it as a browser does.
+        const res = await server.transformRequest(proxy[1].replace(/&amp;/g, '&'));
         if (!res || !res.code.includes('sanity/base')) throw new Error('dev: injected script does not import the sanity layer');
         if (/@awacloud\/fw\/sanity/.test(res.code)) throw new Error('dev: sanity import left unresolved (still bare) in the proxy module');
     } finally {

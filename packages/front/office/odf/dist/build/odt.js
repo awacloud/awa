@@ -954,6 +954,8 @@ export const odtPackage = {
             runs.push(parseLink(c, ctx));
           else if (c.name === "draw:frame" && ctx && typeof ctx.parseFrame === "function")
             runs.push(ctx.parseFrame(c));
+          else if (c.name === "text:note" && ctx && typeof ctx.parseNote === "function")
+            runs.push(ctx.parseNote(c));
           else if (inPlace)
             runs.push(c);
           else
@@ -1056,6 +1058,8 @@ export const odtPackage = {
           return ctx && typeof ctx.renderImage === "function" ? ctx.renderImage(r) : xml.text("");
         case "frame":
           return ctx && typeof ctx.renderFrame === "function" ? ctx.renderFrame(r) : xml.text("");
+        case "note":
+          return ctx && typeof ctx.renderNote === "function" ? ctx.renderNote(r) : xml.text("");
         case "element":
           return r;
         default:
@@ -2912,6 +2916,8 @@ export const odtPackage = {
       for (const key of ["listStyles", "sectionStyles"])
         if (opts && opts[key] !== void 0 && typeof opts[key] !== "boolean")
           throw new ContractError("odf/contract-error/odt", `odt: read opts.${key} must be true or false`, { context: { module: "odt", argument: `opts.${key}` } });
+      if (opts && opts.notes !== void 0 && typeof opts.notes !== "boolean")
+        throw new ContractError("odf/contract-error/odt", "odt: read opts.notes must be true or false", { context: { module: "odt", argument: "opts.notes" } });
       const textBoxes = !!(opts && opts.textBoxes);
       if (textBoxes && !(opts && opts.framesInRuns))
         throw new ContractError("odf/contract-error/odt", "odt: read opts.textBoxes needs opts.framesInRuns", { context: { module: "odt", argument: "opts.textBoxes" } });
@@ -2923,7 +2929,7 @@ export const odtPackage = {
         throw new ParseError("odf/parse-error/odt", "odt: missing content.xml", { context: { part: "content.xml", module: "odt" } });
       const result = { mimetype: p.mimetype, body: [], package: p };
       readSidecars(result, p, { metaMod, settingsMod, stylesMod });
-      const parsed = parseContent(shared.decodeText(contentBytes), result.styles, !!(opts && opts.framesInRuns), !!(opts && opts.elementsInRuns), semanticStyles, textBoxes);
+      const parsed = parseContent(shared.decodeText(contentBytes), result.styles, !!(opts && opts.framesInRuns), !!(opts && opts.elementsInRuns), semanticStyles, textBoxes, !!(opts && opts.notes));
       result.body = parsed.body;
       if (parsed.autoStyles)
         result.autoStyles = parsed.autoStyles;
@@ -3101,14 +3107,14 @@ export const odtPackage = {
     function textFontName(style) {
       return style && style.properties && style.properties.text && style.properties.text["style:font-name"];
     }
-    function parseContent(xmlString, stylesModel, framesInRuns, elementsInRuns, semanticStyles, textBoxes) {
+    function parseContent(xmlString, stylesModel, framesInRuns, elementsInRuns, semanticStyles, textBoxes, notes) {
       const root = parseXmlOrThrow(xmlString, "odt", { part: "content.xml", module: "odt" });
       if (root.name !== "office:document-content")
         throw new ParseError("odf/parse-error/odt", `odt: unexpected content root <${root.name}>`, { context: { part: "content.xml", module: "odt" } });
       const bodyEl = xml.findChild(root, "office:body");
       if (!bodyEl)
         throw new ParseError("odf/parse-error/odt", "odt: missing <office:body> in content.xml", { context: { part: "content.xml", module: "odt" } });
-      const declsEl = xml.findChild(root, "office:font-face-decls"), autoEl = xml.findChild(root, "office:automatic-styles"), contentFaces = declsEl ? xml.findAll(declsEl, "style:font-face") : [], autoModel = autoEl && styleAutoMod ? styleAutoMod.parse(autoEl) : null, resolver = styleRegMod ? styleRegMod.createResolver(autoModel, contentFaces.concat(stylesSidecarFaces(stylesModel)), stylesModel && stylesModel.styles || null, semanticStyles ? { semantic: !0 } : void 0) : void 0, textEl = xml.findChild(bodyEl, "office:text"), readCtx = framesInRuns || elementsInRuns || semanticStyles ? {
+      const declsEl = xml.findChild(root, "office:font-face-decls"), autoEl = xml.findChild(root, "office:automatic-styles"), contentFaces = declsEl ? xml.findAll(declsEl, "style:font-face") : [], autoModel = autoEl && styleAutoMod ? styleAutoMod.parse(autoEl) : null, resolver = styleRegMod ? styleRegMod.createResolver(autoModel, contentFaces.concat(stylesSidecarFaces(stylesModel)), stylesModel && stylesModel.styles || null, semanticStyles ? { semantic: !0 } : void 0) : void 0, textEl = xml.findChild(bodyEl, "office:text"), readCtx = framesInRuns || elementsInRuns || semanticStyles || notes ? {
         ...resolver || {},
         ...framesInRuns ? { parseFrame: frameMod.parseFrame } : {},
         ...elementsInRuns ? { elementsInRuns: !0 } : {},
@@ -3123,6 +3129,8 @@ export const odtPackage = {
         boxCtx.parseFrame = (el) => typeBox(frameMod.parseFrame(el), boxCtx);
         readCtx.parseFrame = boxCtx.parseFrame;
       }
+      if (notes)
+        readCtx.parseNote = (el) => parseNote(el, readCtx);
       const out = { body: textEl ? contentMod.parseBody(textEl, readCtx) : [] };
       out.listStyleEls = autoEl ? xml.findAll(autoEl, "text:list-style") : [];
       out.sectionStyleEls = autoEl ? xml.findAll(autoEl, "style:style") : [];
@@ -3260,7 +3268,30 @@ export const odtPackage = {
     function writeCtx(registry, version) {
       const asRead = typeof version === "string" && parseFloat(version) < 1.3, ctx = { ...registry || {}, renderImage: renderImageRun };
       ctx.renderFrame = asRead ? (f) => frameMod.renderFrame(boxAsWritten(f, ctx), { mimeTypeAsRead: !0 }) : (f) => frameMod.renderFrame(boxAsWritten(f, ctx));
+      ctx.renderNote = (n) => renderNote(n, ctx);
       return ctx;
+    }
+    function parseNote(el, ctx) {
+      const kids = (el.children || []).filter((c) => c && c.type === "element"), cite = kids.find((c) => c.name === "text:note-citation"), body = kids.find((c) => c.name === "text:note-body"), a = el.attrs || {}, note = { type: "note" };
+      if (a["text:id"])
+        note.id = a["text:id"];
+      note.noteClass = a["text:note-class"] === "endnote" ? "endnote" : "footnote";
+      note.citation = cite ? xml.textContent(cite) : "";
+      if (cite && cite.attrs && cite.attrs["text:label"])
+        note.label = cite.attrs["text:label"];
+      note.body = body ? contentMod.parseBody(body, ctx) : [];
+      return note;
+    }
+    function renderNote(n, ctx) {
+      const attrs = {};
+      if (typeof n.id === "string" && n.id)
+        attrs["text:id"] = n.id;
+      attrs["text:note-class"] = n.noteClass === "endnote" ? "endnote" : "footnote";
+      const citeAttrs = typeof n.label === "string" && n.label ? { "text:label": n.label } : {};
+      return xml.el("text:note", attrs, [
+        xml.el("text:note-citation", citeAttrs, [xml.text(String(n.citation == null ? "" : n.citation))]),
+        xml.el("text:note-body", {}, contentMod.renderBody(Array.isArray(n.body) ? n.body : [], ctx))
+      ]);
     }
     function reservedStyleNamesOf(autoStyles) {
       const out = new Set;

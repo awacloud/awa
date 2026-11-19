@@ -17,9 +17,11 @@ import { ALLOWLIST, applyAllowlist, validateAllowlist } from './preview-allowlis
 const wellFormed = () => ({ playground: 'astro-dev', pattern: '[vite] connecting', reason: 'HMR client chatter, upstream' });
 
 describe('preview gate — validateAllowlist', () => {
-    it('the shipped ALLOWLIST is empty (the default state) and validates', () => {
-        expect(ALLOWLIST).toEqual([]);
+    // Entries are allowed, each with a written reason (owner-lane ruling D10);
+    // a dead entry fails a full run in preview.mjs, so none can linger.
+    it('the shipped ALLOWLIST validates and every entry carries a reason', () => {
         expect(validateAllowlist(ALLOWLIST)).toBe(ALLOWLIST);
+        for (const e of ALLOWLIST) expect(typeof e.reason === 'string' && e.reason.trim().length > 0).toBe(true);
     });
 
     it('accepts a well-formed entry', () => {

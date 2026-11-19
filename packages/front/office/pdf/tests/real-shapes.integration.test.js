@@ -84,6 +84,8 @@ function classicalChain(sections, size) {
 const CATALOG = '<< /Type /Catalog /Pages 2 0 R >>';
 const PAGE    = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>';
 
+// T30 (b): the reader rebuilds a broken chain by default; these legs test
+// its typed refusals, so they read strictly (`recoverXref: false`).
 describe('readDocument — BL-1544: /Root supplied by only one of several xref sections', () => {
     // Pre-fix (measured 2026-09-22 on anssi-fondamentaux-zero-trust-v1.0.pdf
     // and pinned red by task 01 on this fixture): readDocument threw
@@ -141,7 +143,7 @@ describe('readDocument — BL-1544: /Root supplied by only one of several xref s
             { objects: [[1, CATALOG], [2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>'], [3, PAGE]] },
             { objects: [[3, PAGE]] }
         ], 4);
-        const result = codeAndMessageOf(() => readDocument(bytes));
+        const result = codeAndMessageOf(() => readDocument(bytes, { recoverXref: false }));
         expect(result).not.toBeNull();
         expect(result.code).toBe('pdf/trailer/missing-root');
         expect(result.message).toBe('trailer is missing required /Root indirect reference');
@@ -156,7 +158,7 @@ describe('readDocument — BL-1544: /Root supplied by only one of several xref s
         const blanked = new Uint8Array(bytes);
         const at = text.indexOf('/Root ');
         blanked.set(new TextEncoder().encode('/Roox '), at);
-        const result = codeAndMessageOf(() => readDocument(blanked));
+        const result = codeAndMessageOf(() => readDocument(blanked, { recoverXref: false }));
         expect(result).not.toBeNull();
         expect(result.code).toBe('pdf/trailer/missing-root');
         expect(result.message).toBe('trailer is missing required /Root indirect reference');
@@ -229,7 +231,7 @@ describe('readDocument — BL-1545: a referenced object the newest xref section 
             { objects: [[2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>'], [3, PAGE]],
               free: [1], trailer: '/Root 1 0 R' }
         ], 4);
-        const result = codeAndMessageOf(() => readDocument(bytes));
+        const result = codeAndMessageOf(() => readDocument(bytes, { recoverXref: false }));
         expect(result).not.toBeNull();
         expect(result.code).toBe('pdf/document/free-object');
         expect(result.message).toBe('object 1 is free');

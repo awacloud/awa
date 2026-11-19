@@ -22,11 +22,13 @@ const lz4 = runtime.resolve('lz4');
 
 ## API
 
-### `lz4.compress(src, len, opts?) → [size, data]`
+### `lz4.compress(src, len?, opts?) → [size, data]`
 
-Compresses a `Uint8Array` block.
+Compresses a `Uint8Array` block: `src[0, len)`, the whole of `src` when `len`
+is omitted (`compress(src)`, `compress(src, opts)`).
 
 ```js
+const [n, block] = lz4.compress(uint8Array);                                          // all of src
 const [size, data] = lz4.compress(uint8Array, uint8Array.length);                      // mode 'speed'
 const [rSize, rData] = lz4.compress(uint8Array, uint8Array.length, { mode: 'ratio' }); // smaller, slower
 ```
@@ -165,7 +167,7 @@ const worker = fw.createWorker(
 
 - LZ4 favours **speed** (hundreds of MB/s) over ratio — for maximum ratio, use `brotli` (quality 11) or `deflate` (level 9).
 - Block format: each `compress` call produces an independent LZ4 block — no multi-block LZ4 frame header.
-- `Lz4CompressStream` / `Lz4DecompressStream`: each `push` produces one or more complete blocks (no inter-push buffering).
+- `Lz4CompressStream`: each `push` emits exactly one block — when `compress` returns no block for the chunk (`[0, copy]`: 12 bytes or less, or incompressible), a block of its bytes as literals — so `Lz4DecompressStream`, which decodes each pushed block, gives every chunk back. A chunk past the size limit throws `EMAXOUT`. No inter-push buffering.
 
 ## Design
 

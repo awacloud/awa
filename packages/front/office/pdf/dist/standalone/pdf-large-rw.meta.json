@@ -27,6 +27,7 @@
     "pdfAesGcm",
     "pdfStandardV5",
     "pdfStandardV6",
+    "pdfInfo",
     "pdfDocument",
     "pdfWriter",
     "pdf",
@@ -52,6 +53,22 @@
     "pdfEmbeddedFilesPortfolio",
     "pdfAssociatedFiles2",
     "pdfXmpExtended",
+    "pdfXmp",
+    "pdfSrgbIcc",
+    "fontErrors",
+    "standard14Helvetica",
+    "standard14Times",
+    "standard14Courier",
+    "standard14Symbol",
+    "standard14ZapfDingbats",
+    "standard14Lookup",
+    "encodingWinAnsi",
+    "encodingMacRoman",
+    "encodingMacExpert",
+    "encodingStandard",
+    "encodingSymbol",
+    "encodingZapfDingbats",
+    "encodingLookup",
     "pdfBuilder",
     "pdfIncrementalWriter",
     "pdfXrefStreamWriter",
@@ -65,8 +82,8 @@
   ],
   "fwDependencies": [],
   "bytes": {
-    "dev": 678862,
-    "min": 378683
+    "dev": 828968,
+    "min": 461419
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

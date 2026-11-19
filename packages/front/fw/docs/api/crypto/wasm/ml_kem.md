@@ -1,6 +1,7 @@
 ---
 module: wasmMlKem
 category: crypto/wasm
+dependencies: [wasmRuntime]
 returns: object
 worker-safe: true
 status: complete

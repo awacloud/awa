@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -27,7 +27,6 @@ import { bitArray } from '../utils/bitArray.js';
  * @property {(prf: {encrypt: Function}, message: number[], tag: number[]) => boolean} verify Constant-time tag verification.
  * @property {(prf: {encrypt: Function}, message: number[], tagLen: number) => (number[]|false)} truncatedMac Truncated MAC (tagLen 32..128 bits).
  * @property {(prf: {encrypt: Function}, message: number[], tag: number[], tagLen: number) => boolean} truncatedVerify Constant-time truncated verification.
- * @property {{ dbl: (b: number[]) => number[] }} _internal Internal primitive (KAT tests only).
  */
 
 export const cmac = {
@@ -42,7 +41,7 @@ export const cmac = {
 
         const _RB = 0x87;
 
-        // FIPS 140-3 upgrade plan iteration D3 - TDES rejection.
+        // TDES rejection.
         // SP 800-131A §2.4 marks Triple-DES as deprecated since 2024 and
         // disallowed for cryptographic protection beyond 2023. SP 800-38B §5.1
         // explicitly requires AES (16-byte block). We reject any PRF that
@@ -130,7 +129,7 @@ export const cmac = {
             return bitArray.equal(expected, tag);
         }
 
-        // FIPS 140-3 upgrade plan iteration D3 - truncated MAC.
+        // Truncated MAC.
         // SP 800-38B §6.4 (Length of MAC) recommends `Tlen ≥ 32 bits` for
         // applications where forgery probability of `2^-Tlen` is acceptable
         // (smaller Tlen requires a per-application risk analysis). The
@@ -160,13 +159,14 @@ export const cmac = {
             return bitArray.equal(expected, tag);
         }
 
-        return {
+        return Object.defineProperty({
             mac,
             verify,
             truncatedMac,
-            truncatedVerify,
+            truncatedVerify
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal primitive - exposed for KAT tests only.
-            _internal: { dbl: _dbl }
-        };
+            value: { dbl: _dbl }
+        });
     }
 };

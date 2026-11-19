@@ -19,7 +19,7 @@ For AEAD, use [`chacha20poly1305`](../mode/chacha20poly1305.md) which combines `
 
 ```js
 const chacha20 = runtime.resolve('chacha20');
-// Returns: { name, xor, xchacha20, _internal }
+// Returns: { xor }
 ```
 
 ## API
@@ -27,8 +27,7 @@ const chacha20 = runtime.resolve('chacha20');
 | Method | Signature | Returns |
 |---------|-----------|---------|
 | `xor` | `(key: Uint8Array, nonce: Uint8Array, data: Uint8Array, initialCounter?: number) => Uint8Array \| false` | `data XOR keystream` (involution: encrypt/decrypt) |
-| `xchacha20` | `() => false` | **NOT-IMPLEMENTED** — explicit reject (G3) |
-| `_internal.block` | `(key32, counter, nonce32, out32) => void` | 64-byte block function (debug/introspection) |
+| `internalOf(chacha20).block` | `(key32, counter, nonce32, out32) => void` | 64-byte block function (debug/introspection) |
 
 ### `chacha20.xor(key, nonce, data, initialCounter=0)`
 
@@ -39,10 +38,6 @@ const chacha20 = runtime.resolve('chacha20');
 
 Returns `false` + `console.warn('INVALID')` on invalid sizes.
 Returns `false` + `console.warn('LIMIT-EXCEEDED')` if `initialCounter + ⌈data.length / 64⌉ > 2³²` (counter overflow → silent wrap that would reuse keystream — catastrophic).
-
-### `chacha20.xchacha20()`
-
-Always `false` + `console.warn('NOT-IMPLEMENTED: chacha20: XChaCha20 (draft-irtf-cfrg-xchacha) is not implemented')`. The IETF draft was never finalised; for 192-bit nonces, use a dedicated implementation (e.g. libsodium-wasm).
 
 ## Examples
 
@@ -74,7 +69,7 @@ const worker = fw.createWorker(
 ## Notes
 
 - **32-bit counter**: intrinsic RFC 8439 §2.3 limit — 256 GiB max under a (key, nonce) pair. Active runtime guard: rejection via `LIMIT-EXCEEDED` warning.
-- **XChaCha20 not implemented**: see explicit reject `xchacha20()`. Use a fresh 12-byte nonce per message; for strong collision resistance, consider an external library.
+- **XChaCha20 not implemented** (192-bit nonces, `draft-irtf-cfrg-xchacha`, never finalised): use a fresh 12-byte nonce per message; for 192-bit nonces use a dedicated implementation (e.g. libsodium-wasm).
 - **Stream cipher** = involution: `xor(xor(pt)) = pt`.
 - **No AEAD**: this module provides confidentiality only. For authentication, use [`chacha20poly1305`](../mode/chacha20poly1305.md).
 

@@ -8,9 +8,9 @@
 
 | Suite | Cases | Pass | Ref. |
 |-------|------:|-----:|------|
-| CommonMark 0.31.2 spec examples | 652 | 652 | [`tests/commonmark-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/commonmark-suite.test.js) |
+| CommonMark 0.31.2 spec examples | 652 | 652 | [`tests/commonmark-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.1/packages/front/office/md/tests/commonmark-suite.test.js) |
 | GFM 0.29 spec examples (cmark-gfm `0.29.0.gfm.13`) | 670 | 661 | `tests/gfm-spec.integration.test.js` |
-| GFM, hand-curated cases | 52 | 52 | [`tests/gfm-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/gfm-suite.test.js) |
+| GFM, hand-curated cases | 52 | 52 | [`tests/gfm-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.1/packages/front/office/md/tests/gfm-suite.test.js) |
 
 How to read these figures: the CommonMark row runs every example of the vendored CommonMark 0.31.2 `spec.txt` through `parse` + `renderHtml`, and a lockfile test pins the version and the example count. The GFM spec row runs every example of the vendored GFM 0.29 `spec.txt` with exactly the extensions its fence names, as cmark-gfm does; the 9 examples that do not pass (398, 426, 434, 435, 436, 473, 474, 475, 477) are nested strong emphasis such as `****foo****`, where GFM 0.29 and CommonMark 0.31.2 disagree: md follows CommonMark 0.31.2. The hand-curated GFM cases predate that row and are kept as a second check. The extras have no conformance suite: each one is covered by its own sibling tests only. The measured figures, with their dates and the commands that replay them, are in [Measured coverage](#measured-coverage) below.
 
@@ -53,10 +53,10 @@ Pre-wired composition: [`md-full`](../api/bundles/md-full.md) (deterministic ord
 
 ## Adding a test case
 
-1. **Spec coverage** — the CommonMark suite reads the vendored fixture [`tests/_fixtures/commonmark/spec.txt`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/_fixtures/commonmark/spec.txt), not a `references/SPEC/*.json` file (per the repo-wide rule that `references/` is never a code dependency — anything a test needs is vendored into the package); [`tests/spec-version.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/spec-version.test.js) locks its version (`0.31.2`) and example count (652). No manual edits to `spec.txt`. The GFM suite is **not** auto-drawn from a spec file — [`tests/gfm-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/gfm-suite.test.js) is a hand-curated set of cases transcribed from `references/SPEC/Markdown/GitHub Flavored Markdown Spec.htm` (cited in the file's own header comment only; extraction from the structured HTML was impractical). Extend it by hand-writing a new case, not by regenerating from a spec source.
+1. **Spec coverage** — the CommonMark suite reads the vendored fixture [`tests/_fixtures/commonmark/spec.txt`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.1/packages/front/office/md/tests/_fixtures/commonmark/spec.txt), not a `references/SPEC/*.json` file (per the repo-wide rule that `references/` is never a code dependency — anything a test needs is vendored into the package); [`tests/spec-version.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.1/packages/front/office/md/tests/spec-version.test.js) locks its version (`0.31.2`) and example count (652). No manual edits to `spec.txt`. The GFM suite is **not** auto-drawn from a spec file — [`tests/gfm-suite.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.1/packages/front/office/md/tests/gfm-suite.test.js) is a hand-curated set of cases transcribed from `references/SPEC/Markdown/GitHub Flavored Markdown Spec.htm` (cited in the file's own header comment only; extraction from the structured HTML was impractical). Extend it by hand-writing a new case, not by regenerating from a spec source.
 2. **Core behavior (out-of-spec)** — add to the sibling `*.test.js` of the relevant module (`src/block/parser.test.js`, `src/inline/parser.test.js`, `src/render/html.test.js`).
 3. **Extra** — add to the sibling `src/extra/<name>.test.js`. Format: `describe('<extra> module', () => { ... })` with a factory-metadata test plus per-case tests.
-4. **Integration** — add to `tests/<scenario>.test.js`. See [`tests/manipulation.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/office/md/tests/manipulation.test.js) as an example.
+4. **Integration** — add to `tests/<scenario>.test.js`. See [`tests/manipulation.test.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.1/packages/front/office/md/tests/manipulation.test.js) as an example.
 
 Re-run `bun test packages/front/office/md/`; everything must stay green.
 

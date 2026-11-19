@@ -176,6 +176,19 @@ function argon2Status(
 
 let wasiSdkPath = "";
 let toolchainPresent = false;
+/** Set once this run has rebuilt `dist/argon2.scalar.wasm` from source. */
+let builtThisRun = false;
+
+/** Build the scalar variant unless an earlier test of this run already did. */
+async function ensureBuilt(): Promise<void> {
+    if (builtThisRun) return;
+    const code = await runWasmCrypto({
+        args: ["build", "--pkg", PKG_DIR, "--target", "argon2"],
+        config: await makeConfig(wasiSdkPath),
+    });
+    expect(code, "wasm-crypto build argon2 exit code").toBe(0);
+    builtThisRun = true;
+}
 
 beforeAll(async () => {
     const envPath = process.env["WASI_SDK_PATH"];
@@ -258,6 +271,7 @@ describe("argon2 build + RFC 9106 KAT (toolchain-gated)", () => {
             config: cfg,
         });
         expect(code, "wasm-crypto build argon2 exit code").toBe(0);
+        builtThisRun = true;
 
         // ── Zero-import + ABI-export invariants on the produced binary. ──
         const bytes = new Uint8Array(await Bun.file(join(OUT_DIR, "argon2.scalar.wasm")).arrayBuffer());
@@ -291,5 +305,97 @@ describe("argon2 build + RFC 9106 KAT (toolchain-gated)", () => {
             "[argon2.kat] RFC 9106 §5.3 Argon2id tag byte-for-byte OK " +
                 "(t=3, m=32 KiB, p=4 lanes, 32-byte tag); determinism + bad-param contract OK.",
         );
+    }, 300_000);
+});
+
+// ─── OWASP parameters beyond the 16 MiB arena (BL-1843, tools/LIGHT_62) ───────
+//
+// The OWASP Password Storage Cheat Sheet's two Argon2id rows: m=19456 KiB
+// (19 MiB), t=2, p=1 and m=47104 KiB (47 MiB), t=1, p=1. Both block matrices
+// exceed the shared 16 MiB arena (`_arena.h`), so the shim takes the matrix
+// from linear memory grown for the call instead. Expected tags: the pure-JS
+// fw `crypto/hash/argon2` module, cross-checked against Node's OpenSSL
+// `crypto.argon2Sync` (both agree byte-for-byte):
+//   pwd = 32 × 0x01, salt = 16 × 0x02, no secret, no ad, 32-byte tag.
+
+const OWASP_19M = { t: 2, m: 19456, p: 1, tag: "551d2b516a3d92963b2cd1e8fdc17251" + "29e15824dfb6c8d9bb8a599ffcabfc1c" };
+const OWASP_47M = { t: 1, m: 47104, p: 1, tag: "e02aa2fa10a4b7901d5fd54a9f936859" + "0c591b23d57a457a63ce12a5cff461c9" };
+
+/** The documented ceiling: the largest `m` (KiB) the binary accepts — 1 GiB. */
+const MAX_MEMORY_KIB = 1024 * 1024;
+const ARGON2_ERR_PARAM = -1;
+
+describe("argon2 OWASP parameters beyond the arena (toolchain-gated)", () => {
+    test("19 MiB / 2 passes and 47 MiB / 1 pass match the pure-JS tags; ceiling refused; small call after", async () => {
+        if (katDeferral("argon2", toolchainPresent, "OWASP legs")) return;
+        await ensureBuilt();
+
+        const host = new AbiHost();
+        const scalar = await loadScalar(host);
+        const none = new Uint8Array(0);
+
+        // ── OWASP leg 1: 19 MiB, 2 passes. ──
+        const a = argon2(host, scalar, KAT_PWD, KAT_SALT, none, none, OWASP_19M.t, OWASP_19M.m, OWASP_19M.p, 32);
+        expect(bytesToHex(a), "OWASP 19 MiB / 2 passes").toBe(OWASP_19M.tag);
+
+        // ── OWASP leg 2: 47 MiB, 1 pass (the matrix region grows). ──
+        const b = argon2(host, scalar, KAT_PWD, KAT_SALT, none, none, OWASP_47M.t, OWASP_47M.m, OWASP_47M.p, 32);
+        expect(bytesToHex(b), "OWASP 47 MiB / 1 pass").toBe(OWASP_47M.tag);
+        const grown = scalar.mem.buffer.byteLength;
+        expect(grown, "linear memory holds the 47 MiB matrix").toBeGreaterThanOrEqual(OWASP_47M.m * 1024);
+
+        // ── A smaller call reuses the grown region: no further growth. ──
+        const a2 = argon2(host, scalar, KAT_PWD, KAT_SALT, none, none, OWASP_19M.t, OWASP_19M.m, OWASP_19M.p, 32);
+        expect(bytesToHex(a2), "OWASP 19 MiB after 47 MiB").toBe(OWASP_19M.tag);
+        expect(scalar.mem.buffer.byteLength, "region reused, memory not grown again").toBe(grown);
+
+        // ── The ceiling: refused up front with ARGON2_ERR_PARAM, nothing grown. ──
+        expect(argon2Status(host, scalar, 1, MAX_MEMORY_KIB + 1, 1, 32), "m above the ceiling").toBe(ARGON2_ERR_PARAM);
+        expect(argon2Status(host, scalar, 1, 0x7fffffff, 1, 32), "m at INT_MAX").toBe(ARGON2_ERR_PARAM);
+        expect(scalar.mem.buffer.byteLength, "a refused call grows nothing").toBe(grown);
+
+        // ── A small call after the large ones: arena + cursor intact. ──
+        const kat = argon2(host, scalar, KAT_PWD, KAT_SALT, KAT_SECRET, KAT_AD, KAT_T, KAT_M, KAT_P, KAT_OUTLEN);
+        expect(bytesToHex(kat), "RFC 9106 §5.3 after the OWASP calls").toBe(KAT_TAG);
+
+        console.warn(
+            "[argon2.kat] OWASP 19 MiB/t=2 + 47 MiB/t=1 tags OK (grown matrix region, " +
+                `${grown} bytes of linear memory); ceiling ${MAX_MEMORY_KIB} KiB refused above; KAT after OK.`,
+        );
+    }, 300_000);
+});
+
+// ─── Segment-addressing regression (BL-1843, tools/LIGHT_62) ──────────────────
+//
+// The RFC 9106 §5.3 vector has a segment length of 2, so slice 0 of pass 0
+// fills no block and the address-word cursor of the data-independent phase is
+// never exercised there. The own core started that cursor at word 0 instead
+// of word 2 (RFC 9106 §3.4.1.2: block i takes word i mod 128), which diverged
+// from RFC 9106 for every segment length ≥ 4 — every realistic parameter set.
+// These shapes pin the fix; tags quoted from Node's OpenSSL `crypto.argon2Sync`
+// (an independent implementation), pwd = 32 × 0x01, salt = 16 × 0x02, no
+// secret, no ad, 32-byte tag. The last two have `m` not a multiple of 4·p.
+
+const SEGMENT_SHAPES = [
+    { t: 1, m: 16, p: 1, tag: "8fb24849a32603a29bc4f7977557638157e540b82c230966c66d0a517df638a6" },
+    { t: 3, m: 32, p: 1, tag: "30e0b44b7e23423b7282859ea36f02825b5828dde3c25f124d59d42d7235e132" },
+    { t: 3, m: 64, p: 2, tag: "491e4e07b4d0a1ca19778a7388c6cbd6aa6ca07033dda98047818a7d6e18e551" },
+    { t: 3, m: 128, p: 4, tag: "1f2c769bc643bac9f9e91ee2cbed66e5722a260cbf5b904e06695e8d6b89f1ce" },
+    { t: 3, m: 1000, p: 3, tag: "75cb1f00d1c6c6ef11c03a79bdef96f66e3ef6200b783c443972446211ce2ce8" },
+    { t: 1, m: 4096, p: 7, tag: "c1a045a69706fa3f1bd0c2e7753738140d5621743cc95a22f2db8ea53827e626" },
+];
+
+describe("argon2 segment addressing vs an independent implementation (toolchain-gated)", () => {
+    test("segment lengths ≥ 4 match OpenSSL argon2id byte-for-byte", async () => {
+        if (katDeferral("argon2", toolchainPresent, "segment-addressing vectors")) return;
+        await ensureBuilt();
+
+        const host = new AbiHost();
+        const scalar = await loadScalar(host);
+        const none = new Uint8Array(0);
+        for (const v of SEGMENT_SHAPES) {
+            const tag = argon2(host, scalar, KAT_PWD, KAT_SALT, none, none, v.t, v.m, v.p, 32);
+            expect(bytesToHex(tag), `t=${v.t} m=${v.m} p=${v.p}`).toBe(v.tag);
+        }
     }, 300_000);
 });

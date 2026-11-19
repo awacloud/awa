@@ -19,25 +19,23 @@ Extremely fast hash (1× faster than MD5, ~2× SHA-256) with security margins �
 
 ```js
 const blake2b = runtime.resolve('blake2b');
-// Returns: { hash, fn }
+// Returns: { hash, create }
 ```
 
 ## API
 
 | Method | Signature | Returns |
 |---------|-----------|---------|
-| `hash(msg, outLen=64, opts?)` | `(Uint8Array, number, {key?, salt?, person?}) => Uint8Array` | One-shot digest, outLen ∈ [1, 64] bytes |
-| `fn(outLen?, opts?)` | constructor | Streaming `update`/`finalize` |
-| `fn.prototype.update(data)` | `(Uint8Array) => this` | Absorbs input |
-| `fn.prototype.finalize()` | `() => Uint8Array` | Emits the digest |
+| `hash(msg, outLen = 64, key?)` | `(Uint8Array, number?, Uint8Array?) => Uint8Array \| false` | One-shot digest, `outLen` ∈ [1, 64] bytes, keyed when `key` is given |
+| `create(outLen = 64, key?, salt?, person?)` | `(number?, Uint8Array?, Uint8Array?, Uint8Array?) => ctx \| false` | A streaming context: `ctx.update(chunk)` (`false` once finalised), `ctx.digest()` |
 
-### Options
+### Parameters
 
-| Option | Type | Description |
+| Parameter | Type | Description |
 |--------|------|-------------|
-| `key` | `Uint8Array(0..64)` | Keyed mode (HMAC alternative, faster) |
-| `salt` | `Uint8Array(16)` | Per-instance domain separation |
-| `person` | `Uint8Array(16)` | Per-application domain separation |
+| `key` | `Uint8Array(0..64)` | Keyed mode (a MAC, an HMAC alternative) |
+| `salt` | `Uint8Array(16)` | Per-instance domain separation (`create` only) |
+| `person` | `Uint8Array(16)` | Per-application domain separation (`create` only) |
 
 ## Examples
 
@@ -52,16 +50,16 @@ hex.fromBytes(out);
 ### Keyed (HMAC alternative)
 
 ```js
-const tag = blake2b.hash(msg, 32, { key: secretKey });
+const tag = blake2b.hash(msg, 32, secretKey);
 ```
 
-### Streaming
+### Streaming, with salt and personalisation
 
 ```js
-const h = new blake2b.fn(64);
+const h = blake2b.create(64, undefined, salt16, person16);
 h.update(chunk1);
 h.update(chunk2);
-const out = h.finalize();
+const out = h.digest();
 ```
 
 ## Worker Usage

@@ -42,7 +42,7 @@ function listDts(dir) {
     for (const ent of readdirSync(dir)) {
         const p = join(dir, ent);
         if (statSync(p).isDirectory()) out.push(...listDts(p));
-        else if (ent.endsWith('.d.ts') && !ent.endsWith('.test.d.ts') && !ent.endsWith('.kat.d.ts')) out.push(p);
+        else if (ent.endsWith('.d.ts') && !ent.endsWith('.test.d.ts') && !ent.endsWith('.kat.d.ts') && !ent.endsWith('.reference.d.ts')) out.push(p);
     }
     return out;
 }

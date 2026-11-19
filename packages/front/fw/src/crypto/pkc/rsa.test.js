@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -11,6 +11,7 @@ import { aes } from '../cipher/aes.js';
 import { bitArray } from '../utils/bitArray.js';
 import { utf8 } from '../../io/codec/utf8.js';
 import { hex } from '../../io/codec/hex.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _ba   = bitArray.factory();
 const _utf8 = utf8.factory();
@@ -64,6 +65,22 @@ describe('rsa module', () => {
             expect(R.oaepDecrypt(KEY, ct, _sha256)).toBe(false);
         });
 
+        test('an OAEP decryption failure is reported at warn level, not error', () => {
+            const ct = R.oaepEncrypt(PUB, new TextEncoder().encode('hi'), _sha256);
+            ct[5] ^= 0x01;
+        const _logs = { warn: [], error: [] };
+        const _w = console.warn, _e = console.error;
+        console.warn = (...a) => { _logs.warn.push(a.join(' ')); };
+        console.error = (...a) => { _logs.error.push(a.join(' ')); };
+            let r;
+            try { r = R.oaepDecrypt(KEY, ct, _sha256); } finally {
+        console.warn = _w; console.error = _e;
+            }
+            expect(r).toBe(false);
+            expect(_logs.error.length).toBe(0);
+            expect(_logs.warn.some((m) => m.includes('CORRUPT'))).toBe(true);
+        });
+
         test('rejects oversized message', () => {
             // For 1024-bit n with SHA-256: max msg = 128 - 2*32 - 2 = 62 bytes.
             const tooLong = new Uint8Array(63);
@@ -110,8 +127,8 @@ describe('rsa module', () => {
         // smoke-test MGF1-SHA256 yields deterministic, correct length.
         test('produces deterministic mask of requested length', () => {
             const seed = _hex.toBytes('00010203040506070809');
-            const a = R._internal.mgf1(_sha256, seed, 50);
-            const b = R._internal.mgf1(_sha256, seed, 50);
+            const a = R[INTERNAL].mgf1(_sha256, seed, 50);
+            const b = R[INTERNAL].mgf1(_sha256, seed, 50);
             expect(a.length).toBe(50);
             expect(_hex.fromBytes(a)).toBe(_hex.fromBytes(b));
         });
@@ -330,7 +347,7 @@ describe('RSA-DecryptionPrimitive-Sp800-56Br2 (NIST CAVP, 90/90 vectors)', () =>
                 priv.qInv = _h2b_rsa(v.qInv);
             }
 
-            const m = R._internal.rsadp(priv, ctBn);
+            const m = R[INTERNAL].rsadp(priv, ctBn);
             expect(m).not.toBe(false);
             // pt may be shorter than n; compare BN equality, not byte length.
             const ptBn = _bnFromHexRsa(v.pt);
@@ -413,8 +430,8 @@ describe('RSA blinding (iteration F1)', () => {
         const ct  = R.oaepEncrypt(PUB, msg, _sha256);
         // Convert ct (Uint8Array) → bn via the internal helper (use _bn.bn).
         const cBn = new _bn.bn(_hex.fromBytes(ct));
-        const mBlinded   = R._internal.rsadp(KEY, cBn);
-        const mUnblinded = R._internal.rsadp(KEY, cBn, { blinding: false });
+        const mBlinded   = R[INTERNAL].rsadp(KEY, cBn);
+        const mUnblinded = R[INTERNAL].rsadp(KEY, cBn, { blinding: false });
         // Must be byte-exact equal - blinding factors out exactly.
         expect(_hex.fromBytes(_ba.ba_to_ui8(mBlinded.toBits())))
             .toBe(_hex.fromBytes(_ba.ba_to_ui8(mUnblinded.toBits())));
@@ -432,44 +449,10 @@ describe('RSA blinding (iteration F1)', () => {
 });
 
 // ── Iteration G1 - PKCS #1 v1.5 explicit reject ──────────────────────────────
-describe('PKCS #1 v1.5 explicit reject (iteration G1)', () => {
-    const R = rsa.factory(sha256.factory(), bitArray.factory(), utf8.factory(), hex.factory());
-
-    test('pkcs1v15Sign returns false + warns DEPRECATED', () => {
-        const calls = [];
-        const orig = console.warn; console.warn = (m) => calls.push(m);
-        try { expect(R.pkcs1v15Sign()).toBe(false); }
-        finally { console.warn = orig; }
-        expect(calls.length).toBe(1);
-        expect(calls[0]).toContain('DEPRECATED');
-        expect(calls[0]).toContain('pssSign');
-    });
-
-    test('pkcs1v15Verify returns false + warns DEPRECATED', () => {
-        const calls = [];
-        const orig = console.warn; console.warn = (m) => calls.push(m);
-        try { expect(R.pkcs1v15Verify()).toBe(false); }
-        finally { console.warn = orig; }
-        expect(calls[0]).toContain('DEPRECATED');
-        expect(calls[0]).toContain('pssVerify');
-    });
-
-    test('pkcs1v15Encrypt returns false + warns DEPRECATED|UNSAFE (Bleichenbacher)', () => {
-        const calls = [];
-        const orig = console.warn; console.warn = (m) => calls.push(m);
-        try { expect(R.pkcs1v15Encrypt()).toBe(false); }
-        finally { console.warn = orig; }
-        expect(calls[0]).toContain('UNSAFE');
-        expect(calls[0]).toContain('Bleichenbacher');
-        expect(calls[0]).toContain('oaepEncrypt');
-    });
-
-    test('pkcs1v15Decrypt returns false + warns DEPRECATED|UNSAFE', () => {
-        const calls = [];
-        const orig = console.warn; console.warn = (m) => calls.push(m);
-        try { expect(R.pkcs1v15Decrypt()).toBe(false); }
-        finally { console.warn = orig; }
-        expect(calls[0]).toContain('UNSAFE');
-        expect(calls[0]).toContain('oaepDecrypt');
+describe('PKCS #1 v1.5', () => {
+    test('the `pkcs1v15*` reject stubs are gone: OAEP and PSS only (D9 G3)', () => {
+        for (const k of ['pkcs1v15Sign', 'pkcs1v15Verify', 'pkcs1v15Encrypt', 'pkcs1v15Decrypt']) expect(R[k]).toBeUndefined();
+        expect(typeof R.pssSign).toBe('function');
+        expect(typeof R.oaepEncrypt).toBe('function');
     });
 });

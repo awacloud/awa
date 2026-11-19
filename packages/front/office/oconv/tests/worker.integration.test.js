@@ -711,9 +711,9 @@ describe('oconv worker — fromMd/convert forward `defaultFaces` (BL-1267)', () 
 });
 
 describe('oconv worker — BL-1267 static pin', () => {
-    test('src/worker.js contains no `.serialize(` and no `registerDeep(` call', async () => {
+    test('the worker source (src/worker/entry.js) contains no `.serialize(` and no `registerDeep(` call', async () => {
         const src = await Bun.file(
-            new URL('../src/worker.js', import.meta.url)
+            new URL('../src/worker/entry.js', import.meta.url)
         ).text();
         expect(src).not.toContain('.serialize(');
         expect(src).not.toContain('registerDeep(');
@@ -812,5 +812,36 @@ describe('oconv worker — the reply carries the full `losses` array', () => {
             expect(data.losses).toEqual([]);
             expect(data.warnings).toBe(0);
         }
+    });
+});
+
+// T82 (D57 (3) a): a convert message's layout is forwarded, so a worker
+// caller can turn the default off.
+describe('oconv worker — convert forwards `layout` (T82)', () => {
+    async function ask(message) {
+        const worker = spawnWorker();
+        try {
+            const reply = nextMessage(worker);
+            worker.postMessage(message);
+            return await reply;
+        } finally {
+            worker.terminate();
+        }
+    }
+    const pagedDocx = () => docxApi.write({
+        body: [docxApi.paragraph('Paged')],
+        sectPr: { pageSize: { w: 16838, h: 11906, orient: 'landscape' } }
+    });
+    const stylesXml = (bytes) => new TextDecoder().decode(fixtureRuntime.resolve('zip').unzipSync(new Uint8Array(bytes))['styles.xml']);
+
+    test('without layout the docx page reaches the odt; with layout false it does not', async () => {
+        const [dflt, off] = await Promise.all([
+            ask({ id: 90, name: 'p.docx', bytes: transferableCopy(pagedDocx()), target: 'odt' }),
+            ask({ id: 91, name: 'p.docx', bytes: transferableCopy(pagedDocx()), target: 'odt', layout: false })
+        ]);
+        expect(dflt.error).toBeNull();
+        expect(off.error).toBeNull();
+        expect(stylesXml(dflt.bytes)).toContain('style:print-orientation="landscape"');
+        expect(stylesXml(off.bytes)).not.toContain('style:page-layout');
     });
 });

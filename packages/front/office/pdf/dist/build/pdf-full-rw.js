@@ -10,15 +10,17 @@
  * @fileoverview `@awacloud/pdf/bundles/prebuilt/pdf-full-rw-package` — pre-built single-factory bundle.
  *
  * Variant **package** : declares the 26 fw modules as dependencies and inlines every
- * pdf-local factory transitively reachable from `pdf` plus 33 extras.
+ * pdf-local factory transitively reachable from `pdf` plus 34 extras.
+ *
+ * Sibling modules DECLARED (not inlined), DI-injected: standard14Lookup, encodingLookup.
  *
  * @module pdf/bundles/prebuilt/pdf-full-rw-package
  */
 
 export const pdfFullRwPackage = {
     name: "pdfFullRwPackage",
-    dependencies: ["bitstream","huffman","lz77","deflate","adler32","b64","hex","zlib","lzw","utf8","aes","cbc","gcm","sha256","sha384","sha512","bitArray","asn1","asn1Oid","pem","random","bn","hmac","rsa","ecc","ed25519"],
-    factory(bitstream, huffman, lz77, deflate, adler32, b64, hex, zlib, lzw, utf8, aes, cbc, gcm, sha256, sha384, sha512, bitArray, asn1, asn1Oid, pem, random, bn, hmac, rsa, ecc, ed25519) {
+    dependencies: ["bitstream","huffman","lz77","deflate","adler32","b64","hex","zlib","lzw","utf8","aes","cbc","gcm","sha256","sha384","sha512","bitArray","asn1","asn1Oid","pem","random","bn","hmac","rsa","ecc","ed25519","standard14Lookup","encodingLookup"],
+    factory(bitstream, huffman, lz77, deflate, adler32, b64, hex, zlib, lzw, utf8, aes, cbc, gcm, sha256, sha384, sha512, bitArray, asn1, asn1Oid, pem, random, bn, hmac, rsa, ecc, ed25519, __ext_standard14Lookup, __ext_encodingLookup) {
     const __reg = Object.create(null);
     const __cache = Object.create(null);
     function __register(m) { __reg[m.name] = m; }
@@ -57,6 +59,10 @@ export const pdfFullRwPackage = {
     __cache["rsa"] = rsa;
     __cache["ecc"] = ecc;
     __cache["ed25519"] = ed25519;
+
+    // sibling package modules — injected by DI (declared, not inlined).
+    __cache["standard14Lookup"] = __ext_standard14Lookup;
+    __cache["encodingLookup"] = __ext_encodingLookup;
 
     // pdf-local factories — inlined and topo-ordered.
     __register({ name: "pdfErrors", dependencies: [], factory: function() {
@@ -1425,7 +1431,8 @@ endstream`);
       "AF",
       "OutputIntents",
       "DPart",
-      "AssociatedFiles"
+      "AssociatedFiles",
+      "Hid"
     ]), has = (v) => !!v && v.type !== "null", isNum = (v) => !!v && (v.type === "int" || v.type === "real");
     function toBox(v) {
       if (!v || v.type !== "array" || v.items.length !== 4)
@@ -1514,6 +1521,8 @@ endstream`);
         out.b = e.B;
       if (isNum(e.Dur))
         out.dur = e.Dur.value;
+      if (isType(e.Hid, "bool"))
+        out.hid = e.Hid.value;
       if (has(e.Trans))
         out.trans = e.Trans;
       if (has(e.AA))
@@ -1794,7 +1803,7 @@ endstream`);
       return out;
     }
     function endedBeforeFinalBlock(e) {
-      return !!e && e.code === 0;
+      return !!e && e.code === "EEOF";
     }
     const limits = Object.freeze({ maxOutput: 268435456 }), SAFE_RATIO = 2048, CHUNK = 16384;
     function outputLimit(max, length) {
@@ -1803,7 +1812,7 @@ endstream`);
     function inflateChunked(bytes, max, final) {
       const chunks = [];
       let total = 0;
-      const stream = new fwZlib.UnzlibStream((chunk) => {
+      const stream = new fwZlib.UnzlibStream({ verify: !1 }, (chunk) => {
         total += chunk.length;
         if (max && total > max)
           throw outputLimit(max, bytes.length);
@@ -1828,7 +1837,7 @@ endstream`);
     }
     function inflate(bytes, max) {
       if (!max || bytes.length <= max / SAFE_RATIO || typeof fwZlib.UnzlibStream !== "function" || !plainZlibHeader(bytes))
-        return fwZlib.unzlibSync(bytes);
+        return fwZlib.unzlibSync(bytes, { verify: !1 });
       return inflateChunked(bytes, max, !0);
     }
     function isOutputLimit(e) {
@@ -2409,13 +2418,21 @@ endstream`);
         return new Uint8Array(v);
       return;
     }
+    function recipientsOf(v) {
+      if (v == null)
+        return;
+      const items = Array.isArray(v) ? v : typeof v === "object" && v.type === "array" && Array.isArray(v.items) ? v.items : null;
+      if (!items)
+        return;
+      return items.map((i) => asUint8(i && typeof i === "object" && i.type === "string" ? i.value : i)).filter(Boolean);
+    }
     function typeEncryptDict(dict) {
       if (dict == null || typeof dict !== "object")
         throw new EncryptionError("pdf/crypto/encrypt-dict/bad-input", "/Encrypt must be a dictionary");
-      const isNode = !(dict instanceof Map) && dict.type === "dict" && dict.entries !== null && typeof dict.entries === "object", plain = (n) => n && typeof n === "object" && (n.type === "int" || n.type === "real" || n.type === "bool" || n.type === "string") ? n.value : n, get = (k) => dict instanceof Map ? dict.get(k) : isNode ? plain(dict.entries[k]) : dict[k], V = get("V"), R = get("R"), Filter = get("Filter");
-      if (V === void 0 || R === void 0)
+      const isNode = !(dict instanceof Map) && dict.type === "dict" && dict.entries !== null && typeof dict.entries === "object", plain = (n) => n && typeof n === "object" && (n.type === "int" || n.type === "real" || n.type === "bool" || n.type === "string") ? n.value : n, get = (k) => dict instanceof Map ? dict.get(k) : isNode ? plain(dict.entries[k]) : dict[k], V = get("V"), R = get("R"), Filter = get("Filter"), filterName = Filter && typeof Filter === "object" && Filter.type === "name" ? Filter.value : Filter;
+      if (V === void 0 || R === void 0 && (filterName === void 0 || filterName === null || filterName === "Standard"))
         throw new EncryptionError("pdf/crypto/encrypt-dict/missing-V-R", "/Encrypt requires both /V and /R", { context: { V, R } });
-      if (typeof V !== "number" || typeof R !== "number")
+      if (typeof V !== "number" || R !== void 0 && typeof R !== "number")
         throw new EncryptionError("pdf/crypto/encrypt-dict/bad-V-R-type", "/V and /R must be integers", { context: { V, R } });
       return {
         V,
@@ -2433,6 +2450,7 @@ endstream`);
         UE: asUint8(get("UE")),
         Perms: asUint8(get("Perms")),
         EncryptMetadata: get("EncryptMetadata") !== !1,
+        Recipients: recipientsOf(get("Recipients")),
         P: get("P"),
         raw: dict
       };
@@ -3579,7 +3597,103 @@ endstream`);
       buildPerms
     };
   } });
-    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch","pdfSecurity","pdfStandardV4","pdfStandardV5","pdfStandardV6"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod, securityMod, v4Mod, v5Mod, v6Mod) {
+    __register({ name: "pdfInfo", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
+    const { ParseError, ContractError } = errors, { isType } = parser, PDFDOC = [];
+    for (let c = 0;c < 256; c++)
+      PDFDOC.push(c);
+    [728, 711, 710, 729, 733, 731, 730, 732].forEach((u, i) => {
+      PDFDOC[24 + i] = u;
+    });
+    PDFDOC[127] = 65533;
+    [
+      8226,
+      8224,
+      8225,
+      8230,
+      8212,
+      8211,
+      402,
+      8260,
+      8249,
+      8250,
+      8722,
+      8240,
+      8222,
+      8220,
+      8221,
+      8216,
+      8217,
+      8218,
+      8482,
+      64257,
+      64258,
+      321,
+      338,
+      352,
+      376,
+      381,
+      305,
+      322,
+      339,
+      353,
+      382,
+      65533,
+      8364
+    ].forEach((u, i) => {
+      PDFDOC[128 + i] = u;
+    });
+    PDFDOC[173] = 65533;
+    function decodeTextString(bytes) {
+      if (!(bytes instanceof Uint8Array))
+        throw new ContractError("pdf/info/bad-text-string", "decodeTextString expects a Uint8Array", { context: { typeof: typeof bytes } });
+      if (bytes.length >= 2 && bytes[0] === 254 && bytes[1] === 255) {
+        let s = "";
+        for (let i = 2;i + 1 < bytes.length; i += 2)
+          s += String.fromCharCode(bytes[i] << 8 | bytes[i + 1]);
+        return s.replace(/\u001b[^\u001b]*\u001b/g, "");
+      }
+      if (bytes.length >= 3 && bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191)
+        return new TextDecoder("utf-8").decode(bytes.subarray(3));
+      let s = "";
+      for (const c of bytes)
+        s += String.fromCharCode(PDFDOC[c]);
+      return s;
+    }
+    const STRINGY = ["Title", "Author", "Subject", "Keywords", "Creator", "Producer"], DATEY = ["CreationDate", "ModDate"], KNOWN = new Set(STRINGY.concat(DATEY, ["Trapped"]));
+    function lower(s) {
+      return s.charAt(0).toLowerCase() + s.slice(1);
+    }
+    function typeInfo(dict) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/info/not-dict", "Info must be a dictionary", { context: { type: dict && dict.type } });
+      const e = dict.entries, out = { raw: dict, _extras: {} };
+      for (const k of STRINGY)
+        if (e[k] !== void 0) {
+          if (e[k].type !== "string")
+            throw new ParseError("pdf/info/bad-string", "/" + k + " must be a string", { context: { key: k, type: e[k].type } });
+          out[lower(k)] = e[k].value;
+        }
+      for (const k of DATEY)
+        if (e[k] !== void 0) {
+          if (e[k].type !== "string")
+            throw new ParseError("pdf/info/bad-date", "/" + k + " must be a date string", { context: { key: k, type: e[k].type } });
+          out[lower(k)] = e[k].value;
+        }
+      if (e.Trapped !== void 0)
+        if (e.Trapped.type === "name")
+          out.trapped = e.Trapped.value;
+        else if (e.Trapped.type === "bool")
+          out.trapped = e.Trapped.value ? "True" : "False";
+        else
+          throw new ParseError("pdf/info/bad-trapped", "/Trapped must be a name (True|False|Unknown)", { context: { type: e.Trapped.type } });
+      for (const k of Object.keys(e))
+        if (!KNOWN.has(k))
+          out._extras[k] = e[k];
+      return out;
+    }
+    return { typeInfo, decodeTextString };
+  } });
+    __register({ name: "pdfDocument", dependencies: ["pdfErrors","pdfTokenizer","pdfParser","pdfXref","pdfTrailer","pdfCatalog","pdfPage","pdfPages","pdfCrossRefStream","pdfObjStream","pdfFilterDispatch","pdfSecurity","pdfStandardV4","pdfStandardV5","pdfStandardV6","pdfInfo"], factory: function(errors, tokenizerMod, parserMod, xrefMod, trailerMod, catalogMod, pageMod, pagesMod, crossRefStreamMod, objStreamMod, filterDispatchMod, securityMod, v4Mod, v5Mod, v6Mod, infoMod) {
     const { ParseError, ContractError, EncryptionError } = errors, tokenize = tokenizerMod && tokenizerMod.tokenize, parseIndirect = parserMod && parserMod.parseIndirect, locateStartXref = xrefMod && xrefMod.locateStartXref, readStartXref = xrefMod && xrefMod.readStartXref, parseXrefTable = xrefMod && xrefMod.parseXrefTable, parseTrailerDict = xrefMod && xrefMod.parseTrailerDict, typeTrailer = trailerMod && trailerMod.typeTrailer, typeCatalog = catalogMod && catalogMod.typeCatalog, typePage = pageMod && pageMod.typePage, walkPageTree = pagesMod && pagesMod.walkPageTree, HEADER_PREFIX = new Uint8Array([37, 80, 68, 70, 45]), XREF_KEYWORD = new Uint8Array([120, 114, 101, 102]), PDF_NULL = Object.freeze({ type: "null" }), SECTION_LOCAL_KEYS = new Set([
       "Prev",
       "XRefStm",
@@ -3625,9 +3739,11 @@ endstream`);
       if (!crossRefStreamMod || !objStreamMod || !filterDispatchMod)
         throw new ParseError("pdf/document/xref-stream-unwired", "this pdfDocument was built without pdfCrossRefStream, " + "pdfObjStream and pdfFilterDispatch \u2014 cross-reference " + "streams and object streams cannot be read", { context: { offset } });
     }
-    function readXrefStreamSection(bytes, at) {
+    function readXrefStreamSection(bytes, at, end = !0) {
       requireStreamWiring(at);
-      const tok = tokenize(bytes, { start: at }), streamObj = parseIndirect(tok, refuseIndirectLength).value, typeEntry = streamObj && streamObj.dict && streamObj.dict.entries && streamObj.dict.entries.Type;
+      const tok = tokenize(bytes, { start: at }), streamObj = parseIndirect(tok, refuseIndirectLength).value;
+      checkStreamWindow(streamObj, bytes, end, null);
+      const typeEntry = streamObj && streamObj.dict && streamObj.dict.entries && streamObj.dict.entries.Type;
       if (!streamObj || streamObj.type !== "stream" || !typeEntry || typeEntry.type !== "name" || typeEntry.value !== "XRef")
         throw new ParseError("pdf/document/bad-xref-section", "neither an xref table nor a cross-reference stream at startxref", { context: { offset: at } });
       const decoded = filterDispatchMod.decode(streamObj);
@@ -3817,10 +3933,119 @@ endstream`);
         }
       };
     }
-    function readDocument(bytes, opts = {}) {
-      if (!(bytes instanceof Uint8Array))
-        throw new ParseError("pdf/document/bad-input", "readDocument expects a Uint8Array", { context: { typeof: typeof bytes } });
-      const password = opts.password;
+    const SOURCE_WINDOW = 65536, SOURCE_WINDOW_MIN = 16, SOURCE_WINDOW_SLACK = 65536, STARTXREF_TAIL = 8192;
+    function isSource(v) {
+      return !!v && typeof v === "object" && !(v instanceof Uint8Array) && Number.isSafeInteger(v.byteLength) && v.byteLength >= 0 && typeof v.read === "function";
+    }
+
+    class WindowShort extends Error {
+    }
+    function inputOf(input, first) {
+      if (!isSource(input)) {
+        const whole = { bytes: input, base: 0, end: !0 };
+        return { size: input.length, window: () => whole, run: (offset, parse) => parse(input, offset, !0) };
+      }
+      const size = input.byteLength;
+      function window(offset, length) {
+        const n = Math.max(0, Math.min(length, size - offset)), got = input.read(offset, n);
+        if (!(got instanceof Uint8Array))
+          throw new ContractError("pdf/document/bad-source-read", "a byte source read must return a Uint8Array", { context: { offset, length: n, typeof: typeof got } });
+        return { bytes: got, base: offset, end: offset + got.length >= size };
+      }
+      function run(offset, parse) {
+        const cap = parserMod.parserLimits.maxStreamBytes + SOURCE_WINDOW_SLACK;
+        let length = Math.min(first, cap);
+        for (;; ) {
+          const w = window(offset, length);
+          try {
+            return parse(w.bytes, 0, w.end);
+          } catch (err) {
+            if (w.end || !(err instanceof ParseError || err instanceof WindowShort))
+              throw err;
+          }
+          if (length >= cap)
+            throw new ParseError("pdf/document/source-window", "the object does not fit the largest window a byte source is read by", { context: { offset, window: length } });
+          length = Math.min(length * 2, cap);
+        }
+      }
+      return { size, window, run };
+    }
+    function checkStreamWindow(value, bytes, end, resolveRef) {
+      if (end || !value || value.type !== "stream")
+        return;
+      let len = value.dict && value.dict.entries && value.dict.entries.Length;
+      if (len && len.type === "ref" && resolveRef)
+        len = resolveRef(len);
+      if (len && len.type === "int" && len.value > value.raw.length)
+        throw new WindowShort("stream longer than its window");
+    }
+    const INFO_TEXT = [
+      ["Title", "title"],
+      ["Author", "author"],
+      ["Subject", "subject"],
+      ["Keywords", "keywords"],
+      ["Creator", "creator"],
+      ["Producer", "producer"],
+      ["CreationDate", "creationDate"],
+      ["ModDate", "modDate"]
+    ];
+    function infoText(node, resolve) {
+      let dict;
+      try {
+        dict = resolve(node);
+      } catch {
+        return null;
+      }
+      if (!dict || dict.type !== "dict")
+        return null;
+      const out = {};
+      for (const [key, name] of INFO_TEXT) {
+        let v;
+        try {
+          v = resolve(dict.entries[key]);
+        } catch {
+          continue;
+        }
+        if (v && v.type === "string" && v.value instanceof Uint8Array)
+          out[name] = infoMod.decodeTextString(v.value);
+      }
+      let t;
+      try {
+        t = resolve(dict.entries.Trapped);
+      } catch {
+        t = void 0;
+      }
+      if (t && t.type === "name")
+        out.trapped = t.value;
+      else if (t && t.type === "bool")
+        out.trapped = t.value ? "True" : "False";
+      return out;
+    }
+    function contentsOf(page, resolve) {
+      const parts = [];
+      for (const ref of page.contents || []) {
+        const s = resolve({ type: "ref", num: ref.num, gen: ref.gen });
+        if (!s || s.type !== "stream")
+          throw new ParseError("pdf/document/bad-contents", `content ${ref.num} ${ref.gen} R is not a stream`, { context: { num: ref.num, gen: ref.gen } });
+        parts.push(filterDispatchMod.decode(s));
+      }
+      const size = parts.reduce((n, x) => n + x.length, 0) + Math.max(0, parts.length - 1), out = new Uint8Array(size);
+      let at = 0;
+      parts.forEach((x, k) => {
+        if (k)
+          out[at++] = 10;
+        out.set(x, at);
+        at += x.length;
+      });
+      return out;
+    }
+    function readDocument(input, opts = {}) {
+      if (!(input instanceof Uint8Array) && !isSource(input))
+        throw new ParseError("pdf/document/bad-input", "readDocument expects a Uint8Array or a byte source { byteLength, read(offset, length) }", { context: { typeof: input === null ? "null" : typeof input } });
+      const sourceWindow = opts.sourceWindow;
+      if (sourceWindow !== void 0 && !(Number.isSafeInteger(sourceWindow) && sourceWindow >= SOURCE_WINDOW_MIN))
+        throw new ContractError("pdf/document/bad-source-window-option", `opts.sourceWindow must be an integer of at least ${SOURCE_WINDOW_MIN}`, { context: { typeof: typeof sourceWindow } });
+      const fromSource = isSource(input), src = inputOf(input, sourceWindow === void 0 ? SOURCE_WINDOW : sourceWindow), bytes = fromSource ? null : input, password = opts.password;
       if (password !== void 0 && typeof password !== "string" && !(password instanceof Uint8Array))
         throw new ContractError("pdf/document/bad-password-option", "opts.password must be a string or a Uint8Array", { context: { typeof: typeof password } });
       const legacyRc4 = opts.legacyRc4;
@@ -3834,12 +4059,12 @@ endstream`);
       const fastCipher = opts.fastCipher;
       if (fastCipher !== void 0 && typeof fastCipher !== "boolean")
         throw new ContractError("pdf/document/bad-fast-cipher-option", "opts.fastCipher must be a boolean", { context: { typeof: fastCipher === null ? "null" : typeof fastCipher } });
-      const { version, end: headerEnd } = readHeader(bytes), xref = { entries: {}, sections: [] }, losses = [];
+      const { version, end: headerEnd } = readHeader(fromSource ? src.window(0, SOURCE_WINDOW).bytes : bytes), xref = { entries: {}, sections: [] }, losses = [];
       function walkChain() {
-        const sxAt = locateStartXref(bytes);
+        const tail = fromSource ? src.window(Math.max(0, src.size - STARTXREF_TAIL), STARTXREF_TAIL).bytes : bytes, sxAt = locateStartXref(tail);
         if (sxAt < 0)
           throw new ParseError("pdf/document/no-startxref", "startxref keyword not found near EOF");
-        const xrefAt = readStartXref(bytes, sxAt), trailerDicts = [];
+        const xrefAt = readStartXref(tail, sxAt), trailerDicts = [];
         let cursor = xrefAt;
         const seenSections = new Set;
         function mergeSection(at, kind, entries) {
@@ -3853,8 +4078,23 @@ endstream`);
             break;
           seenSections.add(cursor);
           let dict;
-          if (startsXrefTable(bytes, skipWhitespace(bytes, cursor))) {
-            const section = parseXrefTable(bytes, cursor);
+          const read = src.run(cursor, (b, at, end) => {
+            if (startsXrefTable(b, skipWhitespace(b, at))) {
+              const section = parseXrefTable(b, at);
+              let trailerError = null, trailerDict;
+              try {
+                trailerDict = parseTrailerDict(b, section.end).dict;
+              } catch (err) {
+                if (!end)
+                  throw err;
+                trailerError = err;
+              }
+              return { table: section, dict: trailerDict, trailerError };
+            }
+            return { stream: readXrefStreamSection(b, at, end) };
+          });
+          if (read.table) {
+            const section = read.table;
             for (const shape of section.tolerated || [])
               losses.push({
                 code: "pdf/document/xref-tolerated",
@@ -3862,14 +4102,16 @@ endstream`);
                 context: { shape, at: cursor }
               });
             mergeSection(cursor, "table", section.entries);
-            dict = parseTrailerDict(bytes, section.end).dict;
+            if (read.trailerError)
+              throw read.trailerError;
+            dict = read.dict;
             const stmAt = dict && dict.entries && dict.entries.XRefStm;
-            if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < bytes.length) {
-              const hybrid = readXrefStreamSection(bytes, stmAt.value);
+            if (stmAt && stmAt.type === "int" && stmAt.value >= 0 && stmAt.value < src.size) {
+              const hybrid = src.run(stmAt.value, (b, at, end) => readXrefStreamSection(b, at, end));
               mergeSection(stmAt.value, "stream", hybrid.entries);
             }
           } else {
-            const section = readXrefStreamSection(bytes, cursor);
+            const section = read.stream;
             mergeSection(cursor, "stream", section.entries);
             dict = section.dict;
           }
@@ -3888,9 +4130,9 @@ endstream`);
       try {
         trailerTyped = walkChain();
       } catch (err) {
-        if (opts.recoverXref !== !0 || !(err instanceof ParseError))
+        if (opts.recoverXref === !1 || !(err instanceof ParseError))
           throw err;
-        const rebuilt = rebuildXref(bytes);
+        const rebuilt = rebuildXref(bytes || src.window(0, src.size).bytes);
         xref.entries = rebuilt.entries;
         xref.sections = [{ at: null, kind: "rebuilt", entries: xref.entries }];
         losses.push({
@@ -3900,9 +4142,25 @@ endstream`);
         });
         trailerTyped = typeTrailer(rebuilt.trailer);
       }
-      if (trailerTyped.encrypt && opts.allowEncrypted !== !0 && password === void 0)
-        throw new ParseError("pdf/document/encrypted", "document is encrypted (trailer /Encrypt present) \u2014 " + "no decrypt path is composed for readDocument; pass { allowEncrypted: true } to read the raw ciphertext container", { context: { encrypt: trailerTyped.encrypt } });
-      const indirects = new Map, lossKeys = new Set, freeKeys = new Set, objStmMembers = new Map;
+      if (trailerTyped.encrypt && opts.allowEncrypted !== !0 && password === void 0) {
+        const refused = new ParseError("pdf/document/encrypted", "document is encrypted (trailer /Encrypt present) and the empty password does not open it \u2014 " + "pass { password } to decrypt it, or { allowEncrypted: true } to read the raw ciphertext container", { context: { encrypt: trailerTyped.encrypt } });
+        if (opts.emptyPassword === !1)
+          throw refused;
+        let opened;
+        try {
+          opened = readDocument(input, { ...opts, password: "" });
+        } catch {
+          throw refused;
+        }
+        const er = opened.trailer.encrypt, encNode = er && er.type === "dict" ? er : opened._raw.resolve({ type: "ref", num: er.num, gen: er.gen }), p = encNode && encNode.type === "dict" && encNode.entries.P ? encNode.entries.P.value : null;
+        opened.losses.push({
+          code: "pdf/document/opened-with-empty-password",
+          message: "the document is encrypted; it was opened with the empty password",
+          context: { permissions: p }
+        });
+        return opened;
+      }
+      const indirects = new Map, lossKeys = new Set, freeKeys = new Set, objStmMembers = new Map, resolving = new Set;
       function resolve(ref) {
         if (!ref || ref.type !== "ref")
           return ref;
@@ -3912,6 +4170,24 @@ endstream`);
         const key = num + ":" + gen;
         if (indirects.has(key))
           return indirects.get(key).value;
+        if (resolving.has(key)) {
+          recordLoss("cycle:" + key, {
+            code: "pdf/document/reference-cycle",
+            message: `object ${num} ${gen} is referenced while it is being read; the reference reads as null`,
+            context: { num, gen }
+          });
+          return PDF_NULL;
+        }
+        if (resolving.size >= 32)
+          throw new ParseError("pdf/document/resolve-too-deep", `object ${num} ${gen} nests more than 32 objects being read`, { context: { num, gen, depth: resolving.size } });
+        resolving.add(key);
+        try {
+          return resolveUnguarded(num, gen, key);
+        } finally {
+          resolving.delete(key);
+        }
+      }
+      function resolveUnguarded(num, gen, key) {
         let entry = xref.entries[num];
         if (!entry)
           throw new ParseError("pdf/document/missing-xref", `object ${num} ${gen} not in xref`, { context: { num, gen } });
@@ -3926,9 +4202,15 @@ endstream`);
           return value;
         }
         const offset = entry.offset;
-        if (offset <= 0 || offset >= bytes.length)
-          throw new ParseError("pdf/document/bad-offset", `object ${num} ${gen} xref offset out of range`, { context: { num, gen, offset, total: bytes.length } });
-        const tok = tokenize(bytes, { start: offset }), def = parseIndirect(tok, resolve);
+        if (offset <= 0 || offset >= src.size)
+          throw new ParseError("pdf/document/bad-offset", `object ${num} ${gen} xref offset out of range`, { context: { num, gen, offset, total: src.size } });
+        const def = src.run(offset, (b, at, end) => {
+          const d = parseIndirect(tokenize(b, { start: at }), resolve);
+          checkStreamWindow(d.value, b, end, resolve);
+          if (fromSource && d.value && d.value.type === "stream")
+            d.value = { ...d.value, raw: d.value.raw.slice() };
+          return d;
+        });
         if (def.num !== num || def.gen !== gen)
           throw new ParseError("pdf/document/xref-mismatch", "xref points to a different object", { context: { expected: { num, gen }, found: { num: def.num, gen: def.gen } } });
         const value = decryptor ? decryptor.decrypt(num, gen, def.value) : def.value;
@@ -4015,12 +4297,14 @@ endstream`);
         trailer: trailerTyped,
         xref,
         losses,
-        _raw: {
-          resolve,
-          bytes,
-          headerEnd,
-          indirects
-        }
+        resolve,
+        info: () => trailerTyped && trailerTyped.info ? infoText({ type: "ref", num: trailerTyped.info.num, gen: trailerTyped.info.gen }, resolve) : null,
+        pageContents(i) {
+          if (!Number.isInteger(i) || i < 0 || i >= pages.length)
+            throw new ContractError("pdf/document/bad-page-index", `no page ${i} (the document has ${pages.length})`, { context: { index: i, pages: pages.length } });
+          return contentsOf(pages[i], resolve);
+        },
+        _raw: fromSource ? { resolve, source: input, headerEnd, indirects } : { resolve, bytes, headerEnd, indirects }
       };
     }
     return { readDocument, readHeader };
@@ -4125,7 +4409,7 @@ ${opts.xrefOffset}
       }
       const xrefOffset = cursor;
       push(buildXref(maxNum, offsets));
-      const size = maxNum + 1, id = opts.id || (version === "2.0" && canDerive ? derivedId(concat(parts)) : void 0);
+      const size = maxNum + 1, id = opts.id || ((version === "2.0" || opts.deriveId === !0) && canDerive ? derivedId(concat(parts)) : void 0);
       push(buildTrailer({
         size,
         root: opts.root,
@@ -4173,8 +4457,8 @@ ${opts.xrefOffset}
   } });
     __register({ name: "pdf", dependencies: ["pdfErrors","pdfShared","pdfTokenizer","pdfParserObj","pdfParser","pdfXref","pdfTrailer","pdfSerializer","pdfCatalog","pdfPages","pdfPage","pdfDocument","pdfWriter"], factory: function(errors, shared, tokenizer, parserObj, parser, xref, trailer, serializer, catalog, pages, page, docMod, writerMod) {
     const { ContractError } = errors, readDocument = docMod.readDocument, readHeader = docMod.readHeader, writeDocument = writerMod.writeDocument, assembleIndirects = writerMod.assembleIndirects, usedExtensions = new Set, api = {
-      read(bytes, opts) {
-        return readDocument(bytes, opts);
+      read(input, opts) {
+        return readDocument(input, opts);
       },
       header(bytes) {
         return readHeader(bytes);
@@ -5434,7 +5718,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfAOutputIntent", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
-    const { ParseError } = errors, { isType } = parser, PDFA_PROFILES = Object.freeze({
+    const { ParseError, ContractError } = errors, { isType } = parser, PDFA_PROFILES = Object.freeze({
       "1a": { part: 1, level: "a", iso: "ISO 19005-1:2005", notes: "accessible" },
       "1b": { part: 1, level: "b", iso: "ISO 19005-1:2005", notes: "basic" },
       "2a": { part: 2, level: "a", iso: "ISO 19005-2:2011", notes: "accessible" },
@@ -5483,23 +5767,33 @@ ${opts.xrefOffset}
       const tag = m[1].toLowerCase();
       return VALID_LEVELS.has(tag) ? tag : null;
     }
-    function validatePdfABasics(typedDoc) {
+    const METADATA_RULE = Object.freeze({ 1: "6.7.2-t1", 2: "6.6.2.1-t1", 3: "6.6.2.1-t1", 4: "6.7.2.1-t1" }), ENCRYPT_RULE = "6.1.3-t2";
+    function validatePdfABasics(typedDoc, opts) {
       if (!typedDoc || typeof typedDoc !== "object")
         throw new ParseError("pdf/extra/pdfa/lint/bad-doc", "validatePdfABasics requires a typed document object", { context: { type: typeof typedDoc } });
-      const errors = [], warnings = [], cat = typedDoc.catalog && typedDoc.catalog.entries;
-      if (typedDoc.encrypted)
-        errors.push("PDF/A forbids encryption");
+      const profile = opts && opts.profile !== void 0 ? opts.profile : null;
+      if (profile !== null && !VALID_LEVELS.has(profile))
+        throw new ContractError("pdf/extra/pdfa/bad-profile", "validatePdfABasics: opts.profile must be a PDFA_PROFILES key", { context: { received: typeof profile === "string" ? profile : typeof profile } });
+      const part = profile ? PDFA_PROFILES[profile].part : null, errors = [], warnings = [], findings = [], error = (rule, message) => {
+        errors.push(message);
+        findings.push({ rule, severity: "error", message });
+      }, warning = (rule, message) => {
+        warnings.push(message);
+        findings.push({ rule, severity: "warning", message });
+      }, resolver = typedDoc._raw && typeof typedDoc._raw.resolve === "function" ? typedDoc._raw.resolve : null, deref = (v) => resolver && v && v.type === "ref" ? resolver(v) : v, cat = typedDoc.catalog && (typedDoc.catalog.entries || typedDoc.catalog.raw && typedDoc.catalog.raw.entries);
+      if (typedDoc.encrypted || typedDoc.trailer && typedDoc.trailer.encrypt)
+        error(part ? ENCRYPT_RULE : null, "PDF/A forbids encryption");
       if (!cat) {
-        errors.push("catalog missing");
-        return { pass: !1, errors, warnings };
+        error(null, "catalog missing");
+        return { pass: !1, errors, warnings, findings };
       }
       if (!cat.Metadata)
-        errors.push("catalog requires /Metadata XMP stream");
-      if (cat.MarkInfo && !isType(cat.MarkInfo, "dict"))
-        errors.push("/MarkInfo must be a dictionary");
+        error(part ? METADATA_RULE[part] : null, "catalog requires /Metadata XMP stream");
+      if (cat.MarkInfo && !isType(deref(cat.MarkInfo), "dict"))
+        warning(null, "/MarkInfo must be a dictionary");
       if (!cat.OutputIntents)
-        warnings.push("catalog has no /OutputIntents array");
-      return { pass: errors.length === 0, errors, warnings };
+        warning(null, "catalog has no /OutputIntents array");
+      return { pass: errors.length === 0, errors, warnings, findings };
     }
     return {
       detectPdfAProfile,
@@ -5508,7 +5802,7 @@ ${opts.xrefOffset}
     };
   } });
     __register({ name: "pdfUaTagged", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
-    const { ParseError } = errors, { isType } = parser, UA_STRUCTURE = Object.freeze({
+    const { ParseError, ContractError } = errors, { isType } = parser, UA_STRUCTURE = Object.freeze({
       required: Object.freeze([
         "Document",
         "Part",
@@ -5529,39 +5823,61 @@ ${opts.xrefOffset}
       forbidden: Object.freeze(["Span"]),
       figure: Object.freeze(["Alt", "ActualText"]),
       headings: Object.freeze(["H", "H1", "H2", "H3", "H4", "H5", "H6"])
+    }), UA_RULES = Object.freeze({
+      1: Object.freeze({ structTree: "7.1-t11", marked: "6.2-t1", docTitle: "7.1-t10", lang: null, accessible: "7.16-t1" }),
+      2: Object.freeze({ structTree: "8.2.1-t1", marked: "6.2-t1", docTitle: "8.11.2-t1", lang: "8.4.4-t1", accessible: null })
     });
-    function validatePdfUa(typedDoc) {
+    function lintView(doc) {
+      const resolver = doc._raw && typeof doc._raw.resolve === "function" ? doc._raw.resolve : null, deref = (v) => resolver && v && v.type === "ref" ? resolver(v) : v, catalog = doc.catalog && (doc.catalog.entries || doc.catalog.raw && doc.catalog.raw.entries);
+      let p = typeof doc.p === "number" ? doc.p : void 0;
+      const enc = doc.trailer && doc.trailer.encrypt;
+      if (p === void 0 && enc) {
+        const e = deref(enc.type ? enc : { type: "ref", num: enc.num, gen: enc.gen }), P = isType(e, "dict") ? deref(e.entries.P) : null;
+        if (isType(P, "int"))
+          p = P.value;
+      }
+      return { catalog, deref, p };
+    }
+    function validatePdfUa(typedDoc, opts) {
       if (!typedDoc || typeof typedDoc !== "object")
         throw new ParseError("pdf/extra/pdfua/bad-doc", "validatePdfUa requires a typed document object", { context: { type: typeof typedDoc } });
-      const errors = [], warnings = [], cat = typedDoc.catalog && typedDoc.catalog.entries;
+      const part = opts && opts.part !== void 0 ? opts.part : 1;
+      if (part !== 1 && part !== 2)
+        throw new ContractError("pdf/extra/pdfua/bad-part", "validatePdfUa: opts.part must be 1 or 2", { context: { received: typeof part === "number" ? String(part) : typeof part } });
+      const rules = UA_RULES[part], errors = [], warnings = [], findings = [], error = (rule, message) => {
+        errors.push(message);
+        findings.push({ rule, severity: "error", message });
+      }, warning = (rule, message) => {
+        warnings.push(message);
+        findings.push({ rule, severity: "warning", message });
+      }, { catalog: cat, deref, p } = lintView(typedDoc);
       if (!cat) {
-        errors.push("catalog missing");
-        return { pass: !1, errors, warnings };
+        error(null, "catalog missing");
+        return { pass: !1, errors, warnings, findings };
       }
       if (!cat.StructTreeRoot)
-        errors.push("catalog requires /StructTreeRoot");
-      if (!cat.Lang || !isType(cat.Lang, "string"))
-        errors.push("catalog requires /Lang string");
-      if (!cat.MarkInfo)
-        errors.push("catalog requires /MarkInfo dictionary");
-      else if (!isType(cat.MarkInfo, "dict"))
-        errors.push("/MarkInfo must be a dictionary");
+        error(rules.structTree, "catalog requires /StructTreeRoot");
+      if (!isType(deref(cat.Lang), "string"))
+        if (part === 2)
+          error(rules.lang, "catalog requires /Lang string");
+        else
+          warning(rules.lang, "catalog has no /Lang string");
+      const markInfo = deref(cat.MarkInfo);
+      if (!markInfo)
+        error(rules.marked, "catalog requires /MarkInfo dictionary");
+      else if (!isType(markInfo, "dict"))
+        error(rules.marked, "/MarkInfo must be a dictionary");
       else {
-        const m = cat.MarkInfo.entries.Marked;
+        const m = deref(markInfo.entries.Marked);
         if (!isType(m, "bool") || m.value !== !0)
-          errors.push("/MarkInfo /Marked must be true");
+          error(rules.marked, "/MarkInfo /Marked must be true");
       }
-      if (cat.ViewerPreferences && isType(cat.ViewerPreferences, "dict")) {
-        const ddt = cat.ViewerPreferences.entries.DisplayDocTitle;
-        if (!isType(ddt, "bool") || ddt.value !== !0)
-          warnings.push("/ViewerPreferences /DisplayDocTitle should be true");
-      } else
-        warnings.push("catalog should have /ViewerPreferences");
-      if (typeof typedDoc.p === "number") {
-        if ((typedDoc.p & 512) === 0)
-          errors.push("permissions bit 10 (accessible) must be set");
-      }
-      return { pass: errors.length === 0, errors, warnings };
+      const prefs = deref(cat.ViewerPreferences), ddt = isType(prefs, "dict") ? deref(prefs.entries.DisplayDocTitle) : null;
+      if (!isType(ddt, "bool") || ddt.value !== !0)
+        error(rules.docTitle, "catalog requires /ViewerPreferences /DisplayDocTitle true");
+      if (rules.accessible && typeof p === "number" && (p & 512) === 0)
+        error(rules.accessible, "permissions bit 10 (accessible) must be set");
+      return { pass: errors.length === 0, errors, warnings, findings };
     }
     function validateUaStructElement(node) {
       if (!node || typeof node !== "object")
@@ -6696,7 +7012,8 @@ ${opts.xrefOffset}
       "Start",
       "End",
       "DPM",
-      "NodeNameTree"
+      "NodeNameTree",
+      "AF"
     ]), ROOT_KNOWN = new Set([
       "Type",
       "DPartRootNode",
@@ -6736,6 +7053,7 @@ ${opts.xrefOffset}
         end: pageRef(e.End),
         dpm: isType(e.DPM, "dict") ? typeDPM(e.DPM) : null,
         nodeNameTree: e.NodeNameTree || null,
+        af: e.AF || null,
         raw: dict,
         _extras: {}
       };
@@ -8431,7 +8749,8 @@ ${opts.xrefOffset}
       bool: (v) => isBool(v) ? v.value : null,
       array: (v) => isArr(v) || isRef(v) ? v : null,
       dict: (v) => isDict(v) || isRef(v) ? v : null,
-      stream: (v) => v && (v.type === "stream" || v.type === "ref") ? v : null
+      stream: (v) => v && (v.type === "stream" || v.type === "ref") ? v : null,
+      any: (v) => v === void 0 ? null : v
     });
     function readKey(type, v) {
       if (isRef(v))
@@ -8582,7 +8901,40 @@ ${opts.xrefOffset}
           out._extras[k] = v;
       return out;
     }
+    const SMALL_OBJECT_TYPES = Object.freeze({
+      alternateImage: keyTypes("Image:stream DefaultForPrinting:bool OC:dict"),
+      data: keyTypes("LastModified:text Private:any"),
+      destDict: keyTypes("D:array SD:array"),
+      fixedPrint: keyTypes("Type:name Matrix:array H:number V:number"),
+      markInfo: keyTypes("Marked:bool UserProperties:bool Suspects:bool"),
+      markedContentReference: keyTypes("Type:name Pg:dict Stm:stream StmOwn:array|dict|stream MCID:int"),
+      minimumBitDepth: keyTypes("Type:name V:int M:int"),
+      namespace: keyTypes("Type:name NS:text Schema:dict|text RoleMapNS:dict"),
+      objectReference: keyTypes("Type:name Pg:dict Obj:array|dict|stream"),
+      reference: keyTypes("F:dict|text Page:int|text ID:array"),
+      sourceInformation: keyTypes("AU:dict|text TS:text E:text S:int C:dict"),
+      timespan: keyTypes("Type:name S:name V:number"),
+      urlAlias: keyTypes("U:text C:array"),
+      userProperty: keyTypes("N:text V:any F:text H:bool"),
+      winLaunch: keyTypes("F:text D:text O:text P:text")
+    }), SMALL_OBJECT_KEYS = Object.freeze(Object.fromEntries(Object.entries(SMALL_OBJECT_TYPES).map(([kind, types]) => [kind, Object.freeze(Object.keys(types))])));
+    function typeSmallObject(value, kind) {
+      if (typeof kind !== "string" || !Object.prototype.hasOwnProperty.call(SMALL_OBJECT_TYPES, kind))
+        throw new ContractError("pdf/misc/small-object/kind", "kind must be a key of SMALL_OBJECT_KEYS", { context: { kind } });
+      const dict = value && value.type === "stream" ? value.dict : value;
+      if (!isDict(dict))
+        throw new ParseError("pdf/misc/small-object/not-dict", "neither a stream nor a dictionary", { context: { type: value && value.type } });
+      const types = SMALL_OBJECT_TYPES[kind], out = { raw: value, _extras: {} };
+      for (const [k, v] of Object.entries(dict.entries))
+        if (Object.prototype.hasOwnProperty.call(types, k))
+          out[k.toLowerCase()] = readKey(types[k], v);
+        else
+          out._extras[k] = v;
+      return out;
+    }
     return {
+      typeSmallObject,
+      SMALL_OBJECT_KEYS,
       typeSpiderInfo,
       typeViewerPreferences,
       typeThreads,
@@ -8775,8 +9127,257 @@ ${opts.xrefOffset}
       ACTIVE_KINDS
     };
   } });
-    __register({ name: "pdfBuilder", dependencies: ["pdfErrors","pdfParserObj","pdfWriter"], factory: function(errors, parserObjMod, writerMod) {
-    const { RenderError } = errors, obj = parserObjMod.obj, writeDocument = writerMod.writeDocument, te = new TextEncoder, STRINGY_INFO = new Set([
+    __register({ name: "pdfCryptPublicKey", dependencies: ["pdfErrors","pdfParser","pdfSigAesGcm"], factory: function(errors, parser, aesGcm) {
+    const { ParseError } = errors, { isType } = parser;
+    function dictOf(dict, what) {
+      if (!isType(dict, "dict"))
+        throw new ParseError("pdf/extra/crypt-public-key/not-dict", `${what} must be a dictionary`, { context: { type: dict && dict.type } });
+      return dict.entries;
+    }
+    const nameOf = (v) => isType(v, "name") ? v.value : null, extrasOf = (e, known) => {
+      const out = {};
+      for (const k of Object.keys(e))
+        if (!known.has(k))
+          out[k] = e[k];
+      return out;
+    };
+    function byteStrings(v) {
+      if (isType(v, "string"))
+        return [v.value];
+      if (isType(v, "array"))
+        return v.items.filter((i) => isType(i, "string")).map((i) => i.value);
+      return null;
+    }
+    const PK_FILTER_KNOWN = new Set(["Recipients", "EncryptMetadata", "Type", "CFM", "AuthEvent", "Length"]);
+    function typeCryptFilterPublicKey(dict) {
+      const e = dictOf(dict, "a public-key crypt filter"), out = {
+        recipients: byteStrings(e.Recipients),
+        encryptMetadata: isType(e.EncryptMetadata, "bool") ? e.EncryptMetadata.value : !0,
+        cfm: nameOf(e.CFM),
+        authEvent: nameOf(e.AuthEvent),
+        length: isType(e.Length, "int") ? e.Length.value : null,
+        raw: dict,
+        _extras: extrasOf(e, PK_FILTER_KNOWN)
+      };
+      if (isType(e.Type, "name"))
+        out.type = e.Type.value;
+      return out;
+    }
+    function typeMap(dict, what, typeOne) {
+      const e = dictOf(dict, what), filters = {}, extras = {};
+      for (const name of Object.keys(e))
+        if (isType(e[name], "dict"))
+          filters[name] = typeOne(e[name]);
+        else
+          extras[name] = e[name];
+      return { filters, raw: dict, _extras: extras };
+    }
+    function typeCryptFilterPublicKeyMap(dict) {
+      return typeMap(dict, "a public-key crypt filter map", typeCryptFilterPublicKey);
+    }
+    function typeCryptFilterMap(dict) {
+      return typeMap(dict, "a crypt filter map", aesGcm.typeCfEntry);
+    }
+    const PAYLOAD_KNOWN = new Set(["Type", "Subtype", "Version"]);
+    function typeEncryptedPayload(dict) {
+      const e = dictOf(dict, "/EncryptedPayload"), out = {
+        subtype: nameOf(e.Subtype),
+        version: nameOf(e.Version),
+        raw: dict,
+        _extras: extrasOf(e, PAYLOAD_KNOWN)
+      };
+      if (isType(e.Type, "name"))
+        out.type = e.Type.value;
+      return out;
+    }
+    return { typeCryptFilterPublicKey, typeCryptFilterPublicKeyMap, typeCryptFilterMap, typeEncryptedPayload };
+  } });
+    __register({ name: "pdfXmp", dependencies: ["pdfErrors","pdfParser"], factory: function(errors, parser) {
+    const { ParseError, ContractError } = errors, { isType } = parser, te = new TextEncoder;
+    function esc(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function xmpDate(key, value) {
+      const m = /^D:(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?(Z|[+-]\d{2}(?:'\d{2}'?)?)?$/.exec(String(value));
+      if (!m)
+        throw new ContractError("pdf/xmp/bad-date", `xmp packet: ${key} is not a PDF date`, { context: { key } });
+      const [, y, mo, d, h, mi, s, tz] = m;
+      let out = y + (mo ? "-" + mo : "") + (mo && d ? "-" + d : "");
+      if (mo && d && h)
+        out += "T" + h + ":" + (mi || "00") + ":" + (s || "00");
+      if (mo && d && h && tz)
+        out += tz === "Z" ? "Z" : tz.slice(0, 3) + ":" + (tz.slice(4, 6) || "00");
+      return out;
+    }
+    function packet(fields) {
+      const f = fields || {}, id = f.pdfaid || {}, info = f.info || {}, has = (k) => info[k] !== void 0 && info[k] !== null, props = [];
+      if (id.part !== void 0)
+        props.push(`<pdfaid:part>${esc(id.part)}</pdfaid:part>`);
+      if (id.rev !== void 0)
+        props.push(`<pdfaid:rev>${esc(id.rev)}</pdfaid:rev>`);
+      if (id.conformance !== void 0)
+        props.push(`<pdfaid:conformance>${esc(id.conformance)}</pdfaid:conformance>`);
+      const ua = f.pdfuaid || {};
+      if (ua.part !== void 0)
+        props.push(`<pdfuaid:part>${esc(ua.part)}</pdfuaid:part>`);
+      if (ua.rev !== void 0)
+        props.push(`<pdfuaid:rev>${esc(ua.rev)}</pdfuaid:rev>`);
+      const alt = (v) => `<rdf:Alt><rdf:li xml:lang="x-default">${esc(v)}</rdf:li></rdf:Alt>`;
+      if (has("Title"))
+        props.push(`<dc:title>${alt(info.Title)}</dc:title>`);
+      if (has("Author"))
+        props.push(`<dc:creator><rdf:Seq><rdf:li>${esc(info.Author)}</rdf:li></rdf:Seq></dc:creator>`);
+      if (has("Subject"))
+        props.push(`<dc:description>${alt(info.Subject)}</dc:description>`);
+      if (has("Keywords"))
+        props.push(`<pdf:Keywords>${esc(info.Keywords)}</pdf:Keywords>`);
+      if (has("Producer"))
+        props.push(`<pdf:Producer>${esc(info.Producer)}</pdf:Producer>`);
+      if (has("Creator"))
+        props.push(`<xmp:CreatorTool>${esc(info.Creator)}</xmp:CreatorTool>`);
+      if (has("CreationDate"))
+        props.push(`<xmp:CreateDate>${xmpDate("CreationDate", info.CreationDate)}</xmp:CreateDate>`);
+      if (has("ModDate"))
+        props.push(`<xmp:ModifyDate>${xmpDate("ModDate", info.ModDate)}</xmp:ModifyDate>`);
+      const text = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
+` + '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/" xmlns:pdfuaid="http://www.aiim.org/pdfua/ns/id/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:pdf="http://ns.adobe.com/pdf/1.3/" xmlns:xmp="http://ns.adobe.com/xap/1.0/">' + props.join("") + `</rdf:Description></rdf:RDF></x:xmpmeta>
+<?xpacket end="w"?>`;
+      return te.encode(text);
+    }
+    function typeXmpStream(stream) {
+      if (!isType(stream, "stream"))
+        throw new ParseError("pdf/xmp/not-stream", "XMP metadata must be a stream", { context: { type: stream && stream.type } });
+      if (!stream.dict || stream.dict.type !== "dict")
+        throw new ParseError("pdf/xmp/no-dict", "XMP stream missing dict");
+      const e = stream.dict.entries;
+      if (!e.Type || e.Type.type !== "name" || e.Type.value !== "Metadata")
+        throw new ParseError("pdf/xmp/bad-type", "/Type must be /Metadata", { context: { actual: e.Type && e.Type.value } });
+      if (!e.Subtype || e.Subtype.type !== "name" || e.Subtype.value !== "XML")
+        throw new ParseError("pdf/xmp/bad-subtype", "/Subtype must be /XML", { context: { actual: e.Subtype && e.Subtype.value } });
+      return {
+        type: "Metadata",
+        subtype: "XML",
+        bytes: stream.raw,
+        raw: stream
+      };
+    }
+    return { typeXmpStream, packet };
+  } });
+    __register({ name: "pdfSrgbIcc", dependencies: [], factory: function() {
+    const te = new TextEncoder;
+    function u32(buf, off, v) {
+      buf[off] = v >>> 24 & 255;
+      buf[off + 1] = v >>> 16 & 255;
+      buf[off + 2] = v >>> 8 & 255;
+      buf[off + 3] = v & 255;
+    }
+    function u16(buf, off, v) {
+      buf[off] = v >>> 8 & 255;
+      buf[off + 1] = v & 255;
+    }
+    function s15f16(buf, off, value) {
+      u32(buf, off, Math.round(value * 65536) & 4294967295);
+    }
+    function sig(buf, off, s) {
+      for (let i = 0;i < 4; i++)
+        buf[off + i] = s.charCodeAt(i);
+    }
+    function align4(n) {
+      return n + 3 & -4;
+    }
+    function writeXyz(buf, off, x, y, z) {
+      sig(buf, off, "XYZ ");
+      s15f16(buf, off + 8, x);
+      s15f16(buf, off + 12, y);
+      s15f16(buf, off + 16, z);
+    }
+    function buildSrgbIcc() {
+      const descAscii = te.encode("awa sRGB (IEC 61966-2.1) "), descLen = 12 + descAscii.length + 4 + 4 + 2 + 1 + 67, cprtAscii = te.encode("Generated by @awacloud/pdf from the public sRGB (IEC 61966-2.1) colorimetry; no third-party data. "), cprtLen = 8 + cprtAscii.length, tags = [
+        { s: "desc", len: descLen },
+        { s: "wtpt", len: 20 },
+        { s: "rXYZ", len: 20 },
+        { s: "gXYZ", len: 20 },
+        { s: "bXYZ", len: 20 },
+        { s: "curv", len: 14, shared: "trc" },
+        { s: "rTRC", shareOf: "trc" },
+        { s: "gTRC", shareOf: "trc" },
+        { s: "bTRC", shareOf: "trc" },
+        { s: "cprt", len: cprtLen }
+      ];
+      let cursor = 132 + tags.length * 12;
+      const offsets = {};
+      for (const t of tags) {
+        if (t.shareOf)
+          continue;
+        offsets[t.s] = { offset: cursor, len: t.len };
+        if (t.shared)
+          offsets[t.shared] = offsets[t.s];
+        cursor = align4(cursor + t.len);
+      }
+      const buf = new Uint8Array(cursor);
+      u32(buf, 0, cursor);
+      u32(buf, 8, 34603008);
+      sig(buf, 12, "mntr");
+      sig(buf, 16, "RGB ");
+      sig(buf, 20, "XYZ ");
+      u16(buf, 24, 2026);
+      u16(buf, 26, 1);
+      u16(buf, 28, 1);
+      sig(buf, 36, "acsp");
+      u32(buf, 64, 0);
+      s15f16(buf, 68, 0.9642);
+      s15f16(buf, 72, 1);
+      s15f16(buf, 76, 0.8249);
+      u32(buf, 128, tags.length);
+      let entry = 132;
+      for (const t of tags) {
+        const ref = t.shareOf ? offsets[t.shareOf] : offsets[t.s];
+        sig(buf, entry, t.s);
+        u32(buf, entry + 4, ref.offset);
+        u32(buf, entry + 8, ref.len);
+        entry += 12;
+      }
+      const desc = offsets.desc.offset;
+      sig(buf, desc, "desc");
+      u32(buf, desc + 8, descAscii.length);
+      buf.set(descAscii, desc + 12);
+      writeXyz(buf, offsets.wtpt.offset, 0.9642, 1, 0.8249);
+      writeXyz(buf, offsets.rXYZ.offset, 0.43607, 0.22249, 0.01392);
+      writeXyz(buf, offsets.gXYZ.offset, 0.38515, 0.71687, 0.09708);
+      writeXyz(buf, offsets.bXYZ.offset, 0.14307, 0.06061, 0.7141);
+      const trc = offsets.trc.offset;
+      sig(buf, trc, "curv");
+      u32(buf, trc + 8, 1);
+      u16(buf, trc + 12, 563);
+      const cprt = offsets.cprt.offset;
+      sig(buf, cprt, "text");
+      buf.set(cprtAscii, cprt + 8);
+      return buf;
+    }
+    return { buildSrgbIcc, SRGB_ICC_N: 3, SRGB_CONDITION: "sRGB IEC61966-2.1" };
+  } });
+    __register({ name: "pdfBuilder", dependencies: ["pdfErrors","pdfParserObj","pdfWriter","pdfXmp","pdfSrgbIcc","standard14Lookup","encodingLookup"], factory: function(errors, parserObjMod, writerMod, xmpMod, iccMod, s14Mod, encMod) {
+    const { RenderError, ContractError } = errors, obj = parserObjMod.obj, writeDocument = writerMod.writeDocument, PDFA_PROFILES = Object.freeze({
+      "4": Object.freeze({ version: "2.0", pdfaid: Object.freeze({ part: 4, rev: 2020 }), info: !1 }),
+      "2b": Object.freeze({ version: "1.7", pdfaid: Object.freeze({ part: 2, conformance: "B" }), info: !0 })
+    }), PDFUA_PARTS = Object.freeze({
+      1: Object.freeze({ version: "1.7", pdfuaid: Object.freeze({ part: 1 }) }),
+      2: Object.freeze({ version: "2.0", pdfuaid: Object.freeze({ part: 2, rev: 2024 }) })
+    });
+    function uaClaimOf(opts) {
+      const part = opts && opts.pdfUA !== void 0 ? opts.pdfUA : null;
+      if (part === null)
+        return null;
+      if (part !== 1 && part !== 2)
+        throw new ContractError("pdf/builder/bad-pdfua", "builder: opts.pdfUA must be 1 or 2", { context: { received: typeof part === "number" ? String(part) : typeof part } });
+      const lang = opts.lang;
+      if (typeof lang !== "string" || lang === "")
+        throw new ContractError("pdf/builder/pdfua-lang", "builder: opts.lang (the document language, a BCP 47 tag) is required with opts.pdfUA", { context: { received: typeof lang } });
+      if (opts.pdfA !== void 0)
+        throw new ContractError("pdf/builder/pdfua-with-pdfa", "builder: opts.pdfUA and opts.pdfA are not written together", { context: { pdfUA: part, pdfA: String(opts.pdfA) } });
+      return { part, lang, version: PDFUA_PARTS[part].version, pdfuaid: PDFUA_PARTS[part].pdfuaid };
+    }
+    const te = new TextEncoder, STRINGY_INFO = new Set([
       "Title",
       "Author",
       "Subject",
@@ -8796,6 +9397,50 @@ ${opts.xrefOffset}
     }
     function numObj(n) {
       return Number.isInteger(n) ? obj.int(n) : obj.real(n);
+    }
+    function textObj(s) {
+      if (/^[\x00-\x7f]*$/.test(s))
+        return obj.string(te.encode(s), "lit");
+      const out = new Uint8Array(2 + s.length * 2);
+      out[0] = 254;
+      out[1] = 255;
+      for (let i = 0;i < s.length; i++) {
+        out[2 + i * 2] = s.charCodeAt(i) >> 8;
+        out[3 + i * 2] = s.charCodeAt(i) & 255;
+      }
+      return obj.string(out, "lit");
+    }
+    const STRUCT_TYPE = /^[A-Za-z][A-Za-z0-9]*$/, PDF2_NS = "http://iso.org/pdf2/ssn";
+    function structPropsOf(props) {
+      const bad = (why) => new ContractError("pdf/builder/bad-struct-props", `builder: openElement props: ${why}`, { context: { why } });
+      if (props === void 0)
+        return { alt: null, lang: null, attributes: [] };
+      if (!props || typeof props !== "object" || Array.isArray(props))
+        throw bad("not an object");
+      for (const k of ["alt", "lang"])
+        if (props[k] !== void 0 && typeof props[k] !== "string")
+          throw bad(`${k} is not a string`);
+      const attributes = props.attributes === void 0 ? [] : props.attributes;
+      if (!Array.isArray(attributes))
+        throw bad("attributes is not an array");
+      for (const a of attributes) {
+        if (!a || typeof a !== "object" || typeof a.O !== "string" || a.O === "")
+          throw bad("an attribute object has no string O");
+        for (const k of Object.keys(a)) {
+          const v = a[k];
+          if (typeof v !== "string" && typeof v !== "boolean" && !(typeof v === "number" && Number.isFinite(v)))
+            throw bad(`attribute ${k} is not a string, a finite number or a boolean`);
+        }
+      }
+      return { alt: props.alt ?? null, lang: props.lang ?? null, attributes };
+    }
+    function attributeDict(a) {
+      const entries = {};
+      for (const k of Object.keys(a)) {
+        const v = a[k];
+        entries[k] = typeof v === "string" ? obj.name(v) : typeof v === "boolean" ? obj.bool(v) : numObj(v);
+      }
+      return obj.dict(entries);
     }
     function boxArray(box) {
       if (!Array.isArray(box) || box.length !== 4)
@@ -8838,11 +9483,32 @@ ${opts.xrefOffset}
         out[i] = parseInt(clean.substr(i * 2, 2), 16);
       return out;
     }
-    function createBuilder() {
+    function outputIntentOf(opts, profile) {
+      const given = opts && Object.prototype.hasOwnProperty.call(opts, "outputIntent") ? opts.outputIntent : void 0;
+      if (given === void 0) {
+        if (!profile)
+          return null;
+        return {
+          profile: iccMod.buildSrgbIcc(),
+          components: iccMod.SRGB_ICC_N,
+          identifier: iccMod.SRGB_CONDITION,
+          info: iccMod.SRGB_CONDITION,
+          registry: "http://www.color.org"
+        };
+      }
+      if (!(profile && given && typeof given === "object" && given.profile instanceof Uint8Array && given.profile.length > 0 && [1, 3, 4].includes(given.components) && typeof given.identifier === "string" && given.identifier !== "" && (given.info === void 0 || typeof given.info === "string")))
+        throw new ContractError("pdf/builder/bad-output-intent", "builder: opts.outputIntent must be { profile: Uint8Array, components: 1 | 3 | 4, identifier: string, info?: string }, with opts.pdfA", { context: { pdfA: profile ? "set" : "absent" } });
+      return { profile: given.profile, components: given.components, identifier: given.identifier, info: given.info };
+    }
+    function createBuilder(opts) {
+      const pdfA = opts && opts.pdfA !== void 0 ? opts.pdfA : null;
+      if (pdfA !== null && (typeof pdfA !== "string" || !Object.prototype.hasOwnProperty.call(PDFA_PROFILES, pdfA)))
+        throw new ContractError("pdf/builder/bad-pdfa", "builder: opts.pdfA must be '4' or '2b'", { context: { received: typeof pdfA === "string" ? pdfA : typeof pdfA } });
+      const profile = pdfA !== null ? PDFA_PROFILES[pdfA] : null, outputIntent = outputIntentOf(opts, profile), ua = uaClaimOf(opts), claim = profile ? { name: `PDF/A-${pdfA}`, version: profile.version, versionCode: "pdf/builder/pdfa-version" } : ua ? { name: `PDF/UA-${ua.part}`, version: ua.version, versionCode: "pdf/builder/pdfua-version" } : null;
       let nextNum = 1;
-      const indirects = [], pageRecords = [], embedNums = new WeakMap, stdFontNums = new Map;
-      let currentPage = null, version = "2.0", docId = null;
-      const metadata = {};
+      const indirects = [], pageRecords = [], embedNums = new WeakMap, stdFontNums = new Map, unembedded = new Set;
+      let currentPage = null, version = claim ? claim.version : "2.0", docId = null;
+      const metadata = {}, structTop = [], structOpen = [];
       function alloc() {
         return nextNum++;
       }
@@ -8858,7 +9524,8 @@ ${opts.xrefOffset}
           fonts: {},
           xobjects: {},
           extraResources: o.resources || null,
-          contents: []
+          contents: [],
+          marked: []
         };
         pageRecords.push(rec);
         currentPage = rec;
@@ -8870,6 +9537,36 @@ ${opts.xrefOffset}
         const raw = toBytes(data), num = alloc();
         pushIndirect(num, obj.stream(obj.dict({}), raw));
         currentPage.contents.push(num);
+        return api;
+      }
+      function noOpenElement(what) {
+        return new ContractError("pdf/builder/no-open-element", `builder: ${what} needs an open structure element (openElement)`);
+      }
+      function openElement(type, props) {
+        if (typeof type !== "string" || !STRUCT_TYPE.test(type))
+          throw new ContractError("pdf/builder/bad-struct-type", "builder: openElement type must be a name of letters and digits", { context: { received: typeof type === "string" ? type : typeof type } });
+        const el = { type, ...structPropsOf(props), kids: [], num: 0 };
+        if (structOpen.length > 0)
+          structOpen[structOpen.length - 1].kids.push(el);
+        else
+          structTop.push(el);
+        structOpen.push(el);
+        return api;
+      }
+      function markContent() {
+        if (!currentPage)
+          throw new RenderError("pdf/builder/no-page", "markContent requires a page (call addPage first)");
+        if (structOpen.length === 0)
+          throw noOpenElement("markContent");
+        const el = structOpen[structOpen.length - 1], mcid = currentPage.marked.length;
+        currentPage.marked.push(el);
+        el.kids.push({ mcid, page: currentPage });
+        return mcid;
+      }
+      function closeElement() {
+        if (structOpen.length === 0)
+          throw noOpenElement("closeElement");
+        structOpen.pop();
         return api;
       }
       const STANDARD14_ENCODINGS = Object.freeze(["WinAnsiEncoding", "MacRomanEncoding", "StandardEncoding"]);
@@ -8942,10 +9639,7 @@ ${opts.xrefOffset}
         const cached = embedNums.get(embedded);
         if (cached)
           return cached.num;
-        const fileKey = typeof embedded.fontFileKey === "string" ? embedded.fontFileKey : "FontFile2", fileDict = { Length1: obj.int(embedded.fontFile.length) };
-        if (fileKey === "FontFile3")
-          fileDict.Subtype = obj.name("OpenType");
-        const fileNum = alloc();
+        const fileKey = typeof embedded.fontFileKey === "string" ? embedded.fontFileKey : "FontFile2", fileDict = fileKey === "FontFile3" ? { Subtype: obj.name("OpenType") } : { Length1: obj.int(embedded.fontFile.length) }, fileNum = alloc();
         pushIndirect(fileNum, obj.stream(obj.dict(fileDict), embedded.fontFile));
         const descNum = alloc();
         pushIndirect(descNum, withEntries(embedded.descriptor, { [fileKey]: obj.ref(fileNum, 0) }));
@@ -8998,7 +9692,15 @@ ${opts.xrefOffset}
           };
           if (spec.encoding !== void 0)
             fontEntries.Encoding = obj.name(spec.encoding);
-          const metrics = spec.standard14 !== void 0 ? standard14Entries(spec, subtype) : null, key = String(spec.baseFont) + "\x00" + subtype + "\x00" + (spec.encoding ?? "") + (metrics ? "\x00standard14" : "");
+          let { standard14: lookup, encodings } = spec;
+          const base = String(spec.baseFont);
+          if (lookup === void 0 && s14Mod && subtype === "Type1" && s14Mod.isStandard14(base) && !(SYMBOLIC14.includes(base) && spec.encoding !== void 0)) {
+            lookup = s14Mod;
+            if (encodings === void 0 && spec.encoding !== "WinAnsiEncoding")
+              encodings = encMod;
+          }
+          const metrics = lookup !== void 0 && lookup !== !1 ? standard14Entries({ ...spec, standard14: lookup, encodings }, subtype) : null, key = String(spec.baseFont) + "\x00" + subtype + "\x00" + (spec.encoding ?? "") + (metrics ? "\x00standard14" : "");
+          unembedded.add(String(spec.baseFont));
           num = stdFontNums.get(key);
           if (num === void 0) {
             if (metrics)
@@ -9089,6 +9791,8 @@ ${opts.xrefOffset}
       function setVersion(v) {
         if (typeof v !== "string" || !/^\d\.\d$/.test(v))
           throw new RenderError("pdf/builder/bad-version", 'version must look like "x.y"', { context: { version: v } });
+        if (claim && v !== claim.version)
+          throw new ContractError(claim.versionCode, `builder: ${claim.name} is written as version ${claim.version}`, { context: { version: v, claim: claim.name } });
         version = v;
         return api;
       }
@@ -9107,6 +9811,8 @@ ${opts.xrefOffset}
           entries.CropBox = boxArray(rec.cropBox);
         if (rec.rotate !== null)
           entries.Rotate = obj.int(rec.rotate);
+        if (rec.structParents !== void 0)
+          entries.StructParents = obj.int(rec.structParents);
         const resEntries = {}, fontNames = Object.keys(rec.fonts);
         if (fontNames.length > 0) {
           const fontDict = {};
@@ -9155,25 +9861,151 @@ ${opts.xrefOffset}
           return null;
         return obj.dict(e);
       }
+      function firstPageOf(el) {
+        for (const kid of el.kids) {
+          if (kid.page)
+            return kid.page;
+          const page = firstPageOf(kid);
+          if (page)
+            return page;
+        }
+        return null;
+      }
+      function writeStructure() {
+        let key = 0;
+        for (const rec of pageRecords)
+          if (rec.marked.length > 0)
+            rec.structParents = key++;
+        const rootNum = alloc();
+        let nsRef = null;
+        if (ua && ua.part === 2) {
+          const nsNum = alloc();
+          pushIndirect(nsNum, obj.dict({ Type: obj.name("Namespace"), NS: strObj(PDF2_NS) }));
+          nsRef = obj.ref(nsNum, 0);
+        }
+        const number = (el) => {
+          el.num = alloc();
+          for (const kid of el.kids)
+            if (!kid.page)
+              number(kid);
+        };
+        structTop.forEach(number);
+        const one = (items) => items.length === 1 ? items[0] : obj.array(items), write = (el, parentNum) => {
+          const page = firstPageOf(el), entries = { Type: obj.name("StructElem"), S: obj.name(el.type), P: obj.ref(parentNum, 0) };
+          if (page)
+            entries.Pg = obj.ref(page.num, 0);
+          const kids = el.kids.map((kid) => {
+            if (!kid.page)
+              return obj.ref(kid.num, 0);
+            if (kid.page === page)
+              return obj.int(kid.mcid);
+            return obj.dict({ Type: obj.name("MCR"), Pg: obj.ref(kid.page.num, 0), MCID: obj.int(kid.mcid) });
+          });
+          if (kids.length > 0)
+            entries.K = one(kids);
+          if (el.alt !== null)
+            entries.Alt = textObj(el.alt);
+          if (el.lang !== null)
+            entries.Lang = textObj(el.lang);
+          if (el.attributes.length > 0)
+            entries.A = one(el.attributes.map(attributeDict));
+          if (nsRef)
+            entries.NS = nsRef;
+          pushIndirect(el.num, obj.dict(entries));
+          for (const kid of el.kids)
+            if (!kid.page)
+              write(kid, el.num);
+        };
+        for (const el of structTop)
+          write(el, rootNum);
+        const nums = [];
+        for (const rec of pageRecords) {
+          if (rec.structParents === void 0)
+            continue;
+          nums.push(obj.int(rec.structParents), obj.array(rec.marked.map((el) => obj.ref(el.num, 0))));
+        }
+        const parentTreeNum = alloc();
+        pushIndirect(parentTreeNum, obj.dict({ Nums: obj.array(nums) }));
+        const root = {
+          Type: obj.name("StructTreeRoot"),
+          K: one(structTop.map((el) => obj.ref(el.num, 0))),
+          ParentTree: obj.ref(parentTreeNum, 0),
+          ParentTreeNextKey: obj.int(key)
+        };
+        if (nsRef)
+          root.Namespaces = obj.array([nsRef]);
+        pushIndirect(rootNum, obj.dict(root));
+        return rootNum;
+      }
       function build() {
         if (pageRecords.length === 0)
           throw new RenderError("pdf/builder/no-pages", "build requires at least one page");
-        const catalogNum = alloc(), pagesNum = alloc(), kidsRefs = [];
+        if (structOpen.length > 0)
+          throw new ContractError("pdf/builder/open-element", `builder: build() with the structure element ${structOpen[structOpen.length - 1].type} still open`, { context: { open: structOpen.map((el) => el.type) } });
+        if (claim && unembedded.size > 0)
+          throw new ContractError("pdf/builder/pdfa-font-not-embedded", `builder: ${claim.name} embeds every font; ${[...unembedded].join(", ")} has no program`, { context: { claim: claim.name, fonts: [...unembedded] } });
+        if (ua && (typeof metadata.Title !== "string" || metadata.Title === ""))
+          throw new ContractError("pdf/builder/pdfua-title", `builder: ${claim.name} needs a Title (addMetadata)`, { context: { claim: claim.name } });
+        const catalogNum = alloc(), pagesNum = alloc(), structRootNum = structTop.length > 0 ? writeStructure() : 0, kidsRefs = [];
         for (const rec of pageRecords) {
           pushIndirect(rec.num, buildPageObject(rec, pagesNum));
           kidsRefs.push(obj.ref(rec.num, 0));
         }
-        pushIndirect(catalogNum, obj.dict({
+        const catalog = {
           Type: obj.name("Catalog"),
           Pages: obj.ref(pagesNum, 0)
-        }));
+        };
+        if (profile) {
+          const xmp = xmpMod.packet({ pdfaid: profile.pdfaid, info: metadata }), metadataNum = alloc();
+          pushIndirect(metadataNum, obj.stream(obj.dict({
+            Type: obj.name("Metadata"),
+            Subtype: obj.name("XML"),
+            Length: obj.int(xmp.length)
+          }), xmp));
+          catalog.Metadata = obj.ref(metadataNum, 0);
+          const iccNum = alloc();
+          pushIndirect(iccNum, obj.stream(obj.dict({
+            N: obj.int(outputIntent.components),
+            Length: obj.int(outputIntent.profile.length)
+          }), outputIntent.profile));
+          const intent = {
+            Type: obj.name("OutputIntent"),
+            S: obj.name("GTS_PDFA1"),
+            OutputConditionIdentifier: strObj(outputIntent.identifier)
+          };
+          if (outputIntent.info)
+            intent.Info = strObj(outputIntent.info);
+          if (outputIntent.registry)
+            intent.RegistryName = strObj(outputIntent.registry);
+          intent.DestOutputProfile = obj.ref(iccNum, 0);
+          const intentNum = alloc();
+          pushIndirect(intentNum, obj.dict(intent));
+          catalog.OutputIntents = obj.array([obj.ref(intentNum, 0)]);
+        }
+        if (ua) {
+          const xmp = xmpMod.packet({ pdfuaid: ua.pdfuaid, info: metadata }), metadataNum = alloc();
+          pushIndirect(metadataNum, obj.stream(obj.dict({
+            Type: obj.name("Metadata"),
+            Subtype: obj.name("XML"),
+            Length: obj.int(xmp.length)
+          }), xmp));
+          catalog.Metadata = obj.ref(metadataNum, 0);
+          catalog.MarkInfo = obj.dict({ Marked: obj.bool(!0) });
+          catalog.Lang = strObj(ua.lang);
+          catalog.ViewerPreferences = obj.dict({ DisplayDocTitle: obj.bool(!0) });
+        }
+        if (structRootNum) {
+          catalog.MarkInfo = obj.dict({ Marked: obj.bool(!0) });
+          catalog.StructTreeRoot = obj.ref(structRootNum, 0);
+        }
+        pushIndirect(catalogNum, obj.dict(catalog));
         pushIndirect(pagesNum, obj.dict({
           Type: obj.name("Pages"),
           Kids: obj.array(kidsRefs),
           Count: obj.int(pageRecords.length)
         }));
         let infoRef = null;
-        const infoDict = buildInfoDict();
+        const infoDict = profile && !profile.info ? null : buildInfoDict();
         if (infoDict) {
           const infoNum = alloc();
           pushIndirect(infoNum, infoDict);
@@ -9188,6 +10020,8 @@ ${opts.xrefOffset}
           writeOpts.info = infoRef;
         if (docId)
           writeOpts.id = docId;
+        else if (claim)
+          writeOpts.deriveId = !0;
         return writeDocument(writeOpts);
       }
       const api = {
@@ -9196,6 +10030,9 @@ ${opts.xrefOffset}
         addFont,
         addImage,
         addMetadata,
+        openElement,
+        markContent,
+        closeElement,
         setVersion,
         setId,
         build
@@ -10805,7 +11642,7 @@ ${xrefOffset}
         throw new ContractError("pdf/sign/no-security-handler", "signing an encrypted base requires the pdfSecurity, pdfStandardV4, pdfStandardV5 and pdfStandardV6 deps");
       if (opts.password === void 0 || opts.password === null)
         throw new ContractError("pdf/sign/encrypted-password-required", "the base is encrypted; pass opts.password (use '' for an empty user password)");
-      const doc = documentMod.readDocument(baseBytes, { allowEncrypted: !0 }), encEntry = doc.trailer.encrypt, encNode = encEntry && encEntry.type === "dict" ? encEntry : doc._raw.resolve(_ref(encEntry.num, encEntry.gen));
+      const doc = documentMod.readDocument(baseBytes, { allowEncrypted: !0, recoverXref: !1 }), encEntry = doc.trailer.encrypt, encNode = encEntry && encEntry.type === "dict" ? encEntry : doc._raw.resolve(_ref(encEntry.num, encEntry.gen));
       let typed;
       try {
         typed = securityMod.typeEncryptDict(encNode && encNode.type === "dict" ? _plainOf(encNode) : null);
@@ -11028,7 +11865,7 @@ ${xrefOffset}
     function _buildSignatureField(baseBytes, trailer, sigObjNum, fieldNum, signOpts, encCtx) {
       if (!(documentMod && typeof documentMod.readDocument === "function"))
         throw new ContractError("pdf/sign/no-document-reader", "signing requires the pdfDocument dep (the Catalog and page 1 are resolved through readDocument)");
-      const enc = trailer.encrypt ? encCtx || _openEncrypted(baseBytes, trailer, signOpts) : null, doc = documentMod.readDocument(baseBytes, enc ? { allowEncrypted: !0 } : void 0), resolve = doc._raw.resolve, rootRef = doc.trailer.root, catalog = resolve(_ref(rootRef.num, rootRef.gen));
+      const enc = trailer.encrypt ? encCtx || _openEncrypted(baseBytes, trailer, signOpts) : null, doc = documentMod.readDocument(baseBytes, enc ? { allowEncrypted: !0, recoverXref: !1 } : { recoverXref: !1 }), resolve = doc._raw.resolve, rootRef = doc.trailer.root, catalog = resolve(_ref(rootRef.num, rootRef.gen));
       if (!catalog || catalog.type !== "dict")
         throw new ContractError("pdf/sign/catalog-not-found", `the trailer /Root (object ${rootRef.num} ${rootRef.gen}) does not resolve to a Catalog dictionary`, { context: { root: rootRef } });
       const updates = new Map, fieldRef = _ref(fieldNum, 0), catalogEntries = Object.assign({}, catalog.entries);
@@ -11434,7 +12271,7 @@ ${xrefOffset}
       return bytes;
     }
     function _buildUpdatedCatalog(bytes, dssNum) {
-      const doc = documentMod.readDocument(bytes, { allowEncrypted: !0 }), rootRef = doc.trailer.root, catalog = doc._raw.resolve({ type: "ref", num: rootRef.num, gen: rootRef.gen });
+      const doc = documentMod.readDocument(bytes, { allowEncrypted: !0, recoverXref: !1 }), rootRef = doc.trailer.root, catalog = doc._raw.resolve({ type: "ref", num: rootRef.num, gen: rootRef.gen });
       if (!catalog || catalog.type !== "dict")
         throw new ContractError("pdf/sign/catalog-not-found", `the trailer /Root (object ${rootRef.num} ${rootRef.gen}) does not resolve to a Catalog dictionary`, { context: { root: rootRef } });
       const entries = Object.assign({}, catalog.entries);
@@ -12118,7 +12955,7 @@ ${xrefOffset}
               code: "pdf/sig/verify-pk/no-message",
               error: "Ed25519 verify requires message"
             };
-          return { verified: !!fb.ed25519.verify(pubKey, message, signature) };
+          return { verified: !!fb.ed25519.verify(pubKey, signature, message) };
         }
         return {
           verified: !1,
@@ -12548,6 +13385,7 @@ ${xrefOffset}
     __core.use({ name: "pdfMisc", register() { return { ["pdfMisc"]: __resolve("pdfMisc") }; } });
     __core.use({ name: "pdfInfoDictDeprecated", register() { return { ["pdfInfoDictDeprecated"]: __resolve("pdfInfoDictDeprecated") }; } });
     __core.use({ name: "pdfSandbox", register() { return { ["pdfSandbox"]: __resolve("pdfSandbox") }; } });
+    __core.use({ name: "pdfCryptPublicKey", register() { return { ["pdfCryptPublicKey"]: __resolve("pdfCryptPublicKey") }; } });
     __core.use({ name: "pdfBuilder", register() { return { ["pdfBuilder"]: __resolve("pdfBuilder") }; } });
     __core.use({ name: "pdfIncrementalWriter", register() { return { ["pdfIncrementalWriter"]: __resolve("pdfIncrementalWriter") }; } });
     __core.use({ name: "pdfXrefStreamWriter", register() { return { ["pdfXrefStreamWriter"]: __resolve("pdfXrefStreamWriter") }; } });

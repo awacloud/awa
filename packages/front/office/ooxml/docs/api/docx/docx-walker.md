@@ -13,7 +13,7 @@ status: complete
 
 **Module** `docxWalker` | **Source** `packages/front/office/ooxml/src/docx/docx-walker.js` | **Deps** none | **Worker-safe** yes
 
-`docx` builds one walker per factory call. `docx.use(...extensions)` forwards to it, `docx.read` runs `applyHydrate` on the freshly parsed result, and `docx.write` runs `applyDehydrate` on the document and the `headers`, `footers`, `footnotes`, `endnotes`, `comments`, `styles` and `settings` write options before they are serialized. The node hooks (run, paragraph, table, row, cell, drawing) visit the body, the headers, the footers, and the footnotes', endnotes' and comments' blocks. You rarely call the walker yourself: this page documents the contract an extension has to satisfy, and what the walker visits.
+`docx` builds one walker per factory call. `docx.use(...extensions)` forwards to it, `docx.read` runs `applyHydrate` on the freshly parsed result, and `docx.write` runs `applyDehydrate` on the document and the `headers`, `footers`, `footnotes`, `endnotes`, `comments`, `styles`, `numbering` and `settings` write options before they are serialized (the styles, numbering and settings parts are written from what the walker leaves, so a part hook may return a new object). The node hooks (run, paragraph, table, row, cell, drawing) visit the body, the headers, the footers, and the footnotes', endnotes' and comments' blocks. You rarely call the walker yourself: this page documents the contract an extension has to satisfy, and what the walker visits.
 
 Extensions are indexed by hook name when they are registered, so traversal does not pay a lookup cost per visited node.
 
@@ -46,23 +46,26 @@ const walker = walkerMod.createWalker();
 
 ## Hooks
 
-An extension is a plain object. It implements only the hooks it needs; any member that is not a function is ignored. Hooks are called as `hook(value)`, in registration order. A hook may mutate `value` in place, or return a replacement; returning `undefined` keeps the (possibly mutated) value.
+An extension is a plain object. It implements only the hooks it needs; any member that is not a function is ignored. Hooks are called as `hook(value)`: the `hydrate*` ones in registration order, the `dehydrate*` ones in the reverse order (an extension registered after another writes its fields back first, so a field it typed inside the other's structure is back in that structure's `_extras` before it is rendered). A hook may mutate `value` in place, or return a replacement; returning `undefined` keeps the (possibly mutated) value.
 
 | Hook pair | Receives | Visited in |
 |-----------|----------|------------|
-| `hydrateRunProperties` / `dehydrateRunProperties` | a run `rPr` | every `run` node, the paragraph-mark `pPr.rPr`, and every style `rPr` |
-| `hydrateParagraphProperties` / `dehydrateParagraphProperties` | a paragraph `pPr` | every `paragraph` node and every style `pPr` |
+| `hydrateRunProperties` / `dehydrateRunProperties` | a run `rPr` | every `run` node, the paragraph-mark `pPr.rPr`, every style `rPr`, the styles' `docDefaults.rPr` and every numbering level's `rPr` |
+| `hydrateParagraphProperties` / `dehydrateParagraphProperties` | a paragraph `pPr` | every `paragraph` node, every style `pPr`, the styles' `docDefaults.pPr` and every numbering level's `pPr` |
 | `hydrateTcPr` / `dehydrateTcPr` | a table-cell `tcPr` | every `cell` node |
 | `hydrateTable` / `dehydrateTable` | a `table` node | each table found as an element of an array (body, cell content, header, footer) |
 | `hydrateRow` / `dehydrateRow` | a `row` node | each row of a table |
 | `hydrateDrawing` / `dehydrateDrawing` | a `drawing` node | each drawing found as an element of an array (a run's children), after `docx.read` attached its picture and chart |
 | `hydrateSettings` / `dehydrateSettings` | `result.settings` | the settings part, when present |
+| `hydrateStyles` / `dehydrateStyles` | `result.styles` | the styles part, when present: hydrate before its properties are visited, dehydrate after |
+| `hydrateNumbering` / `dehydrateNumbering` | `result.numbering` | the numbering part, when present: hydrate before its levels' properties are visited, dehydrate after |
+| `hydrateSection` / `dehydrateSection` | a section (`sectPr`) | the body's final `document.sectPr`, and a paragraph's `pPr.sectPr` once a paragraph hook typed it (after the paragraph hooks on hydrate, before them on dehydrate) |
 
 Absent properties are not visited: a run without `rPr` triggers no `hydrateRunProperties` call.
 
 ## What is traversed
 
-The walker is handed an object shaped like a `docx.read` result: on read the result itself, on write `{ document, headers, footers, footnotes, endnotes, comments, styles, settings }` built from the document and the write options. It visits, in this order: `document`, every entry of `headers`, every entry of `footers`, the `body` of every note of `footnotes.notes` and `endnotes.notes` and of every comment of `comments.comments`, the `rPr` and `pPr` of each entry of `styles.styles`, then `settings`. Inside a body it descends through any `body`, `children`, `rows` and `cells` member; `numbering` is not walked.
+The walker is handed an object shaped like a `docx.read` result: on read the result itself, on write `{ document, headers, footers, footnotes, endnotes, comments, styles, numbering, settings }` built from the document and the write options. It visits, in this order: `document`, every entry of `headers`, every entry of `footers`, the `body` of every note of `footnotes.notes` and `endnotes.notes` and of every comment of `comments.comments`; `styles` (its part hook, then `docDefaults.rPr` / `pPr` and the `rPr` and `pPr` of each entry of `styles.styles`); `numbering` (its part hook, then the `pPr` and `rPr` of each level of each `abstractNums` entry); then `settings`. Inside a body it descends through any `body`, `children`, `rows` and `cells` member.
 
 ## Examples
 

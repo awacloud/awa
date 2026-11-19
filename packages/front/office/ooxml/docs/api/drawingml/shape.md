@@ -33,7 +33,7 @@ const sh = runtime.resolve('drawingmlShape');
 
 | Method | Signature | Returns |
 |---------|-----------|---------|
-| `parseShapeProperties` | `(spPrEl) => shapeProps` | Typed model. |
+| `parseShapeProperties` | `(spPrEl, opts?) => shapeProps` | Typed model; `opts.typedLineColors` types a line's colour (see below). |
 | `renderShapeProperties` | `(props) => element` | `<*:spPr>`. |
 | `parsePrstGeom` / `renderPrstGeom` | symmetric | Preset geometry. |
 | `parseXfrm` / `renderXfrm` | symmetric | 2D transform. |
@@ -54,11 +54,13 @@ shapeProps := {
     cx?, cy?, offsetX?, offsetY?,   // EMU
     rotation?: number,              // 60000ths of a degree
     flipH?: boolean, flipV?: boolean,
+    bwMode?: string,                // the spPr's black-and-white mode
     fill?: 'none' | { rgb: 'RRGGBB', mods?: [{ name, val? }] }
                   | { schemeColor: string, mods?: [{ name, val? }] },
     line?: 'none' | {
         width?: number,             // EMU
-        color?: 'RRGGBB',
+        color?: 'RRGGBB'            // with opts.typedLineColors also
+              | { rgb | schemeColor, mods? },  // a typed colour (see below)
         dash?: 'solid'|'dash'|'dot'|'dashDot'|…,
         cap?: 'flat'|'rnd'|'sq',
         compound?: 'sng'|'dbl'|'thickThin'|'thinThick'|'tri',
@@ -77,7 +79,14 @@ attributes other than `w`, `cap` and `cmpd` to `line.extraAttrs`, and the
 writer puts them back in schema order. `color` stays the `RRGGBB` string of
 an `a:srgbClr` (its transforms dropped) or `null` for `noFill`. A typed
 `color` (or `null`) set on such a line replaces the kept fill, a typed `dash`
-the kept `custDash`. The `spPr` children kept in `_extras` (`custGeom`,
+the kept `custDash`.
+
+With `opts.typedLineColors: true` (threaded from `pptx.read` and
+`xlsx.read`) a line's colour reads as the fill's does: `'RRGGBB'` for a bare
+`a:srgbClr`, else the typed `{ rgb | schemeColor, mods? }` of the shared
+colour codec (an `a:srgbClr`'s transforms kept). A colour the codec does not
+type (`prstClr`, `sysClr`) stays verbatim in `line._extras`. The writer
+writes either form. The `spPr` children kept in `_extras` (`custGeom`,
 `gradFill`, `blipFill`, `effectLst`, `scene3d`, …) are written at their
 schema place too: geometry and fill before `a:ln`, effects after it.
 

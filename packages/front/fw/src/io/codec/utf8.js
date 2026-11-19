@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -56,8 +56,10 @@ export const utf8 = {
             let p = 0;
             for (let i = 0; i < len; i++) {
                 let cp = text.charCodeAt(i);
-                if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < len) {
-                    const next = text.charCodeAt(i + 1);
+                if (cp >= 0xD800 && cp <= 0xDBFF) {
+                    // A high surrogate pairs with a following low one; unpaired
+                    // (mid-string or the last code unit) it becomes U+FFFD.
+                    const next = i + 1 < len ? text.charCodeAt(i + 1) : -1;
                     if (next >= 0xDC00 && next <= 0xDFFF) {
                         cp = 0x10000 + ((cp - 0xD800) << 10) + (next - 0xDC00);
                         i++;

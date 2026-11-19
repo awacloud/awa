@@ -1,0 +1,31 @@
+{
+  "name": "@awacloud/media-video",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS",
+  "type": "module",
+  "awa": { "maturity": "L2" },
+  "description": "Video codec for low-latency streaming in the browser: Haar layers and conditional replenishment, built for end-to-end encrypted streams. fw add-on, zero runtime dependency beyond @awacloud/fw.",
+  "main": "src/main.js",
+  "sideEffects": false,
+  "dependencies": { "@awacloud/fw": "workspace:*", "@awacloud/media-stream": "workspace:*" },
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "bun test .",
+    "build:workers": "bun build ./demo/worker.js --outfile ./dist/workers/demo.js --target browser && bun build ./bench/link/link-worker.js --outfile ./dist/workers/loop.js --target browser",
+    "lint": "eslint . --max-warnings 0"
+  }
+}

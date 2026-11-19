@@ -47,6 +47,8 @@ describe('fuzz — malformed input rejected with typed errors', () => {
         expectPdfError(() => api.read(b));
     });
 
+    // T30 (b): the reader rebuilds a broken chain by default; these legs test
+    // its typed refusals, so they read strictly (`recoverXref: false`).
     test('truncated xref offset (points past EOF)', () => {
         const b = buildDocument({ pages: ['ok'] });
         // Rewrite the startxref offset to point past EOF
@@ -54,7 +56,7 @@ describe('fuzz — malformed input rejected with typed errors', () => {
         const i = s.lastIndexOf('startxref\n');
         const tampered = te.encode(s.slice(0, i)
             + 'startxref\n999999\n%%EOF\n');
-        expectPdfError(() => api.read(tampered));
+        expectPdfError(() => api.read(tampered, { recoverXref: false }));
     });
 
     test('non-Uint8Array rejected', () => {
@@ -88,7 +90,7 @@ describe('fuzz — malformed input rejected with typed errors', () => {
         const body = lines.join('');
         const xrefIdx = body.indexOf('xref');
         const tail = body + xrefIdx + '\n%%EOF\n';
-        expectPdfError(() => api.read(te.encode(tail)));
+        expectPdfError(() => api.read(te.encode(tail), { recoverXref: false }));
     });
 
     test('error message + context are inspectable', () => {

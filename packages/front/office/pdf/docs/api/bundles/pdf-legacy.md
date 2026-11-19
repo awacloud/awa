@@ -113,7 +113,7 @@ Items 1-27 are [`pdf-full`](./pdf-full.md)'s extras, re-listed here so every mem
 ### Reading an RC4-encrypted PDF 1.7 file
 
 `read` refuses an encrypted file (`pdf/document/encrypted`) unless it is given
-the password; this bundle's `read` then decrypts RC4 V=1 / V=2 through its own
+the password or the empty password opens it; this bundle's `read` then decrypts RC4 V=1 / V=2 through its own
 [`pdfLegacyRc4Read`](../extra/legacy-rc4-read.md) (the core reader's
 `legacyRc4` option), and AES like the core bundles:
 

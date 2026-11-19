@@ -1,11 +1,12 @@
 {
     "$schema": "https://typedoc.org/schema.json",
-    "name": "@awacloud/fw — Référence API (générée)",
+    "name": "@awacloud/fw — API reference (generated)",
     "entryPoints": ["../../dist/types"],
     "entryPointStrategy": "expand",
     "exclude": [
         "**/*.test.d.ts",
         "**/*.kat.d.ts",
+        "**/*.reference.d.ts",
         "**/registry.generated.d.ts",
         "**/typed.d.ts"
     ],

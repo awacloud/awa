@@ -954,6 +954,8 @@ export const odpLargePackage = {
             runs.push(parseLink(c, ctx));
           else if (c.name === "draw:frame" && ctx && typeof ctx.parseFrame === "function")
             runs.push(ctx.parseFrame(c));
+          else if (c.name === "text:note" && ctx && typeof ctx.parseNote === "function")
+            runs.push(ctx.parseNote(c));
           else if (inPlace)
             runs.push(c);
           else
@@ -1056,6 +1058,8 @@ export const odpLargePackage = {
           return ctx && typeof ctx.renderImage === "function" ? ctx.renderImage(r) : xml.text("");
         case "frame":
           return ctx && typeof ctx.renderFrame === "function" ? ctx.renderFrame(r) : xml.text("");
+        case "note":
+          return ctx && typeof ctx.renderNote === "function" ? ctx.renderNote(r) : xml.text("");
         case "element":
           return r;
         default:

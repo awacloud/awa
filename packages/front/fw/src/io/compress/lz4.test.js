@@ -801,14 +801,21 @@ describe('lz4 block format (spec vectors)', () => {
 			expect(() => ds.push(bad, true)).toThrow('lz4 decompression error');
 		});
 
-		test('a 12-byte chunk is forwarded raw (same reference) by the compressor', () => {
-			const chunk = new Uint8Array(12).fill(0x61);
-			const seen = [];
-			const cs = new codec.Lz4CompressStream((c, final) => seen.push({ c, final }));
-			cs.push(chunk);
-			expect(seen.length).toBe(1);
-			expect(seen[0].c).toBe(chunk);
-			expect(seen[0].final).toBe(false);
+		test('every chunk becomes a block the decompress stream decodes (BL-1703): short, incompressible, empty', () => {
+			let x = 0x12345678;
+			const rnd = (n) => Uint8Array.from({ length: n }, () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x & 0xFF; });
+			const chunks = [new Uint8Array(12).fill(0x61), rnd(1), rnd(14), rnd(15), rnd(270), rnd(4096),
+				new Uint8Array(0), new TextEncoder().encode('compressible '.repeat(200))];
+			const blocks = [];
+			const cs = new codec.Lz4CompressStream((c, final) => blocks.push({ c, final }));
+			chunks.forEach((c, i) => cs.push(c, i === chunks.length - 1));
+			expect(blocks.length).toBe(chunks.length);
+			expect(blocks[0].c).not.toBe(chunks[0]);
+			expect(blocks[blocks.length - 1].final).toBe(true);
+			const out = [];
+			const ds = new codec.Lz4DecompressStream((c) => out.push(c));
+			for (const b of blocks) ds.push(b.c, b.final);
+			for (let i = 0; i < chunks.length; i++) expect(Array.from(out[i])).toEqual(Array.from(chunks[i]));
 		});
 
 		test('ondata is null when not a function', () => {
@@ -992,5 +999,30 @@ describe('lz4 block format (spec vectors)', () => {
 			expect(() => new codec.Lz4CompressStream(() => {}, { mode: 'turbo' })).toThrow(RangeError);
 			expect(() => new codec.Lz4CompressStream(() => {}, { mode: 'turbo' })).toThrow("'turbo'");
 		});
+	});
+});
+
+describe('lz4.compress: len is optional', () => {
+	const codec = lz4.factory();
+	const data = new TextEncoder().encode('lz4 len optional, lz4 len optional, lz4 len optional.');
+
+	test('compress(src) uses src.length', () => {
+		expect(codec.compress(data)).toEqual(codec.compress(data, data.length));
+	});
+
+	test('compress(src, opts) uses src.length and the options', () => {
+		expect(codec.compress(data, { mode: 'ratio' })).toEqual(codec.compress(data, data.length, { mode: 'ratio' }));
+		const [size, out] = codec.compress(data, { mode: 'ratio' });
+		const [n, back] = codec.decompress(out.subarray(0, size));
+		expect(n).toBe(data.length);
+		expect(back.subarray(0, n)).toEqual(data);
+	});
+
+	test('compress(src, len, opts) is unchanged', () => {
+		// a prefix: no match in the first 10 bytes ([0, copy]), one within 40
+		expect(codec.compress(data, 10)[0]).toBe(0);
+		expect(codec.compress(data, 40)[0]).toBeGreaterThan(0);
+		expect(() => codec.compress(data, data.length, { mode: 'nope' })).toThrow(RangeError);
+		expect(() => codec.compress(data, { mode: 'nope' })).toThrow(RangeError);
 	});
 });

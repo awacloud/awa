@@ -57,7 +57,7 @@ let pkcs1Keys;
 
 beforeAll(async () => {
     oaepKeys = await _wc.generateKey('OAEP', 2048, 'SHA-256');
-    pssKeys = await _wc.generateKey('PSS', 2048, 'SHA-256');
+    pssKeys = await _wc.generateKey('PSS', 2048, 'SHA-256', true);   // exported below (pkcs8)
     // PKCS1 emits a deprecation warning at generate time; swallow it here.
     const gen = await withWarnCapture(() => _wc.generateKey('PKCS1', 2048, 'SHA-256'));
     pkcs1Keys = gen.result;
@@ -161,6 +161,23 @@ describe('webcryptoRsa OAEP encrypt/decrypt', () => {
         tampered[0] ^= 0x01;
         const pt = await _wc.decrypt(oaepKeys.privateKey, tampered);
         expect(pt).toBe(false);
+    });
+
+    test('a decryption failure is reported at warn level, not error', async () => {
+        const ct = await _wc.encrypt(oaepKeys.publicKey, fromStr('log level'));
+        const tampered = new Uint8Array(ct);
+        tampered[0] ^= 0x01;
+        const _logs = { warn: [], error: [] };
+        const _w = console.warn, _e = console.error;
+        console.warn = (...a) => { _logs.warn.push(a.join(' ')); };
+        console.error = (...a) => { _logs.error.push(a.join(' ')); };
+        let r;
+        try { r = await _wc.decrypt(oaepKeys.privateKey, tampered); } finally {
+        console.warn = _w; console.error = _e;
+        }
+        expect(r).toBe(false);
+        expect(_logs.error.length).toBe(0);
+        expect(_logs.warn.some((m) => m.includes('CORRUPT'))).toBe(true);
     });
 });
 
@@ -352,5 +369,104 @@ describe('webcryptoRsa invalid arguments', () => {
 
     test('exportKey with unsupported format returns false', async () => {
         expect(await _wc.exportKey('raw', pssKeys.publicKey)).toBe(false);
+    });
+});
+
+// ── ACVP RSA-SigVer-FIPS186-5, PKCS#1 v1.5 (vendored) ──────────────────────
+// Source: references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/RSA-SigVer-FIPS186-5/
+// (copied byte-exact into tests/_vectors/, provenance in its README). The
+// groups WebCrypto can run: PKCS#1 v1.5 with SHA2-256 and a public exponent
+// of at most 32 bits (2 of the 18 groups). Bun's WebCrypto verifies a valid
+// signature to `false` when e exceeds 32 bits (measured on tg2: false under
+// Bun 1.3.13, true under Node 24), so the other 16 groups would test the
+// platform, not fw. Its PSS groups use SHA-3 / SHAKE, which WebCrypto lacks:
+// PSS is covered by the node:crypto oracle below.
+describe('webcryptoRsa — ACVP RSA-SigVer-FIPS186-5 (PKCS#1 v1.5)', () => {
+    const hexToBytes = (h) => Uint8Array.from((h.length % 2 ? '0' + h : h).match(/../g) || [], (b) => parseInt(b, 16));
+    const b64u = (bytes) => Buffer.from(bytes).toString('base64url');
+    let groups = [];
+
+    beforeAll(async () => {
+        const { readFileSync } = await import('node:fs');
+        const url = new URL('../../../tests/_vectors/RSA-SigVer-FIPS186-5/internalProjection.json', import.meta.url);
+        const p = JSON.parse(readFileSync(url, 'utf8'));
+        groups = p.testGroups.filter((g) => g.sigType === 'pkcs1v1.5' && g.hashAlg === 'SHA2-256' && g.e.length <= 8);
+    });
+
+    test('the supported subset is the expected size (non-vacuity)', () => {
+        expect(groups.length).toBe(2);
+        const all = groups.flatMap((g) => g.tests);
+        expect(all.length).toBe(12);
+        expect(all.some((t) => t.testPassed)).toBe(true);
+        expect(all.some((t) => !t.testPassed)).toBe(true);
+    });
+
+    test('every case verifies to its ACVP testPassed value', async () => {
+        const mismatches = [];
+        const warn = console.warn, error = console.error;
+        console.warn = () => {}; console.error = () => {};
+        try {
+            for (const g of groups) {
+                const jwk = { kty: 'RSA', n: b64u(hexToBytes(g.n)), e: b64u(hexToBytes(g.e)), ext: true };
+                const pub = await _wc.importKey('jwk', jwk, 'PKCS1', 'SHA-256', ['verify']);
+                for (const t of g.tests) {
+                    const ok = pub ? await _wc.verify(pub, hexToBytes(t.signature), hexToBytes(t.message)) : false;
+                    if (ok !== t.testPassed) mismatches.push(`tg${g.tgId}/tc${t.tcId}`);
+                }
+            }
+        } finally {
+            console.warn = warn; console.error = error;
+        }
+        expect(mismatches).toEqual([]);
+    }, 120000);
+});
+
+// ── node:crypto oracle: RSA-PSS and RSA-OAEP across implementations ────────
+// The ACVP sets have no OAEP and no SHA-2 PSS group WebCrypto runs, so an
+// independent implementation is the oracle: node:crypto signs / encrypts,
+// webcryptoRsa verifies / decrypts, and the other way round.
+describe('webcryptoRsa — node:crypto oracle (PSS, OAEP)', () => {
+    let nodeCrypto;
+    let kp;
+
+    beforeAll(async () => {
+        nodeCrypto = await import('node:crypto');
+        kp = nodeCrypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+    });
+
+    const spki = () => new Uint8Array(kp.publicKey.export({ type: 'spki', format: 'der' }));
+    const pkcs8 = () => new Uint8Array(kp.privateKey.export({ type: 'pkcs8', format: 'der' }));
+    const msg = new TextEncoder().encode('oracle message');
+
+    test('a node:crypto PSS-SHA256 signature verifies; a tampered one does not', async () => {
+        const sig = new Uint8Array(nodeCrypto.sign('sha256', msg, {
+            key: kp.privateKey, padding: nodeCrypto.constants.RSA_PKCS1_PSS_PADDING, saltLength: 32,
+        }));
+        const pub = await _wc.importKey('spki', spki(), 'PSS', 'SHA-256', ['verify']);
+        expect(await _wc.verify(pub, sig, msg, 32)).toBe(true);
+        const bad = new Uint8Array(sig);
+        bad[10] ^= 0x01;
+        expect(await _wc.verify(pub, bad, msg, 32)).toBe(false);
+    });
+
+    test('a webcryptoRsa PSS-SHA256 signature verifies under node:crypto', async () => {
+        const priv = await _wc.importKey('pkcs8', pkcs8(), 'PSS', 'SHA-256', ['sign']);
+        const sig = await _wc.sign(priv, msg, 32);
+        expect(nodeCrypto.verify('sha256', msg, {
+            key: kp.publicKey, padding: nodeCrypto.constants.RSA_PKCS1_PSS_PADDING, saltLength: 32,
+        }, Buffer.from(sig))).toBe(true);
+    });
+
+    test('node:crypto OAEP-SHA256 ciphertext decrypts; webcryptoRsa ciphertext decrypts under node', async () => {
+        const ct = new Uint8Array(nodeCrypto.publicEncrypt({
+            key: kp.publicKey, padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256',
+        }, msg));
+        const priv = await _wc.importKey('pkcs8', pkcs8(), 'OAEP', 'SHA-256', ['decrypt']);
+        expect(Buffer.from(await _wc.decrypt(priv, ct)).toString()).toBe('oracle message');
+        const pub = await _wc.importKey('spki', spki(), 'OAEP', 'SHA-256', ['encrypt']);
+        const ct2 = await _wc.encrypt(pub, msg);
+        expect(nodeCrypto.privateDecrypt({
+            key: kp.privateKey, padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256',
+        }, Buffer.from(ct2)).toString()).toBe('oracle message');
     });
 });

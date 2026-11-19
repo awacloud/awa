@@ -10,6 +10,198 @@ Reference specs:
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-19
+
+### Breaking
+
+- **A font without a `name` table reads by default.** `fonts.read` and
+  `fonts.buildFont` read it with `name: null` and every `names` field
+  `undefined`, as `allowMissingName: true` did; `allowMissingName: false`
+  keeps the 1.x refusal, `fonts/missing-name`. The other required tables
+  stay required. Of 1,040 fonts in the corpora, 6 more read (test and fuzz
+  fonts); 5 deliberately broken ones move to another typed refusal.
+
+### Added
+
+- **CID CMaps.** `cmapCid` reads the CMap of a composite font — its
+  codespace, `cidrange`, `cidchar`, `notdefrange`, `notdefchar` and
+  `usecmap` — and maps a code of a given byte length to its CID
+  (`parseCidCMap`, `chain` for a parent CMap, `cidOf`). A malformed hex
+  code is a `ParseError`; no predefined CMap is bundled.
+
+- **The Computer Modern math layouts.** `encodingTexMath` gives the text
+  at each position of cmsy (`OMS`), cmmi (`OML`) and cmex (`OMX`), and
+  `text(layout, code)`: for a font converted from TeX's math fonts that
+  names its glyphs by position and carries no truthful Unicode mapping.
+  The layout is the TeXbook's; 205 of its positions were checked against
+  the built-in encodings of pdfTeX fonts in the reference corpus. A
+  position with no character of its own (an assembly piece, a wide
+  accent, an overlay) is `null`.
+
+- **The ITC Zapf Dingbats Glyph List.** `zapfdingbats.txt` is vendored
+  from `adobe-type-tools/agl-aglfn` at the AGL's pinned commit
+  (BSD-3-Clause, the AGL's notice), and `tools/gen-agl-table.mjs`
+  generates `encodingZapfDingbatsGlyphs` from it: the Zapf Dingbats
+  font's glyph names `a1` to `a206`, 201 entries. `encodingAgl` gains
+  `dingbatsNameToUnicode(name)`, the list first and then
+  `glyphNameToUnicode`, for a font the caller knows to be a Zapf
+  Dingbats one. `glyphNameToUnicode` is unchanged.
+
+- **Bare CFF programs: `fontCffProgram`.** `readCff(bytes)` reads a PDF
+  `/FontFile3` `Type1C` or `CIDFontType0C` program as a font: its
+  encoding, glyph names or CIDs, and `glyph(gid)` with its advance
+  (`nominalWidthX`, `defaultWidthX`, per Font DICT), closed contours, a
+  `seac` drawn as its base and accent, and its font matrix. `parseCff`'s
+  fonts gain `encoding` and `encodingKind` (the predefined Standard and
+  Expert encodings, formats 0 and 1, the supplements), and the predefined
+  Expert and ExpertSubset charsets are read (they gave `null`). The
+  axis-C suite `fonttools-cff` compares every glyph of the pinned PDFs'
+  CFF programs with fontTools 4.66.1's `cffLib`.
+- **Type 1 programs: `fontType1` and `fontType1Charstring`.**
+  `readType1(bytes, { length1, length2 })` reads a PFB, a PFA or a PDF
+  `/FontFile` stream (binary or hex eexec, the trailer of zeros
+  optional): the font name, matrix, bounding box, built-in encoding and
+  glyph names, and `glyph(name)` draws a glyph into `M`, `L`, `C`, `Z`
+  commands with its advance and side bearing. The charstring interpreter
+  covers the whole Type 1 operator set, flex and hint replacement
+  through the othersubrs, `seac` composites and `div`; the hints are
+  ignored. The axis-C suite `fonttools-type1` compares every glyph of the
+  pinned PDFs' Type 1 programs with fontTools 4.66.1.
+
+- **`fontShaper`, a generic OpenType layout engine (opt-in extra).**
+  `shape(font, text, opts)` maps a string to glyphs through the cmap and
+  the font's GSUB lookups and returns each glyph with its cluster and
+  advance:
+  - it selects one script and language system (`opts.script`, else the
+    first character's script, then `DFLT`, then `latn`);
+  - it applies the features `ccmp`, `locl`, `rlig`, `liga`, `clig`,
+    `calt` and the required one (`opts.features` turns one off or adds
+    one), in lookup-list order;
+  - it covers lookup types 1 to 8, honouring the lookup flags and GDEF's
+    classes, mark attachment classes and mark glyph sets;
+  - nested lookups stop 16 deep and a call has an operation budget.
+
+  Then it applies the GPOS lookups of `kern`, `mark`, `mkmk`, `curs`,
+  `dist` and the required feature (types 1 to 9: single and pair
+  adjustment, cursive attachment, mark to base, ligature and mark,
+  context, extension). A mark is placed by its anchors and takes no
+  advance; device tables and variations are not applied. `gpos` reads
+  `'applied'`, or `'none'` without a GPOS table. On the Unicode
+  text-rendering-tests' GSUB and GPOS families, 42 of 42 static cases
+  render as expected.
+
+- **AAT `morx` in `fontShaper` (opt-in extra).** A font with a `morx`
+  table and no GSUB (or with `opts.aat: true`) runs its chains instead
+  of GSUB:
+  - the new extra `aatLookup` reads the AAT lookup tables (formats 0, 2,
+    4, 6, 8, 10) and extended state tables;
+  - `parseMorx` decodes the bodies of the five subtable types
+    (`parsed: true`; a body that does not decode keeps `parsed: false`
+    and its `error`);
+  - the new extra `aatMorxEngine` applies them: the chains' default
+    flags and the feature settings `opts.features` maps to, the coverage
+    bits and the processing order, the 16 rearrangement verbs, mark and
+    current substitution, ligature actions on a stack of 64 components,
+    marked and current insertions, deleted glyphs removed;
+  - `opts.direction` (else detected from the text) orders the
+    processing, and the result gains `direction` and `morx`.
+
+  On the text-rendering-tests' MORX families, 166 of 166 static cases
+  render as expected.
+
+- **A `glyf` glyph at variation coordinates.** The new module `varGlyph`
+  gives `glyphAt(font, gid, coords)`, its outline and advance at the user
+  coordinates, as FreeType draws them:
+  - `normalise(font, coords)`: `fvar`'s ranges, then `avar`'s segment
+    maps;
+  - every `gvar` tuple at the coordinates, with its private or shared
+    point numbers, the untouched points inferred (IUP), the components'
+    offsets moved, the phantom points;
+  - the advance from `HVAR` (through the new module `varItemStore`, the
+    item variation store and delta-set index map), else the phantom
+    points.
+
+  It draws a CFF2 glyph too: `decodeCharstring`'s `ctx.cff2` takes the
+  region `scalars` of each `vsindex` and blends at them (the store's new
+  `scalars`). `cvar` is not applied (it only feeds hinting).
+
+  `fontShaper` takes `opts.coords`: the GSUB and GPOS FeatureVariations
+  (and `rvrn` joins the default features), the advances at the
+  coordinates, and a format 3 anchor's VariationIndex deltas from GDEF's
+  store (the GPOS anchors now carry `xVariation` / `yVariation`). A mark
+  in right-to-left text is placed as HarfBuzz places it in a backward run.
+
+  On the text-rendering-tests' variation families, 132 of 132 cases
+  render as expected.
+
+  `varInstantiate.instantiate(font, coords)` writes a static TrueType
+  font at the coordinates: every glyph re-encoded at them, the advances,
+  side bearings and extents recomputed, `MVAR`'s deltas applied to
+  `OS/2`, `hhea` and `post`, the variation tables dropped. `subsetForPdf`
+  subsets it as any font. Rendered from their instances, the 112 `glyf`
+  variation cases match too.
+
+- **`kerx` and `kern` in `fontShaper` (opt-in extra).** The positioning
+  is chosen as HarfBuzz chooses it: `kerx` unless GSUB ran and the font
+  has GPOS (or with `opts.aat: true`), else GPOS, then the `kern` table
+  when nothing else kerned:
+  - `parseKerx` decodes the formats 1, 2, 4 and 6, `parseProp` its
+    lookup, and `parseAnkr` gains `anchors(glyph)`;
+  - `aatLookup.parseLookup` reads 32-bit values (`valueSize: 4`);
+  - the new extra `aatKerxEngine` applies them: the pair machine (the
+    `kern` and `kerx` formats 0, 2 and 6, marks skipped, cross-stream),
+    format 1's kerning stack, format 4's attachments by control points,
+    anchors or coordinates;
+  - the result gains `kerx` and `kern`.
+
+  On the text-rendering-tests' KERN families, now in the shaping suite,
+  2 of 2 static cases render as expected (44 of 44 with GSUB and GPOS).
+
+- **`subsetForPdf(font, codePoints, { cff: true })` subsets a name-keyed
+  CFF font.** The subset is an `OTTO` font and its descriptor carries
+  `FontFile3`:
+  - the CFF program keeps the kept glyphs' CharStrings byte for byte,
+    their names (a format 0 charset) and the whole subroutines;
+  - a kept `seac` glyph keeps its base and accent glyphs.
+
+  On Source Sans 3 every one of its 1,614 code points keeps its advance
+  and outline, and OTS sanitizes the subsets. Without the option nothing
+  changes.
+- **`{ cff: true }` also subsets CID-keyed CFF and CFF2 fonts.**
+  - A CID-keyed font keeps its FDs, its CIDs and a format 3 FDSelect.
+  - A one-FD CFF2 font is subset to its default instance as a static
+    CID-keyed CFF program: its charstrings are flattened, `blend` is
+    evaluated at the default, and the variation tables are dropped.
+  - `tableCff`'s `decodeCharstring` reads CFF2 charstrings at the default
+    instance (`ctx.cff2`), and `tableCff2` gives the variation store's
+    `regionCounts` and each FD's local subroutines and `vsindex`.
+
+### Fixed
+
+- **A suffixed or ligature glyph name reads.** `glyphNameToUnicode`
+  applied the Adobe Glyph List's table, `uni` and `u` rules to the whole
+  name only, so `one.SP`, `uni0031.sups` and `f_f_i` read nothing. A
+  name those rules do not read is now read by the specification's own
+  steps: everything from the first full stop dropped, the rest split at
+  its underscores, each component read and the texts concatenated
+  (`1`, `1`, `ffi`). A name that read before reads the same; one whose
+  components all read nothing is still `null`.
+
+- **A Type 2 charstring's width before stem hints.** Before `hstem`,
+  `vstem`, `hstemhm`, `vstemhm`, `hintmask` and `cntrmask`, which take
+  pairs, only an odd count holds a width; an even one was read as a width
+  too, giving a wrong advance and miscounting the hints.
+- **`encodingStandard` maps 0xD0 to `emdash`**, as ISO 32000-2 Annex D.2
+  lists it; the table left the code empty, so a StandardEncoding font's
+  code 208 read as `.notdef`.
+- **`parseKern` reads the OpenType coverage bit 0 as the spec says.** A
+  subtable with bit 0 set holds data for horizontal text; it read
+  `horizontal: false`.
+- **A subset's `cmap` maps the code points past U+FFFF.** They were
+  written into the format 4 subtable truncated to 16 bits. The `cmap` now
+  adds a Windows (3, 10) format 12 subtable when a kept code point lies
+  past U+FFFF; a subset without one is byte-identical.
+
 ## [1.2.0] - 2026-11-02
 
 ### Added

@@ -151,3 +151,11 @@ describe('pdfPage module', () => {
         expect(typeof pdfPage.factory(_pdfErrors_TD1, {}).typePage).toBe('function');
     });
 });
+
+describe('typePage — /Hid (T1)', () => {
+    test('a hidden page\'s flag is typed, not left in _extras', () => {
+        const r = typePage(obj.dict({ Type: obj.name('Page'), Parent: obj.ref(2, 0), MediaBox: box(0, 0, 10, 10), Hid: obj.bool(true) }));
+        expect(r.hid).toBe(true);
+        expect(r._extras.Hid).toBeUndefined();
+    });
+});

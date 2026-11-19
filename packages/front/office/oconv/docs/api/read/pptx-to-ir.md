@@ -9,7 +9,7 @@ status: complete
 
 # oconvPptxToIr
 
-> `.pptx` (`@awacloud/ooxml`'s `pptx.read()` result) → `oconv-ir/v1`, tier 1 — one heading + N paragraphs per slide.
+> `.pptx` (`@awacloud/ooxml`'s `pptx.read()` result) → `oconv-ir/v2`, tier 1 — one heading + N paragraphs per slide.
 
 **Module** `oconvPptxToIr` (`oconvPptxToIr`) | **Source** `packages/front/office/oconv/src/read/pptx-to-ir.js` | **Deps** `oconvIr`, `pptx` | **Worker-safe** yes
 
@@ -32,7 +32,7 @@ const { pptxToIr } = runtime.resolve('oconvPptxToIr');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `pptxToIr` | `(readResult: object, opts?: {includeNotes?: boolean}) => {ir, losses}` | `ir` — an `oconv-ir/v1` document; `losses` — `{code, detail}[]` | — |
+| `pptxToIr` | `(readResult: object, opts?: {includeNotes?: boolean}) => {ir, losses}` | `ir` — an `oconv-ir/v2` document; `losses` — `{code, detail}[]` | — |
 
 ## Examples
 
@@ -47,7 +47,7 @@ ir.kind;   // 'document'
 
 - **Title** — the first shape whose `placeholder.type` is `'title'` or `'ctrTitle'`; a title shape present but carrying no non-empty text counts as "no title" (loss `slides/untitled`).
 - **Body** — every other shape carrying a `txBody`, in shape order, one IR `paragraph` per non-empty text paragraph.
-- **Pictures** — a `picture` shape is a block IR `image` among the body paragraphs, at its place in shape order: `alt` its `description` (else `''`), `name` `image<k>.<ext>` (`k` counting the deck's distinct pictures, by their bytes, from 1 in reading order; `ext` from the media type: `png`, `jpg`, `gif`, `wmf`, `emf`, else `bin`), its bytes in `escapes.pptx = { bytes, contentType }`. One picture used on several slides is one name (one asset in `toMd`); a picture without bytes (a linked one) keeps its shape name, has no escapes and records `image/bytes-unavailable`. A group shape is not typed by `pptx.read()` (it stays in the slide's raw `_extras`), so nothing inside one reaches this reader.
+- **Pictures** — a `picture` shape is a block IR `image` among the body paragraphs, at its place in shape order: `alt` its `description` (else `''`), `name` `image<k>.<ext>` (`k` counting the deck's distinct pictures, by their bytes, from 1 in reading order; `ext` from the media type: `png`, `jpg`, `gif`, `wmf`, `emf`, else `bin`), its bytes in `escapes.pptx = { bytes, contentType }`. One picture used on several slides is one name (one asset in `toMd`); a picture without bytes (a linked one) keeps its shape name, has no escapes and records `image/bytes-unavailable`. A group shape — typed when `pptx.read()` is given `typedGroups`, which `oconv.toMd` asks for — is walked in place, depth first: its text, pictures and media are read as the slide's. Read without that option, a group stays in the slide's raw `_extras` and nothing inside one reaches this reader.
 - **`includeNotes` is a documented no-op for pptx**: `pptx.read()`'s public return shape never surfaces speaker notes (no `notes` field on a slide, no relationship resolution to `notesSlide<n>.xml`), so this reader never emits a notes blockquote and never records `slides/notes-omitted` for pptx — the option is accepted only for frozen shape parity with `oconvOdpToIr`, whose underlying format does expose notes.
 - Loss codes this module emits: `slides/untitled`, `image/bytes-unavailable` (a picture without bytes — a linked one; detail = its shape name), `slides/media-dropped` (a `table`/`chart`/`graphicFrame` shape, detail = its `type`), `slides/notes-omitted` (never actually reachable for pptx — see above).
 - Layout and animations (`layoutRef`, transitions) are permanently out of scope and never reach a per-node loss — `pptx.read()`'s public result does not even model them.

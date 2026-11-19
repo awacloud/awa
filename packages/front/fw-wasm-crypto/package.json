@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/fw-wasm-crypto",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "description": "Supply-chain-isolated WebAssembly crypto for @awacloud/fw: 17 wasm modules (AES, ChaCha20-Poly1305, SHA-2/3, BLAKE2b, HMAC/HKDF/PBKDF2/Argon2, RSA, ECC, Ed25519/X25519, ML-KEM, ML-DSA, SLH-DSA) built from own C23 sources and committed vendored bases, with a browser loader and a provenance validator.",
   "keywords": ["awa", "wasm", "webassembly", "crypto", "post-quantum", "ml-kem", "ml-dsa", "slh-dsa", "aes", "chacha20-poly1305", "sha3", "blake2b", "ed25519", "x25519", "browser"],

@@ -1,6 +1,8 @@
 # @awacloud/md
 
-Pure-JavaScript Markdown parser and serializer for the browser, built on CommonMark 0.31 and the GitHub Flavored Markdown extensions (tables, task lists, strikethrough, extended autolinks, the disallowed raw HTML filter). It parses to a CommonMark-compatible AST, renders HTML, Markdown (CommonMark + GFM roundtrip) and XML, offers opt-in extras (frontmatter, math, footnotes, wikilinks, admonitions, highlight, sub/superscript, table of contents, emoji, mermaid) and can assemble Markdown documents into one self-contained HTML page. The only dependency is [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.0/packages/front/fw); no Node API is used.
+CommonMark 0.31 and GitHub Flavored Markdown in plain JavaScript: parse to an AST, render HTML, Markdown or XML, and build one self-contained HTML page. Runs in the browser, no bundler.
+
+Pure-JavaScript Markdown parser and serializer for the browser, built on CommonMark 0.31 and the GitHub Flavored Markdown extensions (tables, task lists, strikethrough, extended autolinks, the disallowed raw HTML filter). It parses to a CommonMark-compatible AST, renders HTML, Markdown (CommonMark + GFM roundtrip) and XML, offers opt-in extras (frontmatter, math, footnotes, wikilinks, admonitions, highlight, sub/superscript, table of contents, emoji, mermaid) and can assemble Markdown documents into one self-contained HTML page. The only dependency is [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.1/packages/front/fw); no Node API is used.
 
 Coverage claim, with its limit: every example of the vendored CommonMark 0.31.2 specification passes; of the GFM 0.29 specification's 670 examples, 661 pass, and the 9 others are nested strong emphasis, where GFM 0.29 and CommonMark 0.31.2 disagree and md follows CommonMark; the extras are covered by their own tests only. See the [coverage guide](./docs/guide/coverage.md).
 
@@ -193,7 +195,7 @@ The suite includes the CommonMark spec examples (`tests/commonmark-suite.test.js
 
 ## See also
 
-- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.0/packages/front/fw): `ModuleRuntime` + shared helpers
+- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.1/packages/front/fw): `ModuleRuntime` + shared helpers
 - [CommonMark 0.31](https://spec.commonmark.org/0.31.2/): implemented spec
 - [GitHub Flavored Markdown](https://github.github.com/gfm/): GFM extensions
 
@@ -226,7 +228,7 @@ See [`docs/api/bundles/README.md`](./docs/api/bundles/README.md).
 
 ## Project
 
-- Website: https://awaforge.eu
-- Source: [`packages/front/office/md`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.0/packages/front/office/md)
+- Website: https://awaforge.eu/
+- Source: [`packages/front/office/md`](https://github.com/awacloud/awa/tree/@awacloud/md@1.2.1/packages/front/office/md)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/SECURITY.md)
+- Security policy: [`SECURITY.md`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.1/SECURITY.md)

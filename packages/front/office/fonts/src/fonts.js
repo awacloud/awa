@@ -102,10 +102,11 @@ export const fonts = {
         const { resolveGlyphPath } = compositeResolveMod;
 
         /**
-         * Build the font model from a parsed sfnt. `opts.allowMissingName`
-         * reads a font without a `name` table (`font.name` null, every
-         * `font.names` field undefined) instead of throwing
-         * `fonts/missing-name`.
+         * Build the font model from a parsed sfnt. A font without a `name`
+         * table reads (`font.name` null, every `font.names` field
+         * undefined), since 2.0.0; `opts.allowMissingName: false` throws
+         * `fonts/missing-name` instead, as 1.x did by default. Any other
+         * value of the option is the default.
          *
          * @param {object} sfnt
          * @param {{ allowMissingName?: boolean }} [opts]
@@ -116,7 +117,7 @@ export const fonts = {
             if (!sfnt.tables.hhea) throw new ParseError('fonts/missing-hhea', 'font is missing the required `hhea` table');
             if (!sfnt.tables.hmtx) throw new ParseError('fonts/missing-hmtx', 'font is missing the required `hmtx` table');
             if (!sfnt.tables.cmap) throw new ParseError('fonts/missing-cmap', 'font is missing the required `cmap` table');
-            if (!sfnt.tables.name && !(opts && opts.allowMissingName)) {
+            if (!sfnt.tables.name && opts && opts.allowMissingName === false) {
                 throw new ParseError('fonts/missing-name', 'font is missing the required `name` table');
             }
 

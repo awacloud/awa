@@ -45,16 +45,24 @@ const t = runtime.resolve('xlsxTables');
     columns: [{
         id, name,
         totalsRowLabel?, totalsRowFunction?,   // 'sum'|'average'|'count'|'min'|'max'|…
+        extraAttrs?,                           // its other attributes (dxf ids …)
         _extras?
     }],
     tableStyleInfo?: {
         name?, showFirstColumn?, showLastColumn?,
         showRowStripes?, showColumnStripes?
     },
-    autoFilter?: { ref },
-    _extras?: [xmlNode]
+    autoFilter?: { ref, extraAttrs?, _extras? },  // its other attributes and children
+    rootAttrs?: object,      // the root's other attributes (tableType, insertRow,
+                             // dxf ids, xr:uid …, with their namespace
+                             // declarations and mc:Ignorable)
+    _extras?: [xmlNode]      // the table's other children (sortState, extLst)
 }
 ```
+
+A table is written back as read: `rootAttrs`, a column's `extraAttrs`, the
+`autoFilter`'s `extraAttrs` and children, and the table's other children,
+written in the schema's order.
 
 ## Examples
 

@@ -9,7 +9,7 @@ status: complete
 
 # oconvXlsxToIr
 
-> `.xlsx` (`@awacloud/ooxml`'s `xlsx.read()` result) → `oconv-ir/v1`, tier 2 — one heading + one table per sheet.
+> `.xlsx` (`@awacloud/ooxml`'s `xlsx.read()` result) → `oconv-ir/v2`, tier 2 — one heading + one table per sheet.
 
 **Module** `oconvXlsxToIr` (`oconvXlsxToIr`) | **Source** `packages/front/office/oconv/src/read/xlsx-to-ir.js` | **Deps** `oconvIr`, `xlsx` | **Worker-safe** yes
 
@@ -32,7 +32,7 @@ const { xlsxToIr } = runtime.resolve('oconvXlsxToIr');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `xlsxToIr` | `(readResult: object, opts?: object) => {ir, losses}` | `ir` — an `oconv-ir/v1` document; `losses` — `{code, detail}[]` | — |
+| `xlsxToIr` | `(readResult: object, opts?: object) => {ir, losses}` | `ir` — an `oconv-ir/v2` document; `losses` — `{code, detail}[]` | — |
 
 ## Examples
 
@@ -50,7 +50,7 @@ losses;    // [] on a plain grid with no formulas/styles/merges/charts
 - The sheet's row grid is padded to its widest row, then trailing all-empty rows/columns are trimmed (`normalizeGrid`, mirrored from `read/sheet-grid.js`); a sheet whose trimmed grid has zero rows emits its heading only.
 - No `row.header` is ever set — xlsx carries no first-class header-row concept (contrast `oconvOdsToIr`, whose `table:table-header-rows` is a real signal).
 - **`opts.sheets`** (`toMd`'s `sheets` input): `'table'` (default) maps each sheet to a GFM table as above; `'csv'` or `'tsv'` writes the same normalised grid as one `codeBlock` (`info` `csv` / `tsv`) under the sheet's heading — RFC 4180 quoting for csv; for tsv a cell's backslash, tab, LF and CR written as two-character escapes, recorded once per sheet as `sheet/tsv-escaped`. Another value throws `oconv: bad sheets`.
-- **`opts.cellBudget`** (`toMd`'s `sheetCellBudget` input): a positive safe integer, else `oconv: bad cell budget`. A sheet whose padded table (its kept rows times its kept columns, found from the row lengths without padding) would hold more cells is never padded: under `'table'` one `paragraph` per non-empty cell, `<A1 address>: <text>`, in row then column order; under `'csv'` / `'tsv'` its rows unpadded. Recorded `sheet/sparse-form` (the sheet name, the padded and the kept cell counts). Without it every sheet is padded as above.
+- **`opts.cellBudget`** (`toMd`'s `sheetCellBudget` input): a positive safe integer, else `oconv: bad cell budget`; **5,000,000 when absent** (since 2.0.0). A sheet whose padded table (its kept rows times its kept columns, found from the row lengths without padding) would hold more cells is never padded: under `'table'` one `paragraph` per non-empty cell, `<A1 address>: <text>`, in row then column order; under `'csv'` / `'tsv'` its rows unpadded. Recorded `sheet/sparse-form` (the sheet name, the padded and the kept cell counts). `Number.MAX_SAFE_INTEGER` pads every sheet as above, as 1.x did without the option.
 - Loss codes this module emits: `sheet/formula-as-value` (a formula cell reduced to its cached value), `sheet/format-dropped` (once per sheet, first styled cell), `sheet/merge-dropped` (once per sheet, when any merge exists), `sheet/chart-dropped` (once per sheet, first drawing carrying a chart).
 - Pivot tables are a matrix-level, permanently out-of-scope drop — this reader's frozen dependency list never wires the opt-in pivot-table extension, so a pivot table is structurally invisible on the `readResult` it receives; never reported per node.
 

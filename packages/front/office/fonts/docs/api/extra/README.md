@@ -12,4 +12,5 @@ Modules beyond the core OpenType tables: hinting VM, WOFF2 encoder, complex shap
 | [shaper-arabic](./shaper-arabic.md) | `{ arabicShape, arabicShapeString, joiningType, JOINING_TYPES }` | `fontErrors` | Joining types, UAX §9. |
 | [shaper-indic](./shaper-indic.md) | `{ indicReorder, categorize, splitClusters, INDIC_SCRIPTS, DEVA_CATEGORIES, DEVANAGARI_CATEGORIES, DEVA_RA }` | `fontErrors` | Devanagari + related scripts. |
 | [shaper-cjk](./shaper-cjk.md) | `{ cjkVertical, extractIVS, ... }` | `fontErrors` | Vertical forms + IVS. |
-| [apple-aat/](./apple-aat/README.md) | 6 factories | reader | Apple AAT scaffolds. |
+| [shaper](./shaper.md) | `{ shape, DEFAULT_FEATURES, ... }` | `fontErrors`, `tableGsub`, `tableGpos`, `tableGdef`, `layoutClassDefinitions`, `aatMorx`, `aatMorxEngine`, `aatKerx`, `aatAnkr`, `aatKerxEngine`, `tableKern` | A generic OpenType layout engine: text to positioned glyphs through the GSUB and GPOS lookups, a font's `morx` and `kerx`, or its `kern` table. |
+| [apple-aat/](./apple-aat/README.md) | 9 factories | reader | Apple AAT tables; the `morx` and `kerx` engines. |

@@ -76,7 +76,7 @@ describe('oconvOdpToIr — slide order, title + body mapping', () => {
         ({ ir, losses } = odpToIr(back));
     });
 
-    test('validates against the frozen oconv-ir/v1 schema', () => {
+    test('validates against the oconv-ir/v2 schema', () => {
         expect(validate(ir).ok).toBe(true);
     });
 

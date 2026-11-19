@@ -1,13 +1,16 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 try { GlobalRegistrator.register(); } catch { /* already registered by another test file */ }
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { template } from './template.js';
 import { secPolicy } from './secPolicy.js';
+import { styleSheet } from './styleSheet.js';
+import { ModuleRuntime } from '../../core/runtime.js';
+import modules from '../../core/modules.js';
 
 const sp = () => secPolicy.factory();
 
@@ -15,7 +18,7 @@ describe('template module', () => {
 
     test('has correct module metadata', () => {
         expect(template.name).toBe('template');
-        expect(template.dependencies).toEqual(['secPolicy']);
+        expect(template.dependencies).toEqual(['secPolicy', 'styleSheet']);
         expect(typeof template.factory).toBe('function');
     });
 
@@ -506,6 +509,18 @@ describe('template module', () => {
                 });
                 expect(cmd.get('urlD', 'i1').getAttribute('src')).toBe('data:image/png;base64,iVBORw0KGgo=');
             });
+            test('allows the parameter-less data:image/svg+xml, form in src', () => {
+                const ct = document.createElement('div');
+                document.body.appendChild(ct);
+                cmd.init('urlD2', { to: ct, main: true });
+                const svg = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E';
+                cmd.elm('urlD2', {
+                    id: 'i1', tag: 'img',
+                    attrs: ['src'],
+                    data:  { src: svg },
+                });
+                expect(cmd.get('urlD2', 'i1').getAttribute('src')).toBe(svg);
+            });
             test('allows https URLs', () => {
                 const ct = document.createElement('div');
                 document.body.appendChild(ct);
@@ -597,6 +612,85 @@ describe('template module', () => {
                 const ct2 = document.createElement('div');
                 document.body.appendChild(ct2);
                 expect(() => cmd.init('reinit-ctx', { to: ct2, main: true })).not.toThrow();
+            });
+        });
+
+        describe('tags outside the catalogue', () => {
+            test('an uncatalogued tag renders through createElement, children in place', () => {
+                cmd.init('unk', { to: container, main: true });
+                cmd.elms('unk', [
+                    { id: 'o', tag: 'output', attrs: ['for'], data: { for: 'a b' } },
+                    { id: 'o-t', tag: 'span', parent: 'o', text: '42' },
+                    { id: 'ce', tag: 'my-widget', attrs: ['data-x'], data: { 'data-x': '1' }, text: 'w' },
+                ]);
+                const out = cmd.get('unk', 'o');
+                expect(out).not.toBeNull();
+                expect(out.tagName.toLowerCase()).toBe('output');
+                expect(out.getAttribute('for')).toBe('a b');
+                expect(out.parentNode).toBe(container);
+                expect(cmd.get('unk', 'o-t').parentNode).toBe(out);
+                const ce = cmd.get('unk', 'ce');
+                expect(ce.tagName.toLowerCase()).toBe('my-widget');
+                expect(ce.getAttribute('data-x')).toBe('1');
+                expect(ce.textContent).toBe('w');
+            });
+
+            test('an uncatalogued svg_<name> tag is created in the SVG namespace', () => {
+                cmd.init('unk-svg', { to: container, main: true });
+                cmd.elms('unk-svg', [
+                    { id: 's', tag: 'svg' },
+                    { id: 'r', tag: 'svg_rect', parent: 's', attrs: ['width'], data: { width: '10' } },
+                ]);
+                const rect = cmd.get('unk-svg', 'r');
+                expect(rect).not.toBeNull();
+                expect(rect.namespaceURI).toBe('http://www.w3.org/2000/svg');
+                expect(rect.localName).toBe('rect');
+                expect(rect.getAttribute('width')).toBe('10');
+            });
+
+            test('a blocked tag or an invalid element name is still not rendered', () => {
+                cmd.init('unk-bad', { to: container, main: true });
+                for (const tag of ['script', 'iframe', 'object', 'embed', '1x', 'a b', 'svg_1x']) {
+                    expect(() => cmd.elm('unk-bad', { id: 'n-' + tag.replace(/\W/g, ''), tag })).not.toThrow();
+                    expect(cmd.has('unk-bad', 'n-' + tag.replace(/\W/g, ''))).toBe(false);
+                }
+                expect(container.querySelector('script, iframe, object, embed')).toBeNull();
+            });
+        });
+
+        describe('elm() leaves the caller data untouched', () => {
+            test('an id-less node gets its generated id on a copy', () => {
+                cmd.init('noid', { to: container, main: true });
+                const node = { tag: 'div', text: 'x', child: [{ tag: 'span', text: 'y' }] };
+                const before = JSON.stringify(node);
+                cmd.elm('noid', node);
+                expect(JSON.stringify(node)).toBe(before);
+                expect(container.querySelector('div').textContent).toContain('x');
+                expect(container.querySelector('div span').textContent).toBe('y');
+            });
+        });
+
+        describe('clearContext on a page context', () => {
+            test('empties the body and removes its own style/script, the body stays', () => {
+                const doc = document.implementation.createHTMLDocument('page');
+                const keep = doc.createElement('meta');
+                doc.head.appendChild(keep);
+                cmd.init('pg', { to: doc, page: true, main: true });
+                cmd.elm('pg', { id: 'hello', tag: 'p', text: 'hi' });
+                cmd.style('pg', 'pg-style', 'p { color: red; }');
+                cmd.script('pg', 'pg-script', 'void 0');
+                expect(doc.body.querySelector('p')).not.toBeNull();
+
+                cmd.clearContext('pg');
+
+                expect(doc.body).not.toBeNull();
+                expect(doc.body.parentNode).toBe(doc.documentElement);
+                expect(doc.body.childNodes.length).toBe(0);
+                expect(doc.head.querySelector('#pg-style')).toBeNull();
+                expect(doc.head.querySelector('#pg-script')).toBeNull();
+                expect(keep.parentNode).toBe(doc.head);
+                expect(cmd.getCtx('pg')).toBeNull();
+                expect(() => cmd.init('pg', { to: doc, page: true, main: true })).not.toThrow();
             });
         });
 
@@ -706,5 +800,103 @@ describe('template module', () => {
                 expect(out.template).toEqual([]);
             });
         });
+    });
+});
+
+describe('template through styleSheet', () => {
+    let cmd, ss;
+
+    beforeEach(() => {
+        document.head.innerHTML = '';
+        document.adoptedStyleSheets = [];
+        ss = styleSheet.factory();
+        cmd = template.factory(sp(), ss);
+        cmd.init('page', { to: document, page: true, main: true });
+    });
+
+    afterEach(() => {
+        cmd.setNonce('');
+        document.head.innerHTML = '';
+        document.adoptedStyleSheets = [];
+    });
+
+    test('element mode: style#<id> in the head, text and nonce as hand-wired', () => {
+        cmd.setNonce('abc123');
+        cmd.style('page', 'theme', 'body { color: red; }');
+        const els = document.head.querySelectorAll('style#theme');
+        expect(els.length).toBe(1);
+        expect(els[0].textContent).toBe('body { color: red; }');
+        expect(els[0].getAttribute('nonce')).toBe('abc123');
+        expect(cmd.getCtx('page').styles.theme).toBe(els[0]);
+        cmd.style('page', 'theme', 'body { color: green; }');
+        expect(document.head.querySelectorAll('style#theme').length).toBe(1);
+        expect(els[0].textContent).toBe('body { color: green; }');
+        cmd.removeStyle('page', 'theme');
+        expect(document.head.querySelector('#theme')).toBeNull();
+    });
+
+    test('adopted mode: no <style> element, one sheet per id, text replaced in place', () => {
+        ss.mode('adopted');
+        cmd.style('page', 'a', 'a { color: red; }');
+        cmd.style('page', 'b', 'b { color: blue; }');
+        expect(document.querySelectorAll('style').length).toBe(0);
+        expect(document.adoptedStyleSheets.length).toBe(2);
+        const [sheetA] = document.adoptedStyleSheets;
+        cmd.style('page', 'a', 'a { color: green; }');
+        expect(document.adoptedStyleSheets.length).toBe(2);
+        expect(document.adoptedStyleSheets[0]).toBe(sheetA);
+        expect(sheetA.cssRules[0].cssText).toContain('green');
+    });
+
+    test('adopted mode: removeStyle removes only its sheet', () => {
+        ss.mode('adopted');
+        cmd.style('page', 'a', 'a { color: red; }');
+        cmd.style('page', 'b', 'b { color: blue; }');
+        const [sheetA, sheetB] = document.adoptedStyleSheets;
+        cmd.removeStyle('page', 'a');
+        expect(document.adoptedStyleSheets).toEqual([sheetB]);
+        expect(document.adoptedStyleSheets).not.toContain(sheetA);
+        cmd.removeStyle('page', 'a'); // no-op
+        expect(document.adoptedStyleSheets.length).toBe(1);
+    });
+
+    test('adopted mode: the context teardown removes its sheets and only theirs', () => {
+        ss.mode('adopted');
+        const foreign = new CSSStyleSheet();
+        foreign.replaceSync('x { color: red; }');
+        document.adoptedStyleSheets = [foreign];
+        cmd.style('page', 'a', 'a { color: red; }');
+        cmd.style('page', 'b', 'b { color: blue; }');
+        expect(document.adoptedStyleSheets.length).toBe(3);
+        cmd.clearContext('page');
+        expect(document.adoptedStyleSheets).toEqual([foreign]);
+    });
+
+    test('element mode: the context teardown removes its <style> elements', () => {
+        cmd.style('page', 'a', 'a { color: red; }');
+        cmd.clearContext('page');
+        expect(document.head.querySelector('#a')).toBeNull();
+    });
+
+    test('hand-wired without styleSheet (legacy call): still inserts the <style> element', () => {
+        const legacy = template.factory(sp());
+        legacy.init('legacy', { to: document, page: true });
+        legacy.style('legacy', 'old', 'p { color: red; }');
+        expect(document.head.querySelectorAll('style#old').length).toBe(1);
+        legacy.removeStyle('legacy', 'old');
+        expect(document.head.querySelector('#old')).toBeNull();
+    });
+
+    test('resolved path: template shares the resolved styleSheet instance', () => {
+        const rt = new ModuleRuntime();
+        rt.registerAll(modules);
+        const tpl = rt.resolve('template');
+        expect(rt.resolve('component')).toBeDefined();
+        expect(rt.resolve('themeTokens')).toBeDefined();
+        rt.resolve('styleSheet').mode('adopted');
+        tpl.init('res', { to: document, page: true });
+        tpl.style('res', 'r', 'p { color: red; }');
+        expect(document.querySelector('style#r')).toBeNull();
+        expect(document.adoptedStyleSheets.length).toBe(1);
     });
 });

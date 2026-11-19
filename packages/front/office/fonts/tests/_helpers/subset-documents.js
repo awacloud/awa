@@ -85,7 +85,8 @@ export function codePointSets(font) {
  * The subset documents: one per source face and code-point set, the face's
  * own bytes as `source`.
  * @param {{ resolve(name: string): any }} [rt]
- * @returns {{ docs: { id: string, ext: 'ttf', bytes: Uint8Array, source: Uint8Array, codePoints: number[] }[], skipped: { case: string, reason: string }[] }}
+ * A name-keyed CFF face is subset with `{ cff: true }` and written `.otf`.
+ * @returns {{ docs: { id: string, ext: 'ttf' | 'otf', bytes: Uint8Array, source: Uint8Array, codePoints: number[] }[], skipped: { case: string, reason: string }[] }}
  */
 export function subsetDocuments(rt = fontsRuntime()) {
     const api = rt.resolve('fonts');
@@ -94,15 +95,17 @@ export function subsetDocuments(rt = fontsRuntime()) {
     for (const face of subsetSources()) {
         const font = api.read(face.bytes);
         const sets = codePointSets(font);
+        const opts = font.glyphTable ? undefined : { cff: true };
+        const ext = font.glyphTable ? 'ttf' : 'otf';
         for (const name of /** @type {const} */ (['text', 'full'])) {
             const id = `${face.id}/${name}`;
             try {
-                const bytes = subsetForPdf(font, new Set(sets[name])).subsetBytes;
-                out.docs.push({ id, ext: 'ttf', bytes, source: face.bytes, codePoints: sets[name] });
+                const bytes = subsetForPdf(font, new Set(sets[name]), opts).subsetBytes;
+                out.docs.push({ id, ext, bytes, source: face.bytes, codePoints: sets[name] });
             } catch (e) {
                 const code = /** @type {{ code?: unknown }} */ (e).code;
                 if (typeof code !== 'string' || !code.startsWith('fonts/')) throw e;
-                out.skipped.push({ case: `${id}.ttf`, reason: `subsetForPdf refuses the face with the typed ${code} (a documented limit: glyf outlines only)` });
+                out.skipped.push({ case: `${id}.${ext}`, reason: `subsetForPdf refuses the face with the typed ${code} (a documented limit: glyf and name-keyed CFF outlines only)` });
             }
         }
     }

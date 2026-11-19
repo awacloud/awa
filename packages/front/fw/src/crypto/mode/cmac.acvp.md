@@ -49,7 +49,7 @@ ACVP CMAC-AES-1.0 exposes **54 testGroups / 756 tests** organized as:
 
 - [x] **`K1`, `K2` subkey derivation** — RFC 4493 §4 vector + all
   189 ACVP (each tag depends on the correct subkeys).
-- [x] **GF(2^128) doubling** — `_dbl` exposed (`_internal.dbl`) and validated
+- [x] **GF(2^128) doubling** — `_dbl` exposed (`internalOf(cmac).dbl`) and validated
   against the RFC 4493 values (`L`, `K1`, `K2`).
 - [x] **Full block vs padded branch** — covered by msgLen ∈ {0
   (padded), 4256 (= 532 bytes, non-aligned mod 16 → padded K2), 65536 (= 8192
@@ -76,7 +76,7 @@ ACVP CMAC-AES-1.0 exposes **54 testGroups / 756 tests** organized as:
 ## Known limitations
 
 - **CMAC-TDES not covered**: `CMAC-TDES-1.0` present in `references/NIST/`
-  but out of scope. **Iteration D3**: added `_checkBlockSize` which
+  but out of scope. `_checkBlockSize`
   rejects any PRF with `blockSize !== 16` (TDES = 8 bytes) with a typed
   `DEPRECATED` warning. Prevents any silent use by a consumer that would
   mistakenly pass a TDES PRF.
@@ -84,8 +84,8 @@ ACVP CMAC-AES-1.0 exposes **54 testGroups / 756 tests** organized as:
   the same code paths. The anchors cover `[first, middle, last]`
   per group and each `(keyLen, msgLen, macLen)` combination has at least
   3 gen + 4 ver integrated.
-- ~~**No explicit guard against invalid macLen**~~ ✅ **Iteration
-  D3** — added `truncatedMac(prf, message, tagLen)` and
+- ~~**No explicit guard against invalid macLen**~~ ✅
+  `truncatedMac(prf, message, tagLen)` and
   `truncatedVerify(prf, message, tag, tagLen)` which enforce
   `tagLen ∈ [32, 128]` (SP 800-38B §6.4). The legacy `mac()` API remains
   unchanged (returns 128 bits) for back-compat; the new functions are
@@ -100,7 +100,7 @@ ACVP CMAC-AES-1.0 exposes **54 testGroups / 756 tests** organized as:
 ## Cross-references
 
 - Module: [`mode/cmac.js`](./cmac.js)
-- Tests: [`mode/cmac.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/cmac.test.js) — 210 tests (197 baseline + 13 iteration D3: TDES guard + truncatedMac SP 800-38B §6.4 enforcement)
+- Tests: [`mode/cmac.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/cmac.test.js) — 210 tests (197 baseline + 13 more: TDES guard + truncatedMac SP 800-38B §6.4 enforcement)
 - ACVP draft: `references/NIST/ACVP/src/cmac/`
 - Vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/CMAC-AES-1.0/`
 - Overall conformance: [`NIST_CONFORMANCE.md`](../NIST_CONFORMANCE.md)

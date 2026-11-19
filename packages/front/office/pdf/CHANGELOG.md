@@ -7,6 +7,307 @@ ISO 32000-1:2008 (PDF 1.7).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-19
+
+### Breaking
+
+- **`pdfBuilder` writes the Standard 14 metrics by default.**
+  `addFont({ baseFont })` of a Standard 14 Type1 face with no
+  `standard14` now carries `FirstChar`, `LastChar`, `Widths` and a
+  `FontDescriptor`, which PDF 2.0 requires of every simple font (ISO
+  32000-2 Table 109): the builder declares `@awacloud/fonts`'
+  `standard14Lookup` and `encodingLookup` and uses them. Symbol and
+  ZapfDingbats with an `/Encoding`, and a base font outside the 14, keep
+  the legacy dictionary; `standard14: false` writes it on request. The
+  standalone write bundles carry the two lookups (about 33 KB minified);
+  the fw-variant ones declare them (next entry). pdf's Arlington write
+  measure reads 387 / 387, from 327 / 343. A runtime composed without
+  `pkg_require` (the README registers it) can no longer resolve
+  `pdfBuilder`.
+
+- **The fw-variant Read+Write bundles declare the `@awacloud/fonts`
+  modules they use.** `@awacloud/pdf/build/pdf-rw.js`, `pdf-large-rw.js`,
+  `pdf-full-rw.js` and `pdf-legacy-rw.js` no longer inline
+  `standard14Lookup`, `encodingLookup` and their tables: register
+  `@awacloud/fonts`' manifest on the runtime, as for the unbundled
+  modules. The standalone bundles are unchanged and still need nothing.
+  Each fw-variant Read+Write bundle is about 32.6 KB smaller minified
+  (`pdf-rw.min.js` 226,956 → 194,324 bytes) and 60.9 KB smaller
+  unminified; its `.meta.json` names the two declared modules under
+  `siblingDependencies`.
+
+- **`readDocument` opens an encrypted document with the empty password
+  by default.** Read with no `password` (and without `allowEncrypted`),
+  an encrypted document the empty password opens, as the user then as
+  the owner, now reads, with one
+  `pdf/document/opened-with-empty-password` loss carrying the permission
+  bits; one it does not open still throws `pdf/document/encrypted`.
+  `emptyPassword: false` keeps the 1.x refusal. `pdfMerge` refuses an
+  encrypted source by name, `pdf/merge/encrypted-source`, since its
+  pages would land in an unencrypted output. On the corpus, 10 of 42
+  encrypted files open this way (AES), 7 more with the `legacyRc4`
+  reader.
+
+- **`readDocument` rebuilds an unusable cross-reference chain by
+  default.** A wrong `startxref`, an undecodable cross-reference stream,
+  no `startxref` or a trailer without `/Root` now rebuilds the table
+  from the file's bytes, recorded as `pdf/document/xref-rebuilt`, unless
+  `recoverXref: false`, which throws the walk's error as 1.x did. A byte
+  source whose chain fails is read whole once for the rebuild, and
+  `recoverXref: true` with a source no longer throws
+  `pdf/document/recover-needs-bytes`. `pdfSign` and `pdfFormFill`, which
+  append an incremental update, read their base with `recoverXref:
+  false`. On 2,422 corpus PDFs, 27 deliberately damaged qpdf test files
+  now read; no file that read changes.
+
+### Changed
+
+- **A composite font follows its embedded CMap.** `pdfFontDecoder`
+  read a `Type0` font's glyph widths from `/W` only under `Identity-H` /
+  `-V` (any other CMap gave `/DW` and `text/width-approximated`), and
+  split its strings 2 bytes at a time. Under an embedded CMap stream it
+  now maps each code to its CID through `@awacloud/fonts`' `cmapCid` (the
+  stream's `/UseCMap` parent under it) and takes `/W` there, and reads
+  the codes by the CMap's codespace when they are not all 2 bytes long:
+  the decoder gains `split(bytes)` and `width(code, length)`, which
+  `decodeShow` and `pdfPageText` use. A predefined CMap by another name
+  keeps `/DW`. Over the reference corpus, the 10 documents with such a
+  font change: their runs placed by `/W`, `text/width-approximated` gone
+  from them; every other page is unchanged.
+
+- **The TeXCMMaths fonts read as the signs they draw.** A simple font of
+  the `TeXCMMathsSymbols`, `TeXCMMathsItalic` or `TeXCMMathsExtension`
+  family names each glyph by a Computer Modern position, and its
+  ToUnicode repeats the names: `=` was read as `¼`, `+` as `þ`, `(` and
+  `)` as `ð` and `Þ`, the minus sign as U+FFFD, `/` as `=`. `pdfFontDecoder`
+  now reads those three families through `@awacloud/fonts`'
+  `encodingTexMath` before the ToUnicode (the glyph name gives the
+  position); every other font is read as before. The decoder depends on
+  `encodingTexMath`, which `@awacloud/fonts`' manifest registers.
+
+### Added
+
+- **`pdfPageText`'s visitor knows the losses so far.** `visit`'s `ctx`
+  gains `lossCount`, the number of losses the walk has recorded before
+  the operator, so a caller's own losses fall in order among the walk's,
+  as `runCount` places its items among the runs.
+
+- **Fonts with CFF outlines embed.** `pdfFontEmbed.embedSimple` and
+  `embedCid` took TrueType outlines only (a CFF or CFF2 font threw
+  `fonts/subset-bad-font`). They now subset any outlines and write the
+  dictionaries ISO 32000-2 Table 124 asks for: a CFF font's subset is a
+  `FontFile3 /OpenType` program under `/Type1` (its codes reaching their
+  glyphs by name, a `/Differences` of the subset's glyph names over
+  `/WinAnsiEncoding`) or a `/CIDFontType0` CIDFont (its codes the
+  program's CIDs, no `/CIDToGIDMap`). A CID-keyed program (a CFF2 font's
+  subset is one) has no simple form: `embedSimple` refuses it with
+  `pdf/embed/cid-keyed-simple`. A TrueType font embeds as before, byte for
+  byte. The builder writes a `FontFile3` stream with `/Subtype /OpenType`
+  and without `/Length1`. `pdfFontEmbed` depends on `fontSfnt` and
+  `fontCffProgram`, in the fonts manifest `pkg_require` carries.
+
+- **Zapf Dingbats glyph names and the Standard 14 symbol fonts read as
+  characters** (`pdfFontDecoder`). A font whose family names Dingbats
+  resolves its glyph names through the ITC Zapf Dingbats Glyph List
+  (`a73` → `■`), and a non-embedded `Symbol` or `ZapfDingbats` font with
+  no base in `/Encoding` takes its built-in encoding (`a24` → `✘`, not
+  `8`). On 2,422 corpus PDFs (first 60 pages each), the undecodable
+  codes fall from 3,017 to 2,744.
+
+- **Symbol and Wingdings private-use text read as characters**
+  (`pdfFontDecoder`). A ToUnicode entry at 0xF020–0xF0FF in a `Symbol`,
+  `SymbolMT` or `Wingdings` font is read again: Symbol's through
+  `SymbolEncoding` and the AGL (U+F0B7 → `•`), Wingdings' for the pairs
+  Word itself writes (U+F0A7 → `▪`, U+F0FC → `✓`). On 2,422 corpus PDFs
+  (first 60 pages each), the private-use characters fall from 50,675 to
+  438.
+
+- **`pdfFontDecoder` reads a symbolic font's built-in encoding.** A
+  symbolic `Type1` or `MMType1` font whose embedded program is `/FontFile`
+  (Type 1), `/FontFile3` `Type1C`, or `/FontFile3` `OpenType` with a `CFF `
+  table, and whose `/Encoding` names no base, now decodes through the
+  program's built-in encoding (ISO 32000-2 §9.6.6.1), with `/Differences`
+  over it. Before, `StandardEncoding` was used. pdfLaTeX's Computer Modern
+  text and math, which carry no `/ToUnicode`, now come out as text: a
+  comma where a semicolon came out, a period for a colon, and the minus,
+  relation and Greek symbols where codes were counted undecodable. The
+  decoder depends on `fontType1`, `fontCffProgram` and `fontSfnt`.
+
+- **`pdfFormFill`, fill an AcroForm and save it.** `fill(bytes, values)`
+  sets text, check-box, radio and choice fields by their full names, in
+  an incremental update that keeps the prior bytes (an earlier
+  signature still verifies). Each filled text field gets a generated
+  appearance stream (its `/DA` font and size, one line), and the AcroForm
+  gets `/NeedAppearances true`.
+
+- **`pdfMerge`, copy pages from several documents into a new one.**
+  `merge(sources, opts?)` takes each source's bytes and, optionally, the
+  page indices wanted, and writes the chosen pages in order: each with
+  its inherited attributes flattened and every object it reaches,
+  renumbered and shared once. The sources' outlines, structure trees,
+  form fields and Info are not carried; a link to a page left out loses
+  its destination.
+
+- **A read document's public reach.** `readDocument`'s result carries
+  `resolve(node)` (the resolver `_raw.resolve` is), `info()` (the Info
+  dictionary as decoded text, or `null`) and `pageContents(i)` (a page's
+  content streams decoded and joined), so no caller needs `_raw`; `_raw`
+  stays.
+
+- **`pdfPageText`, a page text extra.** `extractPage(page, resolve,
+  opts)` walks a page's content streams and returns its positioned runs
+  (`text`, `x`, `y`, `xEnd`, `fontSize`, `bold`, `mcid`), its counts and
+  its text losses:
+  - Form XObjects are executed under cycle, depth and operator-budget
+    guards;
+  - `opts.cellKerns` cuts a `TJ` table row at its cell gaps;
+  - `opts.visit(op, ctx)` sees every operator walked, with the CTM, the
+    marked-content id, the resources in force, the form depth and the
+    run count.
+
+  `pageText(page, resolve, opts)` returns the runs joined into lines. Its
+  walk is `@awacloud/oconv`'s pdf page walk without the layout opt-ins: on
+  5,217 pages of 1,678 PDFs, its runs, counts and text losses equal that
+  walk's. It is on `pdfFontDecoder`, so it is not in the prebuilt bundles
+  either.
+
+- **`pdfFontDecoder`, a font decoder extra.**
+  `buildDecoder(fontDict, resolve)` and `decodeShow(decoder, bytes)` turn
+  a Font dict's character codes into Unicode text and glyph widths:
+  - text through the ToUnicode CMap, the encoding + AGL hop, or a Type 0
+    font's predefined Unicode CMaps;
+  - widths from `/Widths`, `/W` / `/DW`, the Standard 14 AFM widths or a
+    declared fallback.
+
+  It was moved from `@awacloud/oconv`'s pdf reader, where a copy stays
+  until oconv is rebuilt on it. On 5,217 pages of 1,678 PDFs both give
+  the same text items. It is registered in the extras. It is not in the
+  prebuilt bundles: their generator cannot bundle a `@awacloud/fonts`
+  dependency (the same gap as `pdfFontEmbed`).
+
+- **`pdf.read` through a byte source.** `pdf.read(source, opts)` takes a
+  synchronous `{ byteLength, read(offset, length) }` in place of the
+  bytes. The file is read by windows: its header, its tail, each xref
+  section and each object as it is resolved. A window starts at 64 KiB
+  (`opts.sourceWindow`) and doubles while a parse needs it, up to the
+  parser's `maxStreamBytes` plus 64 KiB (`pdf/document/source-window`).
+  The result's `_raw` carries `source`; `recoverXref` needs the bytes
+  (`pdf/document/recover-needs-bytes`). A `Uint8Array` reads as before.
+  A 6 GB PDF of the Stressful corpus now reads within 1 GiB.
+
+- **The Arlington tail typed.** `pdfMisc.typeSmallObject(value, kind)`
+  (with `SMALL_OBJECT_KEYS`) types fifteen small objects no other typer was
+  bound to: an alternate image, a page-piece data dictionary, a structure
+  destination's dictionary, a fixed-print dictionary, the mark
+  information, a marked-content and an object reference, a minimum bit
+  depth, a namespace, a reference XObject's reference, a web capture's
+  source information, a timespan, a URL alias, a user property, the
+  Windows launch parameters. `pdfDocumentParts.typeDPart` copies a part's
+  `/AF` (`af`), and `typePage` types `/Hid` (`hid`). The read keys of the
+  Arlington PDF Model now handled: 3,355 of 3,357.
+- **The public-key security handler typed.** `typeEncryptDict` types a
+  public-key `/Encrypt` dictionary (no `/R`; `/R` stays required for the
+  Standard handler) and its `/Recipients` (`Recipients: [Uint8Array]`). A
+  new opt-in extra, `pdfCryptPublicKey` (registered by `pdf-full`), types a
+  public-key crypt filter, the public-key and Standard crypt filter maps,
+  and `/EncryptedPayload`. A document under the public-key handler is now
+  refused by the read with `pdf/crypto/unsupported-filter` (it was
+  refused with `pdf/crypto/encrypt-dict/missing-V-R`). Typing only: the
+  package decrypts the Standard handler alone.
+- **The builder's structure API: tagged documents.** `openElement(type,
+  props?)` (`alt`, `lang`, `attributes`), `markContent()` (the current
+  page's next MCID) and `closeElement()` declare the logical structure; the
+  caller writes the marked content. `build()` writes the StructTreeRoot,
+  the elements with their marked-content references (an MCR for another
+  page), the ParentTree, the pages' StructParents and MarkInfo, and under
+  `pdfUA: 2` the PDF 2.0 namespace. Misuse is a `ContractError`
+  (`pdf/builder/bad-struct-type`, `bad-struct-props`, `no-open-element`,
+  `open-element`). So tagged, the builder's documents conform to PDF/UA-1
+  and PDF/UA-2 as veraPDF 1.30.3 judges them.
+- **`builder({ pdfUA: 1 | 2, lang })`: a document claiming PDF/UA.** The
+  catalog gets MarkInfo `/Marked true`, `/Lang`, ViewerPreferences
+  `/DisplayDocTitle true` and an XMP packet with `pdfuaid` and the
+  `addMetadata` fields (a Title required); version 1.7 (UA-1) or 2.0
+  (UA-2), a trailer `/ID`, every font embedded. `pdfXmp.packet` writes
+  `pdfuaid`. A bad part (`pdf/builder/bad-pdfua`), a missing language
+  (`pdf/builder/pdfua-lang`) or Title (`pdf/builder/pdfua-title`), a
+  `setVersion` against the part (`pdf/builder/pdfua-version`) and `pdfUA`
+  with `pdfA` (`pdf/builder/pdfua-with-pdfa`) are `ContractError`s. The
+  logical structure is not written yet: an untagged document so claimed
+  fails only veraPDF's structure rules.
+- **A font without a program is refused under `pdfA`.** `build()` throws
+  `pdf/builder/pdfa-font-not-embedded` (a `ContractError`, its context
+  naming the fonts) when a document claiming PDF/A registered a font with
+  no embedded program; PDF/A requires every font embedded.
+- **The PDF/A output intent.** Under `pdfA`, `pdfBuilder` writes the
+  catalog's `/OutputIntents`: one `GTS_PDFA1` intent whose destination
+  profile is a first-party sRGB ICC profile (the new `pdfSrgbIcc` module,
+  generated in code from the public IEC 61966-2.1 colorimetry, no
+  third-party bytes), or the caller's (`builder({ pdfA, outputIntent: {
+  profile, components, identifier, info } })`; a malformed one, or one
+  without `pdfA`, is a `ContractError` `pdf/builder/bad-output-intent`).
+  With it, veraPDF 1.30.3 judges the builder's PDF/A-4 and PDF/A-2b
+  documents — text in embedded fonts, a soft-masked image — conforming.
+- **`builder({ pdfA: '4' | '2b' })`: a document claiming PDF/A.**
+  `pdfBuilder` writes an XMP packet (`pdfaid` and the `addMetadata` fields)
+  as the catalog's unfiltered `/Metadata`; under PDF/A-4 no trailer Info and
+  version 2.0, under PDF/A-2b the Info mirrored in the XMP, version 1.7 and
+  a trailer `/ID`. A `pdfA` value other than `'4'` or `'2b'`
+  (`pdf/builder/bad-pdfa`) and a `setVersion` against the profile
+  (`pdf/builder/pdfa-version`) are `ContractError`s. `pdfXmp.packet(fields)`
+  writes the packet; `writeDocument`'s `deriveId: true` derives the `/ID`
+  at any version. The output without `pdfA` is unchanged. Colours, output
+  intent and fonts are not handled yet: a blank page conforms to both
+  profiles, as veraPDF 1.30.3 judges it.
+- **The PDF/A and PDF/UA linters read a `pdf.read` result and name the
+  veraPDF rule of each finding.** `validatePdfABasics(doc, { profile })`
+  (`pdfAOutputIntent`) and `validatePdfUa(doc, { part })` (`pdfUaTagged`)
+  take what `pdf.read` returns — the catalog from `catalog.raw`, references
+  resolved, encryption and `/P` from the trailer — as well as the hand-built
+  shape they took. Each result gains `findings: [{ rule, severity, message
+  }]`, `rule` the veraPDF rule id of the check for the profile (`'1b'` …
+  `'4f'`) or the part (1 or 2; PDF/UA-2 is new). A profile or part out of
+  range is a `ContractError` (`pdf/extra/pdfa/bad-profile`,
+  `pdf/extra/pdfua/bad-part`). On a read document the linters found the
+  catalog missing in every file; over the 787 PDF/A and PDF/UA files of the
+  veraPDF corpus, the rules they fail now equal veraPDF 1.30.3's on those
+  rules for every file.
+
+### Fixed
+
+- **The tarball ships the sRGB profile's provenance note.** The package's
+  `files` now take `src/**/*.md`, so `src/prepress/PROVENANCE.md`, which
+  `docs/api/prepress/srgb-icc.md` links, is in the npm tarball.
+
+- **A ToUnicode entry of U+FFFD no longer hides a glyph name that
+  reads.** The entry says the producer knew no character; `pdfFontDecoder` now
+  reads the code through the font's encoding instead, and keeps U+FFFD
+  only when that reads nothing either. With `@awacloud/fonts`' fuller
+  glyph-name reading, `one.SP` reads `1` where the text had U+FFFD.
+
+- **A stream whose `/Length` names itself no longer overflows the
+  stack.** `readDocument`'s resolver reads a reference to an object it is
+  already reading as null, recorded as `pdf/document/reference-cycle`,
+  and the stream's data ends at its `endstream`; an object stream whose
+  `/Length` names one of its members reads too. A nesting of more than 32
+  objects being read throws `pdf/document/resolve-too-deep`. Found by
+  qpdf's `issue-117.pdf`, which the cross-reference rebuild now reaches.
+
+- **`Q` restores the text font.** `pdfPageText`: `q` now saves the font
+  in force, its size and the leading with the CTM, `Tc`, `Tw` and `Tz`,
+  and `Q` brings them back (ISO 32000-2 §8.4.1). Text drawn after a `q …
+  Tf … Q`, as after a list label in a bullet font, was decoded through
+  the font set inside the `q`. On 2,422 corpus PDFs (first 60 pages
+  each), the undecodable codes fall from 14,410 to 3,017.
+
+- **The PDF/UA linter's verdicts follow their rules.** A missing
+  `/ViewerPreferences /DisplayDocTitle true` is an error (a "shall" of both
+  parts; it was a warning); a missing catalog `/Lang` is a warning under
+  PDF/UA-1, which asks only that the language be determinable (it was an
+  error, wrong on 18 conforming files of the veraPDF corpus), and an error
+  under PDF/UA-2; a `/Marked` held by reference is read. The PDF/A linter's
+  "/MarkInfo must be a dictionary" is a warning (no PDF/A rule names it).
+
 ## [1.2.0] - 2026-11-02
 
 ### Added

@@ -145,7 +145,7 @@ describe('the measure’s own rules', () => {
         ], rt);
         expect(m.fonts.cases).toEqual([]);
         const reason = 'Type 1 or Mac resource-fork font: not a format the package claims';
-        expect(m.fonts.skipped).toEqual([{ case: 'a.pfa', reason }, { case: 'b.dfont', reason }]);
+        expect(m.fonts.skipped).toEqual([{ case: 'a.pfa', reason: 'a Type 1 program, measured by fonttools-type1' }, { case: 'b.dfont', reason }]);
         expect(m.tables.cases).toEqual([{ case: 'c.{head}.bin :: head', ok: true }]);
     });
 

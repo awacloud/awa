@@ -13,6 +13,10 @@ function fromMd(input: FromMdInput): Promise<FromMdResult>
 | `markdown` | `string` | yes | The Markdown source. |
 | `target` | `string` | one of the two | `docx`, `odt` or `pdf`. Wins over the extension of `name`. |
 | `name` | `string` | one of the two | Output file name. Its extension picks the target when `target` is omitted. |
+| `pdfA` | `string` | no | pdf target: `'4'` or `'2b'` — claim PDF/A-4 or PDF/A-2b (XMP metadata, an sRGB output intent, every font embedded). Without `pdfFonts`, the Liberation faces of the optional package `@awacloud/oconv-fonts` are used when it is installed; when it is not, a usage error `pdfA: no embeddable face: regular.ttf, bold.ttf, italic.ttf, boldItalic.ttf and mono.ttf are needed. Install the optional package (npm i @awacloud/oconv-fonts) for the Liberation faces, or pass --pdf-fonts <dir> (pdfFonts) with your own.` before converting. |
+| `pdfUA` | `number` | no | pdf target: `1` or `2` — claim PDF/UA-1 or PDF/UA-2, a tagged document (headings, paragraphs, lists, tables, pictures with their alt text; the title from the front matter or the first heading). Needs `pdfFonts` and `pdfLang`: without them, a usage error. |
+| `pdfLang` | `string` | no | pdf target: the document language under `pdfUA` (a BCP 47 tag); without `pdfUA`, a usage error. |
+| `pdfFonts` | [`PdfFonts`](./types.md#pdffonts) | no | pdf target: the TrueType faces to embed, per style class; a class without one is drawn in a Standard 14 font, which `pdfA` refuses. |
 
 ## Output — [`FromMdResult`](./types.md#frommdresult)
 

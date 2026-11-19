@@ -31,9 +31,11 @@ Exactly the two exports of `src/typed.js`:
 | `asTyped` | `(runtime: *) => *` | identity cast — re-types an existing `ModuleRuntime` at the type level; no runtime effect |
 | `createRuntime` | `(modules?: *) => *` | builds a fresh `ModuleRuntime`, deep-registers `modules` (via `registerAllDeep`, so transitive `deps` come along) when provided, and returns it typed |
 
-`createRuntime`'s `modules` argument accepts either an array of module
-definitions or a namespace object whose values are module definitions (the
-shape of `@awacloud/fw/core/modules`).
+`createRuntime`'s `modules` argument accepts an array of module definitions
+(the default export of `@awacloud/fw/core/modules`), an object whose values
+are module definitions, or a module namespace whose values are such arrays
+(`import * as ns from '@awacloud/fw/core/modules'`, i.e. `{ default: [...] }`):
+an array value is registered entry by entry.
 
 **Narrowing caveat** (quoted from `src/typed.js`'s file header): *"`resolve`
 is typed against the FULL catalog, not against what you actually

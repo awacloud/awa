@@ -2,7 +2,7 @@
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, spyOn } from 'bun:test';
 import { wasmArgon2 } from './argon2.js';
 import { wasmRuntime } from './runtime.js';
 import { argon2 as pureArgon2 } from '../hash/argon2.js';
@@ -201,5 +201,109 @@ describe('wasmArgon2 — invalid params', () => {
         await expect(
             _arg.hash(KAT_PWD, KAT_SALT, { ...base, hashLen: 0 }),
         ).resolves.toBe(false);
+    });
+});
+
+// ── OWASP parameters beyond the 16 MiB arena (BL-1843, tools/LIGHT_62) ───────
+//
+// The OWASP Password Storage Cheat Sheet's two Argon2id rows. Both matrices
+// exceed the binary's 16 MiB scratch arena; the binary grows linear memory for
+// them. Tags quoted from the pure-JS module, cross-checked against Node's
+// OpenSSL `crypto.argon2Sync` (pwd = 32 × 0x01, salt = 16 × 0x02, 32 bytes).
+
+const OWASP = [
+    {
+        label: '19 MiB / 2 passes',
+        opts: { timeCost: 2, memoryKiB: 19456, parallelism: 1, hashLen: 32 },
+        tag: '551d2b516a3d92963b2cd1e8fdc17251' + '29e15824dfb6c8d9bb8a599ffcabfc1c',
+    },
+    {
+        label: '47 MiB / 1 pass',
+        opts: { timeCost: 1, memoryKiB: 47104, parallelism: 1, hashLen: 32 },
+        tag: 'e02aa2fa10a4b7901d5fd54a9f936859' + '0c591b23d57a457a63ce12a5cff461c9',
+    },
+];
+
+/** The pure-JS tag for the same wasm options. */
+function pureTag(opts) {
+    return _pure.hash({
+        password: KAT_PWD,
+        salt: KAT_SALT,
+        time: opts.timeCost,
+        memory: opts.memoryKiB,
+        parallelism: opts.parallelism,
+        tagLen: opts.hashLen,
+    });
+}
+
+describe('wasmArgon2 — OWASP parameters (beyond the arena)', () => {
+    for (const leg of OWASP) {
+        test(leg.label + ': the quoted tag, and parity with pure-JS argon2', async () => {
+            const wasmTag = await _arg.hash(KAT_PWD, KAT_SALT, leg.opts);
+            expect(wasmTag).not.toBe(false);
+            expect(hex(wasmTag)).toBe(leg.tag);
+            expect(hex(wasmTag)).toBe(hex(pureTag(leg.opts)));
+        }, 120_000);
+    }
+
+    test('segment length ≥ 4 (slice-0 addressing) matches pure-JS argon2', async () => {
+        // m=16, p=1 → segment length 4: slice 0 fills two blocks with a choice
+        // of reference — the shape the RFC 9106 §5.3 vector never exercises.
+        const opts = { timeCost: 1, memoryKiB: 16, parallelism: 1, hashLen: 32 };
+        const wasmTag = await _arg.hash(KAT_PWD, KAT_SALT, opts);
+        expect(wasmTag).not.toBe(false);
+        expect(hex(wasmTag)).toBe(hex(pureTag(opts)));
+    }, 60_000);
+
+    test('a small call after a large one still answers the RFC 9106 vector', async () => {
+        const big = await _arg.hash(KAT_PWD, KAT_SALT, OWASP[1].opts);
+        expect(hex(big)).toBe(OWASP[1].tag);
+        const small = await _arg.hash(KAT_PWD, KAT_SALT, KAT_OPTS);
+        expect(hex(small)).toBe(KAT_TAG);
+        const again = await _arg.hash(KAT_PWD, KAT_SALT, OWASP[0].opts);
+        expect(hex(again)).toBe(OWASP[0].tag);
+    }, 120_000);
+});
+
+// ── the documented memory ceiling (1 GiB) ─────────────────────────────────────
+
+describe('wasmArgon2 — memory ceiling', () => {
+    const base = { timeCost: 1, parallelism: 1, hashLen: 32 };
+
+    test('memoryKiB above 1048576 → false with the named ceiling error', async () => {
+        const spy = spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            const r = await _arg.hash(KAT_PWD, KAT_SALT, { ...base, memoryKiB: 1048577 });
+            expect(r).toBe(false);
+            expect(spy).toHaveBeenCalledTimes(1);
+            expect(spy.mock.calls[0][0]).toBe(
+                '[crypto] INVALID: wasmArgon2: memoryKiB above the ceiling of 1048576 KiB (1 GiB)',
+            );
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    test('the ceiling refuses before the binary runs (no bare status logged)', async () => {
+        const spy = spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            const r = await _arg.hash(KAT_PWD, KAT_SALT, { ...base, memoryKiB: 0x7fffffff });
+            expect(r).toBe(false);
+            for (const call of spy.mock.calls) {
+                expect(String(call[0])).not.toContain('argon2id_hash status');
+            }
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    test('verify above the ceiling → false', async () => {
+        const spy = spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            const ok = await _arg.verify(KAT_PWD, KAT_SALT, fromHex(KAT_TAG), { ...base, memoryKiB: 1048577 });
+            expect(ok).toBe(false);
+        } finally {
+            spy.mockRestore();
+        }
     });
 });

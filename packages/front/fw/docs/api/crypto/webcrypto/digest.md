@@ -19,7 +19,7 @@ Opt-in alternative to the pure-JS hash modules. Async, `Uint8Array` in / `Uint8A
 
 ```js
 const webcryptoDigest = runtime.resolve('webcryptoDigest');
-// Returns: { isAvailable, digest, sha256, sha384, sha512, sha1 }
+// Returns: { isAvailable, digest, sha256, sha384, sha512 }
 ```
 
 ## API
@@ -31,7 +31,6 @@ const webcryptoDigest = runtime.resolve('webcryptoDigest');
 | `sha256` | `(data: Uint8Array) => Promise<Uint8Array\|false>` | SHA-256 shorthand |
 | `sha384` | `(data: Uint8Array) => Promise<Uint8Array\|false>` | SHA-384 shorthand |
 | `sha512` | `(data: Uint8Array) => Promise<Uint8Array\|false>` | SHA-512 shorthand |
-| `sha1` | `(data: Uint8Array) => Promise<Uint8Array\|false>` | SHA-1 shorthand — emits deprecation warning |
 
 `digest` resolves `false` when:
 - `crypto.subtle` is unavailable (`[crypto] NOT READY` logged)
@@ -70,8 +69,7 @@ if (!webcryptoDigest.isAvailable()) {
 ### SHA-1 (legacy interop only)
 
 ```js
-// Emits: [crypto] DEPRECATED: SHA-1 is broken; use SHA-256+
-const digest = await webcryptoDigest.sha1(legacyBytes);
+const digest = await webcryptoDigest.digest('SHA-1', legacyBytes);
 ```
 
 ## Worker Usage
@@ -91,7 +89,7 @@ const worker = fw.createWorker(
 - **Supported algorithms**: WebCrypto mandates exactly SHA-1, SHA-256, SHA-384, SHA-512 (FIPS 180-4). SHA-224, SHA-512/224, SHA-512/256, SHA-3, and BLAKE2b are **not** supported by the WebCrypto spec — use the pure-JS modules for those.
 - **No-throw contract**: all methods are `async` and resolve to `Uint8Array | false`. `crypto.subtle` rejections are caught and logged; they never propagate.
 - **Input type**: `data` must be a `Uint8Array`. Strings, `ArrayBuffer`, and `number[]` are rejected with `false`. Encode strings first with `TextEncoder` or `@awacloud/fw`'s `utf8` codec.
-- **SHA-1 deprecation**: SHA-1 is cryptographically broken. `sha1()` is provided for legacy interoperability only and always emits `console.warn('[crypto] DEPRECATED: SHA-1 is broken; use SHA-256+')`.
+- **SHA-1**: cryptographically broken; reachable only as `digest('SHA-1', data)`, for legacy interoperability (the `sha1` shorthand is gone).
 - **Worker-safe**: `crypto.subtle` is available in Web Workers; this module has no DOM dependency and no main-thread closures.
 
 ## See also

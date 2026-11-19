@@ -38,6 +38,8 @@ let xmlApi;
 let pdfReadApi;
 // office/BATCH_45 task 02 (BL-1610) — building a Form-XObject pdf fixture.
 let pdfObjApi;
+/** The runtime, for the legs that resolve a module of their own (T69). */
+let sharedRuntime;
 
 beforeAll(() => {
     const runtime = new ModuleRuntime();
@@ -59,6 +61,7 @@ beforeAll(() => {
     xmlApi = runtime.resolve('xml');
     pdfReadApi = runtime.resolve('pdf');
     pdfObjApi = runtime.resolve('pdfParser').obj;
+    sharedRuntime = runtime;
 });
 
 const FIXED_AT = '2026-07-20T00:00:00Z';
@@ -241,7 +244,7 @@ describe('oconv.toMd — docx end to end', () => {
     test('produces profile-v1 front matter with the right provenance', () => {
         expect(result.markdown).toStartWith('---\n');
         expect(result.markdown).toContain('profile: v1');
-        expect(result.markdown).toContain('ir: oconv-ir/v1');
+        expect(result.markdown).toContain('ir: oconv-ir/v2');
         expect(result.markdown).toContain('sourceFormat: docx');
         expect(result.markdown).toContain('sourceName: report.docx');
         expect(result.markdown).toContain('convertedAt: ' + FIXED_AT);
@@ -599,12 +602,23 @@ describe('oconv.toMd — pdfInfer (A13a)', () => {
         return pdfReadApi.write({ indirects, root: { num: 1, gen: 0 }, version: '1.7' });
     }
 
-    test("pdfInfer: ['headings'] turns the title into a Markdown heading", async () => {
+    test("pdfInfer: ['headings'] turns the title into a Markdown heading; [] reads it as a paragraph", async () => {
         const bytes = headingFixtureBytes();
         const r = await oconvApi.toMd({ name: 'h.pdf', bytes, convertedAt: FIXED_AT, pdfInfer: ['headings'] });
         expect(r.markdown).toContain('# Main Title');
-        const plain = await oconvApi.toMd({ name: 'h.pdf', bytes, convertedAt: FIXED_AT });
+        const plain = await oconvApi.toMd({ name: 'h.pdf', bytes, convertedAt: FIXED_AT, pdfInfer: [] });
         expect(plain.markdown).not.toContain('# Main Title');
+        expect(plain.markdown).toContain('Main Title');
+    });
+
+    // T30 (a), D43: with no `pdfInfer`, an untagged pdf infers headings and
+    // tables; `[]` is the read without inference.
+    test('with no pdfInfer, the untagged read infers headings and tables', async () => {
+        const bytes = headingFixtureBytes();
+        const r = await oconvApi.toMd({ name: 'h.pdf', bytes, convertedAt: FIXED_AT });
+        expect(r.markdown).toContain('# Main Title');
+        const both = await oconvApi.toMd({ name: 'h.pdf', bytes, convertedAt: FIXED_AT, pdfInfer: ['headings', 'tables'] });
+        expect(r.markdown).toBe(both.markdown);
     });
 
     test("pdfInfer: ['tables'] writes an aligned block as a GFM table", async () => {
@@ -1586,6 +1600,38 @@ describe('oconv.toMd — pdfPassword and pdfRecoverXref', () => {
         return Uint8Array.from(broken, (c) => c.charCodeAt(0));
     }
 
+    // T69 (BL-2920): the pdf read's own losses reach the ledger.
+    test('a rebuilt cross-reference chain is recorded (T69)', async () => {
+        const bytes = brokenXrefBytes();
+        const r = await oconvApi.toMd({ name: 'broken.pdf', bytes, convertedAt: FIXED_AT });
+        expect(r.markdown).toContain('Locked page text');
+        const rebuilt = r.losses.filter((l) => l.code === 'pdf/document/xref-rebuilt');
+        expect(rebuilt).toHaveLength(1);
+        expect(rebuilt[0].detail).toMatch(/^pdf\/[a-z/-]+, \d+ entries$/);
+        expect(r.lossy).toBe(true);
+        const { pdfToIr } = sharedRuntime.resolve('oconvPdfToIr');
+        expect(pdfToIr(pdfReadApi.read(bytes)).losses.map((l) => l.code)).toContain('pdf/document/xref-rebuilt');
+    });
+
+    test('a reference met during the extraction is recorded, after the read (T69)', async () => {
+        // The writer states a stream's real /Length, so the file is written
+        // with three spaces of padding in the stream, then `/Length 52`
+        // becomes `/Length 4 0 R` and the padding goes: the same size, the
+        // cross-reference table still sound.
+        const obj = pdfObjApi;
+        const indirects = pageIndirects();
+        const content = new TextEncoder().encode('BT /F1 12 Tf 72 720 Td (Locked page text) Tj ET\n   ');
+        indirects[3] = { num: 4, gen: 0, value: obj.stream(obj.dict({ Length: obj.int(content.length) }), content) };
+        const written = new TextDecoder('latin1').decode(pdfReadApi.write({ indirects, root: { num: 1, gen: 0 }, version: '1.7' }));
+        const patched = written.replace(`/Length ${content.length}`, '/Length 4 0 R').replace('ET\n   \nendstream', 'ET\n\nendstream');
+        expect(patched.length).toBe(written.length);
+        expect(patched).toContain('/Length 4 0 R');
+        const bytes = Uint8Array.from(patched, (c) => c.charCodeAt(0));
+        const r = await oconvApi.toMd({ name: 'cycle.pdf', bytes, convertedAt: FIXED_AT });
+        expect(r.markdown).toContain('Locked page text');
+        expect(r.losses).toContainEqual({ code: 'pdf/document/reference-cycle', detail: 'object 4 0' });
+    });
+
     test('an encrypted pdf converts with its user or owner password', async () => {
         const bytes = locked;
         for (const pdfPassword of ['user', 'owner', new TextEncoder().encode('user')]) {
@@ -1604,11 +1650,14 @@ describe('oconv.toMd — pdfPassword and pdfRecoverXref', () => {
             .rejects.toMatchObject({ code: 'pdf/document/bad-password-option' });
     });
 
-    test('a pdf whose startxref points nowhere converts with pdfRecoverXref: true', async () => {
+    // T30 (b): pdf rebuilds a broken chain by default; `false` is the strict read.
+    test('a pdf whose startxref points nowhere converts by default; pdfRecoverXref: false throws', async () => {
         const bytes = brokenXrefBytes();
-        await expect(oconvApi.toMd({ name: 'broken.pdf', bytes, convertedAt: FIXED_AT })).rejects.toThrow();
-        const r = await oconvApi.toMd({ name: 'broken.pdf', bytes, convertedAt: FIXED_AT, pdfRecoverXref: true });
+        const r = await oconvApi.toMd({ name: 'broken.pdf', bytes, convertedAt: FIXED_AT });
         expect(r.markdown).toContain('Locked page text');
+        const t = await oconvApi.toMd({ name: 'broken.pdf', bytes, convertedAt: FIXED_AT, pdfRecoverXref: true });
+        expect(t.markdown).toBe(r.markdown);
+        await expect(oconvApi.toMd({ name: 'broken.pdf', bytes, convertedAt: FIXED_AT, pdfRecoverXref: false })).rejects.toThrow();
     });
 
     test('pdfRecoverXref must be a boolean', async () => {
@@ -1703,6 +1752,34 @@ describe('oconv.toMd — pdfPassword opens RC4 (V1 / V2) files (T45, D8)', () =>
         });
     }
 
+    // T30 (c), D45: with no pdfPassword the empty one is tried, RC4 included.
+    test('an empty user password opens by default, recorded; pdfEmptyPassword: false refuses', async () => {
+        const bytes = rc4File({ revision: 3, user: '' });
+        const r = await oconvApi.toMd({ name: 'rc4.pdf', bytes, convertedAt: FIXED_AT });
+        expect(r.markdown).toContain('RC4 page text');
+        expect(r.lossy).toBe(true);
+        expect(r.losses).toContainEqual({ code: 'pdf/opened-with-empty-user-password', detail: 'permissions -44' });
+        await expect(oconvApi.toMd({ name: 'rc4.pdf', bytes, convertedAt: FIXED_AT, pdfEmptyPassword: false }))
+            .rejects.toMatchObject({ code: 'pdf/document/encrypted' });
+        for (const pdfEmptyPassword of ['no', 0, null]) {
+            await expect(oconvApi.toMd({ name: 'rc4.pdf', bytes, convertedAt: FIXED_AT, pdfEmptyPassword }))
+                .rejects.toThrow('oconv: bad pdf empty password');
+        }
+    });
+
+    // T69 (BL-2920): the record is pdfToIr's, so a chain that reads with
+    // pdf.read itself records it too; toMd records it once.
+    test('pdfToIr records the empty password itself; toMd once (T69)', async () => {
+        const bytes = rc4File({ revision: 3, user: '' });
+        const doc = pdfReadApi.read(bytes, { legacyRc4: sharedRuntime.resolve('pdfLegacyRc4Read') });
+        const { pdfToIr } = sharedRuntime.resolve('oconvPdfToIr');
+        const opened = (ls) => ls.filter((l) => l.code === 'pdf/opened-with-empty-user-password');
+        expect(opened(pdfToIr(doc).losses)).toEqual([{ code: 'pdf/opened-with-empty-user-password', detail: 'permissions -44' }]);
+        const r = await oconvApi.toMd({ name: 'rc4.pdf', bytes, convertedAt: FIXED_AT });
+        expect(opened(r.losses)).toHaveLength(1);
+        expect(r.losses.map((l) => l.code)).not.toContain('pdf/document/opened-with-empty-password');
+    });
+
     test('without a password it still refuses; a wrong password is refused', async () => {
         const bytes = rc4File({ revision: 3, user: 'user' });
         await expect(oconvApi.toMd({ name: 'rc4.pdf', bytes, convertedAt: FIXED_AT }))
@@ -1765,6 +1842,16 @@ describe('oconv.toMd — sheetCellBudget (T46, D9)', () => {
         await expect(oconvApi.toMd({ name: 'x.docx', bytes: docxFixtureBytes(), convertedAt: FIXED_AT, sheetCellBudget: 10 }))
             .rejects.toThrow('oconv: sheet cell budget needs format xlsx or ods');
     });
+
+    test('by default (T30 (d), D46) a sheet past 5 M padded cells takes the sparse form', async () => {
+        const last = new Array(16384).fill(null);
+        last[16383] = 'z';
+        const bytes = xlsxApi.write({ sheets: [{ name: 'Wide', rows: [['a'], ...Array.from({ length: 398 }, () => []), last] }] });
+        const r = await oconvApi.toMd({ name: 'wide.xlsx', bytes, convertedAt: FIXED_AT });
+        expect(r.markdown).toContain('# Wide\n\nA1: a\n\nXFD400: z\n');
+        expect(r.losses).toContainEqual({ code: 'sheet/sparse-form', detail: 'Wide: 6553600 padded cells, 2 kept' });
+        expect(r.lossy).toBe(true);
+    });
 });
 
 describe('oconv.toMd — outputBudget (T48, D11)', () => {
@@ -1815,10 +1902,25 @@ describe('oconv.toMd — outputBudget (T48, D11)', () => {
     });
 
     test('a bad budget is refused', async () => {
-        for (const outputBudget of [null, 5, [], {}, { bytes: 0 }, { bytes: 1.5 }, { bytes: '9' }, { bytes: 10, overflow: 'cut' }, { bytes: 10, other: 1 }]) {
+        // T30 (e), D47 (3) b: `{}` is the default now (no bytes, no overflow), so it left this list.
+        for (const outputBudget of [null, 5, [], { bytes: 0 }, { bytes: 1.5 }, { bytes: '9' }, { bytes: 10, overflow: 'cut' }, { bytes: 10, other: 1 }]) {
             await expect(oconvApi.toMd({ name: 'x.docx', bytes: docxFixtureBytes(), convertedAt: FIXED_AT, outputBudget }))
                 .rejects.toThrow('oconv: bad output budget');
         }
+    });
+
+    test('by default (T30 (e), D47) a document past 256 MiB of text throws by name', async () => {
+        // Letters at random: a run of one letter trips the archive's ratio guard first.
+        const big = (() => { let n = 7; let s = ''; for (let i = 0; i < 1 << 20; i++) { n = (Math.imul(n, 1103515245) + 12345) >>> 0; s += String.fromCharCode(97 + (n >>> 27) % 26); } return s; })();
+        const bytes = xlsxApi.write({ sheets: [{ name: 'S', rows: Array.from({ length: 100 }, () => [big, big, big]) }] });
+        await expect(oconvApi.toMd({ name: 'shared.xlsx', bytes, convertedAt: FIXED_AT })).rejects.toThrow('oconv: output too large');
+    });
+
+    test("{ overflow: 'truncate' } alone takes the 256 MiB default (T30 (e), D47)", async () => {
+        const bytes = docxFixtureBytes();
+        const without = await oconvApi.toMd({ name: 'x.docx', bytes, convertedAt: FIXED_AT });
+        const alone = await oconvApi.toMd({ name: 'x.docx', bytes, convertedAt: FIXED_AT, outputBudget: { overflow: 'truncate' } });
+        expect(alone.markdown).toBe(without.markdown);
     });
 });
 
@@ -1930,10 +2032,10 @@ describe('oconv.convert — docx -> odt keeps the images it has no bytes for, an
         expect(bodyOf(back.markdown)).toBe('# T\n\n![A chart](missing.png)\n');
     });
 
-    test('docx -> odt -> md: a shape and two pictures of one name keep the body of the direct reading', async () => {
+    test('docx -> odt -> md: a picture without bytes and two pictures of one name keep the body of the direct reading', async () => {
         const B = new Uint8Array([...PX_PNG, 0]);
         const source = docxApi.write({ body: [{ type: 'paragraph', children: [
-            docxApi.shapeRun('rect', { name: 'Shape 1', description: 'A box' }),
+            { type: 'run', children: [{ type: 'drawing', docName: 'Shape 1', description: 'A box' }] },
             docxApi.imageRun(PX_PNG, { name: 'Picture', description: 'one' }),
             docxApi.imageRun(B, { name: 'Picture', description: 'two' })
         ] }] });
@@ -1946,6 +2048,20 @@ describe('oconv.convert — docx -> odt keeps the images it has no bytes for, an
             { code: 'image/bytes-unavailable', detail: 'Shape 1' },
             { code: 'image/placeholder', detail: 'Shape 1' }
         ]);
+        const back = await oconvApi.toMd({ name: 'x.odt', bytes: odt.bytes, convertedAt: 'x' });
+        expect(bodyOf(back.markdown)).toBe(bodyOf(direct.markdown));
+    });
+
+    test('docx -> odt -> md: a shape is no image, in the direct reading and after the odt hop', async () => {
+        const source = docxApi.write({ body: [{ type: 'paragraph', children: [
+            docxApi.run('Before '), docxApi.shapeRun('rect', { name: 'Shape 1', description: 'A box' }),
+            docxApi.imageRun(PX_PNG, { name: 'Picture', description: 'one' })
+        ] }] });
+        const direct = await oconvApi.toMd({ name: 'x.docx', bytes: source, convertedAt: 'x' });
+        expect(direct.assets.map((a) => a.name)).toEqual(['Picture']);
+        expect(direct.losses).toEqual([{ code: 'inline/dropped', detail: 'wps:wsp' }]);
+        const odt = await oconvApi.convert({ name: 'x.docx', bytes: source, target: 'odt' });
+        expect(odt.losses).toEqual([{ code: 'inline/dropped', detail: 'wps:wsp' }]);
         const back = await oconvApi.toMd({ name: 'x.odt', bytes: odt.bytes, convertedAt: 'x' });
         expect(bodyOf(back.markdown)).toBe(bodyOf(direct.markdown));
     });
@@ -1972,5 +2088,106 @@ describe('oconv.convert — odt -> docx keeps nested lists and headings in list 
         const back = await oconvApi.toMd({ name: 'x.docx', bytes: docx.bytes, convertedAt: 'x' });
         expect(bodyOf(back.markdown)).toBe(bodyOf(direct.markdown));
         expect(back.losses.map((l) => l.code)).not.toContain('list/nesting-flattened');
+    });
+});
+
+describe('oconv.toMd — a pptx group shape\'s text (T24)', () => {
+    test('the text inside a group reaches the Markdown', async () => {
+        const bytes = pptxApi.write({ slides: [{ shapes: [
+            { type: 'shape', id: 2, placeholder: { type: 'title' }, txBody: { paragraphs: [{ runs: [{ type: 'text', value: 'Grouped' }] }] } },
+            { type: 'group', shapes: [{ type: 'shape', id: 3, name: 'TextBox', txBody: { paragraphs: [{ runs: [{ type: 'text', value: 'Inside the group.' }] }] } }] }
+        ] }] });
+        const result = await oconvApi.toMd({ name: 'grouped.pptx', bytes, convertedAt: FIXED_AT });
+        expect(result.markdown).toContain('Inside the group.');
+    });
+});
+
+// T27 (a), D36 B: convert's opt-in layout carries the docx page to the odt.
+describe('oconv.convert — layout (T27 a)', () => {
+    const para = (text) => ({ type: 'paragraph', children: [{ type: 'run', children: [{ type: 'text', text }] }] });
+    const sectPr = { pageSize: { w: 16838, h: 11906, orient: 'landscape' }, pageMargin: { top: 720, right: 1440, bottom: 720, left: 1440, header: 0, footer: 0, gutter: 0 } };
+    const docxBytes = () => docxApi.write({ body: [para('wide')], sectPr });
+    const pageOf = (bytes) => {
+        const st = odtApi.read(bytes).styles;
+        const pl = (st.automaticStyles || []).find((e) => e.type === 'element' && e.name === 'style:page-layout');
+        return pl ? pl.children.find((c) => c.name === 'style:page-layout-properties').attrs : null;
+    };
+
+    test('docx to odt with layout: the landscape page and its margins in the odt', async () => {
+        const r = await oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'odt', layout: true });
+        expect(pageOf(r.bytes)).toEqual({
+            'fo:page-width': '841.9pt', 'fo:page-height': '595.3pt', 'style:print-orientation': 'landscape',
+            'fo:margin-top': '36pt', 'fo:margin-right': '72pt', 'fo:margin-bottom': '36pt', 'fo:margin-left': '72pt'
+        });
+        expect(r.losses).toEqual([]);
+    });
+
+    // T82 (D57 (3) a): an absent layout is on where the pair honours it.
+    test('without layout, docx to odt carries the page as layout true does; layout false writes no page layout', async () => {
+        const dflt = await oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'odt' });
+        const on = await oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'odt', layout: true });
+        const no = await oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'odt', layout: false });
+        expect(pageOf(dflt.bytes)).toEqual(pageOf(on.bytes));
+        expect(pageOf(dflt.bytes)).not.toBe(null);
+        expect(pageOf(no.bytes)).toBe(null);
+    });
+
+    test('a layout that is not a boolean throws oconv: bad layout option', async () => {
+        for (const layout of ['yes', 1, null, {}]) {
+            await expect(oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'odt', layout })).rejects.toThrow('oconv: bad layout option');
+        }
+    });
+
+    test('layout on another pair throws oconv: layout needs docx to odt; the existing errors keep their order', async () => {
+        const odt = (await oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'odt' })).bytes;
+        await expect(oconvApi.convert({ name: 'w.odt', bytes: odt, target: 'docx', layout: true })).rejects.toThrow('oconv: layout needs docx to odt');
+        await expect(oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'pdf', layout: true })).rejects.toThrow('oconv: layout needs docx to odt');
+        await expect(oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'docx', layout: 'x' })).rejects.toThrow('oconv: unsupported pair');
+        await expect(oconvApi.convert({ name: 'wide.docx', bytes: docxBytes(), target: 'odt', opts: { pdf: {} }, layout: 'x' })).rejects.toThrow('oconv: pdf options need target pdf');
+    });
+
+    test('toMd reads docxInclude layout and writes the same body; the front matter names oconv-ir/v2', async () => {
+        const plain = await oconvApi.toMd({ name: 'wide.docx', bytes: docxBytes(), convertedAt: '2026-01-01T00:00:00Z' });
+        const laid = await oconvApi.toMd({ name: 'wide.docx', bytes: docxBytes(), convertedAt: '2026-01-01T00:00:00Z', docxInclude: ['layout'] });
+        expect(laid.markdown).toBe(plain.markdown);
+        expect(plain.markdown).toContain('ir: oconv-ir/v2');
+        expect(plain.markdown).toContain('profile: v1');
+    });
+});
+
+// T82 (D57 (3) a): the default of layout per pair.
+describe('oconv.convert — layout on by default where a pair honours it (T82)', () => {
+    const run = (text) => ({ type: 'run', rPr: {}, children: [{ type: 'text', value: text }] });
+    const para = (...children) => ({ type: 'paragraph', children });
+    const docxBytes = () => docxApi.write({
+        body: [para(run('Body'), { type: 'run', rPr: {}, children: [{ type: 'footnoteReference', id: '1' }] })],
+        sectPr: { pageSize: { w: 11906, h: 16838 }, headerReferences: [{ type: 'default', rId: 'rIdH' }] }
+    }, { headers: { rIdH: { type: 'header', body: [para(run('Head'))] } }, footnotes: { notes: [{ id: 1, body: [para(run('Foot'))] }] } });
+    const part = (bytes, name) => new TextDecoder().decode(sharedRuntime.resolve('zip').unzipSync(bytes)[name]);
+
+    test('docx to odt without layout writes the page, the header and the note, as layout true', async () => {
+        const dflt = await oconvApi.convert({ name: 'd.docx', bytes: docxBytes(), target: 'odt' });
+        const on = await oconvApi.convert({ name: 'd.docx', bytes: docxBytes(), target: 'odt', layout: true });
+        for (const name of ['content.xml', 'styles.xml']) expect(part(dflt.bytes, name)).toBe(part(on.bytes, name));
+        expect(part(dflt.bytes, 'styles.xml')).toContain('<style:header>');
+        expect(part(dflt.bytes, 'content.xml')).toContain('<text:note ');
+        expect(dflt.losses).toEqual(on.losses);
+    });
+
+    test('layout false writes tier 2: no page, no header, no note', async () => {
+        const off = await oconvApi.convert({ name: 'd.docx', bytes: docxBytes(), target: 'odt', layout: false });
+        expect(part(off.bytes, 'styles.xml')).not.toContain('style:page-layout');
+        expect(part(off.bytes, 'styles.xml')).not.toContain('<style:header>');
+        expect(part(off.bytes, 'content.xml')).not.toContain('text:note');
+    });
+
+    test('on another pair an absent layout is accepted and changes nothing; true still throws', async () => {
+        const odt = (await oconvApi.convert({ name: 'd.docx', bytes: docxBytes(), target: 'odt', layout: false })).bytes;
+        const dflt = await oconvApi.convert({ name: 'd.odt', bytes: odt, target: 'docx' });
+        const off = await oconvApi.convert({ name: 'd.odt', bytes: odt, target: 'docx', layout: false });
+        expect(dflt.bytes).toEqual(off.bytes);
+        await expect(oconvApi.convert({ name: 'd.odt', bytes: odt, target: 'docx', layout: true })).rejects.toThrow('oconv: layout needs docx to odt');
+        const pdf = await oconvApi.convert({ name: 'd.docx', bytes: docxBytes(), target: 'pdf' });
+        expect(pdf.bytes.length).toBeGreaterThan(0);
     });
 });

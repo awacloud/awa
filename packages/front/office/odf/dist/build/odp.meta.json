@@ -40,8 +40,8 @@
     "crc32"
   ],
   "bytes": {
-    "dev": 105476,
-    "min": 60578
+    "dev": 105724,
+    "min": 60747
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

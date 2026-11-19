@@ -52,7 +52,7 @@ const LOREM = [
     'Every dropped or clipped fragment is recorded as an explicit loss rather than vanishing quietly.'
 ];
 
-/** An `oconv-ir/v1` inline run with the frozen full property set. */
+/** An `oconv-ir/v2` inline run with the frozen full property set. */
 function run(text, flags = {}) {
     return {
         kind: 'run', text, bold: false, italic: false, strike: false,
@@ -198,9 +198,11 @@ describe('oconvIrToPdf — descriptor', () => {
         const args = oconvIrToPdf.dependencies.slice(0, 15).map((n) => rt.resolve(n));
         const ir = emissionDocument();
         const latin1 = (bytes) => Array.from(bytes, (b) => String.fromCharCode(b)).join('');
+        // T30 (g2), D53: re-pinned. pdf's builder writes the metrics by
+        // default, so the bare path carries them too.
         const bare = latin1(oconvIrToPdf.factory(...args).irToPdf(ir).bytes);
-        expect(bare).toContain('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
-        expect(bare).not.toContain('/FontDescriptor');
+        expect(bare).toContain('/Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 255 /Widths [');
+        expect(bare).toContain('/Type /FontDescriptor /FontName /Helvetica');
         const full = latin1(oconvIrToPdf.factory(...args, rt.resolve('standard14Lookup')).irToPdf(ir).bytes);
         expect(full).toContain('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 255 /Widths [');
         expect(full).toContain('/Type /FontDescriptor /FontName /Helvetica');
@@ -636,6 +638,29 @@ describe('oconvIrToPdf — embedded route on caller-supplied bytes (D-A)', () =>
         corpusFonts = embeddedFontBytesFromPdf(runtime, await corpusBytes(CORPUS_PDF));
     });
 
+    // T30 (f), D48: fonts reads a face without a `name` table by default, so
+    // a posted name-less face embeds (named by the subset, `<prefix>+Font`)
+    // where 1.x threw `oconv: bad pdf font regular`.
+    test('a name-less regular face embeds (T30 (f))', () => {
+        const nameless = corpusFonts.regular.slice();
+        const n = (nameless[4] << 8) | nameless[5];
+        let renamed = 0;
+        for (let i = 0; i < n; i++) {
+            const at = 12 + i * 16;
+            if (String.fromCharCode(...nameless.subarray(at, at + 4)) === 'name') {
+                nameless[at + 1] = 0x62; // 'name' -> 'nbme': same directory order, a table no reader reads
+                renamed++;
+            }
+        }
+        expect(renamed).toBe(1);
+        const ir = { kind: 'document', children: [{ kind: 'paragraph', children: [run('Plain ASCII only')] }] };
+        const written = irToPdf.irToPdf(ir, { fonts: { regular: nameless } });
+        let latin1 = '';
+        for (const b of written.bytes) latin1 += String.fromCharCode(b);
+        expect(latin1).toMatch(/\/BaseFont \/[A-Z]{6}\+Font\b/);
+        expect(latin1).toContain('/FontFile2');
+    });
+
     test('the corpus really carries the four Latin faces this route needs', () => {
         expect(Object.keys(corpusFonts).sort())
             .toEqual(['bold', 'boldItalic', 'italic', 'regular']);
@@ -804,7 +829,7 @@ describe('oconvIrToPdf — the D-E renderer seam', () => {
         // Tasks 08/09/10 replaced the task-07 stubs, so the `*-unrendered`
         // codes this test used to pin are gone by design: list, codeBlock and
         // table now render for real. `image` is the ONE delegated kind that
-        // still cannot render — the frozen `oconv-ir/v1` carries name/alt
+        // still cannot render — the `oconv-ir/v2` carries name/alt
         // only. The asset-manifest input landed with BL-980
         // (office/BATCH_35 task 02) and IS threaded here — but this call
         // supplies none, so the image is refused with the honest
@@ -836,8 +861,10 @@ describe('oconvIrToPdf — the D-E renderer seam', () => {
             { kind: 'image', name: 'a.png', alt: 'A' }
         ] };
         const written = irToPdf.irToPdf(ir);
+        // The text-first read (`pdfInfer: []`): each kind's text, line by
+        // line, not the headings and tables the default infers (T30 (a)).
         const back = await oconvApi.toMd({
-            name: 'seam.pdf', bytes: written.bytes, convertedAt: AT
+            name: 'seam.pdf', bytes: written.bytes, convertedAt: AT, pdfInfer: []
         });
         // Body = everything past the frontmatter block; the page number is
         // the trailing line. `toMd` escapes the placeholder's brackets, so

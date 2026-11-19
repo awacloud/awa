@@ -33,6 +33,7 @@ const ext = runtime.resolve('pdfMisc');
 //   WEB_CAPTURE_KEYS, typeFieldLock, typePresentation,
 //   PRESENTATION_KEYS, typeCatalogPart, CATALOG_PART_KEYS,
 //   typeObjectEntries, OBJECT_ENTRY_KEYS,
+//   typeSmallObject, SMALL_OBJECT_KEYS,
 //   REQUIREMENT_S_VALUES }
 ```
 
@@ -62,6 +63,8 @@ const ext = runtime.resolve('pdfMisc');
 | `CATALOG_PART_KEYS` | frozen object | Kind → its keys (the Arlington PDF Model's lists). |
 | `typeObjectEntries` | `(stream\|dict, kind) => ObjectEntries` | The companion of the core typers that read these keys without putting them in their record: a thumbnail (`kind` `thumbnail`), a CMap or ToUnicode stream (`cmap`), an ICC profile (`iccProfile`), a page tree node, the root included (`pageTree`), a resource dictionary (`resource`), an encoding (`encoding`), the trailer (`trailer`), an object stream (`objectStream`); a stream's dictionary is read. One field per key of its list, named after the key in lower case, present only when the key is — a name or an integer by its value, an array, a dictionary or a stream as read, a key of several types (`ColorSpace`, `UseCMap`, `Alternate`) by the first that fits, a reference as read, `null` for a value of another type — plus `raw` (the value given) and `_extras`. |
 | `OBJECT_ENTRY_KEYS` | frozen object | Kind → its keys (the Arlington PDF Model's lists). |
+| `typeSmallObject` | `(stream\|dict, kind) => SmallObject` | A small object no other typer is bound to: an alternate image (`kind` `alternateImage`), a page-piece data dictionary (`data`), a structure destination's dictionary (`destDict`), a fixed-print dictionary (`fixedPrint`), the mark information (`markInfo`), a marked-content reference (`markedContentReference`), an object reference (`objectReference`), a minimum bit depth (`minimumBitDepth`), a namespace (`namespace`), a reference XObject's reference (`reference`), a web capture's source information (`sourceInformation`), a timespan (`timespan`), a URL alias (`urlAlias`), a user property (`userProperty`), the Windows launch parameters (`winLaunch`); a stream's dictionary is read. One field per key of its list, named after the key in lower case, present only when the key is — each value by its Arlington type as `typeObjectEntries` reads it (a string as bytes, a date as its string, a reference as read), a key that takes any object (`Data/Private`, `UserProperty/V`) as read — plus `raw` and `_extras`. |
+| `SMALL_OBJECT_KEYS` | frozen object | Kind → its keys (the Arlington PDF Model's lists). |
 | `REQUIREMENT_S_VALUES` | `Set` | The 27 requirement types of ISO 32000-2 (`3DMarkup` … `glTF`, `STEP`; the Arlington model's), each `standard`. |
 
 ## Examples

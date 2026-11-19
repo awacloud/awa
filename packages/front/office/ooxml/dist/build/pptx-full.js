@@ -10,7 +10,7 @@
  * @fileoverview `@awacloud/ooxml/bundles/prebuilt/pptx-full-package` — pre-built single-factory bundle.
  *
  * Variant **package** : declares the 7 fw modules as dependencies and inlines every
- * ooxml-local factory transitively reachable from `pptx` plus 19 extras.
+ * ooxml-local factory transitively reachable from `pptx` plus 22 extras.
  *
  * @module ooxml/bundles/prebuilt/pptx-full-package
  */
@@ -218,7 +218,10 @@ export const pptxFullPackage = {
       SLIDE: NS.R + "/slide",
       SLIDE_LAYOUT: NS.R + "/slideLayout",
       SLIDE_MASTER: NS.R + "/slideMaster",
-      THEME: NS.R + "/theme"
+      THEME: NS.R + "/theme",
+      NOTES_SLIDE: NS.R + "/notesSlide",
+      NOTES_MASTER: NS.R + "/notesMaster",
+      HANDOUT_MASTER: NS.R + "/handoutMaster"
     }), CT = Object.freeze({
       DOCUMENT: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
       STYLES_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
@@ -244,7 +247,10 @@ export const pptxFullPackage = {
       SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
       THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
       VML_DRAWING: "application/vnd.openxmlformats-officedocument.vmlDrawing",
-      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"
+      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml",
+      NOTES_SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+      NOTES_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+      HANDOUT_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml"
     });
     function toEmu(v) {
       if (typeof v === "number")
@@ -1503,7 +1509,21 @@ export const pptxFullPackage = {
       "a:hlinkMouseOver",
       "a:rtl",
       "a:extLst"
-    ]);
+    ]), RPR_TYPED_ATTRS = new Set(["lang", "sz", "b", "i", "strike", "u", "baseline"]), PPR_TYPED_ATTRS = new Set(["lvl", "algn", "indent", "marL"]), LATIN_TYPED_ATTRS = new Set(["typeface"]);
+    function otherAttrs(attrs, typed) {
+      const out = {};
+      for (const [k, v] of Object.entries(attrs || {}))
+        if (!typed.has(k))
+          out[k] = v;
+      return Object.keys(out).length ? out : void 0;
+    }
+    function stringAttrs(o) {
+      const out = {};
+      for (const [k, v] of Object.entries(o || {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
+    }
     function runColor(solidFill, opts) {
       if (!(opts && opts.typedRunColors)) {
         const cl = solidFill.children.find((n) => n.type === "element" && n.name === "a:srgbClr");
@@ -1534,6 +1554,9 @@ export const pptxFullPackage = {
         out.underline = a.u;
       if (a.baseline != null)
         out.baseline = Number(a.baseline);
+      const extraAttrs = otherAttrs(a, RPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of rPrEl.children) {
         if (c.type !== "element")
@@ -1544,9 +1567,12 @@ export const pptxFullPackage = {
             out.color = color;
           else
             extras.push(c);
-        } else if (c.name === "a:latin")
+        } else if (c.name === "a:latin") {
           out.font = c.attrs.typeface;
-        else
+          const fontAttrs = otherAttrs(c.attrs, LATIN_TYPED_ATTRS);
+          if (fontAttrs)
+            out.fontAttrs = fontAttrs;
+        } else
           extras.push(c);
       }
       if (extras.length)
@@ -1556,7 +1582,7 @@ export const pptxFullPackage = {
     function renderRunProperties(rPr) {
       if (!rPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(rPr.extraAttrs) };
       if (rPr.lang)
         a.lang = rPr.lang;
       if (rPr.size != null)
@@ -1578,7 +1604,7 @@ export const pptxFullPackage = {
           children.push(xml.el("a:solidFill", {}, [el]));
       }
       if (rPr.font)
-        children.push(xml.el("a:latin", { typeface: rPr.font }));
+        children.push(xml.el("a:latin", { typeface: rPr.font, ...stringAttrs(rPr.fontAttrs) }));
       if (rPr._extras)
         for (const ex of rPr._extras)
           children.push(ex);
@@ -1596,6 +1622,9 @@ export const pptxFullPackage = {
         out.indent = Number(a.indent);
       if (a.marL != null)
         out.marL = Number(a.marL);
+      const extraAttrs = otherAttrs(a, PPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of pPrEl.children) {
         if (c.type !== "element")
@@ -1604,9 +1633,11 @@ export const pptxFullPackage = {
           out.bullet = "none";
         else if (c.name === "a:buChar")
           out.bullet = { char: c.attrs.char };
-        else if (c.name === "a:buAutoNum")
+        else if (c.name === "a:buAutoNum") {
           out.bullet = { autoNumType: c.attrs.type };
-        else if (c.name === "a:defRPr")
+          if (c.attrs.startAt != null)
+            out.bullet.startAt = Number(c.attrs.startAt);
+        } else if (c.name === "a:defRPr")
           out.defRPr = parseRunProperties(c, opts);
         else
           extras.push(c);
@@ -1618,7 +1649,7 @@ export const pptxFullPackage = {
     function renderParagraphProperties(pPr) {
       if (!pPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(pPr.extraAttrs) };
       if (pPr.level != null)
         a.lvl = String(pPr.level);
       if (pPr.align)
@@ -1632,8 +1663,12 @@ export const pptxFullPackage = {
         children.push(xml.el("a:buNone", {}));
       else if (pPr.bullet && pPr.bullet.char)
         children.push(xml.el("a:buChar", { char: pPr.bullet.char }));
-      else if (pPr.bullet && pPr.bullet.autoNumType)
-        children.push(xml.el("a:buAutoNum", { type: pPr.bullet.autoNumType }));
+      else if (pPr.bullet && pPr.bullet.autoNumType) {
+        const ba = { type: pPr.bullet.autoNumType };
+        if (pPr.bullet.startAt != null)
+          ba.startAt = String(pPr.bullet.startAt);
+        children.push(xml.el("a:buAutoNum", ba));
+      }
       if (pPr.defRPr) {
         const dpr = renderRunProperties(pPr.defRPr);
         if (dpr)
@@ -1642,8 +1677,6 @@ export const pptxFullPackage = {
       if (pPr._extras)
         for (const ex of pPr._extras)
           children.push(ex);
-      if (!Object.keys(a).length && !children.length)
-        return null;
       return xml.el("a:pPr", a, ordered(children, PPR_SEQ));
     }
     function parseRun(rEl, opts) {
@@ -1669,6 +1702,9 @@ export const pptxFullPackage = {
       const rPrEl = xml.findChild(fEl, "a:rPr"), tEl = xml.findChild(fEl, "a:t"), rPr = parseRunProperties(rPrEl, opts);
       if (rPr)
         out.rPr = rPr;
+      const pPr = parseParagraphProperties(xml.findChild(fEl, "a:pPr"), opts);
+      if (pPr)
+        out.pPr = pPr;
       if (tEl)
         out.value = xml.textContent(tEl);
       return out;
@@ -1680,6 +1716,9 @@ export const pptxFullPackage = {
       const children = [], rPrEl = renderRunProperties(f.rPr);
       if (rPrEl)
         children.push(rPrEl);
+      const pPrEl = renderParagraphProperties(f.pPr);
+      if (pPrEl)
+        children.push(pPrEl);
       if (f.value != null)
         children.push(xml.el("a:t", {}, [xml.text(f.value)]));
       return xml.el("a:fld", a, children);
@@ -1751,12 +1790,15 @@ export const pptxFullPackage = {
         else if (c.name === "a:p")
           out.paragraphs.push(parseParagraph(c, opts));
       }
+      if (out.lstStyle === void 0)
+        out.lstStyle = null;
       return out;
     }
     function renderTextBody(tb, rootTag = "a:txBody") {
       const children = [];
       children.push(tb.bodyPr || xml.el("a:bodyPr", {}));
-      children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
+      if (tb.lstStyle !== null)
+        children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
       for (const p of tb.paragraphs || [])
         children.push(renderParagraph(p));
       return xml.el(rootTag, {}, children);
@@ -2840,7 +2882,19 @@ export const pptxFullPackage = {
       }
       return null;
     }
-    function parseLine(lnEl) {
+    function lineColor(solidFill, opts) {
+      if (!(opts && opts.typedLineColors)) {
+        const col = parseColorChild(solidFill);
+        return col && col.rgb ? col.rgb : void 0;
+      }
+      const el = solidFill.children.find((n) => n.type === "element");
+      if (!el)
+        return;
+      if (el.name === "a:srgbClr" && !el.children.some((n) => n.type === "element"))
+        return el.attrs.val;
+      return typedColor.parse(el) || void 0;
+    }
+    function parseLine(lnEl, opts) {
       if (!lnEl)
         return;
       const out = {};
@@ -2865,9 +2919,9 @@ export const pptxFullPackage = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:solidFill") {
-          const col = parseColorChild(c);
-          if (col && col.rgb)
-            out.color = col.rgb;
+          const col = lineColor(c, opts);
+          if (col !== void 0)
+            out.color = col;
           else
             extras.push(c);
         } else if (c.name === "a:prstDash")
@@ -2901,8 +2955,11 @@ export const pptxFullPackage = {
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
-      else if (line.color)
-        children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
+      else if (line.color) {
+        const el = typeof line.color === "object" ? typedColor.render(line.color) : renderSrgbClr(line.color);
+        if (el)
+          children.push(xml.el("a:solidFill", {}, [el]));
+      }
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
       if (!line._extras)
@@ -2916,10 +2973,13 @@ export const pptxFullPackage = {
       }
       return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
-    function parseShapeProperties(spPrEl) {
+    function parseShapeProperties(spPrEl, opts) {
       if (!spPrEl)
         return;
-      const out = {}, xfrmEl = xml.findChild(spPrEl, "a:xfrm");
+      const out = {};
+      if (spPrEl.attrs && spPrEl.attrs.bwMode)
+        out.bwMode = spPrEl.attrs.bwMode;
+      const xfrmEl = xml.findChild(spPrEl, "a:xfrm");
       Object.assign(out, parseXfrm(xfrmEl));
       const prst = xml.findChild(spPrEl, "a:prstGeom");
       if (prst) {
@@ -2932,7 +2992,7 @@ export const pptxFullPackage = {
         out.fill = fill;
       const ln = xml.findChild(spPrEl, "a:ln");
       if (ln) {
-        const lineProps = parseLine(ln);
+        const lineProps = parseLine(ln, opts);
         if (lineProps !== void 0)
           out.line = lineProps;
       }
@@ -2967,11 +3027,12 @@ export const pptxFullPackage = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
+      const attrs = props.bwMode ? { bwMode: String(props.bwMode) } : {};
       if (!props._extras)
-        return xml.el(tag, {}, children);
+        return xml.el(tag, attrs, children);
       for (const ex of props._extras)
         children.push(ex);
-      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
+      return xml.el(tag, attrs, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -3083,7 +3144,8 @@ export const pptxFullPackage = {
       "p:clrMap",
       "p:clrMapOvr",
       "p:sldLayoutIdLst",
-      "p:txStyles"
+      "p:txStyles",
+      "p:notesStyle"
     ]), CSLD_ONLY = new Set(["p:custDataLst", "p:controls"]);
     function placedName(c) {
       if (!c || c.type !== "element")
@@ -3100,7 +3162,7 @@ export const pptxFullPackage = {
       "p:transition",
       "p:timing",
       "p:hf",
-      "p:txStyles",
+      ["p:txStyles", "p:notesStyle"],
       "p:extLst"
     ]);
     function parseShape(spEl, opts) {
@@ -3132,7 +3194,7 @@ export const pptxFullPackage = {
       const spPr = xml.findChild(spEl, "p:spPr");
       if (spPr) {
         out.spPr = spPr;
-        const typed = shapeMod.parseShapeProperties(spPr);
+        const typed = shapeMod.parseShapeProperties(spPr, opts);
         if (typed)
           out.shapeProps = typed;
       }
@@ -3209,6 +3271,12 @@ export const pptxFullPackage = {
             shapes.push({ type: "graphicFrame", node: c });
             break;
           }
+          case "p:grpSp":
+            if (opts && opts.typedGroups)
+              shapes.push(parseGroup(c, opts));
+            else
+              extras.push(c);
+            break;
           case "p:nvGrpSpPr":
           case "p:grpSpPr":
             extras.push(c);
@@ -3219,7 +3287,13 @@ export const pptxFullPackage = {
       }
       return { shapes, extras };
     }
-    function renderSpTree({ shapes, extras }) {
+    function parseGroup(el, opts) {
+      const tree = parseSpTree(el, opts), out = { type: "group", shapes: tree.shapes };
+      if (tree.extras.length)
+        out._extras = tree.extras;
+      return out;
+    }
+    function renderSpTree({ shapes, extras }, tag = "p:spTree") {
       const children = [], headExtras = (extras || []).filter((n) => n.name === "p:nvGrpSpPr" || n.name === "p:grpSpPr"), tailExtras = (extras || []).filter((n) => n.name !== "p:nvGrpSpPr" && n.name !== "p:grpSpPr");
       if (!headExtras.length) {
         children.push(xml.el("p:nvGrpSpPr", {}, [
@@ -3242,9 +3316,11 @@ export const pptxFullPackage = {
           children.push(chartMod.renderGraphicFrame(sp));
         else if (sp.type === "graphicFrame" && sp.node)
           children.push(sp.node);
+        else if (sp.type === "group")
+          children.push(renderSpTree({ shapes: sp.shapes || [], extras: sp._extras }, "p:grpSp"));
       for (const ex of tailExtras)
         children.push(ex);
-      return xml.el("p:spTree", {}, children);
+      return xml.el(tag, {}, children);
     }
     function parseCSld(cSldEl, opts) {
       const out = {}, extras = [];
@@ -3297,10 +3373,22 @@ export const pptxFullPackage = {
         }
         if (root.name !== rootTag)
           throw new ParseError(`pptx/${rootTag.replace(/^p:/, "")}-bad-root`, `pptx ${rootTag}: expected <${rootTag}>, got <${root.name}>`, { context: { expected: rootTag, elementName: root && root.name } });
-        const out = { type: defaults.type }, cSld = xml.findChild(root, "p:cSld");
+        const out = { type: defaults.type }, rootAttrs = {};
+        for (const [k, v] of Object.entries(root.attrs || {})) {
+          if (k === "xmlns" || k.startsWith("xmlns:") || k === "mc:Ignorable")
+            continue;
+          if (k === "type" && rootTag === "p:sldLayout")
+            out.layoutType = v;
+          else
+            rootAttrs[k] = v;
+        }
+        if (Object.keys(rootAttrs).length)
+          out.rootAttrs = rootAttrs;
+        const cSld = xml.findChild(root, "p:cSld");
         if (cSld)
           Object.assign(out, parseCSld(cSld, opts));
-        if (opts && opts.slideExtrasByPart) {
+        const byPart = !!(opts && opts.slideExtrasByPart);
+        if (byPart) {
           out.cSldExtras = out._extras || [];
           delete out._extras;
         }
@@ -3316,8 +3404,14 @@ export const pptxFullPackage = {
             out.layoutIds = parseSldLayoutIdLst(c);
           else if (c.name === "p:txStyles")
             out.txStyles = c;
+          else if (c.name === "p:notesStyle")
+            out.notesStyle = c;
           else
             extras.push(c);
+        }
+        if (extras.length && !byPart) {
+          out.cSldExtras = out._extras || [];
+          delete out._extras;
         }
         if (extras.length)
           out._extras = extras;
@@ -3327,6 +3421,7 @@ export const pptxFullPackage = {
     function buildSerializer(rootTag, defaultName, extraNs) {
       return function serialize(obj) {
         const ns = {
+          ...rootAttrsOf(obj),
           "xmlns:p": P_NS,
           "xmlns:a": A_NS,
           "xmlns:r": R_NS,
@@ -3340,13 +3435,24 @@ export const pptxFullPackage = {
           children.push(renderSldLayoutIdLst(obj.layoutIds));
         if (obj.txStyles)
           children.push(obj.txStyles);
-        if (obj._extras) {
-          for (const ex of obj._extras)
-            if (!CSLD_ONLY.has(placedName(ex)))
+        if (obj.notesStyle)
+          children.push(obj.notesStyle);
+        const rootOwn = Array.isArray(obj.cSldExtras);
+        if (obj._extras)
+          for (const ex of obj._extras) {
+            const name = placedName(ex);
+            if (rootOwn ? !CSLD_ONLY.has(name) : ROOT_ONLY.has(name))
               children.push(ex);
-        }
+          }
         return xml.serialize(xml.el(rootTag, ns, ordered(children, ROOT_SEQ)));
       };
+    }
+    function rootAttrsOf(obj) {
+      const out = {};
+      for (const [k, v] of Object.entries(obj && obj.rootAttrs || {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
     }
     function parseSldLayoutIdLst(el) {
       return xml.findAll(el, "p:sldLayoutId").map((c) => ({
@@ -3364,7 +3470,7 @@ export const pptxFullPackage = {
         return xmlText.replace("<p:sldLayout", `<p:sldLayout type="${obj.layoutType}"`);
       return xmlText;
     }
-    const serializeSlideMaster = buildSerializer("p:sldMaster", null);
+    const serializeSlideMaster = buildSerializer("p:sldMaster", null), parseNotesSlide = buildParser("p:notes", { type: "notes" }), parseNotesMaster = buildParser("p:notesMaster", { type: "notesMaster" }), parseHandoutMaster = buildParser("p:handoutMaster", { type: "handoutMaster" }), serializeNotesSlide = buildSerializer("p:notes", null), serializeNotesMaster = buildSerializer("p:notesMaster", null), serializeHandoutMaster = buildSerializer("p:handoutMaster", null);
     function slideBytes(obj) {
       return encodeText(serializeSlide(obj));
     }
@@ -3420,6 +3526,12 @@ export const pptxFullPackage = {
       serializeSlide,
       serializeSlideLayout,
       serializeSlideMaster,
+      parseNotesSlide,
+      parseNotesMaster,
+      parseHandoutMaster,
+      serializeNotesSlide,
+      serializeNotesMaster,
+      serializeHandoutMaster,
       slideBytes,
       slideLayoutBytes,
       slideMasterBytes,
@@ -3436,9 +3548,15 @@ export const pptxFullPackage = {
       REL_TYPE_SLIDE: REL_TYPE.SLIDE,
       REL_TYPE_SLIDE_LAYOUT: REL_TYPE.SLIDE_LAYOUT,
       REL_TYPE_SLIDE_MASTER: REL_TYPE.SLIDE_MASTER,
+      REL_TYPE_NOTES_SLIDE: REL_TYPE.NOTES_SLIDE,
+      REL_TYPE_NOTES_MASTER: REL_TYPE.NOTES_MASTER,
+      REL_TYPE_HANDOUT_MASTER: REL_TYPE.HANDOUT_MASTER,
       CT_SLIDE: CT.SLIDE,
       CT_SLIDE_LAYOUT: CT.SLIDE_LAYOUT,
-      CT_SLIDE_MASTER: CT.SLIDE_MASTER
+      CT_SLIDE_MASTER: CT.SLIDE_MASTER,
+      CT_NOTES_SLIDE: CT.NOTES_SLIDE,
+      CT_NOTES_MASTER: CT.NOTES_MASTER,
+      CT_HANDOUT_MASTER: CT.HANDOUT_MASTER
     };
   } });
     __register({ name: "pptxTheme", dependencies: ["ooxmlErrors","xml","ooxmlShared"], factory: function(errors, xml, shared) {
@@ -3487,7 +3605,7 @@ export const pptxFullPackage = {
       "folHlink"
     ];
     function parseClrScheme(el) {
-      const out = { name: el.attrs.name || "", colors: {} };
+      const out = { name: el.attrs.name ?? "", colors: {} };
       for (const key of CLR_SCHEME_KEYS) {
         const child = xml.findChild(el, "a:" + key);
         if (child)
@@ -3505,7 +3623,17 @@ export const pptxFullPackage = {
         if (el)
           children.push(el);
       }
-      return xml.el("a:clrScheme", { name: scheme.name || "Office" }, children);
+      return xml.el("a:clrScheme", { name: schemeName(scheme) }, children);
+    }
+    function schemeName(scheme) {
+      return typeof scheme.name === "string" ? scheme.name : "Office";
+    }
+    function otherFontAttrs(el) {
+      const out = {};
+      for (const [k, v] of Object.entries(el.attrs || {}))
+        if (k !== "typeface")
+          out[k] = v;
+      return Object.keys(out).length ? out : null;
     }
     function parseFontKind(el) {
       const out = {}, latin = xml.findChild(el, "a:latin"), ea = xml.findChild(el, "a:ea"), cs = xml.findChild(el, "a:cs");
@@ -3515,23 +3643,39 @@ export const pptxFullPackage = {
         out.ea = ea.attrs.typeface;
       if (cs)
         out.cs = cs.attrs.typeface;
+      const fontAttrs = {};
+      for (const [key, f] of [["latin", latin], ["ea", ea], ["cs", cs]]) {
+        const other = f && otherFontAttrs(f);
+        if (other)
+          fontAttrs[key] = other;
+      }
+      if (Object.keys(fontAttrs).length)
+        out.fontAttrs = fontAttrs;
       const extras = el.children.filter((n) => n.type === "element" && !["a:latin", "a:ea", "a:cs"].includes(n.name));
       if (extras.length)
         out._extras = extras;
       return out;
     }
     function renderFontKind(tag, kind) {
-      const children = [];
-      children.push(xml.el("a:latin", { typeface: kind.latin || "Calibri" }));
-      children.push(xml.el("a:ea", { typeface: kind.ea || "" }));
-      children.push(xml.el("a:cs", { typeface: kind.cs || "" }));
+      const children = [], fa = (key) => {
+        const a = kind.fontAttrs && kind.fontAttrs[key], out = {};
+        if (a && typeof a === "object") {
+          for (const [k, v] of Object.entries(a))
+            if (k !== "typeface" && v != null)
+              out[k] = String(v);
+        }
+        return out;
+      };
+      children.push(xml.el("a:latin", { typeface: kind.latin || "Calibri", ...fa("latin") }));
+      children.push(xml.el("a:ea", { typeface: kind.ea || "", ...fa("ea") }));
+      children.push(xml.el("a:cs", { typeface: kind.cs || "", ...fa("cs") }));
       if (kind._extras)
         for (const ex of kind._extras)
           children.push(ex);
       return xml.el(tag, {}, children);
     }
     function parseFontScheme(el) {
-      const out = { name: el.attrs.name || "" }, major = xml.findChild(el, "a:majorFont"), minor = xml.findChild(el, "a:minorFont");
+      const out = { name: el.attrs.name ?? "" }, major = xml.findChild(el, "a:majorFont"), minor = xml.findChild(el, "a:minorFont");
       if (major)
         out.majorFont = parseFontKind(major);
       if (minor)
@@ -3542,8 +3686,15 @@ export const pptxFullPackage = {
       const children = [];
       children.push(renderFontKind("a:majorFont", scheme.majorFont || {}));
       children.push(renderFontKind("a:minorFont", scheme.minorFont || {}));
-      return xml.el("a:fontScheme", { name: scheme.name || "Office" }, children);
+      return xml.el("a:fontScheme", { name: schemeName(scheme) }, children);
     }
+    const ROOT_TYPED = new Set(["a:themeElements", "a:objectDefaults", "a:extraClrSchemeLst"]), ROOT_SEQ = shared.sequence ? shared.sequence([
+      "a:themeElements",
+      "a:objectDefaults",
+      "a:extraClrSchemeLst",
+      "a:custClrLst",
+      "a:extLst"
+    ]) : null, ordered = (children, seq) => seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children;
     function parse(input) {
       const text = typeof input === "string" ? input : decodeText(input), root = xml.parse(text);
       if (root.name !== "a:theme")
@@ -3558,11 +3709,11 @@ export const pptxFullPackage = {
         if (fm)
           out.fmtScheme = fm;
       }
-      const od = xml.findChild(root, "a:objectDefaults"), xc = xml.findChild(root, "a:extraClrSchemeLst");
-      if (od)
-        out.objectDefaults = od;
-      if (xc)
-        out.extraClrSchemeLst = xc;
+      out.objectDefaults = xml.findChild(root, "a:objectDefaults") || null;
+      out.extraClrSchemeLst = xml.findChild(root, "a:extraClrSchemeLst") || null;
+      const extras = root.children.filter((c) => c.type === "element" && !ROOT_TYPED.has(c.name));
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function serialize(obj) {
@@ -3574,9 +3725,14 @@ export const pptxFullPackage = {
       if (obj.fmtScheme)
         themeChildren.push(obj.fmtScheme);
       const children = [xml.el("a:themeElements", {}, themeChildren)];
-      children.push(obj.objectDefaults || xml.el("a:objectDefaults", {}));
-      children.push(obj.extraClrSchemeLst || xml.el("a:extraClrSchemeLst", {}));
-      return xml.serialize(xml.el("a:theme", { "xmlns:a": A_NS, name: obj.name || "Office Theme" }, children));
+      if (obj.objectDefaults !== null)
+        children.push(obj.objectDefaults || xml.el("a:objectDefaults", {}));
+      if (obj.extraClrSchemeLst !== null)
+        children.push(obj.extraClrSchemeLst || xml.el("a:extraClrSchemeLst", {}));
+      for (const ex of Array.isArray(obj._extras) ? obj._extras : [])
+        if (ex && ex.type === "element" && !ROOT_TYPED.has(ex.name))
+          children.push(ex);
+      return xml.serialize(xml.el("a:theme", { "xmlns:a": A_NS, name: obj.name || "Office Theme" }, ordered(children, ROOT_SEQ)));
     }
     function bytesOf(obj) {
       return encodeText(serialize(obj));
@@ -3793,31 +3949,88 @@ export const pptxFullPackage = {
         return value;
       }
       function walkRunsInTextBody(tb, phase) {
-        if (!tb || !tb.paragraphs)
+        if (!tb || !Array.isArray(tb.paragraphs))
           return;
-        const hr = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hp = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties";
-        for (const p of tb.paragraphs) {
+        const hydrate = phase === "hydrate", hr = hydrate ? "hydrateRunProperties" : "dehydrateRunProperties", hp = hydrate ? "hydrateParagraphProperties" : "dehydrateParagraphProperties", hpara = hydrate ? "hydrateParagraph" : "dehydrateParagraph";
+        tb.paragraphs.forEach((p, i) => {
+          if (!p || typeof p !== "object")
+            return;
+          if (!hydrate)
+            p = tb.paragraphs[i] = applyHook(hpara, p);
           if (p.pPr)
             p.pPr = applyHook(hp, p.pPr);
-          for (const r of p.runs || [])
-            if (r.rPr)
+          for (const r of p.runs || []) {
+            if (r && r.rPr)
               r.rPr = applyHook(hr, r.rPr);
+            if (r && r.pPr)
+              r.pPr = applyHook(hp, r.pPr);
+          }
+          if (hydrate)
+            tb.paragraphs[i] = applyHook(hpara, p);
+        });
+      }
+      function walkShape(shape, phase) {
+        if (!shape || typeof shape !== "object")
+          return;
+        if (shape.type === "group") {
+          for (const s of Array.isArray(shape.shapes) ? shape.shapes : [])
+            walkShape(s, phase);
+          return;
         }
+        walkRunsInTextBody(shape.txBody, phase);
+        for (const row of Array.isArray(shape.rows) ? shape.rows : [])
+          for (const cell of row && Array.isArray(row.cells) ? row.cells : [])
+            if (cell)
+              walkRunsInTextBody(cell.txBody, phase);
+      }
+      const isObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+      function walkPart(holder, key, phase) {
+        const hydrate = phase === "hydrate", name = hydrate ? "hydrateSlidePart" : "dehydrateSlidePart";
+        let part = holder[key];
+        if (!part || typeof part !== "object")
+          return;
+        if (!hydrate)
+          part = holder[key] = applyHook(name, part);
+        for (const shape of part && part.shapes || [])
+          walkShape(shape, phase);
+        if (hydrate)
+          holder[key] = applyHook(name, part);
+      }
+      function walkTheme(holder, phase) {
+        if (!isObject(holder) || !isObject(holder.theme))
+          return;
+        holder.theme = applyHook(phase === "hydrate" ? "hydrateTheme" : "dehydrateTheme", holder.theme);
       }
       function applyExtensions(presentation, phase) {
         if (!_exts.length || !presentation)
           return presentation;
         const sName = phase === "hydrate" ? "hydrateSettings" : "dehydrateSettings";
-        for (const slide of presentation.slides || [])
-          for (const shape of slide.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
-        for (const layout of presentation.slideLayouts || [])
-          for (const shape of layout.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
-        for (const master of presentation.slideMasters || [])
-          for (const shape of master.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
+        for (const list of [presentation.slides, presentation.slideLayouts, presentation.slideMasters]) {
+          if (!Array.isArray(list))
+            continue;
+          for (let i = 0;i < list.length; i++)
+            walkPart(list, i, phase);
+        }
+        for (const slide of Array.isArray(presentation.slides) ? presentation.slides : [])
+          if (isObject(slide) && isObject(slide.notes))
+            walkPart(slide, "notes", phase);
+        for (const key of ["notesMaster", "handoutMaster"]) {
+          if (!isObject(presentation[key]))
+            continue;
+          walkPart(presentation, key, phase);
+          walkTheme(presentation[key], phase);
+        }
+        walkTheme(presentation, phase);
         applyHook(sName, presentation);
+        return presentation;
+      }
+      function applyPackage(name, presentation, ctx) {
+        for (const ext of _exts)
+          if (typeof ext[name] === "function") {
+            const r = ext[name](presentation, ctx);
+            if (r !== void 0)
+              presentation = r;
+          }
         return presentation;
       }
       return {
@@ -3827,6 +4040,12 @@ export const pptxFullPackage = {
         },
         applyDehydrate(presentation) {
           applyExtensions(presentation, "dehydrate");
+        },
+        applyPackageHydrate(presentation, ctx) {
+          return applyPackage("hydratePackage", presentation, ctx);
+        },
+        applyPackageDehydrate(presentation, ctx) {
+          return applyPackage("dehydratePackage", presentation, ctx);
         },
         get hasExtensions() {
           return _exts.length > 0;
@@ -3848,6 +4067,15 @@ export const pptxFullPackage = {
       createRidAllocator,
       trackUnmodelledParts
     } = shared, P_NS = slideMod.P_NS, A_NS = slideMod.A_NS, R_NS = slideMod.R_NS, REL_TYPE_DOC = REL_TYPE.DOC, CT_PRESENTATION = CT.PRESENTATION;
+    function allShapes(shapes) {
+      const out = [];
+      for (const s of Array.isArray(shapes) ? shapes : [])
+        if (s && s.type === "group")
+          out.push(...allShapes(s.shapes));
+        else
+          out.push(s);
+      return out;
+    }
     function attachPictureImage(shape, rels, part, pkg) {
       const rel = rels.find((r) => r.Id === shape.embedRef);
       if (!rel || rel.Type !== picMod.REL_TYPE_IMAGE)
@@ -3863,12 +4091,12 @@ export const pptxFullPackage = {
     }
     function attachTemplateImages(template, part, pkg) {
       const rels = pkg.rels[part] || [];
-      for (const shape of template.shapes || [])
+      for (const shape of allShapes(template.shapes))
         if (shape.type === "picture" && shape.embedRef)
           attachPictureImage(shape, rels, part, pkg);
     }
     function attachSlideImages(slide, slideRels, slidePart, pkg) {
-      for (const shape of slide.shapes || [])
+      for (const shape of allShapes(slide.shapes))
         if (shape.type === "picture" && shape.embedRef)
           attachPictureImage(shape, slideRels, slidePart, pkg);
         else if (shape.type === "chart" && shape.chartRef) {
@@ -3930,11 +4158,15 @@ export const pptxFullPackage = {
     }
     function read(bytes, opts) {
       const pkg = opc.read(bytes, archiveLimits(opts)), textOpts = { typedRunColors: !!(opts && opts.typedRunColors) };
+      if (opts && opts.typedLineColors)
+        textOpts.typedLineColors = !0;
+      if (opts && opts.typedGroups)
+        textOpts.typedGroups = !0;
       if (opts && opts.slideExtrasByPart)
         textOpts.slideExtrasByPart = !0;
-      const { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
+      const plainParts = pkg.parts, { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
         try {
-          return readPackage(p, textOpts);
+          return readPackage(p, textOpts, plainParts);
         } catch (e) {
           throw typedPartXml(e);
         }
@@ -3947,7 +4179,7 @@ export const pptxFullPackage = {
         return e;
       return new ParseError("pptx/invalid-part-xml", `pptx: failed to parse a part's XML (${e.message})`, { cause: e });
     }
-    function readPackage(pkg, textOpts) {
+    function readPackage(pkg, textOpts, plainParts) {
       const docRel = (pkg.rels["/"] || []).find((r) => r.Type === REL_TYPE_DOC || r.Type.endsWith("/officeDocument"));
       if (!docRel)
         throw new ParseError("pptx/missing-officeDocument-rel", "pptx: no officeDocument relationship");
@@ -3977,7 +4209,7 @@ export const pptxFullPackage = {
         if (ssEl.attrs.type)
           sldSize.type = ssEl.attrs.type;
       }
-      const slides = [], slideLayouts = [], slideMasters = [];
+      const slides = [], slideLayouts = [], slideMasters = [], slideParts = [], masterParts = [];
       let theme;
       for (const entry of slideEntries) {
         const rel = presRels.find((r) => r.Id === entry.rId);
@@ -3990,6 +4222,7 @@ export const pptxFullPackage = {
         slide._partName = slidePart;
         attachSlideImages(slide, slideRels, slidePart, pkg);
         slides.push(slide);
+        slideParts.push(slidePart);
         const layoutRel = slideRels.find((r) => r.Type === slideMod.REL_TYPE_SLIDE_LAYOUT);
         if (layoutRel) {
           const layoutPart = relsMod.resolveTarget(slidePart, layoutRel.Target);
@@ -4016,6 +4249,7 @@ export const pptxFullPackage = {
         attachTemplateImages(master, masterPart, pkg);
         master._partName = masterPart;
         slideMasters.push(master);
+        masterParts.push(masterPart);
         const themeRel = (pkg.rels[masterPart] || []).find((r) => r.Type === themeMod.REL_TYPE_THEME);
         if (themeRel && !theme) {
           const themePart = relsMod.resolveTarget(masterPart, themeRel.Target), tBytes = pkg.parts[themePart];
@@ -4023,9 +4257,10 @@ export const pptxFullPackage = {
             theme = themeMod.parse(tBytes);
         }
       }
+      const layoutParts = slideLayouts.map((l) => l._partName);
       for (const s of slides) {
         delete s._partName;
-        for (const sp of s.shapes || [])
+        for (const sp of allShapes(s.shapes))
           delete sp._chartPartName;
       }
       for (const l of slideLayouts)
@@ -4041,8 +4276,23 @@ export const pptxFullPackage = {
         presentation.theme = theme;
       if (sldSize)
         presentation.sldSize = sldSize;
-      walker.applyHydrate(presentation);
-      return { presentation, package: pkg };
+      const hydrated = walker.applyPackageHydrate(presentation, {
+        package: pkg,
+        parts: plainParts,
+        rels: pkg.rels,
+        presPart,
+        presRoot,
+        presRels,
+        slideParts,
+        layoutParts,
+        masterParts,
+        textOpts,
+        consume(partName) {
+          return pkg.parts[partName];
+        }
+      });
+      walker.applyHydrate(hydrated);
+      return { presentation: hydrated, package: pkg };
     }
     const walker = walkerMod.createWalker();
     function use(...extensions) {
@@ -4121,7 +4371,7 @@ export const pptxFullPackage = {
       const chartParts = [];
       slides.forEach((slide, k) => {
         const node = normalizeSlide(slide), slidePath = `/ppt/slides/slide${k + 1}.xml`, slideRels = [], ridAlloc = createRidAllocator({ prefix: "rId", start: 1 }), seenData = new Map;
-        for (const shape of node.shapes || [])
+        for (const shape of allShapes(node.shapes))
           if (shape.type === "picture" && shape.image && shape.image.data) {
             let item = seenData.get(shape.image.data);
             if (!item) {
@@ -4212,6 +4462,15 @@ export const pptxFullPackage = {
         Type: REL_TYPE_DOC,
         Target: "ppt/presentation.xml"
       }]);
+      if (walker.hasExtensions)
+        walker.applyPackageDehydrate(pres, {
+          package: pkg,
+          presPart: "/ppt/presentation.xml",
+          themePart: "/ppt/theme/theme1.xml",
+          slideParts: slides.map((_, k) => `/ppt/slides/slide${k + 1}.xml`),
+          layoutParts: layouts.map((_, j) => `/ppt/slideLayouts/slideLayout${j + 1}.xml`),
+          masterParts: masters.map((_, i) => `/ppt/slideMasters/slideMaster${i + 1}.xml`)
+        });
       return opc.write(pkg);
     }
     function normalizeSlide(slide) {
@@ -4627,6 +4886,15 @@ export const pptxFullPackage = {
           case "p:videoClr":
             node.videoClr = { ...c.attrs };
             break;
+          case "p:prevCondLst":
+            node.prevCondLst = parseCondLst(c, "prevCondLst");
+            break;
+          case "p:nextCondLst":
+            node.nextCondLst = parseCondLst(c, "nextCondLst");
+            break;
+          case "p:rCtr":
+            node.rCtr = { ...c.attrs };
+            break;
         }
       }
       return node;
@@ -4825,14 +5093,14 @@ export const pptxFullPackage = {
         kids.push(renderCondLst(c.prevCondLst));
       if (c.nextCondLst)
         kids.push(renderCondLst(c.nextCondLst));
+      if (c.endSync)
+        kids.push(xml.el("p:endSync", c.endSync.attrs || {}, renderCond(c.endSync).children));
       if (c.iterate)
         kids.push(renderIterate(c.iterate));
       if (c.childTnLst && c.childTnLst.children && c.childTnLst.children.length)
         kids.push(xml.el("p:childTnLst", {}, c.childTnLst.children.map(renderTimeNode)));
       if (c.subTnLst && c.subTnLst.children && c.subTnLst.children.length)
         kids.push(xml.el("p:subTnLst", {}, c.subTnLst.children.map(renderTimeNode)));
-      if (c.endSync)
-        kids.push(xml.el("p:endSync", c.endSync.attrs || {}));
       return xml.el("p:cTn", c.attrs || {}, kids);
     }
     function renderTimeNode(node) {
@@ -4843,12 +5111,18 @@ export const pptxFullPackage = {
         kids.push(renderCBhvr(node.cBhvr));
       if (node.cMediaNode)
         kids.push(renderCMediaNode(node.cMediaNode));
+      if (node.prevCondLst)
+        kids.push(renderCondLst(node.prevCondLst));
+      if (node.nextCondLst)
+        kids.push(renderCondLst(node.nextCondLst));
+      if (node.by)
+        kids.push(xml.el("p:by", node.by.attrs || {}, renderValChildren(node.by)));
       if (node.from)
         kids.push(xml.el("p:from", node.from.attrs || {}, renderValChildren(node.from)));
       if (node.to)
         kids.push(xml.el("p:to", node.to.attrs || {}, renderValChildren(node.to)));
-      if (node.by)
-        kids.push(xml.el("p:by", node.by.attrs || {}, renderValChildren(node.by)));
+      if (node.rCtr)
+        kids.push(xml.el("p:rCtr", node.rCtr));
       if (node.tavLst)
         kids.push(renderTavLst(node.tavLst));
       if (node.progress)
@@ -12036,9 +12310,1217 @@ export const pptxFullPackage = {
     }
     return { parseElement, renderElement, ELEMENTS };
   } });
+    __register({ name: "docxProperties", dependencies: ["xml"], factory: function(xml) {
+    function readToggle(el) {
+      if (!el)
+        return;
+      const v = el.attrs["w:val"];
+      if (v === void 0)
+        return !0;
+      return !(v === "0" || v === "false" || v === "off");
+    }
+    function writeToggle(name, value) {
+      if (value === !0)
+        return xml.el(name, {});
+      if (value === !1)
+        return xml.el(name, { "w:val": "0" });
+      return null;
+    }
+    function toggleForm(v) {
+      if (v === void 0 || v === "true" || v === "1" || v === "on")
+        return "on";
+      if (v === "false" || v === "0" || v === "off")
+        return "off";
+      return v;
+    }
+    function significant(children) {
+      return (children || []).filter((c) => !(c && c.type === "text" && /^\s*$/.test(String(c.value ?? c.text ?? ""))));
+    }
+    function sameElement(a, b) {
+      if (!a || !b || a.type !== b.type)
+        return !1;
+      if (a.type !== "element")
+        return String(a.value ?? a.text ?? "") === String(b.value ?? b.text ?? "");
+      if (a.name !== b.name)
+        return !1;
+      const ka = significant(a.children), kb = significant(b.children), aa = a.attrs || {}, ba = b.attrs || {}, keys = new Set([...Object.keys(aa), ...Object.keys(ba)]);
+      for (const k of keys)
+        if (k === "w:val" && ka.length === 0 && kb.length === 0) {
+          if (toggleForm(aa[k]) !== toggleForm(ba[k]))
+            return !1;
+        } else if (aa[k] !== ba[k])
+          return !1;
+      if (ka.length !== kb.length)
+        return !1;
+      for (let i = 0;i < ka.length; i++)
+        if (!sameElement(ka[i], kb[i]))
+          return !1;
+      return !0;
+    }
+    function isPlain(v) {
+      return !!v && typeof v === "object" && !Array.isArray(v);
+    }
+    function hydrateLossless(bag, typeBag, untypeBag) {
+      if (!bag || !Array.isArray(bag._extras))
+        return bag;
+      const count = new Map;
+      for (const c of bag._extras)
+        if (c && c.type === "element")
+          count.set(c.name, (count.get(c.name) || 0) + 1);
+      const claimed = new Map, keysOf = (k) => {
+        if (!claimed.has(k))
+          claimed.set(k, new Set(isPlain(bag[k]) ? Object.keys(bag[k]) : []));
+        return claimed.get(k);
+      }, verdicts = bag._extras.map((c) => {
+        if (!c || c.type !== "element")
+          return null;
+        const probe = typeBag({ _extras: [c] }) || {}, fields = Object.keys(probe).filter((k) => k !== "_extras");
+        if (count.get(c.name) > 1 && !fields.every((k) => Array.isArray(probe[k])))
+          return null;
+        const merges = (k) => Array.isArray(probe[k]) && (bag[k] === void 0 || Array.isArray(bag[k])) || isPlain(probe[k]) && (bag[k] === void 0 || isPlain(bag[k])) && (k[0] === "_" || Object.keys(probe[k]).every((s) => !keysOf(k).has(s))), taken = (k) => bag[k] !== void 0 || claimed.has(k), clash = fields.some((k) => taken(k) && !merges(k));
+        if (fields.length === 0 || (probe._extras || []).length > 0 || clash)
+          return null;
+        const back = (untypeBag({ ...probe }) || {})._extras || [];
+        if (back.length !== 1 || !sameElement(back[0], c))
+          return null;
+        for (const k of fields) {
+          const keys = keysOf(k);
+          if (isPlain(probe[k]))
+            for (const s of Object.keys(probe[k]))
+              keys.add(s);
+        }
+        return { name: c.name, probe, fields };
+      }), refused = new Set;
+      bag._extras.forEach((c, i) => {
+        if (c && c.type === "element" && count.get(c.name) > 1 && verdicts[i] === null)
+          refused.add(c.name);
+      });
+      const remaining = [];
+      bag._extras.forEach((c, i) => {
+        const v = verdicts[i];
+        if (v === null || refused.has(v.name)) {
+          remaining.push(c);
+          return;
+        }
+        for (const k of v.fields)
+          if (Array.isArray(v.probe[k]))
+            bag[k] = (Array.isArray(bag[k]) ? bag[k] : []).concat(v.probe[k]);
+          else if (isPlain(bag[k]))
+            bag[k] = { ...bag[k], ...v.probe[k] };
+          else
+            bag[k] = v.probe[k];
+      });
+      if (remaining.length)
+        bag._extras = remaining;
+      else
+        delete bag._extras;
+      return bag;
+    }
+    function valOf(el) {
+      return el ? el.attrs["w:val"] : void 0;
+    }
+    function elVal(name, val) {
+      return xml.el(name, { "w:val": String(val) });
+    }
+    function sequence(names) {
+      const rank = new Map;
+      let change = -1;
+      names.forEach((entry, i) => {
+        for (const n of Array.isArray(entry) ? entry : [entry]) {
+          rank.set(n, i);
+          if (change < 0 && /Change$/.test(n))
+            change = i;
+        }
+      });
+      return { rank, other: change >= 0 ? change - 0.5 : names.length };
+    }
+    function orderBySequence(children, seq) {
+      const firstElement = (el) => (el && el.children || []).find((k) => k && k.type === "element"), nameOf = (c) => {
+        if (c.name !== "mc:AlternateContent")
+          return c.name;
+        const branches = (c.children || []).filter((k) => k && k.type === "element"), branch = branches.find((k) => k.name === "mc:Fallback") || branches.find((k) => k.name === "mc:Choice"), inner = firstElement(branch);
+        return inner ? inner.name : c.name;
+      };
+      return children.map((c, i) => {
+        const n = c && c.type === "element" ? nameOf(c) : null;
+        return { c, i, r: n !== null && seq.rank.has(n) ? seq.rank.get(n) : seq.other };
+      }).sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.c);
+    }
+    const RPR_SEQ = sequence([
+      "w:ins",
+      "w:del",
+      "w:moveFrom",
+      "w:moveTo",
+      "w:rStyle",
+      "w:rFonts",
+      "w:b",
+      "w:bCs",
+      "w:i",
+      "w:iCs",
+      "w:caps",
+      "w:smallCaps",
+      "w:strike",
+      "w:dstrike",
+      "w:outline",
+      "w:shadow",
+      "w:emboss",
+      "w:imprint",
+      "w:noProof",
+      "w:snapToGrid",
+      "w:vanish",
+      "w:webHidden",
+      "w:color",
+      "w:spacing",
+      "w:w",
+      "w:kern",
+      "w:position",
+      "w:sz",
+      "w:szCs",
+      "w:highlight",
+      "w:u",
+      "w:effect",
+      "w:bdr",
+      "w:shd",
+      "w:fitText",
+      "w:vertAlign",
+      "w:rtl",
+      "w:cs",
+      "w:em",
+      "w:lang",
+      "w:eastAsianLayout",
+      "w:specVanish",
+      "w:oMath",
+      "w:rPrChange"
+    ]), PPR_SEQ = sequence([
+      "w:pStyle",
+      "w:keepNext",
+      "w:keepLines",
+      "w:pageBreakBefore",
+      "w:framePr",
+      "w:widowControl",
+      "w:numPr",
+      "w:suppressLineNumbers",
+      "w:pBdr",
+      "w:shd",
+      "w:tabs",
+      "w:suppressAutoHyphens",
+      "w:kinsoku",
+      "w:wordWrap",
+      "w:overflowPunct",
+      "w:topLinePunct",
+      "w:autoSpaceDE",
+      "w:autoSpaceDN",
+      "w:bidi",
+      "w:adjustRightInd",
+      "w:snapToGrid",
+      "w:spacing",
+      "w:ind",
+      "w:contextualSpacing",
+      "w:mirrorIndents",
+      "w:suppressOverlap",
+      "w:jc",
+      "w:textDirection",
+      "w:textAlignment",
+      "w:textboxTightWrap",
+      "w:outlineLvl",
+      "w:divId",
+      "w:cnfStyle",
+      "w:rPr",
+      "w:sectPr",
+      "w:pPrChange"
+    ]), TBLPR_SEQ = sequence([
+      "w:tblStyle",
+      "w:tblpPr",
+      "w:tblOverlap",
+      "w:bidiVisual",
+      "w:tblStyleRowBandSize",
+      "w:tblStyleColBandSize",
+      "w:tblW",
+      "w:jc",
+      "w:tblCellSpacing",
+      "w:tblInd",
+      "w:tblBorders",
+      "w:shd",
+      "w:tblLayout",
+      "w:tblCellMar",
+      "w:tblLook",
+      "w:tblCaption",
+      "w:tblDescription",
+      "w:tblPrChange"
+    ]), RPR_KNOWN = new Set([
+      "w:b",
+      "w:i",
+      "w:u",
+      "w:strike",
+      "w:color",
+      "w:sz",
+      "w:rFonts",
+      "w:vertAlign",
+      "w:highlight",
+      "w:rStyle"
+    ]), FONT_SLOTS = ["ascii", "hAnsi", "cs", "asciiTheme", "hAnsiTheme", "cstheme"];
+    function parseFonts(el) {
+      const out = {};
+      for (const [k, v] of Object.entries(el.attrs))
+        out[k.replace(/^w:/, "")] = v;
+      return out;
+    }
+    function renderFonts(rPr) {
+      const fonts = rPr.fonts && typeof rPr.fonts === "object" ? rPr.fonts : null;
+      if (!fonts)
+        return rPr.font != null ? xml.el("w:rFonts", { "w:ascii": rPr.font, "w:hAnsi": rPr.font, "w:cs": rPr.font }) : null;
+      const derived = fonts.ascii || fonts.hAnsi || fonts.cs, kept = { ...fonts };
+      if ((rPr.font ?? void 0) !== derived) {
+        for (const k of FONT_SLOTS)
+          delete kept[k];
+        if (rPr.font != null) {
+          kept.ascii = rPr.font;
+          kept.hAnsi = rPr.font;
+          kept.cs = rPr.font;
+        }
+      }
+      const attrs = {};
+      for (const [k, v] of Object.entries(kept))
+        if (v != null)
+          attrs["w:" + k] = String(v);
+      return Object.keys(attrs).length ? xml.el("w:rFonts", attrs) : null;
+    }
+    const THEME_LINK = [["themeColor", "w:themeColor"], ["themeTint", "w:themeTint"], ["themeShade", "w:themeShade"]];
+    function themeLinkOf(el) {
+      const out = {};
+      for (const [k, a] of THEME_LINK)
+        if (el.attrs[a] != null)
+          out[k] = el.attrs[a];
+      return Object.keys(out).length ? out : void 0;
+    }
+    function withThemeLink(el, theme) {
+      if (theme) {
+        for (const [k, a] of THEME_LINK)
+          if (theme[k] != null)
+            el.attrs[a] = String(theme[k]);
+      }
+      return el;
+    }
+    function parseRunProperties(rPrEl) {
+      if (!rPrEl)
+        return;
+      const out = {}, extras = [];
+      for (const c of rPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        switch (c.name) {
+          case "w:b":
+            out.bold = readToggle(c);
+            break;
+          case "w:i":
+            out.italic = readToggle(c);
+            break;
+          case "w:strike":
+            out.strike = readToggle(c);
+            break;
+          case "w:u": {
+            out.underline = valOf(c) || "single";
+            if (c.attrs["w:color"] != null)
+              out.underlineColor = c.attrs["w:color"];
+            const theme = themeLinkOf(c);
+            if (theme)
+              out.underlineTheme = theme;
+            break;
+          }
+          case "w:color": {
+            out.color = valOf(c);
+            const theme = themeLinkOf(c);
+            if (theme)
+              out.colorTheme = theme;
+            break;
+          }
+          case "w:sz":
+            out.size = Number(valOf(c));
+            break;
+          case "w:rFonts":
+            out.font = c.attrs["w:ascii"] || c.attrs["w:hAnsi"] || c.attrs["w:cs"];
+            out.fonts = parseFonts(c);
+            break;
+          case "w:vertAlign":
+            out.vertAlign = valOf(c);
+            break;
+          case "w:highlight":
+            out.highlight = valOf(c);
+            break;
+          case "w:rStyle":
+            out.rStyle = valOf(c);
+            break;
+          default:
+            if (!RPR_KNOWN.has(c.name))
+              extras.push(c);
+        }
+      }
+      if (extras.length)
+        out._extras = orderBySequence(extras, RPR_SEQ);
+      return out;
+    }
+    function renderRunProperties(rPr) {
+      if (!rPr)
+        return null;
+      const children = [];
+      if (rPr.rStyle != null)
+        children.push(elVal("w:rStyle", rPr.rStyle));
+      const rFonts = renderFonts(rPr);
+      if (rFonts)
+        children.push(rFonts);
+      const bold = writeToggle("w:b", rPr.bold);
+      if (bold)
+        children.push(bold);
+      const italic = writeToggle("w:i", rPr.italic);
+      if (italic)
+        children.push(italic);
+      const strike = writeToggle("w:strike", rPr.strike);
+      if (strike)
+        children.push(strike);
+      if (rPr.color != null || rPr.colorTheme)
+        children.push(withThemeLink(rPr.color != null ? elVal("w:color", rPr.color) : xml.el("w:color", {}), rPr.colorTheme));
+      if (rPr.size != null)
+        children.push(elVal("w:sz", rPr.size));
+      if (rPr.underline != null) {
+        const u = elVal("w:u", rPr.underline);
+        if (rPr.underlineColor != null)
+          u.attrs["w:color"] = String(rPr.underlineColor);
+        children.push(withThemeLink(u, rPr.underlineTheme));
+      }
+      if (rPr.highlight != null)
+        children.push(elVal("w:highlight", rPr.highlight));
+      if (rPr.vertAlign != null)
+        children.push(elVal("w:vertAlign", rPr.vertAlign));
+      if (rPr._extras)
+        for (const ex of rPr._extras)
+          children.push(ex);
+      if (!children.length)
+        return null;
+      return xml.el("w:rPr", {}, orderBySequence(children, RPR_SEQ));
+    }
+    const PPR_KNOWN = new Set([
+      "w:jc",
+      "w:ind",
+      "w:spacing",
+      "w:pStyle",
+      "w:numPr",
+      "w:rPr"
+    ]), SPACING_TYPED = new Set(["w:before", "w:after", "w:line", "w:lineRule"]), IND_TYPED = new Set(["w:left", "w:right", "w:firstLine", "w:hanging"]);
+    function keepExtraAttrs(el, out, typed) {
+      const extraAttrs = {};
+      let any = !1;
+      for (const k of Object.keys(el.attrs)) {
+        if (typed.has(k) && el.attrs[k])
+          continue;
+        if (k === "xmlns" || k.startsWith("xmlns:"))
+          continue;
+        extraAttrs[k] = el.attrs[k];
+        any = !0;
+      }
+      if (any)
+        out.extraAttrs = extraAttrs;
+    }
+    function writeExtraAttrs(a, extraAttrs) {
+      if (!extraAttrs)
+        return;
+      for (const k of Object.keys(extraAttrs))
+        if (!(k in a) && extraAttrs[k] !== void 0)
+          a[k] = String(extraAttrs[k]);
+    }
+    function parseParagraphProperties(pPrEl) {
+      if (!pPrEl)
+        return;
+      const out = {}, extras = [];
+      for (const c of pPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        switch (c.name) {
+          case "w:jc":
+            out.align = valOf(c);
+            break;
+          case "w:pStyle":
+            out.pStyle = valOf(c);
+            break;
+          case "w:ind": {
+            const ind = {};
+            if (c.attrs["w:left"])
+              ind.left = Number(c.attrs["w:left"]);
+            if (c.attrs["w:right"])
+              ind.right = Number(c.attrs["w:right"]);
+            if (c.attrs["w:firstLine"])
+              ind.firstLine = Number(c.attrs["w:firstLine"]);
+            if (c.attrs["w:hanging"])
+              ind.hanging = Number(c.attrs["w:hanging"]);
+            keepExtraAttrs(c, ind, IND_TYPED);
+            if (Object.keys(ind).length)
+              out.indent = ind;
+            break;
+          }
+          case "w:spacing": {
+            const sp = {};
+            if (c.attrs["w:before"])
+              sp.before = Number(c.attrs["w:before"]);
+            if (c.attrs["w:after"])
+              sp.after = Number(c.attrs["w:after"]);
+            if (c.attrs["w:line"])
+              sp.line = Number(c.attrs["w:line"]);
+            if (c.attrs["w:lineRule"])
+              sp.lineRule = c.attrs["w:lineRule"];
+            keepExtraAttrs(c, sp, SPACING_TYPED);
+            if (Object.keys(sp).length)
+              out.spacing = sp;
+            break;
+          }
+          case "w:numPr": {
+            const np = {}, ilvl = xml.findChild(c, "w:ilvl"), numId = xml.findChild(c, "w:numId");
+            if (ilvl)
+              np.ilvl = Number(valOf(ilvl));
+            if (numId)
+              np.numId = Number(valOf(numId));
+            if (Object.keys(np).length)
+              out.numPr = np;
+            break;
+          }
+          case "w:rPr": {
+            const inner = parseRunProperties(c);
+            if (inner)
+              out.rPr = inner;
+            break;
+          }
+          default:
+            if (!PPR_KNOWN.has(c.name))
+              extras.push(c);
+        }
+      }
+      if (extras.length)
+        out._extras = orderBySequence(extras, PPR_SEQ);
+      return out;
+    }
+    function renderParagraphProperties(pPr) {
+      if (!pPr)
+        return null;
+      const children = [];
+      if (pPr.pStyle != null)
+        children.push(elVal("w:pStyle", pPr.pStyle));
+      if (pPr.numPr) {
+        const inner = [];
+        if (pPr.numPr.ilvl != null)
+          inner.push(elVal("w:ilvl", pPr.numPr.ilvl));
+        if (pPr.numPr.numId != null)
+          inner.push(elVal("w:numId", pPr.numPr.numId));
+        children.push(xml.el("w:numPr", {}, inner));
+      }
+      if (pPr.spacing) {
+        const a = {};
+        if (pPr.spacing.before != null)
+          a["w:before"] = String(pPr.spacing.before);
+        if (pPr.spacing.after != null)
+          a["w:after"] = String(pPr.spacing.after);
+        if (pPr.spacing.line != null)
+          a["w:line"] = String(pPr.spacing.line);
+        if (pPr.spacing.lineRule != null)
+          a["w:lineRule"] = String(pPr.spacing.lineRule);
+        writeExtraAttrs(a, pPr.spacing.extraAttrs);
+        children.push(xml.el("w:spacing", a));
+      }
+      if (pPr.indent) {
+        const a = {};
+        if (pPr.indent.left != null)
+          a["w:left"] = String(pPr.indent.left);
+        if (pPr.indent.right != null)
+          a["w:right"] = String(pPr.indent.right);
+        if (pPr.indent.firstLine != null)
+          a["w:firstLine"] = String(pPr.indent.firstLine);
+        if (pPr.indent.hanging != null)
+          a["w:hanging"] = String(pPr.indent.hanging);
+        writeExtraAttrs(a, pPr.indent.extraAttrs);
+        children.push(xml.el("w:ind", a));
+      }
+      if (pPr.align != null)
+        children.push(elVal("w:jc", pPr.align));
+      if (pPr.rPr)
+        children.push(renderRunProperties(pPr.rPr) || xml.el("w:rPr", {}, []));
+      if (pPr._extras)
+        for (const ex of pPr._extras)
+          children.push(ex);
+      if (!children.length)
+        return null;
+      return xml.el("w:pPr", {}, orderBySequence(children, PPR_SEQ));
+    }
+    const BORDER_EDGES = ["top", "left", "bottom", "right", "insideH", "insideV"], BORDER_EDGE_NAMES = new Set(BORDER_EDGES.map((e) => "w:" + e));
+    function numOrRaw(v) {
+      if (v === void 0)
+        return v;
+      const n = Number(v);
+      return String(v).trim() !== "" && Number.isFinite(n) ? n : v;
+    }
+    const BORDER_MODELLED_ATTRS = new Set(["w:val", "w:sz", "w:space", "w:color"]);
+    function parseBorder(el) {
+      const b = { val: el.attrs["w:val"] };
+      if (el.attrs["w:sz"] !== void 0)
+        b.sz = Number(el.attrs["w:sz"]);
+      if (el.attrs["w:space"] !== void 0)
+        b.space = Number(el.attrs["w:space"]);
+      if (el.attrs["w:color"] !== void 0)
+        b.color = el.attrs["w:color"];
+      const extraAttrs = {};
+      let any = !1;
+      for (const k of Object.keys(el.attrs)) {
+        if (BORDER_MODELLED_ATTRS.has(k))
+          continue;
+        extraAttrs[k] = el.attrs[k];
+        any = !0;
+      }
+      if (any)
+        b.extraAttrs = extraAttrs;
+      return b;
+    }
+    function renderBorder(edge, b) {
+      const a = { "w:val": String(b.val) };
+      if (b.sz !== void 0)
+        a["w:sz"] = String(b.sz);
+      if (b.space !== void 0)
+        a["w:space"] = String(b.space);
+      if (b.color !== void 0)
+        a["w:color"] = String(b.color);
+      if (b.extraAttrs) {
+        for (const k of Object.keys(b.extraAttrs))
+          if (!BORDER_MODELLED_ATTRS.has(k) && b.extraAttrs[k] !== void 0)
+            a[k] = String(b.extraAttrs[k]);
+      }
+      return xml.el("w:" + edge, a);
+    }
+    function parseTableBorders(el) {
+      const out = {}, extras = [];
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        if (BORDER_EDGE_NAMES.has(c.name))
+          out[c.name.slice(2)] = parseBorder(c);
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderTableBorders(borders) {
+      if (!borders)
+        return null;
+      const kids = [];
+      for (const edge of BORDER_EDGES)
+        if (borders[edge])
+          kids.push(renderBorder(edge, borders[edge]));
+      if (borders._extras)
+        for (const ex of borders._extras)
+          kids.push(ex);
+      if (!kids.length)
+        return null;
+      return xml.el("w:tblBorders", {}, kids);
+    }
+    const MARGIN_EDGES = ["top", "start", "left", "bottom", "end", "right"], MARGIN_EDGE_NAMES = new Set(MARGIN_EDGES.map((e) => "w:" + e));
+    function parseWidth(el) {
+      return { w: numOrRaw(el.attrs["w:w"]), type: el.attrs["w:type"] || "auto" };
+    }
+    function renderWidth(name, width) {
+      const a = {};
+      if (width.w !== void 0)
+        a["w:w"] = String(width.w);
+      a["w:type"] = width.type || "auto";
+      return xml.el(name, a);
+    }
+    function parseCellMargins(el) {
+      const out = {}, extras = [];
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        if (MARGIN_EDGE_NAMES.has(c.name))
+          out[c.name.slice(2)] = parseWidth(c);
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderCellMargins(margins) {
+      if (!margins)
+        return null;
+      const kids = [];
+      for (const edge of MARGIN_EDGES)
+        if (margins[edge])
+          kids.push(renderWidth("w:" + edge, margins[edge]));
+      if (margins._extras)
+        for (const ex of margins._extras)
+          kids.push(ex);
+      if (!kids.length)
+        return null;
+      return xml.el("w:tblCellMar", {}, kids);
+    }
+    function parseTableProperties(tblPrEl) {
+      if (!tblPrEl)
+        return;
+      const out = {}, extras = [];
+      let any = !1;
+      for (const c of tblPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        any = !0;
+        switch (c.name) {
+          case "w:tblStyle":
+            out.style = valOf(c);
+            break;
+          case "w:tblW":
+            out.width = parseWidth(c);
+            break;
+          case "w:tblBorders":
+            if ((c.children || []).some((k) => k.type === "element"))
+              out.borders = parseTableBorders(c);
+            else
+              extras.push(c);
+            break;
+          case "w:tblCellMar":
+            out.cellMargins = parseCellMargins(c);
+            break;
+          default:
+            extras.push(c);
+        }
+      }
+      if (!any)
+        return;
+      if (extras.length)
+        out._extras = orderBySequence(extras, TBLPR_SEQ);
+      return out;
+    }
+    function renderTableProperties(tblPr) {
+      if (!tblPr)
+        return null;
+      const children = [];
+      if (tblPr.style != null)
+        children.push(elVal("w:tblStyle", tblPr.style));
+      if (tblPr.width)
+        children.push(renderWidth("w:tblW", tblPr.width));
+      const bordersEl = renderTableBorders(tblPr.borders);
+      if (bordersEl)
+        children.push(bordersEl);
+      const marginsEl = renderCellMargins(tblPr.cellMargins);
+      if (marginsEl)
+        children.push(marginsEl);
+      for (const ex of tblPr._extras || [])
+        children.push(ex);
+      if (!children.length)
+        return null;
+      return xml.el("w:tblPr", {}, orderBySequence(children, TBLPR_SEQ));
+    }
+    return {
+      parseRunProperties,
+      renderRunProperties,
+      parseParagraphProperties,
+      renderParagraphProperties,
+      parseTableProperties,
+      renderTableProperties,
+      readToggle,
+      writeToggle,
+      valOf,
+      elVal,
+      sequence,
+      orderBySequence,
+      sameElement,
+      hydrateLossless
+    };
+  } });
+    __register({ name: "dmlTextDetails", dependencies: ["xml","ooxmlShared","docxProperties","drawingml","dmlEffects","dmlFillsAdvanced"], factory: function(xml, shared, props, dml, effects, fills) {
+    const codec = shared.createDmlColorCodec(xml), elementsOf = (el) => (el.children || []).filter((c) => c && c.type === "element"), attrKeys = (el) => Object.keys(el.attrs || {}), isLeaf = (el) => elementsOf(el).length === 0, strAttrs = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v != null && typeof v !== "object").map(([k, v]) => [k, String(v)])), isPlain = (v) => !!v && typeof v === "object" && !Array.isArray(v), KINDS = {
+      attrs: { parse: (el) => isLeaf(el) && attrKeys(el).length ? { ...el.attrs } : void 0, render: (name, v) => xml.el(name, strAttrs(v)) },
+      flag: { parse: (el) => isLeaf(el) && !attrKeys(el).length ? !0 : void 0, render: (name, v) => v === !0 ? xml.el(name, {}) : null },
+      num: {
+        parse: (el) => isLeaf(el) && attrKeys(el).join() === "val" ? Number(el.attrs.val) : void 0,
+        render: (name, v) => xml.el(name, { val: String(v) })
+      },
+      color: {
+        parse(el) {
+          const kids = elementsOf(el);
+          if (kids.length !== 1 || attrKeys(el).length)
+            return;
+          return codec.parseColor(kids[0], { withMods: !0 }) || void 0;
+        },
+        render(name, v) {
+          const c = codec.renderColor(v, { withMods: !0 });
+          return c ? xml.el(name, {}, [c]) : null;
+        }
+      },
+      spacing: {
+        parse(el) {
+          const kids = elementsOf(el);
+          if (kids.length !== 1 || attrKeys(el).length)
+            return;
+          const c = kids[0];
+          if (!isLeaf(c) || attrKeys(c).join() !== "val")
+            return;
+          if (c.name === "a:spcPct")
+            return { pct: Number(c.attrs.val) };
+          if (c.name === "a:spcPts")
+            return { pts: Number(c.attrs.val) };
+          return;
+        },
+        render(name, v) {
+          if (!isPlain(v))
+            return null;
+          const inner = v.pct != null ? xml.el("a:spcPct", { val: String(v.pct) }) : v.pts != null ? xml.el("a:spcPts", { val: String(v.pts) }) : null;
+          return inner ? xml.el(name, {}, [inner]) : null;
+        }
+      },
+      tabs: {
+        parse(el) {
+          const kids = elementsOf(el);
+          if (attrKeys(el).length || kids.some((c) => c.name !== "a:tab" || !isLeaf(c)))
+            return;
+          return kids.map((c) => ({ ...c.attrs }));
+        },
+        render: (name, v) => Array.isArray(v) ? xml.el(name, {}, v.map((a) => xml.el("a:tab", strAttrs(a)))) : null
+      },
+      effectLst: { parse: (el) => attrKeys(el).length ? void 0 : effects.parseEffectLst(el), render: (name, v) => effects.renderEffectLst(v) },
+      gradFill: { parse: (el) => fills.parseGradFill(el), render: (name, v) => fills.renderGradFill(v) },
+      fonts: { parse: (el) => isLeaf(el) && attrKeys(el).length ? [{ ...el.attrs }] : void 0, render: (name, v) => v.map((a) => xml.el(name, strAttrs(a))) }
+    };
+    function bagOf(spec) {
+      const byName = new Map(spec.map(([name, kind, field]) => [name, { kind: KINDS[kind], field: field || name.replace(/^a:/, "") }]));
+      function type(bag) {
+        if (!bag || !Array.isArray(bag._extras))
+          return bag;
+        const remaining = [];
+        for (const c of bag._extras) {
+          const s = c && c.type === "element" ? byName.get(c.name) : void 0, v = s ? s.kind.parse(c) : void 0;
+          if (v === void 0) {
+            remaining.push(c);
+            continue;
+          }
+          bag[s.field] = Array.isArray(v) && Array.isArray(bag[s.field]) ? bag[s.field].concat(v) : v;
+        }
+        if (remaining.length)
+          bag._extras = remaining;
+        else
+          delete bag._extras;
+        return bag;
+      }
+      function untype(bag) {
+        if (!bag || typeof bag !== "object")
+          return bag;
+        const out = { ...bag }, typed = [];
+        for (const [name, s] of byName) {
+          if (out[s.field] === void 0)
+            continue;
+          const r = s.kind.render(name, out[s.field]);
+          for (const el of Array.isArray(r) ? r : [r])
+            if (el)
+              typed.push(el);
+          delete out[s.field];
+        }
+        const extras = typed.concat(Array.isArray(out._extras) ? out._extras : []);
+        if (extras.length)
+          out._extras = extras;
+        else
+          delete out._extras;
+        return out;
+      }
+      return {
+        hydrate: (bag) => isPlain(bag) ? props.hydrateLossless(bag, type, untype) : bag,
+        dehydrate: (bag) => isPlain(bag) ? untype(bag) : bag
+      };
+    }
+    const run = bagOf([
+      ["a:solidFill", "color"],
+      ["a:effectLst", "effectLst"],
+      ["a:gradFill", "gradFill"],
+      ["a:highlight", "color"],
+      ["a:latin", "attrs"],
+      ["a:ea", "attrs"],
+      ["a:cs", "attrs"],
+      ["a:sym", "attrs"],
+      ["a:hlinkClick", "attrs"],
+      ["a:hlinkMouseOver", "attrs"],
+      ["a:uFillTx", "flag"],
+      ["a:uLnTx", "flag"],
+      ["a:noFill", "flag"]
+    ]), paragraph = bagOf([
+      ["a:lnSpc", "spacing"],
+      ["a:spcBef", "spacing"],
+      ["a:spcAft", "spacing"],
+      ["a:buClr", "color"],
+      ["a:buSzPct", "num"],
+      ["a:buSzPts", "num"],
+      ["a:buFont", "attrs"],
+      ["a:buClrTx", "flag"],
+      ["a:buSzTx", "flag"],
+      ["a:buFontTx", "flag"],
+      ["a:tabLst", "tabs"]
+    ]), fontKind = bagOf([["a:font", "fonts", "fonts"]]);
+    function hydrateParagraphProperties(pPr) {
+      if (!isPlain(pPr))
+        return pPr;
+      paragraph.hydrate(pPr);
+      if (isPlain(pPr.defRPr))
+        run.hydrate(pPr.defRPr);
+      return pPr;
+    }
+    function dehydrateParagraphProperties(pPr) {
+      if (!isPlain(pPr))
+        return pPr;
+      const out = paragraph.dehydrate(pPr);
+      if (isPlain(out.defRPr))
+        out.defRPr = run.dehydrate(out.defRPr);
+      return out;
+    }
+    const RPR_ATTRS = new Set(["lang", "sz", "b", "i", "strike", "u", "baseline"]), richLatin = (c) => c && c.type === "element" && c.name === "a:latin" && attrKeys(c).some((k) => k !== "typeface");
+    function parseEnd(el) {
+      const latin = (el.children || []).find(richLatin), out = dml.parseRunProperties(latin ? { ...el, children: el.children.filter((c) => c !== latin) } : el, { typedRunColors: !0 }) || {};
+      if (latin)
+        out._extras = [latin, ...out._extras || []];
+      const extraAttrs = {};
+      for (const [k, v] of Object.entries(el.attrs || {}))
+        if (!RPR_ATTRS.has(k))
+          extraAttrs[k] = v;
+      if (Object.keys(extraAttrs).length)
+        out.extraAttrs = extraAttrs;
+      return run.hydrate(out);
+    }
+    function renderEnd(v) {
+      const { extraAttrs, ...rest } = run.dehydrate(v), r = dml.renderRunProperties(rest);
+      return xml.el("a:endParaRPr", { ...r ? r.attrs : {}, ...strAttrs(extraAttrs) }, r ? r.children : []);
+    }
+    function hydrateParagraph(p) {
+      if (!isPlain(p) || !Array.isArray(p._extras) || p.endParaRPr !== void 0)
+        return p;
+      const last = p._extras[p._extras.length - 1];
+      if (!last || last.type !== "element" || last.name !== "a:endParaRPr")
+        return p;
+      if (p._extras.filter((c) => c && c.name === "a:endParaRPr").length !== 1)
+        return p;
+      const v = parseEnd(last);
+      if (!props.sameElement(renderEnd(v), last))
+        return p;
+      p.endParaRPr = v;
+      if (p._extras.length === 1)
+        delete p._extras;
+      else
+        p._extras = p._extras.slice(0, -1);
+      return p;
+    }
+    function dehydrateParagraph(p) {
+      if (!isPlain(p) || p.endParaRPr === void 0)
+        return p;
+      const { endParaRPr, ...out } = p;
+      out._extras = (Array.isArray(out._extras) ? out._extras : []).concat(isPlain(endParaRPr) ? [renderEnd(endParaRPr)] : []);
+      if (!out._extras.length)
+        delete out._extras;
+      return out;
+    }
+    function eachFontKind(theme, fn) {
+      const fs = isPlain(theme) && isPlain(theme.fontScheme) ? theme.fontScheme : null;
+      if (!fs)
+        return;
+      for (const k of ["majorFont", "minorFont"])
+        if (isPlain(fs[k]))
+          fs[k] = fn(fs[k]);
+    }
+    function hydrateTheme(theme) {
+      eachFontKind(theme, fontKind.hydrate);
+      return theme;
+    }
+    function dehydrateTheme(theme) {
+      if (!isPlain(theme) || !isPlain(theme.fontScheme))
+        return theme;
+      const out = { ...theme, fontScheme: { ...theme.fontScheme } };
+      eachFontKind(out, fontKind.dehydrate);
+      return out;
+    }
+    return {
+      hydrateRunProperties: run.hydrate,
+      dehydrateRunProperties: run.dehydrate,
+      hydrateParagraphProperties,
+      dehydrateParagraphProperties,
+      hydrateParagraph,
+      dehydrateParagraph,
+      hydrateTheme,
+      dehydrateTheme
+    };
+  } });
+    __register({ name: "pmlPartDetails", dependencies: ["docxProperties","pmlTransitions","pmlAnimations","pmlNotes"], factory: function(props, transitions, animations, notes) {
+    const isPlain = (v) => !!v && typeof v === "object" && !Array.isArray(v), SPEC = [
+      ["p:transition", "transition", transitions.parseTransition, transitions.renderTransition],
+      ["p:timing", "timing", animations.parseTiming, animations.renderTiming],
+      ["p:hf", "hf", notes.parseHf, notes.renderHf]
+    ], byName = new Map(SPEC.map(([name, field, parse, render]) => [name, { field, parse, render }]));
+    function type(bag) {
+      if (!bag || !Array.isArray(bag._extras))
+        return bag;
+      const remaining = [];
+      for (const c of bag._extras) {
+        const s = c && c.type === "element" ? byName.get(c.name) : void 0, v = s ? s.parse(c) : void 0;
+        if (v === void 0 || v === null) {
+          remaining.push(c);
+          continue;
+        }
+        bag[s.field] = v;
+      }
+      if (remaining.length)
+        bag._extras = remaining;
+      else
+        delete bag._extras;
+      return bag;
+    }
+    function untype(bag) {
+      if (!isPlain(bag))
+        return bag;
+      const out = { ...bag }, typed = [];
+      for (const [, s] of byName) {
+        if (out[s.field] === void 0)
+          continue;
+        const el = isPlain(out[s.field]) ? s.render(out[s.field]) : null;
+        if (el)
+          typed.push(el);
+        delete out[s.field];
+      }
+      const extras = typed.concat(Array.isArray(out._extras) ? out._extras : []);
+      if (extras.length)
+        out._extras = extras;
+      else
+        delete out._extras;
+      return out;
+    }
+    return {
+      hydrateSlidePart: (part) => isPlain(part) ? props.hydrateLossless(part, type, untype) : part,
+      dehydrateSlidePart: untype
+    };
+  } });
+    __register({ name: "pmlPackageParts", dependencies: ["xml","opcPackage","opcRelationships","markupCompatibility","docxProperties","pptxSlide","pptxTheme","ooxmlShared"], factory: function(xml, opc, relsMod, mc, props, slideMod, themeMod, shared) {
+    const { REL_TYPE, CT, decodeText, encodeText } = shared, isPlain = (v) => !!v && typeof v === "object" && !Array.isArray(v), noNs = (el) => ({ ...el, attrs: Object.fromEntries(Object.entries(el.attrs || {}).filter(([k]) => k !== "xmlns" && !k.startsWith("xmlns:") && k !== "mc:Ignorable")) }), same = (a, b) => props.sameElement(noNs(a), noNs(b));
+    function rootOf(parts, name) {
+      const bytes = parts[name];
+      if (!bytes)
+        return null;
+      try {
+        return mc.process(xml.parse(decodeText(bytes)));
+      } catch {
+        return null;
+      }
+    }
+    function hasRRef(node) {
+      if (!node || node.type !== "element")
+        return !1;
+      for (const k of Object.keys(node.attrs || {}))
+        if (k.startsWith("r:"))
+          return !0;
+      return (node.children || []).some(hasRRef);
+    }
+    function readBack(root, parse, render) {
+      if (!root || hasRRef(root))
+        return null;
+      let model;
+      try {
+        model = parse(root);
+      } catch {
+        return null;
+      }
+      return same(xml.parse(render(model)), root) ? model : null;
+    }
+    function relsAre(rels, part, expect) {
+      for (const r of rels[part] || []) {
+        if (r.TargetMode === "External" || !(r.Type in expect))
+          return !1;
+        const want = expect[r.Type];
+        if (want && relsMod.resolveTarget(part, r.Target) !== want)
+          return !1;
+      }
+      return !0;
+    }
+    function themeOf(parts, rels, part) {
+      const list = rels[part] || [], themeRels = list.filter((r) => r.Type === REL_TYPE.THEME);
+      if (themeRels.length !== 1 || list.length !== 1)
+        return null;
+      const tp = relsMod.resolveTarget(part, themeRels[0].Target), root = rootOf(parts, tp);
+      if (!root)
+        return null;
+      let model;
+      try {
+        model = themeMod.parse(parts[tp]);
+      } catch {
+        return null;
+      }
+      return same(xml.parse(themeMod.serialize(model)), root) ? { model, part: tp } : null;
+    }
+    function readLayouts(pres, ctx) {
+      const { parts, rels, masterParts, layoutParts, textOpts } = ctx, masters = pres.slideMasters;
+      if (!Array.isArray(masters) || masters.length !== 1 || masterParts.length !== 1)
+        return;
+      const master = masters[0], masterPart = masterParts[0], ids = Array.isArray(master.layoutIds) ? master.layoutIds : [], mRels = rels[masterPart] || [], entries = ids.map((li) => {
+        const r = mRels.find((x) => x.Id === li.rId);
+        return r && r.Type === REL_TYPE.SLIDE_LAYOUT ? relsMod.resolveTarget(masterPart, r.Target) : null;
+      });
+      if (!entries.length || entries.some((e) => !e || !parts[e]) || new Set(entries).size !== entries.length)
+        return;
+      const used = layoutParts;
+      if (used.some((u) => !entries.includes(u)))
+        return;
+      const read = new Map;
+      for (const e of entries) {
+        if (used.includes(e))
+          continue;
+        if (!relsAre(rels, e, { [REL_TYPE.SLIDE_MASTER]: masterPart }))
+          return;
+        const root = rootOf(parts, e);
+        if (!root || root.name !== "p:sldLayout")
+          return;
+        const model = readBack(root, (r) => slideMod.parseSlideLayout(r, textOpts), slideMod.serializeSlideLayout);
+        if (!model)
+          return;
+        read.set(e, model);
+      }
+      const old = pres.slideLayouts || [];
+      pres.slideLayouts = entries.map((e) => read.has(e) ? read.get(e) : old[used.indexOf(e)]);
+      for (const s of pres.slides || [])
+        if (s && Number.isInteger(s.layoutRef) && used[s.layoutRef])
+          s.layoutRef = entries.indexOf(used[s.layoutRef]);
+      master.layoutIds = ids.map((li, j) => ({ id: li.id, rId: `rId${j + 1}` }));
+      for (const e of read.keys())
+        ctx.consume(e);
+    }
+    function masterEntryPart(ctx, listName, itemName) {
+      const lst = xml.findChild(ctx.presRoot, listName), item = lst && xml.findChild(lst, itemName), rel = item && (ctx.presRels || []).find((r) => r.Id === item.attrs["r:id"]);
+      return rel ? relsMod.resolveTarget(ctx.presPart, rel.Target) : null;
+    }
+    function readMaster(ctx, part, rootName, parse, serialize) {
+      if (!part)
+        return null;
+      const root = rootOf(ctx.parts, part);
+      if (!root || root.name !== rootName)
+        return null;
+      const theme = themeOf(ctx.parts, ctx.rels, part);
+      if (!theme)
+        return null;
+      const model = readBack(root, (r) => parse(r, ctx.textOpts), serialize);
+      if (!model)
+        return null;
+      model.theme = theme.model;
+      ctx.consume(part);
+      ctx.consume(theme.part);
+      return model;
+    }
+    function hydratePackage(pres, ctx) {
+      if (!isPlain(pres) || !ctx)
+        return pres;
+      readLayouts(pres, ctx);
+      const nmPart = masterEntryPart(ctx, "p:notesMasterIdLst", "p:notesMasterId"), nm = readMaster(ctx, nmPart, "p:notesMaster", slideMod.parseNotesMaster, slideMod.serializeNotesMaster);
+      if (nm)
+        pres.notesMaster = nm;
+      const hmPart = masterEntryPart(ctx, "p:handoutMasterIdLst", "p:handoutMasterId"), hm = readMaster(ctx, hmPart, "p:handoutMaster", slideMod.parseHandoutMaster, slideMod.serializeHandoutMaster);
+      if (hm)
+        pres.handoutMaster = hm;
+      (pres.slides || []).forEach((slide, k) => {
+        const slidePart = ctx.slideParts[k];
+        if (!isPlain(slide) || !slidePart)
+          return;
+        const rel = (ctx.rels[slidePart] || []).find((r) => r.Type === REL_TYPE.NOTES_SLIDE);
+        if (!rel)
+          return;
+        const np = relsMod.resolveTarget(slidePart, rel.Target), expect = { [REL_TYPE.SLIDE]: slidePart, [REL_TYPE.NOTES_MASTER]: null };
+        if (!relsAre(ctx.rels, np, expect))
+          return;
+        const root = rootOf(ctx.parts, np);
+        if (!root || root.name !== "p:notes")
+          return;
+        const model = readBack(root, (r) => slideMod.parseNotesSlide(r, ctx.textOpts), slideMod.serializeNotesSlide);
+        if (!model)
+          return;
+        slide.notes = model;
+        ctx.consume(np);
+      });
+      return pres;
+    }
+    const CLR_MAP = {
+      bg1: "lt1",
+      tx1: "dk1",
+      bg2: "lt2",
+      tx2: "dk2",
+      accent1: "accent1",
+      accent2: "accent2",
+      accent3: "accent3",
+      accent4: "accent4",
+      accent5: "accent5",
+      accent6: "accent6",
+      hlink: "hlink",
+      folHlink: "folHlink"
+    };
+    function minimalNotesMaster() {
+      return { type: "notesMaster", shapes: [], clrMap: xml.el("p:clrMap", { ...CLR_MAP }) };
+    }
+    function freeRid(list) {
+      const used = new Set((list || []).map((r) => r.Id));
+      let n = list ? list.length + 1 : 1;
+      while (used.has(`rId${n}`))
+        n++;
+      return `rId${n}`;
+    }
+    function dehydratePackage(pres, ctx) {
+      if (!isPlain(pres) || !ctx || !ctx.package)
+        return pres;
+      const pkg = ctx.package, slides = Array.isArray(pres.slides) ? pres.slides : [], withNotes = [];
+      slides.forEach((s, k) => {
+        if (isPlain(s) && isPlain(s.notes))
+          withNotes.push(k);
+      });
+      let nm = isPlain(pres.notesMaster) ? pres.notesMaster : null;
+      const hm = isPlain(pres.handoutMaster) ? pres.handoutMaster : null;
+      if (withNotes.length && !nm)
+        nm = minimalNotesMaster();
+      if (!nm && !hm)
+        return pres;
+      let themeN = 1;
+      while (pkg.parts[`/ppt/theme/theme${themeN}.xml`])
+        themeN++;
+      function themeTarget(model) {
+        if (!isPlain(model.theme))
+          return "../theme/" + ctx.themePart.split("/").pop();
+        const name = `theme${themeN++}.xml`;
+        opc.setPart(pkg, "/ppt/theme/" + name, themeMod.bytesOf(model.theme), CT.THEME);
+        return "../theme/" + name;
+      }
+      const presRoot = xml.parse(decodeText(pkg.parts[ctx.presPart])), lists = [], presRels = (pkg.rels[ctx.presPart] || []).slice();
+      if (nm) {
+        opc.setPart(pkg, "/ppt/notesMasters/notesMaster1.xml", encodeText(slideMod.serializeNotesMaster(nm)), CT.NOTES_MASTER);
+        opc.setRels(pkg, "/ppt/notesMasters/notesMaster1.xml", [{ Id: "rId1", Type: REL_TYPE.THEME, Target: themeTarget(nm) }]);
+        presRels.push({ Id: "rIdNotesMaster1", Type: REL_TYPE.NOTES_MASTER, Target: "notesMasters/notesMaster1.xml" });
+        lists.push(xml.el("p:notesMasterIdLst", {}, [xml.el("p:notesMasterId", { "r:id": "rIdNotesMaster1" })]));
+      }
+      if (hm) {
+        opc.setPart(pkg, "/ppt/handoutMasters/handoutMaster1.xml", encodeText(slideMod.serializeHandoutMaster(hm)), CT.HANDOUT_MASTER);
+        opc.setRels(pkg, "/ppt/handoutMasters/handoutMaster1.xml", [{ Id: "rId1", Type: REL_TYPE.THEME, Target: themeTarget(hm) }]);
+        presRels.push({ Id: "rIdHandoutMaster1", Type: REL_TYPE.HANDOUT_MASTER, Target: "handoutMasters/handoutMaster1.xml" });
+        lists.push(xml.el("p:handoutMasterIdLst", {}, [xml.el("p:handoutMasterId", { "r:id": "rIdHandoutMaster1" })]));
+      }
+      for (const k of withNotes) {
+        const slidePart = ctx.slideParts[k], path = `/ppt/notesSlides/notesSlide${k + 1}.xml`;
+        opc.setPart(pkg, path, encodeText(slideMod.serializeNotesSlide(slides[k].notes)), CT.NOTES_SLIDE);
+        opc.setRels(pkg, path, [
+          { Id: "rId1", Type: REL_TYPE.NOTES_MASTER, Target: "../notesMasters/notesMaster1.xml" },
+          { Id: "rId2", Type: REL_TYPE.SLIDE, Target: "../slides/" + slidePart.split("/").pop() }
+        ]);
+        const sRels = (pkg.rels[slidePart] || []).slice();
+        sRels.push({ Id: freeRid(sRels), Type: REL_TYPE.NOTES_SLIDE, Target: `../notesSlides/notesSlide${k + 1}.xml` });
+        opc.setRels(pkg, slidePart, sRels);
+      }
+      const kids = presRoot.children.slice(), at = kids.findIndex((c) => c && c.type === "element" && c.name === "p:sldMasterIdLst");
+      kids.splice(at + 1, 0, ...lists);
+      presRoot.children = kids;
+      opc.setPart(pkg, ctx.presPart, encodeText(xml.serialize(presRoot)), CT.PRESENTATION);
+      opc.setRels(pkg, ctx.presPart, presRels);
+      return pres;
+    }
+    return { hydratePackage, dehydratePackage };
+  } });
 
     const __core = __resolve("pptx");
-    __core.use(__resolve("pmlAnimations"), __resolve("pmlTransitions"), __resolve("pmlNotes"), __resolve("pmlLayoutsTyped"), __resolve("dmlChartDataLabels"), __resolve("dmlChartTrendlines"), __resolve("dmlChartAxesAdvanced"), __resolve("dmlChart3d"), __resolve("dmlChartOtherTypes"), __resolve("mathAdvanced"), __resolve("dmlEffects"), __resolve("dmlFillsAdvanced"), __resolve("dmlShapesAdvanced"), __resolve("transitional"), __resolve("legacyVml"), __resolve("pmlMisc"), __resolve("dmlChartMisc"), __resolve("dmlMainMisc"), __resolve("mathMisc"));
+    __core.use(__resolve("pmlAnimations"), __resolve("pmlTransitions"), __resolve("pmlNotes"), __resolve("pmlLayoutsTyped"), __resolve("dmlChartDataLabels"), __resolve("dmlChartTrendlines"), __resolve("dmlChartAxesAdvanced"), __resolve("dmlChart3d"), __resolve("dmlChartOtherTypes"), __resolve("mathAdvanced"), __resolve("dmlEffects"), __resolve("dmlFillsAdvanced"), __resolve("dmlShapesAdvanced"), __resolve("transitional"), __resolve("legacyVml"), __resolve("pmlMisc"), __resolve("dmlChartMisc"), __resolve("dmlMainMisc"), __resolve("mathMisc"), __resolve("dmlTextDetails"), __resolve("pmlPartDetails"), __resolve("pmlPackageParts"));
     return __core;
     }
 };

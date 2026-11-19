@@ -1,0 +1,11 @@
+@awacloud/graphic-anim
+Copyright (c) 2026 AwaCloud SAS
+Author: Matthieu Bouilloux
+
+Licensed under Apache-2.0; see the LICENSE file.
+SPDX-License-Identifier: Apache-2.0
+
+AWACLOUD and AWA are trademarks of Towards Conseil, used under licence.
+
+Third-party components:
+- Robert Penner's easing equations / jQuery Easing v1.3 — Copyright © 2001 Robert Penner; Copyright © 2008 George McGinley Smith — BSD-3-Clause — licence text: third-party/NOTICE-penner-easing

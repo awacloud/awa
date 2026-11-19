@@ -1,0 +1,45 @@
+{
+  "kind": "build",
+  "variant": "fw",
+  "name": "graphic-anim",
+  "package": "@awacloud/graphic-anim",
+  "aggregate": "graphic.anim",
+  "modules": [
+    "graphic.lerp",
+    "graphic.easing",
+    "graphic.units",
+    "graphic.matrix",
+    "graphic.color",
+    "graphic.scopedIds",
+    "graphic.interpolate",
+    "graphic.svgApply",
+    "graphic.svgBuild",
+    "graphic.scheduler",
+    "graphic.tween",
+    "graphic.timeline",
+    "graphic.scene",
+    "graphic.frames"
+  ],
+  "fwDependencies": [
+    "secPolicy",
+    "dom",
+    "interp",
+    "easing",
+    "clock"
+  ],
+  "bytes": {
+    "dev": 54976,
+    "min": 29848
+  },
+  "domBound": true,
+  "workerSafeSlice": [
+    "graphic.lerp",
+    "graphic.easing",
+    "graphic.units",
+    "graphic.matrix",
+    "graphic.color",
+    "graphic.scopedIds",
+    "graphic.interpolate"
+  ],
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

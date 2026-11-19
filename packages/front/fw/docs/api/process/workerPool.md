@@ -52,7 +52,7 @@ Returns a `Promise` resolved with the value of `event.data` from the worker's re
 - If `maxQueue` is reached: throws `'workerPool: queue is full'`.
 - If the signal is already aborted: immediate rejection with `AbortError`.
 
-**Abort behaviour during execution:** if `signal.abort()` is called while a job is already dispatched to a worker, that worker is `terminate()`d immediately (it is impossible to cancel a worker without killing it). If `respawnOnCrash` is active, a replacement is created. The job is rejected with `AbortError`.
+**Abort behaviour during execution:** if `signal.abort()` is called while a job is already dispatched to a worker, that worker is `terminate()`d immediately (it is impossible to cancel a worker without killing it) and the job is rejected with `AbortError`. An abort is not a crash: the slot always gets a replacement worker, whatever `respawnOnCrash` says, so the pool keeps its size and the next job runs. A slot that `resize()` already removed gets none.
 
 ### `pool.resize(n)`
 

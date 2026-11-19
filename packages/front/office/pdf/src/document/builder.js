@@ -16,7 +16,7 @@
  *
  * Example:
  *
- *     const { builder } = pdfBuilder.factory(errors, parserObj, writer);
+ *     const { builder } = pdfBuilder.factory(errors, parserObj, writer, xmp, icc);
  *     const bytes = builder()
  *         .addPage({ mediaBox: [0, 0, 612, 792] })
  *         .addFont({ name: 'F1', baseFont: 'Helvetica', subtype: 'Type1' })
@@ -58,15 +58,60 @@
 import { pdfErrors } from '../errors.js';
 import { pdfParserObj } from '../syntax/parser-obj.js';
 import { pdfWriter } from './writer.js';
+import { pdfXmp } from '../metadata/xmp.js';
+import { pdfSrgbIcc } from '../prepress/srgb-icc.js';
+import { standard14Lookup, encodingLookup } from '@awacloud/fonts';
 
 export const pdfBuilder = {
     name: 'pdfBuilder',
-    dependencies: ['pdfErrors', 'pdfParserObj', 'pdfWriter'],
-    deps: [pdfErrors, pdfParserObj, pdfWriter],
-    factory(errors, parserObjMod, writerMod) {
-        const { RenderError } = errors;
+    dependencies: ['pdfErrors', 'pdfParserObj', 'pdfWriter', 'pdfXmp', 'pdfSrgbIcc', 'standard14Lookup', 'encodingLookup'],
+    deps: [pdfErrors, pdfParserObj, pdfWriter, pdfXmp, pdfSrgbIcc, standard14Lookup, encodingLookup],
+    factory(errors, parserObjMod, writerMod, xmpMod, iccMod, s14Mod, encMod) {
+        const { RenderError, ContractError } = errors;
         const obj = parserObjMod.obj;
         const writeDocument = writerMod.writeDocument;
+
+        // The PDF/A profiles `builder({ pdfA })` writes: the version each
+        // asks and its XMP identification (ISO 19005-4 § 6.7.3, ISO 19005-2
+        // § 6.6.4).
+        const PDFA_PROFILES = Object.freeze({
+            '4': Object.freeze({ version: '2.0', pdfaid: Object.freeze({ part: 4, rev: 2020 }), info: false }),
+            '2b': Object.freeze({ version: '1.7', pdfaid: Object.freeze({ part: 2, conformance: 'B' }), info: true })
+        });
+
+        // The PDF/UA parts `builder({ pdfUA })` writes: the version each asks
+        // and its XMP identification (ISO 14289-1 § 5, ISO 14289-2 § 5).
+        const PDFUA_PARTS = Object.freeze({
+            1: Object.freeze({ version: '1.7', pdfuaid: Object.freeze({ part: 1 }) }),
+            2: Object.freeze({ version: '2.0', pdfuaid: Object.freeze({ part: 2, rev: 2024 }) })
+        });
+
+        /**
+         * The PDF/UA claim of `opts` (`{ part, lang, version, pdfuaid }`), or
+         * null without `pdfUA`. Throws `pdf/builder/bad-pdfua`,
+         * `pdf/builder/pdfua-lang` and `pdf/builder/pdfua-with-pdfa`.
+         */
+        function uaClaimOf(opts) {
+            const part = opts && opts.pdfUA !== undefined ? opts.pdfUA : null;
+            if (part === null) return null;
+            if (part !== 1 && part !== 2) {
+                throw new ContractError('pdf/builder/bad-pdfua',
+                    'builder: opts.pdfUA must be 1 or 2',
+                    { context: { received: typeof part === 'number' ? String(part) : typeof part } });
+            }
+            const lang = opts.lang;
+            if (typeof lang !== 'string' || lang === '') {
+                throw new ContractError('pdf/builder/pdfua-lang',
+                    'builder: opts.lang (the document language, a BCP 47 tag) is required with opts.pdfUA',
+                    { context: { received: typeof lang } });
+            }
+            if (opts.pdfA !== undefined) {
+                throw new ContractError('pdf/builder/pdfua-with-pdfa',
+                    'builder: opts.pdfUA and opts.pdfA are not written together',
+                    { context: { pdfUA: part, pdfA: String(opts.pdfA) } });
+            }
+            return { part, lang, version: PDFUA_PARTS[part].version, pdfuaid: PDFUA_PARTS[part].pdfuaid };
+        }
 
         const te = new TextEncoder();
 
@@ -89,6 +134,65 @@ export const pdfBuilder = {
 
         function numObj(n) {
             return Number.isInteger(n) ? obj.int(n) : obj.real(n);
+        }
+
+        /**
+         * A text string (ISO 32000-2 § 7.9.2.2): the bytes of an ASCII
+         * string, else UTF-16BE behind its byte order mark.
+         */
+        function textObj(s) {
+            if (/^[\x00-\x7f]*$/.test(s)) return obj.string(te.encode(s), 'lit');
+            const out = new Uint8Array(2 + s.length * 2);
+            out[0] = 0xfe; out[1] = 0xff;
+            for (let i = 0; i < s.length; i++) {
+                out[2 + i * 2] = s.charCodeAt(i) >> 8;
+                out[3 + i * 2] = s.charCodeAt(i) & 0xff;
+            }
+            return obj.string(out, 'lit');
+        }
+
+        // A structure type the builder writes: a PDF name of letters and
+        // digits (the standard types and the usual role-mapped ones).
+        const STRUCT_TYPE = /^[A-Za-z][A-Za-z0-9]*$/;
+        // The PDF 2.0 standard structure namespace (ISO 32000-2 § 14.7.4.2).
+        const PDF2_NS = 'http://iso.org/pdf2/ssn';
+
+        /**
+         * The checked properties of `openElement(type, props)`: `alt` and
+         * `lang` strings, `attributes` an array of `{ O, … }` objects whose
+         * values are strings (names), finite numbers or booleans. Throws
+         * `pdf/builder/bad-struct-props`.
+         */
+        function structPropsOf(props) {
+            const bad = (why) => new ContractError('pdf/builder/bad-struct-props',
+                `builder: openElement props: ${why}`, { context: { why } });
+            if (props === undefined) return { alt: null, lang: null, attributes: [] };
+            if (!props || typeof props !== 'object' || Array.isArray(props)) throw bad('not an object');
+            for (const k of ['alt', 'lang']) {
+                if (props[k] !== undefined && typeof props[k] !== 'string') throw bad(`${k} is not a string`);
+            }
+            const attributes = props.attributes === undefined ? [] : props.attributes;
+            if (!Array.isArray(attributes)) throw bad('attributes is not an array');
+            for (const a of attributes) {
+                if (!a || typeof a !== 'object' || typeof a.O !== 'string' || a.O === '') throw bad('an attribute object has no string O');
+                for (const k of Object.keys(a)) {
+                    const v = a[k];
+                    if (typeof v !== 'string' && typeof v !== 'boolean' && !(typeof v === 'number' && Number.isFinite(v))) {
+                        throw bad(`attribute ${k} is not a string, a finite number or a boolean`);
+                    }
+                }
+            }
+            return { alt: props.alt ?? null, lang: props.lang ?? null, attributes };
+        }
+
+        /** An attribute object as a dictionary: strings as names. */
+        function attributeDict(a) {
+            const entries = {};
+            for (const k of Object.keys(a)) {
+                const v = a[k];
+                entries[k] = typeof v === 'string' ? obj.name(v) : typeof v === 'boolean' ? obj.bool(v) : numObj(v);
+            }
+            return obj.dict(entries);
         }
 
         function boxArray(box) {
@@ -148,17 +252,72 @@ export const pdfBuilder = {
             return out;
         }
 
-        function createBuilder() {
+        /**
+         * A new builder. `opts.pdfA` (`'4'` or `'2b'`) makes the document
+         * claim that PDF/A profile: `build()` adds the XMP packet
+         * (`pdfaid` and the `addMetadata` fields) as the catalog's
+         * unfiltered `/Metadata`; under `'4'` no trailer Info is written and
+         * the version is 2.0; under `'2b'` the Info is kept, the version is
+         * 1.7 and a trailer `/ID` is written (`setId`'s, else derived). The
+         * catalog gets a GTS_PDFA1 output intent: the first-party sRGB
+         * profile, or `opts.outputIntent` (`{ profile, components,
+         * identifier, info? }`).
+         */
+        /**
+         * The output intent of a PDF/A builder: `opts.outputIntent`
+         * checked, else the first-party sRGB profile; null without a PDF/A
+         * profile. Throws `pdf/builder/bad-output-intent`.
+         */
+        function outputIntentOf(opts, profile) {
+            const given = opts && Object.prototype.hasOwnProperty.call(opts, 'outputIntent') ? opts.outputIntent : undefined;
+            if (given === undefined) {
+                if (!profile) return null;
+                return { profile: iccMod.buildSrgbIcc(), components: iccMod.SRGB_ICC_N, identifier: iccMod.SRGB_CONDITION,
+                    info: iccMod.SRGB_CONDITION, registry: 'http://www.color.org' };
+            }
+            const ok = profile && given && typeof given === 'object'
+                && given.profile instanceof Uint8Array && given.profile.length > 0
+                && [1, 3, 4].includes(given.components)
+                && typeof given.identifier === 'string' && given.identifier !== ''
+                && (given.info === undefined || typeof given.info === 'string');
+            if (!ok) {
+                throw new ContractError('pdf/builder/bad-output-intent',
+                    'builder: opts.outputIntent must be { profile: Uint8Array, components: 1 | 3 | 4, identifier: string, info?: string }, with opts.pdfA',
+                    { context: { pdfA: profile ? 'set' : 'absent' } });
+            }
+            return { profile: given.profile, components: given.components, identifier: given.identifier, info: given.info };
+        }
+
+        function createBuilder(opts) {
+            const pdfA = opts && opts.pdfA !== undefined ? opts.pdfA : null;
+            if (pdfA !== null && (typeof pdfA !== 'string' || !Object.prototype.hasOwnProperty.call(PDFA_PROFILES, pdfA))) {
+                throw new ContractError('pdf/builder/bad-pdfa',
+                    "builder: opts.pdfA must be '4' or '2b'",
+                    { context: { received: typeof pdfA === 'string' ? pdfA : typeof pdfA } });
+            }
+            const profile = pdfA !== null ? PDFA_PROFILES[pdfA] : null;
+            const outputIntent = outputIntentOf(opts, profile);
+            const ua = uaClaimOf(opts);
+            // The standard the document claims, for the version, the fonts
+            // and the trailer /ID.
+            const claim = profile ? { name: `PDF/A-${pdfA}`, version: profile.version, versionCode: 'pdf/builder/pdfa-version' }
+                : ua ? { name: `PDF/UA-${ua.part}`, version: ua.version, versionCode: 'pdf/builder/pdfua-version' } : null;
             // Local mutable state — held in closure.
             let nextNum = 1;
             const indirects = [];                  // [{ num, gen, value }]
             const pageRecords = [];                // [{ num, page-state }]
             const embedNums = new WeakMap();       // embed result -> { num }
             const stdFontNums = new Map();         // baseFont|subtype|encoding -> num
+            const unembedded = new Set();          // baseFont of every font with no program
             let currentPage = null;
-            let version = '2.0';
+            let version = claim ? claim.version : '2.0';
             let docId = null;                      // [Uint8Array, Uint8Array]
             const metadata = {};                   // raw user metadata
+            // The logical structure: the top elements and the open ones.
+            // An element is { type, alt, lang, attributes, kids, num }, a
+            // kid an element or { mcid, page }.
+            const structTop = [];
+            const structOpen = [];
 
             function alloc() { return nextNum++; }
 
@@ -181,7 +340,8 @@ export const pdfBuilder = {
                     fonts:     {},               // name -> font ref { num, gen }
                     xobjects:  {},               // name -> xobject ref { num, gen }
                     extraResources: o.resources || null,
-                    contents:  []                // [num, ...]
+                    contents:  [],               // [num, ...]
+                    marked:    []                // the element of each MCID
                 };
                 pageRecords.push(rec);
                 currentPage = rec;
@@ -205,6 +365,56 @@ export const pdfBuilder = {
             }
 
             // ----------------------------------------------------------
+            // Logical structure (tagged content)
+            // ----------------------------------------------------------
+
+            function noOpenElement(what) {
+                return new ContractError('pdf/builder/no-open-element',
+                    `builder: ${what} needs an open structure element (openElement)`);
+            }
+
+            /**
+             * Open a structure element of `type` under the open one (at the
+             * top when none is open). `props`: `alt`, `lang`, `attributes`.
+             */
+            function openElement(type, props) {
+                if (typeof type !== 'string' || !STRUCT_TYPE.test(type)) {
+                    throw new ContractError('pdf/builder/bad-struct-type',
+                        'builder: openElement type must be a name of letters and digits',
+                        { context: { received: typeof type === 'string' ? type : typeof type } });
+                }
+                const el = { type, ...structPropsOf(props), kids: [], num: 0 };
+                if (structOpen.length > 0) structOpen[structOpen.length - 1].kids.push(el);
+                else structTop.push(el);
+                structOpen.push(el);
+                return api;
+            }
+
+            /**
+             * The current page's next MCID, made the open element's next
+             * kid. The caller writes the marked-content sequence.
+             */
+            function markContent() {
+                if (!currentPage) {
+                    throw new RenderError('pdf/builder/no-page',
+                        'markContent requires a page (call addPage first)');
+                }
+                if (structOpen.length === 0) throw noOpenElement('markContent');
+                const el = structOpen[structOpen.length - 1];
+                const mcid = currentPage.marked.length;
+                currentPage.marked.push(el);
+                el.kids.push({ mcid, page: currentPage });
+                return mcid;
+            }
+
+            /** Close the open structure element. */
+            function closeElement() {
+                if (structOpen.length === 0) throw noOpenElement('closeElement');
+                structOpen.pop();
+                return api;
+            }
+
+            // ----------------------------------------------------------
             // Fonts (simple Type1/TrueType registration in Resources)
             // ----------------------------------------------------------
 
@@ -223,7 +433,8 @@ export const pdfBuilder = {
             const stdDescNums = new Map();         // baseFont -> descriptor num
 
             /**
-             * The opt-in `standard14` metrics of a legacy registration: the
+             * The `standard14` metrics of a legacy registration (by default
+             * since 2.0.0, the factory's own lookups; `addFont` below): the
              * `@awacloud/fonts` `standard14Lookup` API (as `pdfFont.typeFont`
              * takes it). PDF 2.0 requires `FirstChar`, `LastChar`, `Widths`
              * and `FontDescriptor` for every simple font, the Standard 14
@@ -319,11 +530,14 @@ export const pdfBuilder = {
                 if (cached) return cached.num;
 
                 // (1) font-program stream — /Length1 is the UNCOMPRESSED length
-                //     (nothing is filtered here, so it equals the byte length).
+                //     (nothing is filtered here, so it equals the byte length),
+                //     a key of FontFile and FontFile2 only (ISO 32000-2
+                //     Table 125); a FontFile3 stream names its /Subtype.
                 const fileKey = typeof embedded.fontFileKey === 'string'
                     ? embedded.fontFileKey : 'FontFile2';
-                const fileDict = { Length1: obj.int(embedded.fontFile.length) };
-                if (fileKey === 'FontFile3') fileDict.Subtype = obj.name('OpenType');
+                const fileDict = fileKey === 'FontFile3'
+                    ? { Subtype: obj.name('OpenType') }
+                    : { Length1: obj.int(embedded.fontFile.length) };
                 const fileNum = alloc();
                 pushIndirect(fileNum, obj.stream(obj.dict(fileDict), embedded.fontFile));
 
@@ -370,7 +584,12 @@ export const pdfBuilder = {
              * @param {{ name: string, baseFont?: string, subtype?: string,
              *           encoding?: string, embedded?: object, standard14?: object,
              *           encodings?: object }} spec `standard14` / `encodings`:
-             *   the opt-in Standard 14 metrics (`standard14Entries`).
+             *   the Standard 14 metrics (`standard14Entries`). Absent, a
+             *   Standard 14 Type1 face takes the factory's own lookups
+             *   (fonts' `standard14Lookup` and `encodingLookup`, since
+             *   2.0.0) — Symbol and ZapfDingbats only without an
+             *   `encoding`; `standard14: false`, or a factory composed
+             *   without the lookups, writes the legacy dictionary.
              * @returns {object} the builder api (chainable)
              */
             function addFont(spec) {
@@ -417,11 +636,22 @@ export const pdfBuilder = {
                     if (spec.encoding !== undefined) {
                         fontEntries.Encoding = obj.name(spec.encoding);
                     }
-                    // Opt-in metrics; `undefined` = absent: the legacy bytes.
-                    const metrics = spec.standard14 !== undefined
-                        ? standard14Entries(spec, subtype) : null;
+                    // The metrics: the caller's lookup, else the factory's
+                    // for a Standard 14 face (since 2.0.0); `false` the
+                    // legacy bytes.
+                    let lookup = spec.standard14;
+                    let encodings = spec.encodings;
+                    const base = String(spec.baseFont);
+                    if (lookup === undefined && s14Mod && subtype === 'Type1' && s14Mod.isStandard14(base)
+                            && !(SYMBOLIC14.includes(base) && spec.encoding !== undefined)) {
+                        lookup = s14Mod;
+                        if (encodings === undefined && spec.encoding !== 'WinAnsiEncoding') encodings = encMod;
+                    }
+                    const metrics = lookup !== undefined && lookup !== false
+                        ? standard14Entries({ ...spec, standard14: lookup, encodings }, subtype) : null;
                     const key = String(spec.baseFont) + '\0' + subtype
                         + '\0' + (spec.encoding ?? '') + (metrics ? '\0standard14' : '');
+                    unembedded.add(String(spec.baseFont));
                     num = stdFontNums.get(key);
                     if (num === undefined) {
                         if (metrics) Object.assign(fontEntries, metrics);
@@ -563,6 +793,11 @@ export const pdfBuilder = {
                         'version must look like "x.y"',
                         { context: { version: v } });
                 }
+                if (claim && v !== claim.version) {
+                    throw new ContractError(claim.versionCode,
+                        `builder: ${claim.name} is written as version ${claim.version}`,
+                        { context: { version: v, claim: claim.name } });
+                }
                 version = v;
                 return api;
             }
@@ -586,6 +821,7 @@ export const pdfBuilder = {
                 };
                 if (rec.cropBox) entries.CropBox = boxArray(rec.cropBox);
                 if (rec.rotate !== null) entries.Rotate = obj.int(rec.rotate);
+                if (rec.structParents !== undefined) entries.StructParents = obj.int(rec.structParents);
 
                 // Resources
                 const resEntries = {};
@@ -646,15 +882,104 @@ export const pdfBuilder = {
                 return obj.dict(e);
             }
 
+            /** The page of an element's first marked content, its own or a descendant's. */
+            function firstPageOf(el) {
+                for (const kid of el.kids) {
+                    if (kid.page) return kid.page;
+                    const page = firstPageOf(kid);
+                    if (page) return page;
+                }
+                return null;
+            }
+
+            /**
+             * Write the structure tree (ISO 32000-2 § 14.7): the elements,
+             * the ParentTree, the root, the pages' StructParents. Returns
+             * the root's object number; call before the pages are written.
+             */
+            function writeStructure() {
+                let key = 0;
+                for (const rec of pageRecords) {
+                    if (rec.marked.length > 0) rec.structParents = key++;
+                }
+                const rootNum = alloc();
+                let nsRef = null;
+                if (ua && ua.part === 2) {
+                    const nsNum = alloc();
+                    pushIndirect(nsNum, obj.dict({ Type: obj.name('Namespace'), NS: strObj(PDF2_NS) }));
+                    nsRef = obj.ref(nsNum, 0);
+                }
+                const number = (el) => {
+                    el.num = alloc();
+                    for (const kid of el.kids) if (!kid.page) number(kid);
+                };
+                structTop.forEach(number);
+                const one = (items) => (items.length === 1 ? items[0] : obj.array(items));
+                const write = (el, parentNum) => {
+                    const page = firstPageOf(el);
+                    const entries = { Type: obj.name('StructElem'), S: obj.name(el.type), P: obj.ref(parentNum, 0) };
+                    if (page) entries.Pg = obj.ref(page.num, 0);
+                    const kids = el.kids.map((kid) => {
+                        if (!kid.page) return obj.ref(kid.num, 0);
+                        if (kid.page === page) return obj.int(kid.mcid);
+                        return obj.dict({ Type: obj.name('MCR'), Pg: obj.ref(kid.page.num, 0), MCID: obj.int(kid.mcid) });
+                    });
+                    if (kids.length > 0) entries.K = one(kids);
+                    if (el.alt !== null) entries.Alt = textObj(el.alt);
+                    if (el.lang !== null) entries.Lang = textObj(el.lang);
+                    if (el.attributes.length > 0) entries.A = one(el.attributes.map(attributeDict));
+                    if (nsRef) entries.NS = nsRef;
+                    pushIndirect(el.num, obj.dict(entries));
+                    for (const kid of el.kids) if (!kid.page) write(kid, el.num);
+                };
+                for (const el of structTop) write(el, rootNum);
+                const nums = [];
+                for (const rec of pageRecords) {
+                    if (rec.structParents === undefined) continue;
+                    nums.push(obj.int(rec.structParents), obj.array(rec.marked.map((el) => obj.ref(el.num, 0))));
+                }
+                const parentTreeNum = alloc();
+                pushIndirect(parentTreeNum, obj.dict({ Nums: obj.array(nums) }));
+                const root = {
+                    Type: obj.name('StructTreeRoot'),
+                    K: one(structTop.map((el) => obj.ref(el.num, 0))),
+                    ParentTree: obj.ref(parentTreeNum, 0),
+                    ParentTreeNextKey: obj.int(key)
+                };
+                if (nsRef) root.Namespaces = obj.array([nsRef]);
+                pushIndirect(rootNum, obj.dict(root));
+                return rootNum;
+            }
+
             function build() {
                 if (pageRecords.length === 0) {
                     throw new RenderError('pdf/builder/no-pages',
                         'build requires at least one page');
                 }
+                if (structOpen.length > 0) {
+                    throw new ContractError('pdf/builder/open-element',
+                        `builder: build() with the structure element ${structOpen[structOpen.length - 1].type} still open`,
+                        { context: { open: structOpen.map((el) => el.type) } });
+                }
+                // PDF/A and PDF/UA embed every font program (ISO 19005-2
+                // § 6.2.11.4.1, ISO 19005-4 § 6.2.10.4.1, ISO 14289-1 § 7.21.4.1).
+                if (claim && unembedded.size > 0) {
+                    throw new ContractError('pdf/builder/pdfa-font-not-embedded',
+                        `builder: ${claim.name} embeds every font; ${[...unembedded].join(', ')} has no program`,
+                        { context: { claim: claim.name, fonts: [...unembedded] } });
+                }
+                // PDF/UA displays the document title (ISO 14289-1 § 7.1).
+                if (ua && (typeof metadata.Title !== 'string' || metadata.Title === '')) {
+                    throw new ContractError('pdf/builder/pdfua-title',
+                        `builder: ${claim.name} needs a Title (addMetadata)`,
+                        { context: { claim: claim.name } });
+                }
 
                 // Reserve numbers for Catalog + Pages so refs work.
                 const catalogNum = alloc();
                 const pagesNum   = alloc();
+                // The structure tree first: it numbers the pages' StructParents.
+                const structRootNum = structTop.length > 0 ? writeStructure() : 0;
 
                 // Build page objects (uses reserved pagesNum as Parent).
                 const kidsRefs = [];
@@ -663,11 +988,55 @@ export const pdfBuilder = {
                     kidsRefs.push(obj.ref(rec.num, 0));
                 }
 
-                // Catalog.
-                pushIndirect(catalogNum, obj.dict({
+                // Catalog, with the XMP packet of a PDF/A profile.
+                const catalog = {
                     Type:  obj.name('Catalog'),
                     Pages: obj.ref(pagesNum, 0)
-                }));
+                };
+                if (profile) {
+                    const xmp = xmpMod.packet({ pdfaid: profile.pdfaid, info: metadata });
+                    const metadataNum = alloc();
+                    pushIndirect(metadataNum, obj.stream(obj.dict({
+                        Type:    obj.name('Metadata'),
+                        Subtype: obj.name('XML'),
+                        Length:  obj.int(xmp.length)
+                    }), xmp));
+                    catalog.Metadata = obj.ref(metadataNum, 0);
+                    const iccNum = alloc();
+                    pushIndirect(iccNum, obj.stream(obj.dict({
+                        N:      obj.int(outputIntent.components),
+                        Length: obj.int(outputIntent.profile.length)
+                    }), outputIntent.profile));
+                    const intent = {
+                        Type: obj.name('OutputIntent'),
+                        S:    obj.name('GTS_PDFA1'),
+                        OutputConditionIdentifier: strObj(outputIntent.identifier)
+                    };
+                    if (outputIntent.info) intent.Info = strObj(outputIntent.info);
+                    if (outputIntent.registry) intent.RegistryName = strObj(outputIntent.registry);
+                    intent.DestOutputProfile = obj.ref(iccNum, 0);
+                    const intentNum = alloc();
+                    pushIndirect(intentNum, obj.dict(intent));
+                    catalog.OutputIntents = obj.array([obj.ref(intentNum, 0)]);
+                }
+                if (ua) {
+                    const xmp = xmpMod.packet({ pdfuaid: ua.pdfuaid, info: metadata });
+                    const metadataNum = alloc();
+                    pushIndirect(metadataNum, obj.stream(obj.dict({
+                        Type:    obj.name('Metadata'),
+                        Subtype: obj.name('XML'),
+                        Length:  obj.int(xmp.length)
+                    }), xmp));
+                    catalog.Metadata = obj.ref(metadataNum, 0);
+                    catalog.MarkInfo = obj.dict({ Marked: obj.bool(true) });
+                    catalog.Lang = strObj(ua.lang);
+                    catalog.ViewerPreferences = obj.dict({ DisplayDocTitle: obj.bool(true) });
+                }
+                if (structRootNum) {
+                    catalog.MarkInfo = obj.dict({ Marked: obj.bool(true) });
+                    catalog.StructTreeRoot = obj.ref(structRootNum, 0);
+                }
+                pushIndirect(catalogNum, obj.dict(catalog));
 
                 // Pages tree node.
                 pushIndirect(pagesNum, obj.dict({
@@ -676,9 +1045,9 @@ export const pdfBuilder = {
                     Count: obj.int(pageRecords.length)
                 }));
 
-                // Info dict (optional).
+                // Info dict (optional; none under PDF/A-4, whose XMP holds it).
                 let infoRef = null;
-                const infoDict = buildInfoDict();
+                const infoDict = profile && !profile.info ? null : buildInfoDict();
                 if (infoDict) {
                     const infoNum = alloc();
                     pushIndirect(infoNum, infoDict);
@@ -692,12 +1061,14 @@ export const pdfBuilder = {
                 };
                 if (infoRef) writeOpts.info = infoRef;
                 if (docId)   writeOpts.id = docId;
+                else if (claim) writeOpts.deriveId = true;
 
                 return writeDocument(writeOpts);
             }
 
             const api = {
                 addPage, addContent, addFont, addImage, addMetadata,
+                openElement, markContent, closeElement,
                 setVersion, setId, build
             };
             return api;

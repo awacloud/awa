@@ -25,7 +25,7 @@ API (`Uint8Array`):
 - `encrypt(key, nonce, plaintext, aad?)` → `{ ct, tag }` (16-byte
   tag), or `false` if key/nonce has the wrong size.
 - `decrypt(key, nonce, ciphertext, tag, aad?)` → `Uint8Array` (plaintext)
-  or `false` if tag verification fails (`console.error CORRUPT`).
+  or `false` if tag verification fails (`console.warn CORRUPT`).
 
 Internal construction (RFC 8439 §2.8.1):
 1. `polyKey = ChaCha20(key, nonce, 0×64)[0..31]` — counter=0 block.
@@ -72,7 +72,7 @@ Internal construction (RFC 8439 §2.8.1):
       (see poly1305.acvp.md; accumulated XOR).
 - [x] **key/nonce/tag length validation** — early return false;
       negative tests.
-- [x] **No `throw`** — `console.error CORRUPT` + `return false`
+- [x] **No `throw`** — `console.warn CORRUPT` + `return false`
       on tag mismatch (reviewed lines 80-85).
 - [ ] **XChaCha20-Poly1305 (192-bit nonce)** — not implemented
       (draft-irtf-cfrg-xchacha). **P3**.
@@ -80,7 +80,7 @@ Internal construction (RFC 8439 §2.8.1):
       ~2⁶⁴ ChaCha20 blocks per (key, nonce) pair. No runtime guard;
       caller's responsibility. **P3** — could be added as a
       counter.
-- [x] **Nonce-reuse detection** — **Iteration G2**: `nonceTracker(key)`
+- [x] **Nonce-reuse detection** — `nonceTracker(key)`
       exposed (symmetric pattern to `mode/gcm.js:258`). Wraps `encrypt` /
       `decrypt` with a `Set` of seen nonces, reuse → `console.error('[crypto]
       CORRUPT: chacha20poly1305: nonce reuse rejected by tracker')` + `false`.
@@ -97,18 +97,18 @@ Internal construction (RFC 8439 §2.8.1):
 | Length-encoding binding | ✅ | ct length tampering rejected |
 | Constant-time tag verify | ✅ | delegated to poly1305.verify |
 | No `throw` | ✅ | `console.error` + return false |
-| Nonce-reuse protection | ✅ (opt-in) | **Iteration G2**: `nonceTracker(key)` wraps encrypt/decrypt with a Set of nonces, reuse → `false` + `CORRUPT` warn |
+| Nonce-reuse protection | ✅ (opt-in) | `nonceTracker(key)` wraps encrypt/decrypt with a Set of nonces, reuse → `false` + `CORRUPT` warn |
 
 ## Known limitations
 
 - **Outside NIST scope** — no ACVP vector. Validation = RFC 8439.
 - **No XChaCha20-Poly1305**: see P3 above.
-- ~~**No nonce-reuse tracker**~~ — resolved in G2 (see above).
+- ~~**No nonce-reuse tracker**~~ — resolved (see above).
 
 ## Cross-references
 
 - Module: [`mode/chacha20poly1305.js`](./chacha20poly1305.js)
-- Tests: [`mode/chacha20poly1305.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/chacha20poly1305.test.js) — **23 tests** (including the 5 added in G2: `nonceTracker` opt-in — first-encrypt / reuse rejected / distinct nonces / decrypt does not increment the set / per-wrapper scope; was 6 before the upgrade)
+- Tests: [`mode/chacha20poly1305.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/chacha20poly1305.test.js) — **23 tests** (including 5 for `nonceTracker` opt-in — first-encrypt / reuse rejected / distinct nonces / decrypt does not increment the set / per-wrapper scope; was 6 before the upgrade)
 - RFC 8439: [`https://datatracker.ietf.org/doc/html/rfc8439`](https://datatracker.ietf.org/doc/html/rfc8439)
 - Stream cipher: [`../cipher/chacha20.js`](../cipher/chacha20.js) — see [chacha20.acvp.md](../cipher/chacha20.acvp.md)
 - MAC: [`../hash/poly1305.js`](../hash/poly1305.js) — see [poly1305.acvp.md](../hash/poly1305.acvp.md)

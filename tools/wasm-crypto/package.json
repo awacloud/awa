@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/tool-wasm-crypto",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "description": "Build tool that compiles and verifies the WebAssembly crypto modules used by @awacloud/fw, from each package's own C sources, validated against pinned test vectors and checked into the repo as committed bytes.",
   "private": true,

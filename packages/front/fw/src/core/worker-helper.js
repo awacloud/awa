@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -18,6 +18,13 @@
  *    run the user-supplied `terminate` callback) before delegating to the native
  *    `terminate`.
  *
+ * **Confinement** (`revoke`, `lockdown`): after `workerFw` has built the
+ * context and before the user function runs, the named globals are removed
+ * from every owner on the global's prototype chain, then `lockdown()` freezes
+ * the worker's realm. What `workerFw` resolved is the explicit grant; the user
+ * function meets the confined realm. `lockdown` makes the worker a MODULE
+ * worker: a static `import` of `sanity/lockdown.js` runs before the body, so no
+ * top-level await delays the message handler.
  */
 
 /**
@@ -37,6 +44,16 @@
  *   `workerFw` as its third parameter. Must be JSON-serialisable.
  * @property {Function}  [terminate]        - Callback invoked during cleanup, just
  *   before the native `Worker.terminate()` call. Defaults to a no-op.
+ * @property {string[]}  [revoke]           - Global names to remove inside the
+ *   worker before `workerFn` runs (e.g. `['fetch', 'XMLHttpRequest',
+ *   'WebSocket']`), from every object of the global's prototype chain that owns
+ *   them. A name still reachable afterwards throws in the worker (its `error`
+ *   event): confinement fails closed.
+ * @property {boolean|{url: string}} [lockdown] - Run `lockdown()` inside the
+ *   worker before `workerFn` (after `revoke`). `true` imports the
+ *   `sanity/lockdown.js` that sits next to this file; `{ url }` names it by an
+ *   absolute URL (a bundled or re-hosted build). The worker becomes a module
+ *   worker, where `importScripts` does not exist.
  */
 
 /**
@@ -91,6 +108,59 @@ export function createWorkerRuntime(ENV, runtime, runtimeSource, log, logFn) {
     const FW_TYPE_LOG = 'log';
 
     const DEFAULT_WORKER_MODULES = [];
+
+    /** A global name `revoke` accepts. */
+    const IDENT_RE = /^[A-Za-z_$][\w$]*$/;
+
+    /**
+     * Worker-side: remove each name from every owner on the global's
+     * prototype chain, then require it to be gone. Stringified into the worker
+     * code, so it is self-contained.
+     *
+     * @param {string[]} names
+     * @returns {void}
+     */
+    const REVOKE_GLOBALS = function(names) {
+        for (const name of names) {
+            for (let o = globalThis; o; o = Object.getPrototypeOf(o)) {
+                if (Object.prototype.hasOwnProperty.call(o, name)) {
+                    try { delete o[name]; } catch (_e) { /* reported below */ }
+                }
+            }
+            if (name in globalThis) throw new Error('createWorker: could not revoke "' + name + '"');
+        }
+    };
+
+    /**
+     * Validate the confinement options on the main thread.
+     *
+     * @param {Object} opts - The caller's options.
+     * @returns {{revoke: string[], lockdownUrl: (string|null)}}
+     * @throws {TypeError} on a malformed `revoke` or `lockdown`.
+     */
+    const confinementOf = function(opts) {
+        let revoke = [];
+        if (opts.revoke !== undefined) {
+            if (!Array.isArray(opts.revoke) || !opts.revoke.every((n) => typeof n === 'string' && IDENT_RE.test(n))) {
+                throw new TypeError('createWorker: revoke must be an array of global names');
+            }
+            revoke = opts.revoke.slice();
+        }
+        let lockdownUrl = null;
+        const l = opts.lockdown;
+        if (l === true) {
+            lockdownUrl = new URL('../sanity/lockdown.js', import.meta.url).href;
+        } else if (l && typeof l === 'object') {
+            try {
+                lockdownUrl = new URL(String(l.url)).href;
+            } catch (e) {
+                throw new TypeError('createWorker: lockdown.url must be an absolute URL', { cause: e });
+            }
+        } else if (l !== undefined && l !== false) {
+            throw new TypeError('createWorker: lockdown must be true, false or { url }');
+        }
+        return { revoke, lockdownUrl };
+    };
 
     /**
      * Default worker-side framework bootstrap.
@@ -184,10 +254,11 @@ export function createWorkerRuntime(ENV, runtime, runtimeSource, log, logFn) {
             args: Array.isArray(safeOptions.args) ? safeOptions.args : [],
             terminate: typeof safeOptions.terminate === 'function' ? safeOptions.terminate : function(){},
         };
+        const confine = confinementOf(safeOptions);
 
         const serialized = runtime.serialize(normalizedOptions.dependencies);
         const argsRaw = JSON.stringify(normalizedOptions.args);
-        const logger = ENV.LOG ? `(${logFn})(${ENV.DEV.toString()}, self);` : ``;
+        const logger = ENV.LOG ? `(${logFn})(${ENV.DEV === true}, self);` : ``;
 
         // Specs exposed to workerFw: use the user's **original** specs
         // (`normalizedOptions.dependencies`) rather than `serialized.list`,
@@ -199,7 +270,13 @@ export function createWorkerRuntime(ENV, runtime, runtimeSource, log, logFn) {
         // on the worker side works correctly.
         const exposedSpecsLiteral = JSON.stringify(normalizedOptions.dependencies);
 
-        const code = logger + `
+        const lockImport = confine.lockdownUrl
+            ? `import { lockdown as __fwLockdown } from ${JSON.stringify(confine.lockdownUrl)};\n`
+            : '';
+        const confineCode = (confine.revoke.length ? `(${REVOKE_GLOBALS.toString()})(${JSON.stringify(confine.revoke)});` : '')
+            + (confine.lockdownUrl ? '__fwLockdown();' : '');
+
+        const code = lockImport + logger + `
             ${runtimeSource}
 
             const runtime = new ModuleRuntime();
@@ -210,13 +287,15 @@ export function createWorkerRuntime(ENV, runtime, runtimeSource, log, logFn) {
 
             runtime.context = (${normalizedOptions.workerFw.toString()})(runtime, ${exposedSpecsLiteral}, ${argsRaw});
 
+            ${confineCode}
+
             (${workerFn.toString()})( runtime.context );
         `;
 
         const blobUrl = URL.createObjectURL(new Blob([code], {type: 'text/javascript'}));
         let worker;
         try {
-            worker = new Worker(blobUrl);
+            worker = confine.lockdownUrl ? new Worker(blobUrl, { type: 'module' }) : new Worker(blobUrl);
         } catch (err) {
             URL.revokeObjectURL(blobUrl);
             throw err;

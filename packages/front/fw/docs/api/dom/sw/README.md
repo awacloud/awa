@@ -8,8 +8,8 @@ Service Worker lifecycle + Cache API.
 | [cache](./cache.md) | `{open, delete, has, keys, match}` | none | Cache API wrapper |
 | [installPrompt](./installPrompt.md) | `{install, launchQueue}` | none | PWA install prompt deferral + File Handling launch queue |
 | [precache](./precache.md) | `{create, DEFAULT_MESSAGES}` | `cache` | Worker-side release precache + cache-first / network-first strategies |
+| [push](./push.md) | `{subscribe, unsubscribe, current, permission, support}` | `serviceWorker`, `b64` | PushManager wrapper — VAPID subscription, permission |
 | [serviceWorker](./serviceWorker.md) | `{register, unregister, ready, update, onUpdate, postMessage, onMessage, controller, isSupported}` | none | SW lifecycle (window-side) |
-| [push](./push.md) | `{subscribe, unsubscribe, current, permission, support}` | `serviceWorker`, `b64` | PushManager wrapper — VAPID subscription, subscription, permission |
 | [sharedWorker](./sharedWorker.md) | `{create, support}` | `processRPC` | SharedWorker cross-tab connection + bidirectional RPC |
 | [swUpdate](./swUpdate.md) | `{create, DEFAULT_MESSAGES}` | `serviceWorker` | Waiting-release update flow: report once, check, apply, version |
 

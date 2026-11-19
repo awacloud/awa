@@ -44,7 +44,9 @@
     "legacyVml",
     "wmlMisc",
     "mathMisc",
-    "dmlMainMisc"
+    "dmlMainMisc",
+    "wmlStyleDetails",
+    "wmlDocumentDetails"
   ],
   "fwDependencies": [
     "xml",
@@ -56,8 +58,8 @@
     "crc32"
   ],
   "bytes": {
-    "dev": 663692,
-    "min": 397657
+    "dev": 694300,
+    "min": 414633
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

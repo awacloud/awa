@@ -13,13 +13,13 @@ status: complete
 
 **Module** `argon2` | **Source** `packages/front/fw/src/crypto/hash/argon2.js` | **Deps** `blake2b` | **Worker-safe** yes
 
-NIST/IETF/OWASP selection for password storage. RFC 9106 §4 mandates Argon2id (d/i hybrid). `hashD` (Argon2d) and `hashI` (Argon2i) are exposed but return `false` + typed warning.
+NIST/IETF/OWASP selection for password storage. RFC 9106 §4 mandates Argon2id (d/i hybrid); Argon2d and Argon2i are not offered.
 
 ## Resolve
 
 ```js
 const argon2 = runtime.resolve('argon2');
-// Returns: { hash, hashD, hashI, _internal }
+// Returns: { hash }
 ```
 
 ## API
@@ -27,9 +27,7 @@ const argon2 = runtime.resolve('argon2');
 | Method | Signature | Returns |
 |---------|-----------|---------|
 | `hash(opts)` | `({password, salt, time, memory, parallelism, tagLen, secret?, ad?}) => Uint8Array \| false` | Argon2id tag |
-| `hashD()` | `() => false` | **UNSAFE reject** (cache-timing) |
-| `hashI()` | `() => false` | **DEPRECATED reject** (Alwen-Blocki 2016) |
-| `_internal.{Hp, compress}` | — | Test/debug primitives |
+| `internalOf(argon2).{Hp, compress}` | — | Test/debug primitives |
 
 ### Options `hash`
 
@@ -57,13 +55,6 @@ const tag = argon2.hash({
     time: 3, memory: 47104, parallelism: 1, tagLen: 32
 });
 // Store (tag, salt) in the database; rehash at login to verify.
-```
-
-### Argon2d / Argon2i rejected
-
-```js
-argon2.hashD();   // false + console.warn('UNSAFE: Argon2d cache-timing')
-argon2.hashI();   // false + console.warn('DEPRECATED: Argon2i Alwen-Blocki 2016')
 ```
 
 ## Worker Usage

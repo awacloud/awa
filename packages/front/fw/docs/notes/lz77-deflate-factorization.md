@@ -65,19 +65,19 @@ Until then, keep the duplication as an accepted trade-off.
 ## Outcome
 
 - **Prerequisite 1 fulfilled.** `lz77.encode`/`encodeTokens` gained
-  additive `hashFn`, `start` and `niceLength` options (task 01,
+  additive `hashFn`, `start` and `niceLength` options (the first step,
   `01-lz77-scanner-extensions`), making an injectable hash function — and
   therefore a bit-exact cutover path — available without touching the
   module's existing default behaviour or its 6 pre-existing `DEFAULT`
   values.
 - **The factorisation landed, but as a full in-house rewrite rather than a
   cutover onto the pre-existing `lz77.encode` callback interface.**
-  `deflate.js`'s DEFLATE encoder was rewritten from RFC 1951 (task 03,
+  `deflate.js`'s DEFLATE encoder was rewritten from RFC 1951 (a later step,
   `03-deflate-encoder-rfc1951`) to scan through the shared `lz77` module —
   first via `lz77.encode`'s `literal`/`match` callbacks, then via
   `lz77.encodeTokens`'s packed `(len, dist)` buffer — replacing the
   duplicated inline hash-chain scanner this note flagged.
-- **Prerequisite 2's callback-vs-packed-token measurement (task 03) settled
+- **Prerequisite 2's callback-vs-packed-token measurement settled
   as a wash, not a win**, and a separate perf landing then closed the
   larger regression the note did not anticipate. Quoted from
   `03-report.md`: "Δbytes is IDENTICAL to the callback run at every level,

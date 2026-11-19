@@ -1,7 +1,7 @@
 ---
 module: template
 category: dom/rendering
-dependencies: [secPolicy]
+dependencies: [secPolicy, styleSheet]
 returns: object
 worker-safe: false
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > DOM engine: materialises elm-arrays into DOM nodes. Manages named contexts and a `<template>` catalogue as cloning sources.
 
-**Module** `template` | **Source** `packages/front/fw/src/dom/rendering/template.js` | **Deps** `secPolicy` | **Worker-safe** no
+**Module** `template` | **Source** `packages/front/fw/src/dom/rendering/template.js` | **Deps** `secPolicy`, `styleSheet` | **Worker-safe** no
 
 > **Security**: `applyAttributes` rejects dangerous URLs on `href`/`src`/`action`/…, DOM-clobbering values on `id`/`name`, and `on*` attributes. The shared policy lives in [`secPolicy`](./secPolicy.md).
 
@@ -39,7 +39,7 @@ const tpl = runtime.resolve('template');
 | `clearElm` | `(name, id) => void` | Removes an element and its children |
 | `clearIn` | `(name, id) => void` | Removes children (keeps the element) |
 | `clearAll` | `(name) => void` | Clears the entire context |
-| `clearContext` | `(name) => void` | Destroys the context (DOM + map + catalogue) |
+| `clearContext` | `(name) => void` | Destroys the context (DOM + map + catalogue); a page context keeps `body`, empties it and removes its own `<style>` / `<script>` |
 | `style` | `(name, id, styles) => void` | Injects `<style>` into `<head>` (page contexts) |
 | `script` | `(name, id, content) => void` | Injects `<script>` into `<head>` (page contexts) |
 
@@ -218,7 +218,7 @@ Returns: `string[]` — names added (existing entries are overwritten).
 | `tpl.clearElm(name, id)` | Removes an element and its children from the DOM and the `map` |
 | `tpl.clearIn(name, id)` | Removes the **children** of an element (keeps the element) |
 | `tpl.clearAll(name)` | Clears the entire context |
-| `tpl.clearContext(name)` | Destroys the context (DOM + map + catalogue if needed) |
+| `tpl.clearContext(name)` | Destroys the context (DOM + map + catalogue if needed). A **page** context renders into `document.body`, which stays in the document: its children are cleared and the `<style>` / `<script>` elements the context injected are removed |
 
 ---
 
@@ -229,7 +229,19 @@ Injection into `<head>` (page contexts only).
 ```js
 tpl.style('page', 'myStyle', 'body { background: #eee; }');
 tpl.script('page', 'myScript', 'console.log("loaded")');
+tpl.removeStyle('page', 'myStyle');
 ```
+
+`style` goes through the [`styleSheet`](./styleSheet.md) module. By default it
+inserts (or updates in place) a `<style id>` element in the context's `<head>`,
+with the CSP nonce from `setNonce` or the `<meta name="csp-nonce">` tag.
+Under a strict CSP (`style-src 'self'`, no `'unsafe-inline'`, no nonce) call
+`runtime.resolve('styleSheet').mode('adopted')` before the first `style`: each
+id then becomes one constructable stylesheet (a second `style` with the same id
+replaces its text) and no `<style>` element is created. `removeStyle` and
+`clearContext` detach exactly the styles their context added, in either mode.
+A factory wired by hand without the `styleSheet` argument keeps the `<style>`
+element path. `script` is unchanged.
 
 ### Default tags (auto-generated catalogue)
 
@@ -245,7 +257,9 @@ When no `tpl` is provided to `init`, the catalogue contains the common semantic 
 - **Media**: `video`, `audio`, `picture`, `img`, `figure`, `figcaption`
 - **Canvas / SVG**: `cvs` (canvas), `svg`, `svg_use`
 
-To add other tags, either pass a `tpl: [...]` array to `init`, or call `tpl.registerTags([...])` after init.
+A tag outside the catalogue (`output`, a custom element such as `my-widget`, …) is created with `document.createElement` (an `svg_<name>` tag with `createElementNS` in the SVG namespace) and rendered like any other. Two kinds are never rendered: the blocked tags (`script`, `object`, `embed`, `iframe`, see [`secPolicy`](./secPolicy.md)) and names that are not valid element names; their children, if any, are placed on the context root. Register a tag (`tpl: [...]` at `init`, or `tpl.registerTags([...])` after it) to give it preset attributes or an SVG wrapper.
+
+`tpl.elm(name, node)` never writes into `node`: an id-less node gets a generated id on an internal copy.
 
 ### Conditional attributes
 
@@ -296,6 +310,7 @@ tpl.clearElm('app', 'content');
 
 ## See also
 
+- [styleSheet](./styleSheet.md) — the channel behind `tpl.style` / `tpl.removeStyle`
 - [render](./render.md) — produces elm-arrays for `tpl.elms`
 - [parser](./parser.md) — produces elm-arrays via `fromHTML`
 - [uiSession](./uiSession.md) — facade that wraps `template` + `render` + `parser`

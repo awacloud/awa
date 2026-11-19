@@ -24,7 +24,7 @@ const stack = runtime.resolve('oconvPdfStack');
 const measurer = metrics.createMeasurer();
 const LAYOUT = box.resolveLayout();
 
-/** An `oconv-ir/v1` inline run with the frozen full property set. */
+/** An `oconv-ir/v2` inline run with the frozen full property set. */
 function run(text, flags = {}) {
     return {
         kind: 'run', text, bold: false, italic: false, strike: false,

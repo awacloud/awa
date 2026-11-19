@@ -27,7 +27,7 @@ const msgpack = runtime.resolve('msgpack');
 | Method | Signature | Returns |
 |--------|-----------|---------|
 | `encode` | `(value: any) => Uint8Array` | MessagePack representation |
-| `decode` | `(bytes: Uint8Array, options?: {useMap?: boolean}) => any` | Reconstructed JS value |
+| `decode` | `(bytes: Uint8Array, options?: {useMap?: boolean, maxDepth?: number}) => any` | Reconstructed JS value; nesting deeper than `maxDepth` (default 512) throws |
 | `Ext` | `class Ext(type, data)` | Ext wrapper (type ∈ [-128, 127], data: `Uint8Array`). Type -1 reserved for the standard timestamp (handled automatically via `Date`) |
 
 ## JS ↔ MessagePack mapping
@@ -124,6 +124,7 @@ const worker = fw.createWorker(
 
 ## Notes
 
+- A map decoded to a plain object never takes its prototype from the payload: the object has a `null` prototype (`Object.create(null)`: no inherited key such as `toString` or `hasOwnProperty`; use `Object.hasOwn`), and a `"__proto__"` key is an own enumerable property holding the decoded value.
 - Integers and strings encoded in shortest form (fixint before int8/16/32, fixstr before str8/16/32, etc.).
 - Floats are emitted as `float32` if the value is exactly representable, otherwise `float64` — symmetric interop with msgpack-c, msgpack-python, msgpack-go.
 - `undefined` is encoded as `nil` (`0xc0`) and read back as `null` (information loss, consistent with reference implementations).

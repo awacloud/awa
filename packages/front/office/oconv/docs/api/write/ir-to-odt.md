@@ -9,7 +9,7 @@ status: complete
 
 # oconvIrToOdt
 
-> `oconv-ir/v1` → `.odt` bytes, tier 2, composing `@awacloud/odf`'s typed body model and typed named styles.
+> `oconv-ir/v2` → `.odt` bytes, tier 2, composing `@awacloud/odf`'s typed body model and typed named styles.
 
 **Module** `oconvIrToOdt` | **Source** `packages/front/office/oconv/src/write/ir-to-odt.js` | **Deps** `oconvIr`, `odt` | **Worker-safe** yes
 
@@ -152,6 +152,22 @@ the write without `assets` records
   image-only paragraph does produce a paragraph.
 - **A table without a row is not written**: ODF needs one, and there is
   nothing to keep (no loss); a docx table without a row reads as one.
+- **Headers and footers** (`oconv-ir/v2` `document.header`,
+  `document.footer`, T80) are written in the master page `Standard`, in
+  the schema's order: `style:header` (the default slot),
+  `style:header-left` (`even`), `style:header-first` (`first`), then the
+  footers'. A slot is mapped as the body is (its images in the same
+  `Pictures/`, frame names unique across the document) and handed to
+  `odt.write` as the element's `content`; its automatic styles are
+  `styles.xml`'s `MP<n>` and `MT<n>`. A region without a page names a page
+  layout `pm1` with no properties. A `field` is written as
+  `text:page-number` (`text:select-page="current"`) or `text:page-count`,
+  holding its text.
+- **Notes** (`note`, T81) are written as `@awacloud/odf`'s typed note run
+  (`text:note`): `id` `ftn<k>` / `edn<k>`, the class, the citation (the
+  custom mark, also its `text:label`, else the note's number among its
+  class's automatic notes), the body mapped as the body is. A note inside
+  a note's body is not written (`note/dropped`, detail `nested`).
 - **`code` maps to `monospace`** on a `span` run (`mapRunFlags`); a run with
   no truthy flag is a plain `text` run, never a `span`.
 - **Code blocks, quotes and rules are styled, and read back**: a

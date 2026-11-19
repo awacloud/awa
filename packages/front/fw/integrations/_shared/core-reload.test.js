@@ -33,6 +33,10 @@ const FW_ROOT = resolve(HERE, '..', '..');
 
 /** Track temp dirs for cleanup. */
 const tmpDirs = [];
+// The catalog as it is on disk when the suite starts: the restore and the
+// regeneration below must leave it byte-identical. (A `git status` check made
+// these legs red by construction while a module-adding change was uncommitted.)
+const CATALOG_AT_START = readFileSync(CATALOG_PATH, 'utf8');
 function mkTmp() {
     const d = mkdtempSync(join(tmpdir(), 'fw-core-reload-'));
     tmpDirs.push(d);
@@ -181,10 +185,8 @@ describe('createFwCore().reload() — catalog.generated.json invalidation', () =
         }
     });
 
-    it('tree left clean: the restore above leaves no dirt on the committed catalog', () => {
-        const result = Bun.spawnSync(['git', 'status', '--porcelain', CATALOG_PATH], { cwd: FW_ROOT });
-        const out = result.stdout.toString();
-        expect(out.trim()).toBe('');
+    it('tree left clean: the restore above leaves the catalog byte-identical to the suite start', () => {
+        expect(readFileSync(CATALOG_PATH, 'utf8')).toBe(CATALOG_AT_START);
     });
 
     it('the real generator (`bun run integrations:catalog`) is byte-idempotent on an unchanged src/ — exercises the exact command the orchestrator notes flag as tracked-file-rewriting, and proves it leaves the tree clean', () => {
@@ -194,8 +196,6 @@ describe('createFwCore().reload() — catalog.generated.json invalidation', () =
 
         const after = readFileSync(CATALOG_PATH, 'utf8');
         expect(after).toBe(before); // idempotent — the regen produced byte-identical output.
-
-        const status = Bun.spawnSync(['git', 'status', '--porcelain', CATALOG_PATH], { cwd: FW_ROOT });
-        expect(status.stdout.toString().trim()).toBe('');
+        expect(after).toBe(CATALOG_AT_START);
     });
 });

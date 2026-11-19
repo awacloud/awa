@@ -5,7 +5,7 @@
 /**
  * sanity/wasm-gate — the WebAssembly **capability seam** of the lockdown tier.
  *
- * ── The invariant (frozen wording, fw-sanity W0 FINDINGS §d) ──
+ * ── The invariant (frozen wording) ──
  *
  * > **Only a holder of the fw wasm capability may compile or instantiate
  * > WebAssembly after `lockdown()`. The sole holder is `wasmRuntime`, whose
@@ -132,7 +132,7 @@ export function captureRealEvaluators(g = globalThis) {
  * Close the SYNCHRONOUS compile path — `new WebAssembly.Module(bytes)` and
  * `new WebAssembly.Instance(module)`.
  *
- * MEASURED HOLE (fw-sanity W0 FINDINGS §d.2): `removeAmbientEvaluators()`
+ * MEASURED HOLE: `removeAmbientEvaluators()`
  * poisons the four *async* slots only. The synchronous constructors were left
  * untouched, so caller-supplied wasm still compiled AND EXECUTED after
  * `lockdown()` — proven end to end. Whitelisting the async four while the sync

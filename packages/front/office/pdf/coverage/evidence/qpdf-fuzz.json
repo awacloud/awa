@@ -12,8 +12,8 @@
   "bun": "1.3.13",
   "memoryMax": "1342177280",
   "counts": {
-    "returned": 0,
-    "refused": 78,
+    "returned": 3,
+    "refused": 75,
     "untyped": 0,
     "hang": 0,
     "memory": 0,
@@ -25,8 +25,8 @@
       "bytes": 56,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72308,
+      "ms": 4,
+      "maxRssKiB": 74308,
       "code": "pdf/document/bad-header"
     },
     {
@@ -34,8 +34,8 @@
       "bytes": 55,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 74552,
       "code": "pdf/document/bad-header"
     },
     {
@@ -43,17 +43,17 @@
       "bytes": 821,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72612,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 7,
+      "maxRssKiB": 76292,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/15442.fuzz",
       "bytes": 44,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 75392,
       "code": "pdf/document/bad-header"
     },
     {
@@ -61,35 +61,34 @@
       "bytes": 146,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 76052,
       "code": "pdf/document/bad-header"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/15983.fuzz",
       "bytes": 830412,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74716,
-      "code": "pdf/tokenizer/unexpected-rangle"
+      "ms": 53,
+      "maxRssKiB": 77276
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/16172.fuzz",
       "bytes": 40,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72612,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 5,
+      "maxRssKiB": 74604,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/16301.fuzz",
       "bytes": 249,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73476,
+      "ms": 4,
+      "maxRssKiB": 74128,
       "code": "pdf/document/bad-header"
     },
     {
@@ -97,8 +96,8 @@
       "bytes": 164,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 74452,
       "code": "pdf/document/bad-header"
     },
     {
@@ -106,8 +105,8 @@
       "bytes": 1048576,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 5,
+      "maxRssKiB": 75408,
       "code": "pdf/document/bad-header"
     },
     {
@@ -115,8 +114,8 @@
       "bytes": 871948,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 6,
+      "maxRssKiB": 74600,
       "code": "pdf/document/bad-header"
     },
     {
@@ -124,8 +123,8 @@
       "bytes": 672027,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72772,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -133,8 +132,8 @@
       "bytes": 73,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73484,
+      "ms": 4,
+      "maxRssKiB": 74440,
       "code": "pdf/document/bad-header"
     },
     {
@@ -142,17 +141,17 @@
       "bytes": 569,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72612,
-      "code": "pdf/parser/unexpected-keyword"
+      "ms": 6,
+      "maxRssKiB": 74128,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/23172.fuzz",
       "bytes": 26638,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73088,
+      "ms": 4,
+      "maxRssKiB": 74860,
       "code": "pdf/document/bad-header"
     },
     {
@@ -160,8 +159,8 @@
       "bytes": 369,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 75832,
       "code": "pdf/document/bad-header"
     },
     {
@@ -169,8 +168,8 @@
       "bytes": 45240,
       "class": "refused",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 74848,
+      "ms": 8,
+      "maxRssKiB": 74320,
       "code": "pdf/content/unknown-op"
     },
     {
@@ -178,8 +177,8 @@
       "bytes": 25750,
       "class": "refused",
       "ok": true,
-      "ms": 7,
-      "maxRssKiB": 73452,
+      "ms": 8,
+      "maxRssKiB": 75620,
       "code": "pdf/document/xref-mismatch"
     },
     {
@@ -187,18 +186,17 @@
       "bytes": 793,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/26994.fuzz",
       "bytes": 40088,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72612,
-      "code": "pdf/xref/bad-digit"
+      "ms": 15,
+      "maxRssKiB": 86184
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/27393.fuzz",
@@ -206,7 +204,7 @@
       "class": "refused",
       "ok": true,
       "ms": 4,
-      "maxRssKiB": 72612,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -214,8 +212,8 @@
       "bytes": 40395,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 74048,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -223,8 +221,8 @@
       "bytes": 9548,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 74492,
       "code": "pdf/document/bad-header"
     },
     {
@@ -232,8 +230,8 @@
       "bytes": 160,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73864,
+      "ms": 4,
+      "maxRssKiB": 74468,
       "code": "pdf/document/bad-header"
     },
     {
@@ -242,7 +240,7 @@
       "class": "refused",
       "ok": true,
       "ms": 4,
-      "maxRssKiB": 72612,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -250,8 +248,8 @@
       "bytes": 378,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 74056,
+      "ms": 4,
+      "maxRssKiB": 74340,
       "code": "pdf/document/bad-header"
     },
     {
@@ -259,8 +257,8 @@
       "bytes": 234,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -268,8 +266,8 @@
       "bytes": 12948,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73676,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -277,35 +275,35 @@
       "bytes": 1041,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72788,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 6,
+      "maxRssKiB": 76684,
+      "code": "pdf/document/encrypted"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/388571629.fuzz",
       "bytes": 893256,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 74880,
-      "code": "pdf/xref/bad-startxref"
+      "ms": 41,
+      "maxRssKiB": 77396,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/389339260.fuzz",
       "bytes": 3542,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72612,
-      "code": "pdf/document/no-startxref"
+      "ms": 6,
+      "maxRssKiB": 75348,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/389974979.fuzz",
       "bytes": 374,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
+      "ms": 4,
+      "maxRssKiB": 74908,
       "code": "pdf/document/bad-header"
     },
     {
@@ -313,26 +311,26 @@
       "bytes": 210041,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72612,
-      "code": "pdf/document/no-startxref"
+      "ms": 16,
+      "maxRssKiB": 82856,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/394129398.fuzz",
       "bytes": 210329,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 74924,
-      "code": "pdf/document/no-startxref"
+      "ms": 17,
+      "maxRssKiB": 81752,
+      "code": "pdf/document/xref-mismatch"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/394463491.fuzz",
       "bytes": 143,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72984,
+      "ms": 5,
+      "maxRssKiB": 74660,
       "code": "pdf/document/bad-header"
     },
     {
@@ -340,8 +338,8 @@
       "bytes": 952848,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 75312,
+      "ms": 4,
+      "maxRssKiB": 77732,
       "code": "pdf/document/bad-header"
     },
     {
@@ -349,17 +347,17 @@
       "bytes": 2613,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72612,
-      "code": "pdf/document/no-startxref"
+      "ms": 6,
+      "maxRssKiB": 74400,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/411312393.fuzz",
       "bytes": 287,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73684,
+      "ms": 4,
+      "maxRssKiB": 74608,
       "code": "pdf/document/bad-header"
     },
     {
@@ -367,8 +365,8 @@
       "bytes": 280982,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
+      "ms": 4,
+      "maxRssKiB": 74628,
       "code": "pdf/document/bad-header"
     },
     {
@@ -376,9 +374,9 @@
       "bytes": 2909,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72912,
-      "code": "pdf/document/no-startxref"
+      "ms": 6,
+      "maxRssKiB": 75580,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/440747125.fuzz",
@@ -386,7 +384,7 @@
       "class": "refused",
       "ok": true,
       "ms": 4,
-      "maxRssKiB": 73488,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -394,9 +392,9 @@
       "bytes": 1354,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72752,
-      "code": "pdf/document/no-startxref"
+      "ms": 5,
+      "maxRssKiB": 74320,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/4720043549327360.fuzz",
@@ -404,7 +402,7 @@
       "class": "refused",
       "ok": true,
       "ms": 4,
-      "maxRssKiB": 73456,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -412,8 +410,8 @@
       "bytes": 55,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -421,8 +419,8 @@
       "bytes": 45,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73340,
+      "ms": 4,
+      "maxRssKiB": 74756,
       "code": "pdf/document/bad-header"
     },
     {
@@ -430,8 +428,8 @@
       "bytes": 506766,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72784,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -439,17 +437,17 @@
       "bytes": 749,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73412,
-      "code": "pdf/document/no-startxref"
+      "ms": 6,
+      "maxRssKiB": 74748,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/547975127.fuzz",
       "bytes": 152,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73616,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -457,44 +455,44 @@
       "bytes": 20154,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72828,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 8,
+      "maxRssKiB": 77376,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/5828408539152384.fuzz",
       "bytes": 1707,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
-      "code": "pdf/document/no-startxref"
+      "ms": 6,
+      "maxRssKiB": 74320,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/6310410941956096.fuzz",
       "bytes": 950,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
-      "code": "pdf/document/no-startxref"
+      "ms": 7,
+      "maxRssKiB": 75280,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/6322553212960768.fuzz",
       "bytes": 2257,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
-      "code": "pdf/document/no-startxref"
+      "ms": 6,
+      "maxRssKiB": 75404,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/6489005569146880.fuzz",
       "bytes": 318844,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
+      "ms": 4,
+      "maxRssKiB": 74672,
       "code": "pdf/document/bad-header"
     },
     {
@@ -502,8 +500,8 @@
       "bytes": 60590,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73340,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -511,8 +509,8 @@
       "bytes": 43,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -520,8 +518,8 @@
       "bytes": 67,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73232,
+      "ms": 4,
+      "maxRssKiB": 75032,
       "code": "pdf/document/bad-header"
     },
     {
@@ -529,8 +527,8 @@
       "bytes": 392,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
+      "ms": 4,
+      "maxRssKiB": 74324,
       "code": "pdf/document/bad-header"
     },
     {
@@ -538,26 +536,25 @@
       "bytes": 124,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/68668.fuzz",
       "bytes": 33453,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73068,
-      "code": "pdf/document/no-startxref"
+      "ms": 12,
+      "maxRssKiB": 77964
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/68915.fuzz",
       "bytes": 132856,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72888,
+      "ms": 5,
+      "maxRssKiB": 74620,
       "code": "pdf/document/bad-header"
     },
     {
@@ -565,36 +562,36 @@
       "bytes": 53677,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73988,
-      "code": "pdf/document/no-startxref"
+      "ms": 10,
+      "maxRssKiB": 77144,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/69913.fuzz",
       "bytes": 918,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72832,
-      "code": "pdf/xref/bad-digit"
+      "ms": 6,
+      "maxRssKiB": 75132,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/69969.fuzz",
       "bytes": 11828,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72920,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 9,
+      "maxRssKiB": 80468,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/69977.fuzz",
       "bytes": 28858,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72784,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 11,
+      "maxRssKiB": 81996,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/69977a.fuzz",
@@ -602,7 +599,7 @@
       "class": "refused",
       "ok": true,
       "ms": 4,
-      "maxRssKiB": 73032,
+      "maxRssKiB": 74972,
       "code": "pdf/document/bad-header"
     },
     {
@@ -610,8 +607,8 @@
       "bytes": 52851,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -619,35 +616,35 @@
       "bytes": 92316,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
-      "code": "pdf/xref/no-startxref"
+      "ms": 22,
+      "maxRssKiB": 96056,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/69977d.fuzz",
       "bytes": 376010,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73664,
-      "code": "pdf/document/no-startxref"
+      "ms": 18,
+      "maxRssKiB": 78340,
+      "code": "pdf/trailer/missing-root"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/69977e.fuzz",
       "bytes": 822178,
       "class": "refused",
       "ok": true,
-      "ms": 7,
-      "maxRssKiB": 79156,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 49,
+      "maxRssKiB": 84424,
+      "code": "pdf/pages/not-dict"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/70055.fuzz",
       "bytes": 4336,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73720,
+      "ms": 4,
+      "maxRssKiB": 74320,
       "code": "pdf/document/bad-header"
     },
     {
@@ -655,8 +652,8 @@
       "bytes": 0,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73548,
+      "ms": 4,
+      "maxRssKiB": 74512,
       "code": "pdf/document/short"
     },
     {
@@ -664,17 +661,17 @@
       "bytes": 262144,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72952,
-      "code": "pdf/document/no-startxref"
+      "ms": 22,
+      "maxRssKiB": 81288,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/70306a.fuzz",
       "bytes": 341159,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
+      "ms": 4,
+      "maxRssKiB": 74512,
       "code": "pdf/document/bad-header"
     },
     {
@@ -682,47 +679,47 @@
       "bytes": 243636,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72752,
-      "code": "pdf/xref/bad-startxref"
+      "ms": 23,
+      "maxRssKiB": 84528,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/71624.fuzz",
       "bytes": 14735,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72752,
-      "code": "pdf/xref/bad-digit"
+      "ms": 6,
+      "maxRssKiB": 74512,
+      "code": "pdf/parser/indirect-bad-num"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/71689.fuzz",
       "bytes": 205987,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74484,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 21,
+      "maxRssKiB": 80656,
+      "code": "pdf/content/unknown-op"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/99999d.fuzz",
       "bytes": 5408,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73408,
-      "code": "pdf/document/no-startxref"
+      "ms": 8,
+      "maxRssKiB": 75336,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "qpdf/fuzz/qpdf_extra/99999e.fuzz",
       "bytes": 554938,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73124,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 34,
+      "maxRssKiB": 82212,
+      "code": "pdf/content/unknown-op"
     }
   ],
-  "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
-  "date": "2026-10-16"
+  "commit": "c4d742d5c1b1569e68fa8fdae7af2361ca0e9002",
+  "date": "2026-11-11"
 }

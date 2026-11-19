@@ -58,6 +58,7 @@ const writer = runtime.resolve('pdfWriter');
     info?:     { num, gen },                 // optional — /Info
     version?:  '2.0' | '1.7' | …             // default '2.0', matches /^\d\.\d$/
     id?:       [ Uint8Array, Uint8Array ]    // 2 × 16 bytes for /ID; derived when omitted at '2.0'
+    deriveId?: boolean                       // true: derive the omitted /ID at any version
 }
 ```
 
@@ -71,7 +72,7 @@ A PDF 2.0 file requires the trailer `/ID` (ISO 32000-2 Table 15). When
 of the written `/ID` are the first 16 bytes of the SHA-256 of every byte
 written before the trailer (header, objects, cross-reference table): the
 same input still gives the same bytes. An explicit `opts.id` is written as
-given, and another version without one gets no `/ID`. The digest comes from
+given, and another version without one gets no `/ID` unless `opts.deriveId` is `true` (a PDF/A-2 file at 1.7 requires one). The digest comes from
 the `sha256` and `bitArray` dependencies, the last two and optional: a
 hand-wired `pdfWriter.factory(errors, serializer)` derives nothing and
 writes no `/ID` unless given one.

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -332,10 +332,11 @@ describe('cbor module', () => {
                 expect(decoded.value).toBe(0);
             });
 
-            test('decode simple(16) via one-byte form (f8 10)', () => {
-                const decoded = codec.decode(hexToBytes('f810'));
+            test('simple(16) decodes from its one-byte form (f0); the two-byte f8 10 is refused (RFC 8949 §3.3, App. F; D23)', () => {
+                const decoded = codec.decode(hexToBytes('f0'));
                 expect(decoded).toBeInstanceOf(codec.Simple);
                 expect(decoded.value).toBe(16);
+                expect(() => codec.decode(hexToBytes('f810'))).toThrow();
             });
 
             test('decode simple(255) via f8 ff', () => {
@@ -420,5 +421,40 @@ describe('cbor module', () => {
                 expect(bytesToHex(codec.encode(NaN))).toBe('f97e00');
             });
         });
+    });
+});
+
+describe('cbor: a "__proto__" key never sets the result prototype', () => {
+    const codec = cbor.factory(utf8.factory());
+    const payload = () => JSON.parse('{"__proto__": {"polluted": 1}, "a": 2, "z": {"__proto__": [1, 2]}}');
+
+    test('it decodes to an own enumerable property; nothing is inherited', () => {
+        const r = codec.decode(codec.encode(payload()));
+        expect(Object.getPrototypeOf(r)).toBe(null);   // null prototype (D9 G7)
+        expect(r.polluted).toBeUndefined();
+        const d = Object.getOwnPropertyDescriptor(r, '__proto__');
+        expect(d && d.enumerable).toBe(true);
+        expect(d.value).toEqual({ polluted: 1 });
+        expect(Object.keys(r)).toEqual(['__proto__', 'a', 'z']);
+        expect(Object.getPrototypeOf(r.z)).toBe(null);
+        expect(Object.getOwnPropertyDescriptor(r.z, '__proto__').value).toEqual([1, 2]);
+        expect(({}).polluted).toBeUndefined();
+    });
+
+    test('a re-encode gives the same bytes back', () => {
+        const bytes = codec.encode(payload());
+        expect(codec.encode(codec.decode(bytes))).toEqual(bytes);
+    });
+
+    test('an indefinite-length map is handled the same way', () => {
+        // 0xBF … 0xFF: indefinite map { "__proto__": { "p": 1 }, "a": 2 }
+        const te = new TextEncoder();
+        const k = te.encode('__proto__');
+        const bytes = new Uint8Array([0xBF, 0x60 | k.length, ...k, 0xA1, 0x61, 0x70, 0x01, 0x61, 0x61, 0x02, 0xFF]);
+        const r = codec.decode(bytes);
+        expect(Object.getPrototypeOf(r)).toBe(null);   // null prototype (D9 G7)
+        expect(r.p).toBeUndefined();
+        expect(Object.getOwnPropertyDescriptor(r, '__proto__').value).toEqual({ p: 1 });
+        expect(r.a).toBe(2);
     });
 });

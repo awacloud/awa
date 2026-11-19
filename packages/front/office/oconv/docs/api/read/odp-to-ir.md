@@ -9,7 +9,7 @@ status: complete
 
 # oconvOdpToIr
 
-> `.odp` (`@awacloud/odf`'s `odp.read()` result) → `oconv-ir/v1`, tier 1 — one heading + N paragraphs per slide.
+> `.odp` (`@awacloud/odf`'s `odp.read()` result) → `oconv-ir/v2`, tier 1 — one heading + N paragraphs per slide.
 
 **Module** `oconvOdpToIr` (`oconvOdpToIr`) | **Source** `packages/front/office/oconv/src/read/odp-to-ir.js` | **Deps** `oconvIr`, `odp` | **Worker-safe** yes
 
@@ -32,7 +32,7 @@ const { odpToIr } = runtime.resolve('oconvOdpToIr');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `odpToIr` | `(readResult: object, opts?: {includeNotes?: boolean}) => {ir, losses}` | `ir` — an `oconv-ir/v1` document; `losses` — `{code, detail}[]` | — |
+| `odpToIr` | `(readResult: object, opts?: {includeNotes?: boolean}) => {ir, losses}` | `ir` — an `oconv-ir/v2` document; `losses` — `{code, detail}[]` | — |
 
 ## Examples
 

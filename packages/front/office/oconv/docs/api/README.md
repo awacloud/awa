@@ -9,12 +9,12 @@ other member below.
 ## Boundary note
 
 The package's `exports` map declares **two** keys: `"."` → `./src/main.js`
-(the [manifest](./main.md)) and `"./src/worker.js"` → `./src/worker.js`
+(the [manifest](./main.md)) and `"./worker.js"` → `./src/worker.js`
 (the [worker](./worker.md)); every other `src/` path stays non-resolvable. The public API is reached by resolving the
 descriptors listed below from a `@awacloud/fw` `ModuleRuntime` built from
 that manifest's `fw_require` + `modules` arrays — never by importing a `src/`
 path directly. `src/worker.js` (the [worker](./worker.md)) is loaded by its
-own URL/path (or its `@awacloud/oconv/src/worker.js` specifier), not through
+own URL/path (or its `@awacloud/oconv/worker.js` specifier), not through
 `runtime.resolve()`.
 
 `mdFrontmatter` is registered inside this package's `modules` array (needed
@@ -34,8 +34,8 @@ Internal helpers (`write/anchors.js`, `write/image-header.js`,
 |---|---|---|---|
 | [`manifest`](./main.md) | manifest (`fw_require`, `pkg_require`, `modules`, `extras`, `bundle`) | `src/main.js` | The package entry point — five arrays, nothing else. |
 | [`oconv`](./oconv.md) | `oconv` | `src/oconv.js` | The public facade — `toMd`, `fromMd`, `convert`. |
-| [`worker`](./worker.md) | worker (`./src/worker.js` sub-path) | `src/worker.js` | The Worker entry — one conversion per message, three message kinds. |
-| [`ir/ir`](./ir/ir.md) | `oconvIr` | `src/ir/ir.js` | The frozen `oconv-ir/v1` pivot document model. |
+| [`worker`](./worker.md) | worker (`./worker.js` sub-path) | `src/worker.js` (bundle of `src/worker/entry.js`) | The Worker entry — one conversion per message, three message kinds. |
+| [`ir/ir`](./ir/ir.md) | `oconvIr` | `src/ir/ir.js` | The `oconv-ir/v2` pivot document model. |
 | [`read/docx-to-ir`](./read/docx-to-ir.md) | `oconvDocxToIr` | `src/read/docx-to-ir.js` | `.docx` → IR, tier 2. |
 | [`read/odt-to-ir`](./read/odt-to-ir.md) | `oconvOdtToIr` | `src/read/odt-to-ir.js` | `.odt` → IR, tier 2. |
 | [`read/xlsx-to-ir`](./read/xlsx-to-ir.md) | `oconvXlsxToIr` | `src/read/xlsx-to-ir.js` | `.xlsx` → IR, tier 2 — one heading + table per sheet. |
@@ -43,12 +43,11 @@ Internal helpers (`write/anchors.js`, `write/image-header.js`,
 | [`read/pptx-to-ir`](./read/pptx-to-ir.md) | `oconvPptxToIr` | `src/read/pptx-to-ir.js` | `.pptx` → IR, tier 1 — one heading + N paragraphs per slide. |
 | [`read/odp-to-ir`](./read/odp-to-ir.md) | `oconvOdpToIr` | `src/read/odp-to-ir.js` | `.odp` → IR, tier 1 — one heading + N paragraphs per slide, notes reachable. |
 | [`read/pdf-to-ir`](./read/pdf-to-ir.md) | `oconvPdfToIr` | `src/read/pdf-to-ir.js` | `.pdf` → IR, tier 1, text-first — tagged fast path + untagged fall-back. |
-| [`read/pdf/font-decoder`](./read/pdf/font-decoder.md) | `oconvPdfFontDecoder` | `src/read/pdf/font-decoder.js` | Per-font character decoder for the tier-1 pdf reader. |
 | [`read/pdf/image-png`](./read/pdf/image-png.md) | `oconvPdfImagePng` | `src/read/pdf/image-png.js` | A raw-pixel pdf picture written as a PNG, for the opt-in pdf pictures. |
 | [`read/pdf/text-extract`](./read/pdf/text-extract.md) | `oconvPdfTextExtract` | `src/read/pdf/text-extract.js` | Page-level positioned-text extraction for the tier-1 pdf reader. |
 | [`read/pdf/struct`](./read/pdf/struct.md) | `oconvPdfStruct` | `src/read/pdf/struct.js` | Tagged-PDF structure reader — the tier-1 pdf reader's fast-path detector. |
 | [`read/md-to-ir`](./read/md-to-ir.md) | `oconvMdToIr` | `src/read/md-to-ir.js` | Markdown text → IR — the `fromMd`/`convert` read side. |
-| [`write/ir-to-md`](./write/ir-to-md.md) | `oconvIrToMd` | `src/write/ir-to-md.js` | `oconv-ir/v1` → structured-markdown profile v1, the frozen wire contract. |
+| [`write/ir-to-md`](./write/ir-to-md.md) | `oconvIrToMd` | `src/write/ir-to-md.js` | `oconv-ir/v2` → structured-markdown profile v1, the frozen wire contract. |
 | [`write/ir-to-docx`](./write/ir-to-docx.md) | `oconvIrToDocx` | `src/write/ir-to-docx.js` | IR → `.docx` bytes writer, tier 2, composing `@awacloud/ooxml`'s typed write model. |
 | [`write/ir-to-odt`](./write/ir-to-odt.md) | `oconvIrToOdt` | `src/write/ir-to-odt.js` | IR → `.odt` bytes writer, tier 2, composing `@awacloud/odf`'s typed body model and typed named styles. |
 | [`write/ir-to-pdf`](./write/ir-to-pdf.md) | `oconvIrToPdf` | `src/write/ir-to-pdf.js` | IR → `.pdf` bytes writer — the bounded typesetter's facade, the only module in the family that talks to `@awacloud/pdf`. |
@@ -69,7 +68,7 @@ Internal helpers (`write/anchors.js`, `write/image-header.js`,
 `@awacloud/oconv` descriptor rows (`grep -n "^    oconv" src/main.js` matched
 against every entry that is not itself a spread from a sibling package),
 **+ 1** for the manifest, **+ 1** for the worker (spawned by path or its
-`./src/worker.js` sub-path, no descriptor of its own) = **29**. `mdFrontmatter` — the one non-`oconv*`
+`./worker.js` sub-path, no descriptor of its own) = **29**. `mdFrontmatter` — the one non-`oconv*`
 descriptor `modules` also registers — is excluded from this count: it is
 `@awacloud/md`'s own module, documented on that package's index (see the
 boundary note above).

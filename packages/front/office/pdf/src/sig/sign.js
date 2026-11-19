@@ -557,7 +557,9 @@ export const pdfSign = {
                     "the base is encrypted; pass opts.password (use '' for an "
                     + 'empty user password)');
             }
-            const doc = documentMod.readDocument(baseBytes, { allowEncrypted: true });
+            // Strict: an incremental update chains to the base's own
+            // cross-reference section, never to a rebuilt view of it.
+            const doc = documentMod.readDocument(baseBytes, { allowEncrypted: true, recoverXref: false });
             const encEntry = doc.trailer.encrypt;
             const encNode = encEntry && encEntry.type === 'dict'
                 ? encEntry
@@ -965,8 +967,9 @@ export const pdfSign = {
             const enc = trailer.encrypt
                 ? (encCtx || _openEncrypted(baseBytes, trailer, signOpts))
                 : null;
+            // Strict, as above: a damaged base is refused, not rebuilt.
             const doc = documentMod.readDocument(baseBytes,
-                enc ? { allowEncrypted: true } : undefined);
+                enc ? { allowEncrypted: true, recoverXref: false } : { recoverXref: false });
             const resolve = doc._raw.resolve;
             const rootRef = doc.trailer.root;
             const catalog = resolve(_ref(rootRef.num, rootRef.gen));
@@ -1852,7 +1855,8 @@ export const pdfSign = {
          * strings keep their object number and generation, hence their key.
          */
         function _buildUpdatedCatalog(bytes, dssNum) {
-            const doc = documentMod.readDocument(bytes, { allowEncrypted: true });
+            // Strict, as the signing base reads: the DSS update is incremental.
+            const doc = documentMod.readDocument(bytes, { allowEncrypted: true, recoverXref: false });
             const rootRef = doc.trailer.root;
             const catalog = doc._raw.resolve(
                 { type: 'ref', num: rootRef.num, gen: rootRef.gen });

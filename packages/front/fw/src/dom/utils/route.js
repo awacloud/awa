@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -218,6 +218,10 @@ export const route = {
         let _dispatching = false;
         /** Last successfully-matched route info, for `beforeLeave`. */
         let _activeRoute = null;   // { name, params, query, info, prevHash } | null
+        // Hash of the last dispatch. A `hashchange` that finds the same hash
+        // has nothing new to dispatch: the event `go()` causes after its own
+        // direct dispatch, or a stale event delivered late.
+        let _lastDispatchedHash = null;
 
         /**
          * Convert a guard return value to a boolean (sync) or `Promise<boolean>`.
@@ -240,10 +244,17 @@ export const route = {
             }
         }
 
+        /** `hashchange` listener: dispatch only when the hash moved since the last dispatch. */
+        function _onHashChange() {
+            if (location.hash === _lastDispatchedHash) return;
+            dispatch();
+        }
+
         async function dispatch() {
             if (_dispatching) return;
             _dispatching = true;
             const currentHash = location.hash;
+            _lastDispatchedHash = currentHash;
             try {
                 const { path, query } = parseHash(currentHash);
 
@@ -458,7 +469,7 @@ export const route = {
             start() {
                 if (started) return;
                 started = true;
-                events.on('fw:route:hashchange', window, 'hashchange', dispatch);
+                events.on('fw:route:hashchange', window, 'hashchange', _onHashChange);
                 dispatch();
             },
 
@@ -472,6 +483,7 @@ export const route = {
                 }
                 routes.length = 0;
                 _activeRoute = null;
+                _lastDispatchedHash = null;
             },
 
             get size() { return routes.length; },

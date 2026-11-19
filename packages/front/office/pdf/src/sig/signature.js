@@ -703,7 +703,7 @@ export const pdfSignature = {
          *                returns `{ verified: false,
          *                            code: 'pdf/sig/rsa-pkcs1v15-deprecated' }`.
          *   - ECDSA    → `ecc.ecdsa.publicKey(curve, point).verify(hash, rs)`
-         *   - Ed25519  → `ed25519.verify(pub, msg, sig)`
+         *   - Ed25519  → `ed25519.verify(pub, sig, msg)`
          *
          * @param {Object} args
          * @param {string} args.algorithm One of 'rsa-pss', 'rsa-v15',
@@ -858,7 +858,7 @@ export const pdfSignature = {
                                  code: 'pdf/sig/verify-pk/no-message',
                                  error: 'Ed25519 verify requires message' };
                     }
-                    const ok = fb.ed25519.verify(pubKey, message, signature);
+                    const ok = fb.ed25519.verify(pubKey, signature, message);
                     return { verified: !!ok };
                 }
                 return { verified: false,

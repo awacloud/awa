@@ -19,7 +19,7 @@ One-shot API for SHA-3 and SHAKE + 4 streaming `sha3_*_hash` sub-modules consuma
 
 ```js
 const sha3 = runtime.resolve('sha3');
-// Returns: { name, sha3_224, sha3_256, sha3_384, sha3_512, shake128, shake256,
+// Returns: { sha3_224, sha3_256, sha3_384, sha3_512, shake128, shake256,
 //             sha3_224_hash, sha3_256_hash, sha3_384_hash, sha3_512_hash }
 ```
 
@@ -80,7 +80,7 @@ const worker = fw.createWorker(
 
 - **One-shot only on `sha3_*` / `shake*`** — no direct streaming API (use `sha3_*_hash.fn` which exposes update/finalize).
 - **SHAKE outBits**: must be a multiple of 8 (byte alignment); otherwise `false` + `console.warn('INVALID')`.
-- **MCT byte-exact**: all SHA3-{224,256,384,512} variants tested 100/100 iterations × 1000 inner (Iteration H2).
+- **MCT byte-exact**: all SHA3-{224,256,384,512} variants tested 100/100 iterations × 1000 inner.
 
 ## See also
 

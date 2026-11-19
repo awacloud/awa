@@ -10,7 +10,7 @@
  * @fileoverview `@awacloud/ooxml/bundles/prebuilt/xlsx-full-bundled` — pre-built single-factory bundle.
  *
  * Variant **bundled** : declares no dependencies — every fw and ooxml-local
- * factory transitively reachable from `xlsx` plus 19 extras is inlined.
+ * factory transitively reachable from `xlsx` plus 22 extras is inlined.
  *
  * @module ooxml/bundles/prebuilt/xlsx-full-bundled
  */
@@ -459,7 +459,19 @@ export const xlsxFullBundled = {
         t[symbols[i]] = lengths[i];
       return { t, l: lengths[0] };
     }
-    return { buildTree, buildMap };
+    function kraft(codeLengths) {
+      const perLength = new Int32Array(16);
+      for (let s = 0;s < codeLengths.length; ++s)
+        perLength[codeLengths[s]]++;
+      let left = 1;
+      for (let len = 1;len < 16; ++len) {
+        left = left * 2 - perLength[len];
+        if (left < 0)
+          return { oversubscribed: !0, incomplete: !1 };
+      }
+      return { oversubscribed: !1, incomplete: left > 0 };
+    }
+    return { buildTree, buildMap, kraft };
   } });
     __register({ name: "lz77", dependencies: [], factory: function() {
     const u8 = Uint8Array, i32 = Int32Array, DEFAULT = Object.freeze({
@@ -583,30 +595,18 @@ export const xlsxFullBundled = {
         }
       }
     }
-    function encodeTokens(data, opts) {
-      if (!(data instanceof u8))
-        throw Error("lz77.encodeTokens: data must be Uint8Array");
-      const o = _resolveOpts(opts), len = data.length, cap = 2 * Math.max(0, len - o.start), provided = opts && opts.tokens;
-      let tokens;
-      if (provided) {
-        if (provided.length < cap)
-          throw Error("lz77.encodeTokens: tokens buffer too small");
-        tokens = provided;
-      } else
-        tokens = new i32(cap);
+    function _fill(st, tokens, max) {
+      const { data, len, head, prev, hash, maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip, wndSize } = st, wndMask = wndSize - 1, lastKey = st.lastKey, atLeast = st.atLeast, cap = 2 * max;
       let p = 0;
-      if (o.start >= len)
-        return { tokens, count: 0 };
-      const { maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip } = o, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, head = new i32(1 << o.hashBits).fill(-1), prev = new i32(Math.min(wndSize, len)).fill(-1), hash = _hasherFor(o), lastKey = len - o.minMatch, atLeast = o.minMatch - 1;
-      for (let k = 0;k < o.start && k <= lastKey; ++k) {
-        const h = hash(data, k);
-        prev[k & wndMask] = head[h];
-        head[h] = k;
+      if (st.heldLen) {
+        tokens[p++] = st.heldLen;
+        tokens[p++] = st.heldDist;
+        st.heldLen = 0;
       }
-      let i = o.start;
-      while (i <= lastKey) {
-        const h = hash(data, i);
-        let matchLen = _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
+      let i = st.at;
+      while (p < cap && i <= lastKey) {
+        const h = hash(data, i), newest = head[h];
+        let matchLen = newest === -1 || i - newest >= wndSize ? 0 : _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
         prev[i & wndMask] = head[h];
         head[h] = i;
         if (matchLen === 0) {
@@ -616,7 +616,7 @@ export const xlsxFullBundled = {
           continue;
         }
         if (lazy && matchLen < maxLazy && i < lastKey) {
-          const h1 = hash(data, i + 1), nextLen = _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
+          const h1 = hash(data, i + 1), newest1 = head[h1], nextLen = newest1 === -1 || i + 1 - newest1 >= wndSize ? 0 : _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
           if (nextLen) {
             tokens[p++] = 0;
             tokens[p++] = data[i];
@@ -627,8 +627,13 @@ export const xlsxFullBundled = {
             head[h1] = i;
           }
         }
-        tokens[p++] = matchLen;
-        tokens[p++] = dist;
+        if (p < cap) {
+          tokens[p++] = matchLen;
+          tokens[p++] = dist;
+        } else {
+          st.heldLen = matchLen;
+          st.heldDist = dist;
+        }
         const end = i + matchLen;
         for (let k = i + 1;k < end && k <= lastKey; ++k) {
           const hk = hash(data, k);
@@ -637,12 +642,67 @@ export const xlsxFullBundled = {
         }
         i = end;
       }
-      while (i < len) {
+      while (p < cap && i < len) {
         tokens[p++] = 0;
         tokens[p++] = data[i];
         i++;
       }
-      return { tokens, count: p / 2 };
+      st.at = i;
+      return p >> 1;
+    }
+    function createScanner(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.createScanner: data must be Uint8Array");
+      const o = _resolveOpts(opts), len = data.length, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, empty = o.start >= len, hash = _hasherFor(o), lastKey = len - o.minMatch, head = empty ? null : new i32(1 << o.hashBits).fill(-1), prev = empty ? null : new i32(Math.min(wndSize, len)).fill(-1);
+      if (!empty)
+        for (let k = 0;k < o.start && k <= lastKey; ++k) {
+          const h = hash(data, k);
+          prev[k & wndMask] = head[h];
+          head[h] = k;
+        }
+      const st = {
+        data,
+        len,
+        hash,
+        lastKey,
+        wndSize,
+        head,
+        prev,
+        maxMatch: o.maxMatch,
+        niceLength: o.niceLength,
+        chainDepth: o.chainDepth,
+        lazy: o.lazy,
+        goodLength: o.goodLength,
+        maxLazy: o.maxLazy,
+        chainSkip: o.chainSkip,
+        atLeast: o.minMatch - 1,
+        at: empty ? len : o.start,
+        heldLen: 0,
+        heldDist: 0
+      };
+      return {
+        fill(tokens, max) {
+          return _fill(st, tokens, max);
+        },
+        get done() {
+          return st.at >= st.len && st.heldLen === 0;
+        }
+      };
+    }
+    function encodeTokens(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.encodeTokens: data must be Uint8Array");
+      const n = Math.max(0, data.length - Math.max(0, (opts && opts.start) | 0)), cap = 2 * n, provided = opts && opts.tokens;
+      let tokens;
+      if (provided) {
+        if (provided.length < cap)
+          throw Error("lz77.encodeTokens: tokens buffer too small");
+        tokens = provided;
+      } else
+        tokens = new i32(cap);
+      if (n === 0)
+        return { tokens, count: 0 };
+      return { tokens, count: createScanner(data, opts).fill(tokens, n) };
     }
     function decodeStream(dst, ops) {
       let p = 0;
@@ -659,6 +719,7 @@ export const xlsxFullBundled = {
     return {
       encode,
       encodeTokens,
+      createScanner,
       findMatch,
       decodeStream,
       DEFAULT
@@ -673,7 +734,7 @@ export const xlsxFullBundled = {
       byteOffset,
       slice,
       max
-    } = bitstream, { buildMap, buildTree } = huffman, ERROR_MESSAGES = [
+    } = bitstream, { buildMap, buildTree } = huffman, CODE_NAMES = { 0: "EEOF", 1: "EBADBLOCK", 2: "EBADSYMBOL", 3: "EBADDISTANCE", 4: "ESTREAMEND", 5: "ENOHANDLER", 6: "EBADFORMAT", 7: "EMAXOUT", 8: "EBADSTREAM", 9: "EEXTRATOOLONG", 10: "EBADDATE", 11: "ENAMETOOLONG", 12: "ENOENCODER", 13: "EBADFORMAT", 14: "EBADMETHOD", 15: "EUNSAFEPATH", 16: "ECHECKSUM" }, ERROR_MESSAGES = [
       "unexpected EOF",
       "invalid block type",
       "invalid length/literal",
@@ -681,12 +742,13 @@ export const xlsxFullBundled = {
       "stream finished",
       "no stream handler",
       null,
-      null,
+      "output limit exceeded",
       "invalid data"
     ];
     function fail(code, message) {
       const e = Error(message ?? ERROR_MESSAGES[code] ?? "unknown error");
-      e.code = code;
+      e.code = CODE_NAMES[code];
+      e.errno = code;
       throw e;
     }
     const u8 = Uint8Array, u16 = Uint16Array, u32 = Uint32Array, i32 = Int32Array, WINDOW_SIZE = 32768;
@@ -774,8 +836,10 @@ export const xlsxFullBundled = {
       return sym < 29 && dist >= DIST_BASE[sym + 1] ? sym + 1 : sym;
     }
     const PHASE_HEADER = 0, PHASE_STORED = 1, PHASE_CODES = 2, PHASE_DONE = 3, NEED_INPUT = 0, COMPLETE = 1;
-    function createInflateState(dictionary) {
+    function createInflateState(dictionary, maxOutput) {
       const dict = dictionary && dictionary.length ? dictionary.subarray(Math.max(0, dictionary.length - WINDOW_SIZE)) : null;
+      if (maxOutput !== void 0 && maxOutput !== null && !(Number.isSafeInteger(maxOutput) && maxOutput >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
       return {
         bitPos: 0,
         finalBlock: 0,
@@ -789,7 +853,10 @@ export const xlsxFullBundled = {
         outLen: 0,
         emitted: 0,
         dictionary: dict,
-        fixedOut: !1
+        fixedOut: !1,
+        base: 0,
+        limit: maxOutput !== void 0 && maxOutput !== null ? (dict ? dict.length : 0) + maxOutput : 1 / 0,
+        end: 0
       };
     }
     function initOutput(state, inputLength, providedOut) {
@@ -798,24 +865,29 @@ export const xlsxFullBundled = {
         state.out = providedOut;
         state.fixedOut = !0;
       } else
-        state.out = new u8(Math.max(65536, inputLength * 3));
+        state.out = new u8(Math.min(Math.max(65536, inputLength * 3), state.limit));
       if (dictLen) {
         state.out.set(state.dictionary);
         state.outLen = dictLen;
         state.emitted = dictLen;
       }
+      state.end = Math.min(state.out.length, state.limit - state.base);
     }
     function reserveOutput(state, needed) {
-      if (needed <= state.out.length)
+      if (needed <= state.end)
         return;
+      if (state.base + needed > state.limit)
+        fail(7);
       if (state.fixedOut)
         fail(8, "output exceeds provided buffer");
       let size = state.out.length || 65536;
       while (size < needed)
         size *= 2;
+      size = Math.min(size, state.limit - state.base);
       const grown = new u8(size);
       grown.set(state.out.subarray(0, state.outLen));
       state.out = grown;
+      state.end = Math.min(size, state.limit - state.base);
     }
     function readDynamicTables(state, input) {
       const totalBits = input.length * 8;
@@ -1033,6 +1105,8 @@ export const xlsxFullBundled = {
       const start = state.outLen - WINDOW_SIZE;
       state.out.set(state.out.subarray(start, state.outLen), 0);
       state.outLen = WINDOW_SIZE;
+      state.base += start;
+      state.end = Math.min(state.out.length, state.limit - state.base);
       state.emitted = Math.max(0, state.emitted - start);
     }
     const WINDOW_BITS = 15, MIN_MATCH = 3, MAX_MATCH = 258, BLOCK_TOKENS = 16384, STREAM_FLUSH_BYTES = 65536, LEVELS = [
@@ -1063,15 +1137,7 @@ export const xlsxFullBundled = {
         return Math.imul(data[i] | data[i + 1] << 8 | data[i + 2] << 16, 2654435761) >>> shift;
       };
     }
-    const TOKEN_SCRATCH_MAX = 2097152;
-    let tokenScratch = null;
-    function tokenBuffer(capacity) {
-      if (capacity > TOKEN_SCRATCH_MAX)
-        return new i32(capacity);
-      if (!tokenScratch || tokenScratch.length < capacity)
-        tokenScratch = new i32(capacity);
-      return tokenScratch;
-    }
+    const blockTokens = new i32(2 * BLOCK_TOKENS);
     function createTokenBuffer(tokens, start) {
       return {
         tokens,
@@ -1296,7 +1362,7 @@ export const xlsxFullBundled = {
       if (params.level === 0)
         writeStoredRun(w, input, start, params.final);
       else {
-        const scan = lz77.encodeTokens(input, {
+        const scan = lz77.createScanner(input, {
           windowBits: WINDOW_BITS,
           minMatch: MIN_MATCH,
           maxMatch: MAX_MATCH,
@@ -1305,12 +1371,11 @@ export const xlsxFullBundled = {
           hashFn: makeHashFn(params.hashBits),
           lazy: params.lazy,
           chainSkip: !0,
-          ...LEVELS[params.level],
-          tokens: tokenBuffer(2 * Math.max(0, input.length - start))
-        }), tb = createTokenBuffer(scan.tokens, start), count = scan.count;
-        for (let from = 0;; from += BLOCK_TOKENS) {
-          const to = Math.min(count, from + BLOCK_TOKENS), covered = tallyBlock(tb, from, to);
-          if (to === count) {
+          ...LEVELS[params.level]
+        }), tb = createTokenBuffer(blockTokens, start);
+        for (;; ) {
+          const covered = tallyBlock(tb, 0, scan.fill(blockTokens, BLOCK_TOKENS));
+          if (scan.done) {
             tb.blockLen = input.length - tb.blockStart;
             writeBlock(w, tb, input, params.final);
             break;
@@ -1398,7 +1463,7 @@ export const xlsxFullBundled = {
         opts = {};
       }
       this.ondata = ondata;
-      this._state = createInflateState((opts || {}).dictionary);
+      this._state = createInflateState((opts || {}).dictionary, (opts || {}).maxOutput);
       initOutput(this._state, 0, void 0);
       this._pending = new u8(0);
       this._done = !1;
@@ -1431,6 +1496,16 @@ export const xlsxFullBundled = {
       this._pending = slice(this._pending, state.bitPos >> 3);
       state.bitPos &= 7;
     };
+    Object.defineProperty(InflateStream.prototype, "ended", {
+      get() {
+        return this._state.phase === PHASE_DONE;
+      }
+    });
+    InflateStream.prototype.rest = function() {
+      if (this._state.phase !== PHASE_DONE)
+        return null;
+      return this._pending.subarray(this._state.bitPos ? 1 : 0);
+    };
     function deflateSync(data, opts = {}) {
       let input = data, start = 0;
       const dict = opts.dictionary;
@@ -1454,9 +1529,11 @@ export const xlsxFullBundled = {
     function inflateSync(data, opts = {}) {
       if (!data.length)
         return opts.out ? opts.out.subarray(0, 0) : new u8(0);
-      const state = createInflateState(opts.dictionary), dictLen = state.dictionary ? state.dictionary.length : 0;
+      const state = createInflateState(opts.dictionary, opts.maxOutput), dictLen = state.dictionary ? state.dictionary.length : 0;
       initOutput(state, data.length, opts.out);
       runInflate(state, data, !1);
+      if (typeof opts.onEnd === "function")
+        opts.onEnd(byteOffset(state.bitPos));
       if (state.fixedOut)
         return state.out.subarray(0, state.outLen);
       if (opts.out) {
@@ -1575,7 +1652,8 @@ export const xlsxFullBundled = {
       const d = new Date(mtime ?? Date.now()), y = d.getFullYear() - 1980;
       if (y < 0 || y > 119) {
         const e = Error("date not in range 1980-2099");
-        e.code = 10;
+        e.code = "EBADDATE";
+        e.errno = 10;
         throw e;
       }
       return y << 25 | d.getMonth() + 1 << 21 | d.getDate() << 16 | d.getHours() << 11 | d.getMinutes() << 5 | d.getSeconds() >> 1;
@@ -1590,7 +1668,8 @@ export const xlsxFullBundled = {
           const l = ex[k].length;
           if (l > 65535) {
             const e = Error("extra field too long");
-            e.code = 9;
+            e.code = "EEXTRATOOLONG";
+            e.errno = 9;
             throw e;
           }
           le += l + 4;
@@ -1708,8 +1787,14 @@ export const xlsxFullBundled = {
       return b + 30 + _r16(d, b + 26) + _r16(d, b + 28);
     }
     function _readCDE(d, b, zip64) {
-      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
-      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off];
+      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8).replace(/\\/g, "/"), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
+      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off, _r32(d, b + 16) >>> 0];
+    }
+    function _setOwn(obj, key, value) {
+      if (key === "__proto__")
+        Object.defineProperty(obj, key, { value, writable: !0, enumerable: !0, configurable: !0 });
+      else
+        obj[key] = value;
     }
     function _flatten(d, prefix, out, defaultOpts) {
       for (const k in d) {
@@ -1720,9 +1805,9 @@ export const xlsxFullBundled = {
           data = val[0];
         }
         if (data instanceof Uint8Array)
-          out[name] = [data, opts];
+          _setOwn(out, name, [data, opts]);
         else {
-          out[name + "/"] = [new Uint8Array(0), opts];
+          _setOwn(out, name + "/", [new Uint8Array(0), opts]);
           _flatten(data, name + "/", out, defaultOpts);
         }
       }
@@ -1736,7 +1821,8 @@ export const xlsxFullBundled = {
         const [file, p] = flat[fn], compression = p.level === 0 ? 0 : 8, fnBytes = _strToU8(fn), fnLen = fnBytes.length;
         if (fnLen > 65535) {
           const e = Error("filename too long");
-          e.code = 11;
+          e.code = "ENAMETOOLONG";
+          e.errno = 11;
           throw e;
         }
         const comBytes = p.comment ? _strToU8(p.comment) : null, exl = _exfl(p.extra), u = _isUTF8(fn) || comBytes && _isUTF8(p.comment), dosTime = _dosDateTime(p.mtime), crc = new Crc32;
@@ -1787,12 +1873,15 @@ export const xlsxFullBundled = {
       return !1;
     }
     function unzipSync(data, opts = {}) {
-      const result = {}, safe = opts.safe !== !1;
-      let e = data.length - 22;
+      const result = Object.create(null), safe = opts.safe !== !1, cap = opts.maxOutput === void 0 || opts.maxOutput === null ? 1 / 0 : opts.maxOutput;
+      if (cap !== 1 / 0 && !(Number.isSafeInteger(cap) && cap >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
+      let extracted = 0, e = data.length - 22;
       while (_r32(data, e) !== 101010256) {
         if (!e || data.length - e > 65558) {
           const err = Error("invalid zip data");
-          err.code = 13;
+          err.code = "EBADFORMAT";
+          err.errno = 13;
           throw err;
         }
         --e;
@@ -1811,26 +1900,46 @@ export const xlsxFullBundled = {
       const fltr = opts.filter;
       let o = cdOffset;
       for (let i = 0;i < entryCount; ++i) {
-        const [cmp, cSize, uSize, fn, nextOff, localOff] = _readCDE(data, o, zip64);
+        const [cmp, cSize, uSize, fn, nextOff, localOff, crcExpected] = _readCDE(data, o, zip64);
         o = nextOff;
         const dataStart = _slzh(data, localOff);
         if (safe && _isUnsafePath(fn)) {
           const err = Error('zip-slip: unsafe entry path "' + fn + '"');
-          err.code = 15;
+          err.code = "EUNSAFEPATH";
+          err.errno = 15;
           throw err;
         }
         if (fltr && !fltr({ name: fn, size: cSize, originalSize: uSize, compression: cmp }))
           continue;
+        const outSize = cmp === 0 ? cSize : uSize;
+        if (outSize > cap - extracted) {
+          const err = Error('zip: output limit exceeded (maxOutput) at "' + fn + '"');
+          err.code = "EMAXOUT";
+          err.errno = 7;
+          throw err;
+        }
+        extracted += outSize;
         if (cmp === 0)
-          result[fn] = new Uint8Array(data.subarray(dataStart, dataStart + cSize));
+          _setOwn(result, fn, new Uint8Array(data.subarray(dataStart, dataStart + cSize)));
         else if (cmp === 8)
-          result[fn] = inflateSync(data.subarray(dataStart, dataStart + cSize), {
+          _setOwn(result, fn, inflateSync(data.subarray(dataStart, dataStart + cSize), {
             out: new Uint8Array(uSize)
-          });
+          }));
         else {
           const err = Error("unknown compression type " + cmp);
-          err.code = 14;
+          err.code = "EBADMETHOD";
+          err.errno = 14;
           throw err;
+        }
+        if (opts.verify !== !1) {
+          const c = new Crc32;
+          c.append(result[fn]);
+          if (c.get() !== crcExpected || result[fn].length !== uSize) {
+            const err = Error('zip: incorrect data check (CRC-32 or size mismatch) for "' + fn + '"');
+            err.code = "ECHECKSUM";
+            err.errno = 16;
+            throw err;
+          }
         }
       }
       return result;
@@ -1893,7 +2002,8 @@ export const xlsxFullBundled = {
       const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
       if (fnBytes.length > 65535) {
         const e = Error("filename too long");
-        e.code = 11;
+        e.code = "ENAMETOOLONG";
+        e.errno = 11;
         throw e;
       }
       const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, crc = new Crc32;
@@ -1911,7 +2021,8 @@ export const xlsxFullBundled = {
       const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
       if (fnBytes.length > 65535) {
         const e = Error("filename too long");
-        e.code = 11;
+        e.code = "ENAMETOOLONG";
+        e.errno = 11;
         throw e;
       }
       const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, hdr = new Uint8Array(localHdrLen);
@@ -2047,12 +2158,27 @@ export const xlsxFullBundled = {
           t = t >>> 1;
       table[i] = t;
     }
+    const slices = new Uint32Array(4096);
+    slices.set(table);
+    for (let k = 256;k < 4096; k++) {
+      const prev = slices[k - 256];
+      slices[k] = prev >>> 8 ^ table[prev & 255];
+    }
     function Crc32() {
       this.crc = -1;
     }
     Crc32.prototype.append = function(data) {
       let crc = this.crc | 0;
-      for (let offset = 0, length = data.length | 0;offset < length; offset++)
+      const length = data.length | 0;
+      let offset = 0;
+      if (data instanceof Uint8Array) {
+        const t = slices;
+        for (const end = length - 15;offset < end; offset += 16) {
+          const a = crc ^ (data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 | data[offset + 3] << 24);
+          crc = t[3840 + (a & 255)] ^ t[3584 + (a >>> 8 & 255)] ^ t[3328 + (a >>> 16 & 255)] ^ t[3072 + (a >>> 24)] ^ t[2816 + data[offset + 4]] ^ t[2560 + data[offset + 5]] ^ t[2304 + data[offset + 6]] ^ t[2048 + data[offset + 7]] ^ t[1792 + data[offset + 8]] ^ t[1536 + data[offset + 9]] ^ t[1280 + data[offset + 10]] ^ t[1024 + data[offset + 11]] ^ t[768 + data[offset + 12]] ^ t[512 + data[offset + 13]] ^ t[256 + data[offset + 14]] ^ t[data[offset + 15]];
+        }
+      }
+      for (;offset < length; offset++)
         crc = crc >>> 8 ^ table[(crc ^ data[offset]) & 255];
       this.crc = crc;
     };
@@ -2241,7 +2367,10 @@ export const xlsxFullBundled = {
       SLIDE: NS.R + "/slide",
       SLIDE_LAYOUT: NS.R + "/slideLayout",
       SLIDE_MASTER: NS.R + "/slideMaster",
-      THEME: NS.R + "/theme"
+      THEME: NS.R + "/theme",
+      NOTES_SLIDE: NS.R + "/notesSlide",
+      NOTES_MASTER: NS.R + "/notesMaster",
+      HANDOUT_MASTER: NS.R + "/handoutMaster"
     }), CT = Object.freeze({
       DOCUMENT: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
       STYLES_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
@@ -2267,7 +2396,10 @@ export const xlsxFullBundled = {
       SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
       THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
       VML_DRAWING: "application/vnd.openxmlformats-officedocument.vmlDrawing",
-      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"
+      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml",
+      NOTES_SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+      NOTES_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+      HANDOUT_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml"
     });
     function toEmu(v) {
       if (typeof v === "number")
@@ -3547,13 +3679,19 @@ export const xlsxFullBundled = {
         out.totalsRowLabel = cEl.attrs.totalsRowLabel;
       if (cEl.attrs.totalsRowFunction)
         out.totalsRowFunction = cEl.attrs.totalsRowFunction;
+      const other = {};
+      for (const [k, v] of Object.entries(cEl.attrs || {}))
+        if (!COLUMN_ATTRS.has(k))
+          other[k] = v;
+      if (Object.keys(other).length)
+        out.extraAttrs = other;
       const extras = cEl.children.filter((n) => n.type === "element");
       if (extras.length)
         out._extras = extras;
       return out;
     }
     function renderColumn(c) {
-      const a = { id: String(c.id), name: c.name };
+      const a = { ...stringAttrs(c.extraAttrs), id: String(c.id), name: c.name };
       if (c.totalsRowLabel)
         a.totalsRowLabel = c.totalsRowLabel;
       if (c.totalsRowFunction)
@@ -3588,6 +3726,29 @@ export const xlsxFullBundled = {
           a[k] = writeBoolAttr(s[k]);
       return xml.el("tableStyleInfo", a);
     }
+    const COLUMN_ATTRS = new Set(["id", "name", "totalsRowLabel", "totalsRowFunction"]), ROOT_ATTRS = new Set([
+      "xmlns",
+      "id",
+      "name",
+      "displayName",
+      "ref",
+      "headerRowCount",
+      "totalsRowCount",
+      "totalsRowShown"
+    ]), TYPED_CHILDREN = new Set(["autoFilter", "tableColumns", "tableStyleInfo"]), TABLE_SEQ = shared.sequence ? shared.sequence([
+      "autoFilter",
+      "sortState",
+      "tableColumns",
+      "tableStyleInfo",
+      "extLst"
+    ]) : null, ordered = (children) => TABLE_SEQ && shared.orderBySequence ? shared.orderBySequence(children, TABLE_SEQ) : children;
+    function stringAttrs(map) {
+      const out = {};
+      for (const [k, v] of Object.entries(map && typeof map === "object" ? map : {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
+    }
     function parse(input) {
       const text = typeof input === "string" ? input : decodeText(input), root = xml.parse(text);
       if (root.name !== "table")
@@ -3605,9 +3766,25 @@ export const xlsxFullBundled = {
         out.totalsRowCount = Number(root.attrs.totalsRowCount);
       if (root.attrs.totalsRowShown != null)
         out.totalsRowShown = readBoolAttr(root.attrs.totalsRowShown);
+      const rootAttrs = {};
+      for (const [k, v] of Object.entries(root.attrs || {}))
+        if (!ROOT_ATTRS.has(k))
+          rootAttrs[k] = v;
+      if (Object.keys(rootAttrs).length)
+        out.rootAttrs = rootAttrs;
       const af = xml.findChild(root, "autoFilter");
-      if (af)
+      if (af) {
         out.autoFilter = { ref: af.attrs.ref };
+        const afOther = {};
+        for (const [k, v] of Object.entries(af.attrs || {}))
+          if (k !== "ref")
+            afOther[k] = v;
+        if (Object.keys(afOther).length)
+          out.autoFilter.extraAttrs = afOther;
+        const kids = af.children.filter((n) => n.type === "element");
+        if (kids.length)
+          out.autoFilter._extras = kids;
+      }
       const cols = xml.findChild(root, "tableColumns");
       if (cols)
         for (const cEl of xml.findAll(cols, "tableColumn"))
@@ -3615,10 +3792,14 @@ export const xlsxFullBundled = {
       const tsi = xml.findChild(root, "tableStyleInfo");
       if (tsi)
         out.tableStyleInfo = parseTableStyleInfo(tsi);
+      const extras = root.children.filter((n) => n.type === "element" && !TYPED_CHILDREN.has(n.name));
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function serialize(obj) {
       const a = {
+        ...stringAttrs(obj.rootAttrs),
         xmlns: SS_NS,
         id: String(obj.id),
         name: obj.name,
@@ -3633,14 +3814,14 @@ export const xlsxFullBundled = {
         a.totalsRowShown = writeBoolAttr(obj.totalsRowShown);
       const children = [];
       if (obj.autoFilter)
-        children.push(xml.el("autoFilter", { ref: obj.autoFilter.ref }));
+        children.push(xml.el("autoFilter", { ...stringAttrs(obj.autoFilter.extraAttrs), ref: obj.autoFilter.ref }, Array.isArray(obj.autoFilter._extras) ? obj.autoFilter._extras : []));
       children.push(xml.el("tableColumns", { count: String((obj.columns || []).length) }, (obj.columns || []).map(renderColumn)));
       if (obj.tableStyleInfo)
         children.push(renderTableStyleInfo(obj.tableStyleInfo));
       if (obj._extras)
         for (const ex of obj._extras)
           children.push(ex);
-      return xml.serialize(xml.el("table", a, children));
+      return xml.serialize(xml.el("table", a, ordered(children)));
     }
     function bytesOf(obj) {
       return encodeText(serialize(obj));
@@ -4360,7 +4541,19 @@ export const xlsxFullBundled = {
       }
       return null;
     }
-    function parseLine(lnEl) {
+    function lineColor(solidFill, opts) {
+      if (!(opts && opts.typedLineColors)) {
+        const col = parseColorChild(solidFill);
+        return col && col.rgb ? col.rgb : void 0;
+      }
+      const el = solidFill.children.find((n) => n.type === "element");
+      if (!el)
+        return;
+      if (el.name === "a:srgbClr" && !el.children.some((n) => n.type === "element"))
+        return el.attrs.val;
+      return typedColor.parse(el) || void 0;
+    }
+    function parseLine(lnEl, opts) {
       if (!lnEl)
         return;
       const out = {};
@@ -4385,9 +4578,9 @@ export const xlsxFullBundled = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:solidFill") {
-          const col = parseColorChild(c);
-          if (col && col.rgb)
-            out.color = col.rgb;
+          const col = lineColor(c, opts);
+          if (col !== void 0)
+            out.color = col;
           else
             extras.push(c);
         } else if (c.name === "a:prstDash")
@@ -4421,8 +4614,11 @@ export const xlsxFullBundled = {
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
-      else if (line.color)
-        children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
+      else if (line.color) {
+        const el = typeof line.color === "object" ? typedColor.render(line.color) : renderSrgbClr(line.color);
+        if (el)
+          children.push(xml.el("a:solidFill", {}, [el]));
+      }
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
       if (!line._extras)
@@ -4436,10 +4632,13 @@ export const xlsxFullBundled = {
       }
       return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
-    function parseShapeProperties(spPrEl) {
+    function parseShapeProperties(spPrEl, opts) {
       if (!spPrEl)
         return;
-      const out = {}, xfrmEl = xml.findChild(spPrEl, "a:xfrm");
+      const out = {};
+      if (spPrEl.attrs && spPrEl.attrs.bwMode)
+        out.bwMode = spPrEl.attrs.bwMode;
+      const xfrmEl = xml.findChild(spPrEl, "a:xfrm");
       Object.assign(out, parseXfrm(xfrmEl));
       const prst = xml.findChild(spPrEl, "a:prstGeom");
       if (prst) {
@@ -4452,7 +4651,7 @@ export const xlsxFullBundled = {
         out.fill = fill;
       const ln = xml.findChild(spPrEl, "a:ln");
       if (ln) {
-        const lineProps = parseLine(ln);
+        const lineProps = parseLine(ln, opts);
         if (lineProps !== void 0)
           out.line = lineProps;
       }
@@ -4487,11 +4686,12 @@ export const xlsxFullBundled = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
+      const attrs = props.bwMode ? { bwMode: String(props.bwMode) } : {};
       if (!props._extras)
-        return xml.el(tag, {}, children);
+        return xml.el(tag, attrs, children);
       for (const ex of props._extras)
         children.push(ex);
-      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
+      return xml.el(tag, attrs, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -5095,7 +5295,21 @@ export const xlsxFullBundled = {
       "a:hlinkMouseOver",
       "a:rtl",
       "a:extLst"
-    ]);
+    ]), RPR_TYPED_ATTRS = new Set(["lang", "sz", "b", "i", "strike", "u", "baseline"]), PPR_TYPED_ATTRS = new Set(["lvl", "algn", "indent", "marL"]), LATIN_TYPED_ATTRS = new Set(["typeface"]);
+    function otherAttrs(attrs, typed) {
+      const out = {};
+      for (const [k, v] of Object.entries(attrs || {}))
+        if (!typed.has(k))
+          out[k] = v;
+      return Object.keys(out).length ? out : void 0;
+    }
+    function stringAttrs(o) {
+      const out = {};
+      for (const [k, v] of Object.entries(o || {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
+    }
     function runColor(solidFill, opts) {
       if (!(opts && opts.typedRunColors)) {
         const cl = solidFill.children.find((n) => n.type === "element" && n.name === "a:srgbClr");
@@ -5126,6 +5340,9 @@ export const xlsxFullBundled = {
         out.underline = a.u;
       if (a.baseline != null)
         out.baseline = Number(a.baseline);
+      const extraAttrs = otherAttrs(a, RPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of rPrEl.children) {
         if (c.type !== "element")
@@ -5136,9 +5353,12 @@ export const xlsxFullBundled = {
             out.color = color;
           else
             extras.push(c);
-        } else if (c.name === "a:latin")
+        } else if (c.name === "a:latin") {
           out.font = c.attrs.typeface;
-        else
+          const fontAttrs = otherAttrs(c.attrs, LATIN_TYPED_ATTRS);
+          if (fontAttrs)
+            out.fontAttrs = fontAttrs;
+        } else
           extras.push(c);
       }
       if (extras.length)
@@ -5148,7 +5368,7 @@ export const xlsxFullBundled = {
     function renderRunProperties(rPr) {
       if (!rPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(rPr.extraAttrs) };
       if (rPr.lang)
         a.lang = rPr.lang;
       if (rPr.size != null)
@@ -5170,7 +5390,7 @@ export const xlsxFullBundled = {
           children.push(xml.el("a:solidFill", {}, [el]));
       }
       if (rPr.font)
-        children.push(xml.el("a:latin", { typeface: rPr.font }));
+        children.push(xml.el("a:latin", { typeface: rPr.font, ...stringAttrs(rPr.fontAttrs) }));
       if (rPr._extras)
         for (const ex of rPr._extras)
           children.push(ex);
@@ -5188,6 +5408,9 @@ export const xlsxFullBundled = {
         out.indent = Number(a.indent);
       if (a.marL != null)
         out.marL = Number(a.marL);
+      const extraAttrs = otherAttrs(a, PPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of pPrEl.children) {
         if (c.type !== "element")
@@ -5196,9 +5419,11 @@ export const xlsxFullBundled = {
           out.bullet = "none";
         else if (c.name === "a:buChar")
           out.bullet = { char: c.attrs.char };
-        else if (c.name === "a:buAutoNum")
+        else if (c.name === "a:buAutoNum") {
           out.bullet = { autoNumType: c.attrs.type };
-        else if (c.name === "a:defRPr")
+          if (c.attrs.startAt != null)
+            out.bullet.startAt = Number(c.attrs.startAt);
+        } else if (c.name === "a:defRPr")
           out.defRPr = parseRunProperties(c, opts);
         else
           extras.push(c);
@@ -5210,7 +5435,7 @@ export const xlsxFullBundled = {
     function renderParagraphProperties(pPr) {
       if (!pPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(pPr.extraAttrs) };
       if (pPr.level != null)
         a.lvl = String(pPr.level);
       if (pPr.align)
@@ -5224,8 +5449,12 @@ export const xlsxFullBundled = {
         children.push(xml.el("a:buNone", {}));
       else if (pPr.bullet && pPr.bullet.char)
         children.push(xml.el("a:buChar", { char: pPr.bullet.char }));
-      else if (pPr.bullet && pPr.bullet.autoNumType)
-        children.push(xml.el("a:buAutoNum", { type: pPr.bullet.autoNumType }));
+      else if (pPr.bullet && pPr.bullet.autoNumType) {
+        const ba = { type: pPr.bullet.autoNumType };
+        if (pPr.bullet.startAt != null)
+          ba.startAt = String(pPr.bullet.startAt);
+        children.push(xml.el("a:buAutoNum", ba));
+      }
       if (pPr.defRPr) {
         const dpr = renderRunProperties(pPr.defRPr);
         if (dpr)
@@ -5234,8 +5463,6 @@ export const xlsxFullBundled = {
       if (pPr._extras)
         for (const ex of pPr._extras)
           children.push(ex);
-      if (!Object.keys(a).length && !children.length)
-        return null;
       return xml.el("a:pPr", a, ordered(children, PPR_SEQ));
     }
     function parseRun(rEl, opts) {
@@ -5261,6 +5488,9 @@ export const xlsxFullBundled = {
       const rPrEl = xml.findChild(fEl, "a:rPr"), tEl = xml.findChild(fEl, "a:t"), rPr = parseRunProperties(rPrEl, opts);
       if (rPr)
         out.rPr = rPr;
+      const pPr = parseParagraphProperties(xml.findChild(fEl, "a:pPr"), opts);
+      if (pPr)
+        out.pPr = pPr;
       if (tEl)
         out.value = xml.textContent(tEl);
       return out;
@@ -5272,6 +5502,9 @@ export const xlsxFullBundled = {
       const children = [], rPrEl = renderRunProperties(f.rPr);
       if (rPrEl)
         children.push(rPrEl);
+      const pPrEl = renderParagraphProperties(f.pPr);
+      if (pPrEl)
+        children.push(pPrEl);
       if (f.value != null)
         children.push(xml.el("a:t", {}, [xml.text(f.value)]));
       return xml.el("a:fld", a, children);
@@ -5343,12 +5576,15 @@ export const xlsxFullBundled = {
         else if (c.name === "a:p")
           out.paragraphs.push(parseParagraph(c, opts));
       }
+      if (out.lstStyle === void 0)
+        out.lstStyle = null;
       return out;
     }
     function renderTextBody(tb, rootTag = "a:txBody") {
       const children = [];
       children.push(tb.bodyPr || xml.el("a:bodyPr", {}));
-      children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
+      if (tb.lstStyle !== null)
+        children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
       for (const p of tb.paragraphs || [])
         children.push(renderParagraph(p));
       return xml.el(rootTag, {}, children);
@@ -5626,7 +5862,7 @@ export const xlsxFullBundled = {
       }
       const spPr = xml.findChild(spEl, "xdr:spPr");
       if (spPr) {
-        const typed = shapeMod.parseShapeProperties(spPr);
+        const typed = shapeMod.parseShapeProperties(spPr, opts);
         if (typed)
           out.shapeProps = typed;
       }
@@ -6329,19 +6565,67 @@ export const xlsxFullBundled = {
           }
         return value;
       }
+      function walkText(tb, phase) {
+        if (!tb || !Array.isArray(tb.paragraphs))
+          return;
+        const hydrate = phase === "hydrate", hr = hydrate ? "hydrateRunProperties" : "dehydrateRunProperties", hp = hydrate ? "hydrateParagraphProperties" : "dehydrateParagraphProperties", hpara = hydrate ? "hydrateParagraph" : "dehydrateParagraph";
+        tb.paragraphs.forEach((p, i) => {
+          if (!p || typeof p !== "object")
+            return;
+          if (!hydrate)
+            p = tb.paragraphs[i] = applyHook(hpara, p);
+          if (p.pPr)
+            p.pPr = applyHook(hp, p.pPr);
+          for (const r of p.runs || []) {
+            if (r && r.rPr)
+              r.rPr = applyHook(hr, r.rPr);
+            if (r && r.pPr)
+              r.pPr = applyHook(hp, r.pPr);
+          }
+          if (hydrate)
+            tb.paragraphs[i] = applyHook(hpara, p);
+        });
+      }
+      function walkDrawingText(workbook, phase) {
+        for (const sheet of Array.isArray(workbook.sheets) ? workbook.sheets : []) {
+          const list = sheet && Array.isArray(sheet.drawings) ? sheet.drawings : [];
+          for (const d of list)
+            if (d && typeof d === "object")
+              walkText(d.txBody, phase);
+        }
+      }
       function applyExtensions(workbook, phase) {
         if (!_exts.length || !workbook)
           return workbook;
+        if (phase === "hydrate")
+          walkDrawingText(workbook, phase);
         const sName = phase === "hydrate" ? "hydrateSettings" : "dehydrateSettings", wbName = phase === "hydrate" ? "hydrateWorkbook" : "dehydrateWorkbook", shName = phase === "hydrate" ? "hydrateSheet" : "dehydrateSheet", wb2 = applyHook(wbName, workbook);
         if (wb2 && wb2 !== workbook)
           Object.assign(workbook, wb2);
         applyHook(sName, workbook);
         for (const sheet of workbook.sheets || [])
           applyHook(shName, sheet);
+        if (phase !== "hydrate")
+          walkDrawingText(workbook, phase);
+        return workbook;
+      }
+      function applyPackage(name, workbook, ctx) {
+        for (const ext of _exts)
+          if (typeof ext[name] === "function") {
+            const r = ext[name](workbook, ctx);
+            if (r !== void 0)
+              workbook = r;
+          }
         return workbook;
       }
       return {
         use,
+        applyPackageHydrate(workbook, ctx) {
+          return applyPackage("hydratePackage", workbook, ctx);
+        },
+        applyPackageDehydrate(workbook, ctx) {
+          return applyPackage("dehydratePackage", workbook, ctx);
+        },
         applyHydrate(workbook) {
           applyExtensions(workbook, "hydrate");
         },
@@ -6766,6 +7050,16 @@ export const xlsxFullBundled = {
         Type: REL_TYPE_DOC,
         Target: "xl/workbook.xml"
       }]);
+      if (walker.hasExtensions)
+        walker.applyPackageDehydrate(workbook, {
+          package: pkg,
+          wbPart: "/xl/workbook.xml",
+          sheetParts: sheets.map((_, i) => `/xl/worksheets/sheet${i + 1}.xml`),
+          tablePartOf(t) {
+            const name = t && t.id != null ? `/xl/tables/table${t.id}.xml` : null;
+            return name && pkg.parts[name] ? name : null;
+          }
+        });
       return opc.write(pkg);
     }
     function renderWorksheet(sheet, sheetIdx, internString, hyperlinkRels, extraRels) {
@@ -6787,8 +7081,11 @@ export const xlsxFullBundled = {
             a.bestFit = "1";
           return xml.el("col", a);
         })));
+      let prevNum = 0;
       const rows = (sheet.rows || []).map((row, r) => {
-        const cells = row.map((val, c) => renderCell(val, r, c, internString)), a = { r: String(r + 1) }, p = sheet.rowProps && sheet.rowProps[r];
+        const given = Array.isArray(sheet.rowNumbers) ? sheet.rowNumbers[r] : void 0, num = Number.isInteger(given) && given > prevNum ? given : prevNum + 1;
+        prevNum = num;
+        const cells = row.map((val, c) => renderCell(val, num - 1, c, internString)), a = { r: String(num) }, p = sheet.rowProps && sheet.rowProps[r];
         if (p) {
           if (p.height != null)
             a.ht = String(p.height);
@@ -6914,8 +7211,8 @@ export const xlsxFullBundled = {
       const ref = cellRef(r, c), cell = normalizeCell(val), a = { r: ref };
       if (cell.s != null)
         a.s = String(cell.s);
-      if (cell.formula) {
-        const inner = [xml.el("f", {}, [xml.text(cell.formula)])];
+      if (hasFormula(cell)) {
+        const inner = [renderFormula(cell)];
         if (cell.value != null && cell.value !== "")
           inner.push(xml.el("v", {}, [xml.text(String(cell.value))]));
         if (cell.t && cell.t !== "n")
@@ -6943,11 +7240,29 @@ export const xlsxFullBundled = {
         return xml.el("c", a, []);
       return xml.el("c", a, [xml.el("v", {}, [xml.text(String(cell.value))])]);
     }
+    function hasFormula(cell) {
+      return cell.formula != null && (cell.formula !== "" || cell.formulaType != null);
+    }
+    function renderFormula(cell) {
+      const a = {};
+      if (cell.formulaAttrs && typeof cell.formulaAttrs === "object") {
+        for (const [k, v] of Object.entries(cell.formulaAttrs))
+          if (v != null)
+            a[k] = String(v);
+      }
+      if (cell.formulaType != null)
+        a.t = String(cell.formulaType);
+      if (cell.formulaRef != null)
+        a.ref = String(cell.formulaRef);
+      if (cell.sharedIndex != null)
+        a.si = String(cell.sharedIndex);
+      return xml.el("f", a, cell.formula !== "" ? [xml.text(String(cell.formula))] : []);
+    }
     function normalizeCell(val) {
       if (val == null)
         return { value: null, t: "n" };
       if (typeof val === "object" && val.type === "cell") {
-        if (val.formula)
+        if (hasFormula(val))
           return { ...val, t: val.t || "n" };
         if (val.t)
           return val;
@@ -6970,9 +7285,9 @@ export const xlsxFullBundled = {
       return o ? { maxParts: o.maxParts, maxUncompressed: o.maxUncompressed, maxRatio: o.maxRatio, maxDepth: o.maxDepth } : void 0;
     }
     function read(bytes, readOpts) {
-      const pkg = opc.read(bytes, archiveLimits(readOpts)), { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
+      const pkg = opc.read(bytes, archiveLimits(readOpts)), plainParts = pkg.parts, { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
         try {
-          return readPackage(p, readOpts);
+          return readPackage(p, readOpts, plainParts);
         } catch (e) {
           throw typedPartXml(e);
         }
@@ -6985,7 +7300,7 @@ export const xlsxFullBundled = {
         return e;
       return new ParseError("xlsx/invalid-part-xml", `xlsx: failed to parse a part's XML (${e.message})`, { cause: e });
     }
-    function readPackage(pkg, readOpts) {
+    function readPackage(pkg, readOpts, plainParts) {
       const docRel = (pkg.rels["/"] || []).find((r) => r.Type.endsWith("/officeDocument"));
       if (!docRel)
         throw new ParseError("xlsx/missing-officeDocument-rel", "xlsx: no officeDocument relationship");
@@ -7035,7 +7350,7 @@ export const xlsxFullBundled = {
             dn.hidden = !0;
           definedNames.push(dn);
         }
-      const sheets = [], tables = [], sheetsEl = xml.findChild(wbRoot, "sheets");
+      const sheets = [], tables = [], sheetParts = [], sheetIds = [], tableParts = [], sheetsEl = xml.findChild(wbRoot, "sheets");
       if (sheetsEl) {
         const sheetEls = xml.findAll(sheetsEl, "sheet");
         if (limits.maxSheets && sheetEls.length > limits.maxSheets)
@@ -7066,6 +7381,7 @@ export const xlsxFullBundled = {
                 continue;
               const t = tablesMod.parse(decodeText(tBytes));
               tables.push(t);
+              tableParts.push(tPart);
               sheet.tableRefs.push(t.id);
             }
             delete sheet._tableRefs;
@@ -7092,13 +7408,18 @@ export const xlsxFullBundled = {
             if (drawingRel) {
               const drawingPart = relsMod.resolveTarget(wsPart, drawingRel.Target), dBytes = pkg.parts[drawingPart];
               if (dBytes) {
-                const parsed = drawingsMod.parse(decodeText(dBytes), { typedRunColors: !!(readOpts && readOpts.typedRunColors) }), drawingRels = pkg.rels[drawingPart] || [];
+                const parsed = drawingsMod.parse(decodeText(dBytes), {
+                  typedRunColors: !!(readOpts && readOpts.typedRunColors),
+                  typedLineColors: !!(readOpts && readOpts.typedLineColors)
+                }), drawingRels = pkg.rels[drawingPart] || [];
                 sheet.drawings = resolveDrawingEntries(parsed.entries, drawingPart, drawingRels, pkg);
               }
             }
           }
           delete sheet._drawingRid;
           sheets.push(sheet);
+          sheetParts.push(wsPart);
+          sheetIds.push(sEl.attrs.sheetId);
         }
       }
       const workbook = { type: "workbook", sheets, sharedStrings };
@@ -7110,8 +7431,23 @@ export const xlsxFullBundled = {
         workbook.tables = tables;
       if (persons && persons.length)
         workbook.persons = persons;
-      walker.applyHydrate(workbook);
-      return { workbook, package: pkg };
+      const hydrated = walker.applyPackageHydrate(workbook, {
+        package: pkg,
+        parts: plainParts,
+        rels: pkg.rels,
+        wbPart,
+        wbRoot,
+        wbRels,
+        sheetParts,
+        sheetIds,
+        tableParts,
+        readOpts,
+        consume(partName) {
+          return pkg.parts[partName];
+        }
+      });
+      walker.applyHydrate(hydrated);
+      return { workbook: hydrated, package: pkg };
     }
     function resolveDrawingEntries(entries, drawingPart, drawingRels, pkg) {
       const out = [];
@@ -7209,8 +7545,10 @@ export const xlsxFullBundled = {
         sheet.cols = xml.findAll(cols, "col").map(parseColEl);
       const data = xml.findChild(root, "sheetData");
       if (data) {
-        const budget = { max: limits.maxCellsPerSheet, used: 0, partName };
+        const budget = { max: limits.maxCellsPerSheet, used: 0, partName }, rowNumbers = [];
         for (const rEl of xml.findAll(data, "row")) {
+          const prevNum = rowNumbers.length ? rowNumbers[rowNumbers.length - 1] : 0, given = /^\d+$/.test(rEl.attrs.r || "") ? Number(rEl.attrs.r) : 0;
+          rowNumbers.push(given > prevNum ? given : prevNum + 1);
           if (limits.maxRowsPerSheet && sheet.rows.length >= limits.maxRowsPerSheet)
             throw limitExceeded("maxRowsPerSheet", limits.maxRowsPerSheet, sheet.rows.length + 1, partName);
           const props = parseRowProps(rEl, sheet.rows.length + 1);
@@ -7218,6 +7556,8 @@ export const xlsxFullBundled = {
             (sheet.rowProps || (sheet.rowProps = {}))[sheet.rows.length] = props;
           sheet.rows.push(parseRow(rEl, sharedStrings, budget));
         }
+        if (rowNumbers.some((n, i) => n !== i + 1))
+          sheet.rowNumbers = rowNumbers;
       }
       const af = xml.findChild(root, "autoFilter");
       if (af)
@@ -7393,6 +7733,22 @@ export const xlsxFullBundled = {
       const out = { type: "cell", value, t };
       if (formula)
         out.formula = formula;
+      if (fEl) {
+        const other = {};
+        for (const [k, v] of Object.entries(fEl.attrs || {}))
+          if (k === "t")
+            out.formulaType = v;
+          else if (k === "ref")
+            out.formulaRef = v;
+          else if (k === "si")
+            out.sharedIndex = Number(v);
+          else
+            other[k] = v;
+        if (Object.keys(other).length)
+          out.formulaAttrs = other;
+        if (!formula && out.formulaType != null)
+          out.formula = "";
+      }
       if (ref)
         out.ref = ref;
       if (s !== void 0)
@@ -7774,8 +8130,34 @@ export const xlsxFullBundled = {
         xmlns: "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
         "xmlns:r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
         ...pt.attrs || {}
-      }, kids);
+      }, inTableOrder(kids));
       return xml.serialize(root);
+    }
+    const TABLE_SEQ = [
+      "location",
+      "pivotFields",
+      "rowFields",
+      "rowItems",
+      "colFields",
+      "colItems",
+      "pageFields",
+      "dataFields",
+      "formats",
+      "conditionalFormats",
+      "chartFormats",
+      "pivotHierarchies",
+      "pivotTableStyleInfo",
+      "filters",
+      "rowHierarchiesUsage",
+      "colHierarchiesUsage",
+      "extLst"
+    ];
+    function inTableOrder(kids) {
+      const rank = (k) => {
+        const i = TABLE_SEQ.indexOf(k && k.name);
+        return i < 0 ? TABLE_SEQ.length - 1.5 : i;
+      };
+      return kids.map((k, i) => [k, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map((e) => e[0]);
     }
     function parseCacheSource(src) {
       if (!src)
@@ -14744,9 +15126,1955 @@ export const xlsxFullBundled = {
     }
     return { parseElement, renderElement, ELEMENTS };
   } });
+    __register({ name: "docxProperties", dependencies: ["xml"], factory: function(xml) {
+    function readToggle(el) {
+      if (!el)
+        return;
+      const v = el.attrs["w:val"];
+      if (v === void 0)
+        return !0;
+      return !(v === "0" || v === "false" || v === "off");
+    }
+    function writeToggle(name, value) {
+      if (value === !0)
+        return xml.el(name, {});
+      if (value === !1)
+        return xml.el(name, { "w:val": "0" });
+      return null;
+    }
+    function toggleForm(v) {
+      if (v === void 0 || v === "true" || v === "1" || v === "on")
+        return "on";
+      if (v === "false" || v === "0" || v === "off")
+        return "off";
+      return v;
+    }
+    function significant(children) {
+      return (children || []).filter((c) => !(c && c.type === "text" && /^\s*$/.test(String(c.value ?? c.text ?? ""))));
+    }
+    function sameElement(a, b) {
+      if (!a || !b || a.type !== b.type)
+        return !1;
+      if (a.type !== "element")
+        return String(a.value ?? a.text ?? "") === String(b.value ?? b.text ?? "");
+      if (a.name !== b.name)
+        return !1;
+      const ka = significant(a.children), kb = significant(b.children), aa = a.attrs || {}, ba = b.attrs || {}, keys = new Set([...Object.keys(aa), ...Object.keys(ba)]);
+      for (const k of keys)
+        if (k === "w:val" && ka.length === 0 && kb.length === 0) {
+          if (toggleForm(aa[k]) !== toggleForm(ba[k]))
+            return !1;
+        } else if (aa[k] !== ba[k])
+          return !1;
+      if (ka.length !== kb.length)
+        return !1;
+      for (let i = 0;i < ka.length; i++)
+        if (!sameElement(ka[i], kb[i]))
+          return !1;
+      return !0;
+    }
+    function isPlain(v) {
+      return !!v && typeof v === "object" && !Array.isArray(v);
+    }
+    function hydrateLossless(bag, typeBag, untypeBag) {
+      if (!bag || !Array.isArray(bag._extras))
+        return bag;
+      const count = new Map;
+      for (const c of bag._extras)
+        if (c && c.type === "element")
+          count.set(c.name, (count.get(c.name) || 0) + 1);
+      const claimed = new Map, keysOf = (k) => {
+        if (!claimed.has(k))
+          claimed.set(k, new Set(isPlain(bag[k]) ? Object.keys(bag[k]) : []));
+        return claimed.get(k);
+      }, verdicts = bag._extras.map((c) => {
+        if (!c || c.type !== "element")
+          return null;
+        const probe = typeBag({ _extras: [c] }) || {}, fields = Object.keys(probe).filter((k) => k !== "_extras");
+        if (count.get(c.name) > 1 && !fields.every((k) => Array.isArray(probe[k])))
+          return null;
+        const merges = (k) => Array.isArray(probe[k]) && (bag[k] === void 0 || Array.isArray(bag[k])) || isPlain(probe[k]) && (bag[k] === void 0 || isPlain(bag[k])) && (k[0] === "_" || Object.keys(probe[k]).every((s) => !keysOf(k).has(s))), taken = (k) => bag[k] !== void 0 || claimed.has(k), clash = fields.some((k) => taken(k) && !merges(k));
+        if (fields.length === 0 || (probe._extras || []).length > 0 || clash)
+          return null;
+        const back = (untypeBag({ ...probe }) || {})._extras || [];
+        if (back.length !== 1 || !sameElement(back[0], c))
+          return null;
+        for (const k of fields) {
+          const keys = keysOf(k);
+          if (isPlain(probe[k]))
+            for (const s of Object.keys(probe[k]))
+              keys.add(s);
+        }
+        return { name: c.name, probe, fields };
+      }), refused = new Set;
+      bag._extras.forEach((c, i) => {
+        if (c && c.type === "element" && count.get(c.name) > 1 && verdicts[i] === null)
+          refused.add(c.name);
+      });
+      const remaining = [];
+      bag._extras.forEach((c, i) => {
+        const v = verdicts[i];
+        if (v === null || refused.has(v.name)) {
+          remaining.push(c);
+          return;
+        }
+        for (const k of v.fields)
+          if (Array.isArray(v.probe[k]))
+            bag[k] = (Array.isArray(bag[k]) ? bag[k] : []).concat(v.probe[k]);
+          else if (isPlain(bag[k]))
+            bag[k] = { ...bag[k], ...v.probe[k] };
+          else
+            bag[k] = v.probe[k];
+      });
+      if (remaining.length)
+        bag._extras = remaining;
+      else
+        delete bag._extras;
+      return bag;
+    }
+    function valOf(el) {
+      return el ? el.attrs["w:val"] : void 0;
+    }
+    function elVal(name, val) {
+      return xml.el(name, { "w:val": String(val) });
+    }
+    function sequence(names) {
+      const rank = new Map;
+      let change = -1;
+      names.forEach((entry, i) => {
+        for (const n of Array.isArray(entry) ? entry : [entry]) {
+          rank.set(n, i);
+          if (change < 0 && /Change$/.test(n))
+            change = i;
+        }
+      });
+      return { rank, other: change >= 0 ? change - 0.5 : names.length };
+    }
+    function orderBySequence(children, seq) {
+      const firstElement = (el) => (el && el.children || []).find((k) => k && k.type === "element"), nameOf = (c) => {
+        if (c.name !== "mc:AlternateContent")
+          return c.name;
+        const branches = (c.children || []).filter((k) => k && k.type === "element"), branch = branches.find((k) => k.name === "mc:Fallback") || branches.find((k) => k.name === "mc:Choice"), inner = firstElement(branch);
+        return inner ? inner.name : c.name;
+      };
+      return children.map((c, i) => {
+        const n = c && c.type === "element" ? nameOf(c) : null;
+        return { c, i, r: n !== null && seq.rank.has(n) ? seq.rank.get(n) : seq.other };
+      }).sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.c);
+    }
+    const RPR_SEQ = sequence([
+      "w:ins",
+      "w:del",
+      "w:moveFrom",
+      "w:moveTo",
+      "w:rStyle",
+      "w:rFonts",
+      "w:b",
+      "w:bCs",
+      "w:i",
+      "w:iCs",
+      "w:caps",
+      "w:smallCaps",
+      "w:strike",
+      "w:dstrike",
+      "w:outline",
+      "w:shadow",
+      "w:emboss",
+      "w:imprint",
+      "w:noProof",
+      "w:snapToGrid",
+      "w:vanish",
+      "w:webHidden",
+      "w:color",
+      "w:spacing",
+      "w:w",
+      "w:kern",
+      "w:position",
+      "w:sz",
+      "w:szCs",
+      "w:highlight",
+      "w:u",
+      "w:effect",
+      "w:bdr",
+      "w:shd",
+      "w:fitText",
+      "w:vertAlign",
+      "w:rtl",
+      "w:cs",
+      "w:em",
+      "w:lang",
+      "w:eastAsianLayout",
+      "w:specVanish",
+      "w:oMath",
+      "w:rPrChange"
+    ]), PPR_SEQ = sequence([
+      "w:pStyle",
+      "w:keepNext",
+      "w:keepLines",
+      "w:pageBreakBefore",
+      "w:framePr",
+      "w:widowControl",
+      "w:numPr",
+      "w:suppressLineNumbers",
+      "w:pBdr",
+      "w:shd",
+      "w:tabs",
+      "w:suppressAutoHyphens",
+      "w:kinsoku",
+      "w:wordWrap",
+      "w:overflowPunct",
+      "w:topLinePunct",
+      "w:autoSpaceDE",
+      "w:autoSpaceDN",
+      "w:bidi",
+      "w:adjustRightInd",
+      "w:snapToGrid",
+      "w:spacing",
+      "w:ind",
+      "w:contextualSpacing",
+      "w:mirrorIndents",
+      "w:suppressOverlap",
+      "w:jc",
+      "w:textDirection",
+      "w:textAlignment",
+      "w:textboxTightWrap",
+      "w:outlineLvl",
+      "w:divId",
+      "w:cnfStyle",
+      "w:rPr",
+      "w:sectPr",
+      "w:pPrChange"
+    ]), TBLPR_SEQ = sequence([
+      "w:tblStyle",
+      "w:tblpPr",
+      "w:tblOverlap",
+      "w:bidiVisual",
+      "w:tblStyleRowBandSize",
+      "w:tblStyleColBandSize",
+      "w:tblW",
+      "w:jc",
+      "w:tblCellSpacing",
+      "w:tblInd",
+      "w:tblBorders",
+      "w:shd",
+      "w:tblLayout",
+      "w:tblCellMar",
+      "w:tblLook",
+      "w:tblCaption",
+      "w:tblDescription",
+      "w:tblPrChange"
+    ]), RPR_KNOWN = new Set([
+      "w:b",
+      "w:i",
+      "w:u",
+      "w:strike",
+      "w:color",
+      "w:sz",
+      "w:rFonts",
+      "w:vertAlign",
+      "w:highlight",
+      "w:rStyle"
+    ]), FONT_SLOTS = ["ascii", "hAnsi", "cs", "asciiTheme", "hAnsiTheme", "cstheme"];
+    function parseFonts(el) {
+      const out = {};
+      for (const [k, v] of Object.entries(el.attrs))
+        out[k.replace(/^w:/, "")] = v;
+      return out;
+    }
+    function renderFonts(rPr) {
+      const fonts = rPr.fonts && typeof rPr.fonts === "object" ? rPr.fonts : null;
+      if (!fonts)
+        return rPr.font != null ? xml.el("w:rFonts", { "w:ascii": rPr.font, "w:hAnsi": rPr.font, "w:cs": rPr.font }) : null;
+      const derived = fonts.ascii || fonts.hAnsi || fonts.cs, kept = { ...fonts };
+      if ((rPr.font ?? void 0) !== derived) {
+        for (const k of FONT_SLOTS)
+          delete kept[k];
+        if (rPr.font != null) {
+          kept.ascii = rPr.font;
+          kept.hAnsi = rPr.font;
+          kept.cs = rPr.font;
+        }
+      }
+      const attrs = {};
+      for (const [k, v] of Object.entries(kept))
+        if (v != null)
+          attrs["w:" + k] = String(v);
+      return Object.keys(attrs).length ? xml.el("w:rFonts", attrs) : null;
+    }
+    const THEME_LINK = [["themeColor", "w:themeColor"], ["themeTint", "w:themeTint"], ["themeShade", "w:themeShade"]];
+    function themeLinkOf(el) {
+      const out = {};
+      for (const [k, a] of THEME_LINK)
+        if (el.attrs[a] != null)
+          out[k] = el.attrs[a];
+      return Object.keys(out).length ? out : void 0;
+    }
+    function withThemeLink(el, theme) {
+      if (theme) {
+        for (const [k, a] of THEME_LINK)
+          if (theme[k] != null)
+            el.attrs[a] = String(theme[k]);
+      }
+      return el;
+    }
+    function parseRunProperties(rPrEl) {
+      if (!rPrEl)
+        return;
+      const out = {}, extras = [];
+      for (const c of rPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        switch (c.name) {
+          case "w:b":
+            out.bold = readToggle(c);
+            break;
+          case "w:i":
+            out.italic = readToggle(c);
+            break;
+          case "w:strike":
+            out.strike = readToggle(c);
+            break;
+          case "w:u": {
+            out.underline = valOf(c) || "single";
+            if (c.attrs["w:color"] != null)
+              out.underlineColor = c.attrs["w:color"];
+            const theme = themeLinkOf(c);
+            if (theme)
+              out.underlineTheme = theme;
+            break;
+          }
+          case "w:color": {
+            out.color = valOf(c);
+            const theme = themeLinkOf(c);
+            if (theme)
+              out.colorTheme = theme;
+            break;
+          }
+          case "w:sz":
+            out.size = Number(valOf(c));
+            break;
+          case "w:rFonts":
+            out.font = c.attrs["w:ascii"] || c.attrs["w:hAnsi"] || c.attrs["w:cs"];
+            out.fonts = parseFonts(c);
+            break;
+          case "w:vertAlign":
+            out.vertAlign = valOf(c);
+            break;
+          case "w:highlight":
+            out.highlight = valOf(c);
+            break;
+          case "w:rStyle":
+            out.rStyle = valOf(c);
+            break;
+          default:
+            if (!RPR_KNOWN.has(c.name))
+              extras.push(c);
+        }
+      }
+      if (extras.length)
+        out._extras = orderBySequence(extras, RPR_SEQ);
+      return out;
+    }
+    function renderRunProperties(rPr) {
+      if (!rPr)
+        return null;
+      const children = [];
+      if (rPr.rStyle != null)
+        children.push(elVal("w:rStyle", rPr.rStyle));
+      const rFonts = renderFonts(rPr);
+      if (rFonts)
+        children.push(rFonts);
+      const bold = writeToggle("w:b", rPr.bold);
+      if (bold)
+        children.push(bold);
+      const italic = writeToggle("w:i", rPr.italic);
+      if (italic)
+        children.push(italic);
+      const strike = writeToggle("w:strike", rPr.strike);
+      if (strike)
+        children.push(strike);
+      if (rPr.color != null || rPr.colorTheme)
+        children.push(withThemeLink(rPr.color != null ? elVal("w:color", rPr.color) : xml.el("w:color", {}), rPr.colorTheme));
+      if (rPr.size != null)
+        children.push(elVal("w:sz", rPr.size));
+      if (rPr.underline != null) {
+        const u = elVal("w:u", rPr.underline);
+        if (rPr.underlineColor != null)
+          u.attrs["w:color"] = String(rPr.underlineColor);
+        children.push(withThemeLink(u, rPr.underlineTheme));
+      }
+      if (rPr.highlight != null)
+        children.push(elVal("w:highlight", rPr.highlight));
+      if (rPr.vertAlign != null)
+        children.push(elVal("w:vertAlign", rPr.vertAlign));
+      if (rPr._extras)
+        for (const ex of rPr._extras)
+          children.push(ex);
+      if (!children.length)
+        return null;
+      return xml.el("w:rPr", {}, orderBySequence(children, RPR_SEQ));
+    }
+    const PPR_KNOWN = new Set([
+      "w:jc",
+      "w:ind",
+      "w:spacing",
+      "w:pStyle",
+      "w:numPr",
+      "w:rPr"
+    ]), SPACING_TYPED = new Set(["w:before", "w:after", "w:line", "w:lineRule"]), IND_TYPED = new Set(["w:left", "w:right", "w:firstLine", "w:hanging"]);
+    function keepExtraAttrs(el, out, typed) {
+      const extraAttrs = {};
+      let any = !1;
+      for (const k of Object.keys(el.attrs)) {
+        if (typed.has(k) && el.attrs[k])
+          continue;
+        if (k === "xmlns" || k.startsWith("xmlns:"))
+          continue;
+        extraAttrs[k] = el.attrs[k];
+        any = !0;
+      }
+      if (any)
+        out.extraAttrs = extraAttrs;
+    }
+    function writeExtraAttrs(a, extraAttrs) {
+      if (!extraAttrs)
+        return;
+      for (const k of Object.keys(extraAttrs))
+        if (!(k in a) && extraAttrs[k] !== void 0)
+          a[k] = String(extraAttrs[k]);
+    }
+    function parseParagraphProperties(pPrEl) {
+      if (!pPrEl)
+        return;
+      const out = {}, extras = [];
+      for (const c of pPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        switch (c.name) {
+          case "w:jc":
+            out.align = valOf(c);
+            break;
+          case "w:pStyle":
+            out.pStyle = valOf(c);
+            break;
+          case "w:ind": {
+            const ind = {};
+            if (c.attrs["w:left"])
+              ind.left = Number(c.attrs["w:left"]);
+            if (c.attrs["w:right"])
+              ind.right = Number(c.attrs["w:right"]);
+            if (c.attrs["w:firstLine"])
+              ind.firstLine = Number(c.attrs["w:firstLine"]);
+            if (c.attrs["w:hanging"])
+              ind.hanging = Number(c.attrs["w:hanging"]);
+            keepExtraAttrs(c, ind, IND_TYPED);
+            if (Object.keys(ind).length)
+              out.indent = ind;
+            break;
+          }
+          case "w:spacing": {
+            const sp = {};
+            if (c.attrs["w:before"])
+              sp.before = Number(c.attrs["w:before"]);
+            if (c.attrs["w:after"])
+              sp.after = Number(c.attrs["w:after"]);
+            if (c.attrs["w:line"])
+              sp.line = Number(c.attrs["w:line"]);
+            if (c.attrs["w:lineRule"])
+              sp.lineRule = c.attrs["w:lineRule"];
+            keepExtraAttrs(c, sp, SPACING_TYPED);
+            if (Object.keys(sp).length)
+              out.spacing = sp;
+            break;
+          }
+          case "w:numPr": {
+            const np = {}, ilvl = xml.findChild(c, "w:ilvl"), numId = xml.findChild(c, "w:numId");
+            if (ilvl)
+              np.ilvl = Number(valOf(ilvl));
+            if (numId)
+              np.numId = Number(valOf(numId));
+            if (Object.keys(np).length)
+              out.numPr = np;
+            break;
+          }
+          case "w:rPr": {
+            const inner = parseRunProperties(c);
+            if (inner)
+              out.rPr = inner;
+            break;
+          }
+          default:
+            if (!PPR_KNOWN.has(c.name))
+              extras.push(c);
+        }
+      }
+      if (extras.length)
+        out._extras = orderBySequence(extras, PPR_SEQ);
+      return out;
+    }
+    function renderParagraphProperties(pPr) {
+      if (!pPr)
+        return null;
+      const children = [];
+      if (pPr.pStyle != null)
+        children.push(elVal("w:pStyle", pPr.pStyle));
+      if (pPr.numPr) {
+        const inner = [];
+        if (pPr.numPr.ilvl != null)
+          inner.push(elVal("w:ilvl", pPr.numPr.ilvl));
+        if (pPr.numPr.numId != null)
+          inner.push(elVal("w:numId", pPr.numPr.numId));
+        children.push(xml.el("w:numPr", {}, inner));
+      }
+      if (pPr.spacing) {
+        const a = {};
+        if (pPr.spacing.before != null)
+          a["w:before"] = String(pPr.spacing.before);
+        if (pPr.spacing.after != null)
+          a["w:after"] = String(pPr.spacing.after);
+        if (pPr.spacing.line != null)
+          a["w:line"] = String(pPr.spacing.line);
+        if (pPr.spacing.lineRule != null)
+          a["w:lineRule"] = String(pPr.spacing.lineRule);
+        writeExtraAttrs(a, pPr.spacing.extraAttrs);
+        children.push(xml.el("w:spacing", a));
+      }
+      if (pPr.indent) {
+        const a = {};
+        if (pPr.indent.left != null)
+          a["w:left"] = String(pPr.indent.left);
+        if (pPr.indent.right != null)
+          a["w:right"] = String(pPr.indent.right);
+        if (pPr.indent.firstLine != null)
+          a["w:firstLine"] = String(pPr.indent.firstLine);
+        if (pPr.indent.hanging != null)
+          a["w:hanging"] = String(pPr.indent.hanging);
+        writeExtraAttrs(a, pPr.indent.extraAttrs);
+        children.push(xml.el("w:ind", a));
+      }
+      if (pPr.align != null)
+        children.push(elVal("w:jc", pPr.align));
+      if (pPr.rPr)
+        children.push(renderRunProperties(pPr.rPr) || xml.el("w:rPr", {}, []));
+      if (pPr._extras)
+        for (const ex of pPr._extras)
+          children.push(ex);
+      if (!children.length)
+        return null;
+      return xml.el("w:pPr", {}, orderBySequence(children, PPR_SEQ));
+    }
+    const BORDER_EDGES = ["top", "left", "bottom", "right", "insideH", "insideV"], BORDER_EDGE_NAMES = new Set(BORDER_EDGES.map((e) => "w:" + e));
+    function numOrRaw(v) {
+      if (v === void 0)
+        return v;
+      const n = Number(v);
+      return String(v).trim() !== "" && Number.isFinite(n) ? n : v;
+    }
+    const BORDER_MODELLED_ATTRS = new Set(["w:val", "w:sz", "w:space", "w:color"]);
+    function parseBorder(el) {
+      const b = { val: el.attrs["w:val"] };
+      if (el.attrs["w:sz"] !== void 0)
+        b.sz = Number(el.attrs["w:sz"]);
+      if (el.attrs["w:space"] !== void 0)
+        b.space = Number(el.attrs["w:space"]);
+      if (el.attrs["w:color"] !== void 0)
+        b.color = el.attrs["w:color"];
+      const extraAttrs = {};
+      let any = !1;
+      for (const k of Object.keys(el.attrs)) {
+        if (BORDER_MODELLED_ATTRS.has(k))
+          continue;
+        extraAttrs[k] = el.attrs[k];
+        any = !0;
+      }
+      if (any)
+        b.extraAttrs = extraAttrs;
+      return b;
+    }
+    function renderBorder(edge, b) {
+      const a = { "w:val": String(b.val) };
+      if (b.sz !== void 0)
+        a["w:sz"] = String(b.sz);
+      if (b.space !== void 0)
+        a["w:space"] = String(b.space);
+      if (b.color !== void 0)
+        a["w:color"] = String(b.color);
+      if (b.extraAttrs) {
+        for (const k of Object.keys(b.extraAttrs))
+          if (!BORDER_MODELLED_ATTRS.has(k) && b.extraAttrs[k] !== void 0)
+            a[k] = String(b.extraAttrs[k]);
+      }
+      return xml.el("w:" + edge, a);
+    }
+    function parseTableBorders(el) {
+      const out = {}, extras = [];
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        if (BORDER_EDGE_NAMES.has(c.name))
+          out[c.name.slice(2)] = parseBorder(c);
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderTableBorders(borders) {
+      if (!borders)
+        return null;
+      const kids = [];
+      for (const edge of BORDER_EDGES)
+        if (borders[edge])
+          kids.push(renderBorder(edge, borders[edge]));
+      if (borders._extras)
+        for (const ex of borders._extras)
+          kids.push(ex);
+      if (!kids.length)
+        return null;
+      return xml.el("w:tblBorders", {}, kids);
+    }
+    const MARGIN_EDGES = ["top", "start", "left", "bottom", "end", "right"], MARGIN_EDGE_NAMES = new Set(MARGIN_EDGES.map((e) => "w:" + e));
+    function parseWidth(el) {
+      return { w: numOrRaw(el.attrs["w:w"]), type: el.attrs["w:type"] || "auto" };
+    }
+    function renderWidth(name, width) {
+      const a = {};
+      if (width.w !== void 0)
+        a["w:w"] = String(width.w);
+      a["w:type"] = width.type || "auto";
+      return xml.el(name, a);
+    }
+    function parseCellMargins(el) {
+      const out = {}, extras = [];
+      for (const c of el.children) {
+        if (c.type !== "element")
+          continue;
+        if (MARGIN_EDGE_NAMES.has(c.name))
+          out[c.name.slice(2)] = parseWidth(c);
+        else
+          extras.push(c);
+      }
+      if (extras.length)
+        out._extras = extras;
+      return out;
+    }
+    function renderCellMargins(margins) {
+      if (!margins)
+        return null;
+      const kids = [];
+      for (const edge of MARGIN_EDGES)
+        if (margins[edge])
+          kids.push(renderWidth("w:" + edge, margins[edge]));
+      if (margins._extras)
+        for (const ex of margins._extras)
+          kids.push(ex);
+      if (!kids.length)
+        return null;
+      return xml.el("w:tblCellMar", {}, kids);
+    }
+    function parseTableProperties(tblPrEl) {
+      if (!tblPrEl)
+        return;
+      const out = {}, extras = [];
+      let any = !1;
+      for (const c of tblPrEl.children) {
+        if (c.type !== "element")
+          continue;
+        any = !0;
+        switch (c.name) {
+          case "w:tblStyle":
+            out.style = valOf(c);
+            break;
+          case "w:tblW":
+            out.width = parseWidth(c);
+            break;
+          case "w:tblBorders":
+            if ((c.children || []).some((k) => k.type === "element"))
+              out.borders = parseTableBorders(c);
+            else
+              extras.push(c);
+            break;
+          case "w:tblCellMar":
+            out.cellMargins = parseCellMargins(c);
+            break;
+          default:
+            extras.push(c);
+        }
+      }
+      if (!any)
+        return;
+      if (extras.length)
+        out._extras = orderBySequence(extras, TBLPR_SEQ);
+      return out;
+    }
+    function renderTableProperties(tblPr) {
+      if (!tblPr)
+        return null;
+      const children = [];
+      if (tblPr.style != null)
+        children.push(elVal("w:tblStyle", tblPr.style));
+      if (tblPr.width)
+        children.push(renderWidth("w:tblW", tblPr.width));
+      const bordersEl = renderTableBorders(tblPr.borders);
+      if (bordersEl)
+        children.push(bordersEl);
+      const marginsEl = renderCellMargins(tblPr.cellMargins);
+      if (marginsEl)
+        children.push(marginsEl);
+      for (const ex of tblPr._extras || [])
+        children.push(ex);
+      if (!children.length)
+        return null;
+      return xml.el("w:tblPr", {}, orderBySequence(children, TBLPR_SEQ));
+    }
+    return {
+      parseRunProperties,
+      renderRunProperties,
+      parseParagraphProperties,
+      renderParagraphProperties,
+      parseTableProperties,
+      renderTableProperties,
+      readToggle,
+      writeToggle,
+      valOf,
+      elVal,
+      sequence,
+      orderBySequence,
+      sameElement,
+      hydrateLossless
+    };
+  } });
+    __register({ name: "dmlTextDetails", dependencies: ["xml","ooxmlShared","docxProperties","drawingml","dmlEffects","dmlFillsAdvanced"], factory: function(xml, shared, props, dml, effects, fills) {
+    const codec = shared.createDmlColorCodec(xml), elementsOf = (el) => (el.children || []).filter((c) => c && c.type === "element"), attrKeys = (el) => Object.keys(el.attrs || {}), isLeaf = (el) => elementsOf(el).length === 0, strAttrs = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v != null && typeof v !== "object").map(([k, v]) => [k, String(v)])), isPlain = (v) => !!v && typeof v === "object" && !Array.isArray(v), KINDS = {
+      attrs: { parse: (el) => isLeaf(el) && attrKeys(el).length ? { ...el.attrs } : void 0, render: (name, v) => xml.el(name, strAttrs(v)) },
+      flag: { parse: (el) => isLeaf(el) && !attrKeys(el).length ? !0 : void 0, render: (name, v) => v === !0 ? xml.el(name, {}) : null },
+      num: {
+        parse: (el) => isLeaf(el) && attrKeys(el).join() === "val" ? Number(el.attrs.val) : void 0,
+        render: (name, v) => xml.el(name, { val: String(v) })
+      },
+      color: {
+        parse(el) {
+          const kids = elementsOf(el);
+          if (kids.length !== 1 || attrKeys(el).length)
+            return;
+          return codec.parseColor(kids[0], { withMods: !0 }) || void 0;
+        },
+        render(name, v) {
+          const c = codec.renderColor(v, { withMods: !0 });
+          return c ? xml.el(name, {}, [c]) : null;
+        }
+      },
+      spacing: {
+        parse(el) {
+          const kids = elementsOf(el);
+          if (kids.length !== 1 || attrKeys(el).length)
+            return;
+          const c = kids[0];
+          if (!isLeaf(c) || attrKeys(c).join() !== "val")
+            return;
+          if (c.name === "a:spcPct")
+            return { pct: Number(c.attrs.val) };
+          if (c.name === "a:spcPts")
+            return { pts: Number(c.attrs.val) };
+          return;
+        },
+        render(name, v) {
+          if (!isPlain(v))
+            return null;
+          const inner = v.pct != null ? xml.el("a:spcPct", { val: String(v.pct) }) : v.pts != null ? xml.el("a:spcPts", { val: String(v.pts) }) : null;
+          return inner ? xml.el(name, {}, [inner]) : null;
+        }
+      },
+      tabs: {
+        parse(el) {
+          const kids = elementsOf(el);
+          if (attrKeys(el).length || kids.some((c) => c.name !== "a:tab" || !isLeaf(c)))
+            return;
+          return kids.map((c) => ({ ...c.attrs }));
+        },
+        render: (name, v) => Array.isArray(v) ? xml.el(name, {}, v.map((a) => xml.el("a:tab", strAttrs(a)))) : null
+      },
+      effectLst: { parse: (el) => attrKeys(el).length ? void 0 : effects.parseEffectLst(el), render: (name, v) => effects.renderEffectLst(v) },
+      gradFill: { parse: (el) => fills.parseGradFill(el), render: (name, v) => fills.renderGradFill(v) },
+      fonts: { parse: (el) => isLeaf(el) && attrKeys(el).length ? [{ ...el.attrs }] : void 0, render: (name, v) => v.map((a) => xml.el(name, strAttrs(a))) }
+    };
+    function bagOf(spec) {
+      const byName = new Map(spec.map(([name, kind, field]) => [name, { kind: KINDS[kind], field: field || name.replace(/^a:/, "") }]));
+      function type(bag) {
+        if (!bag || !Array.isArray(bag._extras))
+          return bag;
+        const remaining = [];
+        for (const c of bag._extras) {
+          const s = c && c.type === "element" ? byName.get(c.name) : void 0, v = s ? s.kind.parse(c) : void 0;
+          if (v === void 0) {
+            remaining.push(c);
+            continue;
+          }
+          bag[s.field] = Array.isArray(v) && Array.isArray(bag[s.field]) ? bag[s.field].concat(v) : v;
+        }
+        if (remaining.length)
+          bag._extras = remaining;
+        else
+          delete bag._extras;
+        return bag;
+      }
+      function untype(bag) {
+        if (!bag || typeof bag !== "object")
+          return bag;
+        const out = { ...bag }, typed = [];
+        for (const [name, s] of byName) {
+          if (out[s.field] === void 0)
+            continue;
+          const r = s.kind.render(name, out[s.field]);
+          for (const el of Array.isArray(r) ? r : [r])
+            if (el)
+              typed.push(el);
+          delete out[s.field];
+        }
+        const extras = typed.concat(Array.isArray(out._extras) ? out._extras : []);
+        if (extras.length)
+          out._extras = extras;
+        else
+          delete out._extras;
+        return out;
+      }
+      return {
+        hydrate: (bag) => isPlain(bag) ? props.hydrateLossless(bag, type, untype) : bag,
+        dehydrate: (bag) => isPlain(bag) ? untype(bag) : bag
+      };
+    }
+    const run = bagOf([
+      ["a:solidFill", "color"],
+      ["a:effectLst", "effectLst"],
+      ["a:gradFill", "gradFill"],
+      ["a:highlight", "color"],
+      ["a:latin", "attrs"],
+      ["a:ea", "attrs"],
+      ["a:cs", "attrs"],
+      ["a:sym", "attrs"],
+      ["a:hlinkClick", "attrs"],
+      ["a:hlinkMouseOver", "attrs"],
+      ["a:uFillTx", "flag"],
+      ["a:uLnTx", "flag"],
+      ["a:noFill", "flag"]
+    ]), paragraph = bagOf([
+      ["a:lnSpc", "spacing"],
+      ["a:spcBef", "spacing"],
+      ["a:spcAft", "spacing"],
+      ["a:buClr", "color"],
+      ["a:buSzPct", "num"],
+      ["a:buSzPts", "num"],
+      ["a:buFont", "attrs"],
+      ["a:buClrTx", "flag"],
+      ["a:buSzTx", "flag"],
+      ["a:buFontTx", "flag"],
+      ["a:tabLst", "tabs"]
+    ]), fontKind = bagOf([["a:font", "fonts", "fonts"]]);
+    function hydrateParagraphProperties(pPr) {
+      if (!isPlain(pPr))
+        return pPr;
+      paragraph.hydrate(pPr);
+      if (isPlain(pPr.defRPr))
+        run.hydrate(pPr.defRPr);
+      return pPr;
+    }
+    function dehydrateParagraphProperties(pPr) {
+      if (!isPlain(pPr))
+        return pPr;
+      const out = paragraph.dehydrate(pPr);
+      if (isPlain(out.defRPr))
+        out.defRPr = run.dehydrate(out.defRPr);
+      return out;
+    }
+    const RPR_ATTRS = new Set(["lang", "sz", "b", "i", "strike", "u", "baseline"]), richLatin = (c) => c && c.type === "element" && c.name === "a:latin" && attrKeys(c).some((k) => k !== "typeface");
+    function parseEnd(el) {
+      const latin = (el.children || []).find(richLatin), out = dml.parseRunProperties(latin ? { ...el, children: el.children.filter((c) => c !== latin) } : el, { typedRunColors: !0 }) || {};
+      if (latin)
+        out._extras = [latin, ...out._extras || []];
+      const extraAttrs = {};
+      for (const [k, v] of Object.entries(el.attrs || {}))
+        if (!RPR_ATTRS.has(k))
+          extraAttrs[k] = v;
+      if (Object.keys(extraAttrs).length)
+        out.extraAttrs = extraAttrs;
+      return run.hydrate(out);
+    }
+    function renderEnd(v) {
+      const { extraAttrs, ...rest } = run.dehydrate(v), r = dml.renderRunProperties(rest);
+      return xml.el("a:endParaRPr", { ...r ? r.attrs : {}, ...strAttrs(extraAttrs) }, r ? r.children : []);
+    }
+    function hydrateParagraph(p) {
+      if (!isPlain(p) || !Array.isArray(p._extras) || p.endParaRPr !== void 0)
+        return p;
+      const last = p._extras[p._extras.length - 1];
+      if (!last || last.type !== "element" || last.name !== "a:endParaRPr")
+        return p;
+      if (p._extras.filter((c) => c && c.name === "a:endParaRPr").length !== 1)
+        return p;
+      const v = parseEnd(last);
+      if (!props.sameElement(renderEnd(v), last))
+        return p;
+      p.endParaRPr = v;
+      if (p._extras.length === 1)
+        delete p._extras;
+      else
+        p._extras = p._extras.slice(0, -1);
+      return p;
+    }
+    function dehydrateParagraph(p) {
+      if (!isPlain(p) || p.endParaRPr === void 0)
+        return p;
+      const { endParaRPr, ...out } = p;
+      out._extras = (Array.isArray(out._extras) ? out._extras : []).concat(isPlain(endParaRPr) ? [renderEnd(endParaRPr)] : []);
+      if (!out._extras.length)
+        delete out._extras;
+      return out;
+    }
+    function eachFontKind(theme, fn) {
+      const fs = isPlain(theme) && isPlain(theme.fontScheme) ? theme.fontScheme : null;
+      if (!fs)
+        return;
+      for (const k of ["majorFont", "minorFont"])
+        if (isPlain(fs[k]))
+          fs[k] = fn(fs[k]);
+    }
+    function hydrateTheme(theme) {
+      eachFontKind(theme, fontKind.hydrate);
+      return theme;
+    }
+    function dehydrateTheme(theme) {
+      if (!isPlain(theme) || !isPlain(theme.fontScheme))
+        return theme;
+      const out = { ...theme, fontScheme: { ...theme.fontScheme } };
+      eachFontKind(out, fontKind.dehydrate);
+      return out;
+    }
+    return {
+      hydrateRunProperties: run.hydrate,
+      dehydrateRunProperties: run.dehydrate,
+      hydrateParagraphProperties,
+      dehydrateParagraphProperties,
+      hydrateParagraph,
+      dehydrateParagraph,
+      hydrateTheme,
+      dehydrateTheme
+    };
+  } });
+    __register({ name: "smlWorkbookDetails", dependencies: ["xml","docxProperties"], factory: function(xml, props) {
+    const isPlain = (v) => !!v && typeof v === "object" && !Array.isArray(v), elements = (n) => (n && n.children || []).filter((c) => c && c.type === "element"), keysAre = (attrs, allowed) => Object.keys(attrs || {}).every((k) => allowed.includes(k)), BOOL = { 1: !0, true: !0, 0: !1, false: !1 }, bool = (v) => (v in BOOL) ? BOOL[v] : void 0, flag = (b) => b ? "1" : "0", STYLE_EXTS = [
+      {
+        field: "slicerStyles",
+        uri: "{EB79DEF2-80B8-43e5-95BD-54CBDDF9020C}",
+        p: "x14",
+        ns: "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main",
+        list: "slicerStyles",
+        item: "slicerStyle",
+        els: "slicerStyleElements",
+        el: "slicerStyleElement",
+        def: "defaultSlicerStyle"
+      },
+      {
+        field: "timelineStyles",
+        uri: `{${["9260A510", "F301", "46a8", "8635", "F512D64BE5F5"].join("-")}}`,
+        p: "x15",
+        ns: "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main",
+        list: "timelineStyles",
+        item: "timelineStyle",
+        els: "timelineStyleElements",
+        el: "timelineStyleElement",
+        def: "defaultTimelineStyle"
+      }
+    ];
+    function parseNamedStyles(list, s) {
+      if (!keysAre(list.attrs, [s.def]))
+        return;
+      const out = {};
+      if (list.attrs[s.def] != null)
+        out.default = list.attrs[s.def];
+      const styles = [];
+      for (const it of elements(list)) {
+        if (it.name !== `${s.p}:${s.item}` || !keysAre(it.attrs, ["name"]))
+          return;
+        const style = { name: it.attrs.name }, kids = elements(it);
+        if (kids.length > 1)
+          return;
+        if (kids.length) {
+          if (kids[0].name !== `${s.p}:${s.els}` || Object.keys(kids[0].attrs || {}).length)
+            return;
+          style.elements = [];
+          for (const e of elements(kids[0])) {
+            if (e.name !== `${s.p}:${s.el}` || !keysAre(e.attrs, ["type", "dxfId"]) || elements(e).length)
+              return;
+            const item = { type: e.attrs.type };
+            if (e.attrs.dxfId != null)
+              item.dxfId = Number(e.attrs.dxfId);
+            style.elements.push(item);
+          }
+        }
+        styles.push(style);
+      }
+      if (styles.length)
+        out.styles = styles;
+      return out;
+    }
+    function renderNamedStyles(v, s) {
+      const a = v.default != null ? { [s.def]: String(v.default) } : {}, items = (Array.isArray(v.styles) ? v.styles : []).map((st) => xml.el(`${s.p}:${s.item}`, { name: String(st.name) }, Array.isArray(st.elements) ? [xml.el(`${s.p}:${s.els}`, {}, st.elements.map((e) => {
+        const ea = { type: String(e.type) };
+        if (e.dxfId != null)
+          ea.dxfId = String(e.dxfId);
+        return xml.el(`${s.p}:${s.el}`, ea);
+      }))] : []));
+      return xml.el(`${s.p}:${s.list}`, a, items);
+    }
+    function parseStyleExtLst(el) {
+      if (Object.keys(el.attrs || {}).length)
+        return;
+      const out = {};
+      let at = 0;
+      for (const ext of elements(el)) {
+        const i = STYLE_EXTS.findIndex((s) => s.uri === (ext.attrs && ext.attrs.uri));
+        if (i < at)
+          return;
+        const s = STYLE_EXTS[i];
+        if (!keysAre(ext.attrs, ["uri", `xmlns:${s.p}`]) || ext.attrs[`xmlns:${s.p}`] !== s.ns)
+          return;
+        const kids = elements(ext);
+        if (kids.length !== 1 || kids[0].name !== `${s.p}:${s.list}`)
+          return;
+        const v = parseNamedStyles(kids[0], s);
+        if (!v)
+          return;
+        out[s.field] = v;
+        at = i + 1;
+      }
+      return Object.keys(out).length ? out : void 0;
+    }
+    function renderStyleExtLst(bag) {
+      const exts = STYLE_EXTS.filter((s) => isPlain(bag[s.field])).map((s) => xml.el("ext", { uri: s.uri, [`xmlns:${s.p}`]: s.ns }, [renderNamedStyles(bag[s.field], s)]));
+      return exts.length ? xml.el("extLst", {}, exts) : null;
+    }
+    function parseColors(el) {
+      if (Object.keys(el.attrs || {}).length)
+        return;
+      const out = {};
+      for (const c of elements(el))
+        if (c.name === "indexedColors" && !out.indexed) {
+          out.indexed = [];
+          for (const r of elements(c)) {
+            if (r.name !== "rgbColor" || !keysAre(r.attrs, ["rgb"]) || r.attrs.rgb == null)
+              return;
+            out.indexed.push(r.attrs.rgb);
+          }
+        } else if (c.name === "mruColors" && !out.mru && !Object.keys(c.attrs || {}).length) {
+          out.mru = [];
+          for (const r of elements(c)) {
+            if (r.name !== "color" || elements(r).length)
+              return;
+            out.mru.push({ ...r.attrs });
+          }
+        } else
+          return;
+      return out;
+    }
+    function renderColors(v) {
+      const kids = [];
+      if (Array.isArray(v.indexed))
+        kids.push(xml.el("indexedColors", {}, v.indexed.map((rgb) => xml.el("rgbColor", { rgb: String(rgb) }))));
+      if (Array.isArray(v.mru))
+        kids.push(xml.el("mruColors", {}, v.mru.map((c) => xml.el("color", { ...c }))));
+      return xml.el("colors", {}, kids);
+    }
+    function parseFlag(el) {
+      if (elements(el).length || !keysAre(el.attrs, ["val"]))
+        return;
+      return el.attrs.val == null ? !0 : bool(el.attrs.val);
+    }
+    const flagSpec = (name) => [name, name, parseFlag, (v, n) => v ? xml.el(n) : xml.el(n, { val: "0" })];
+    function parseProtection(el) {
+      if (elements(el).length || !keysAre(el.attrs, ["locked", "hidden"]))
+        return;
+      const out = {};
+      for (const k of ["locked", "hidden"]) {
+        if (el.attrs[k] == null)
+          continue;
+        const b = bool(el.attrs[k]);
+        if (b === void 0)
+          return;
+        out[k] = b;
+      }
+      return out;
+    }
+    function renderProtection(v) {
+      const a = {};
+      for (const k of ["locked", "hidden"])
+        if (v[k] != null)
+          a[k] = flag(v[k]);
+      return xml.el("protection", a);
+    }
+    function parseXmlColumnPr(el) {
+      if (elements(el).length || !keysAre(el.attrs, ["mapId", "xpath", "denormalized", "xmlDataType"]))
+        return;
+      const { mapId, xpath, denormalized, xmlDataType } = el.attrs;
+      if (mapId == null || xpath == null || xmlDataType == null)
+        return;
+      const out = { mapId: Number(mapId), xpath, xmlDataType };
+      if (denormalized != null) {
+        out.denormalized = bool(denormalized);
+        if (out.denormalized === void 0)
+          return;
+      }
+      return out;
+    }
+    function renderXmlColumnPr(v) {
+      const a = { mapId: String(v.mapId), xpath: String(v.xpath) };
+      if (v.denormalized != null)
+        a.denormalized = flag(v.denormalized);
+      a.xmlDataType = String(v.xmlDataType);
+      return xml.el("xmlColumnPr", a);
+    }
+    function parseFormula(el) {
+      if (elements(el).length || !keysAre(el.attrs, ["array"]))
+        return;
+      const out = { formula: (el.children || []).map((c) => c && c.type === "text" ? c.value : "").join("") };
+      if (el.attrs.array != null) {
+        out.array = bool(el.attrs.array);
+        if (out.array === void 0)
+          return;
+      }
+      return out;
+    }
+    function renderFormula(v, name) {
+      const a = v.array != null ? { array: flag(v.array) } : {};
+      return xml.el(name, a, v.formula ? [xml.text(String(v.formula))] : []);
+    }
+    const STYLES = [
+      ["colors", "colors", parseColors, renderColors],
+      ["extLst", null, parseStyleExtLst, null]
+    ], FONT = ["condense", "extend", "outline", "shadow"].map(flagSpec), DXF = [["protection", "protection", parseProtection, renderProtection]], COLUMN = [
+      ["calculatedColumnFormula", "calculatedColumnFormula", parseFormula, renderFormula],
+      ["xmlColumnPr", "xmlColumnPr", parseXmlColumnPr, renderXmlColumnPr]
+    ];
+    function typer(spec) {
+      const byName = new Map(spec.map((s) => [s[0], s]));
+      return function type(bag) {
+        if (!bag || !Array.isArray(bag._extras))
+          return bag;
+        const remaining = [];
+        for (const c of bag._extras) {
+          const s = c && c.type === "element" ? byName.get(c.name) : void 0, v = s ? s[2](c) : void 0;
+          if (v === void 0) {
+            remaining.push(c);
+            continue;
+          }
+          if (s[1])
+            bag[s[1]] = v;
+          else
+            Object.assign(bag, v);
+        }
+        if (remaining.length)
+          bag._extras = remaining;
+        else
+          delete bag._extras;
+        return bag;
+      };
+    }
+    function untyper(spec) {
+      return function untype(bag) {
+        if (!isPlain(bag))
+          return bag;
+        const out = { ...bag }, typed = [];
+        for (const [name, field, , render] of spec) {
+          if (field === null) {
+            const el = renderStyleExtLst(out);
+            for (const s of STYLE_EXTS)
+              delete out[s.field];
+            if (el)
+              typed.push(el);
+            continue;
+          }
+          if (out[field] === void 0)
+            continue;
+          const el = out[field] !== null && typeof out[field] < "u" ? render(out[field], name) : null;
+          if (el)
+            typed.push(el);
+          delete out[field];
+        }
+        const extras = typed.concat(Array.isArray(out._extras) ? out._extras : []);
+        if (extras.length)
+          out._extras = extras;
+        else
+          delete out._extras;
+        return out;
+      };
+    }
+    const kinds = {
+      styles: [typer(STYLES), untyper(STYLES)],
+      font: [typer(FONT), untyper(FONT)],
+      dxf: [typer(DXF), untyper(DXF)],
+      column: [typer(COLUMN), untyper(COLUMN)]
+    };
+    function hydrate(kind, bag) {
+      if (!isPlain(bag) || !Array.isArray(bag._extras))
+        return bag;
+      const before = bag._extras, typed = props.hydrateLossless({ ...bag, _extras: before.slice() }, kinds[kind][0], kinds[kind][1]), back = kinds[kind][1](typed)._extras || [];
+      return back.length === before.length && back.every((e, i) => props.sameElement(e, before[i])) ? typed : bag;
+    }
+    const dehydrate = (kind, bag) => isPlain(bag) ? kinds[kind][1](bag) : bag;
+    function each(wb, fn, outerFirst) {
+      const styles = isPlain(wb.styles) ? wb.styles : null;
+      if (styles && outerFirst)
+        wb.styles = fn("styles", styles);
+      const st = isPlain(wb.styles) ? wb.styles : null;
+      if (st) {
+        if (Array.isArray(st.fonts))
+          st.fonts = st.fonts.map((f) => fn("font", f));
+        if (Array.isArray(st.dxfs))
+          st.dxfs = st.dxfs.map((d) => {
+            if (!isPlain(d))
+              return d;
+            const out = outerFirst ? fn("dxf", d) : d;
+            if (isPlain(out.font))
+              out.font = fn("font", out.font);
+            return outerFirst ? out : fn("dxf", out);
+          });
+        if (!outerFirst)
+          wb.styles = fn("styles", st);
+      }
+      for (const t of Array.isArray(wb.tables) ? wb.tables : [])
+        if (isPlain(t) && Array.isArray(t.columns))
+          t.columns = t.columns.map((c) => fn("column", c));
+    }
+    return {
+      hydrateWorkbook(wb) {
+        if (isPlain(wb))
+          each(wb, hydrate, !1);
+        return wb;
+      },
+      dehydrateWorkbook(wb) {
+        if (isPlain(wb))
+          each(wb, dehydrate, !0);
+        return wb;
+      }
+    };
+  } });
+    __register({ name: "smlPackageParts", dependencies: ["xml","opcPackage","opcRelationships","docxProperties","ooxmlShared","smlPivotTables"], factory: function(xml, opc, relsMod, props, shared, piv) {
+    const { NS, decodeText, encodeText } = shared, R_NS = NS.R, REL = {
+      CALC_CHAIN: R_NS + "/calcChain",
+      EXTERNAL_LINK: R_NS + "/externalLink",
+      EXTERNAL_LINK_PATH: R_NS + "/externalLinkPath",
+      XML_MAPS: R_NS + "/xmlMaps",
+      CONNECTIONS: R_NS + "/connections",
+      QUERY_TABLE: R_NS + "/queryTable",
+      PIVOT_DEF: R_NS + "/pivotCacheDefinition",
+      PIVOT_RECORDS: R_NS + "/pivotCacheRecords",
+      PIVOT_TABLE: R_NS + "/pivotTable"
+    }, CT = {
+      CALC_CHAIN: "application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml",
+      EXTERNAL_LINK: "application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml",
+      XML_MAPS: "application/xml",
+      CONNECTIONS: "application/vnd.openxmlformats-officedocument.spreadsheetml.connections+xml",
+      QUERY_TABLE: "application/vnd.openxmlformats-officedocument.spreadsheetml.queryTable+xml",
+      PIVOT_DEF: "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheDefinition+xml",
+      PIVOT_RECORDS: "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml",
+      PIVOT_TABLE: "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml"
+    }, isPlain = (v) => !!v && typeof v === "object" && !Array.isArray(v), elements = (n) => (n && n.children || []).filter((c) => c && c.type === "element"), textOf = (n) => (n && n.children || []).map((c) => c && c.type === "text" ? c.value : "").join(""), BOOL = { 1: !0, true: !0, 0: !1, false: !1 };
+    function parseAttrs(el, spec, out = {}) {
+      const known = new Map(spec.map((s) => [s[0], s]));
+      for (const [k, v] of Object.entries(el.attrs || {})) {
+        const s = known.get(k);
+        if (!s)
+          return;
+        const [, field, kind] = s;
+        if (kind === "int") {
+          if (!/^-?\d+$/.test(v))
+            return;
+          out[field] = Number(v);
+        } else if (kind === "bool" || kind === "word") {
+          if (!(v in BOOL))
+            return;
+          out[field] = BOOL[v];
+        } else
+          out[field] = v;
+      }
+      return out;
+    }
+    function renderAttrs(obj, spec) {
+      const a = {};
+      for (const [attr, field, kind] of spec) {
+        const v = obj[field];
+        if (v == null)
+          continue;
+        if (kind === "bool")
+          a[attr] = v ? "1" : "0";
+        else if (kind === "word")
+          a[attr] = v ? "true" : "false";
+        else
+          a[attr] = String(v);
+      }
+      return a;
+    }
+    function nsAttrs(root) {
+      const out = {};
+      for (const [k, v] of Object.entries(root.attrs || {}))
+        if (k.startsWith("xmlns:") || k === "mc:Ignorable")
+          out[k] = v;
+      return out;
+    }
+    const withNs = (model, attrs) => ({ xmlns: "http://schemas.openxmlformats.org/spreadsheetml/2006/main", ...isPlain(model.ns) ? model.ns : {}, ...attrs }), noNs = (el) => ({ ...el, attrs: Object.fromEntries(Object.entries(el.attrs || {}).filter(([k]) => k !== "xmlns" && !k.startsWith("xmlns:") && k !== "mc:Ignorable")) }), same = (a, b) => props.sameElement(noNs(a), noNs(b));
+    function rootOf(parts, name) {
+      const bytes = parts[name];
+      if (!bytes)
+        return null;
+      try {
+        const root = xml.parse(decodeText(bytes));
+        return root.attrs && root.attrs.xmlns === "http://schemas.openxmlformats.org/spreadsheetml/2006/main" ? root : null;
+      } catch {
+        return null;
+      }
+    }
+    function readBack(root, parse, render) {
+      if (!root)
+        return;
+      let model;
+      try {
+        model = parse(root);
+      } catch {
+        return;
+      }
+      if (model === void 0)
+        return;
+      return same(render(model), root) ? model : void 0;
+    }
+    const relsOf = (ctx, part) => ctx.rels[part] || [], CALC_CELL = [
+      ["r", "ref", "str"],
+      ["i", "i", "int"],
+      ["s", "childChain", "bool"],
+      ["l", "newLevel", "bool"],
+      ["t", "newThread", "bool"],
+      ["a", "array", "bool"]
+    ];
+    function parseCalcChain(root, sheetIds) {
+      if (Object.keys(root.attrs).some((k) => k !== "xmlns" && !k.startsWith("xmlns:") && k !== "mc:Ignorable"))
+        return;
+      const cells = [];
+      let sheet;
+      for (const c of elements(root)) {
+        if (c.name !== "c")
+          return;
+        const a = parseAttrs(c, CALC_CELL);
+        if (!a || a.ref == null || elements(c).length)
+          return;
+        if (a.i != null) {
+          sheet = sheetIds.indexOf(String(a.i));
+          if (sheet < 0)
+            return;
+          a.sheetGiven = !0;
+        } else if (sheet === void 0)
+          return;
+        delete a.i;
+        a.sheet = sheet;
+        cells.push(a);
+      }
+      return { ns: nsAttrs(root), cells };
+    }
+    function renderCalcChain(model, idOf) {
+      let prev;
+      const kids = model.cells.map((c, n) => {
+        const a = renderAttrs(c, CALC_CELL.filter((s) => s[0] !== "i")), id = idOf(c.sheet);
+        if (c.sheetGiven || n === 0 || c.sheet !== prev)
+          a.i = String(id);
+        prev = c.sheet;
+        return xml.el("c", { r: a.r, ...a.i != null ? { i: a.i } : {}, ...a });
+      });
+      return xml.el("calcChain", withNs(model, {}), kids);
+    }
+    function refAt(ref) {
+      const m = /^([A-Z]+)(\d+)$/.exec(String(ref));
+      if (!m)
+        return null;
+      let col = 0;
+      for (const ch of m[1])
+        col = col * 26 + (ch.charCodeAt(0) - 64);
+      return [Number(m[2]) - 1, col - 1];
+    }
+    function rowAt(sheet, n) {
+      if (!sheet || !Array.isArray(sheet.rows))
+        return null;
+      if (!Array.isArray(sheet.rowNumbers))
+        return sheet.rows[n];
+      const i = sheet.rowNumbers.indexOf(n + 1);
+      return i < 0 ? null : sheet.rows[i];
+    }
+    const arrayRanges = new WeakMap;
+    function rangesOf(sheet) {
+      if (arrayRanges.has(sheet))
+        return arrayRanges.get(sheet);
+      const out = [];
+      for (const row of Array.isArray(sheet.rows) ? sheet.rows : [])
+        for (const cell of Array.isArray(row) ? row : []) {
+          if (!isPlain(cell) || cell.formulaType !== "array" || typeof cell.formulaRef !== "string")
+            continue;
+          const [a, b] = cell.formulaRef.split(":"), p = refAt(a), q = refAt(b || a);
+          if (p && q)
+            out.push([p[0], p[1], q[0], q[1]]);
+        }
+      arrayRanges.set(sheet, out);
+      return out;
+    }
+    function holdsFormula(sheet, ref) {
+      const at = refAt(ref);
+      if (!at || !isPlain(sheet))
+        return !1;
+      const row = rowAt(sheet, at[0]), cell = Array.isArray(row) ? row[at[1]] : null;
+      if (isPlain(cell) && cell.formula != null && (cell.formula !== "" || cell.formulaType != null))
+        return !0;
+      return rangesOf(sheet).some(([r0, c0, r1, c1]) => at[0] >= r0 && at[0] <= r1 && at[1] >= c0 && at[1] <= c1);
+    }
+    const DEFINED_NAME = [["name", "name", "str"], ["refersTo", "refersTo", "str"], ["sheetId", "sheetId", "int"]], SHEET_DATA = [["sheetId", "sheetId", "int"], ["refreshError", "refreshError", "bool"]], EXT_CELL = [["r", "ref", "str"], ["t", "t", "str"], ["vm", "vm", "int"]];
+    function parseExternalLink(root, rId) {
+      if (Object.keys(noNs(root).attrs).length)
+        return;
+      const kids = elements(root);
+      if (kids.length !== 1 || kids[0].name !== "externalBook")
+        return;
+      const bookEl = kids[0], bookNs = {};
+      for (const [k, v] of Object.entries(bookEl.attrs || {}))
+        if (k === "r:id") {
+          if (v !== rId)
+            return;
+        } else if (k.startsWith("xmlns:"))
+          bookNs[k] = v;
+        else
+          return;
+      const book = {};
+      if (Object.keys(bookNs).length)
+        book.ns = bookNs;
+      for (const c of elements(bookEl)) {
+        if (Object.keys(c.attrs || {}).length)
+          return;
+        if (c.name === "sheetNames" && !book.sheetNames) {
+          book.sheetNames = [];
+          for (const s of elements(c)) {
+            if (s.name !== "sheetName" || Object.keys(s.attrs).join() !== "val")
+              return;
+            book.sheetNames.push(s.attrs.val);
+          }
+        } else if (c.name === "definedNames" && !book.definedNames) {
+          book.definedNames = [];
+          for (const d of elements(c)) {
+            const v = d.name === "definedName" && !elements(d).length ? parseAttrs(d, DEFINED_NAME) : void 0;
+            if (!v)
+              return;
+            book.definedNames.push(v);
+          }
+        } else if (c.name === "sheetDataSet" && !book.sheetDataSet) {
+          book.sheetDataSet = [];
+          for (const sd of elements(c)) {
+            const v = sd.name === "sheetData" ? parseAttrs(sd, SHEET_DATA) : void 0;
+            if (!v)
+              return;
+            v.rows = [];
+            for (const r of elements(sd)) {
+              if (r.name !== "row" || Object.keys(r.attrs).join() !== "r")
+                return;
+              const row = { r: Number(r.attrs.r), cells: [] };
+              for (const cell of elements(r)) {
+                const cv = cell.name === "cell" ? parseAttrs(cell, EXT_CELL) : void 0;
+                if (!cv)
+                  return;
+                const vs = elements(cell);
+                if (vs.length > 1 || vs.length && (vs[0].name !== "v" || Object.keys(vs[0].attrs).length))
+                  return;
+                if (vs.length)
+                  cv.v = textOf(vs[0]);
+                row.cells.push(cv);
+              }
+              v.rows.push(row);
+            }
+            book.sheetDataSet.push(v);
+          }
+        } else
+          return;
+      }
+      return { ns: nsAttrs(root), book };
+    }
+    function renderExternalLink(model, rId) {
+      const b = model.book || {}, kids = [];
+      if (Array.isArray(b.sheetNames))
+        kids.push(xml.el("sheetNames", {}, b.sheetNames.map((n) => xml.el("sheetName", { val: String(n) }))));
+      if (Array.isArray(b.definedNames))
+        kids.push(xml.el("definedNames", {}, b.definedNames.map((d) => xml.el("definedName", renderAttrs(d, DEFINED_NAME)))));
+      if (Array.isArray(b.sheetDataSet))
+        kids.push(xml.el("sheetDataSet", {}, b.sheetDataSet.map((sd) => xml.el("sheetData", renderAttrs(sd, SHEET_DATA), (sd.rows || []).map((r) => xml.el("row", { r: String(r.r) }, (r.cells || []).map((c) => xml.el("cell", renderAttrs(c, EXT_CELL), c.v != null ? [xml.el("v", {}, [xml.text(String(c.v))])] : []))))))));
+      const book = xml.el("externalBook", { ...isPlain(b.ns) ? b.ns : {}, "r:id": rId }, kids);
+      return xml.el("externalLink", withNs(model, {}), [book]);
+    }
+    const SCHEMA = [["ID", "id", "str"], ["SchemaRef", "schemaRef", "str"], ["Namespace", "namespace", "str"]], MAP = [
+      ["ID", "id", "int"],
+      ["Name", "name", "str"],
+      ["RootElement", "rootElement", "str"],
+      ["SchemaID", "schemaId", "str"],
+      ["ShowImportExportValidationErrors", "showImportExportValidationErrors", "word"],
+      ["AutoFit", "autoFit", "word"],
+      ["Append", "append", "word"],
+      ["PreserveSortAFLayout", "preserveSortAFLayout", "word"],
+      ["PreserveFormat", "preserveFormat", "word"]
+    ];
+    function parseXmlMaps(root) {
+      if (root.name !== "MapInfo")
+        return;
+      const top = parseAttrs(noNs(root), [["SelectionNamespaces", "selectionNamespaces", "str"]]);
+      if (!top)
+        return;
+      const out = { ns: nsAttrs(root), ...top, schemas: [], maps: [] };
+      for (const c of elements(root))
+        if (c.name === "Schema") {
+          const s = parseAttrs(c, SCHEMA);
+          if (!s)
+            return;
+          s.content = (c.children || []).filter((k) => k && k.type === "element");
+          out.schemas.push(s);
+        } else if (c.name === "Map") {
+          const m = parseAttrs(c, MAP);
+          if (!m || elements(c).length)
+            return;
+          out.maps.push(m);
+        } else
+          return;
+      return out;
+    }
+    function renderXmlMaps(model) {
+      const a = withNs(model, {});
+      if (model.selectionNamespaces != null)
+        a.SelectionNamespaces = String(model.selectionNamespaces);
+      return xml.el("MapInfo", a, [
+        ...(model.schemas || []).map((s) => xml.el("Schema", renderAttrs(s, SCHEMA), Array.isArray(s.content) ? s.content : [])),
+        ...(model.maps || []).map((m) => xml.el("Map", renderAttrs(m, MAP)))
+      ]);
+    }
+    const CONNECTION = [
+      ["id", "id", "int"],
+      ["name", "name", "str"],
+      ["type", "type", "int"],
+      ["refreshedVersion", "refreshedVersion", "int"],
+      ["minRefreshableVersion", "minRefreshableVersion", "int"],
+      ["background", "background", "bool"],
+      ["saveData", "saveData", "bool"],
+      ["keepAlive", "keepAlive", "bool"],
+      ["deleted", "deleted", "bool"],
+      ["onlyUseConnectionFile", "onlyUseConnectionFile", "bool"],
+      ["refreshOnLoad", "refreshOnLoad", "bool"],
+      ["savePassword", "savePassword", "bool"],
+      ["new", "new", "bool"],
+      ["interval", "interval", "int"],
+      ["reconnectionMethod", "reconnectionMethod", "int"],
+      ["credentials", "credentials", "str"],
+      ["singleSignOnId", "singleSignOnId", "str"],
+      ["sourceFile", "sourceFile", "str"],
+      ["odcFile", "odcFile", "str"],
+      ["description", "description", "str"],
+      ["xr16:uid", "uid", "str"]
+    ], DB_PR = [
+      ["connection", "connection", "str"],
+      ["command", "command", "str"],
+      ["serverCommand", "serverCommand", "str"],
+      ["commandType", "commandType", "int"]
+    ], WEB_PR = [
+      ["xml", "xml", "bool"],
+      ["sourceData", "sourceData", "bool"],
+      ["parsePre", "parsePre", "bool"],
+      ["consecutive", "consecutive", "bool"],
+      ["firstRow", "firstRow", "bool"],
+      ["xl97", "xl97", "bool"],
+      ["textDates", "textDates", "bool"],
+      ["xl2000", "xl2000", "bool"],
+      ["url", "url", "str"],
+      ["post", "post", "str"],
+      ["htmlTables", "htmlTables", "bool"],
+      ["htmlFormat", "htmlFormat", "str"],
+      ["editPage", "editPage", "str"]
+    ], PARAMETER = [
+      ["name", "name", "str"],
+      ["sqlType", "sqlType", "int"],
+      ["parameterType", "parameterType", "str"],
+      ["refreshOnChange", "refreshOnChange", "bool"],
+      ["prompt", "prompt", "str"],
+      ["boolean", "boolean", "bool"],
+      ["double", "double", "str"],
+      ["integer", "integer", "int"],
+      ["string", "string", "str"],
+      ["cell", "cell", "str"]
+    ];
+    function parseConnections(root) {
+      if (root.name !== "connections" || Object.keys(noNs(root).attrs).length)
+        return;
+      const list = [];
+      for (const c of elements(root)) {
+        const conn = c.name === "connection" ? parseAttrs(c, CONNECTION) : void 0;
+        if (!conn)
+          return;
+        for (const k of elements(c)) {
+          if (k.name === "dbPr" && !conn.dbPr && !elements(k).length)
+            conn.dbPr = parseAttrs(k, DB_PR);
+          else if (k.name === "webPr" && !conn.webPr && !elements(k).length)
+            conn.webPr = parseAttrs(k, WEB_PR);
+          else if (k.name === "parameters" && !conn.parameters && Object.keys(k.attrs).every((a) => a === "count")) {
+            conn.parameters = elements(k).map((p) => p.name === "parameter" && !elements(p).length ? parseAttrs(p, PARAMETER) : void 0);
+            if (conn.parameters.some((p) => !p))
+              return;
+            if (k.attrs.count != null && Number(k.attrs.count) !== conn.parameters.length)
+              return;
+            conn.parametersCount = k.attrs.count != null;
+          } else
+            return;
+          if (k.name === "dbPr" && !conn.dbPr || k.name === "webPr" && !conn.webPr)
+            return;
+        }
+        list.push(conn);
+      }
+      return { ns: nsAttrs(root), connections: list };
+    }
+    function renderConnections(model) {
+      return xml.el("connections", withNs(model, {}), (model.connections || []).map((conn) => {
+        const kids = [];
+        if (isPlain(conn.dbPr))
+          kids.push(xml.el("dbPr", renderAttrs(conn.dbPr, DB_PR)));
+        if (isPlain(conn.webPr))
+          kids.push(xml.el("webPr", renderAttrs(conn.webPr, WEB_PR)));
+        if (Array.isArray(conn.parameters))
+          kids.push(xml.el("parameters", conn.parametersCount ? { count: String(conn.parameters.length) } : {}, conn.parameters.map((p) => xml.el("parameter", renderAttrs(p, PARAMETER)))));
+        return xml.el("connection", renderAttrs(conn, CONNECTION), kids);
+      }));
+    }
+    const QUERY_TABLE = [
+      ["name", "name", "str"],
+      ["headers", "headers", "bool"],
+      ["rowNumbers", "rowNumbers", "bool"],
+      ["disableRefresh", "disableRefresh", "bool"],
+      ["backgroundRefresh", "backgroundRefresh", "bool"],
+      ["firstBackgroundRefresh", "firstBackgroundRefresh", "bool"],
+      ["refreshOnLoad", "refreshOnLoad", "bool"],
+      ["growShrinkType", "growShrinkType", "str"],
+      ["fillFormulas", "fillFormulas", "bool"],
+      ["removeDataOnSave", "removeDataOnSave", "bool"],
+      ["disableEdit", "disableEdit", "bool"],
+      ["preserveFormatting", "preserveFormatting", "bool"],
+      ["adjustColumnWidth", "adjustColumnWidth", "bool"],
+      ["intermediate", "intermediate", "bool"],
+      ["connectionId", "connectionId", "int"],
+      ["autoFormatId", "autoFormatId", "int"],
+      ["applyNumberFormats", "applyNumberFormats", "bool"],
+      ["applyBorderFormats", "applyBorderFormats", "bool"],
+      ["applyFontFormats", "applyFontFormats", "bool"],
+      ["applyPatternFormats", "applyPatternFormats", "bool"],
+      ["applyAlignmentFormats", "applyAlignmentFormats", "bool"],
+      ["applyWidthHeightFormats", "applyWidthHeightFormats", "bool"]
+    ], REFRESH = [
+      ["preserveSortFilterLayout", "preserveSortFilterLayout", "bool"],
+      ["fieldIdWrapped", "fieldIdWrapped", "bool"],
+      ["headersInLastRefresh", "headersInLastRefresh", "bool"],
+      ["minimumVersion", "minimumVersion", "int"],
+      ["nextId", "nextId", "int"],
+      ["unboundColumnsLeft", "unboundColumnsLeft", "int"],
+      ["unboundColumnsRight", "unboundColumnsRight", "int"]
+    ], FIELD = [
+      ["id", "id", "int"],
+      ["name", "name", "str"],
+      ["dataBound", "dataBound", "bool"],
+      ["rowNumbers", "rowNumbers", "bool"],
+      ["fillFormulas", "fillFormulas", "bool"],
+      ["clipped", "clipped", "bool"],
+      ["tableColumnId", "tableColumnId", "int"]
+    ];
+    function parseQueryTable(root) {
+      if (root.name !== "queryTable")
+        return;
+      const qt = parseAttrs(noNs(root), QUERY_TABLE);
+      if (!qt)
+        return;
+      qt.ns = nsAttrs(root);
+      for (const c of elements(root)) {
+        if (c.name !== "queryTableRefresh" || qt.refresh)
+          return;
+        const r = parseAttrs(c, REFRESH);
+        if (!r)
+          return;
+        for (const k of elements(c)) {
+          if (k.name !== "queryTableFields" || r.fields || Object.keys(k.attrs).some((a) => a !== "count"))
+            return;
+          r.fields = elements(k).map((f) => f.name === "queryTableField" && !elements(f).length ? parseAttrs(f, FIELD) : void 0);
+          if (r.fields.some((f) => !f))
+            return;
+          if (k.attrs.count != null && Number(k.attrs.count) !== r.fields.length)
+            return;
+          r.fieldsCount = k.attrs.count != null;
+        }
+        qt.refresh = r;
+      }
+      return qt;
+    }
+    function renderQueryTable(qt) {
+      const kids = [];
+      if (isPlain(qt.refresh)) {
+        const r = qt.refresh;
+        kids.push(xml.el("queryTableRefresh", renderAttrs(r, REFRESH), Array.isArray(r.fields) ? [xml.el("queryTableFields", r.fieldsCount ? { count: String(r.fields.length) } : {}, r.fields.map((f) => xml.el("queryTableField", renderAttrs(f, FIELD))))] : []));
+      }
+      return xml.el("queryTable", withNs(qt, renderAttrs(qt, QUERY_TABLE)), kids);
+    }
+    function wbRel(ctx, type) {
+      const rel = (ctx.wbRels || []).find((r) => r.Type === type && r.TargetMode !== "External");
+      return rel ? relsMod.resolveTarget(ctx.wbPart, rel.Target) : null;
+    }
+    function noRels(ctx, part) {
+      return relsOf(ctx, part).length === 0;
+    }
+    const keysOnly = (attrs, allowed) => Object.keys(attrs || {}).every((k) => allowed.includes(k));
+    function hydratePackage(wb, ctx) {
+      if (!isPlain(wb) || !ctx)
+        return wb;
+      const ccPart = wbRel(ctx, REL.CALC_CHAIN);
+      if (ccPart && noRels(ctx, ccPart)) {
+        const ids = ctx.sheetIds || [], m = readBack(rootOf(ctx.parts, ccPart), (r) => parseCalcChain(r, ids), (mm) => renderCalcChain(mm, (p) => ids[p]));
+        if (m) {
+          wb.calcChain = m;
+          ctx.consume(ccPart);
+        }
+      }
+      const refs = xml.findChild(ctx.wbRoot, "externalReferences");
+      if (refs) {
+        const links = [];
+        for (const ref of elements(refs)) {
+          const rel = ref.name === "externalReference" ? (ctx.wbRels || []).find((r) => r.Id === ref.attrs["r:id"]) : null, part = rel && rel.Type === REL.EXTERNAL_LINK ? relsMod.resolveTarget(ctx.wbPart, rel.Target) : null, lr = part ? relsOf(ctx, part) : [];
+          if (!part || lr.length !== 1 || lr[0].Type !== REL.EXTERNAL_LINK_PATH || lr[0].TargetMode !== "External") {
+            links.length = 0;
+            break;
+          }
+          const m = readBack(rootOf(ctx.parts, part), (r) => parseExternalLink(r, lr[0].Id), (mm) => renderExternalLink(mm, lr[0].Id));
+          if (!m) {
+            links.length = 0;
+            break;
+          }
+          m.target = lr[0].Target;
+          links.push({ model: m, part });
+        }
+        if (links.length) {
+          wb.externalLinks = links.map((l) => l.model);
+          for (const l of links)
+            ctx.consume(l.part);
+        }
+      }
+      for (const [type, field, parse, render] of [
+        [REL.XML_MAPS, "xmlMaps", parseXmlMaps, renderXmlMaps],
+        [REL.CONNECTIONS, "connections", parseConnections, renderConnections]
+      ]) {
+        const part = wbRel(ctx, type);
+        if (!part || !noRels(ctx, part))
+          continue;
+        const m = readBack(rootOf(ctx.parts, part), parse, render);
+        if (m) {
+          wb[field] = m;
+          ctx.consume(part);
+        }
+      }
+      (Array.isArray(wb.tables) ? wb.tables : []).forEach((t, k) => {
+        const tPart = (ctx.tableParts || [])[k];
+        if (!isPlain(t) || !tPart)
+          return;
+        const tr = relsOf(ctx, tPart);
+        if (tr.length !== 1 || tr[0].Type !== REL.QUERY_TABLE)
+          return;
+        const part = relsMod.resolveTarget(tPart, tr[0].Target);
+        if (!noRels(ctx, part))
+          return;
+        const m = readBack(rootOf(ctx.parts, part), parseQueryTable, renderQueryTable);
+        if (m) {
+          t.queryTable = m;
+          ctx.consume(part);
+        }
+      });
+      readPivots(wb, ctx);
+      return wb;
+    }
+    function readToolkit(ctx, part, parse, render) {
+      const text = ctx.parts[part] ? decodeText(ctx.parts[part]) : null;
+      return text == null ? void 0 : readBack(rootOf(ctx.parts, part), () => parse(text), (m) => xml.parse(render(m)));
+    }
+    function readPivots(wb, ctx) {
+      const caches = [], used = [];
+      for (const pc of elements(xml.findChild(ctx.wbRoot, "pivotCaches"))) {
+        if (pc.name !== "pivotCache" || !keysOnly(pc.attrs, ["cacheId", "r:id"]) || !/^\d+$/.test(pc.attrs.cacheId || ""))
+          continue;
+        const rel = (ctx.wbRels || []).find((r) => r.Id === pc.attrs["r:id"]);
+        if (!rel || rel.Type !== REL.PIVOT_DEF)
+          continue;
+        const dPart = relsMod.resolveTarget(ctx.wbPart, rel.Target), root = rootOf(ctx.parts, dPart), dRels = relsOf(ctx, dPart), rid = root ? root.attrs["r:id"] : void 0;
+        if (!root || dRels.length > 1 || rid != null !== (dRels.length === 1))
+          continue;
+        if (dRels.length && (dRels[0].Id !== rid || dRels[0].Type !== REL.PIVOT_RECORDS || dRels[0].TargetMode === "External"))
+          continue;
+        const definition = readToolkit(ctx, dPart, piv.parsePivotCacheDefinition, piv.renderPivotCacheDefinition);
+        if (!definition)
+          continue;
+        const entry = { cacheId: Number(pc.attrs.cacheId), definition }, parts = [dPart];
+        if (dRels.length) {
+          const rPart = relsMod.resolveTarget(dPart, dRels[0].Target), records = noRels(ctx, rPart) ? readToolkit(ctx, rPart, piv.parsePivotCacheRecords, piv.renderPivotCacheRecords) : void 0;
+          if (!records)
+            continue;
+          entry.records = records;
+          parts.push(rPart);
+        }
+        caches.push(entry);
+        used.push(dPart);
+        for (const part of parts)
+          ctx.consume(part);
+      }
+      if (!caches.length)
+        return;
+      wb.pivotCaches = caches;
+      (Array.isArray(wb.sheets) ? wb.sheets : []).forEach((sheet, k) => {
+        const sPart = (ctx.sheetParts || [])[k];
+        if (!isPlain(sheet) || !sPart)
+          return;
+        const tables = [];
+        for (const r of relsOf(ctx, sPart)) {
+          if (r.Type !== REL.PIVOT_TABLE || r.TargetMode === "External")
+            continue;
+          const tPart = relsMod.resolveTarget(sPart, r.Target), tRels = relsOf(ctx, tPart);
+          if (tRels.length !== 1 || tRels[0].Type !== REL.PIVOT_DEF)
+            continue;
+          const cache = used.indexOf(relsMod.resolveTarget(tPart, tRels[0].Target));
+          if (cache < 0)
+            continue;
+          const table = readToolkit(ctx, tPart, piv.parsePivotTable, piv.renderPivotTable);
+          if (!table)
+            continue;
+          tables.push({ table, cache });
+          ctx.consume(tPart);
+        }
+        if (tables.length)
+          sheet.pivotTables = tables;
+      });
+    }
+    function addRel(pkg, part, type, target) {
+      const list = (pkg.rels[part] || []).slice(), used = new Set(list.map((r) => r.Id));
+      let n = list.length + 1;
+      while (used.has(`rId${n}`))
+        n++;
+      list.push({ Id: `rId${n}`, Type: type, Target: target });
+      opc.setRels(pkg, part, list);
+      return `rId${n}`;
+    }
+    const addWbRel = (pkg, ctx, type, target) => addRel(pkg, ctx.wbPart, type, target), WB_SEQ = [
+      "fileVersion",
+      "fileSharing",
+      "workbookPr",
+      "workbookProtection",
+      "bookViews",
+      "sheets",
+      "functionGroups",
+      "externalReferences",
+      "definedNames",
+      "calcPr",
+      "oleSize",
+      "customWorkbookViews",
+      "pivotCaches"
+    ];
+    function insertWbChild(pkg, ctx, el) {
+      const root = xml.parse(decodeText(pkg.parts[ctx.wbPart])), kids = root.children.slice(), rank = WB_SEQ.indexOf(el.name);
+      let at = kids.length;
+      for (let i = 0;i < kids.length; i++) {
+        const k = kids[i], r = k && k.type === "element" ? WB_SEQ.indexOf(k.name) : -1;
+        if (r < 0 || r > rank) {
+          at = i;
+          break;
+        }
+      }
+      kids.splice(at, 0, el);
+      root.children = kids;
+      opc.setPart(pkg, ctx.wbPart, encodeText(xml.serialize(root)), pkg.contentTypes.overrides[ctx.wbPart]);
+    }
+    function dehydratePackage(wb, ctx) {
+      if (!isPlain(wb) || !ctx || !ctx.package)
+        return wb;
+      const pkg = ctx.package, sheets = Array.isArray(wb.sheets) ? wb.sheets : [], put = (name, el, ct) => opc.setPart(pkg, name, encodeText(xml.serialize(el)), ct);
+      if (isPlain(wb.calcChain) && Array.isArray(wb.calcChain.cells)) {
+        const cells = wb.calcChain.cells.filter((c) => isPlain(c) && Number.isInteger(c.sheet) && c.sheet < sheets.length && holdsFormula(sheets[c.sheet], c.ref));
+        if (cells.length) {
+          put("/xl/calcChain.xml", renderCalcChain({ ...wb.calcChain, cells }, (p) => p + 1), CT.CALC_CHAIN);
+          addWbRel(pkg, ctx, REL.CALC_CHAIN, "calcChain.xml");
+        }
+      }
+      const links = (Array.isArray(wb.externalLinks) ? wb.externalLinks : []).filter((l) => isPlain(l) && l.target);
+      if (links.length) {
+        const refs = links.map((l, k) => {
+          const name = `/xl/externalLinks/externalLink${k + 1}.xml`;
+          put(name, renderExternalLink(l, "rId1"), CT.EXTERNAL_LINK);
+          opc.setRels(pkg, name, [{ Id: "rId1", Type: REL.EXTERNAL_LINK_PATH, Target: String(l.target), TargetMode: "External" }]);
+          return xml.el("externalReference", { "r:id": addWbRel(pkg, ctx, REL.EXTERNAL_LINK, `externalLinks/externalLink${k + 1}.xml`) });
+        });
+        insertWbChild(pkg, ctx, xml.el("externalReferences", {}, refs));
+      }
+      if (isPlain(wb.xmlMaps)) {
+        put("/xl/xmlMaps.xml", renderXmlMaps(wb.xmlMaps), CT.XML_MAPS);
+        addWbRel(pkg, ctx, REL.XML_MAPS, "xmlMaps.xml");
+      }
+      if (isPlain(wb.connections)) {
+        put("/xl/connections.xml", renderConnections(wb.connections), CT.CONNECTIONS);
+        addWbRel(pkg, ctx, REL.CONNECTIONS, "connections.xml");
+      }
+      let q = 0;
+      for (const t of Array.isArray(wb.tables) ? wb.tables : []) {
+        const tPart = isPlain(t) && isPlain(t.queryTable) && ctx.tablePartOf ? ctx.tablePartOf(t) : null;
+        if (!tPart || !pkg.parts[tPart])
+          continue;
+        const name = `/xl/queryTables/queryTable${++q}.xml`;
+        put(name, renderQueryTable(t.queryTable), CT.QUERY_TABLE);
+        opc.setRels(pkg, tPart, [{ Id: "rId1", Type: REL.QUERY_TABLE, Target: `../queryTables/queryTable${q}.xml` }]);
+      }
+      writePivots(wb, ctx, pkg, sheets);
+      return wb;
+    }
+    function writePivots(wb, ctx, pkg, sheets) {
+      const caches = Array.isArray(wb.pivotCaches) ? wb.pivotCaches : [], ok = caches.map((c) => isPlain(c) && isPlain(c.definition) && Number.isInteger(c.cacheId));
+      if (!ok.some(Boolean))
+        return;
+      const refs = [];
+      caches.forEach((c, i) => {
+        if (!ok[i])
+          return;
+        const dName = `pivotCacheDefinition${i + 1}.xml`, attrs = { ...c.definition.attrs || {} };
+        if (isPlain(c.records)) {
+          const rid = attrs["r:id"] || "rId1";
+          attrs["r:id"] = rid;
+          const rName = `pivotCacheRecords${i + 1}.xml`;
+          opc.setPart(pkg, "/xl/pivotCache/" + rName, encodeText(piv.renderPivotCacheRecords(c.records)), CT.PIVOT_RECORDS);
+          opc.setRels(pkg, "/xl/pivotCache/" + dName, [{ Id: rid, Type: REL.PIVOT_RECORDS, Target: rName }]);
+        } else
+          delete attrs["r:id"];
+        opc.setPart(pkg, "/xl/pivotCache/" + dName, encodeText(piv.renderPivotCacheDefinition({ ...c.definition, attrs })), CT.PIVOT_DEF);
+        const rid = addWbRel(pkg, ctx, REL.PIVOT_DEF, "pivotCache/" + dName);
+        refs.push(xml.el("pivotCache", { cacheId: String(c.cacheId), "r:id": rid }));
+      });
+      insertWbChild(pkg, ctx, xml.el("pivotCaches", {}, refs));
+      let n = 0;
+      sheets.forEach((sheet, k) => {
+        const sPart = (ctx.sheetParts || [])[k];
+        for (const pt of isPlain(sheet) && Array.isArray(sheet.pivotTables) ? sheet.pivotTables : []) {
+          if (!isPlain(pt) || !isPlain(pt.table) || !ok[pt.cache] || !sPart)
+            continue;
+          const tName = `pivotTable${++n}.xml`;
+          opc.setPart(pkg, "/xl/pivotTables/" + tName, encodeText(piv.renderPivotTable(pt.table)), CT.PIVOT_TABLE);
+          opc.setRels(pkg, "/xl/pivotTables/" + tName, [{ Id: "rId1", Type: REL.PIVOT_DEF, Target: `../pivotCache/pivotCacheDefinition${pt.cache + 1}.xml` }]);
+          addRel(pkg, sPart, REL.PIVOT_TABLE, "../pivotTables/" + tName);
+        }
+      });
+    }
+    return { hydratePackage, dehydratePackage };
+  } });
 
     const __core = __resolve("xlsx");
-    __core.use(__resolve("smlPivotTables"), __resolve("smlCalculation"), __resolve("smlSheetConfig"), __resolve("smlWorkbookConfig"), __resolve("dmlChartDataLabels"), __resolve("dmlChartTrendlines"), __resolve("dmlChartAxesAdvanced"), __resolve("dmlChart3d"), __resolve("dmlChartOtherTypes"), __resolve("dmlEffects"), __resolve("dmlFillsAdvanced"), __resolve("smlFormControls"), __resolve("dmlShapesAdvanced"), __resolve("dmlXdrAdvanced"), __resolve("transitional"), __resolve("legacyVml"), __resolve("smlMisc"), __resolve("dmlChartMisc"), __resolve("dmlMainMisc"));
+    __core.use(__resolve("smlPivotTables"), __resolve("smlCalculation"), __resolve("smlSheetConfig"), __resolve("smlWorkbookConfig"), __resolve("dmlChartDataLabels"), __resolve("dmlChartTrendlines"), __resolve("dmlChartAxesAdvanced"), __resolve("dmlChart3d"), __resolve("dmlChartOtherTypes"), __resolve("dmlEffects"), __resolve("dmlFillsAdvanced"), __resolve("smlFormControls"), __resolve("dmlShapesAdvanced"), __resolve("dmlXdrAdvanced"), __resolve("transitional"), __resolve("legacyVml"), __resolve("smlMisc"), __resolve("dmlChartMisc"), __resolve("dmlMainMisc"), __resolve("dmlTextDetails"), __resolve("smlWorkbookDetails"), __resolve("smlPackageParts"));
     return __core;
     }
 };

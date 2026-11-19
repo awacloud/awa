@@ -459,7 +459,19 @@ export const odpLargeBundled = {
         t[symbols[i]] = lengths[i];
       return { t, l: lengths[0] };
     }
-    return { buildTree, buildMap };
+    function kraft(codeLengths) {
+      const perLength = new Int32Array(16);
+      for (let s = 0;s < codeLengths.length; ++s)
+        perLength[codeLengths[s]]++;
+      let left = 1;
+      for (let len = 1;len < 16; ++len) {
+        left = left * 2 - perLength[len];
+        if (left < 0)
+          return { oversubscribed: !0, incomplete: !1 };
+      }
+      return { oversubscribed: !1, incomplete: left > 0 };
+    }
+    return { buildTree, buildMap, kraft };
   } });
     __register({ name: "lz77", dependencies: [], factory: function() {
     const u8 = Uint8Array, i32 = Int32Array, DEFAULT = Object.freeze({
@@ -583,30 +595,18 @@ export const odpLargeBundled = {
         }
       }
     }
-    function encodeTokens(data, opts) {
-      if (!(data instanceof u8))
-        throw Error("lz77.encodeTokens: data must be Uint8Array");
-      const o = _resolveOpts(opts), len = data.length, cap = 2 * Math.max(0, len - o.start), provided = opts && opts.tokens;
-      let tokens;
-      if (provided) {
-        if (provided.length < cap)
-          throw Error("lz77.encodeTokens: tokens buffer too small");
-        tokens = provided;
-      } else
-        tokens = new i32(cap);
+    function _fill(st, tokens, max) {
+      const { data, len, head, prev, hash, maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip, wndSize } = st, wndMask = wndSize - 1, lastKey = st.lastKey, atLeast = st.atLeast, cap = 2 * max;
       let p = 0;
-      if (o.start >= len)
-        return { tokens, count: 0 };
-      const { maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip } = o, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, head = new i32(1 << o.hashBits).fill(-1), prev = new i32(Math.min(wndSize, len)).fill(-1), hash = _hasherFor(o), lastKey = len - o.minMatch, atLeast = o.minMatch - 1;
-      for (let k = 0;k < o.start && k <= lastKey; ++k) {
-        const h = hash(data, k);
-        prev[k & wndMask] = head[h];
-        head[h] = k;
+      if (st.heldLen) {
+        tokens[p++] = st.heldLen;
+        tokens[p++] = st.heldDist;
+        st.heldLen = 0;
       }
-      let i = o.start;
-      while (i <= lastKey) {
-        const h = hash(data, i);
-        let matchLen = _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
+      let i = st.at;
+      while (p < cap && i <= lastKey) {
+        const h = hash(data, i), newest = head[h];
+        let matchLen = newest === -1 || i - newest >= wndSize ? 0 : _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
         prev[i & wndMask] = head[h];
         head[h] = i;
         if (matchLen === 0) {
@@ -616,7 +616,7 @@ export const odpLargeBundled = {
           continue;
         }
         if (lazy && matchLen < maxLazy && i < lastKey) {
-          const h1 = hash(data, i + 1), nextLen = _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
+          const h1 = hash(data, i + 1), newest1 = head[h1], nextLen = newest1 === -1 || i + 1 - newest1 >= wndSize ? 0 : _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
           if (nextLen) {
             tokens[p++] = 0;
             tokens[p++] = data[i];
@@ -627,8 +627,13 @@ export const odpLargeBundled = {
             head[h1] = i;
           }
         }
-        tokens[p++] = matchLen;
-        tokens[p++] = dist;
+        if (p < cap) {
+          tokens[p++] = matchLen;
+          tokens[p++] = dist;
+        } else {
+          st.heldLen = matchLen;
+          st.heldDist = dist;
+        }
         const end = i + matchLen;
         for (let k = i + 1;k < end && k <= lastKey; ++k) {
           const hk = hash(data, k);
@@ -637,12 +642,67 @@ export const odpLargeBundled = {
         }
         i = end;
       }
-      while (i < len) {
+      while (p < cap && i < len) {
         tokens[p++] = 0;
         tokens[p++] = data[i];
         i++;
       }
-      return { tokens, count: p / 2 };
+      st.at = i;
+      return p >> 1;
+    }
+    function createScanner(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.createScanner: data must be Uint8Array");
+      const o = _resolveOpts(opts), len = data.length, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, empty = o.start >= len, hash = _hasherFor(o), lastKey = len - o.minMatch, head = empty ? null : new i32(1 << o.hashBits).fill(-1), prev = empty ? null : new i32(Math.min(wndSize, len)).fill(-1);
+      if (!empty)
+        for (let k = 0;k < o.start && k <= lastKey; ++k) {
+          const h = hash(data, k);
+          prev[k & wndMask] = head[h];
+          head[h] = k;
+        }
+      const st = {
+        data,
+        len,
+        hash,
+        lastKey,
+        wndSize,
+        head,
+        prev,
+        maxMatch: o.maxMatch,
+        niceLength: o.niceLength,
+        chainDepth: o.chainDepth,
+        lazy: o.lazy,
+        goodLength: o.goodLength,
+        maxLazy: o.maxLazy,
+        chainSkip: o.chainSkip,
+        atLeast: o.minMatch - 1,
+        at: empty ? len : o.start,
+        heldLen: 0,
+        heldDist: 0
+      };
+      return {
+        fill(tokens, max) {
+          return _fill(st, tokens, max);
+        },
+        get done() {
+          return st.at >= st.len && st.heldLen === 0;
+        }
+      };
+    }
+    function encodeTokens(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.encodeTokens: data must be Uint8Array");
+      const n = Math.max(0, data.length - Math.max(0, (opts && opts.start) | 0)), cap = 2 * n, provided = opts && opts.tokens;
+      let tokens;
+      if (provided) {
+        if (provided.length < cap)
+          throw Error("lz77.encodeTokens: tokens buffer too small");
+        tokens = provided;
+      } else
+        tokens = new i32(cap);
+      if (n === 0)
+        return { tokens, count: 0 };
+      return { tokens, count: createScanner(data, opts).fill(tokens, n) };
     }
     function decodeStream(dst, ops) {
       let p = 0;
@@ -659,6 +719,7 @@ export const odpLargeBundled = {
     return {
       encode,
       encodeTokens,
+      createScanner,
       findMatch,
       decodeStream,
       DEFAULT
@@ -673,7 +734,7 @@ export const odpLargeBundled = {
       byteOffset,
       slice,
       max
-    } = bitstream, { buildMap, buildTree } = huffman, ERROR_MESSAGES = [
+    } = bitstream, { buildMap, buildTree } = huffman, CODE_NAMES = { 0: "EEOF", 1: "EBADBLOCK", 2: "EBADSYMBOL", 3: "EBADDISTANCE", 4: "ESTREAMEND", 5: "ENOHANDLER", 6: "EBADFORMAT", 7: "EMAXOUT", 8: "EBADSTREAM", 9: "EEXTRATOOLONG", 10: "EBADDATE", 11: "ENAMETOOLONG", 12: "ENOENCODER", 13: "EBADFORMAT", 14: "EBADMETHOD", 15: "EUNSAFEPATH", 16: "ECHECKSUM" }, ERROR_MESSAGES = [
       "unexpected EOF",
       "invalid block type",
       "invalid length/literal",
@@ -681,12 +742,13 @@ export const odpLargeBundled = {
       "stream finished",
       "no stream handler",
       null,
-      null,
+      "output limit exceeded",
       "invalid data"
     ];
     function fail(code, message) {
       const e = Error(message ?? ERROR_MESSAGES[code] ?? "unknown error");
-      e.code = code;
+      e.code = CODE_NAMES[code];
+      e.errno = code;
       throw e;
     }
     const u8 = Uint8Array, u16 = Uint16Array, u32 = Uint32Array, i32 = Int32Array, WINDOW_SIZE = 32768;
@@ -774,8 +836,10 @@ export const odpLargeBundled = {
       return sym < 29 && dist >= DIST_BASE[sym + 1] ? sym + 1 : sym;
     }
     const PHASE_HEADER = 0, PHASE_STORED = 1, PHASE_CODES = 2, PHASE_DONE = 3, NEED_INPUT = 0, COMPLETE = 1;
-    function createInflateState(dictionary) {
+    function createInflateState(dictionary, maxOutput) {
       const dict = dictionary && dictionary.length ? dictionary.subarray(Math.max(0, dictionary.length - WINDOW_SIZE)) : null;
+      if (maxOutput !== void 0 && maxOutput !== null && !(Number.isSafeInteger(maxOutput) && maxOutput >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
       return {
         bitPos: 0,
         finalBlock: 0,
@@ -789,7 +853,10 @@ export const odpLargeBundled = {
         outLen: 0,
         emitted: 0,
         dictionary: dict,
-        fixedOut: !1
+        fixedOut: !1,
+        base: 0,
+        limit: maxOutput !== void 0 && maxOutput !== null ? (dict ? dict.length : 0) + maxOutput : 1 / 0,
+        end: 0
       };
     }
     function initOutput(state, inputLength, providedOut) {
@@ -798,24 +865,29 @@ export const odpLargeBundled = {
         state.out = providedOut;
         state.fixedOut = !0;
       } else
-        state.out = new u8(Math.max(65536, inputLength * 3));
+        state.out = new u8(Math.min(Math.max(65536, inputLength * 3), state.limit));
       if (dictLen) {
         state.out.set(state.dictionary);
         state.outLen = dictLen;
         state.emitted = dictLen;
       }
+      state.end = Math.min(state.out.length, state.limit - state.base);
     }
     function reserveOutput(state, needed) {
-      if (needed <= state.out.length)
+      if (needed <= state.end)
         return;
+      if (state.base + needed > state.limit)
+        fail(7);
       if (state.fixedOut)
         fail(8, "output exceeds provided buffer");
       let size = state.out.length || 65536;
       while (size < needed)
         size *= 2;
+      size = Math.min(size, state.limit - state.base);
       const grown = new u8(size);
       grown.set(state.out.subarray(0, state.outLen));
       state.out = grown;
+      state.end = Math.min(size, state.limit - state.base);
     }
     function readDynamicTables(state, input) {
       const totalBits = input.length * 8;
@@ -1033,6 +1105,8 @@ export const odpLargeBundled = {
       const start = state.outLen - WINDOW_SIZE;
       state.out.set(state.out.subarray(start, state.outLen), 0);
       state.outLen = WINDOW_SIZE;
+      state.base += start;
+      state.end = Math.min(state.out.length, state.limit - state.base);
       state.emitted = Math.max(0, state.emitted - start);
     }
     const WINDOW_BITS = 15, MIN_MATCH = 3, MAX_MATCH = 258, BLOCK_TOKENS = 16384, STREAM_FLUSH_BYTES = 65536, LEVELS = [
@@ -1063,15 +1137,7 @@ export const odpLargeBundled = {
         return Math.imul(data[i] | data[i + 1] << 8 | data[i + 2] << 16, 2654435761) >>> shift;
       };
     }
-    const TOKEN_SCRATCH_MAX = 2097152;
-    let tokenScratch = null;
-    function tokenBuffer(capacity) {
-      if (capacity > TOKEN_SCRATCH_MAX)
-        return new i32(capacity);
-      if (!tokenScratch || tokenScratch.length < capacity)
-        tokenScratch = new i32(capacity);
-      return tokenScratch;
-    }
+    const blockTokens = new i32(2 * BLOCK_TOKENS);
     function createTokenBuffer(tokens, start) {
       return {
         tokens,
@@ -1296,7 +1362,7 @@ export const odpLargeBundled = {
       if (params.level === 0)
         writeStoredRun(w, input, start, params.final);
       else {
-        const scan = lz77.encodeTokens(input, {
+        const scan = lz77.createScanner(input, {
           windowBits: WINDOW_BITS,
           minMatch: MIN_MATCH,
           maxMatch: MAX_MATCH,
@@ -1305,12 +1371,11 @@ export const odpLargeBundled = {
           hashFn: makeHashFn(params.hashBits),
           lazy: params.lazy,
           chainSkip: !0,
-          ...LEVELS[params.level],
-          tokens: tokenBuffer(2 * Math.max(0, input.length - start))
-        }), tb = createTokenBuffer(scan.tokens, start), count = scan.count;
-        for (let from = 0;; from += BLOCK_TOKENS) {
-          const to = Math.min(count, from + BLOCK_TOKENS), covered = tallyBlock(tb, from, to);
-          if (to === count) {
+          ...LEVELS[params.level]
+        }), tb = createTokenBuffer(blockTokens, start);
+        for (;; ) {
+          const covered = tallyBlock(tb, 0, scan.fill(blockTokens, BLOCK_TOKENS));
+          if (scan.done) {
             tb.blockLen = input.length - tb.blockStart;
             writeBlock(w, tb, input, params.final);
             break;
@@ -1398,7 +1463,7 @@ export const odpLargeBundled = {
         opts = {};
       }
       this.ondata = ondata;
-      this._state = createInflateState((opts || {}).dictionary);
+      this._state = createInflateState((opts || {}).dictionary, (opts || {}).maxOutput);
       initOutput(this._state, 0, void 0);
       this._pending = new u8(0);
       this._done = !1;
@@ -1431,6 +1496,16 @@ export const odpLargeBundled = {
       this._pending = slice(this._pending, state.bitPos >> 3);
       state.bitPos &= 7;
     };
+    Object.defineProperty(InflateStream.prototype, "ended", {
+      get() {
+        return this._state.phase === PHASE_DONE;
+      }
+    });
+    InflateStream.prototype.rest = function() {
+      if (this._state.phase !== PHASE_DONE)
+        return null;
+      return this._pending.subarray(this._state.bitPos ? 1 : 0);
+    };
     function deflateSync(data, opts = {}) {
       let input = data, start = 0;
       const dict = opts.dictionary;
@@ -1454,9 +1529,11 @@ export const odpLargeBundled = {
     function inflateSync(data, opts = {}) {
       if (!data.length)
         return opts.out ? opts.out.subarray(0, 0) : new u8(0);
-      const state = createInflateState(opts.dictionary), dictLen = state.dictionary ? state.dictionary.length : 0;
+      const state = createInflateState(opts.dictionary, opts.maxOutput), dictLen = state.dictionary ? state.dictionary.length : 0;
       initOutput(state, data.length, opts.out);
       runInflate(state, data, !1);
+      if (typeof opts.onEnd === "function")
+        opts.onEnd(byteOffset(state.bitPos));
       if (state.fixedOut)
         return state.out.subarray(0, state.outLen);
       if (opts.out) {
@@ -1575,7 +1652,8 @@ export const odpLargeBundled = {
       const d = new Date(mtime ?? Date.now()), y = d.getFullYear() - 1980;
       if (y < 0 || y > 119) {
         const e = Error("date not in range 1980-2099");
-        e.code = 10;
+        e.code = "EBADDATE";
+        e.errno = 10;
         throw e;
       }
       return y << 25 | d.getMonth() + 1 << 21 | d.getDate() << 16 | d.getHours() << 11 | d.getMinutes() << 5 | d.getSeconds() >> 1;
@@ -1590,7 +1668,8 @@ export const odpLargeBundled = {
           const l = ex[k].length;
           if (l > 65535) {
             const e = Error("extra field too long");
-            e.code = 9;
+            e.code = "EEXTRATOOLONG";
+            e.errno = 9;
             throw e;
           }
           le += l + 4;
@@ -1708,8 +1787,14 @@ export const odpLargeBundled = {
       return b + 30 + _r16(d, b + 26) + _r16(d, b + 28);
     }
     function _readCDE(d, b, zip64) {
-      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
-      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off];
+      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8).replace(/\\/g, "/"), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
+      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off, _r32(d, b + 16) >>> 0];
+    }
+    function _setOwn(obj, key, value) {
+      if (key === "__proto__")
+        Object.defineProperty(obj, key, { value, writable: !0, enumerable: !0, configurable: !0 });
+      else
+        obj[key] = value;
     }
     function _flatten(d, prefix, out, defaultOpts) {
       for (const k in d) {
@@ -1720,9 +1805,9 @@ export const odpLargeBundled = {
           data = val[0];
         }
         if (data instanceof Uint8Array)
-          out[name] = [data, opts];
+          _setOwn(out, name, [data, opts]);
         else {
-          out[name + "/"] = [new Uint8Array(0), opts];
+          _setOwn(out, name + "/", [new Uint8Array(0), opts]);
           _flatten(data, name + "/", out, defaultOpts);
         }
       }
@@ -1736,7 +1821,8 @@ export const odpLargeBundled = {
         const [file, p] = flat[fn], compression = p.level === 0 ? 0 : 8, fnBytes = _strToU8(fn), fnLen = fnBytes.length;
         if (fnLen > 65535) {
           const e = Error("filename too long");
-          e.code = 11;
+          e.code = "ENAMETOOLONG";
+          e.errno = 11;
           throw e;
         }
         const comBytes = p.comment ? _strToU8(p.comment) : null, exl = _exfl(p.extra), u = _isUTF8(fn) || comBytes && _isUTF8(p.comment), dosTime = _dosDateTime(p.mtime), crc = new Crc32;
@@ -1787,12 +1873,15 @@ export const odpLargeBundled = {
       return !1;
     }
     function unzipSync(data, opts = {}) {
-      const result = {}, safe = opts.safe !== !1;
-      let e = data.length - 22;
+      const result = Object.create(null), safe = opts.safe !== !1, cap = opts.maxOutput === void 0 || opts.maxOutput === null ? 1 / 0 : opts.maxOutput;
+      if (cap !== 1 / 0 && !(Number.isSafeInteger(cap) && cap >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
+      let extracted = 0, e = data.length - 22;
       while (_r32(data, e) !== 101010256) {
         if (!e || data.length - e > 65558) {
           const err = Error("invalid zip data");
-          err.code = 13;
+          err.code = "EBADFORMAT";
+          err.errno = 13;
           throw err;
         }
         --e;
@@ -1811,26 +1900,46 @@ export const odpLargeBundled = {
       const fltr = opts.filter;
       let o = cdOffset;
       for (let i = 0;i < entryCount; ++i) {
-        const [cmp, cSize, uSize, fn, nextOff, localOff] = _readCDE(data, o, zip64);
+        const [cmp, cSize, uSize, fn, nextOff, localOff, crcExpected] = _readCDE(data, o, zip64);
         o = nextOff;
         const dataStart = _slzh(data, localOff);
         if (safe && _isUnsafePath(fn)) {
           const err = Error('zip-slip: unsafe entry path "' + fn + '"');
-          err.code = 15;
+          err.code = "EUNSAFEPATH";
+          err.errno = 15;
           throw err;
         }
         if (fltr && !fltr({ name: fn, size: cSize, originalSize: uSize, compression: cmp }))
           continue;
+        const outSize = cmp === 0 ? cSize : uSize;
+        if (outSize > cap - extracted) {
+          const err = Error('zip: output limit exceeded (maxOutput) at "' + fn + '"');
+          err.code = "EMAXOUT";
+          err.errno = 7;
+          throw err;
+        }
+        extracted += outSize;
         if (cmp === 0)
-          result[fn] = new Uint8Array(data.subarray(dataStart, dataStart + cSize));
+          _setOwn(result, fn, new Uint8Array(data.subarray(dataStart, dataStart + cSize)));
         else if (cmp === 8)
-          result[fn] = inflateSync(data.subarray(dataStart, dataStart + cSize), {
+          _setOwn(result, fn, inflateSync(data.subarray(dataStart, dataStart + cSize), {
             out: new Uint8Array(uSize)
-          });
+          }));
         else {
           const err = Error("unknown compression type " + cmp);
-          err.code = 14;
+          err.code = "EBADMETHOD";
+          err.errno = 14;
           throw err;
+        }
+        if (opts.verify !== !1) {
+          const c = new Crc32;
+          c.append(result[fn]);
+          if (c.get() !== crcExpected || result[fn].length !== uSize) {
+            const err = Error('zip: incorrect data check (CRC-32 or size mismatch) for "' + fn + '"');
+            err.code = "ECHECKSUM";
+            err.errno = 16;
+            throw err;
+          }
         }
       }
       return result;
@@ -1893,7 +2002,8 @@ export const odpLargeBundled = {
       const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
       if (fnBytes.length > 65535) {
         const e = Error("filename too long");
-        e.code = 11;
+        e.code = "ENAMETOOLONG";
+        e.errno = 11;
         throw e;
       }
       const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, crc = new Crc32;
@@ -1911,7 +2021,8 @@ export const odpLargeBundled = {
       const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
       if (fnBytes.length > 65535) {
         const e = Error("filename too long");
-        e.code = 11;
+        e.code = "ENAMETOOLONG";
+        e.errno = 11;
         throw e;
       }
       const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, hdr = new Uint8Array(localHdrLen);
@@ -2047,12 +2158,27 @@ export const odpLargeBundled = {
           t = t >>> 1;
       table[i] = t;
     }
+    const slices = new Uint32Array(4096);
+    slices.set(table);
+    for (let k = 256;k < 4096; k++) {
+      const prev = slices[k - 256];
+      slices[k] = prev >>> 8 ^ table[prev & 255];
+    }
     function Crc32() {
       this.crc = -1;
     }
     Crc32.prototype.append = function(data) {
       let crc = this.crc | 0;
-      for (let offset = 0, length = data.length | 0;offset < length; offset++)
+      const length = data.length | 0;
+      let offset = 0;
+      if (data instanceof Uint8Array) {
+        const t = slices;
+        for (const end = length - 15;offset < end; offset += 16) {
+          const a = crc ^ (data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 | data[offset + 3] << 24);
+          crc = t[3840 + (a & 255)] ^ t[3584 + (a >>> 8 & 255)] ^ t[3328 + (a >>> 16 & 255)] ^ t[3072 + (a >>> 24)] ^ t[2816 + data[offset + 4]] ^ t[2560 + data[offset + 5]] ^ t[2304 + data[offset + 6]] ^ t[2048 + data[offset + 7]] ^ t[1792 + data[offset + 8]] ^ t[1536 + data[offset + 9]] ^ t[1280 + data[offset + 10]] ^ t[1024 + data[offset + 11]] ^ t[768 + data[offset + 12]] ^ t[512 + data[offset + 13]] ^ t[256 + data[offset + 14]] ^ t[data[offset + 15]];
+        }
+      }
+      for (;offset < length; offset++)
         crc = crc >>> 8 ^ table[(crc ^ data[offset]) & 255];
       this.crc = crc;
     };
@@ -2977,6 +3103,8 @@ export const odpLargeBundled = {
             runs.push(parseLink(c, ctx));
           else if (c.name === "draw:frame" && ctx && typeof ctx.parseFrame === "function")
             runs.push(ctx.parseFrame(c));
+          else if (c.name === "text:note" && ctx && typeof ctx.parseNote === "function")
+            runs.push(ctx.parseNote(c));
           else if (inPlace)
             runs.push(c);
           else
@@ -3079,6 +3207,8 @@ export const odpLargeBundled = {
           return ctx && typeof ctx.renderImage === "function" ? ctx.renderImage(r) : xml.text("");
         case "frame":
           return ctx && typeof ctx.renderFrame === "function" ? ctx.renderFrame(r) : xml.text("");
+        case "note":
+          return ctx && typeof ctx.renderNote === "function" ? ctx.renderNote(r) : xml.text("");
         case "element":
           return r;
         default:

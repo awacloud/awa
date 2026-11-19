@@ -311,6 +311,10 @@ static void fill_segment(uint8_t *mem, uint32_t pass, uint32_t lane,
     const int data_independent =
         (pass == 0) && (slice < (ARGON2_SYNC_POINTS / 2));
 
+    /* Starting index within the segment: pass 0 / slice 0 already has blocks
+     * [0],[1] (the H' columns); start filling at index 2 there, else 0. */
+    uint32_t starting_index = (pass == 0 && slice == 0) ? 2u : 0u;
+
     addr_state st;
     if (data_independent) {
         st.pass = pass;
@@ -320,13 +324,14 @@ static void fill_segment(uint8_t *mem, uint32_t pass, uint32_t lane,
         st.total_passes = passes;
         st.type = ARGON2_TYPE_ID;
         st.counter = 0;
-        st.idx = 0;
         next_addr_block(&st);  /* prime the first address block */
+        /* Block i of the segment takes address word i mod 128 (RFC 9106
+         * §3.4.1.2): a segment that starts at index 2 starts at word 2, not 0.
+         * Starting at 0 diverged from RFC 9106 whenever slice 0 filled more
+         * than one block with a choice of reference (segment length ≥ 4) —
+         * masked by the §5.3 vector, whose segment length is 2 (BL-1843). */
+        st.idx = starting_index;
     }
-
-    /* Starting index within the segment: pass 0 / slice 0 already has blocks
-     * [0],[1] (the H' columns); start filling at index 2 there, else 0. */
-    uint32_t starting_index = (pass == 0 && slice == 0) ? 2u : 0u;
 
     for (uint32_t i = starting_index; i < segment_length; i++) {
         uint32_t curr_offset = slice * segment_length + i;

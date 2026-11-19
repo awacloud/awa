@@ -27,6 +27,7 @@
     "pdfAesGcm",
     "pdfStandardV5",
     "pdfStandardV6",
+    "pdfInfo",
     "pdfDocument",
     "pdfWriter",
     "pdf",
@@ -52,6 +53,8 @@
     "pdfEmbeddedFilesPortfolio",
     "pdfAssociatedFiles2",
     "pdfXmpExtended",
+    "pdfXmp",
+    "pdfSrgbIcc",
     "pdfBuilder",
     "pdfIncrementalWriter",
     "pdfXrefStreamWriter",
@@ -91,9 +94,16 @@
     "ecc",
     "ed25519"
   ],
+  "siblingDependencies": {
+    "modules": [
+      "standard14Lookup",
+      "encodingLookup"
+    ],
+    "package": "@awacloud/fonts"
+  },
   "bytes": {
-    "dev": 467797,
-    "min": 265307
+    "dev": 503767,
+    "min": 287171
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

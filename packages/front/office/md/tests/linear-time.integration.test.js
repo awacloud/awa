@@ -137,3 +137,26 @@ describe('link destination parentheses: nesting capped at 32 levels', () => {
         expect(r(`[a]: ${parens(33)}\n\n[a]\n`)).toBe(`<p>[a]: ${parens(33)}</p>\n<p>[a]</p>\n`);
     });
 });
+
+describe('renderMarkdown in linear time on deep block nesting (T20)', () => {
+    // The render alone, the parse done first; 100,000 levels took 2.5 to 20
+    // seconds when every level re-prefixed its whole inner text.
+    const RENDER_BUDGET_MS = 1000;
+    const N = 100000;
+    const SHAPES = [
+        ['quotes', '>'.repeat(N) + ' x\n', '> '.repeat(N) + 'x\n'],
+        ['lists', '- '.repeat(N) + 'x\n', '- '.repeat(N) + 'x\n'],
+        ['ordered lists', '1. '.repeat(N) + 'x\n', '1. '.repeat(N) + 'x\n'],
+        ['a list item holding a quote', '- > '.repeat(N) + 'x\n', '- > '.repeat(N) + 'x\n'],
+    ];
+    for (const [name, src, expected] of SHAPES) {
+        test(`${name}, ${N} levels: rendered within ${RENDER_BUDGET_MS} ms`, () => {
+            const ast = md.parse(src);
+            const t0 = performance.now();
+            const out = md.renderMarkdown(ast);
+            const ms = performance.now() - t0;
+            expect(out).toBe(expected);
+            expect(ms).toBeLessThan(RENDER_BUDGET_MS);
+        });
+    }
+});

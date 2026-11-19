@@ -11,7 +11,7 @@ Four families:
 | Module | Returns | Deps | Description |
 |--------|----------|------|-------------|
 | [hex](./hex.md) | `{toBytes, fromBytes}` | none | Hex string ↔ Uint8Array |
-| [b64](./b64.md) | `{toBytes, fromBytes, test}` | none | Base64 RFC 4648 encode/decode/validate |
+| [b64](./b64.md) | `{toBytes, fromBytes, test, url}` | none | Base64 RFC 4648 encode/decode/validate, base64url (§ 5) under `url` |
 | [base32](./base32.md) | `{toBytes, fromBytes, test}` | none | Base32 RFC 4648 (A–Z 2–7, padding `=`) |
 | [base58](./base58.md) | `{toBytes, fromBytes, test}` | none | Base58 Bitcoin/IPFS alphabet (no padding) |
 | [utf8](./utf8.md) | `{toBytes, fromBytes}` | none | JS String ↔ UTF-8 bytes |

@@ -85,7 +85,6 @@ const RUNTIME_UNCOVERED = 'browser-surface-less; NO e2e coverage today (absent f
  * @property {number} [port]               Explicit, non-default, availability-checked before use.
  * @property {string} [docroot]            Repo-relative docroot for `type: 'static'`.
  * @property {string} [entryPath]          URL path opened on the leg's origin.
- * @property {boolean} [requiresFwDist]    Page references `dist/build/*` → SKIP when the gitignored artifact is absent.
  * @property {boolean} [needsInstall]      SKIP when the playground's `node_modules` is absent.
  * @property {BuildStep[]} [build]         Build steps, run before bring-up.
  * @property {{binRel: string, args: string[]}} [serve]  Long-lived server, spawned with `process.execPath`.
@@ -94,7 +93,7 @@ const RUNTIME_UNCOVERED = 'browser-surface-less; NO e2e coverage today (absent f
  */
 
 /**
- * 15 legs covering the 14 catalogue entries (astro has two launch modes), plus
+ * 19 legs covering the 18 catalogue entries (astro has two launch modes), plus
  * the sentinel — which is excluded from the default run and executes only when
  * named on the command line.
  *
@@ -194,6 +193,56 @@ export const RECIPES = Object.freeze([
         build: [{ binRel: 'next/dist/bin/next', args: ['build'] }],
         serve: { binRel: 'next/dist/bin/next', args: ['start', '-p', '4804'] },
         env: { NEXT_TELEMETRY_DISABLED: '1', DO_NOT_TRACK: '1' },
+    },
+
+    // ── static: the use cases (fw sources through an import map, no build) ────
+    {
+        name: 'usecase-web-app',
+        entryName: 'web-app',
+        type: 'static',
+        port: 4801,
+        cwd: `${PG}/usecases/web-app`,
+        // The use cases import fw's sources through an import map: the
+        // docroot is the fw package root.
+        docroot: FW,
+        entryPath: '/playground/usecases/web-app/index.html',
+        needsInstall: false,
+    },
+    {
+        name: 'usecase-progressive',
+        entryName: 'progressive',
+        type: 'static',
+        port: 4801,
+        cwd: `${PG}/usecases/progressive`,
+        // The use cases import fw's sources through an import map: the
+        // docroot is the fw package root.
+        docroot: FW,
+        entryPath: '/playground/usecases/progressive/index.html',
+        needsInstall: false,
+    },
+    {
+        name: 'usecase-crypto-workers',
+        entryName: 'crypto-workers',
+        type: 'static',
+        port: 4801,
+        cwd: `${PG}/usecases/crypto-workers`,
+        // The use cases import fw's sources through an import map: the
+        // docroot is the fw package root.
+        docroot: FW,
+        entryPath: '/playground/usecases/crypto-workers/index.html',
+        needsInstall: false,
+    },
+    {
+        name: 'usecase-pwa',
+        entryName: 'pwa',
+        type: 'static',
+        port: 4801,
+        cwd: `${PG}/usecases/pwa`,
+        // The use cases import fw's sources through an import map: the
+        // docroot is the fw package root.
+        docroot: FW,
+        entryPath: '/playground/usecases/pwa/index.html',
+        needsInstall: false,
     },
 
     // ── runtime: browser-surface-less, EXPLICIT skips (never silently omitted) ─

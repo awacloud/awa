@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -74,6 +74,15 @@ describe('ModuleRuntime', () => {
             }
         });
 
+        test('accepts the app.<sub> namespace for application-local descriptors', () => {
+            for (const t of ['app.ui', 'app.demo.viewer', 'app.notes_store']) {
+                expect(() => rt.register(mod('m_' + t.replace(/\W/g, '_'), '1.0.0', [], () => 1, t))).not.toThrow();
+            }
+            for (const t of ['app', 'app.', 'apps.ui', 'demo.ui', 'App.ui']) {
+                expect(() => rt.register(mod('bad_' + t.replace(/\W/g, '_'), '1.0.0', [], () => 1, t))).toThrow(/Invalid type/);
+            }
+        });
+
         test('accepts module without type', () => {
             expect(() => rt.register(mod('foo', '1.0.0'))).not.toThrow();
         });
@@ -128,6 +137,60 @@ describe('ModuleRuntime', () => {
             rt.register(mod('foo', '1.0.0', [], () => 'v1'));
             rt.register(mod('foo', '2.0.0', [], () => 'v2'));
             expect(rt.resolve('foo')).toBe('v2');
+        });
+
+        describe('precedence follows SemVer 2.0.0 § 11', () => {
+            /** Highest version picked from `versions`, registered in the given order. */
+            const latestOf = (versions) => {
+                const r = new ModuleRuntime();
+                for (const v of versions) r.register(mod('p', v, [], () => v));
+                return r.resolve('p');
+            };
+            /** Every `[lower, higher]` pair, in both registration orders. */
+            const expectOrdered = (lower, higher) => {
+                expect(latestOf([lower, higher])).toBe(higher);
+                expect(latestOf([higher, lower])).toBe(higher);
+            };
+
+            test('numeric pre-release identifiers compare numerically', () => {
+                expectOrdered('1.0.0-beta.2', '1.0.0-beta.11');
+                expectOrdered('1.0.0-9', '1.0.0-10');
+            });
+
+            test('a hyphen inside the pre-release is part of it', () => {
+                expectOrdered('1.0.0-rc-1', '1.0.0-rc-2');
+                expectOrdered('1.0.0-rc-9', '1.0.0');
+            });
+
+            test('numeric identifiers sort below alphanumeric ones; a longer set wins on a tie', () => {
+                expectOrdered('1.0.0-1', '1.0.0-alpha');
+                expectOrdered('1.0.0-alpha', '1.0.0-alpha.1');
+            });
+
+            test('the spec chain, whatever the registration order', () => {
+                const chain = [
+                    '1.0.0-alpha', '1.0.0-alpha.1', '1.0.0-alpha.beta', '1.0.0-beta',
+                    '1.0.0-beta.2', '1.0.0-beta.11', '1.0.0-rc.1', '1.0.0',
+                ];
+                const shuffled = [chain[4], chain[7], chain[0], chain[5], chain[2], chain[6], chain[1], chain[3]];
+                const r = new ModuleRuntime();
+                for (const v of shuffled) r.register(mod('p', v, [], () => v));
+                const descending = [];
+                while (r.has('p')) {
+                    const v = r.resolve('p');
+                    descending.push(v);
+                    r.unregister('p', v);
+                }
+                expect(descending).toEqual([...chain].reverse());
+            });
+
+            test('build metadata is ignored', () => {
+                expectOrdered('1.0.4', '1.0.5+build.1');
+                expectOrdered('1.0.0-rc.1+build.9', '1.0.0+build.1');
+                // equal precedence: the later registration wins, as for any tie
+                expect(latestOf(['1.0.5', '1.0.5+build.1'])).toBe('1.0.5+build.1');
+                expect(latestOf(['1.0.5+build.1', '1.0.5'])).toBe('1.0.5');
+            });
         });
 
         test('resolve(name, {version}) returns exact version', () => {
@@ -1139,6 +1202,18 @@ describe('ModuleRuntime', () => {
             `);
             expect(result.latest).toBe('v2');
             expect(result.pinned).toBe('v1');
+        });
+
+        test('the isolated source orders versions by SemVer § 11 too', () => {
+            const result = evalInIsolation(`
+                const rt = new ModuleRuntime();
+                for (const v of ['1.0.0-beta.11', '1.0.0-beta.2', '1.0.4', '1.0.5+build.1', '1.0.0-rc-2', '1.0.0-rc-1']) {
+                    rt.register({ name: 'p' + (v.startsWith('1.0.0-') ? 'pre' : 'rel'), version: v, dependencies: [], factory: () => v });
+                }
+                rt.register({ name: 'typed', type: 'app.worker', version: '1.0.0', dependencies: [], factory: () => 'ok' });
+                return { pre: rt.resolve('ppre'), rel: rt.resolve('prel'), typed: rt.resolve('typed') };
+            `);
+            expect(result).toEqual({ pre: '1.0.0-rc-2', rel: '1.0.5+build.1', typed: 'ok' });
         });
 
         test('register without version uses DEFAULT_VERSION (constant included)', () => {

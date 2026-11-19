@@ -78,7 +78,7 @@ export default function fwAstro(options = {}) {
                     // building its own bare-import literal) so the injected
                     // script is the INVOKING form (`import {applyBase} …;
                     // applyBase();`) — a bare side-effect import of the
-                    // explicit-call ESM tiers is inert (FINDINGS §c.1).
+                    // explicit-call ESM tiers is inert.
                     // `injectScript`'s body accepts arbitrary statements, so
                     // the multi-statement snippet is not a problem here.
                     injectScript('page', sanityImportLine(sanity, pkg).trim());

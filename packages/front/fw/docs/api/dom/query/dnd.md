@@ -41,7 +41,7 @@ Makes `el` draggable via Pointer Events. The drag only starts after the pointer 
 | Option | Type | Default | Description |
 |--------|------|--------|-------------|
 | `data` | `() => any` | — | **Required.** Serialisable drag data, called at start. |
-| `preview` | `(data) => HTMLElement` | clone of `el` at opacity 0.6 | Visual element following the pointer. |
+| `preview` | `(data) => HTMLElement` | clone of `el` at opacity 0.6, at `el`'s rendered width and height (`box-sizing: border-box`) | Visual element following the pointer. A custom preview is used as given. |
 | `handle` | `string \| Element` | `el` | Selector or element — drag only starts from this sub-element. |
 | `axis` | `'x' \| 'y' \| 'both'` | `'both'` | Axis constraint. |
 | `threshold` | `number` (px) | `5` | Distance before the drag is recognised. |
@@ -129,6 +129,8 @@ dnd.draggable(row, { data: () => ({ row: row.dataset.index }), axis: 'y' });
 - `dnd:start` and `dnd:end` are emitted via native `dispatchEvent` on `document` to allow observability without a dependency on `eventBus`.
 - Hovered zone detection uses `document.elementsFromPoint`; in the absence of this API (test environment without a full DOM), no drop target fires.
 - `pointer-events: none` on the preview prevents interference with `elementsFromPoint`.
+- The default clone is sized like its source: appended to `<body>` with `position: fixed`, an unsized clone would take its intrinsic width (wider or narrower than the original). Inherited styles (colour, font, a background set on the source's container) are not copied: give the source its own, or pass a `preview`.
+- While a drag is active the document's `user-select` is `none` (its inline value restored at the end, on cancel and on dispose), and a selection the gesture itself started is cleared; a selection the page had before is kept.
 
 ## See also
 

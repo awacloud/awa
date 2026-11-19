@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -209,6 +209,23 @@ describe('chacha20poly1305 AEAD (RFC 8439)', () => {
             bad[i] ^= 0x01;
             expect(_aead.decrypt(key, nonce, ct, bad, aad)).toBe(false);
         }
+    });
+
+    test('a tag mismatch is reported at warn level, not error (an expected outcome)', () => {
+        const { key, nonce, aad, ct, tag } = tamperFixture();
+        const bad = new Uint8Array(tag);
+        bad[0] ^= 0x01;
+        const _logs = { warn: [], error: [] };
+        const _w = console.warn, _e = console.error;
+        console.warn = (...a) => { _logs.warn.push(a.join(' ')); };
+        console.error = (...a) => { _logs.error.push(a.join(' ')); };
+        let r;
+        try { r = _aead.decrypt(key, nonce, ct, bad, aad); } finally {
+        console.warn = _w; console.error = _e;
+        }
+        expect(r).toBe(false);
+        expect(_logs.error.length).toBe(0);
+        expect(_logs.warn.some((m) => m.includes('CORRUPT'))).toBe(true);
     });
 
     test('decrypt rejects tampered AAD (every byte position)', () => {

@@ -212,6 +212,78 @@
           "reason": "source not valid: 2 error(s): Schema Sch_MissRequiredAttribute: The required attribute 'date' is missing. (/word/document.xml/w:document[1]/w:body[1]/w:p[2]/w:moveFromRangeStart[1]); Schema Sch_MissRequiredAttribute: The required attribute 'date' is missing. (/word/document.xml/w:document[1]/w:body[1]/w:p[1]/w:moveToRangeStart[1])"
         }
       ]
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "ooxml-untyped-docx",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-05",
+      "commit": "e5beeff053c3a3851836adbb2b0a12a26e81a2a5",
+      "command": "bun cli.ts office-scorecard axis-b --suite ooxml-untyped-docx",
+      "result": {
+        "kind": "pass-total",
+        "pass": 97,
+        "total": 1491,
+        "criterion": "every wild docx (poi, lo-ooxmlexport, lo-odfexport) is read through docxFullBundle (the core, the large and the full bundles' extras); it passes when the read model keeps no raw XML node in an _extras array (every element typed) and its unmodelledParts lists none of no part (every docx part T60 takes on is read today); a throw fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "ooxml-untyped-xlsx",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-06",
+      "commit": "e5e9a82b011076ba101c405641ec6a8c389062c7",
+      "command": "bun cli.ts office-scorecard axis-b --suite ooxml-untyped-xlsx",
+      "result": {
+        "kind": "pass-total",
+        "pass": 295,
+        "total": 344,
+        "criterion": "every wild xlsx (poi, lo-ooxmlexport, lo-ods) is read through xlsxFullBundle (the core, the large and the full bundles' extras); it passes when the read model keeps no raw XML node in an _extras array (every element typed) and its unmodelledParts lists none of the calculation chain, pivot tables and caches, external links, XML maps, connections and query tables; a throw fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "ooxml-untyped-pptx",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-05",
+      "commit": "1a6ddae08afa8f3b47d3467197bba1184ab5ad13",
+      "command": "bun cli.ts office-scorecard axis-b --suite ooxml-untyped-pptx",
+      "result": {
+        "kind": "pass-total",
+        "pass": 65,
+        "total": 476,
+        "criterion": "every wild pptx (poi, lo-ooxmlexport, lo-pptx) is read through pptxFullBundle (the core, the large and the full bundles' extras); it passes when the read model keeps no raw XML node in an _extras array (every element typed) and its unmodelledParts lists none of the slide layouts, notes masters, handout masters and notes slides; a throw fails it"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "ooxml-saveback-pptx",
+        "version": "poi@REL_5_5_1+libreoffice@26.8.0.3",
+        "source": null
+      },
+      "date": "2026-11-05",
+      "commit": "3911a353e28b12ecff518fe86e56aec14fe0a766",
+      "command": "bun cli.ts office-scorecard axis-b --suite ooxml-saveback-pptx",
+      "result": {
+        "kind": "pass-total",
+        "pass": 77,
+        "total": 476,
+        "criterion": "every wild pptx (poi, lo-ooxmlexport, lo-pptx) is read with the core pptx.read and written with pptx.write; it passes when every slide, every layout a slide uses and every master is written back as read (docxProperties.sameElement against the source after markup-compatibility processing, the roots' namespace declarations set aside); a throw fails it"
+      },
+      "skipped": []
     }
   ],
   "comparators": []

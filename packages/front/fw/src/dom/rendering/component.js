@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -49,8 +49,12 @@
  * Scoped CSS : `spec.css` is injected **once per define()** into the page's
  * `<head>`. Inside the CSS, `&` is rewritten to the unique scope class
  * generated for the blueprint (`.fw-comp-N`). The scope class is added to
- * every instance's root element automatically. CSP nonce is auto-detected
- * from `<meta name="csp-nonce">` and applied to the injected `<style>`.
+ * every instance's root element automatically. The CSS goes through the
+ * `styleSheet` module: in its default mode a `<style data-fw-component>`
+ * element is added to `<head>` (CSP nonce auto-detected from
+ * `<meta name="csp-nonce">` and applied to it); under
+ * `styleSheet.mode('adopted')` no `<style>` element is created, the CSS is
+ * attached as a constructable stylesheet.
  *
  * Props shape : `self.props` always holds the **transformed** shape (the
  * exact data the DOM template was bound against). The original validated
@@ -63,9 +67,8 @@
  * automatically re-write the DOM from the new props — re-binding is left to the
  * hook. Wire the changed fields explicitly in `update(self, prev)` via
  * `self.text(...)` / `self.attr(...)` (or a `reactiveBind` set up in `mount`).
- * (Clarified 2026-06-30 from the `@awacloud/ui-templates` W0 dual-form spike, which
- * measured this behaviour; `component.js` is not yet field-tested — see
- * `ai/plans/ui-templates`.)
+ * (Measured 2026-06-30 while building `@awacloud/ui-templates`' dual-form
+ * components.)
  *
  */
 
@@ -96,16 +99,17 @@
  */
 
 import { reactiveBind } from './reactiveBind.js';
+import { styleSheet } from './styleSheet.js';
 
 export const component = {
     name: 'component',
     version: '1.3.0',
     type: 'fw.dom.rendering',
-    dependencies: ['reactiveBind'],
-    deps: [reactiveBind],
+    dependencies: ['reactiveBind', 'styleSheet'],
+    deps: [reactiveBind, styleSheet],
 
     /** @returns {ComponentAPI} */
-    factory(reactiveBind) {
+    factory(reactiveBind, styleSheet) {
 
         // Shared counter for scope class names across all `define()` calls.
         let _scopeSeq = 0;
@@ -198,7 +202,7 @@ export const component = {
          *    are resolved iteratively until no `&` remains.
          *
          * The function does NOT parse full CSS — it operates with targeted
-         * regexes that cover the patterns documented in the plan. Corner-cases
+         * regexes that cover the documented patterns. Corner-cases
          * involving `&` inside attribute selectors or string values are
          * intentionally out-of-scope.
          *
@@ -270,10 +274,12 @@ export const component = {
         }
 
         /**
-         * Inject a `<style>` block scoped to `scopeClass`. User CSS uses `&`
-         * to refer to the scope ; we rewrite to `.<scopeClass>` so the result
-         * is plain CSS understood by all browsers (no nesting requirement).
-         * Extended to handle nested `&`, `:global(sel)` and `@keyframes`.
+         * Inject the CSS scoped to `scopeClass` through `styleSheet`. User CSS
+         * uses `&` to refer to the scope ; we rewrite to `.<scopeClass>` so the
+         * result is plain CSS understood by all browsers (no nesting
+         * requirement). Extended to handle nested `&`, `:global(sel)` and
+         * `@keyframes`. Under `styleSheet.mode('adopted')` no `<style>` element
+         * is created (a constructable stylesheet is attached instead).
          */
         function _injectScopedCss(cssSource, scopeClass) {
             if (typeof document === 'undefined') return;
@@ -283,6 +289,11 @@ export const component = {
             if (_injectedScopes.has(scopeClass)) return;
             _injectedScopes.add(scopeClass);
             const scoped = _rewriteCss(cssSource, scopeClass);
+            if (styleSheet) {
+                styleSheet.attach(scoped, { attrs: { 'data-fw-component': scopeClass }, nonce: _cspNonce });
+                return;
+            }
+            // hand-wired without styleSheet: the element path, as before
             const styleEl = document.createElement('style');
             styleEl.textContent = scoped;
             styleEl.setAttribute('data-fw-component', scopeClass);

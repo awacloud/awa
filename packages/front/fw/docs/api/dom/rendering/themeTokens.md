@@ -1,7 +1,7 @@
 ---
 module: themeTokens
 category: dom/rendering
-dependencies: [dom]
+dependencies: [dom, styleSheet]
 returns: object
 worker-safe: false
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > CSS design-token manager — definition, variants, light/dark/a11y modes.
 
-**Module** `themeTokens` | **Source** `packages/front/fw/src/dom/rendering/themeTokens.js` | **Deps** `dom` | **Worker-safe** no
+**Module** `themeTokens` | **Source** `packages/front/fw/src/dom/rendering/themeTokens.js` | **Deps** `dom`, `styleSheet` | **Worker-safe** no
 
 Manages the application's CSS Custom Properties via dedicated `<style>` elements per instance (no conflict between multiple instances).
 Supports tokens as scalar values or mode variants (`light`, `dark`, `highContrast`, `reducedMotion`),
@@ -162,7 +162,9 @@ theme.dispose(); // removes the <style>, detaches all MQ listeners
 
 ## Notes
 
-- A single `<style id="data-fw-theme-tokens">` element is created in `<head>`; successive calls to `define()` or `mode()` rewrite its entire content.
+- Each instance creates one `<style id="data-fw-theme-tokens-N">` element in `<head>` (through [`styleSheet`](./styleSheet.md)); successive calls to `define()` or `mode()` rewrite its entire content.
+- The element carries the page's `<meta name="csp-nonce">` nonce when there is one (read when the factory runs). Before it carried none, so a nonce-based CSP refused the tokens.
+- Under a strict CSP (`style-src 'self'`, no `'unsafe-inline'`, no nonce) call `runtime.resolve('styleSheet').mode('adopted')` before the first `create()`: each instance then uses one constructable stylesheet and there is no `<style id="data-fw-theme-tokens-N">` element; `dispose()` removes that sheet and only it. `get()` still reads computed values from the scope element. A factory wired by hand without the `styleSheet` argument keeps the element path (no nonce).
 - The fallback cascade for `highContrast` without an explicit variant is: `highContrast` → `dark` → `light` → `default`.
 - `forced-colors: active` (Windows High Contrast) is detected and automatically forces `resolved: 'high-contrast'`, regardless of the configured mode.
 - Listeners passed to `onChange` are called on **every** `mode()` call, even if the resolved mode does not change (the caller's explicit intent is honoured).
@@ -171,5 +173,6 @@ theme.dispose(); // removes the <style>, detaches all MQ listeners
 ## See also
 
 - [dom](../query/dom.md) — low-level DOM manipulation
+- [styleSheet](./styleSheet.md) — attaches the token CSS (`<style>` element or constructable stylesheet)
 - [template](./template.md) — elm-array → DOM render engine
 - [uiSession](./uiSession.md) — high-level facade

@@ -1,0 +1,41 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Use case — progressive enhancement</title>
+    <link rel="stylesheet" href="../usecases.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "@awacloud/fw": "../../../src/main.js",
+            "@awacloud/fw/": "../../../src/"
+        }
+    }
+    </script>
+    <script type="module">
+        import { lockdown } from '@awacloud/fw/sanity/lockdown.js';
+        lockdown();
+    </script>
+    <script type="module" src="./enhance.js"></script>
+</head>
+<body>
+    <main>
+        <nav class="site" id="site-nav">
+            <a href="index.html">Home</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <h1>Progressive enhancement</h1>
+        <p>This page is complete as plain HTML: the links work, the content is here,
+           the contact form submits without JavaScript.</p>
+        <p id="js-note" hidden>JavaScript is on: <code>enhance.js</code> marked the current
+           link and will validate the contact form in place.</p>
+    </main>
+</body>
+</html>

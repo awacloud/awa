@@ -1,0 +1,32 @@
+{
+  "name": "@awacloud/media-stream",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "author": "Matthieu Bouilloux",
+  "company": "AwaCloud SAS",
+  "copyright": "Copyright (c) 2026 AwaCloud SAS",
+  "type": "module",
+  "awa": { "maturity": "L2" },
+  "description": "The stream seam of the media codecs: frames, per-layer sequence numbers, a lossless stage, room for end-to-end encryption. fw add-on, no runtime dependency.",
+  "main": "src/main.js",
+  "sideEffects": false,
+  "dependencies": {},
+  "devDependencies": { "@awacloud/fw": "workspace:*" },
+  "files": [
+    "src/**/*.js",
+    "!src/**/*.test.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./src/main.js",
+    "./frame": "./src/frame/frame.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "bun test .",
+    "lint": "eslint . --max-warnings 0"
+  }
+}

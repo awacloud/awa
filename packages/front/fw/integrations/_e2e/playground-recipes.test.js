@@ -15,7 +15,6 @@
 import { describe, expect, it } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,19 +33,9 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CATALOGUE = catalogueNames(JSON.parse(readFileSync(resolve(HERE, EXAMPLES_JSON_REL), 'utf8')));
 
-/** Playwright is a task-02 devDependency: absent here, present later. Measured, not assumed. */
-function playwrightInstalled() {
-    try {
-        createRequire(import.meta.url).resolve('playwright/package.json');
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 describe('preview gate — drift gate', () => {
     it('covers every catalogue entry, and names no unknown one', () => {
-        expect(CATALOGUE.length).toBe(14);
+        expect(CATALOGUE.length).toBe(18);
         expect(checkCoverage(CATALOGUE, RECIPES)).toEqual({ missingRecipes: [], unknownRecipes: [] });
     });
 
@@ -71,7 +60,7 @@ describe('preview gate — drift gate', () => {
         expect(new Set(names).size).toBe(names.length);
         expect(names).toContain(SENTINEL_NAME);
         expect(defaultLegs().map((r) => r.name)).not.toContain(SENTINEL_NAME);
-        expect(defaultLegs().length).toBe(15);
+        expect(defaultLegs().length).toBe(19);
     });
 });
 
@@ -181,8 +170,8 @@ describe('preview gate — browsers path', () => {
 });
 
 describe('preview gate — harness smoke (no browser)', () => {
-    const run = (args) =>
-        spawnSync('node', [join(HERE, 'preview.mjs'), ...args], { cwd: HERE, encoding: 'utf8', timeout: 120_000 });
+    const run = (args, env = {}) =>
+        spawnSync('node', [join(HERE, 'preview.mjs'), ...args], { cwd: HERE, encoding: 'utf8', timeout: 120_000, env: { ...process.env, ...env } });
 
     it('--list exits 0 and prints the leg table', () => {
         const done = run(['--list']);
@@ -191,17 +180,20 @@ describe('preview gate — harness smoke (no browser)', () => {
         expect(out).toContain(SENTINEL_NAME);
         expect(out).toContain('astro-preview');
         expect(out).toContain(`${RECIPES.length} recipes`);
-        expect(out).toContain('14 catalogue entries');
+        expect(out).toContain('18 catalogue entries');
     }, 120_000);
 
     it('exits 2 on an unknown leg (config error, before any browser work)', () => {
         expect(run(['zzz-not-a-leg']).status).toBe(2);
     }, 120_000);
 
-    it.skipIf(playwrightInstalled())(
+    // Runs whether playwright is installed or not: the seam makes preview.mjs
+    // take its no-playwright path (a skipIf on the absence retired this leg
+    // for good once playwright landed).
+    it(
         'full run without playwright: exit 0, every leg SKIPs, report written',
         () => {
-            const done = run([]);
+            const done = run([], { FW_PREVIEW_ASSUME_NO_PLAYWRIGHT: '1' });
             const out = `${done.stdout ?? ''}${done.stderr ?? ''}`;
             expect(done.status).toBe(0);
             expect(out).toContain('playwright not provisioned');
@@ -212,7 +204,9 @@ describe('preview gate — harness smoke (no browser)', () => {
             expect(report.schema).toBe('fw-preview-gate/1');
             expect(Object.keys(report)).toEqual(['schema', 'generatedAt', 'host', 'allowlist', 'totals', 'results']);
             expect(Object.keys(report.host)).toEqual(['platform', 'node', 'browser', 'headed']);
-            expect(report.totals).toEqual({ total: 15, pass: 0, fail: 0, skip: 15, inconclusive: 0 });
+            // Every default leg SKIPs (their count is pinned by the drift test above).
+            const legs = defaultLegs().length;
+            expect(report.totals).toEqual({ total: legs, pass: 0, fail: 0, skip: legs, inconclusive: 0 });
             expect(report.allowlist).toEqual([]);
 
             // Per-leg contract fields, exactly in this order (extras come after).

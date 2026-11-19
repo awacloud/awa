@@ -10,7 +10,15 @@
  * Unicode values"). It gives text extraction a glyph-name → Unicode
  * mapping for fonts whose encoding carries only glyph names.
  *
- * The spec's heuristic algorithm, in order:
+ * The name as a whole is read first, by the three rules below; a name
+ * none of them reads is then read by the spec's own steps: everything
+ * from its first full stop is dropped (`one.SP`, `uni0031.sups`), the rest
+ * is split at its underscores into components (`f_f_i`), and each
+ * component is read by the same three rules, the texts concatenated. A
+ * component none of them reads maps to the empty string, as the spec
+ * says; a name whose components all read nothing is `null`.
+ *
+ * The three rules, in order:
  *
  *   1. **Table lookup** — the name is looked up verbatim in the AGL
  *      (`glyphlist.txt`). The table (`encodingAglTable`) ships the
@@ -25,8 +33,15 @@
  *   3. **`uXXXX[XX]` form** — `"u"` followed by 4 to 6 hex digits,
  *      mapping to a single code point, subject to the same range/
  *      surrogate exclusion as above.
- *   4. Anything else (including a malformed `uni`/`u` name) → `null`.
- *      `glyphNameToUnicode` never throws.
+ *   4. Anything else (including a malformed `uni`/`u` name) reads
+ *      nothing. `glyphNameToUnicode` never throws.
+ *
+ * `dingbatsNameToUnicode(name)` reads a name of the Zapf Dingbats font
+ * (`a1` to `a206`) through the vendored ITC Zapf Dingbats Glyph List
+ * (`zapfdingbats.txt`, the same repository and commit as the AGL; seam
+ * `encodingZapfDingbatsGlyphs`), then as `glyphNameToUnicode` does. Those
+ * names mean their characters only in a Zapf Dingbats font, so the caller
+ * asks for it when the font is one.
  *
  * Hex-digit matching is case-insensitive here (a pragmatic, documented
  * deviation from the spec's literal "uppercase hexadecimal digits" —
@@ -35,19 +50,21 @@
  * result).
  *
  * Strict factory-only: no top-level imports beyond the
- * descriptor, which receives `encodingAglTable` via DI. Pure
+ * descriptor, which receives `encodingAglTable` and
+ * `encodingZapfDingbatsGlyphs` via DI. Pure
  * data + string parsing — worker-safe.
  *
  * @module fonts/encodings/agl
  */
 
 import { encodingAglTable } from './aglTable.js';
+import { encodingZapfDingbatsGlyphs } from './zapfDingbatsGlyphs.js';
 
 export const encodingAgl = {
     name: 'encodingAgl',
-    dependencies: ['encodingAglTable'],
-    deps: [encodingAglTable],
-    factory(aglTable) {
+    dependencies: ['encodingAglTable', 'encodingZapfDingbatsGlyphs'],
+    deps: [encodingAglTable, encodingZapfDingbatsGlyphs],
+    factory(aglTable, zapfGlyphs) {
         // Self-contained closure (fw/no-factory-capture — cf. the macRoman.js
         // sibling pattern):
         // every helper the factory needs is declared IN the factory body,
@@ -90,20 +107,44 @@ export const encodingAgl = {
          * @returns {number[] | null} `null` when the name resolves to no
          *   known Unicode value — never throws.
          */
-        function glyphNameToUnicode(name) {
-            if (typeof name !== 'string' || name.length === 0) return null;
-
+        function componentToUnicode(name) {
             const tableHit = aglTable.lookup(name);
             if (tableHit !== undefined) return tableHit;
 
             const uni = fromUniForm(name);
             if (uni !== null) return uni;
 
-            const u = fromUForm(name);
-            if (u !== null) return u;
-
-            return null;
+            return fromUForm(name);
         }
-        return { glyphNameToUnicode };
+
+        function glyphNameToUnicode(name) {
+            if (typeof name !== 'string' || name.length === 0) return null;
+            const whole = componentToUnicode(name);
+            if (whole !== null) return whole;
+
+            const dot = name.indexOf('.');
+            const stem = dot === -1 ? name : name.slice(0, dot);
+            if (stem === name && name.indexOf('_') === -1) return null;
+            const codePoints = [];
+            for (const component of stem.split('_')) {
+                const cps = component ? componentToUnicode(component) : null;
+                if (cps) codePoints.push(...cps);
+            }
+            return codePoints.length ? codePoints : null;
+        }
+        /**
+         * Resolve a glyph name of a Zapf Dingbats font: the ITC Zapf
+         * Dingbats Glyph List first (`a73` → U+25A0), then
+         * `glyphNameToUnicode`.
+         * @param {string} name
+         * @returns {number[] | null} `null` when neither resolves it —
+         *   never throws.
+         */
+        function dingbatsNameToUnicode(name) {
+            if (typeof name !== 'string' || name.length === 0) return null;
+            const hit = zapfGlyphs.lookup(name);
+            return hit !== undefined ? hit : glyphNameToUnicode(name);
+        }
+        return { glyphNameToUnicode, dingbatsNameToUnicode };
     }
 };

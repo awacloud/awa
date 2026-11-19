@@ -1,0 +1,167 @@
+# Copyright (c) 2026 AwaCloud SAS
+# Author: Matthieu Bouilloux
+# SPDX-License-Identifier: Apache-2.0
+"""Write the LZW streams of tests/_vectors/lzw-foreign/ with an encoder that is
+not fw: GDI+ (System.Drawing, through Windows PowerShell 5.1), which encodes
+GIF images with LZW and, on request, TIFF strips with LZW.
+
+    python generate.py.txt        # from this directory, on Windows
+
+A Python script stored with a .txt suffix: the repository's licence-header
+checker has no comment syntax for .py yet.
+
+The pixels are this lane's own deterministic pattern (pattern() below), so
+the images carry no third-party material; only the encoder is foreign. Each
+image is stored base64-encoded in images.json with the pixel bytes it must
+decode to: for a GIF, the palette indices GDI+ itself reads back from the
+file (a foreign decoder as the ground truth), which the script checks equal
+the source indices; for a TIFF, the source pixel bytes (the format is
+lossless). The tests read images.json and never run this script.
+"""
+
+import base64
+import json
+import os
+import subprocess
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def pattern(w, h, levels):
+    """Bands, a diagonal and a checker block: long runs and short ones."""
+    out = bytearray()
+    for y in range(h):
+        for x in range(w):
+            if 8 <= x < 24 and 8 <= y < 24:
+                v = ((x // 2 + y // 2) & 1) * (levels - 1)
+            elif x == y or x == w - 1 - y:
+                v = levels - 1
+            else:
+                v = (x * levels // w + (y // 5)) % levels
+            out.append(v)
+    return bytes(out)
+
+
+PS = r'''
+param([string]$Mode, [int]$W, [int]$H, [string]$PixB64, [string]$Out)
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Drawing
+$pix = [Convert]::FromBase64String($PixB64)
+function Copy-Rows($bmp, $fmt, [int]$bpr, [byte[]]$src) {
+    $rect = New-Object System.Drawing.Rectangle 0, 0, $bmp.Width, $bmp.Height
+    $data = $bmp.LockBits($rect, [System.Drawing.Imaging.ImageLockMode]::WriteOnly, $fmt)
+    for ($y = 0; $y -lt $bmp.Height; $y++) {
+        [System.Runtime.InteropServices.Marshal]::Copy($src, $y * $bpr, [IntPtr]($data.Scan0.ToInt64() + $y * $data.Stride), $bpr)
+    }
+    $bmp.UnlockBits($data)
+}
+function Read-Rows($bmp, $fmt, [int]$bpr) {
+    $rect = New-Object System.Drawing.Rectangle 0, 0, $bmp.Width, $bmp.Height
+    $data = $bmp.LockBits($rect, [System.Drawing.Imaging.ImageLockMode]::ReadOnly, $fmt)
+    $buf = New-Object byte[] ($bpr * $bmp.Height)
+    for ($y = 0; $y -lt $bmp.Height; $y++) {
+        [System.Runtime.InteropServices.Marshal]::Copy([IntPtr]($data.Scan0.ToInt64() + $y * $data.Stride), $buf, $y * $bpr, $bpr)
+    }
+    $bmp.UnlockBits($data)
+    return ,$buf
+}
+if ($Mode -eq 'gif8' -or $Mode -eq 'gif4' -or $Mode -eq 'tif8') {
+    $fmt = if ($Mode -eq 'gif4') { [System.Drawing.Imaging.PixelFormat]::Format4bppIndexed } else { [System.Drawing.Imaging.PixelFormat]::Format8bppIndexed }
+    $n = if ($Mode -eq 'gif4') { 16 } else { 256 }
+    $bmp = New-Object System.Drawing.Bitmap $W, $H, $fmt
+    $pal = $bmp.Palette
+    for ($i = 0; $i -lt $n; $i++) { $g = [int]($i * 255 / ($n - 1)); $pal.Entries[$i] = [System.Drawing.Color]::FromArgb(255, $g, (255 - $g), (($i * 37) % 256)) }
+    $bmp.Palette = $pal
+    if ($Mode -eq 'gif4') {
+        $bpr = [int][Math]::Ceiling($W / 2)
+        $packed = New-Object byte[] ($bpr * $H)
+        for ($y = 0; $y -lt $H; $y++) { for ($x = 0; $x -lt $W; $x++) {
+            $v = $pix[$y * $W + $x]; $k = $y * $bpr + [int][Math]::Floor($x / 2)
+            if (($x % 2) -eq 0) { $packed[$k] = $packed[$k] -bor ($v -shl 4) } else { $packed[$k] = $packed[$k] -bor $v } } }
+        Copy-Rows $bmp $fmt $bpr $packed
+    } else { Copy-Rows $bmp $fmt $W $pix }
+    if ($Mode -eq 'tif8') {
+        $enc = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/tiff' }
+        $ps = New-Object System.Drawing.Imaging.EncoderParameters 1
+        $ps.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter ([System.Drawing.Imaging.Encoder]::Compression), ([long][System.Drawing.Imaging.EncoderValue]::CompressionLZW)
+        $bmp.Save($Out, $enc, $ps)
+    } else { $bmp.Save($Out, [System.Drawing.Imaging.ImageFormat]::Gif) }
+    $bmp.Dispose()
+    # read the file back with GDI+: the indices a foreign decoder sees
+    $back = New-Object System.Drawing.Bitmap $Out
+    $bf = $back.PixelFormat
+    $bbpr = if ($bf -eq [System.Drawing.Imaging.PixelFormat]::Format4bppIndexed) { [int][Math]::Ceiling($W / 2) } else { $W }
+    $raw = Read-Rows $back $bf $bbpr
+    $back.Dispose()
+    "$bf " + [Convert]::ToBase64String($raw)
+} elseif ($Mode -eq 'tif24') {
+    $fmt = [System.Drawing.Imaging.PixelFormat]::Format24bppRgb
+    $bmp = New-Object System.Drawing.Bitmap $W, $H, $fmt
+    # GDI+ rows are BGR; the source bytes are given as RGB triples
+    $bgr = New-Object byte[] ($pix.Length)
+    for ($i = 0; $i -lt $pix.Length; $i += 3) { $bgr[$i] = $pix[$i + 2]; $bgr[$i + 1] = $pix[$i + 1]; $bgr[$i + 2] = $pix[$i] }
+    Copy-Rows $bmp $fmt ($W * 3) $bgr
+    $enc = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/tiff' }
+    $ps = New-Object System.Drawing.Imaging.EncoderParameters 1
+    $ps.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter ([System.Drawing.Imaging.Encoder]::Compression), ([long][System.Drawing.Imaging.EncoderValue]::CompressionLZW)
+    $bmp.Save($Out, $enc, $ps)
+    $bmp.Dispose()
+    ''
+}
+'''
+
+
+def gdiplus(mode, w, h, pix):
+    script = os.path.join(HERE, '_gen.ps1')
+    out = os.path.join(HERE, '_out.bin')
+    with open(script, 'w', encoding='utf-8-sig') as f:
+        f.write(PS)
+    try:
+        r = subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
+                            '-Mode', mode, '-W', str(w), '-H', str(h), '-PixB64', base64.b64encode(pix).decode('ascii'), '-Out', out],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            raise RuntimeError(mode + ': ' + r.stderr.strip()[:2000])
+        with open(out, 'rb') as f:
+            data = f.read()
+        text = r.stdout.strip()
+        if not text:
+            return data, b'', None
+        fmt, b64 = text.split(' ', 1)
+        return data, base64.b64decode(b64), fmt
+    finally:
+        for p in (script, out):
+            if os.path.exists(p):
+                os.remove(p)
+
+
+def unpack4(packed, w, h):
+    bpr = (w + 1) // 2
+    return bytes((packed[y * bpr + x // 2] >> (4 if x % 2 == 0 else 0)) & 15 for y in range(h) for x in range(w))
+
+
+def main():
+    images = {}
+    w, h = 61, 37  # odd sizes: no row aligns on a byte or word boundary by luck
+    for mode, levels in (('gif8', 256), ('gif4', 16), ('tif8', 256)):
+        src = pattern(w, h, levels)
+        data, back, fmt = gdiplus(mode, w, h, src)
+        idx = unpack4(back, w, h) if fmt == 'Format4bppIndexed' else back
+        # An 8-bit source keeps its indices; GDI+ writes a 4-bit one as an
+        # 8-bit GIF with a palette of its own, so its indices change — the
+        # read-back (what the file's LZW stream holds) is the ground truth.
+        kept = idx == src
+        if levels == 256:
+            assert kept, mode + ': GDI+ read back other indices than it was given'
+        images[mode + ('.gif' if mode.startswith('gif') else '.tif')] = {'width': w, 'height': h, 'readBackFormat': fmt, 'sourceIndicesKept': kept, 'file': base64.b64encode(data).decode('ascii'), 'pixels': base64.b64encode(idx).decode('ascii')}
+    rgb = bytes(b for v in pattern(w, h, 256) for b in (v, 255 - v, (v * 37) & 255))
+    data, _, _ = gdiplus('tif24', w, h, rgb)
+    images['tif24.tif'] = {'width': w, 'height': h, 'file': base64.b64encode(data).decode('ascii'), 'pixels': base64.b64encode(rgb).decode('ascii')}
+    ver = subprocess.run(['powershell', '-NoProfile', '-Command', '[System.Environment]::OSVersion.VersionString + " / .NET " + [System.Environment]::Version'], capture_output=True, text=True).stdout.strip()
+    with open(os.path.join(HERE, 'images.json'), 'w', encoding='utf-8', newline='\n') as f:
+        json.dump({'encoder': 'GDI+ (System.Drawing), ' + ver, 'images': images}, f, indent=1)
+        f.write('\n')
+
+
+if __name__ == '__main__':
+    main()

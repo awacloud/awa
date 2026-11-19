@@ -9,7 +9,7 @@ status: complete
 
 # oconvDocxToIr
 
-> `.docx` (`@awacloud/ooxml`'s `docx.read()` result) → `oconv-ir/v1`, tier 2.
+> `.docx` (`@awacloud/ooxml`'s `docx.read()` result) → `oconv-ir/v2`, tier 2.
 
 **Module** `oconvDocxToIr` (`oconvDocxToIr`) | **Source** `packages/front/office/oconv/src/read/docx-to-ir.js` | **Deps** `oconvIr`, `docx` | **Worker-safe** yes
 
@@ -32,9 +32,9 @@ const { docxToIr } = runtime.resolve('oconvDocxToIr');
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `docxToIr` | `(readResult: object, opts?: {include?: string[]}) => {ir, losses}` | `ir` — an `oconv-ir/v1` document; `losses` — `{code, detail}[]` in document order | `oconv: bad docx include` — `opts.include` not an array of distinct known names |
+| `docxToIr` | `(readResult: object, opts?: {include?: string[]}) => {ir, losses}` | `ir` — an `oconv-ir/v2` document; `losses` — `{code, detail}[]` in document order | `oconv: bad docx include` — `opts.include` not an array of distinct known names |
 
-`opts.include` — the opt-in parts brought back, as the odt reader's: `'toc'` reads a table of contents control's entries as paragraphs (below). Absent or `[]`: none.
+`opts.include` — the opt-in parts brought back, as the odt reader's: `'toc'` reads a table of contents control's entries as paragraphs (below); `'layout'` reads tier 3 — the page, the paragraphs' alignment and breaks, the runs' size, font, colour, underline and script, the headers and footers, and the page fields (below). Absent or `[]`: none.
 
 ## Examples
 
@@ -66,7 +66,10 @@ losses;       // [] for a plain document with no tracked features
 - **Task markers**: a list item whose first run, a plain text run, leads with `☐ ` or `☒ ` (a glyph followed by one space; the GFM task marker as `oconvIrToDocx` draws it) reads as `listItem.escapes.md.task` `'unchecked'` / `'checked'`, the marker stripped, so md → docx → md keeps `[ ]` / `[x]`. The glyph with no space, after other text, outside a list, or `☑` stays text.
 - **Images**: each `w:drawing` is an IR `image` named after its `wp:docPr` name (else its `pic:cNvPr` name, else `image`), its alt text the drawing's description, its bytes in `escapes.docx` when the picture part resolves (a chart, a shape or a SmartArt has none: `image/bytes-unavailable`). A document may repeat a drawing name, an asset may not: the first image of a name keeps it, a later one takes the first free `<name> (k)`, k from 2 (the odt writer's rule for frame names), so two distinct pictures never share one asset in `toMd`.
 - Loss codes this module emits: `heading/subtitle-degraded` (a paragraph styled `Subtitle` kept as a plain paragraph, detail = its style ID), `link/target-missing` (an unresolved hyperlink `rId`, text kept), `list/numbering-unresolved`, `image/bytes-unavailable` (a drawing's image bytes did not resolve on read), `block/dropped` (an unmapped body/cell node, detail = its `type`).
-- Page layout, sections, headers/footers, footnotes, comments, revision history (who changed what, when) and font colours are permanently out of scope and never reported per node — see the loss matrix for the full docx→md row.
+- **Headers and footers** (under `include: ['layout']`, T80): `document.header` and `document.footer` from the body's last `sectPr` — `default` its `default` reference's part; `first` `null` without `titlePg`, else its `first` part (`[]` with none); `even` `null` without the settings' `evenAndOddHeaders`, else its `even` part (`[]` with none). Each part's body is read as the body is; a page break does not cross into it or out of it (`layout/break-dropped`, detail `header` or `footer`). A region none of whose slots holds a block is `null`; a reference whose part did not read records `layout/region-unresolved` (detail `<region> <slot>`). A header's hyperlink takes the target of its own part's relationship.
+- **Page fields** (under `include: ['layout']`, T80): a simple or complex field whose instruction starts with `PAGE` is a `field` `page`, `NUMPAGES` or `SECTIONPAGES` a `field` `pages`, its `text` the result the document shows. Another field keeps its result as runs; in a header or footer it records `field/static` (detail its name, once per name).
+- **Footnotes and endnotes** (under `include: ['layout']`, T81): a `footnoteReference` or `endnoteReference` is a `note` at its place in the runs, its children the note's body read as the body is; with `customMarkFollows` the run's next text is its `mark`. Without `layout` a reference is dropped, and its custom mark with it. A reference whose note did not read records `note/unresolved` (detail `<class> <id>`).
+- Comments and revision history (who changed what, when) are out of scope and never reported per node; without `include: ['layout']`, so are the page, sections, headers and footers, notes and font colours — see the loss matrix for the full docx→md row.
 
 ## See also
 

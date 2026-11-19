@@ -83,7 +83,7 @@ const stop = geolocation.watch(pos => {
 stop();
 ```
 
-### Combined with `permissions` (plan 29)
+### Combined with `permissions`
 
 ```js
 const permissions = runtime.resolve('permissions');

@@ -1,10 +1,12 @@
 # @awacloud/odf
 
+Read and write OpenDocument files (`.odt`, `.ods`, `.odp`) in plain JavaScript, in the browser, through a typed, serializable model. No dependency beyond `@awacloud/fw`.
+
 Pure JavaScript library to read and write OpenDocument documents
 (ODF — `.odt`, `.ods`, `.odp`) in the browser. No npm dependency beyond
 the monorepo framework: ZIP, XML parsing/serialization and the ODF
 package container are either implemented here or consumed from
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/fw).
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.3.0/packages/front/fw).
 
 The package exposes a typed document model for the three formats (a
 serializable JSON tree), a core set of parsers and orchestrators, and
@@ -21,7 +23,7 @@ position, unless the document is read with `odt.read(bytes, {
 framesInRuns: true, elementsInRuns: true })` (inside a `text:span`,
 frames, fields, spacing and nested spans keep their position). Two writes of the same document produce the same bytes:
 ZIP entries carry a fixed date, or the `opts.mtime` of `write`. It mirrors the architecture of the sibling package
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/office/ooxml).
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.3.0/packages/front/office/ooxml).
 
 ## Installation
 
@@ -233,8 +235,8 @@ bun test packages/front/office/odf/
 
 ## See also
 
-- [`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/office/ooxml) — sibling OOXML library
-- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/fw) — shared runtime + zip + crc32 + codecs
+- [`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.3.0/packages/front/office/ooxml) — sibling OOXML library
+- [`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.3.0/packages/front/fw) — shared runtime + zip + crc32 + codecs
 - [`CHANGELOG.md`](./CHANGELOG.md) — L0 → L4 history
 
 ## Exposed sub-paths
@@ -282,7 +284,7 @@ as stated in [`NOTICE`](./NOTICE).
 
 ## Project
 
-- Website: https://awaforge.eu
-- Source: [`packages/front/office/odf`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.2.0/packages/front/office/odf)
+- Website: https://awaforge.eu/
+- Source: [`packages/front/office/odf`](https://github.com/awacloud/awa/tree/@awacloud/odf@1.3.0/packages/front/office/odf)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/odf@1.2.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/odf@1.3.0/SECURITY.md

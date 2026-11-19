@@ -7,8 +7,8 @@
  * tools/convert/src/index.ts — `@awacloud/tool-convert` CLI entry.
  *
  *   bun src/index.ts to-md <file> [--format <fmt>] [--at <iso>] [--out <file>] [to-md options]
- *   bun src/index.ts from-md <file.md> --target <fmt> [--out <file>]
- *   bun src/index.ts convert <file> --target <fmt> [--format <fmt>] [--out <file>]
+ *   bun src/index.ts from-md <file.md> --target <fmt> [--out <file>] [--pdf-a <4|2b> | --pdf-ua <1|2> --pdf-lang <tag>] [--pdf-fonts <dir>]
+ *   bun src/index.ts convert <file> --target <fmt> [--format <fmt>] [--out <file>] [--layout | --no-layout] [--pdf-a <4|2b> | --pdf-ua <1|2> --pdf-lang <tag>] [--pdf-fonts <dir>]
  *   bun src/index.ts to-html <file.md> [--out <file>]
  *   bun src/index.ts --help | -h
  *   bun src/index.ts --version | -v
@@ -51,9 +51,11 @@ import {
     FROM_MD_TARGETS,
     CONVERT_PAIRS,
     type Asset,
+    type PdfFonts,
     type ToMdInput,
 } from './core.ts';
 import { passwordFromFile } from './password.ts';
+import { loadPackagedPdfFonts, readPdfFonts } from './pdf-fonts.ts';
 import { timestampError } from './timestamp.ts';
 import {
     argv as runtimeArgv,
@@ -78,8 +80,8 @@ const HELP = `convert ${VERSION} — document conversion (@awacloud/oconv) at th
 
 Usage:
   bun src/index.ts to-md <file> [--format <fmt>] [--at <iso>] [--out <file>] [to-md options]
-  bun src/index.ts from-md <file.md> --target <fmt> [--out <file>]
-  bun src/index.ts convert <file> --target <fmt> [--format <fmt>] [--out <file>]
+  bun src/index.ts from-md <file.md> --target <fmt> [--out <file>] [--pdf-a <4|2b> | --pdf-ua <1|2> --pdf-lang <tag>] [--pdf-fonts <dir>]
+  bun src/index.ts convert <file> --target <fmt> [--format <fmt>] [--out <file>] [--layout | --no-layout] [--pdf-a <4|2b> | --pdf-ua <1|2> --pdf-lang <tag>] [--pdf-fonts <dir>]
   bun src/index.ts to-html <file.md> [--out <file>]
   bun src/index.ts --help | -h
   bun src/index.ts --version | -v
@@ -101,6 +103,30 @@ Flags:
   --format <fmt>   override extension-based source-format detection
   --target <fmt>   target format (required for from-md and convert)
   --out <file>     write output bytes here instead of stdout
+  --pdf-a <4|2b>   from-md and convert, pdf target: claim PDF/A-4 or
+                   PDF/A-2b (XMP metadata, an sRGB output intent, every
+                   font embedded); without --pdf-fonts, the Liberation
+                   faces of the optional package @awacloud/oconv-fonts
+                   are used when it is installed (exit 2 when not)
+  --pdf-ua <1|2>   from-md and convert, pdf target: claim PDF/UA-1 or
+                   PDF/UA-2, a tagged document (headings, paragraphs,
+                   lists, tables, pictures with their alt text, every font
+                   embedded; the title from the front matter or the first
+                   heading); needs --pdf-lang (exit 2 without it); faces
+                   as for --pdf-a
+  --pdf-lang <tag> the document language under --pdf-ua (a BCP 47 tag,
+                   such as en-GB)
+  --pdf-fonts <dir>  from-md and convert, pdf target: embed the TrueType
+                   faces of <dir>, each optional: regular.ttf, bold.ttf,
+                   italic.ttf, boldItalic.ttf, mono.ttf (a style class
+                   without a face is drawn in a Standard 14 font, which
+                   --pdf-a refuses)
+  --layout         convert only, docx to odt: carry the page, the
+                   paragraphs' alignment and page breaks, the runs' size,
+                   font, colour, underline and script, the headers,
+                   footers, page fields and notes to the odt (tier 3, the
+                   default on docx to odt; on another pair, exit 2)
+  --no-layout      convert only, docx to odt: tier 2, without them
   --sheets <mode>  to-md only, xlsx and ods sources: table (default, GFM
                    tables), csv or tsv (each sheet a fenced csv / tsv block,
                    much smaller on a dense sheet); another value, or another
@@ -116,10 +142,15 @@ to-md options (each one @awacloud/oconv's toMd input of the same name; on
 another verb, on a source format it does not apply to, or with a value
 oconv refuses, it is a usage error, exit 2; lists are comma-separated):
   --pdf-infer <list>      pdf: inference on an untagged pdf — headings, tables,
-                          running (headers and footers left out)
+                          running (headers and footers left out); default
+                          headings,tables, none for no inference
   --pdf-declare <list>    pdf: record a silent case — positional
   --pdf-include <list>    pdf: parts brought back — images (see --assets-dir)
-  --pdf-recover-xref      pdf: rebuild an unusable cross-reference chain
+  --pdf-recover-xref      pdf: rebuild an unusable cross-reference chain (the
+                          default)
+  --no-pdf-recover-xref   pdf: read strictly, a broken chain an error
+  --no-pdf-empty-password pdf: with no --password-file, refuse an encrypted
+                          pdf (by default the empty password is tried)
   --pdf-line-hyphens <m>  pdf: join a word a hyphen cuts at a line end —
                           drop (without the hyphen) or keep (with it)
   --password-file <file>  pdf: read the user or owner password from this
@@ -131,16 +162,18 @@ oconv refuses, it is a usage error, exit 2; lists are comma-separated):
   --docx-include <list>   docx: parts brought back — toc
   --sheet-cell-budget <n> xlsx, ods: a sheet whose padded table would hold
                           more cells is written unpadded, one addressed
-                          line per value (sheet/sparse-form)
+                          line per value (sheet/sparse-form); default
+                          5000000
   --max-parts <n>, --max-uncompressed <bytes>, --max-ratio <n>,
   --max-depth <n>         office formats: the reader's archive limits
                           (archiveLimits; 0 disables a check; odt, ods
                           and odp take the first three)
   --output-budget <bytes> every format: a bound on the document's text,
-                          checked before the markdown is built; past it
-                          the conversion fails (exit 1) unless
+                          checked before the markdown is built (default
+                          268435456, 256 MiB); past it the conversion
+                          fails (exit 1) unless
   --output-overflow <m>   is truncate: keep what fits (doc/truncated);
-                          throw is the default
+                          throw is the default; alone, at 256 MiB
   --include-notes         pptx, odp: render speaker notes
   --front-matter <mode>   full (default), compact or none
   --assets-dir <dir>      write each image whose bytes the conversion
@@ -185,8 +218,16 @@ interface Flags {
     outputBudget: string | undefined;
     outputOverflow: string | undefined;
     pdfLineHyphens: string | undefined;
+    pdfA: string | undefined;
+    pdfUA: string | undefined;
+    pdfLang: string | undefined;
+    pdfFonts: string | undefined;
+    layout: boolean | undefined;
+    layoutBoth: boolean;
     includeNotes: boolean;
     pdfRecoverXref: boolean;
+    pdfNoRecoverXref: boolean;
+    pdfNoEmptyPassword: boolean;
     help: boolean;
     version: boolean;
 }
@@ -217,9 +258,11 @@ const TO_MD_VALUE_FLAGS = new Map<string, ToMdValueKey>([
 ]);
 
 /** The `to-md`-only switches. */
-const TO_MD_SWITCHES = new Map<string, 'includeNotes' | 'pdfRecoverXref'>([
+const TO_MD_SWITCHES = new Map<string, 'includeNotes' | 'pdfRecoverXref' | 'pdfNoRecoverXref' | 'pdfNoEmptyPassword'>([
     ['--include-notes', 'includeNotes'],
     ['--pdf-recover-xref', 'pdfRecoverXref'],
+    ['--no-pdf-recover-xref', 'pdfNoRecoverXref'],
+    ['--no-pdf-empty-password', 'pdfNoEmptyPassword'],
 ]);
 
 class CliError extends Error {}
@@ -250,8 +293,16 @@ function parseArgs(argv: string[]): Flags {
         outputBudget: undefined,
         outputOverflow: undefined,
         pdfLineHyphens: undefined,
+        pdfA: undefined,
+        pdfUA: undefined,
+        pdfLang: undefined,
+        pdfFonts: undefined,
+        layout: undefined,
+        layoutBoth: false,
         includeNotes: false,
         pdfRecoverXref: false,
+        pdfNoRecoverXref: false,
+        pdfNoEmptyPassword: false,
         help: false,
         version: false,
     };
@@ -285,6 +336,30 @@ function parseArgs(argv: string[]): Flags {
             case '--at':
                 flags.at = needValue(a, argv[i + 1]);
                 i += 1;
+                break;
+            case '--pdf-a':
+                flags.pdfA = needValue(a, argv[i + 1]);
+                i += 1;
+                break;
+            case '--pdf-ua':
+                flags.pdfUA = needValue(a, argv[i + 1]);
+                i += 1;
+                break;
+            case '--pdf-lang':
+                flags.pdfLang = needValue(a, argv[i + 1]);
+                i += 1;
+                break;
+            case '--pdf-fonts':
+                flags.pdfFonts = needValue(a, argv[i + 1]);
+                i += 1;
+                break;
+            case '--layout':
+                if (flags.layout === false) flags.layoutBoth = true;
+                flags.layout = true;
+                break;
+            case '--no-layout':
+                if (flags.layout === true) flags.layoutBoth = true;
+                flags.layout = false;
                 break;
             default: {
                 const valueKey = TO_MD_VALUE_FLAGS.get(a);
@@ -332,14 +407,15 @@ function toMdOptions(flags: Flags): Partial<ToMdInput> {
         : Object.fromEntries(Object.entries({ bytes: num(flags.outputBudget), overflow: flags.outputOverflow }).filter(([, v]) => v !== undefined));
     const options: Partial<ToMdInput> = {
         sheets: flags.sheets,
-        pdfInfer: list(flags.pdfInfer),
+        pdfInfer: flags.pdfInfer === 'none' ? [] : list(flags.pdfInfer),
         pdfDeclare: list(flags.pdfDeclare),
         pdfInclude: list(flags.pdfInclude),
         odtInclude: list(flags.odtInclude),
         docxInclude: list(flags.docxInclude),
         formOpBudget: flags.formOpBudget === undefined ? undefined : Number(flags.formOpBudget),
         pdfPassword: flags.passwordFile === undefined ? undefined : passwordFromFile(readFileBytes(flags.passwordFile)),
-        pdfRecoverXref: flags.pdfRecoverXref || undefined,
+        pdfRecoverXref: flags.pdfNoRecoverXref ? false : (flags.pdfRecoverXref || undefined),
+        pdfEmptyPassword: flags.pdfNoEmptyPassword ? false : undefined,
         pdfLineHyphens: flags.pdfLineHyphens,
         includeNotes: flags.includeNotes || undefined,
         sheetCellBudget: num(flags.sheetCellBudget),
@@ -404,6 +480,37 @@ async function run(argv: string[]): Promise<number> {
         }
     }
 
+    if (flags.layout !== undefined && flags.command !== 'convert') {
+        writeStderr(`convert: ${flags.layout ? '--layout' : '--no-layout'} is a convert flag\n`);
+        return EXIT_USAGE;
+    }
+    if (flags.layoutBoth) {
+        writeStderr('convert: --layout and --no-layout exclude each other\n');
+        return EXIT_USAGE;
+    }
+
+    if (flags.command !== 'from-md' && flags.command !== 'convert') {
+        const pdfFlag = flags.pdfA !== undefined ? '--pdf-a' : flags.pdfUA !== undefined ? '--pdf-ua'
+            : flags.pdfLang !== undefined ? '--pdf-lang' : flags.pdfFonts !== undefined ? '--pdf-fonts' : null;
+        if (pdfFlag !== null) {
+            writeStderr(`convert: ${pdfFlag} is a from-md / convert flag\n`);
+            return EXIT_USAGE;
+        }
+    }
+    if (flags.pdfUA !== undefined && flags.pdfUA !== '1' && flags.pdfUA !== '2') {
+        writeStderr('convert: --pdf-ua must be 1 or 2\n');
+        return EXIT_USAGE;
+    }
+    if (flags.pdfUA !== undefined && flags.pdfLang === undefined) {
+        writeStderr('convert: --pdf-ua needs --pdf-lang <tag>, the document language\n');
+        return EXIT_USAGE;
+    }
+    if (flags.pdfLang !== undefined && flags.pdfUA === undefined) {
+        writeStderr('convert: --pdf-lang needs --pdf-ua <1|2>\n');
+        return EXIT_USAGE;
+    }
+    const pdfUA = flags.pdfUA === undefined ? undefined : Number(flags.pdfUA);
+
     if ((flags.command === 'from-md' || flags.command === 'convert') && flags.target === undefined) {
         writeStderr(`convert: ${flags.command} requires --target\n`);
         return EXIT_USAGE;
@@ -436,9 +543,27 @@ async function run(argv: string[]): Promise<number> {
             return EXIT_OK;
         }
 
+        let pdfFonts: PdfFonts | undefined;
+        if (flags.pdfFonts !== undefined) {
+            const read = readPdfFonts(flags.pdfFonts);
+            if (read.error !== null) {
+                writeStderr(`convert: --pdf-fonts: ${read.error}\n`);
+                return EXIT_USAGE;
+            }
+            pdfFonts = read.fonts;
+        } else if (flags.pdfA !== undefined || flags.pdfUA !== undefined) {
+            const packaged = await loadPackagedPdfFonts();
+            if (packaged.error !== null) {
+                const flag = flags.pdfA !== undefined ? '--pdf-a' : '--pdf-ua';
+                writeStderr(`convert: ${flag}: ${packaged.error}\n`);
+                return packaged.usage ? EXIT_USAGE : EXIT_ERROR;
+            }
+            pdfFonts = packaged.fonts;
+        }
+
         if (flags.command === 'from-md') {
             const markdown = readFileText(flags.file);
-            const result = await fromMd({ markdown, name, target: flags.target });
+            const result = await fromMd({ markdown, name, target: flags.target, pdfA: flags.pdfA, pdfUA, pdfLang: flags.pdfLang, pdfFonts });
             if (isCoreError(result)) {
                 writeStderr(`convert: ${result.error}\n`);
                 return result.usage ? EXIT_USAGE : EXIT_ERROR;
@@ -451,7 +576,7 @@ async function run(argv: string[]): Promise<number> {
         if (flags.command === 'convert') {
             const bytes = readFileBytes(flags.file);
             const target = flags.target as string;
-            const result = await convert({ name, bytes, format: flags.format, target });
+            const result = await convert({ name, bytes, format: flags.format, target, pdfA: flags.pdfA, pdfUA, pdfLang: flags.pdfLang, pdfFonts, ...(flags.layout !== undefined ? { layout: flags.layout } : {}) });
             if (isCoreError(result)) {
                 writeStderr(`convert: ${result.error}\n`);
                 return result.usage ? EXIT_USAGE : EXIT_ERROR;

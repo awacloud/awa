@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -177,8 +177,9 @@ describe('uiSession module', () => {
                 session.add([{ id: 'b1', template: block1.template, data: {} }]);
                 session.prepend([{ id: 'b2', template: block2.template, data: {} }]);
 
-                // 'second' was prepended, so it should appear first in the container.
-                expect(container.children[0].id).not.toBeNull();
+                // 'second' was prepended, so it appears first in the container.
+                expect(container.children[0]).toBe(session.get('b2', 'second'));
+                expect(container.children[1]).toBe(session.get('b1', 'first'));
             });
         });
 

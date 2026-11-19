@@ -1,0 +1,13 @@
+# EOL policy of @awacloud/fw: every text file is stored and checked out as
+# LF on every platform, so a byte-level reproducibility claim does not depend
+# on the checkout host (core.autocrlf, editor defaults).
+* text=auto eol=lf
+
+# Byte payloads: never converted, never diffed as text.
+*.wasm binary
+*.bin binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.zip binary
+*.gz binary

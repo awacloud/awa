@@ -60,7 +60,7 @@ const str = await proxy.utils.encode([255]);   // → "ff"
 | Param | Type | Description |
 |-------|------|-------------|
 | `port` | `MessagePort` | Port received by transfer (`event.ports[0]`) |
-| `options.timeout` | `number` | Per-call timeout in ms (default 30000) |
+| `options.timeout` | `number` | Per-call and handshake timeout in ms (default 30000), clamped to 2^31-1 ms — `Infinity` means that maximum |
 
 Returns: `Promise<Proxy>` — each property access returns a `Promise`.
 
@@ -152,7 +152,8 @@ receives it in `event.ports[0]` and calls `rpc.open(port)`.
 
 - `rpc.create` sends the descriptor immediately on `port1` — it is queued until `port2` becomes active.
 - Async functions on the host object are `await`-ed before the response is sent.
-- The proxy returned by `open` intercepts **every** property — `await proxy.nonExistent()` returns a rejected Promise after timeout.
+- The proxy reaches only what the descriptor lists: reading a name the host object does not expose throws `RPC endpoint not found: <name>` at once.
+- A **primitive** property is read as a value (`await proxy.version`); an **object-valued** property is exposed as a namespace of endpoints, not as a value — `await api.publicKey` on a `Uint8Array` property fails (`RPC endpoint not found: publicKey.length`). Return bytes and objects from a method instead.
 - `port` is a `Transferable` — it must be transferred via the 2nd argument of `postMessage` (zero-copy transfer). Do **not** pass it in `options.args` of `createWorker`: the args are JSON-serialised and the port would become `{}`.
 
 ## See also

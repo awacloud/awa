@@ -1,7 +1,7 @@
 ---
 module: ml_dsa
 category: crypto/pkc
-dependencies: [sha3, bitArray, random, sha256, sha384, sha512, sha512_224, sha512_256]
+dependencies: [sha3, bitArray, random]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > ML-DSA (FIPS 204, August 2024) — CRYSTALS-Dilithium post-quantum signatures + HashML-DSA + internal interface.
 
-**Module** `ml_dsa` | **Source** `packages/front/fw/src/crypto/pkc/ml_dsa.js` | **Deps** `sha3`, `bitArray`, `random`, `sha256`, `sha384`, `sha512`, `sha512_224`, `sha512_256` | **Worker-safe** yes
+**Module** `ml_dsa` | **Source** `packages/front/fw/src/crypto/pkc/ml_dsa.js` | **Deps** `sha3`, `bitArray`, `random` | **Worker-safe** yes
 
 NIST post-quantum signatures. 3 paramSets. Variants: pure (default), preHash (HashML-DSA, FIPS 204 §5.4), internal (raw §6.2), externalMu (pre-computed mu).
 
@@ -19,7 +19,7 @@ NIST post-quantum signatures. 3 paramSets. Variants: pure (default), preHash (Ha
 
 ```js
 const ml_dsa = runtime.resolve('ml_dsa');
-// Returns: { ml_dsa44, ml_dsa65, ml_dsa87, _internal }
+// Returns: { ml_dsa44, ml_dsa65, ml_dsa87 }
 ```
 
 ## API
@@ -33,14 +33,14 @@ const ml_dsa = runtime.resolve('ml_dsa');
 | Method | Signature | Returns |
 |--------|-----------|---------|
 | `ml_dsa<N>.keygen(seed?)` | `(Uint8Array(32)?) => {publicKey, secretKey}` | Keypair |
-| `ml_dsa<N>.sign(msg, sk, ctx?, rnd?)` | `(Uint8Array, Uint8Array, Uint8Array?, Uint8Array(32)?) => Uint8Array` | Sign external+pure |
-| `ml_dsa<N>.verify(sig, msg, pk, ctx?)` | — | `boolean` |
-| `ml_dsa<N>.signPh(msg, sk, hashAlg, hashMod, ctx?, rnd?)` | — | HashML-DSA (preHash + OID) |
-| `ml_dsa<N>.verifyPh(sig, msg, pk, hashAlg, hashMod, ctx?)` | — | `boolean` |
-| `_internal.signInternal(M, sk, rnd?)` | — | Raw §6.2 (no M' wrapper) |
-| `_internal.verifyInternal(sig, M, pk)` | — | `boolean` raw |
-| `_internal.signWithMu(mu, sk, rnd?)` | — | externalMu (pre-computed mu) |
-| `_internal.verifyWithMu(sig, mu, pk)` | — | `boolean` |
+| `ml_dsa<N>.sign(sk, msg, ctx?, rnd?)` | `(Uint8Array, Uint8Array, Uint8Array?, Uint8Array(32)?) => Uint8Array` | Sign external+pure |
+| `ml_dsa<N>.verify(pk, sig, msg, ctx?)` | — | `boolean` |
+| `ml_dsa<N>.signPh(sk, msg, hashAlg, hashMod, ctx?, rnd?)` | — | HashML-DSA (preHash + OID) |
+| `ml_dsa<N>.verifyPh(pk, sig, msg, hashAlg, hashMod, ctx?)` | — | `boolean` |
+| `internalOf(ml_dsa).signInternal(M, sk, rnd?)` | — | Raw §6.2 (no M' wrapper) |
+| `internalOf(ml_dsa).verifyInternal(sig, M, pk)` | — | `boolean` raw |
+| `internalOf(ml_dsa).signWithMu(mu, sk, rnd?)` | — | externalMu (pre-computed mu) |
+| `internalOf(ml_dsa).verifyWithMu(sig, mu, pk)` | — | `boolean` |
 
 ### Supported `hashAlg` values (HashML-DSA)
 
@@ -55,22 +55,22 @@ const { ml_dsa } = fw.runtime.resolveAll(['ml_dsa']);
 const { publicKey, secretKey } = ml_dsa.ml_dsa65.keygen();
 
 const msg = new TextEncoder().encode('Hello, ML-DSA!');
-const sig = ml_dsa.ml_dsa65.sign(msg, secretKey);    // deterministic per default
-const ok  = ml_dsa.ml_dsa65.verify(sig, msg, publicKey);   // true
+const sig = ml_dsa.ml_dsa65.sign(secretKey, msg);    // hedged: 32 fresh random bytes
+const ok  = ml_dsa.ml_dsa65.verify(publicKey, sig, msg);   // true
 ```
 
 ### HashML-DSA (preHash variant)
 
 ```js
 const sha256 = fw.runtime.resolve('sha256');
-const sig = ml_dsa.ml_dsa65.signPh(msg, secretKey, 'SHA2-256', sha256, ctx);
-const ok  = ml_dsa.ml_dsa65.verifyPh(sig, msg, publicKey, 'SHA2-256', sha256, ctx);
+const sig = ml_dsa.ml_dsa65.signPh(secretKey, msg, 'SHA2-256', sha256, ctx);
+const ok  = ml_dsa.ml_dsa65.verifyPh(publicKey, sig, msg, 'SHA2-256', sha256, ctx);
 ```
 
 ### Internal interface (raw §6.2)
 
 ```js
-const sig = ml_dsa.ml_dsa65._internal.signInternal(M, secretKey);   // no M' wrapper
+const sig = internalOf(ml_dsa.ml_dsa65).signInternal(M, secretKey);   // no M' wrapper
 ```
 
 ## Worker Usage
@@ -81,15 +81,16 @@ const worker = fw.createWorker(
     function ({ libs, args }) {
         self.postMessage(libs.ml_dsa.ml_dsa65.sign(args[0], args[1]));
     },
-    { dependencies: ['ml_dsa'], args: [msg, secretKey] }
+    { dependencies: ['ml_dsa'], args: [secretKey, msg] }
 );
 ```
 
 ## Notes
 
-- **Deterministic by default**: `rnd=null` → byte-exact reproducible signature.
+- **Argument order**: `sign(sk, msg, …)`, `verify(pk, sig, msg, …)`, as the wasm and WebCrypto tiers. The fw order for every signature scheme and tier: `sign(key, message, …)`, `verify(key, signature, message, …)`.
+- **Hedged by default** (FIPS 204 §3.4): without `rnd`, `sign` draws 32 random bytes, so two signatures of one message differ. Pass `new Uint8Array(32)` as `rnd` for the deterministic mode (KAT vectors, reproducible signatures).
 - **HashML-DSA OID**: DER prefix embedded in the M' wrapper (FIPS 204 Algorithm 4).
-- **`_internal.*`** test-only — bypasses §5.4 wrappers; do NOT expose to end users (risk of secret sk leakage).
+- **`internalOf(ml_dsa).*`** test-only — bypasses §5.4 wrappers; do NOT expose to end users (risk of secret sk leakage).
 - **Full ACVP** under `CRYPTO_FULL=1`: 75 keyGen + 45 sigVer + 90 sigGen ext+pure.
 
 ## See also

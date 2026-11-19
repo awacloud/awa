@@ -10,3 +10,11 @@ AWACLOUD and AWA are trademarks of Towards Conseil, used under licence.
 Third-party components:
 - Stanford Javascript Crypto Library (SJCL) — Copyright (c) 2009-2015, Emily Stark, Mike Hamburg and Dan Boneh at Stanford University. All rights reserved. — BSD-2-Clause — licence text: third-party/NOTICE-sjcl
 - Robert Penner's easing equations / jQuery Easing v1.3 — Copyright © 2001 Robert Penner; Copyright © 2008 George McGinley Smith — BSD-3-Clause — licence text: third-party/NOTICE-penner-easing
+- WHATWG HTML Standard named character references (io/text/html-entities) — Copyright © WHATWG (Apple, Google, Mozilla, Microsoft). — BSD-3-Clause — licence text: third-party/NOTICE-whatwg-entities.txt
+- RFC 7932 Brotli static dictionary (io/compress/brotli_dict.bin) — Copyright (c) 2016 IETF Trust and the persons identified as authors of the code. All rights reserved.; Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors. — BSD-3-Clause AND MIT — licence text: third-party/NOTICE-brotli-dictionary.txt
+- mlkem-native v1.2.0 — Copyright (c) The mlkem-native project authors — Apache-2.0 AND MIT AND ISC AND CC0-1.0 — licence text: third-party/NOTICE-fw-wasm-crypto.txt
+- PQClean (commit 202a8f9, ML-DSA clean subset + FIPS-202/SHA-2 helpers) — The PQClean contributors — CC0-1.0 — licence text: third-party/NOTICE-fw-wasm-crypto.txt
+- OpenSSL SLH-DSA (FIPS-205) core — Copyright 2024-2025 The OpenSSL Project Authors. All Rights Reserved. — Apache-2.0 — licence text: third-party/NOTICE-fw-wasm-crypto.txt
+- BearSSL v0.6 — Copyright (c) 2016 Thomas Pornin <pornin@bolet.org> — MIT — licence text: third-party/NOTICE-fw-wasm-crypto.txt
+- fiat-crypto v0.1.6 — Copyright (c) 2015-2020 the fiat-crypto authors — MIT AND BSD-1-Clause AND Apache-2.0 — licence text: third-party/NOTICE-fw-wasm-crypto.txt
+- libsodium 1.0.22 — Copyright (c) 2013-2024 Frank Denis and contributors — ISC — licence text: third-party/NOTICE-fw-wasm-crypto.txt

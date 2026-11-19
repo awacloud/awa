@@ -47,7 +47,7 @@ no images). This re-measures the W0 **pre-AGL 0.9% bound** — the lift comes
 from task 01 making `pdfContentStream` reachable through the public module
 graph and the embedded fonts' own ToUnicode CMaps (the AGL hop from task 02
 is the fall-back for fonts that lack a ToUnicode; it is unit-tested
-separately in `src/read/pdf/font-decoder.test.js`).
+separately in `@awacloud/pdf`'s `src/extra/font-decoder.test.js`).
 
 ## Refresh procedure
 

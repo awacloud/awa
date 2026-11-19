@@ -10,20 +10,13 @@ the official [`@awacloud/fw/bun`](../../../integrations/bun/README.md) plugin
 
 ## Run
 
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
+
 ```sh
-bun build.ts && bun dist/app.js
+bun run start
 ```
 
-Run from this directory. `build.ts` calls `Bun.build({ entrypoints: ['./src/app.js'], outdir: './dist', plugins: [fwBun({ preset: 'core' })] })`.
-The plugin resolves the `virtual:@awacloud/fw/preset/core` import in `src/app.js` and
-emits a pre-instantiated runtime. Output lands in `dist/app.js`; `bun dist/app.js` runs it.
-
-Expected output:
-
-```
-preset "core" modules: errors, eventBus, signal, valid, ui8, abort, clock
-resolved clock: object now = <timestamp>
-```
+No install step: `build.ts` resolves `@awacloud/fw/bun` from the in-repo package. It calls `Bun.build({ entrypoints: ['./src/app.js'], outdir: './dist', plugins: [fwBun({ preset: 'core' })] })`, which resolves the `virtual:@awacloud/fw/preset/core` import and emits a pre-instantiated runtime to `dist/app.js`; `bun dist/app.js` runs it.
 
 ## Runtime variant (`bunfig.toml` preload)
 

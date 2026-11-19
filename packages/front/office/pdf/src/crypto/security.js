@@ -8,7 +8,9 @@
  *
  * The /Encrypt dictionary (ISO 32000-2:2020 §7.6.2) is parsed into a typed
  * view via `typeEncryptDict`, then `selectHandler` dispatches to the
- * v5/v6 Standard handler instance.
+ * v5/v6 Standard handler instance. A public-key handler's dictionary
+ * (§7.6.5, no `/R`) is typed too, its `/Recipients` included; only the
+ * Standard handler decrypts.
  *
  * @module pdf/crypto/security
  */
@@ -37,6 +39,15 @@ export const pdfSecurity = {
             return undefined;
         }
 
+        // A public-key handler's `/Recipients`: its byte strings as bytes.
+        function recipientsOf(v) {
+            if (v == null) return undefined;
+            const items = Array.isArray(v) ? v
+                : (typeof v === 'object' && v.type === 'array' && Array.isArray(v.items) ? v.items : null);
+            if (!items) return undefined;
+            return items.map(i => asUint8(i && typeof i === 'object' && i.type === 'string' ? i.value : i)).filter(Boolean);
+        }
+
         function typeEncryptDict(dict) {
             if (dict == null || typeof dict !== 'object') {
                 throw new EncryptionError('pdf/crypto/encrypt-dict/bad-input',
@@ -56,12 +67,16 @@ export const pdfSecurity = {
             const V = get('V');
             const R = get('R');
             const Filter = get('Filter');
-            if (V === undefined || R === undefined) {
+            // `/R` is the Standard handler's (Table 21); a public-key
+            // handler (Table 23) has none.
+            const filterName = Filter && typeof Filter === 'object' && Filter.type === 'name' ? Filter.value : Filter;
+            const standard = filterName === undefined || filterName === null || filterName === 'Standard';
+            if (V === undefined || (R === undefined && standard)) {
                 throw new EncryptionError('pdf/crypto/encrypt-dict/missing-V-R',
                     '/Encrypt requires both /V and /R',
                     { context: { V, R } });
             }
-            if (typeof V !== 'number' || typeof R !== 'number') {
+            if (typeof V !== 'number' || (R !== undefined && typeof R !== 'number')) {
                 throw new EncryptionError('pdf/crypto/encrypt-dict/bad-V-R-type',
                     '/V and /R must be integers',
                     { context: { V, R } });
@@ -81,6 +96,7 @@ export const pdfSecurity = {
                 UE:   asUint8(get('UE')),
                 Perms: asUint8(get('Perms')),
                 EncryptMetadata: get('EncryptMetadata') !== false,
+                Recipients: recipientsOf(get('Recipients')),
                 P:    get('P'),
                 raw:  dict
             };

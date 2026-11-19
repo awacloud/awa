@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -93,9 +93,11 @@ export const secPolicy = {
 
         /**
          * Accepted `data:image/*` MIME types ; consulted by {@link isSafeUrl}
-         * when `allowDataImage` is true.
+         * when `allowDataImage` is true. The MIME type is followed by a
+         * parameter (`;base64`, `;utf8`) or directly by the data (`,`): both
+         * are RFC 2397 forms.
          */
-        const DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|svg\+xml|bmp|ico|avif|apng);/;
+        const DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|svg\+xml|bmp|ico|avif|apng)[;,]/;
 
         /**
          * Decide whether `url` may be safely set on a URL-bearing attribute.
@@ -137,7 +139,7 @@ export const secPolicy = {
             if (colon === -1) return true;
             const slash = trimmed.indexOf('/');
             if (slash !== -1 && slash < colon) return true;
-            const allowed = Array.isArray(schemes) ? schemes : SAFE_SCHEMES;
+            const allowed = (Array.isArray(schemes) || schemes instanceof Set) ? schemes : SAFE_SCHEMES;
             const scheme  = trimmed.slice(0, colon);
             return allowed instanceof Set ? allowed.has(scheme) : allowed.includes(scheme);
         }

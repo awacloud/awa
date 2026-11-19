@@ -1,0 +1,171 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — demos</title>
+
+    <!-- No sanity lockdown here: this gallery page loads NO fw at runtime —
+         it is a static index of links, per `docs/demo-playground.md`
+         §4 ("Absence is legal exactly when the surface loads no fw at
+         runtime... static surface"). Declared in the footer note below. -->
+
+    <!-- SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+</head>
+
+<body>
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>@awacloud/graphic-anim — demos</h1>
+        <p class="demo-lede">Runnable, self-contained pages for each <code>graphic.anim</code> capability. No build step — open any link directly.</p>
+    </header>
+
+    <ul class="demo-gallery">
+        <li>
+            <a href="engine/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M28 12 L88 12" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4"/>
+                </svg>
+                Engine
+            </a>
+            <span class="demo-slug">demos/engine</span>
+        </li>
+        <li>
+            <a href="scene/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <rect x="26" y="8" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <rect x="44" y="6" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Scene
+            </a>
+            <span class="demo-slug">demos/scene</span>
+        </li>
+        <li>
+            <a href="frames/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <rect x="24" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" opacity="0.6"/>
+                    <rect x="46" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+                </svg>
+                Frames
+            </a>
+            <span class="demo-slug">demos/frames</span>
+        </li>
+        <li>
+            <a href="clock/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 6 L12 12 L17 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Clock
+            </a>
+            <span class="demo-slug">demos/clock</span>
+        </li>
+        <li>
+            <a href="towards-anm/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 20 L20 4 L36 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M44 20 L60 4 L76 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" opacity="0.6"/>
+                </svg>
+                Towards anm
+            </a>
+            <span class="demo-slug">demos/towards-anm</span>
+        </li>
+        <li>
+            <a href="pageflip/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 4 H70 L84 18 V20 H6 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M70 4 L70 18 L84 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" opacity="0.6"/>
+                </svg>
+                Pageflip
+            </a>
+            <span class="demo-slug">demos/pageflip</span>
+        </li>
+        <li>
+            <a href="hypertree/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="12" r="3" fill="currentColor"/>
+                    <path d="M50 12 L14 4 M50 12 L14 20 M50 12 L86 4 M50 12 L86 20" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="14" cy="4" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="14" cy="20" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="86" cy="4" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="86" cy="20" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Hypertree
+            </a>
+            <span class="demo-slug">demos/hypertree</span>
+        </li>
+        <li>
+            <a href="svg3d/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 6 H26 V22 H10 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M22 0 H38 V16 H22" fill="none" stroke="currentColor" stroke-width="2" opacity="0.6"/>
+                    <path d="M10 6 L22 0 M26 6 L38 0 M26 22 L38 16" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Svg3d
+            </a>
+            <span class="demo-slug">demos/svg3d</span>
+        </li>
+        <li>
+            <a href="lumen-rail/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 22 L98 22 M50 8 L10 24 M50 8 L90 24" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    <path d="M50 10 L42 18 L50 16 L58 18 Z" fill="currentColor"/>
+                </svg>
+                Lumen Rail
+            </a>
+            <span class="demo-slug">demos/lumen-rail</span>
+        </li>
+        <li>
+            <a href="neon-boot/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 20 H96 M50 20 L20 24 M50 20 L80 24" stroke="currentColor" stroke-width="2"/>
+                    <path d="M14 20 V10 H24 V20 M30 20 V4 H40 V20 M60 20 V8 H70 V20 M76 20 V12 H86 V20" fill="none" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Neon Grid
+            </a>
+            <span class="demo-slug">demos/neon-boot</span>
+        </li>
+    </ul>
+
+    <p class="demo-note">
+        Every demo boots on either fw surface. Append <code>?variant=fw</code> to a
+        demo's URL to run it registered on an <code>@awacloud/fw</code> runtime instead
+        of the default framework-free <code>standalone</code> build.
+    </p>
+
+    <p class="demo-note">
+        <strong>Functional legs:</strong> three demos
+        now exercise the CORRECTED path behind an earlier "demos not fully
+        functional" assessment — <a href="pageflip/index.html">pageflip</a>'s
+        guard against overlapping turns, <a href="hypertree/index.html">hypertree</a>'s
+        <code>stop()</code>/<code>focusSync()</code> guard-release seam, and
+        <a href="svg3d/index.html">svg3d</a>'s composed <code>Svg3d</code> class
+        (the small inset panel, built from a dedicated prebuilt root, next to the
+        main leaf-kernel terrain). Each leg is asserted, not just displayed —
+        see <code>tests/demos-smoke.integration.test.js</code> in the repository.
+    </p>
+
+    <footer class="demo-footer">
+        <p>This index is a static gallery — no <code>@awacloud/fw</code> is loaded at runtime here; each linked demo loads its own sanity lockdown.</p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+</body>
+</html>

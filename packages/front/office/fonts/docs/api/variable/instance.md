@@ -13,7 +13,7 @@ status: complete
 
 **Module** `varInstance` | **Source** `packages/front/office/fonts/src/variable/instance.js` | **Deps** `fontErrors` | **Worker-safe** yes
 
-This module computes the scalar of a variation tuple at a normalised axis location and applies already-decoded `gvar` deltas, scaled by that scalar, to a glyph's points. It does **not** instantiate a font: there is no `instantiate(font, coords)` entry point, and decoding the tuples, selecting the deltas of each glyph and re-encoding the `glyf` data remain the caller's job.
+This module computes the scalar of a variation tuple at a normalised axis location and applies already-decoded `gvar` deltas, scaled by that scalar, to a glyph's points. It does not instantiate a font itself: [glyph](./glyph.md) draws a glyph at coordinates, and [instantiate](./instantiate.md) writes a static font, `instantiate(font, coords)`.
 
 ## Exports
 
@@ -43,11 +43,12 @@ applyGvarDeltas(glyph, { pointNumbers: [], deltaX: [10, 20], deltaY: [0, 0] }, s
 ## Notes
 
 - Coordinates passed as `coord` are normalised values; build them with [coordsConvert](./coordsConvert.md).
-- `applyGvarDeltas` mutates the glyph and does not interpolate untouched points (no inferred deltas for points absent from `pointNumbers`).
+- `applyGvarDeltas` mutates the glyph and does not interpolate untouched points (no inferred deltas for points absent from `pointNumbers`); [glyph](./glyph.md)'s `glyphAt` decodes a glyph's tuples and infers them (IUP).
 - The deltas must already be unpacked, for example with the point-number and delta decoders exposed by [gvar](../table/gvar.md).
 
 ## See also
 
+- [glyph](./glyph.md) — a `glyf` glyph's outline and advance at coordinates
 - [coordsConvert](./coordsConvert.md) — user-space values to normalised coordinates
 - [gvar](../table/gvar.md) — glyph variation table and its packed-data decoders
 - [errors](../errors.md) — `ContractError`

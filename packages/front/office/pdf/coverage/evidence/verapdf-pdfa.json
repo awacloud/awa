@@ -1,0 +1,102 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "verapdf-pdfa",
+    "version": "verapdf@1.30.3",
+    "source": "https://github.com/veraPDF/veraPDF-library/tree/df51e09dece1d6c11c360edd3b8b0635ef966c47"
+  },
+  "oracle": {
+    "image": "awa-oracle-verapdf:1.30.3",
+    "imageId": "sha256:a590632ce3fca5658b30c7173b39a2764e6dd653a719dac51c02ef20f57b3a89",
+    "version": "veraPDF 1.30.3\nBuilt: Wed Oct 07 13:52:00 GMT 2026\nDeveloped and released by the veraPDF Consortium.\nFunded by the PREFORMA project.\nReleased under the GNU General Public License v3\nand the Mozilla Public License v2 or later."
+  },
+  "criterion": "each document is written claiming PDF/A-4 or PDF/A-2b (pdfBuilder's builder({ pdfA }), oconv fromMd with opts.pdf.pdfA and its default faces); it passes when veraPDF 1.30.3 reports no failed rule and no exception for it under the profile it claims, and pdf's validatePdfABasics of the read document with that profile reports no error; a document its writer refuses fails; documents: 14 (14 written, 0 round trips)",
+  "documents": [
+    {
+      "file": "pdf--builder-blank.pdfa-4.pdf",
+      "kind": "written",
+      "sha256": "db3a3b1b198fe510d028b51ed439f9aa44c0140260b435de3c2a17a92d858ad0",
+      "errors": []
+    },
+    {
+      "file": "pdf--builder-embedded.pdfa-4.pdf",
+      "kind": "written",
+      "sha256": "61a453fe571eb28319645c0474758befa8f8df3660994fba2fd22ca95dcd8cf0",
+      "errors": []
+    },
+    {
+      "file": "pdf--builder-image.pdfa-4.pdf",
+      "kind": "written",
+      "sha256": "ebbce82ae568d68400c2b2b3359f386a3a21a210ec5b0c89f72340d22cfd798b",
+      "errors": []
+    },
+    {
+      "file": "pdf--builder-embedded-cff.pdfa-4.pdf",
+      "kind": "written",
+      "sha256": "aa9eba39de43f3c48fb782f459997747624fc76b35378564053642b21286d5ce",
+      "errors": []
+    },
+    {
+      "file": "oconv--oconv-text.pdfa-4.pdf",
+      "kind": "written",
+      "sha256": "6f696625705ab9db6aea1958091ecc27d0371c39fbb00f241240e27a76124a73",
+      "errors": []
+    },
+    {
+      "file": "oconv--oconv-faces.pdfa-4.pdf",
+      "kind": "written",
+      "sha256": "f0c246020ec1852308f6c73ba9f196e194a562213a616c5bcefa70badb8eacad",
+      "errors": []
+    },
+    {
+      "file": "oconv--oconv-images.pdfa-4.pdf",
+      "kind": "written",
+      "sha256": "019519a7424e32f86f144cc2f7b348df751bc59c68f087ac3f0d7aed0d894e85",
+      "errors": []
+    },
+    {
+      "file": "pdf--builder-blank.pdfa-2b.pdf",
+      "kind": "written",
+      "sha256": "216eb782c934b944a51025c466438239ac06a6802f8e048192ce3ca7f634e750",
+      "errors": []
+    },
+    {
+      "file": "pdf--builder-embedded.pdfa-2b.pdf",
+      "kind": "written",
+      "sha256": "822532b58138083ddec7089d031403602f139f184d822db0e5d8944922cae7bc",
+      "errors": []
+    },
+    {
+      "file": "pdf--builder-image.pdfa-2b.pdf",
+      "kind": "written",
+      "sha256": "5ede38488b451bb8ab120926d662de58669431231f34c988f3b1ad79411d8905",
+      "errors": []
+    },
+    {
+      "file": "pdf--builder-embedded-cff.pdfa-2b.pdf",
+      "kind": "written",
+      "sha256": "32ee616d1578777874e0a0b45899e1a0777d30c28eb74f2ccf07b40a37b829a8",
+      "errors": []
+    },
+    {
+      "file": "oconv--oconv-text.pdfa-2b.pdf",
+      "kind": "written",
+      "sha256": "49310a3b30927b8bbd3e06abd213d0ae6b9623eb3df43457f5be2b1c1f636f01",
+      "errors": []
+    },
+    {
+      "file": "oconv--oconv-faces.pdfa-2b.pdf",
+      "kind": "written",
+      "sha256": "a280da1089bc66bfc6af0545c04f9c103726f3b793da44d771db4a0b88934ced",
+      "errors": []
+    },
+    {
+      "file": "oconv--oconv-images.pdfa-2b.pdf",
+      "kind": "written",
+      "sha256": "fb1a1edbed88660650580971580ffa16abacb6a00d95c105ed3bee4c3fc7edab",
+      "errors": []
+    }
+  ],
+  "date": "2026-11-13",
+  "commit": "430ab6ec9cfb36dc104f78de7a963a52d710bd96"
+}

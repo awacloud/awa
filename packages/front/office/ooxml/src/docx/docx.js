@@ -270,11 +270,16 @@ export const docx = {
          * @param {number} [opts.maxDepth] archive limit forwarded to
          *        `opc.read`: element depth of any XML part (default
          *        1000; `0` disables).
-         * @param {'fallback'|'keep'} [opts.alternateContent='fallback']
+         * @param {'fallback'|'keep'|'choice'} [opts.alternateContent='fallback']
          *        `'fallback'` resolves every `mc:AlternateContent` to its
          *        `mc:Fallback`; `'keep'` leaves it in place, verbatim, for
          *        the write (a chart only a kept Choice references is then
-         *        left unconsumed, so `carry` writes it back).
+         *        left unconsumed, so `carry` writes it back); `'choice'`
+         *        reads a run's construct whose one `mc:Choice` holds one
+         *        `w:drawing` and requires only `wps`, `wpg` or `wpc` as that
+         *        drawing, typed, with `alternate: { requires, fallback }`
+         *        (the write wraps it back unless it was edited), and every
+         *        other construct as `'keep'` does.
          * @param {'drop'|'keep'} [opts.extensions='drop'] `'drop'` removes
          *        the elements and attributes of the Office extension
          *        namespaces (`w14`, `w15`, `w16*`, `wp14`) as markup
@@ -284,9 +289,9 @@ export const docx = {
          */
         function read(bytes, opts) {
             const alternate = opts && opts.alternateContent !== undefined ? opts.alternateContent : 'fallback';
-            if (alternate !== 'fallback' && alternate !== 'keep') {
+            if (alternate !== 'fallback' && alternate !== 'keep' && alternate !== 'choice') {
                 throw new ContractError('docx/invalid-alternate-content',
-                    "docx.read: opts.alternateContent must be 'fallback' or 'keep'",
+                    "docx.read: opts.alternateContent must be 'fallback', 'keep' or 'choice'",
                     { context: { received: alternate === null ? 'null' : typeof alternate === 'string' ? alternate : typeof alternate } });
             }
             const extensions = opts && opts.extensions !== undefined ? opts.extensions : 'drop';
@@ -299,7 +304,8 @@ export const docx = {
             const { value: result, unmodelledParts } =
                 trackUnmodelledParts(pkg, p => {
                     try {
-                        return readPackage(p, alternate === 'keep', extensions === 'keep');
+                        return structure.withChoiceDrawings(alternate === 'choice',
+                            () => readPackage(p, alternate !== 'fallback', extensions === 'keep'));
                     } catch (e) {
                         throw typedPartXml(e);
                     }
@@ -840,7 +846,11 @@ export const docx = {
             // hydrate pass on read().
             // A settings hook returns a new object (the caller's settings
             // are left alone): the part is written from what it returns.
+            // The styles and numbering hooks likewise: those parts are
+            // written from what the walker leaves.
             let settings = opts.settings;
+            let stylesPart = opts.styles;
+            let numberingPart = opts.numbering;
             if (walker.hasExtensions) {
                 const parts = {
                     document: doc,
@@ -850,10 +860,13 @@ export const docx = {
                     endnotes: opts.endnotes,
                     comments: opts.comments,
                     styles: opts.styles,
+                    numbering: opts.numbering,
                     settings: opts.settings
                 };
                 walker.applyDehydrate(parts);
                 settings = parts.settings;
+                stylesPart = parts.styles;
+                numberingPart = parts.numbering;
             }
             assignDocIds(doc, opts);
             const pkg = opc.empty();
@@ -958,17 +971,17 @@ export const docx = {
                 return drawingMod.withRelationships({ links, media }, () => structure.withParaIds(fn));
             }
 
-            if (opts.styles) {
+            if (stylesPart) {
                 attachPart(
-                    { bytes: stylesMod.bytesOf(opts.styles),
+                    { bytes: stylesMod.bytesOf(stylesPart),
                       contentType: stylesMod.CT_STYLES },
                     '/word/styles.xml',
                     { Id: claimRid(), Type: stylesMod.REL_TYPE_STYLES,
                       Target: 'styles.xml' });
             }
-            if (opts.numbering) {
+            if (numberingPart) {
                 attachPart(
-                    { bytes: numberingMod.bytesOf(opts.numbering),
+                    { bytes: numberingMod.bytesOf(numberingPart),
                       contentType: numberingMod.CT_NUMBERING },
                     '/word/numbering.xml',
                     { Id: claimRid(), Type: numberingMod.REL_TYPE_NUMBERING,

@@ -60,7 +60,11 @@
  * view properties have typed parsers and renderers in the `pml-notes`
  * extra, but `read()` does not load those parts; it also skips the
  * layouts no slide uses and every theme other than the first slide
- * master's. All of them are listed in `unmodelledParts`.
+ * master's. All of them are listed in `unmodelledParts`. Through
+ * `pptxFullBundle` (`pmlPackageParts`, on the walker's package hooks) the
+ * notes slides, the notes and handout masters with their themes and, with
+ * one slide master, the unused layouts are read and written back, each
+ * only when it is written back as read.
  *
  * @module ooxml/pptx
  */
@@ -100,6 +104,17 @@ export const pptx = {
 
         // --- Image walking helpers ---
 
+        // A part's shapes, a group's included (the `typedGroups` read), in
+        // document order.
+        function allShapes(shapes) {
+            const out = [];
+            for (const s of Array.isArray(shapes) ? shapes : []) {
+                if (s && s.type === 'group') out.push(...allShapes(s.shapes));
+                else out.push(s);
+            }
+            return out;
+        }
+
         /** Resolve a picture's `embedRef` through its part's relationships. */
         function attachPictureImage(shape, rels, part, pkg) {
             const rel = rels.find(r => r.Id === shape.embedRef);
@@ -117,13 +132,13 @@ export const pptx = {
         /** The pictures of a slide layout or a slide master: images only. */
         function attachTemplateImages(template, part, pkg) {
             const rels = pkg.rels[part] || [];
-            for (const shape of template.shapes || []) {
+            for (const shape of allShapes(template.shapes)) {
                 if (shape.type === 'picture' && shape.embedRef) attachPictureImage(shape, rels, part, pkg);
             }
         }
 
         function attachSlideImages(slide, slideRels, slidePart, pkg) {
-            for (const shape of slide.shapes || []) {
+            for (const shape of allShapes(slide.shapes)) {
                 if (shape.type === 'picture' && shape.embedRef) {
                     attachPictureImage(shape, slideRels, slidePart, pkg);
                 } else if (shape.type === 'chart' && shape.chartRef) {
@@ -211,19 +226,31 @@ export const pptx = {
          *        transforms) as `rPr.color = { rgb | schemeColor, mods? }`
          *        in slides, layouts, masters and table cells (default
          *        `false`: such fills stay verbatim in `rPr._extras`).
+         * @param {boolean} [opts.typedGroups] type a group shape (`p:grpSp`)
+         *        as `{ type: 'group', shapes, _extras }`, at any depth, in
+         *        slides, layouts and masters; its pictures' images and its
+         *        charts are read and written as a top-level shape's (default
+         *        `false`: a group stays verbatim in `spTreeExtras`).
+         * @param {boolean} [opts.typedLineColors] type a shape's line colour
+         *        the same way (`shapeProps.line.color`; default `false`: a
+         *        theme line colour stays verbatim in `line._extras`).
          * @param {boolean} [opts.slideExtrasByPart] keep the leftovers of
          *        each slide, layout and master's `<p:cSld>` in `cSldExtras`
-         *        and those of its root in `_extras` (default `false`: both
-         *        go to `_extras`, the root's replacing `<p:cSld>`'s).
+         *        and those of its root in `_extras` (default `false`: the
+         *        same when the root has leftovers, else `<p:cSld>`'s in
+         *        `_extras`).
          */
         function read(bytes, opts) {
             const pkg = opc.read(bytes, archiveLimits(opts));
             const textOpts = { typedRunColors: !!(opts && opts.typedRunColors) };
+            if (opts && opts.typedLineColors) textOpts.typedLineColors = true;
+            if (opts && opts.typedGroups) textOpts.typedGroups = true;
             if (opts && opts.slideExtrasByPart) textOpts.slideExtrasByPart = true;
+            const plainParts = pkg.parts;
             const { value: result, unmodelledParts } =
                 trackUnmodelledParts(pkg, p => {
                     try {
-                        return readPackage(p, textOpts);
+                        return readPackage(p, textOpts, plainParts);
                     } catch (e) {
                         throw typedPartXml(e);
                     }
@@ -243,8 +270,9 @@ export const pptx = {
         }
 
         // The read pass proper, over an access-tracking view of
-        // `pkg.parts` (see `ooxmlShared.trackUnmodelledParts`).
-        function readPackage(pkg, textOpts) {
+        // `pkg.parts` (see `ooxmlShared.trackUnmodelledParts`); `plainParts`
+        // is the untracked map the package hooks read through.
+        function readPackage(pkg, textOpts, plainParts) {
             const pkgRels = pkg.rels['/'] || [];
             const docRel = pkgRels.find(r => r.Type === REL_TYPE_DOC
                                            || r.Type.endsWith('/officeDocument'));
@@ -298,6 +326,8 @@ export const pptx = {
             const slides = [];
             const slideLayouts = [];
             const slideMasters = [];
+            const slideParts = [];
+            const masterParts = [];
             let theme;
 
             // slides → layouts → masters chain
@@ -314,6 +344,7 @@ export const pptx = {
                 slide._partName = slidePart;
                 attachSlideImages(slide, slideRels, slidePart, pkg);
                 slides.push(slide);
+                slideParts.push(slidePart);
 
                 // Resolve the layout this slide points to.
                 const layoutRel = slideRels.find(r => r.Type === slideMod.REL_TYPE_SLIDE_LAYOUT);
@@ -345,6 +376,7 @@ export const pptx = {
                 attachTemplateImages(master, masterPart, pkg);
                 master._partName = masterPart;
                 slideMasters.push(master);
+                masterParts.push(masterPart);
 
                 // Theme is referenced from the master.
                 const masterRels = pkg.rels[masterPart] || [];
@@ -356,10 +388,12 @@ export const pptx = {
                 }
             }
 
+            const layoutParts = slideLayouts.map(l => l._partName);
+
             // Strip internal markers.
             for (const s of slides) {
                 delete s._partName;
-                for (const sp of s.shapes || []) delete sp._chartPartName;
+                for (const sp of allShapes(s.shapes)) delete sp._chartPartName;
             }
             for (const l of slideLayouts) delete l._partName;
             for (const m of slideMasters) delete m._partName;
@@ -370,8 +404,14 @@ export const pptx = {
             if (theme)               presentation.theme = theme;
             if (sldSize)             presentation.sldSize = sldSize;
 
-            walker.applyHydrate(presentation);
-            return { presentation, package: pkg };
+            // The package hooks, then the walk (which reaches what they read).
+            const hydrated = walker.applyPackageHydrate(presentation, {
+                package: pkg, parts: plainParts, rels: pkg.rels,
+                presPart, presRoot, presRels, slideParts, layoutParts, masterParts,
+                textOpts, consume(partName) { return pkg.parts[partName]; }
+            });
+            walker.applyHydrate(hydrated);
+            return { presentation: hydrated, package: pkg };
         }
 
         // --- Extension support (`.use(...)`) ---
@@ -528,7 +568,7 @@ export const pptx = {
 
                 // Walk the slide's pictures, allocate rIds, write image parts.
                 const seenData = new Map();
-                for (const shape of node.shapes || []) {
+                for (const shape of allShapes(node.shapes)) {
                     if (shape.type === 'picture' && shape.image && shape.image.data) {
                         let item = seenData.get(shape.image.data);
                         if (!item) {
@@ -658,6 +698,15 @@ export const pptx = {
                 Id: 'rId1', Type: REL_TYPE_DOC, Target: 'ppt/presentation.xml'
             }]);
 
+            if (walker.hasExtensions) {
+                walker.applyPackageDehydrate(pres, {
+                    package: pkg, presPart: '/ppt/presentation.xml',
+                    themePart: '/ppt/theme/theme1.xml',
+                    slideParts: slides.map((_, k) => `/ppt/slides/slide${k + 1}.xml`),
+                    layoutParts: layouts.map((_, j) => `/ppt/slideLayouts/slideLayout${j + 1}.xml`),
+                    masterParts: masters.map((_, i) => `/ppt/slideMasters/slideMaster${i + 1}.xml`)
+                });
+            }
             return opc.write(pkg);
         }
 

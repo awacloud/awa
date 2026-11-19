@@ -30,6 +30,12 @@
  * where `t` = passes (timeCost), `m` = memory in KiB, `p` = lanes
  * (parallelism). The tag is written to `outPtr` (`outLen` bytes).
  *
+ * Memory: the binary takes the block matrix from linear memory grown for the
+ * call (not from its 16 MiB scratch arena), up to a ceiling of 1048576 KiB
+ * (1 GiB). Linear memory never shrinks: once grown, it stays allocated for
+ * the life of the loaded module and is reused by later calls. `m` above the
+ * ceiling is refused here, before the call, with a named error.
+ *
  * Worker-safe: pure factory; `WebAssembly` exists in workers; the binary is
  * fetched by the package loader (via `import.meta.url`) inside `wasmRuntime`.
  * ALL constants live inside `factory()` so `factory.toString()` carries no
@@ -40,7 +46,8 @@
  * Tuning + optional-input parameters for {@link WasmArgon2API.hash}.
  * @typedef {object} WasmArgon2Options
  * @property {number} timeCost     Passes `t` (≥ 1).
- * @property {number} memoryKiB    Memory cost `m` in KiB (≥ 8·parallelism).
+ * @property {number} memoryKiB    Memory cost `m` in KiB (≥ 8·parallelism,
+ *   ≤ 1048576 — the binary's 1 GiB ceiling).
  * @property {number} parallelism  Lanes `p` (≥ 1).
  * @property {number} hashLen      Output tag length in bytes (4 .. 2^32-1).
  * @property {Uint8Array} [secret] Optional key `K`.
@@ -86,6 +93,10 @@ export const wasmArgon2 = {
         // hashLen ∈ [4, 2^32-1] per RFC 9106 §3.1.
         const _MIN_HASH_LEN = 4;
         const _MAX_HASH_LEN = 0xffffffff;
+        // The binary's memory ceiling: the largest `m` (KiB) it accepts, 1 GiB
+        // (shims/argon2.c ARGON2_MAX_MEMORY_KIB). Refused here up front so the
+        // caller reads a named cause, not the binary's bare status.
+        const _MAX_MEMORY_KIB = 1048576;
 
         /**
          * Whether the WASM tier can run here.
@@ -117,6 +128,11 @@ export const wasmArgon2 = {
             }
             if (!(memoryKiB >= 8 * parallelism)) {
                 console.error('[crypto] INVALID: wasmArgon2: memoryKiB must be ≥ 8·parallelism');
+                return false;
+            }
+            if (memoryKiB > _MAX_MEMORY_KIB) {
+                console.error('[crypto] INVALID: wasmArgon2: memoryKiB above the ceiling of '
+                    + _MAX_MEMORY_KIB + ' KiB (1 GiB)');
                 return false;
             }
             if (!(hashLen >= _MIN_HASH_LEN && hashLen <= _MAX_HASH_LEN)) {

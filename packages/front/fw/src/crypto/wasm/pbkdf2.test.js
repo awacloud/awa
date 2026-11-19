@@ -128,7 +128,7 @@ describe('wasmPbkdf2 — API shape', () => {
 describe('wasmPbkdf2 — RFC 7914 §11 PBKDF2-HMAC-SHA-256 KAT', () => {
 
     test('P="password", S="salt", c=1, dkLen=32', async () => {
-        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 32, 1, 256);
+        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 256, 1, 256);
         expect(dk).not.toBe(false);
         expect(dk).toBeInstanceOf(Uint8Array);
         expect(dk.length).toBe(32);
@@ -136,7 +136,7 @@ describe('wasmPbkdf2 — RFC 7914 §11 PBKDF2-HMAC-SHA-256 KAT', () => {
     });
 
     test('P="password", S="salt", c=2, dkLen=32', async () => {
-        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 32, 2, 256);
+        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 256, 2, 256);
         expect(dk).not.toBe(false);
         expect(dk).toBeInstanceOf(Uint8Array);
         expect(dk.length).toBe(32);
@@ -144,7 +144,7 @@ describe('wasmPbkdf2 — RFC 7914 §11 PBKDF2-HMAC-SHA-256 KAT', () => {
     });
 
     test('P="password", S="salt", c=4096, dkLen=32', async () => {
-        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 32, 4096, 256);
+        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 256, 4096, 256);
         expect(dk).not.toBe(false);
         expect(dk).toBeInstanceOf(Uint8Array);
         expect(dk.length).toBe(32);
@@ -155,7 +155,7 @@ describe('wasmPbkdf2 — RFC 7914 §11 PBKDF2-HMAC-SHA-256 KAT', () => {
         const dk = await _wasm.deriveBits(
             enc.encode('passwordPASSWORDpassword'),
             enc.encode('saltSALTsaltSALTsaltSALTsaltSALTsalt'),
-            40, 4096, 256,
+            320, 4096, 256,
         );
         expect(dk).not.toBe(false);
         expect(dk).toBeInstanceOf(Uint8Array);
@@ -171,14 +171,14 @@ describe('wasmPbkdf2 — RFC 7914 §11 PBKDF2-HMAC-SHA-256 KAT', () => {
 describe('wasmPbkdf2 — PBKDF2-HMAC-SHA-384 KAT', () => {
 
     test('P="password", S="salt", c=1, dkLen=32', async () => {
-        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 32, 1, 384);
+        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 256, 1, 384);
         expect(dk).not.toBe(false);
         expect(dk).toBeInstanceOf(Uint8Array);
         expect(hex(dk)).toBe('c0e14f06e49e32d73f9f52ddf1d0c5c7191609233631dadd76a567db42b78676');
     });
 
     test('P="password", S="salt", c=4096, dkLen=32', async () => {
-        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 32, 4096, 384);
+        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 256, 4096, 384);
         expect(dk).not.toBe(false);
         expect(hex(dk)).toBe('559726be38db125bc85ed7895f6e3cf574c7a01c080c3447db1e8a76764deb3c');
     });
@@ -191,14 +191,14 @@ describe('wasmPbkdf2 — PBKDF2-HMAC-SHA-384 KAT', () => {
 describe('wasmPbkdf2 — PBKDF2-HMAC-SHA-512 KAT', () => {
 
     test('P="password", S="salt", c=1, dkLen=32', async () => {
-        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 32, 1, 512);
+        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 256, 1, 512);
         expect(dk).not.toBe(false);
         expect(dk).toBeInstanceOf(Uint8Array);
         expect(hex(dk)).toBe('867f70cf1ade02cff3752599a3a53dc4af34c7a669815ae5d513554e1c8cf252');
     });
 
     test('P="password", S="salt", c=4096, dkLen=32', async () => {
-        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 32, 4096, 512);
+        const dk = await _wasm.deriveBits(enc.encode('password'), enc.encode('salt'), 256, 4096, 512);
         expect(dk).not.toBe(false);
         expect(hex(dk)).toBe('d197b1b33db0143e018b12f3d1d1479e6cdebdcc97c5c0f87f6902e072f457b5');
     });
@@ -208,16 +208,16 @@ describe('wasmPbkdf2 — PBKDF2-HMAC-SHA-512 KAT', () => {
 
 describe('wasmPbkdf2 — default iterations (600000)', () => {
     test('omitting iterations uses 600000', async () => {
-        const a = await _wasm.deriveBits(enc.encode('p'), enc.encode('s'), 16);
-        const b = await _wasm.deriveBits(enc.encode('p'), enc.encode('s'), 16, 600000);
+        const a = await _wasm.deriveBits(enc.encode('p'), enc.encode('s'), 128);
+        const b = await _wasm.deriveBits(enc.encode('p'), enc.encode('s'), 128, 600000);
         expect(a).not.toBe(false);
         expect(b).not.toBe(false);
         expect(hex(a)).toBe(hex(b));
     }, 30000); // default=600000 iters may take ~5s in WASM
 
     test('omitting hash uses 256 (HMAC-SHA-256)', async () => {
-        const a = await _wasm.deriveBits(enc.encode('p'), enc.encode('s'), 16, 1);
-        const b = await _wasm.deriveBits(enc.encode('p'), enc.encode('s'), 16, 1, 256);
+        const a = await _wasm.deriveBits(enc.encode('p'), enc.encode('s'), 128, 1);
+        const b = await _wasm.deriveBits(enc.encode('p'), enc.encode('s'), 128, 1, 256);
         expect(a).not.toBe(false);
         expect(b).not.toBe(false);
         expect(hex(a)).toBe(hex(b));
@@ -239,7 +239,7 @@ describe('wasmPbkdf2 — parity with pure-JS pbkdf2 (HMAC-SHA-256)', () => {
 
     for (const { label, pw, salt, iters, dkLen } of PARITY_CASES) {
         test(`${label} (c=${iters}, dkLen=${dkLen}) matches pure-JS`, async () => {
-            const wasmDk = await _wasm.deriveBits(enc.encode(pw), enc.encode(salt), dkLen, iters, 256);
+            const wasmDk = await _wasm.deriveBits(enc.encode(pw), enc.encode(salt), dkLen * 8, iters, 256);
             expect(wasmDk).not.toBe(false);
             const pureDk = _ba.ba_to_ui8(_pure(pw, salt, iters, dkLen * 8));
             expect(hex(wasmDk)).toBe(hex(pureDk));
@@ -250,7 +250,7 @@ describe('wasmPbkdf2 — parity with pure-JS pbkdf2 (HMAC-SHA-256)', () => {
         const pw = 'password';
         const salt = 'salt';
         const _pure384 = pbkdf2.factory(_ba, _utf8, _hmac384);
-        const wasmDk = await _wasm.deriveBits(enc.encode(pw), enc.encode(salt), 32, 1, 384);
+        const wasmDk = await _wasm.deriveBits(enc.encode(pw), enc.encode(salt), 256, 1, 384);
         expect(wasmDk).not.toBe(false);
         const pureDk = _ba.ba_to_ui8(_pure384(pw, salt, 1, 256));
         expect(hex(wasmDk)).toBe(hex(pureDk));
@@ -260,7 +260,7 @@ describe('wasmPbkdf2 — parity with pure-JS pbkdf2 (HMAC-SHA-256)', () => {
         const pw = 'password';
         const salt = 'salt';
         const _pure512 = pbkdf2.factory(_ba, _utf8, _hmac512);
-        const wasmDk = await _wasm.deriveBits(enc.encode(pw), enc.encode(salt), 32, 1, 512);
+        const wasmDk = await _wasm.deriveBits(enc.encode(pw), enc.encode(salt), 256, 1, 512);
         expect(wasmDk).not.toBe(false);
         const pureDk = _ba.ba_to_ui8(_pure512(pw, salt, 1, 256));
         expect(hex(wasmDk)).toBe(hex(pureDk));
@@ -276,24 +276,24 @@ describe('wasmPbkdf2 — invalid params → false, no throw', () => {
 
     test('password not Uint8Array → false', async () => {
         // @ts-expect-error intentional misuse
-        expect(await _wasm.deriveBits('password', SALT, 16, 1, 256)).toBe(false);
+        expect(await _wasm.deriveBits('password', SALT, 128, 1, 256)).toBe(false);
     });
 
     test('salt not Uint8Array → false', async () => {
         // @ts-expect-error intentional misuse
-        expect(await _wasm.deriveBits(PW, 'salt', 16, 1, 256)).toBe(false);
+        expect(await _wasm.deriveBits(PW, 'salt', 128, 1, 256)).toBe(false);
     });
 
     test('iterations = 0 → false', async () => {
-        expect(await _wasm.deriveBits(PW, SALT, 16, 0, 256)).toBe(false);
+        expect(await _wasm.deriveBits(PW, SALT, 128, 0, 256)).toBe(false);
     });
 
     test('iterations = -1 → false', async () => {
-        expect(await _wasm.deriveBits(PW, SALT, 16, -1, 256)).toBe(false);
+        expect(await _wasm.deriveBits(PW, SALT, 128, -1, 256)).toBe(false);
     });
 
     test('iterations = 0.5 (non-integer) → false', async () => {
-        expect(await _wasm.deriveBits(PW, SALT, 16, 0.5, 256)).toBe(false);
+        expect(await _wasm.deriveBits(PW, SALT, 128, 0.5, 256)).toBe(false);
     });
 
     test('dkLen = 0 → false', async () => {
@@ -301,32 +301,32 @@ describe('wasmPbkdf2 — invalid params → false, no throw', () => {
     });
 
     test('dkLen = -1 → false', async () => {
-        expect(await _wasm.deriveBits(PW, SALT, -1, 1, 256)).toBe(false);
+        expect(await _wasm.deriveBits(PW, SALT, -8, 1, 256)).toBe(false);
     });
 
     test('hash = 224 (unsupported) → false', async () => {
         // @ts-expect-error intentional misuse
-        expect(await _wasm.deriveBits(PW, SALT, 16, 1, 224)).toBe(false);
+        expect(await _wasm.deriveBits(PW, SALT, 128, 1, 224)).toBe(false);
     });
 
     test('hash = 0 (invalid) → false', async () => {
         // @ts-expect-error intentional misuse
-        expect(await _wasm.deriveBits(PW, SALT, 16, 1, 0)).toBe(false);
+        expect(await _wasm.deriveBits(PW, SALT, 128, 1, 0)).toBe(false);
     });
 
     test('hash = "SHA-256" (string, not number) → false', async () => {
         // @ts-expect-error intentional misuse
-        expect(await _wasm.deriveBits(PW, SALT, 16, 1, 'SHA-256')).toBe(false);
+        expect(await _wasm.deriveBits(PW, SALT, 128, 1, 'SHA-256')).toBe(false);
     });
 
     test('null password → false', async () => {
         // @ts-expect-error intentional misuse
-        await expect(_wasm.deriveBits(null, SALT, 16, 1, 256)).resolves.toBe(false);
+        await expect(_wasm.deriveBits(null, SALT, 128, 1, 256)).resolves.toBe(false);
     });
 
     test('null salt → false', async () => {
         // @ts-expect-error intentional misuse
-        await expect(_wasm.deriveBits(PW, null, 16, 1, 256)).resolves.toBe(false);
+        await expect(_wasm.deriveBits(PW, null, 128, 1, 256)).resolves.toBe(false);
     });
 
     test('invalid inputs never throw (all promise resolve)', async () => {
@@ -369,5 +369,18 @@ describe('wasmPbkdf2 — stubbed runtime (load returns false) → false', () => 
         const SALT = enc.encode('s');
         const result = await stubWasm.deriveBits(PW, SALT, 32, 1, 256);
         expect(result).toBe(false);
+    });
+});
+
+describe('wasmPbkdf2 — the length is in bits, as the pure and WebCrypto tiers (D9 G5)', () => {
+    test('256 bits give 32 bytes; a length that is not a positive multiple of 8 is refused', async () => {
+        const PW = enc.encode('password'), SALT = enc.encode('salt');
+        const dk = await _wasm.deriveBits(PW, SALT, 256, 1, 256);
+        expect(dk).toBeInstanceOf(Uint8Array);
+        expect(dk.length).toBe(32);
+        expect((await _wasm.deriveBits(PW, SALT, 8, 1, 256)).length).toBe(1);
+        for (const bad of [0, 4, 12, 255, -8, 1.5]) {
+            expect(await _wasm.deriveBits(PW, SALT, bad, 1, 256)).toBe(false);
+        }
     });
 });

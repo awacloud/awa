@@ -1,7 +1,7 @@
 ---
 module: component
 category: dom/rendering
-dependencies: [reactiveBind]
+dependencies: [reactiveBind, styleSheet]
 returns: object
 worker-safe: false
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > Reusable component primitive on top of `uiSession`. Encapsulates template + state + lifecycle + automatic cleanup.
 
-**Module** `component` | **Source** `packages/front/fw/src/dom/rendering/component.js` | **Deps** none | **Worker-safe** no
+**Module** `component` | **Source** `packages/front/fw/src/dom/rendering/component.js` | **Deps** `reactiveBind`, `styleSheet` | **Worker-safe** no
 
 ## Resolve
 
@@ -229,9 +229,30 @@ automatically:
 .fw-comp-7 .icon { animation: fw-comp-7-spin 1s linear infinite; }
 ```
 
+### Id selectors do not match
+
+The rendered ids are not the authored ones: each node gets a fresh runtime
+id when the template is rendered, so a scoped `& #label { … }` rule is
+injected as `.fw-comp-7 #label` and matches nothing. Select by class or
+attribute instead:
+
+```css
+/* authored template: <span class="label">…</span> */
+& .label { font-weight: bold; }
+```
+
 Injection remains **once per blueprint** — multiple instances of the same
 component share the single `<style data-fw-component="fw-comp-N">` tag in
-`<head>`.
+`<head>` in the default mode.
+
+### Under a strict CSP
+
+The CSS is attached through the [`styleSheet`](./styleSheet.md) module. With a
+`style-src 'self'` policy (no `'unsafe-inline'`, no nonce) an inline `<style>`
+is refused: call `runtime.resolve('styleSheet').mode('adopted')` **before the
+first `define`**. The scoped CSS is then attached as one constructable
+stylesheet per blueprint and no `<style>` element is created. A factory wired
+by hand without the `styleSheet` argument keeps the `<style>` element path.
 
 ## Reactive bindings (`self.bind`)
 
@@ -284,4 +305,5 @@ See [reactiveBind](./reactiveBind.md) for the full controller API
 - [uiSession](./uiSession.md) — underlying session layer.
 - [reactiveBind](./reactiveBind.md) — signal-to-DOM binding controller used by `self.bind`.
 - [parser](./parser.md) — produces `ParseResult` templates.
+- [styleSheet](./styleSheet.md) — attaches the scoped CSS (`<style>` element or constructable stylesheet).
 - [Guide rendering-pipeline](../../../guide/rendering-pipeline.md).

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -75,11 +75,6 @@ import { random } from '../utils/random.js';
  * @property {(priv: RsaPrivateKey, ct: Uint8Array, hashMod: object, label?: Uint8Array) => (Uint8Array|false)} oaepDecrypt RSAES-OAEP decrypt.
  * @property {(priv: RsaPrivateKey, msg: Uint8Array, hashMod: object, sLen?: number, salt?: Uint8Array) => (Uint8Array|false)} pssSign RSASSA-PSS sign.
  * @property {(pub: RsaPublicKey, msg: Uint8Array, sig: Uint8Array, hashMod: object, sLen?: number) => boolean} pssVerify RSASSA-PSS verify.
- * @property {() => false} pkcs1v15Sign Deprecated; always rejects.
- * @property {() => false} pkcs1v15Verify Deprecated; always rejects.
- * @property {() => false} pkcs1v15Encrypt Deprecated/unsafe; always rejects.
- * @property {() => false} pkcs1v15Decrypt Deprecated/unsafe; always rejects.
- * @property {{ rsaep: Function, rsadp: Function, mgf1: Function }} _internal KAT-test-only primitives.
  */
 
 export const rsa = {
@@ -118,7 +113,6 @@ export const rsa = {
         }
 
         // ── RSA blinding (Chaum/Pollard, anti-timing) ───────────────────
-        // Iteration F1 of the FIPS 140-3 upgrade plan.
         //
         // To defeat side-channel attacks against `_rsadp` (CRT modular
         // exponentiation is famously vulnerable to remote timing - Boneh
@@ -321,7 +315,7 @@ export const rsa = {
             bad |= badPad | (1 - found);
             // Single failure point - no early exit on `bad` until the end.
             if (bad !== 0) {
-                console.error('[crypto] CORRUPT: rsa: OAEP decryption failed');
+                console.warn('[crypto] CORRUPT: rsa: OAEP decryption failed');
                 return false;
             }
             return new Uint8Array(db.subarray(onePos + 1));
@@ -426,45 +420,14 @@ export const rsa = {
             return _pssVerify(mHash, em, emBits, hashMod, sLen);
         }
 
-        // ── Itération G1 - Secure by default ──────────────────────────────
-        //
-        // PKCS #1 v1.5 signature scheme (RFC 8017 §8.2) is *legacy approved*
-        // but explicitly deprecated by NIST SP 800-131A Rev. 2 (Table 5,
-        // November 2019) in favour of RSASSA-PSS. Vulnerable to:
-        //  - Bleichenbacher 2006 (signature forgery on RSA-3 + lax parsing);
-        //  - padding error oracle on v1.5 decryption (Manger 2001).
-        //
-        // Rather than silently offering a discouraged path, the
-        // module returns `false` + typed warning. Consumers with a
-        // legacy interop need must justify it via a feature request.
-        function pkcs1v15Sign() {
-            console.warn('[crypto] DEPRECATED: rsa: PKCS#1 v1.5 signature scheme (RFC 8017 §8.2) is deprecated by NIST SP 800-131A Rev.2 (Table 5). Use pssSign() instead.');
-            return false;
-        }
-        function pkcs1v15Verify() {
-            console.warn('[crypto] DEPRECATED: rsa: PKCS#1 v1.5 signature verification (RFC 8017 §8.2) is deprecated by NIST SP 800-131A Rev.2 (Table 5). Use pssVerify() instead.');
-            return false;
-        }
-        // PKCS #1 v1.5 *encryption* (RFC 8017 §7.2): Manger/Bleichenbacher
-        // padding oracle. Refused for the same reasons.
-        function pkcs1v15Encrypt() {
-            console.warn('[crypto] DEPRECATED|UNSAFE: rsa: PKCS#1 v1.5 encryption (RFC 8017 §7.2) is vulnerable to Bleichenbacher padding oracle attacks. Use oaepEncrypt() instead.');
-            return false;
-        }
-        function pkcs1v15Decrypt() {
-            console.warn('[crypto] DEPRECATED|UNSAFE: rsa: PKCS#1 v1.5 decryption (RFC 8017 §7.2) is vulnerable to Bleichenbacher padding oracle attacks. Use oaepDecrypt() instead.');
-            return false;
-        }
-
-        return /** @type {RsaAPI} */ (/** @type {any} */ ({
+        return /** @type {RsaAPI} */ (/** @type {any} */ (Object.defineProperty({
             // OAEP
             oaepEncrypt, oaepDecrypt,
             // PSS
-            pssSign, pssVerify,
-            // PKCS #1 v1.5 - DEPRECATED (Itération G1) - explicit reject.
-            pkcs1v15Sign, pkcs1v15Verify, pkcs1v15Encrypt, pkcs1v15Decrypt,
+            pssSign, pssVerify
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal primitives - exposed for KAT tests only. Not API.
-            _internal: { rsaep: _rsaep, rsadp: _rsadp, mgf1: _mgf1 }
-        }));
+            value: { rsaep: _rsaep, rsadp: _rsadp, mgf1: _mgf1 }
+        })));
     }
 };

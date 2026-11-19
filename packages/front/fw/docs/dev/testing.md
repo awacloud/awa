@@ -56,6 +56,19 @@ $env:CRYPTO_FULL='1'; bun test src/crypto/    # PowerShell
 - `*.kat.js` files (Known Answer Tests) are **data** imported by the `.test.js` files. Present in the git repo; read as-is by bun and Vitest (resolution via `import.meta.url`, runtime-agnostic).
 - Large ACVP vectors (CTR_DRBG, ML-KEM/DSA, SLH-DSA, ~50 MB) live in `tests/_vectors/`; read with `CRYPTO_FULL=1`. Neither KATs nor vectors are in the npm tarball (lean package) — audit via git clone or jsDelivr-GitHub.
 
+## CSP style leg (Chromium)
+
+Proves in a real browser what the unit tier cannot: under a `style-src 'self'` policy (no `'unsafe-inline'`, no nonce — the policy of `tools/local-ui-kit`), `styleSheet.mode('adopted')` lets a component's scoped CSS and the `themeTokens` variables apply with no CSP violation, while the default `'element'` mode is refused (the negative control showing the policy really bites). The unit tier (happy-dom) implements no CSP, so it cannot enforce or observe this.
+
+```sh
+cd packages/front/fw
+node tools/browser/csp-style/run.js                    # one JSON line; exit 0 = expectations hold, 1 = not, 3 = no Chromium
+bun test ./tests/csp-style.integration.test.js         # wrapper: asserts the JSON data again
+bun run e2e:preview:install                            # provisions the in-repo Chromium cache (third_party/ms-playwright)
+```
+
+The driver runs under `node` (never inside the bun process), serves the package on `127.0.0.1` with the policy header on every response, and launches headless Chromium once per mode. **Skip rule**: the wrapper skips (with a `console.warn` naming the provisioning command) only when `node` is absent or the driver exits 3 (Chromium not provisioned). A skip is not evidence: a green run means a non-skipped run. This is a heavy job: do not run it beside another Chromium or GPU job.
+
 ## Portability note (bun vs Node)
 
 Some tests may diverge depending on the engine (bun = JavaScriptCore, Node = V8/ICU) — typically DST date arithmetic and `Intl.supportedValuesOf('timeZone')`. These are engine differences, not runner differences; see the relevant module. The suite targets identical pass/fail between `bun test` and `vitest`.

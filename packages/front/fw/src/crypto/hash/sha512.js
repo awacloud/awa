@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -31,7 +31,7 @@ import { utf8 } from '../../io/codec/utf8.js';
  * @property {number} _outWords Number of 32-bit words retained in the digest.
  * @property {number[]} _key Round constants.
  * @property {() => Sha512Hasher} reset Reset internal state; returns `this`.
- * @property {(data: number[]|string) => (Sha512Hasher|false)} update Absorb a bitArray or UTF-8 string; returns `this`, or `false` on > 2^53-1 bit overflow.
+ * @property {(data: number[]|string|Uint8Array) => (Sha512Hasher|false)} update Absorb a bitArray, a UTF-8 string or bytes (`Uint8Array`, hashed as its bytes); returns `this`, or `false` on > 2^53-1 bit overflow.
  * @property {() => number[]} finalize Pad and emit the digest as a bitArray (truncated to `outWords`).
  * @property {(words: ArrayLike<number>) => void} _block Compress one 32-word (1024-bit) block.
  */
@@ -40,8 +40,7 @@ import { utf8 } from '../../io/codec/utf8.js';
  * Object returned by `sha512.factory()`.
  * @typedef {object} Sha512API
  * @property {new (hash?: Sha512Hasher) => Sha512Hasher} fn Streaming hasher constructor (optional arg clones an existing instance).
- * @property {(data: number[]|string) => number[]} hash One-shot hash; returns the digest as a bitArray.
- * @property {{ makeSha: (init: number[], outWords: number) => { fn: Function, hash: Function } }} _internal Escape hatch used by sha384/sha512_224/sha512_256 to build truncated variants.
+ * @property {(data: number[]|string|Uint8Array) => number[]} hash One-shot hash of a bitArray, a UTF-8 string or bytes; returns the digest as a bitArray.
  */
 
 export const sha512 = {
@@ -83,12 +82,19 @@ export const sha512 = {
             0x4cc5d4be, 0xcb3e42b6, 0x597f299c, 0xfc657e2a, 0x5fcb6fab, 0x3ad6faec, 0x6c44198c, 0x4a475817
         ];
 
+        // The round constants as int32 (a plain array holds the halves above
+        // 2^31 as doubles) and one message schedule shared by every block.
+        const _K32 = Int32Array.from(_KEY);
+        const _W = new Int32Array(160);
+        /** One block's 32 words, read from bytes by the `update` fast path. */
+        const _BW = new Int32Array(32);
+
         // ── Builder for SHA-512-shaped hash modules with custom IV + truncation ──
         //
         // Default = SHA-512 (init = _INIT, outWords = 16 → 512-bit digest).
         // Used by `sha512_224.js` and `sha512_256.js` (FIPS 180-4 §5.3.6.{1,2})
         // to share the SHA-512 compression function with different IVs and a
-        // truncated final digest. FIPS 140-3 upgrade plan, iteration A2.
+        // truncated final digest.
         /**
          * Parametric SHA-512 compression factory.
          * @param {number[]} init  16 × 32-bit IV halves (representing 8 × 64-bit lanes).
@@ -129,8 +135,32 @@ export const sha512 = {
                 },
 
                 update(data) {
+                    if (data instanceof Uint8Array && this._buffer.length === 0 && data.length >= 128) {
+                        // Bytes onto an empty buffer: the whole 128-byte blocks
+                        // straight from the bytes (big-endian words), only the
+                        // tail through the bitArray path below.
+                        const whole = data.length - (data.length & 127);
+                        if (this._length + whole * 8 > 9007199254740991) {
+                            console.warn('[crypto] INVALID: sha512: cannot hash more than 2^53 - 1 bits');
+                            return false;
+                        }
+                        const words = _BW;
+                        for (let off = 0; off < whole; off += 128) {
+                            for (let j = 0, o = off; j < 32; j++, o += 4) {
+                                words[j] = (data[o] << 24) | (data[o + 1] << 16) | (data[o + 2] << 8) | data[o + 3];
+                            }
+                            this._block(words);
+                        }
+                        this._length += whole * 8;
+                        if (whole === data.length) return this;
+                        data = data.subarray(whole);
+                    }
                     if (typeof data === 'string') {
                         data = bitArray.ui8_to_ba(utf8.toBytes(data));
+                    } else if (data instanceof Uint8Array) {
+                        // Bytes are hashed as bytes: without this branch a
+                        // Uint8Array was read as a bitArray of 32-bit words.
+                        data = bitArray.ui8_to_ba(data);
                     }
                     const b = this._buffer = bitArray.concat(this._buffer, data);
                     const ol = this._length;
@@ -173,124 +203,93 @@ export const sha512 = {
                 },
 
                 _block(words) {
+                    // Every value an int32 (an unsigned half above 2^31 makes
+                    // JavaScriptCore compute in doubles); a 64-bit add wraps
+                    // the low half and takes its carry from bit operations:
+                    // carry(a, b, lo) = ((a & b) | ((a | b) & ~lo)) >>> 31.
                     const h = this._h;
-                    const k = this._key;
-                    const h0h = h[0], h0l = h[1], h1h = h[2], h1l = h[3];
-                    const h2h = h[4], h2l = h[5], h3h = h[6], h3l = h[7];
-                    const h4h = h[8], h4l = h[9], h5h = h[10], h5l = h[11];
-                    const h6h = h[12], h6l = h[13], h7h = h[14], h7l = h[15];
-
-                    const w = new Array(160);
-                    for (let j = 0; j < 32; j++) {
-                        w[j] = words[j];
+                    const k = _K32;
+                    const w = _W;
+                    for (let j = 0; j < 32; j++) w[j] = words[j] | 0;
+                    for (let i = 16; i < 80; i++) {
+                        const xh = w[(i - 15) * 2], xl = w[(i - 15) * 2 + 1];
+                        const g0h = ((xl << 31) | (xh >>> 1)) ^ ((xl << 24) | (xh >>> 8)) ^ (xh >>> 7);
+                        const g0l = ((xh << 31) | (xl >>> 1)) ^ ((xh << 24) | (xl >>> 8)) ^ ((xh << 25) | (xl >>> 7));
+                        const yh = w[(i - 2) * 2], yl = w[(i - 2) * 2 + 1];
+                        const g1h = ((yl << 13) | (yh >>> 19)) ^ ((yh << 3) | (yl >>> 29)) ^ (yh >>> 6);
+                        const g1l = ((yh << 13) | (yl >>> 19)) ^ ((yl << 3) | (yh >>> 29)) ^ ((yh << 26) | (yl >>> 6));
+                        const w7h = w[(i - 7) * 2], w7l = w[(i - 7) * 2 + 1];
+                        const w16h = w[(i - 16) * 2], w16l = w[(i - 16) * 2 + 1];
+                        // g0 + w[i-7] + g1 + w[i-16]
+                        const l1 = (g0l + w7l) | 0;
+                        let hi = (g0h + w7h + (((g0l & w7l) | ((g0l | w7l) & ~l1)) >>> 31)) | 0;
+                        const l2 = (l1 + g1l) | 0;
+                        hi = (hi + g1h + (((l1 & g1l) | ((l1 | g1l) & ~l2)) >>> 31)) | 0;
+                        const l3 = (l2 + w16l) | 0;
+                        hi = (hi + w16h + (((l2 & w16l) | ((l2 | w16l) & ~l3)) >>> 31)) | 0;
+                        w[i * 2] = hi;
+                        w[i * 2 + 1] = l3;
                     }
 
-                    let ah = h0h, al = h0l, bh = h1h, bl = h1l;
-                    let ch = h2h, cl = h2l, dh = h3h, dl = h3l;
-                    let eh = h4h, el = h4l, fh = h5h, fl = h5l;
-                    let gh = h6h, gl = h6l, hh = h7h, hl = h7l;
-
-                    let wrh;
-                    let wrl;
+                    let ah = h[0] | 0, al = h[1] | 0, bh = h[2] | 0, bl = h[3] | 0;
+                    let ch = h[4] | 0, cl = h[5] | 0, dh = h[6] | 0, dl = h[7] | 0;
+                    let eh = h[8] | 0, el = h[9] | 0, fh = h[10] | 0, fl = h[11] | 0;
+                    let gh = h[12] | 0, gl = h[13] | 0, hh = h[14] | 0, hl = h[15] | 0;
 
                     for (let i = 0; i < 80; i++) {
-                        if (i < 16) {
-                            wrh = w[i * 2];
-                            wrl = w[i * 2 + 1];
-                        } else {
-                            const gamma0xh = w[(i - 15) * 2];
-                            const gamma0xl = w[(i - 15) * 2 + 1];
-                            const gamma0h =
-                                ((gamma0xl << 31) | (gamma0xh >>> 1)) ^
-                                ((gamma0xl << 24) | (gamma0xh >>> 8)) ^
-                                (gamma0xh >>> 7);
-                            const gamma0l =
-                                ((gamma0xh << 31) | (gamma0xl >>> 1)) ^
-                                ((gamma0xh << 24) | (gamma0xl >>> 8)) ^
-                                ((gamma0xh << 25) | (gamma0xl >>> 7));
-
-                            const gamma1xh = w[(i - 2) * 2];
-                            const gamma1xl = w[(i - 2) * 2 + 1];
-                            const gamma1h =
-                                ((gamma1xl << 13) | (gamma1xh >>> 19)) ^
-                                ((gamma1xh << 3) | (gamma1xl >>> 29)) ^
-                                (gamma1xh >>> 6);
-                            const gamma1l =
-                                ((gamma1xh << 13) | (gamma1xl >>> 19)) ^
-                                ((gamma1xl << 3) | (gamma1xh >>> 29)) ^
-                                ((gamma1xh << 26) | (gamma1xl >>> 6));
-
-                            const wr7h = w[(i - 7) * 2];
-                            const wr7l = w[(i - 7) * 2 + 1];
-                            const wr16h = w[(i - 16) * 2];
-                            const wr16l = w[(i - 16) * 2 + 1];
-
-                            wrl = gamma0l + wr7l;
-                            wrh = gamma0h + wr7h + ((wrl >>> 0) < (gamma0l >>> 0) ? 1 : 0);
-                            wrl += gamma1l;
-                            wrh += gamma1h + ((wrl >>> 0) < (gamma1l >>> 0) ? 1 : 0);
-                            wrl += wr16l;
-                            wrh += wr16h + ((wrl >>> 0) < (wr16l >>> 0) ? 1 : 0);
-                        }
-
-                        w[i * 2] = wrh |= 0;
-                        w[i * 2 + 1] = wrl |= 0;
-
                         const chh = (eh & fh) ^ (~eh & gh);
                         const chl = (el & fl) ^ (~el & gl);
-
                         const majh = (ah & bh) ^ (ah & ch) ^ (bh & ch);
                         const majl = (al & bl) ^ (al & cl) ^ (bl & cl);
+                        const s0h = ((al << 4) | (ah >>> 28)) ^ ((ah << 30) | (al >>> 2)) ^ ((ah << 25) | (al >>> 7));
+                        const s0l = ((ah << 4) | (al >>> 28)) ^ ((al << 30) | (ah >>> 2)) ^ ((al << 25) | (ah >>> 7));
+                        const s1h = ((el << 18) | (eh >>> 14)) ^ ((el << 14) | (eh >>> 18)) ^ ((eh << 23) | (el >>> 9));
+                        const s1l = ((eh << 18) | (el >>> 14)) ^ ((eh << 14) | (el >>> 18)) ^ ((el << 23) | (eh >>> 9));
 
-                        const sigma0h = ((al << 4) | (ah >>> 28)) ^ ((ah << 30) | (al >>> 2)) ^ ((ah << 25) | (al >>> 7));
-                        const sigma0l = ((ah << 4) | (al >>> 28)) ^ ((al << 30) | (ah >>> 2)) ^ ((al << 25) | (ah >>> 7));
-
-                        const sigma1h = ((el << 18) | (eh >>> 14)) ^ ((el << 14) | (eh >>> 18)) ^ ((eh << 23) | (el >>> 9));
-                        const sigma1l = ((eh << 18) | (el >>> 14)) ^ ((eh << 14) | (el >>> 18)) ^ ((el << 23) | (eh >>> 9));
-
-                        const krh = k[i * 2];
-                        const krl = k[i * 2 + 1];
-
-                        let t1l = hl + sigma1l;
-                        let t1h = hh + sigma1h + ((t1l >>> 0) < (hl >>> 0) ? 1 : 0);
-                        t1l += chl;
-                        t1h += chh + ((t1l >>> 0) < (chl >>> 0) ? 1 : 0);
-                        t1l += krl;
-                        t1h += krh + ((t1l >>> 0) < (krl >>> 0) ? 1 : 0);
-                        t1l = t1l + wrl | 0;
-                        t1h += wrh + ((t1l >>> 0) < (wrl >>> 0) ? 1 : 0);
-
-                        const t2l = sigma0l + majl;
-                        const t2h = sigma0h + majh + ((t2l >>> 0) < (sigma0l >>> 0) ? 1 : 0);
+                        // t1 = h + s1 + ch + k[i] + w[i]
+                        let tl = (hl + s1l) | 0;
+                        let th = (hh + s1h + (((hl & s1l) | ((hl | s1l) & ~tl)) >>> 31)) | 0;
+                        let nl = (tl + chl) | 0;
+                        th = (th + chh + (((tl & chl) | ((tl | chl) & ~nl)) >>> 31)) | 0;
+                        const kl = k[i * 2 + 1];
+                        tl = (nl + kl) | 0;
+                        th = (th + k[i * 2] + (((nl & kl) | ((nl | kl) & ~tl)) >>> 31)) | 0;
+                        const wl = w[i * 2 + 1];
+                        nl = (tl + wl) | 0;
+                        th = (th + w[i * 2] + (((tl & wl) | ((tl | wl) & ~nl)) >>> 31)) | 0;
+                        const t1l = nl, t1h = th;
+                        // t2 = s0 + maj
+                        const t2l = (s0l + majl) | 0;
+                        const t2h = (s0h + majh + (((s0l & majl) | ((s0l | majl) & ~t2l)) >>> 31)) | 0;
 
                         hh = gh; hl = gl;
                         gh = fh; gl = fl;
                         fh = eh; fl = el;
                         el = (dl + t1l) | 0;
-                        eh = (dh + t1h + ((el >>> 0) < (dl >>> 0) ? 1 : 0)) | 0;
+                        eh = (dh + t1h + (((dl & t1l) | ((dl | t1l) & ~el)) >>> 31)) | 0;
                         dh = ch; dl = cl;
                         ch = bh; cl = bl;
                         bh = ah; bl = al;
                         al = (t1l + t2l) | 0;
-                        ah = (t1h + t2h + ((al >>> 0) < (t1l >>> 0) ? 1 : 0)) | 0;
+                        ah = (t1h + t2h + (((t1l & t2l) | ((t1l | t2l) & ~al)) >>> 31)) | 0;
                     }
 
-                    const nh0l = h[1] = (h0l + al) | 0;
-                    h[0] = (h0h + ah + ((nh0l >>> 0) < (al >>> 0) ? 1 : 0)) | 0;
-                    const nh1l = h[3] = (h1l + bl) | 0;
-                    h[2] = (h1h + bh + ((nh1l >>> 0) < (bl >>> 0) ? 1 : 0)) | 0;
-                    const nh2l = h[5] = (h2l + cl) | 0;
-                    h[4] = (h2h + ch + ((nh2l >>> 0) < (cl >>> 0) ? 1 : 0)) | 0;
-                    const nh3l = h[7] = (h3l + dl) | 0;
-                    h[6] = (h3h + dh + ((nh3l >>> 0) < (dl >>> 0) ? 1 : 0)) | 0;
-                    const nh4l = h[9] = (h4l + el) | 0;
-                    h[8] = (h4h + eh + ((nh4l >>> 0) < (el >>> 0) ? 1 : 0)) | 0;
-                    const nh5l = h[11] = (h5l + fl) | 0;
-                    h[10] = (h5h + fh + ((nh5l >>> 0) < (fl >>> 0) ? 1 : 0)) | 0;
-                    const nh6l = h[13] = (h6l + gl) | 0;
-                    h[12] = (h6h + gh + ((nh6l >>> 0) < (gl >>> 0) ? 1 : 0)) | 0;
-                    const nh7l = h[15] = (h7l + hl) | 0;
-                    h[14] = (h7h + hh + ((nh7l >>> 0) < (hl >>> 0) ? 1 : 0)) | 0;
+                    let x = h[1] | 0, y = (x + al) | 0;
+                    h[0] = ((h[0] | 0) + ah + (((x & al) | ((x | al) & ~y)) >>> 31)) | 0; h[1] = y;
+                    x = h[3] | 0; y = (x + bl) | 0;
+                    h[2] = ((h[2] | 0) + bh + (((x & bl) | ((x | bl) & ~y)) >>> 31)) | 0; h[3] = y;
+                    x = h[5] | 0; y = (x + cl) | 0;
+                    h[4] = ((h[4] | 0) + ch + (((x & cl) | ((x | cl) & ~y)) >>> 31)) | 0; h[5] = y;
+                    x = h[7] | 0; y = (x + dl) | 0;
+                    h[6] = ((h[6] | 0) + dh + (((x & dl) | ((x | dl) & ~y)) >>> 31)) | 0; h[7] = y;
+                    x = h[9] | 0; y = (x + el) | 0;
+                    h[8] = ((h[8] | 0) + eh + (((x & el) | ((x | el) & ~y)) >>> 31)) | 0; h[9] = y;
+                    x = h[11] | 0; y = (x + fl) | 0;
+                    h[10] = ((h[10] | 0) + fh + (((x & fl) | ((x | fl) & ~y)) >>> 31)) | 0; h[11] = y;
+                    x = h[13] | 0; y = (x + gl) | 0;
+                    h[12] = ((h[12] | 0) + gh + (((x & gl) | ((x | gl) & ~y)) >>> 31)) | 0; h[13] = y;
+                    x = h[15] | 0; y = (x + hl) | 0;
+                    h[14] = ((h[14] | 0) + hh + (((x & hl) | ((x | hl) & ~y)) >>> 31)) | 0; h[15] = y;
                 }
             };
 
@@ -300,15 +299,15 @@ export const sha512 = {
         // Default = SHA-512 (FIPS 180-4 §5.3.5, full 512-bit digest = 16 words).
         const _sha512 = _makeSha(_INIT, 16);
 
-        return /** @type {Sha512API} */ (/** @type {any} */ ({
+        return /** @type {Sha512API} */ (/** @type {any} */ (Object.defineProperty({
             // Public API (unchanged)
             fn: _sha512.fn,
-            hash: _sha512.hash,
-
+            hash: _sha512.hash
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal escape hatch - used by sha512_224.js and sha512_256.js
             // (FIPS 180-4 §5.3.6) to share the SHA-512 compression function with
             // a custom IV and truncated output.
-            _internal: { makeSha: _makeSha }
-        }));
+            value: { makeSha: _makeSha }
+        })));
     }
 };

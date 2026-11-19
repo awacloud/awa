@@ -113,15 +113,16 @@ interface ToMdInput {
     includeNotes?: boolean;
     sheets?: string;   // 'table' | 'csv' | 'tsv', xlsx/ods only
     formOpBudget?: number;              // pdf only
-    pdfInfer?: string[];                // pdf only: 'headings', 'tables', 'running'
+    pdfInfer?: string[];                // pdf only: 'headings', 'tables', 'running'; default ['headings', 'tables']
     pdfDeclare?: string[];              // pdf only: 'positional'
     pdfInclude?: string[];              // pdf only: 'images'
     pdfPassword?: string | Uint8Array;  // pdf only
-    pdfRecoverXref?: boolean;           // pdf only
+    pdfRecoverXref?: boolean;           // pdf only; default true, false reads strictly
+    pdfEmptyPassword?: boolean;         // pdf only; default true, false refuses an encrypted pdf with no password
     pdfLineHyphens?: string;            // pdf only: 'drop' | 'keep'
     odtInclude?: string[];              // odt only: 'toc'
     docxInclude?: string[];             // docx only: 'toc'
-    sheetCellBudget?: number;           // xlsx/ods only
+    sheetCellBudget?: number;           // xlsx/ods only; default 5000000
     archiveLimits?: ArchiveLimits;      // office formats only
     outputBudget?: OutputBudget;        // every format
     opts?: { frontMatter?: string };    // 'full' | 'compact' | 'none'
@@ -146,12 +147,13 @@ interface ArchiveLimits {
 ## `OutputBudget`
 
 `ToMdInput.outputBudget`: past `bytes` of text (UTF-8, checked before the
-markdown is built), `'throw'` (the default) fails with `oconv: output too
-large`, `'truncate'` keeps what fits and records `doc/truncated`.
+markdown is built; 256 MiB when absent, and with no `outputBudget`),
+`'throw'` (the default) fails with `oconv: output too large`, `'truncate'`
+keeps what fits and records `doc/truncated`.
 
 ```ts
 interface OutputBudget {
-    bytes: number;
+    bytes?: number;
     overflow?: 'throw' | 'truncate';
 }
 ```
@@ -210,6 +212,10 @@ interface FromMdInput {
     markdown: string;
     name?: string;
     target?: string;
+    pdfA?: string;
+    pdfUA?: number;
+    pdfLang?: string;
+    pdfFonts?: PdfFonts;
 }
 ```
 
@@ -242,6 +248,24 @@ interface ConvertInput {
     name?: string;
     format?: string;
     target: string;
+    pdfA?: string;
+    pdfUA?: number;
+    pdfLang?: string;
+    pdfFonts?: PdfFonts;
+}
+```
+
+## `PdfFonts`
+
+The TrueType faces a pdf target embeds, per style class (`pdfFonts` of [`FromMdInput`](#frommdinput) and [`ConvertInput`](#convertinput)). The CLI's `--pdf-fonts <dir>` and the MCP server's `pdfFonts` read them from a directory: `regular.ttf`, `bold.ttf`, `italic.ttf`, `boldItalic.ttf`, `mono.ttf`, each optional.
+
+```ts
+interface PdfFonts {
+    regular?: Uint8Array;
+    bold?: Uint8Array;
+    italic?: Uint8Array;
+    boldItalic?: Uint8Array;
+    mono?: Uint8Array;
 }
 ```
 

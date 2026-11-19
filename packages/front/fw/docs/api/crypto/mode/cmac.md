@@ -1,7 +1,7 @@
 ---
 module: cmac
 category: crypto/mode
-dependencies: [bitArray, aes]
+dependencies: [bitArray]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > AES-CMAC (SP 800-38B / RFC 4493) — deterministic MAC based on AES, TDES rejected.
 
-**Module** `cmac` | **Source** `packages/front/fw/src/crypto/mode/cmac.js` | **Deps** `bitArray`, `aes` | **Worker-safe** yes
+**Module** `cmac` | **Source** `packages/front/fw/src/crypto/mode/cmac.js` | **Deps** `bitArray` | **Worker-safe** yes
 
 Default 128-bit tag, truncatable to 32-128 via `truncatedMac` (SP 800-38B §6.4 minimum 32 bits).
 
@@ -19,7 +19,7 @@ Default 128-bit tag, truncatable to 32-128 via `truncatedMac` (SP 800-38B §6.4 
 
 ```js
 const cmac = runtime.resolve('cmac');
-// Returns: { mac, verify, truncatedMac, truncatedVerify, _internal }
+// Returns: { mac, verify, truncatedMac, truncatedVerify }
 ```
 
 ## API
@@ -30,7 +30,7 @@ const cmac = runtime.resolve('cmac');
 | `verify(prf, msgBa, tagBa)` | — | `boolean` (constant-time) |
 | `truncatedMac(prf, msgBa, tagLen)` | — | Truncated tag `tagLen ∈ [32, 128]` |
 | `truncatedVerify(prf, msgBa, tagBa, tagLen)` | — | `boolean` |
-| `_internal.{subkeys}` | — | Debug primitives |
+| `internalOf(cmac).{subkeys}` | — | Debug primitives |
 
 ## Examples
 

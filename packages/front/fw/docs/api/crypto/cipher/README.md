@@ -4,8 +4,8 @@
 
 | Module | Returns | Deps | Description |
 |--------|----------|------|-------------|
-| [aes](./aes.md) | `{name, fn, bitsliced}` | none | AES-128/192/256 (FIPS 197) single block + opt-in constant-time bitsliced variant |
-| [chacha20](./chacha20.md) | `{name, xor, xchacha20, _internal}` | none | ChaCha20 IETF (RFC 8439) — keystream stream-cipher |
+| [aes](./aes.md) | `{fn, ttable}` | none | AES-128/192/256 (FIPS 197) single block, constant-time by default (`fn`) + opt-in T-table path (`ttable.fn`) |
+| [chacha20](./chacha20.md) | `{xor}` | none | ChaCha20 IETF (RFC 8439) — keystream stream-cipher |
 
 ## Common pattern
 

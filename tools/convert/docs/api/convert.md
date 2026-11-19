@@ -18,6 +18,11 @@ Four pairs are supported: `docx>odt`, `odt>docx`, `docx>pdf` and
 | `target` | `string` | yes | `docx`, `odt` or `pdf`. Never derived: `name` names the source. |
 | `name` | `string` | no | Source file name. Its extension picks the source format when `format` is omitted. |
 | `format` | `string` | no | `docx` or `odt`. Wins over the extension of `name`. |
+| `layout` | `boolean` | no | docx → odt: carry the page (size, orientation, margins) the paragraphs' alignment and page breaks, and the runs' size, font, colour, underline and script to the odt — `oconv.convert`'s opt-in tier 3. On another pair, or not a boolean, a usage error. |
+| `pdfA` | `string` | no | pdf target: `'4'` or `'2b'` — claim PDF/A-4 or PDF/A-2b (XMP metadata, an sRGB output intent, every font embedded). Without `pdfFonts`, the Liberation faces of the optional package `@awacloud/oconv-fonts` are used when it is installed; when it is not, a usage error `pdfA: no embeddable face: regular.ttf, bold.ttf, italic.ttf, boldItalic.ttf and mono.ttf are needed. Install the optional package (npm i @awacloud/oconv-fonts) for the Liberation faces, or pass --pdf-fonts <dir> (pdfFonts) with your own.` before converting. |
+| `pdfUA` | `number` | no | pdf target: `1` or `2` — claim PDF/UA-1 or PDF/UA-2, a tagged document (headings, paragraphs, lists, tables, pictures with their alt text; the title from the front matter or the first heading). Needs `pdfFonts` and `pdfLang`: without them, a usage error. |
+| `pdfLang` | `string` | no | pdf target: the document language under `pdfUA` (a BCP 47 tag); without `pdfUA`, a usage error. |
+| `pdfFonts` | [`PdfFonts`](./types.md#pdffonts) | no | pdf target: the TrueType faces to embed, per style class; a class without one is drawn in a Standard 14 font, which `pdfA` refuses. |
 
 ## Output — [`ConvertResult`](./types.md#convertresult)
 

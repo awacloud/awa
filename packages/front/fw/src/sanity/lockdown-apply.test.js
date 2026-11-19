@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { describe, test, expect } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -214,11 +214,14 @@ describe('sanity/lockdown-apply — package surface', () => {
     test.if(NODE_OK)('the key resolves in a real Node ESM subprocess; an undeclared spelling does not', () => {
         const specifiers = [
             '@awacloud/fw/sanity/lockdown.apply',
-            '@awacloud/fw/sanity/lockdown',
-            // Falsification guard: no `./sanity/*` wildcard may exist, so the
-            // file-path spelling must be rejected. Without this, a permissive
-            // resolver would make the two assertions above vacuous.
             '@awacloud/fw/sanity/lockdown-apply.js',
+            '@awacloud/fw/sanity/lockdown',
+            // Falsification guard: no `./sanity/*` wildcard may exist, so a
+            // real file under src/sanity/ that is not exported must be
+            // rejected. Without this, a permissive resolver would make the
+            // assertions above vacuous. (`lockdown-apply.js` itself is a
+            // declared twin of `lockdown.apply` since the exports-map row.)
+            '@awacloud/fw/sanity/wasm-gate.js',
         ];
         const script = `
             const out = {};
@@ -235,7 +238,9 @@ describe('sanity/lockdown-apply — package surface', () => {
         if (res.status !== 0) throw new Error(`node subprocess exited ${res.status}: ${res.stderr}`);
         const results = JSON.parse(res.stdout.trim().split('\n').pop());
         expect(results['@awacloud/fw/sanity/lockdown.apply']).toBe('OK');
+        expect(results['@awacloud/fw/sanity/lockdown-apply.js']).toBe('OK');
         expect(results['@awacloud/fw/sanity/lockdown']).toBe('OK');
-        expect(results['@awacloud/fw/sanity/lockdown-apply.js']).toBe('ERR_PACKAGE_PATH_NOT_EXPORTED');
+        expect(existsSync(join(PKG_DIR, 'src', 'sanity', 'wasm-gate.js'))).toBe(true);
+        expect(results['@awacloud/fw/sanity/wasm-gate.js']).toBe('ERR_PACKAGE_PATH_NOT_EXPORTED');
     });
 });

@@ -12,8 +12,8 @@
   "bun": "1.3.13",
   "memoryMax": "1342177280",
   "counts": {
-    "returned": 184,
-    "refused": 55,
+    "returned": 199,
+    "refused": 40,
     "untyped": 0,
     "hang": 0,
     "memory": 0,
@@ -25,72 +25,72 @@
       "bytes": 1429,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72612
+      "ms": 6,
+      "maxRssKiB": 75308
     },
     {
       "case": "363015187.pdf",
       "bytes": 1266,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71976
+      "ms": 6,
+      "maxRssKiB": 74500
     },
     {
       "case": "actual_text_rtl.pdf",
       "bytes": 7880,
       "class": "returned",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 73488
+      "ms": 7,
+      "maxRssKiB": 74616
     },
     {
       "case": "annot_javascript.pdf",
       "bytes": 671,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73580
+      "ms": 7,
+      "maxRssKiB": 75736
     },
     {
       "case": "annotation_highlight_rollover_ap.pdf",
       "bytes": 1180,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74664
+      "ms": 6,
+      "maxRssKiB": 74312
     },
     {
       "case": "annotation_markup_multiline_no_ap.pdf",
       "bytes": 2068,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73520
+      "ms": 6,
+      "maxRssKiB": 73880
     },
     {
       "case": "annotiter.pdf",
       "bytes": 2131,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71088
+      "ms": 6,
+      "maxRssKiB": 75156
     },
     {
       "case": "annots.pdf",
       "bytes": 5745,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72440
+      "ms": 7,
+      "maxRssKiB": 74152
     },
     {
       "case": "annots_action_handling.pdf",
       "bytes": 1938,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73828
+      "ms": 6,
+      "maxRssKiB": 74036
     },
     {
       "case": "arabic.pdf",
@@ -98,31 +98,31 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72684
+      "maxRssKiB": 75400
     },
     {
       "case": "bad_annots_entry.pdf",
       "bytes": 826,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73628
+      "ms": 8,
+      "maxRssKiB": 75140
     },
     {
       "case": "bad_dict_keys.pdf",
       "bytes": 367,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73460
+      "ms": 6,
+      "maxRssKiB": 74108
     },
     {
       "case": "bad_page_type.pdf",
       "bytes": 740,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74008,
+      "ms": 6,
+      "maxRssKiB": 75228,
       "code": "pdf/pages/missing-kids"
     },
     {
@@ -130,24 +130,24 @@
       "bytes": 2233,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71476
+      "ms": 6,
+      "maxRssKiB": 74568
     },
     {
       "case": "bookmarks.pdf",
       "bytes": 2239,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 69816
+      "ms": 9,
+      "maxRssKiB": 75844
     },
     {
       "case": "bookmarks_circular.pdf",
       "bytes": 1647,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74564,
+      "ms": 6,
+      "maxRssKiB": 76108,
       "code": "pdf/parser/stream/expected-endstream"
     },
     {
@@ -155,57 +155,57 @@
       "bytes": 2369,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73868
+      "ms": 8,
+      "maxRssKiB": 74516
     },
     {
       "case": "bookmarks_style.pdf",
       "bytes": 1887,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 70984
+      "ms": 7,
+      "maxRssKiB": 73932
     },
     {
       "case": "brotli_decodeparms.pdf",
       "bytes": 877,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74076
+      "ms": 7,
+      "maxRssKiB": 74008
     },
     {
       "case": "bug_1055869.pdf",
       "bytes": 6622,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73952
+      "ms": 7,
+      "maxRssKiB": 73876
     },
     {
       "case": "bug_1058653.pdf",
       "bytes": 7033,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 70688
+      "ms": 7,
+      "maxRssKiB": 75400
     },
     {
       "case": "bug_113.pdf",
       "bytes": 469,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72916,
-      "code": "pdf/xref/bad-digit"
+      "ms": 7,
+      "maxRssKiB": 74344,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "bug_1139.pdf",
       "bytes": 796,
       "class": "refused",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 72312,
+      "ms": 7,
+      "maxRssKiB": 74908,
       "code": "pdf/content/unknown-op"
     },
     {
@@ -213,67 +213,65 @@
       "bytes": 988,
       "class": "returned",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 73000
+      "ms": 7,
+      "maxRssKiB": 73276
     },
     {
       "case": "bug_1229106.pdf",
       "bytes": 967,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71672,
+      "ms": 7,
+      "maxRssKiB": 75644,
       "code": "pdf/pages/cycle"
     },
     {
       "case": "bug_1265.pdf",
       "bytes": 726,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73272,
-      "code": "pdf/xref/no-trailer"
+      "ms": 7,
+      "maxRssKiB": 75616
     },
     {
       "case": "bug_1296920.pdf",
       "bytes": 1629,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 68728
+      "ms": 8,
+      "maxRssKiB": 74724
     },
     {
       "case": "bug_1301.pdf",
       "bytes": 5795,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 72856,
-      "code": "pdf/document/no-startxref"
+      "ms": 7,
+      "maxRssKiB": 76584
     },
     {
       "case": "bug_1302355.pdf",
       "bytes": 883,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74160
+      "ms": 6,
+      "maxRssKiB": 75644
     },
     {
       "case": "bug_1302455.pdf",
       "bytes": 1102,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72964
+      "ms": 8,
+      "maxRssKiB": 74628
     },
     {
       "case": "bug_1324189.pdf",
       "bytes": 271,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72604,
+      "ms": 5,
+      "maxRssKiB": 73532,
       "code": "pdf/tokenizer/bad-hex"
     },
     {
@@ -281,8 +279,8 @@
       "bytes": 272,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73312,
+      "ms": 5,
+      "maxRssKiB": 73888,
       "code": "pdf/tokenizer/bad-hex"
     },
     {
@@ -290,40 +288,40 @@
       "bytes": 394,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73408
+      "ms": 6,
+      "maxRssKiB": 74784
     },
     {
       "case": "bug_1333298.pdf",
       "bytes": 5449,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73364
+      "ms": 6,
+      "maxRssKiB": 75012
     },
     {
       "case": "bug_1396264.pdf",
       "bytes": 2291,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73368
+      "ms": 6,
+      "maxRssKiB": 74204
     },
     {
       "case": "bug_1477093.pdf",
       "bytes": 1123,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73552
+      "ms": 6,
+      "maxRssKiB": 73816
     },
     {
       "case": "bug_1506.pdf",
       "bytes": 814,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 74656,
+      "ms": 8,
+      "maxRssKiB": 74360,
       "code": "pdf/pages/cycle"
     },
     {
@@ -331,16 +329,16 @@
       "bytes": 886,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74280
+      "ms": 6,
+      "maxRssKiB": 75044
     },
     {
       "case": "bug_1558.pdf",
       "bytes": 711,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71756
+      "ms": 8,
+      "maxRssKiB": 74600
     },
     {
       "case": "bug_1574.pdf",
@@ -348,211 +346,209 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 71560
+      "maxRssKiB": 73628
     },
     {
       "case": "bug_1591.pdf",
       "bytes": 1378,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74276
+      "ms": 7,
+      "maxRssKiB": 75256
     },
     {
       "case": "bug_1658.pdf",
       "bytes": 937,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72640
+      "ms": 6,
+      "maxRssKiB": 74456
     },
     {
       "case": "bug_1768.pdf",
       "bytes": 4984,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72040
+      "ms": 8,
+      "maxRssKiB": 74612
     },
     {
       "case": "bug_1769.pdf",
       "bytes": 938,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72508
+      "ms": 7,
+      "maxRssKiB": 74572
     },
     {
       "case": "bug_1893.pdf",
       "bytes": 760,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73944
+      "ms": 8,
+      "maxRssKiB": 74088
     },
     {
       "case": "bug_2034.pdf",
       "bytes": 26547,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 70568
+      "ms": 7,
+      "maxRssKiB": 74472
     },
     {
       "case": "bug_2132.pdf",
       "bytes": 844,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72452
+      "ms": 7,
+      "maxRssKiB": 74352
     },
     {
       "case": "bug_216.pdf",
       "bytes": 536,
       "class": "refused",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 70460,
-      "code": "pdf/document/no-startxref"
+      "ms": 6,
+      "maxRssKiB": 74620,
+      "code": "pdf/pages/missing-kids"
     },
     {
       "case": "bug_298.pdf",
       "bytes": 209,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73008,
-      "code": "pdf/parser/unexpected-keyword"
+      "ms": 6,
+      "maxRssKiB": 74568,
+      "code": "pdf/catalog/missing-pages"
     },
     {
       "case": "bug_306123.pdf",
       "bytes": 47568,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74044
+      "ms": 7,
+      "maxRssKiB": 76792
     },
     {
       "case": "bug_343075986.pdf",
       "bytes": 1016,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73256
+      "ms": 6,
+      "maxRssKiB": 75268
     },
     {
       "case": "bug_378120423.pdf",
       "bytes": 475,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73284
+      "ms": 6,
+      "maxRssKiB": 73828
     },
     {
       "case": "bug_384770169.pdf",
       "bytes": 783,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72328
+      "ms": 6,
+      "maxRssKiB": 73248
     },
     {
       "case": "bug_399689604.pdf",
       "bytes": 693,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72348
+      "ms": 6,
+      "maxRssKiB": 73532
     },
     {
       "case": "bug_40162073.pdf",
       "bytes": 967,
       "class": "returned",
       "ok": true,
-      "ms": 7,
-      "maxRssKiB": 72308
+      "ms": 6,
+      "maxRssKiB": 73924
     },
     {
       "case": "bug_402562387.pdf",
       "bytes": 19002,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73972
+      "ms": 6,
+      "maxRssKiB": 76880
     },
     {
       "case": "bug_410996566.pdf",
       "bytes": 843,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72468
+      "ms": 6,
+      "maxRssKiB": 70560
     },
     {
       "case": "bug_420508260.pdf",
       "bytes": 801,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71416
+      "ms": 6,
+      "maxRssKiB": 74972
     },
     {
       "case": "bug_42270471.pdf",
       "bytes": 1330,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71936,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 7,
+      "maxRssKiB": 75920
     },
     {
       "case": "bug_42271133.pdf",
       "bytes": 694,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73372
+      "ms": 6,
+      "maxRssKiB": 75460
     },
     {
       "case": "bug_425244539.pdf",
       "bytes": 703,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73116
+      "ms": 6,
+      "maxRssKiB": 73712
     },
     {
       "case": "bug_431824298.pdf",
       "bytes": 1791,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74700
+      "ms": 7,
+      "maxRssKiB": 75824
     },
     {
       "case": "bug_451265.pdf",
       "bytes": 1230,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74056
+      "ms": 6,
+      "maxRssKiB": 75004
     },
     {
       "case": "bug_452455.pdf",
       "bytes": 1082,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73668,
-      "code": "pdf/trailer/missing-size"
+      "ms": 7,
+      "maxRssKiB": 75236
     },
     {
       "case": "bug_454695.pdf",
       "bytes": 188,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71772,
+      "ms": 5,
+      "maxRssKiB": 73400,
       "code": "pdf/catalog/not-dict"
     },
     {
@@ -560,17 +556,17 @@
       "bytes": 685,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71692,
-      "code": "pdf/trailer/missing-size"
+      "ms": 7,
+      "maxRssKiB": 74980,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "bug_461845674.pdf",
       "bytes": 479,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71164
+      "ms": 6,
+      "maxRssKiB": 73000
     },
     {
       "case": "bug_481363.pdf",
@@ -578,33 +574,32 @@
       "class": "refused",
       "ok": true,
       "ms": 5,
-      "maxRssKiB": 73956,
+      "maxRssKiB": 75544,
       "code": "pdf/parser/dict-key-not-name"
     },
     {
       "case": "bug_487928.pdf",
       "bytes": 2696,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73044,
-      "code": "pdf/trailer/missing-size"
+      "ms": 7,
+      "maxRssKiB": 75376
     },
     {
       "case": "bug_488948351.pdf",
       "bytes": 2411,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72688
+      "ms": 7,
+      "maxRssKiB": 74012
     },
     {
       "case": "bug_491161396.pdf",
       "bytes": 753,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73212
+      "ms": 6,
+      "maxRssKiB": 75812
     },
     {
       "case": "bug_491516663.pdf",
@@ -612,63 +607,63 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72864
+      "maxRssKiB": 74192
     },
     {
       "case": "bug_498010830_shared_annots.pdf",
       "bytes": 721,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 74268
+      "ms": 6,
+      "maxRssKiB": 74216
     },
     {
       "case": "bug_498010830_shared_widget.pdf",
       "bytes": 666,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71340
+      "ms": 6,
+      "maxRssKiB": 74544
     },
     {
       "case": "bug_504416752.pdf",
       "bytes": 6987,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71612
+      "ms": 5,
+      "maxRssKiB": 74712
     },
     {
       "case": "bug_507316.pdf",
       "bytes": 1924,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71312
+      "ms": 6,
+      "maxRssKiB": 75464
     },
     {
       "case": "bug_509964646.pdf",
       "bytes": 1167,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71920
+      "ms": 7,
+      "maxRssKiB": 74656
     },
     {
       "case": "bug_517126568.pdf",
       "bytes": 577,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 70400
+      "ms": 7,
+      "maxRssKiB": 74392
     },
     {
       "case": "bug_544880.pdf",
       "bytes": 258,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74388,
+      "ms": 6,
+      "maxRssKiB": 75424,
       "code": "pdf/pages/cycle"
     },
     {
@@ -676,25 +671,24 @@
       "bytes": 678,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73196
+      "ms": 6,
+      "maxRssKiB": 74412
     },
     {
       "case": "bug_551248.pdf",
       "bytes": 2134,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 74352,
-      "code": "pdf/trailer/missing-size"
+      "ms": 7,
+      "maxRssKiB": 75200
     },
     {
       "case": "bug_552046.pdf",
       "bytes": 746,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72492,
+      "ms": 6,
+      "maxRssKiB": 74548,
       "code": "pdf/content/unknown-op"
     },
     {
@@ -702,24 +696,24 @@
       "bytes": 1175,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73896
+      "ms": 6,
+      "maxRssKiB": 74916
     },
     {
       "case": "bug_555784.pdf",
       "bytes": 36626,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73740
+      "ms": 6,
+      "maxRssKiB": 74200
     },
     {
       "case": "bug_57.pdf",
       "bytes": 693,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72612,
+      "ms": 5,
+      "maxRssKiB": 74140,
       "code": "pdf/parser/indirect-missing-endobj"
     },
     {
@@ -727,96 +721,91 @@
       "bytes": 1482,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73064
+      "ms": 6,
+      "maxRssKiB": 74328
     },
     {
       "case": "bug_620428.pdf",
       "bytes": 2734,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 70668,
-      "code": "pdf/trailer/missing-size"
+      "maxRssKiB": 75024
     },
     {
       "case": "bug_634394.pdf",
       "bytes": 2222,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71380,
-      "code": "pdf/trailer/missing-size"
+      "ms": 7,
+      "maxRssKiB": 76316
     },
     {
       "case": "bug_634716.pdf",
       "bytes": 3115,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71336,
-      "code": "pdf/trailer/missing-size"
+      "ms": 8,
+      "maxRssKiB": 74572
     },
     {
       "case": "bug_642.pdf",
       "bytes": 3270,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 70748
+      "ms": 7,
+      "maxRssKiB": 76212
     },
     {
       "case": "bug_644.pdf",
       "bytes": 1119,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71400,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 7,
+      "maxRssKiB": 73996,
+      "code": "pdf/document/encrypted"
     },
     {
       "case": "bug_664284.pdf",
       "bytes": 20874,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72564,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 7,
+      "maxRssKiB": 75940,
+      "code": "pdf/document/missing-xref"
     },
     {
       "case": "bug_674771.pdf",
       "bytes": 995,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74308
+      "ms": 7,
+      "maxRssKiB": 74924
     },
     {
       "case": "bug_679649.pdf",
       "bytes": 2052,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 73692,
-      "code": "pdf/parser/indirect-bad-num"
+      "ms": 7,
+      "maxRssKiB": 75676
     },
     {
       "case": "bug_680376.pdf",
       "bytes": 2236,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72748,
+      "ms": 6,
+      "maxRssKiB": 75848,
       "code": "pdf/pages/cycle"
     },
     {
       "case": "bug_709793.pdf",
       "bytes": 429,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73572,
-      "code": "pdf/trailer/missing-size"
+      "ms": 6,
+      "maxRssKiB": 74968
     },
     {
       "case": "bug_713197.pdf",
@@ -824,31 +813,31 @@
       "class": "returned",
       "ok": true,
       "ms": 5,
-      "maxRssKiB": 72752
+      "maxRssKiB": 75480
     },
     {
       "case": "bug_750568.pdf",
       "bytes": 1019,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74604
+      "ms": 7,
+      "maxRssKiB": 73524
     },
     {
       "case": "bug_765384.pdf",
       "bytes": 2321,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71484
+      "ms": 6,
+      "maxRssKiB": 73912
     },
     {
       "case": "bug_779.pdf",
       "bytes": 685,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74720
+      "ms": 6,
+      "maxRssKiB": 75384
     },
     {
       "case": "bug_821454.pdf",
@@ -856,7 +845,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72860
+      "maxRssKiB": 74328
     },
     {
       "case": "bug_861842.pdf",
@@ -864,39 +853,39 @@
       "class": "returned",
       "ok": true,
       "ms": 5,
-      "maxRssKiB": 72508
+      "maxRssKiB": 75004
     },
     {
       "case": "bug_889099.pdf",
       "bytes": 928,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72640
+      "ms": 6,
+      "maxRssKiB": 74380
     },
     {
       "case": "bug_890322.pdf",
       "bytes": 855,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73264
+      "ms": 6,
+      "maxRssKiB": 74348
     },
     {
       "case": "bug_896366.pdf",
       "bytes": 874,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73648
+      "ms": 6,
+      "maxRssKiB": 74404
     },
     {
       "case": "bug_900552.pdf",
       "bytes": 1131,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71768,
+      "ms": 5,
+      "maxRssKiB": 72900,
       "code": "pdf/parser/indirect-missing-endobj"
     },
     {
@@ -904,8 +893,8 @@
       "bytes": 1128,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71612,
+      "ms": 5,
+      "maxRssKiB": 74808,
       "code": "pdf/parser/indirect-missing-endobj"
     },
     {
@@ -913,8 +902,8 @@
       "bytes": 1150,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72176,
+      "ms": 5,
+      "maxRssKiB": 74412,
       "code": "pdf/parser/indirect-missing-endobj"
     },
     {
@@ -922,8 +911,8 @@
       "bytes": 475,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72240,
+      "ms": 7,
+      "maxRssKiB": 74660,
       "code": "pdf/flate/inflate-failed"
     },
     {
@@ -931,8 +920,8 @@
       "bytes": 3638,
       "class": "returned",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 72952
+      "ms": 8,
+      "maxRssKiB": 74720
     },
     {
       "case": "bug_925981.pdf",
@@ -940,31 +929,31 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 71316
+      "maxRssKiB": 74608
     },
     {
       "case": "bug_972518.pdf",
       "bytes": 1261,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72804
+      "ms": 6,
+      "maxRssKiB": 75012
     },
     {
       "case": "calculate.pdf",
       "bytes": 2020,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73068
+      "ms": 7,
+      "maxRssKiB": 74228
     },
     {
       "case": "circular_viewer_ref.pdf",
       "bytes": 513,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72024,
+      "ms": 5,
+      "maxRssKiB": 74140,
       "code": "pdf/catalog/missing-pages"
     },
     {
@@ -972,136 +961,136 @@
       "bytes": 16250,
       "class": "returned",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 73788
+      "ms": 7,
+      "maxRssKiB": 75520
     },
     {
       "case": "clip_path.pdf",
       "bytes": 514,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72968
+      "ms": 6,
+      "maxRssKiB": 74928
     },
     {
       "case": "combobox_form.pdf",
       "bytes": 1738,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73192
+      "ms": 7,
+      "maxRssKiB": 74524
     },
     {
       "case": "control_characters.pdf",
       "bytes": 784,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74284
+      "ms": 6,
+      "maxRssKiB": 73752
     },
     {
       "case": "cropped_no_overlap.pdf",
       "bytes": 503,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73260
+      "ms": 6,
+      "maxRssKiB": 73528
     },
     {
       "case": "cropped_text.pdf",
       "bytes": 1855,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73768
+      "ms": 7,
+      "maxRssKiB": 75052
     },
     {
       "case": "dashed_lines.pdf",
       "bytes": 539,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73388
+      "ms": 6,
+      "maxRssKiB": 74644
     },
     {
       "case": "docmdp.pdf",
       "bytes": 1262,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72296
+      "ms": 7,
+      "maxRssKiB": 74516
     },
     {
       "case": "document_aactions.pdf",
       "bytes": 2018,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73276
+      "ms": 6,
+      "maxRssKiB": 73900
     },
     {
       "case": "embedded_attachments_invalid_data.pdf",
       "bytes": 638,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72988
+      "ms": 5,
+      "maxRssKiB": 74796
     },
     {
       "case": "embedded_attachments_invalid_types.pdf",
       "bytes": 1172,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73088
+      "ms": 7,
+      "maxRssKiB": 73480
     },
     {
       "case": "embedded_attachments_with_af.pdf",
       "bytes": 1143,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71380
+      "ms": 6,
+      "maxRssKiB": 73472
     },
     {
       "case": "embedded_attachments_with_desc.pdf",
       "bytes": 1417,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71248
+      "ms": 6,
+      "maxRssKiB": 74128
     },
     {
       "case": "find_text_consecutive.pdf",
       "bytes": 654,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74096
+      "ms": 6,
+      "maxRssKiB": 73988
     },
     {
       "case": "font_matrix.pdf",
       "bytes": 790,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74320
+      "ms": 6,
+      "maxRssKiB": 74152
     },
     {
       "case": "font_weight.pdf",
       "bytes": 1418,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74540
+      "ms": 8,
+      "maxRssKiB": 74912
     },
     {
       "case": "form_object.pdf",
       "bytes": 930,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73948,
+      "ms": 6,
+      "maxRssKiB": 75128,
       "code": "pdf/parser/stream/expected-endstream"
     },
     {
@@ -1109,96 +1098,96 @@
       "bytes": 1039,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74280
+      "ms": 6,
+      "maxRssKiB": 74724
     },
     {
       "case": "form_object_with_path.pdf",
       "bytes": 859,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72680
+      "ms": 6,
+      "maxRssKiB": 74628
     },
     {
       "case": "form_object_with_text.pdf",
       "bytes": 1034,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72812
+      "ms": 6,
+      "maxRssKiB": 74044
     },
     {
       "case": "get_page_aaction.pdf",
       "bytes": 842,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73884
+      "ms": 6,
+      "maxRssKiB": 74772
     },
     {
       "case": "goto_action.pdf",
       "bytes": 696,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71876
+      "ms": 5,
+      "maxRssKiB": 74524
     },
     {
       "case": "gotoe_action.pdf",
       "bytes": 720,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 70676
+      "ms": 6,
+      "maxRssKiB": 75040
     },
     {
       "case": "hebrew_mirrored.pdf",
       "bytes": 5931,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73388
+      "ms": 6,
+      "maxRssKiB": 76752
     },
     {
       "case": "hello_world.pdf",
       "bytes": 840,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73288
+      "ms": 7,
+      "maxRssKiB": 73520
     },
     {
       "case": "hello_world_2_pages.pdf",
       "bytes": 962,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73452
+      "ms": 6,
+      "maxRssKiB": 74312
     },
     {
       "case": "hello_world_2_pages_custom_object.pdf",
       "bytes": 983,
       "class": "returned",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 74468
+      "ms": 8,
+      "maxRssKiB": 75876
     },
     {
       "case": "hello_world_2_pages_shared_resources_dict.pdf",
       "bytes": 939,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73256
+      "ms": 6,
+      "maxRssKiB": 76984
     },
     {
       "case": "hello_world_2_pages_split_streams.pdf",
       "bytes": 1082,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71284,
+      "ms": 6,
+      "maxRssKiB": 74472,
       "code": "pdf/parser/indirect-missing-endobj"
     },
     {
@@ -1207,7 +1196,7 @@
       "class": "refused",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 73936,
+      "maxRssKiB": 75084,
       "code": "pdf/filter/unsupported"
     },
     {
@@ -1215,8 +1204,8 @@
       "bytes": 860,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72740,
+      "ms": 7,
+      "maxRssKiB": 74908,
       "code": "pdf/filter/unsupported"
     },
     {
@@ -1224,97 +1213,96 @@
       "bytes": 1414,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72716
+      "ms": 7,
+      "maxRssKiB": 74356
     },
     {
       "case": "hello_world_split_streams.pdf",
       "bytes": 922,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71664
+      "ms": 6,
+      "maxRssKiB": 75264
     },
     {
       "case": "hello_world_with_invisible_spaces.pdf",
       "bytes": 825,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73792
+      "ms": 8,
+      "maxRssKiB": 74288
     },
     {
       "case": "image_clipped.pdf",
       "bytes": 849,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73284
+      "ms": 6,
+      "maxRssKiB": 75224
     },
     {
       "case": "ink_annot.pdf",
       "bytes": 780,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 70000
+      "ms": 7,
+      "maxRssKiB": 75588
     },
     {
       "case": "jpeg_reduced_size.pdf",
       "bytes": 24236,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71556
+      "ms": 6,
+      "maxRssKiB": 74288
     },
     {
       "case": "jpeg_reduced_size_with_smask.pdf",
       "bytes": 40091,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72084
+      "ms": 7,
+      "maxRssKiB": 75064
     },
     {
       "case": "jpeg_unaligned_no_reduce.pdf",
       "bytes": 18423,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73356
+      "ms": 7,
+      "maxRssKiB": 74576
     },
     {
       "case": "jpx_lzw.pdf",
       "bytes": 1152,
       "class": "returned",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 73500
+      "ms": 8,
+      "maxRssKiB": 75052
     },
     {
       "case": "js.pdf",
       "bytes": 1145,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 73892,
-      "code": "pdf/parser/indirect-missing-obj"
+      "ms": 8,
+      "maxRssKiB": 74316
     },
     {
       "case": "launch_action.pdf",
       "bytes": 799,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72668
+      "ms": 6,
+      "maxRssKiB": 75968
     },
     {
       "case": "line_annot.pdf",
       "bytes": 789,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73044
+      "ms": 7,
+      "maxRssKiB": 76244
     },
     {
       "case": "links_highlights_annots.pdf",
@@ -1322,31 +1310,31 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 73148
+      "maxRssKiB": 74508
     },
     {
       "case": "listbox_form.pdf",
       "bytes": 3012,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 70820
+      "ms": 7,
+      "maxRssKiB": 75316
     },
     {
       "case": "many_rectangles.pdf",
       "bytes": 45529,
       "class": "returned",
       "ok": true,
-      "ms": 8,
-      "maxRssKiB": 78736
+      "ms": 9,
+      "maxRssKiB": 80536
     },
     {
       "case": "many_rectangles_brotli.pdf",
       "bytes": 3283,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74100,
+      "ms": 6,
+      "maxRssKiB": 73996,
       "code": "pdf/filter/unsupported"
     },
     {
@@ -1355,7 +1343,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72992
+      "maxRssKiB": 74328
     },
     {
       "case": "matte.pdf",
@@ -1363,7 +1351,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 73508
+      "maxRssKiB": 75220
     },
     {
       "case": "multiple_form_types.pdf",
@@ -1371,31 +1359,31 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 71956
+      "maxRssKiB": 74268
     },
     {
       "case": "multiple_graphics_states.pdf",
       "bytes": 830,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72420
+      "ms": 6,
+      "maxRssKiB": 73736
     },
     {
       "case": "named_action.pdf",
       "bytes": 678,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73220
+      "ms": 7,
+      "maxRssKiB": 74484
     },
     {
       "case": "named_dests.pdf",
       "bytes": 2010,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72440,
+      "ms": 6,
+      "maxRssKiB": 75500,
       "code": "pdf/parser/stream/expected-endstream"
     },
     {
@@ -1404,23 +1392,23 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 74228
+      "maxRssKiB": 74760
     },
     {
       "case": "named_dests_old_style_indirect.pdf",
       "bytes": 1097,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73964
+      "ms": 8,
+      "maxRssKiB": 73016
     },
     {
       "case": "no_page_count.pdf",
       "bytes": 723,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71648,
+      "ms": 6,
+      "maxRssKiB": 74448,
       "code": "pdf/pages/cycle"
     },
     {
@@ -1428,32 +1416,32 @@
       "bytes": 406,
       "class": "returned",
       "ok": true,
-      "ms": 9,
-      "maxRssKiB": 73384
+      "ms": 6,
+      "maxRssKiB": 74036
     },
     {
       "case": "nonesuch_action.pdf",
       "bytes": 687,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73728
+      "ms": 6,
+      "maxRssKiB": 74828
     },
     {
       "case": "page_tree_empty_node.pdf",
       "bytes": 620,
       "class": "returned",
       "ok": true,
-      "ms": 7,
-      "maxRssKiB": 73388
+      "ms": 6,
+      "maxRssKiB": 75436
     },
     {
       "case": "pattern_fill.pdf",
       "bytes": 754,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72812
+      "ms": 6,
+      "maxRssKiB": 74524
     },
     {
       "case": "pattern_fill_uncolored.pdf",
@@ -1461,7 +1449,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72844
+      "maxRssKiB": 74784
     },
     {
       "case": "pattern_stroke.pdf",
@@ -1469,23 +1457,23 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72812
+      "maxRssKiB": 74592
     },
     {
       "case": "pattern_stroke_uncolored.pdf",
       "bytes": 828,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72012
+      "ms": 7,
+      "maxRssKiB": 74428
     },
     {
       "case": "polygon_annot.pdf",
       "bytes": 794,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73380
+      "ms": 7,
+      "maxRssKiB": 74052
     },
     {
       "case": "raw_type_text.pdf",
@@ -1493,7 +1481,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 73692
+      "maxRssKiB": 74888
     },
     {
       "case": "rectangles.pdf",
@@ -1501,15 +1489,15 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72748
+      "maxRssKiB": 74388
     },
     {
       "case": "rectangles_brotli.pdf",
       "bytes": 594,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72864,
+      "ms": 6,
+      "maxRssKiB": 74348,
       "code": "pdf/filter/unsupported"
     },
     {
@@ -1517,8 +1505,8 @@
       "bytes": 661,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74108
+      "ms": 6,
+      "maxRssKiB": 75276
     },
     {
       "case": "rectangles_multi_pages.pdf",
@@ -1526,31 +1514,31 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72240
+      "maxRssKiB": 74760
     },
     {
       "case": "rectangles_object_zero.pdf",
       "bytes": 688,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73552
+      "ms": 7,
+      "maxRssKiB": 74676
     },
     {
       "case": "rectangles_with_leaky_ctm.pdf",
       "bytes": 727,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74496
+      "ms": 6,
+      "maxRssKiB": 72716
     },
     {
       "case": "redact_annot.pdf",
       "bytes": 683,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72740
+      "ms": 6,
+      "maxRssKiB": 75008
     },
     {
       "case": "redirect.pdf",
@@ -1558,15 +1546,15 @@
       "class": "returned",
       "ok": true,
       "ms": 5,
-      "maxRssKiB": 72540
+      "maxRssKiB": 73664
     },
     {
       "case": "repeat_viewer_ref.pdf",
       "bytes": 539,
       "class": "refused",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 70316,
+      "ms": 5,
+      "maxRssKiB": 73624,
       "code": "pdf/parser/dict-key-not-name"
     },
     {
@@ -1575,15 +1563,15 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72956
+      "maxRssKiB": 73812
     },
     {
       "case": "rotated_text.pdf",
       "bytes": 1010,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71336
+      "ms": 6,
+      "maxRssKiB": 73944
     },
     {
       "case": "rotated_text_90.pdf",
@@ -1591,23 +1579,23 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72264
+      "maxRssKiB": 75368
     },
     {
       "case": "shared_form_xobject_matrix.pdf",
       "bytes": 1250,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72652
+      "ms": 6,
+      "maxRssKiB": 74184
     },
     {
       "case": "signature_no_sub_filter.pdf",
       "bytes": 1701,
       "class": "returned",
       "ok": true,
-      "ms": 9,
-      "maxRssKiB": 74644
+      "ms": 6,
+      "maxRssKiB": 74712
     },
     {
       "case": "signature_reason.pdf",
@@ -1615,39 +1603,39 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 73960
+      "maxRssKiB": 74984
     },
     {
       "case": "simple_thumbnail.pdf",
       "bytes": 4514,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71628
+      "ms": 6,
+      "maxRssKiB": 74828
     },
     {
       "case": "simple_xfa.pdf",
       "bytes": 5801,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 75160
+      "ms": 6,
+      "maxRssKiB": 75284
     },
     {
       "case": "split_streams.pdf",
       "bytes": 3502,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72808
+      "ms": 7,
+      "maxRssKiB": 74712
     },
     {
       "case": "tagged_actual_text.pdf",
       "bytes": 2440,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74208,
+      "ms": 6,
+      "maxRssKiB": 76544,
       "code": "pdf/content/unknown-op"
     },
     {
@@ -1656,7 +1644,7 @@
       "class": "refused",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72744,
+      "maxRssKiB": 74636,
       "code": "pdf/content/unknown-op"
     },
     {
@@ -1664,8 +1652,8 @@
       "bytes": 1248,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73104
+      "ms": 6,
+      "maxRssKiB": 75096
     },
     {
       "case": "tagged_marked_content.pdf",
@@ -1673,15 +1661,15 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 74312
+      "maxRssKiB": 75064
     },
     {
       "case": "tagged_mcr_multipage.pdf",
       "bytes": 1635,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73312
+      "ms": 6,
+      "maxRssKiB": 77096
     },
     {
       "case": "tagged_mcr_objr.pdf",
@@ -1689,7 +1677,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72508
+      "maxRssKiB": 74604
     },
     {
       "case": "tagged_nested.pdf",
@@ -1697,15 +1685,15 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 71460
+      "maxRssKiB": 74752
     },
     {
       "case": "tagged_table.pdf",
       "bytes": 3205,
       "class": "refused",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 74608,
+      "ms": 7,
+      "maxRssKiB": 75728,
       "code": "pdf/content/unknown-op"
     },
     {
@@ -1714,7 +1702,7 @@
       "class": "refused",
       "ok": true,
       "ms": 7,
-      "maxRssKiB": 70552,
+      "maxRssKiB": 75232,
       "code": "pdf/content/unknown-op"
     },
     {
@@ -1722,8 +1710,8 @@
       "bytes": 3173,
       "class": "refused",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 73452,
+      "ms": 7,
+      "maxRssKiB": 75932,
       "code": "pdf/content/unknown-op"
     },
     {
@@ -1731,16 +1719,16 @@
       "bytes": 659,
       "class": "returned",
       "ok": true,
-      "ms": 7,
-      "maxRssKiB": 73872
+      "ms": 6,
+      "maxRssKiB": 74844
     },
     {
       "case": "text_form.pdf",
       "bytes": 927,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73824
+      "ms": 6,
+      "maxRssKiB": 77456
     },
     {
       "case": "text_form_color.pdf",
@@ -1748,7 +1736,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 73804
+      "maxRssKiB": 75100
     },
     {
       "case": "text_form_multiline.pdf",
@@ -1756,23 +1744,23 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 73608
+      "maxRssKiB": 74644
     },
     {
       "case": "text_form_multiple.pdf",
       "bytes": 1483,
       "class": "returned",
       "ok": true,
-      "ms": 7,
-      "maxRssKiB": 74252
+      "ms": 6,
+      "maxRssKiB": 76004
     },
     {
       "case": "text_form_negative_fontsize.pdf",
       "bytes": 1013,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73680
+      "ms": 6,
+      "maxRssKiB": 75356
     },
     {
       "case": "text_in_page_marked.pdf",
@@ -1780,7 +1768,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72704
+      "maxRssKiB": 74308
     },
     {
       "case": "text_in_page_marked_indirect.pdf",
@@ -1788,40 +1776,39 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72744
+      "maxRssKiB": 73572
     },
     {
       "case": "text_large_ascent_descent.pdf",
       "bytes": 1419,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71472
+      "ms": 6,
+      "maxRssKiB": 74868
     },
     {
       "case": "thumbnail_with_empty_stream.pdf",
       "bytes": 545,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73848
+      "ms": 6,
+      "maxRssKiB": 75148
     },
     {
       "case": "thumbnail_with_no_filters.pdf",
       "bytes": 907,
       "class": "returned",
       "ok": true,
-      "ms": 6,
-      "maxRssKiB": 73744
+      "ms": 5,
+      "maxRssKiB": 75940
     },
     {
       "case": "trailer_as_hexstring.pdf",
       "bytes": 466,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 72720,
-      "code": "pdf/xref/trailer-not-dict"
+      "ms": 6,
+      "maxRssKiB": 74336
     },
     {
       "case": "trailer_end_trailing_space.pdf",
@@ -1829,16 +1816,15 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 72532
+      "maxRssKiB": 75868
     },
     {
       "case": "trailer_unterminated.pdf",
       "bytes": 472,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 70108,
-      "code": "pdf/parser/dict-key-not-name"
+      "ms": 6,
+      "maxRssKiB": 74684
     },
     {
       "case": "two_signatures.pdf",
@@ -1846,7 +1832,7 @@
       "class": "returned",
       "ok": true,
       "ms": 6,
-      "maxRssKiB": 73764
+      "maxRssKiB": 73872
     },
     {
       "case": "unsupported_feature.pdf",
@@ -1854,15 +1840,15 @@
       "class": "returned",
       "ok": true,
       "ms": 5,
-      "maxRssKiB": 71296
+      "maxRssKiB": 72520
     },
     {
       "case": "uri_action.pdf",
       "bytes": 721,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71376
+      "ms": 6,
+      "maxRssKiB": 75396
     },
     {
       "case": "uri_action_nonascii.pdf",
@@ -1870,39 +1856,39 @@
       "class": "returned",
       "ok": true,
       "ms": 5,
-      "maxRssKiB": 72820
+      "maxRssKiB": 74992
     },
     {
       "case": "use_outlines.pdf",
       "bytes": 805,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73152
+      "ms": 6,
+      "maxRssKiB": 74636
     },
     {
       "case": "utf-8.pdf",
       "bytes": 747,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72856
+      "ms": 6,
+      "maxRssKiB": 74756
     },
     {
       "case": "version_in_catalog.pdf",
       "bytes": 380,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 73456
+      "ms": 5,
+      "maxRssKiB": 75480
     },
     {
       "case": "vertical_text.pdf",
       "bytes": 3518,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 71996
+      "ms": 6,
+      "maxRssKiB": 75580
     },
     {
       "case": "viewer_pref_types.pdf",
@@ -1910,15 +1896,15 @@
       "class": "returned",
       "ok": true,
       "ms": 5,
-      "maxRssKiB": 72596
+      "maxRssKiB": 75216
     },
     {
       "case": "viewer_ref.pdf",
       "bytes": 1200,
       "class": "refused",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 73092,
+      "ms": 6,
+      "maxRssKiB": 75716,
       "code": "pdf/pages/cycle"
     },
     {
@@ -1926,68 +1912,67 @@
       "bytes": 1172,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72780
+      "ms": 6,
+      "maxRssKiB": 73704
     },
     {
       "case": "weblinks_across_lines.pdf",
       "bytes": 1130,
       "class": "returned",
       "ok": true,
-      "ms": 7,
-      "maxRssKiB": 72516
+      "ms": 6,
+      "maxRssKiB": 75656
     },
     {
       "case": "xfa/xfa_break_before_after.pdf",
       "bytes": 6449,
-      "class": "refused",
+      "class": "returned",
       "ok": true,
-      "ms": 3,
-      "maxRssKiB": 74404,
-      "code": "pdf/document/no-startxref"
+      "ms": 7,
+      "maxRssKiB": 75292
     },
     {
       "case": "xfa/xfa_combobox.pdf",
       "bytes": 5976,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74780
+      "ms": 6,
+      "maxRssKiB": 75064
     },
     {
       "case": "xfa/xfa_date_time_edit.pdf",
       "bytes": 5827,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 72196
+      "ms": 6,
+      "maxRssKiB": 74380
     },
     {
       "case": "xfa/xfa_image_edit.pdf",
       "bytes": 14267,
       "class": "returned",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71512
+      "ms": 5,
+      "maxRssKiB": 74600
     },
     {
       "case": "xfa/xfa_multiline_textfield.pdf",
       "bytes": 5911,
       "class": "returned",
       "ok": true,
-      "ms": 5,
-      "maxRssKiB": 74524
+      "ms": 6,
+      "maxRssKiB": 75028
     },
     {
       "case": "zero_length_stream.pdf",
       "bytes": 874,
       "class": "refused",
       "ok": true,
-      "ms": 4,
-      "maxRssKiB": 71436,
+      "ms": 5,
+      "maxRssKiB": 74364,
       "code": "pdf/parser/indirect-missing-endobj"
     }
   ],
-  "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
-  "date": "2026-10-16"
+  "commit": "83906e8762fa132f9e3956d3a89898978f093e80",
+  "date": "2026-11-11"
 }

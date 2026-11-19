@@ -9,7 +9,7 @@ status: complete
 
 # ua
 
-> User agent detection — mobile, touch, and OS platform. All values computed once at init.
+> Client detection — mobile, touch and platform, from UA Client Hints first and the UA string only where they say nothing.
 
 **Module** `ua` | **Source** `packages/front/fw/src/dom/utils/ua.js` | **Deps** none | **Worker-safe** no
 
@@ -25,9 +25,9 @@ const ua = runtime.resolve('ua');
 | Method | Signature | Returns |
 |---------|-----------|---------|
 | `string` | `() => string` | Raw `navigator.userAgent` (computed at init) |
-| `mobile` | `() => boolean` | `true` on iOS/Android (pattern match at init) |
+| `mobile` | `() => boolean` | `true` on a phone-class device: UA-CH `mobile`, else "Mobi" in the UA (computed at init) |
 | `touch` | `() => boolean` | Touch support (evaluated on each call) |
-| `platform` | `() => 'ios' \| 'android' \| 'windows' \| 'mac' \| 'linux' \| 'unknown'` | Normalized OS (computed at init) |
+| `platform` | `() => 'ios' \| 'android' \| 'windows' \| 'mac' \| 'linux' \| 'unknown'` | Normalized OS: UA-CH `platform`, else the UA string (computed at init) |
 
 ### `ua.string() → string`
 
@@ -40,13 +40,15 @@ ua.string();
 
 ### `ua.mobile() → boolean`
 
-Detects a mobile device via pattern matching on the UA string.
+`true` on a phone-class device, following MDN's "Browser detection using the user
+agent": `navigator.userAgentData.mobile` (User-Agent Client Hints, Chromium-based
+browsers) when it exists, else the string "Mobi" anywhere in the UA. Tablets are not
+mobile (an Android tablet UA has no "Mobile" token); an iPad in Safari's mobile mode
+sends "Mobile/…" and is. Computed once at init.
 
 ```js
-ua.mobile();  // → true on iOS, Android, etc.
+ua.mobile();  // → true on a phone
 ```
-
-Pattern-list detection (two regexes: full UA + 4-character prefix), computed once at init. Behaviour is pinned by the module's test table.
 
 ### `ua.touch() → boolean`
 
@@ -56,11 +58,13 @@ Detects touch support at call time (runtime check).
 ua.touch();  // → true if the device supports touch
 ```
 
-Checks `'ontouchstart' in window` AND `navigator.maxTouchPoints > 0`. May change on hybrid devices (touch laptops).
+`true` when `'ontouchstart' in window` OR `navigator.maxTouchPoints > 0`. May change on hybrid devices (touch laptops).
 
 ### `ua.platform() → string`
 
-Normalized OS — value computed at init.
+Normalized OS — value computed at init. `navigator.userAgentData.platform` first (`Windows`, `macOS`, `Linux`,
+`Android`, `iOS`, and `Chrome OS` → `'linux'`; any other hint → `'unknown'`), else a few UA tokens. A `Macintosh`
+UA on a device with more than one touch point is iPadOS asking for desktop sites, so it reads `'ios'`.
 
 | Returns | System |
 |--------|---------|
@@ -110,7 +114,8 @@ if (ua.platform() === 'ios') {
 
 - `mobile()`, `platform()`, and `string()` return values computed once at init — no per-call overhead.
 - `touch()` is evaluated on each call because it may change on hybrid devices.
-- UA detection is **heuristic** and can be spoofed. Prefer feature detection (`ua.touch()`, `media.isSupported()`) when possible.
+- Detection is **heuristic** and both the UA string and the hints can be spoofed (an emulator that overrides the UA string also derives the hints from it). Prefer feature detection (`ua.touch()`, `media.isSupported()`) when a capability is what you need.
+- Measured in headless Chromium 148: `userAgentData` `{ platform: 'Windows', mobile: false }` → `platform()` `'windows'`, `mobile()` `false`.
 - Returns empty strings in non-browser environments.
 
 ## See also

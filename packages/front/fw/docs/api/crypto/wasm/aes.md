@@ -59,7 +59,7 @@ All methods resolve `false` (never throw) when a parameter is invalid (`[crypto]
 
 ### CTR counter / nonce note
 
-The frozen `aes_ctr` ABI consumes a **12-byte nonce**: the 16-byte counter block is `nonce(12) ‖ be32(0)` with the 32-bit block counter starting at `0` (J0-style). This matches the package KAT, which cross-checks against WebCrypto AES-CTR configured with `counter = nonce ‖ be32(0)`, `length: 32`. (The task plan's indicative ABI named a 16-byte full-width counter; the delivered binary — `targets.json` + `shims/aes.c` — is authoritative.)
+The frozen `aes_ctr` ABI consumes a **12-byte nonce**: the 16-byte counter block is `nonce(12) ‖ be32(0)` with the 32-bit block counter starting at `0` (J0-style). This matches the package KAT, which cross-checks against WebCrypto AES-CTR configured with `counter = nonce ‖ be32(0)`, `length: 32`. (An earlier ABI draft named a 16-byte full-width counter; the delivered binary — `targets.json` + `shims/aes.c` — is authoritative.)
 
 ## Examples
 

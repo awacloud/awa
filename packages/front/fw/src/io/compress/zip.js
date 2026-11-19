@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -35,7 +35,7 @@
  *
  * Set `level: 0` to store without compression.
  *
- * ## Deterministic / reproducible archives (BL-28)
+ * ## Deterministic / reproducible archives
  *
  * `opts.mtime` (writer-level default) also accepts `number|Date`, on both
  * write paths: `zipSync`/`zip`'s `opts` argument and `ZipStream`'s
@@ -192,7 +192,7 @@ export const zip = {
             if (y < 0 || y > 119) {
                 const e = new Error('date not in range 1980-2099');
                 // @ts-ignore - Error.code is a non-standard but widely-used extension
-                e.code = 10;
+                e.code = 'EBADDATE'; e.errno = 10;
                 throw e;
             }
             return (y << 25) | ((d.getMonth() + 1) << 21) | (d.getDate() << 16)
@@ -209,7 +209,7 @@ export const zip = {
             if (ex) for (const k in ex) {
                 const l = ex[k].length;
                 // @ts-ignore - Error.code is a non-standard but widely-used extension
-                if (l > 65535) { const e = new Error('extra field too long'); e.code = 9; throw e; }
+                if (l > 65535) { const e = new Error('extra field too long'); e.code = 'EEXTRATOOLONG'; e.errno = 9; throw e; }
                 le += l + 4;
             }
             return le;
@@ -310,16 +310,32 @@ export const zip = {
         function _readCDE(d, b, zip64) {
             const fnl  = _r16(d, b + 28);
             const utf8 = (_r16(d, b + 8) & 0x800) !== 0;
-            const fn   = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8);
+            // `\` becomes `/` (D25): APPNOTE 4.4.17 allows forward slashes only,
+            // and .NET Framework's ZipFile.CreateFromDirectory writes `\`;
+            // Info-ZIP, 7-Zip and CPython present such names with `/` too.
+            const fn   = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8).replace(/\\/g, '/');
             const es   = b + 46 + fnl;
             const bs   = _r32(d, b + 20);
             const [sc, su, off] = zip64 && bs === 0xFFFFFFFF
                 ? _z64e(d, es)
                 : [bs, _r32(d, b + 24), _r32(d, b + 42)];
-            return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off];
+            return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off, _r32(d, b + 16) >>> 0];
         }
 
         // --- Flatten nested directory structure ---
+
+        /**
+         * Set an own enumerable property, `__proto__` included: assigning
+         * `obj.__proto__ = v` would replace the object's prototype with a
+         * decoded value instead of storing it. Every other key assigns.
+         */
+        function _setOwn(obj, key, value) {
+            if (key === '__proto__') {
+                Object.defineProperty(obj, key, { value, writable: true, enumerable: true, configurable: true });
+            } else {
+                obj[key] = value;
+            }
+        }
 
         function _flatten(d, prefix, out, defaultOpts) {
             for (const k in d) {
@@ -328,9 +344,9 @@ export const zip = {
                 let data = val, opts = defaultOpts;
                 if (Array.isArray(val)) { opts = Object.assign({}, defaultOpts, val[1]); data = val[0]; }
                 if (data instanceof Uint8Array) {
-                    out[name] = [data, opts];
+                    _setOwn(out, name, [data, opts]);
                 } else {
-                    out[name + '/'] = [new Uint8Array(0), opts];
+                    _setOwn(out, name + '/', [new Uint8Array(0), opts]);
                     _flatten(data, name + '/', out, defaultOpts);
                 }
             }
@@ -359,7 +375,7 @@ export const zip = {
                 const fnBytes = _strToU8(fn);
                 const fnLen = fnBytes.length;
                 // @ts-ignore - Error.code is a non-standard but widely-used extension
-                if (fnLen > 65535) { const e = new Error('filename too long'); e.code = 11; throw e; }
+                if (fnLen > 65535) { const e = new Error('filename too long'); e.code = 'ENAMETOOLONG'; e.errno = 11; throw e; }
                 const comBytes = p.comment ? _strToU8(p.comment) : null;
                 const exl = _exfl(p.extra);
                 const u = _isUTF8(fn) || (comBytes && _isUTF8(p.comment));
@@ -419,14 +435,25 @@ export const zip = {
         /**
          * Extract a ZIP archive synchronously.
          *
+         * `maxOutput` caps the bytes extracted over every entry: each entry's
+         * declared size is checked against what is left BEFORE its buffer is
+         * allocated, and code 7 is thrown past it. Each entry's CRC-32 and
+         * size are checked (code 16 on a mismatch); `verify: false` skips
+         * the check.
+         *
          * @param {Uint8Array} data
-         * @param {object} [opts] - `{ filter?: fn }`
+         * @param {object} [opts] - `{ filter?: fn, safe?: boolean, verify?: boolean, maxOutput?: number }`
          * @returns {{ [path: string]: Uint8Array }}
          */
         function unzipSync(data, opts = {}) {
             /** @type {{ [path: string]: Uint8Array }} */
-            const result = {};
+            const result = Object.create(null);   // null prototype: no inherited key collides with a decoded one (D9 G7)
             const safe = opts.safe !== false;
+            const cap = opts.maxOutput === undefined || opts.maxOutput === null ? Infinity : opts.maxOutput;
+            if (cap !== Infinity && !(Number.isSafeInteger(cap) && cap >= 0)) {
+                throw new RangeError('maxOutput must be a non-negative integer');
+            }
+            let extracted = 0;
 
             // Locate end-of-central-directory record
             let e = data.length - 22;
@@ -434,7 +461,7 @@ export const zip = {
                 if (!e || data.length - e > 65558) {
                     const err = new Error('invalid zip data');
                     // @ts-ignore - Error.code is a non-standard but widely-used extension
-                    err.code = 13;
+                    err.code = 'EBADFORMAT'; err.errno = 13;
                     throw err;
                 }
                 --e;
@@ -459,30 +486,50 @@ export const zip = {
             let o = cdOffset;
 
             for (let i = 0; i < entryCount; ++i) {
-                const [cmp, cSize, uSize, fn, nextOff, localOff] = _readCDE(data, o, zip64);
+                const [cmp, cSize, uSize, fn, nextOff, localOff, crcExpected] = _readCDE(data, o, zip64);
                 o = nextOff;
                 const dataStart = _slzh(data, localOff);
 
                 if (safe && _isUnsafePath(fn)) {
                     const err = new Error('zip-slip: unsafe entry path "' + fn + '"');
                     // @ts-ignore - Error.code is a non-standard but widely-used extension
-                    err.code = 15;
+                    err.code = 'EUNSAFEPATH'; err.errno = 15;
                     throw err;
                 }
 
                 if (fltr && !fltr({ name: fn, size: cSize, originalSize: uSize, compression: cmp })) continue;
 
+                const outSize = cmp === 0 ? cSize : uSize;
+                if (outSize > cap - extracted) {
+                    const err = new Error('zip: output limit exceeded (maxOutput) at "' + fn + '"');
+                    // @ts-ignore - Error.code is a non-standard but widely-used extension
+                    err.code = 'EMAXOUT'; err.errno = 7;
+                    throw err;
+                }
+                extracted += outSize;
+
                 if (cmp === 0) {
-                    result[fn] = new Uint8Array(data.subarray(dataStart, dataStart + cSize));
+                    _setOwn(result, fn, new Uint8Array(data.subarray(dataStart, dataStart + cSize)));
                 } else if (cmp === 8) {
-                    result[fn] = inflateSync(data.subarray(dataStart, dataStart + cSize), {
+                    _setOwn(result, fn, inflateSync(data.subarray(dataStart, dataStart + cSize), {
                         out: new Uint8Array(uSize),
-                    });
+                    }));
                 } else {
                     const err = new Error('unknown compression type ' + cmp);
                     // @ts-ignore - Error.code is a non-standard but widely-used extension
-                    err.code = 14;
+                    err.code = 'EBADMETHOD'; err.errno = 14;
                     throw err;
+                }
+
+                if (opts.verify !== false) {
+                    const c = new Crc32();
+                    c.append(result[fn]);
+                    if (c.get() !== crcExpected || result[fn].length !== uSize) {
+                        const err = new Error('zip: incorrect data check (CRC-32 or size mismatch) for "' + fn + '"');
+                        // @ts-ignore - Error.code is a non-standard but widely-used extension
+                        err.code = 'ECHECKSUM'; err.errno = 16;
+                        throw err;
+                    }
                 }
             }
 
@@ -582,7 +629,7 @@ export const zip = {
             const p = Object.assign({}, this._opts, opts);
             const fnBytes = _strToU8(name);
             // @ts-ignore - Error.code is a non-standard but widely-used extension
-            if (fnBytes.length > 65535) { const e = new Error('filename too long'); e.code = 11; throw e; }
+            if (fnBytes.length > 65535) { const e = new Error('filename too long'); e.code = 'ENAMETOOLONG'; e.errno = 11; throw e; }
             const u = _isUTF8(name);
             const method = p.level === 0 ? 0 : 8;
             const dosTime = _dosDateTime(p.mtime);
@@ -626,7 +673,7 @@ export const zip = {
             const p = Object.assign({}, this._opts, opts);
             const fnBytes = _strToU8(name);
             // @ts-ignore - Error.code is a non-standard but widely-used extension
-            if (fnBytes.length > 65535) { const e = new Error('filename too long'); e.code = 11; throw e; }
+            if (fnBytes.length > 65535) { const e = new Error('filename too long'); e.code = 'ENAMETOOLONG'; e.errno = 11; throw e; }
             const u = _isUTF8(name);
             const method = p.level === 0 ? 0 : 8;
             const dosTime = _dosDateTime(p.mtime);

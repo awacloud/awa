@@ -32,7 +32,7 @@ const cbor = runtime.resolve('cbor');
 | Method | Signature | Returns |
 |--------|-----------|---------|
 | `encode` | `(value: any, options?: {deterministic?: boolean}) => Uint8Array` | CBOR representation |
-| `decode` | `(bytes: Uint8Array, options?: {useMap?: boolean}) => any` | Reconstructed JS value |
+| `decode` | `(bytes: Uint8Array, options?: {useMap?: boolean, maxDepth?: number}) => any` | Reconstructed JS value; nesting deeper than `maxDepth` (default 512) throws |
 | `Tagged` | `class Tagged(tag, value)` | CBOR tag wrapper (major type 6) |
 | `Simple` | `class Simple(value)` | CBOR simple value (major type 7, 0..255 excluding 20..23 which alias primitives and 24..31 reserved) |
 
@@ -43,8 +43,8 @@ const cbor = runtime.resolve('cbor');
 | `null` | `0xf6` |
 | `undefined` | `0xf7` |
 | `false` / `true` | `0xf4` / `0xf5` |
-| `Number` integer in `[-2^32, 2^32-1]` | major 0 / 1 (shortest form) |
-| `Number` fractional or out of range | float16 / float32 / float64 (shortest exact) |
+| `Number` safe integer (`Number.isSafeInteger`) | major 0 / 1 (shortest form; `1e12` → `1b000000e8d4a51000`, RFC 8949 App. A) |
+| `Number` fractional or past 2^53 | float16 / float32 / float64 (shortest exact) |
 | `BigInt` 0..2^64-1 | major 0 |
 | `BigInt` -2^64..-1 | major 1 |
 | `BigInt` beyond | tag 2 / 3 + byte string |
@@ -166,9 +166,11 @@ const worker = fw.createWorker(
 
 ## Notes
 
+- A map decoded to a plain object never takes its prototype from the payload: the object has a `null` prototype (`Object.create(null)`: no inherited key such as `toString` or `hasOwnProperty`; use `Object.hasOwn`), and a `"__proto__"` key is an own enumerable property holding the decoded value.
 - `Number.isInteger(x)` triggers integer encoding even for `1.0`, `0.0` (identical in JS). To force a float, use an explicit fractional value.
 - Unsupported JS types: `Symbol`, `Function`, `Promise`, `Date` — no implicit conversion. For dates, wrap via `Tagged(0, iso)` (tag 0, RFC 8949 §3.4.1) or `Tagged(1, epoch)` (tag 1, §3.4.2) depending on the intended semantics.
 - `Map` → CBOR map (order preserved). To retrieve a `Map` on decode, use `{ useMap: true }`.
+- **Well-formedness** (RFC 8949 App. F): every not-well-formed example is refused (a throw): truncated heads and string data, reserved additional information, two-byte simple values below 32, indefinite strings whose chunks are not definite strings of the same type, and a break (`0xff`) anywhere but at the end of an indefinite-length item.
 - Duplicate keys on input: the decoder takes the last occurrence (RFC §5.6 classifies this as "well-formed but invalid" — the emitter's responsibility).
 - Comparison with [buffer](./buffer.md): `buffer` is more compact for small integers and uses a typed header; `cbor` is standard and interoperates with COSE, WebAuthn, IPLD, CTAP.
 

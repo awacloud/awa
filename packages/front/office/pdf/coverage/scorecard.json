@@ -40,12 +40,12 @@
         "version": "v1.28.1",
         "source": "https://github.com/veraPDF/veraPDF-corpus/tree/v1.28.1"
       },
-      "date": "2026-10-12",
-      "commit": "b944888e1c6232efd43523f2fa70db244f22eb8b",
+      "date": "2026-11-11",
+      "commit": "8ca1d41967f3c6e9fae573d2d73d9cc172635f7e",
       "command": "bun cli.ts office-scorecard axis-b --suite verapdf-read",
       "result": {
         "kind": "pass-total",
-        "pass": 905,
+        "pass": 906,
         "total": 906,
         "criterion": "read(bytes) of the base reader returns without throwing and the document has at least one page; every file counts, -pass- and -fail- alike (their names are PDF/A or PDF/UA verdicts the reader does not judge)"
       },
@@ -58,8 +58,8 @@
         "version": "v1.28.1",
         "source": "https://github.com/veraPDF/veraPDF-corpus/tree/v1.28.1"
       },
-      "date": "2026-10-26",
-      "commit": "42e6c2f5b444734a123409a11f513bd9c44d1039",
+      "date": "2026-11-11",
+      "commit": "8ca1d41967f3c6e9fae573d2d73d9cc172635f7e",
       "command": "bun cli.ts office-scorecard axis-b --suite verapdf-read-password",
       "result": {
         "kind": "pass-total",
@@ -76,12 +76,12 @@
         "version": "v1.28.1",
         "source": "https://github.com/veraPDF/veraPDF-corpus/tree/v1.28.1"
       },
-      "date": "2026-10-12",
-      "commit": "b944888e1c6232efd43523f2fa70db244f22eb8b",
+      "date": "2026-11-11",
+      "commit": "8ca1d41967f3c6e9fae573d2d73d9cc172635f7e",
       "command": "bun cli.ts office-scorecard axis-b --suite verapdf-roundtrip",
       "result": {
         "kind": "pass-total",
-        "pass": 905,
+        "pass": 906,
         "total": 906,
         "criterion": "read, write, then read again succeeds and keeps the page count; every file counts"
       },
@@ -94,14 +94,14 @@
         "version": "pdf-differences@907fe96e5",
         "source": "https://github.com/pdf-association/pdf-differences/tree/907fe96e52b73e491489eee545c47b119bf9989b"
       },
-      "date": "2026-10-13",
-      "commit": "4fd3a0a3c240a640c4e053efce24bad74a277413",
+      "date": "2026-11-11",
+      "commit": "ded8d48a9c2f24d2586304c3cb6d1946a1d0c116",
       "command": "bun cli.ts office-scorecard axis-b --suite pdf-differences",
       "result": {
         "kind": "pass-total",
-        "pass": 11,
+        "pass": 13,
         "total": 13,
-        "criterion": "per file, the base reader returns what the case expects: PDF-version — doc.version is the header 1.4 and doc.catalog.version the newest catalog 1.6 (the reader exposes both, computes no effective version); UnknownFilter-xrefstm — read throws pdf/filter/unsupported; six other UnknownFilter files — read returns the page and every in-use object resolves and decodes or throws a typed pdf/ error, at least one throwing; UnknownFilter-Linearized and -OutlineObjStm — read returns the page; InlineAbbreviations — 8 inline images, each decoding with the abbreviated keys first to the same 600 bytes. Painting cases (content streams are parsed, not rendered), page labels (carried raw) and the two real-world files (not PDF Association works, issue undisclosed) are skipped"
+        "criterion": "per file, the base reader returns what the case expects: PDF-version — doc.version is the header 1.4 and doc.catalog.version the newest catalog 1.6 (the reader exposes both, computes no effective version); UnknownFilter-xrefstm, -Linearized and -OutlineObjStm — read rebuilds the unusable cross-reference chain (the default since @awacloud/pdf 2.0.0), returns the page and records pdf/document/xref-rebuilt in losses; six other UnknownFilter files — read returns the page and every in-use object resolves and decodes or throws a typed pdf/ error, at least one throwing; InlineAbbreviations — 8 inline images, each decoding with the abbreviated keys first to the same 600 bytes. Painting cases (content streams are parsed, not rendered), page labels (carried raw) and the two real-world files (not PDF Association works, issue undisclosed) are skipped"
       },
       "skipped": [
         {
@@ -209,14 +209,14 @@
         "version": "arlington@c48b363e9",
         "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
       },
-      "date": "2026-10-25",
-      "commit": "c7aeebca9005a5e95819c4bcc5c8f2a5db6b2b87",
+      "date": "2026-11-06",
+      "commit": "48076f3ed0f55d6221cf9fc3e5fe5f308c038c66",
       "command": "bun cli.ts office-scorecard axis-b --suite arlington-read-keys",
       "result": {
         "kind": "pass-total",
-        "pass": 3289,
+        "pass": 3355,
         "total": 3357,
-        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled when a bound typer returns and leaves it out of the record's _extras, or, for a typer with no _extras channel, returns something else once the key is removed or nulled; 364 objects measured, 345 with a typer, 19 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
+        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled when a bound typer returns and leaves it out of the record's _extras, or, for a typer with no _extras channel, returns something else once the key is removed or nulled; 364 objects measured, 364 with a typer, 0 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
       },
       "skipped": [
         {
@@ -1460,14 +1460,14 @@
         "version": "arlington@c48b363e9",
         "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
       },
-      "date": "2026-10-25",
-      "commit": "7c488da7591fda0acc2777dfa77142203c9a0eea",
+      "date": "2026-11-06",
+      "commit": "48076f3ed0f55d6221cf9fc3e5fe5f308c038c66",
       "command": "bun cli.ts office-scorecard axis-b --suite arlington-read-keys-surfaced",
       "result": {
         "kind": "pass-total",
-        "pass": 3280,
+        "pass": 3350,
         "total": 3357,
-        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled only when it reaches the typed record: removing it, or nulling it, changes what a bound typer returns, the record compared without raw, the input copies and _extras (a key a typer lists as known but keeps only in raw does not count — the difference with arlington-read-keys); 364 objects measured, 345 with a typer, 19 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
+        "criterion": "per named key of each Arlington dictionary or stream object (ISO 32000-2 keys; extensions not adopted by 2.0 skipped): a dictionary holding every key with a value of its first Arlington type is given to the pdf typers bound to the object (hand table, core and opt-in extras); the key is handled only when it reaches the typed record: removing it, or nulling it, changes what a bound typer returns, the record compared without raw, the input copies and _extras (a key a typer lists as known but keeps only in raw does not count — the difference with arlington-read-keys); 364 objects measured, 364 with a typer, 0 without (their keys count as not handled); arrays, maps and objects with no ISO 32000-2 named key are skipped"
       },
       "skipped": [
         {
@@ -2711,14 +2711,14 @@
         "version": "arlington@c48b363e9",
         "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
       },
-      "date": "2026-10-14",
-      "commit": "31d88da4c4b554b5ce0bf975b11ff509504c3009",
+      "date": "2026-11-13",
+      "commit": "430ab6ec9cfb36dc104f78de7a963a52d710bd96",
       "command": "bun cli.ts office-scorecard axis-b --suite arlington-write-conformance",
       "result": {
         "kind": "pass-total",
-        "pass": 327,
-        "total": 343,
-        "criterion": "per key instance of the documents pdfBuilder and pdf.write write (builder-blank, builder-standard-14, builder-standard-14-metrics, builder-embedded, builder-image, write-standard-14, write-embedded; 81 dictionaries and streams reached from the trailer through the Arlington links): a key present passes when its object lists it, its SinceVersion holds for PDF 2.0, its value has one of the key's types valid in 2.0 and, when that type's possible values are literals, one of those valid in 2.0; every key required for 2.0 and absent (inherited keys looked up the /Parent chain) is a failing case; fn: predicates are evaluated only for versions, TRUE / FALSE, || and && (fn:Extension false) — the others are not evaluated: 23 passing instances carry one, and an absent key required by one is skipped; IndirectReference, SpecialCase, DefaultValue and deprecation are not checked; array positions and map entries are walked, not counted"
+        "pass": 583,
+        "total": 583,
+        "criterion": "per key instance of the documents pdfBuilder and pdf.write write (builder-blank, builder-standard-14, builder-standard-14-metrics, builder-embedded, builder-image, builder-embedded-cff, write-standard-14, write-embedded, write-embedded-cff; 131 dictionaries and streams reached from the trailer through the Arlington links): a key present passes when its object lists it, its SinceVersion holds for PDF 2.0, its value has one of the key's types valid in 2.0 and, when that type's possible values are literals, one of those valid in 2.0; every key required for 2.0 and absent (inherited keys looked up the /Parent chain) is a failing case; fn: predicates are evaluated only for versions, TRUE / FALSE, || and && (fn:Extension false) — the others are not evaluated: 37 passing instances carry one, and an absent key required by one is skipped; IndirectReference, SpecialCase, DefaultValue and deprecation are not checked; array positions and map entries are walked, not counted"
       },
       "skipped": [
         {
@@ -2750,15 +2750,15 @@
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         },
         {
-          "case": "builder-standard-14 5 0 R PageObject/LastModified",
+          "case": "builder-standard-14 7 0 R PageObject/LastModified",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
         },
         {
-          "case": "builder-standard-14 5 0 R PageObject/StructParents",
+          "case": "builder-standard-14 7 0 R PageObject/StructParents",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
         },
         {
-          "case": "builder-standard-14 5 0 R PageObject/TemplateInstantiated",
+          "case": "builder-standard-14 7 0 R PageObject/TemplateInstantiated",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         },
         {
@@ -2814,6 +2814,22 @@
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:ImageIsStructContentItem()))"
         },
         {
+          "case": "builder-embedded-cff trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-embedded-cff 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-embedded-cff 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-embedded-cff 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
           "case": "write-standard-14 1 0 R PageObject/LastModified",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
         },
@@ -2826,15 +2842,15 @@
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         },
         {
-          "case": "write-standard-14 5 0 R PageObject/LastModified",
+          "case": "write-standard-14 7 0 R PageObject/LastModified",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
         },
         {
-          "case": "write-standard-14 5 0 R PageObject/StructParents",
+          "case": "write-standard-14 7 0 R PageObject/StructParents",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
         },
         {
-          "case": "write-standard-14 5 0 R PageObject/TemplateInstantiated",
+          "case": "write-standard-14 7 0 R PageObject/TemplateInstantiated",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         },
         {
@@ -2852,6 +2868,22 @@
         {
           "case": "write-embedded 1 0 R PageObject/TemplateInstantiated",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "write-embedded-cff trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "write-embedded-cff 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "write-embedded-cff 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "write-embedded-cff 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         }
       ]
     },
@@ -2862,8 +2894,8 @@
         "version": "pdfium@7c55203ed66b",
         "source": "https://pdfium.googlesource.com/pdfium/+/7c55203ed66b0461378323e3fcf2efaf76755241/testing/resources/"
       },
-      "date": "2026-10-16",
-      "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
+      "date": "2026-11-11",
+      "commit": "83906e8762fa132f9e3956d3a89898978f093e80",
       "command": "bun cli.ts office-scorecard axis-d --suite pdfium-resources --container",
       "result": {
         "kind": "rate",
@@ -2881,8 +2913,8 @@
         "version": "qpdf@v12.4.2",
         "source": "https://github.com/qpdf/qpdf/tree/4eba95899886e851cc41d76886483b347612f2a8"
       },
-      "date": "2026-10-16",
-      "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
+      "date": "2026-11-11",
+      "commit": "5ecd33e36ea6b46a67d85f73878c32587e7b0dfb",
       "command": "bun cli.ts office-scorecard axis-d --suite qpdf-qtest --container",
       "result": {
         "kind": "rate",
@@ -2900,8 +2932,8 @@
         "version": "qpdf@v12.4.2",
         "source": "https://github.com/qpdf/qpdf/tree/4eba95899886e851cc41d76886483b347612f2a8"
       },
-      "date": "2026-10-16",
-      "commit": "f60c3d041c6624fb9039ec571df985175a35f910",
+      "date": "2026-11-11",
+      "commit": "c4d742d5c1b1569e68fa8fdae7af2361ca0e9002",
       "command": "bun cli.ts office-scorecard axis-d --suite qpdf-fuzz --container",
       "result": {
         "kind": "rate",
@@ -2919,8 +2951,8 @@
         "version": "cc-main-2021-31-pdf-untruncated@0000",
         "source": "https://digitalcorpora.org/corpora/file-corpora/cc-main-2021-31-pdf-untruncated/"
       },
-      "date": "2026-10-16",
-      "commit": "8f2489052efce3ee0d45190cb4963ca7f6123b6d",
+      "date": "2026-11-11",
+      "commit": "423c4bf2d88ddc420342d4aa342034c12039afc7",
       "command": "bun cli.ts office-scorecard axis-d --suite safedocs-0000 --container",
       "result": {
         "kind": "rate",
@@ -2938,15 +2970,15 @@
         "version": "stressful-pdf-corpus@pdfs_202011/batch5",
         "source": "https://labs.pdfa.org/stressful-corpus/pdfs_202011/batch5.tgz"
       },
-      "date": "2026-10-16",
-      "commit": "0371b253f1aaa0b9f01eefa39d0117a3ccae220a",
+      "date": "2026-11-11",
+      "commit": "b7545cfb703396463deb2c2ba6cd749baeefef59",
       "command": "bun cli.ts office-scorecard axis-d --suite stressful-batch5 --container",
       "result": {
         "kind": "rate",
-        "ok": 6118,
+        "ok": 6119,
         "total": 6119,
         "budget": "10 s per case for an input up to 10 MB, plus 1 s per further MB (hard cap twice the budget); 1 GiB peak memory",
-        "criterion": "per PDF of the Stressful PDF Corpus batch5.tgz, pdf.read then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
+        "criterion": "per PDF of the Stressful PDF Corpus batch5.tgz, pdf.read (a file over the 1 GiB cap read through a file byte source) then every content stream of every page resolved, decoded and parsed to operators; ok when it returns or throws an error of the package's own hierarchy (PdfError) within the budget; a failure is an untyped throw, a hang, memory past the cap or a crash of the child"
       },
       "skipped": []
     },
@@ -2957,14 +2989,14 @@
         "version": "pdf-differences@907fe96e5",
         "source": "https://github.com/pdf-association/pdf-differences/tree/907fe96e52b73e491489eee545c47b119bf9989b"
       },
-      "date": "2026-10-24",
-      "commit": "6a4994638139ed74ce60e316b947eb662cd6c872",
+      "date": "2026-11-11",
+      "commit": "ded8d48a9c2f24d2586304c3cb6d1946a1d0c116",
       "command": "bun cli.ts office-scorecard axis-b --suite pdf-differences-recover",
       "result": {
         "kind": "pass-total",
         "pass": 13,
         "total": 13,
-        "criterion": "the files and expectations of pdf-differences, each read with the opt-in { recoverXref: true }: the cross-reference table is rebuilt from the bytes when its chain cannot be used; UnknownFilter-xrefstm, -Linearized and -OutlineObjStm — read returns the page and records pdf/document/xref-rebuilt in losses; every other file — the pdf-differences expectation, unchanged. The same files are skipped"
+        "criterion": "the files and expectations of pdf-differences, each read with { recoverXref: true } (the default since @awacloud/pdf 2.0.0): the cross-reference table is rebuilt from the bytes when its chain cannot be used; UnknownFilter-xrefstm, -Linearized and -OutlineObjStm — read returns the page and records pdf/document/xref-rebuilt in losses; every other file — the pdf-differences expectation, unchanged. The same files are skipped"
       },
       "skipped": [
         {
@@ -3068,18 +3100,89 @@
     {
       "axis": "B",
       "suite": {
-        "id": "arlington-write-conformance-metrics",
+        "id": "verapdf-lint",
+        "version": "v1.28.1",
+        "source": "https://github.com/veraPDF/veraPDF-corpus/tree/v1.28.1"
+      },
+      "date": "2026-11-03",
+      "commit": "cf829daecf06d768d93642c35d854e462ceddb8e",
+      "command": "bun cli.ts office-scorecard axis-b --suite verapdf-lint",
+      "result": {
+        "kind": "pass-total",
+        "pass": 787,
+        "total": 787,
+        "criterion": "each file of the PDF/A and PDF/UA profile folders is read with pdf.read (password '' when encrypted) and linted by validatePdfABasics (its folder's profile) or validatePdfUa (part 1 or 2); it passes when, on the rules that linter checks for the profile, the rules it fails equal those veraPDF 1.30.3 (awa-oracle-verapdf:1.30.3, the folder's --flavour) fails, and it reports no error outside them; a file veraPDF cannot process, or pdf cannot read, fails (oracle image sha256:a590632ce3fca5658b30c7173b39a2764e6dd653a719dac51c02ef20f57b3a89)"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "C",
+      "suite": {
+        "id": "verapdf-pdfa",
+        "version": "verapdf@1.30.3",
+        "source": "https://github.com/veraPDF/veraPDF-library/tree/df51e09dece1d6c11c360edd3b8b0635ef966c47"
+      },
+      "date": "2026-11-13",
+      "commit": "430ab6ec9cfb36dc104f78de7a963a52d710bd96",
+      "command": "bun cli.ts office-scorecard axis-c --suite verapdf-pdfa",
+      "result": {
+        "kind": "pass-total",
+        "pass": 14,
+        "total": 14,
+        "criterion": "each document is written claiming PDF/A-4 or PDF/A-2b (pdfBuilder's builder({ pdfA }), oconv fromMd with opts.pdf.pdfA and its default faces); it passes when veraPDF 1.30.3 reports no failed rule and no exception for it under the profile it claims, and pdf's validatePdfABasics of the read document with that profile reports no error; a document its writer refuses fails; documents: 14 (14 written, 0 round trips)"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "C",
+      "suite": {
+        "id": "verapdf-pdfua",
+        "version": "verapdf@1.30.3",
+        "source": "https://github.com/veraPDF/veraPDF-library/tree/df51e09dece1d6c11c360edd3b8b0635ef966c47"
+      },
+      "date": "2026-11-04",
+      "commit": "f7adbc8aa17e6f49db9aab2fe36cddd16f84b034",
+      "command": "bun cli.ts office-scorecard axis-c --suite verapdf-pdfua",
+      "result": {
+        "kind": "pass-total",
+        "pass": 12,
+        "total": 12,
+        "criterion": "each document is written claiming PDF/UA-1 or PDF/UA-2 (pdfBuilder's builder({ pdfUA, lang }) and its structure API, oconv fromMd with opts.pdf.pdfUA, opts.pdf.lang and its default faces); it passes when veraPDF 1.30.3 reports no failed rule and no exception for it under the part it claims, and pdf's validatePdfUa of the read document with that part reports no error; a document its writer refuses fails; documents: 12 (12 written, 0 round trips)"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-text",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "date": "2026-11-10",
+      "commit": "3eeb411188f3eab0320fa73a3f64526d036bb014",
+      "command": "bun cli.ts office-scorecard axis-e --suite pypdf-benchmarks-text",
+      "result": {
+        "kind": "score",
+        "value": 0.9466,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the plain text of pdf's pdfPageText.pageText (no OCR, default options, its pages joined by '\\n'), 0–1"
+      },
+      "skipped": []
+    },
+    {
+      "axis": "B",
+      "suite": {
+        "id": "arlington-write-conformance-legacy",
         "version": "arlington@c48b363e9",
         "source": "https://github.com/pdf-association/arlington-pdf-model/tree/c48b363e9b78902deea03e958693c09339248a3a/tsv/latest"
       },
-      "date": "2026-10-26",
-      "commit": "aa2b03e0c21e3f4cfbc2772d04bc6a7f54db9cc4",
-      "command": "bun cli.ts office-scorecard axis-b --suite arlington-write-conformance-metrics",
+      "date": "2026-11-13",
+      "commit": "430ab6ec9cfb36dc104f78de7a963a52d710bd96",
+      "command": "bun cli.ts office-scorecard axis-b --suite arlington-write-conformance-legacy",
       "result": {
         "kind": "pass-total",
-        "pass": 387,
-        "total": 387,
-        "criterion": "per key instance of the documents pdfBuilder (every Standard 14 face through addFont's opt-in metrics) and pdf.write write (builder-blank, builder-standard-14, builder-standard-14-metrics, builder-embedded, builder-image, write-standard-14, write-embedded; 85 dictionaries and streams reached from the trailer through the Arlington links): a key present passes when its object lists it, its SinceVersion holds for PDF 2.0, its value has one of the key's types valid in 2.0 and, when that type's possible values are literals, one of those valid in 2.0; every key required for 2.0 and absent (inherited keys looked up the /Parent chain) is a failing case; fn: predicates are evaluated only for versions, TRUE / FALSE, || and && (fn:Extension false) — the others are not evaluated: 27 passing instances carry one, and an absent key required by one is skipped; IndirectReference, SpecialCase, DefaultValue and deprecation are not checked; array positions and map entries are walked, not counted"
+        "pass": 523,
+        "total": 539,
+        "criterion": "per key instance of the documents pdfBuilder (every Standard 14 face with standard14: false, the 1.x output) and pdf.write write (builder-blank, builder-standard-14, builder-standard-14-metrics, builder-embedded, builder-image, builder-embedded-cff, write-standard-14, write-embedded, write-embedded-cff; 127 dictionaries and streams reached from the trailer through the Arlington links): a key present passes when its object lists it, its SinceVersion holds for PDF 2.0, its value has one of the key's types valid in 2.0 and, when that type's possible values are literals, one of those valid in 2.0; every key required for 2.0 and absent (inherited keys looked up the /Parent chain) is a failing case; fn: predicates are evaluated only for versions, TRUE / FALSE, || and && (fn:Extension false) — the others are not evaluated: 33 passing instances carry one, and an absent key required by one is skipped; IndirectReference, SpecialCase, DefaultValue and deprecation are not checked; array positions and map entries are walked, not counted"
       },
       "skipped": [
         {
@@ -3111,15 +3214,15 @@
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         },
         {
-          "case": "builder-standard-14 7 0 R PageObject/LastModified",
+          "case": "builder-standard-14 5 0 R PageObject/LastModified",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
         },
         {
-          "case": "builder-standard-14 7 0 R PageObject/StructParents",
+          "case": "builder-standard-14 5 0 R PageObject/StructParents",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
         },
         {
-          "case": "builder-standard-14 7 0 R PageObject/TemplateInstantiated",
+          "case": "builder-standard-14 5 0 R PageObject/TemplateInstantiated",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         },
         {
@@ -3175,6 +3278,22 @@
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:ImageIsStructContentItem()))"
         },
         {
+          "case": "builder-embedded-cff trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "builder-embedded-cff 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "builder-embedded-cff 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "builder-embedded-cff 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
           "case": "write-standard-14 1 0 R PageObject/LastModified",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
         },
@@ -3187,15 +3306,15 @@
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         },
         {
-          "case": "write-standard-14 7 0 R PageObject/LastModified",
+          "case": "write-standard-14 5 0 R PageObject/LastModified",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
         },
         {
-          "case": "write-standard-14 7 0 R PageObject/StructParents",
+          "case": "write-standard-14 5 0 R PageObject/StructParents",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
         },
         {
-          "case": "write-standard-14 7 0 R PageObject/TemplateInstantiated",
+          "case": "write-standard-14 5 0 R PageObject/TemplateInstantiated",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         },
         {
@@ -3213,9 +3332,138 @@
         {
           "case": "write-embedded 1 0 R PageObject/TemplateInstantiated",
           "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
+        },
+        {
+          "case": "write-embedded-cff trailer FileTrailer/Info",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:SinceVersion(1.4,fn:IsPresent(trailer::Catalog::PieceInfo))))"
+        },
+        {
+          "case": "write-embedded-cff 1 0 R PageObject/LastModified",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:IsPresent(PieceInfo)))"
+        },
+        {
+          "case": "write-embedded-cff 1 0 R PageObject/StructParents",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:PageContainsStructContentItems()))"
+        },
+        {
+          "case": "write-embedded-cff 1 0 R PageObject/TemplateInstantiated",
+          "reason": "absent; required by a predicate not evaluated (fn:IsRequired(fn:InNameTree(trailer::Catalog::Names::Pages) || fn:InNameTree(trailer::Catalog::Names::Templates)))"
         }
       ]
     }
   ],
-  "comparators": []
+  "comparators": [
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-text",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pypdfium2 5.13.0 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9522,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-text",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pypdf 6.19.0 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9486,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-text",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "PyMuPDF 1.28.2 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9423,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-text",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "Tika 3.3.2 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9306,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-text",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdftotext 0.86.1 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.9019,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-text",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdfminer.six 20260107 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.8793,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "pypdf-benchmarks-text",
+        "version": "py-pdf/benchmarks@778e6c95a",
+        "source": "https://github.com/py-pdf/benchmarks/tree/778e6c95a643a5fb0511d327a86bc5b06802af50"
+      },
+      "tool": "pdfplumber 0.11.10 (the benchmark's run of 2026-10-02, mean of its score cache)",
+      "result": {
+        "kind": "score",
+        "value": 0.7393,
+        "metric": "mean over the 14 documents of the normalised Indel similarity (2·LCS / (|a| + |b|), over code points) between the ground truth and the library's extraction (the benchmark's wrapper), 0–1"
+      },
+      "source": "https://raw.githubusercontent.com/py-pdf/benchmarks/778e6c95a643a5fb0511d327a86bc5b06802af50/cache.json",
+      "date": "2026-11-10"
+    }
+  ]
 }

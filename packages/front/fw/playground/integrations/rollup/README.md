@@ -8,11 +8,11 @@ plugin (which exposes the `virtual:@awacloud/fw/preset/core` module) plus
 
 ## Run
 
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
+
 ```sh
-npm i && npx rollup -c && npx serve --no-clean-urls .
+bun install && bun run start
 ```
 
-Run from this directory (`--no-clean-urls` avoids `serve`'s default
-extension-redirect behaviour). Then open the served page and check the
-devtools console: it logs the `core` preset module names and the
-runtime-resolved first module.
+`rollup -c` writes the bundle and the in-repo static server serves this directory at http://127.0.0.1:4800/; the console logs the `core` preset module names.
+

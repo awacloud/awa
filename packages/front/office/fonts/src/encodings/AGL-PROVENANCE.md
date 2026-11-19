@@ -58,3 +58,24 @@ at the top of the vendored `glyphlist.txt`. Licence text read from
 Only `glyphlist.txt` (AGL, name → Unicode) is in scope. AGLFN (the
 reverse, Unicode → name-for-new-fonts list) is explicitly out of scope:
 it is not needed for text extraction.
+
+## The ITC Zapf Dingbats Glyph List (`zapfdingbats.txt`)
+
+Vendored on the owner's go (2026-11-11) from the same repository, at the
+same pinned commit, under the same licence. Its header carries the same
+Adobe copyright and BSD-3-Clause text as `glyphlist.txt`. The same run of
+`tools/gen-agl-table.mjs` generates `src/encodings/zapfDingbatsGlyphs.js`
+from it: the names of the Zapf Dingbats font (`a1` to `a206`), which the
+AGL does not list, read by `encodingAgl.dingbatsNameToUnicode`.
+
+| Field | Value |
+|---|---|
+| Repository | `adobe-type-tools/agl-aglfn` |
+| Vendored file | `zapfdingbats.txt` (ITC Zapf Dingbats Glyph List, table version 2.0) |
+| Pinned commit SHA | `4036a9ca80a62f64f9de4f7321a9a045ad0ecfd6` |
+| Retrieval date | `2026-11-11` |
+| Vendored path | `src/encodings/zapfdingbats.txt` |
+| SHA-256 (vendored bytes) | `f6394e3cb8a447e84a1dad75d4baaf2aa7f45dc104faf369f4720e1a774ef2dc` |
+| Size / entries | 3879 bytes · 201 name→code-point entries |
+| Licence | `BSD-3-Clause` (Copyright 2002–2019 Adobe) — `LICENSE.md` at the same commit (SHA-256 `58147d341e7a34aa2196862395a34d2fd95716c41d5ed26efb59ab0e12f92089`) |
+| Attribution | `third-party/NOTICE-adobe-glyph-list` names both vendored files |

@@ -103,7 +103,6 @@ package's gate. What skips, and why:
 |---|---|
 | `playwright` not importable | `playwright not provisioned — bun install + bun run e2e:preview:install` |
 | playground `node_modules` absent | `playground not installed — bun install in <dir>` |
-| `dist/build/sanity.min.js` absent | gitignored build output; the un-bundled pages need it — run the fw build |
 | `type: 'runtime'` (8 entries) | `browser-surface-less` — their build/run coverage stays in `playgrounds.mjs` and is never duplicated here |
 
 `skip` and `inconclusive` are first-class in `totals`, so **"green"** and

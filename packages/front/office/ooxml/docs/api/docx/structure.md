@@ -99,6 +99,15 @@ hyperlink := { type:'hyperlink', rId?, anchor?, target?, external?,
              // target / external: set by docx.read when the rId resolves in
              // the node's part, consumed by docx.write (see docx.md § Notes)
 
+smartTag := { type:'smartTag',
+              attrs: { [name]: string },  // w:uri, w:element, as read
+              smartTagPr?: xmlNode,       // <w:smartTagPr>, verbatim
+              children:[inline],          // typed like a paragraph's
+              _extras?: [xmlNode] }       // any other child, verbatim
+             // a w:smartTag (§ 17.5.1.9) among a paragraph's, a revision's,
+             // a content control's or a smart tag's inlines; written back in
+             // its place, w:smartTagPr first
+
 table := { type:'table',
            tblPr?: TableProperties,   // <w:tblPr>: style, width, borders, cellMargins
                                       // (see docxProperties; other tblPr

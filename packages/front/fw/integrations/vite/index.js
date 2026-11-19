@@ -82,7 +82,7 @@ export default function fwVitePlugin(options = {}) {
             return core.emit(id.slice(RESOLVED_PREFIX.length));
         },
 
-        // Dev-only : close the restart gap (W0 FINDINGS § 3.2) — editing
+        // Dev-only : close the restart gap — editing
         // `fw.config.json` or regenerating the committed catalog used to
         // require killing and restarting `vite dev`, because `core` was
         // built once at plugin construction and never re-read. This hook is
@@ -153,7 +153,7 @@ export default function fwVitePlugin(options = {}) {
         // both `dev` and `build`.
         //
         // CAVEAT — documented only, NOT fixed here (pre-existing, orthogonal
-        // to the ESM sanity conversion; W0 FINDINGS §b.5): the injected script
+        // to the ESM sanity conversion): the injected script
         // carries `type: 'module'`, and per the HTML spec module scripts are
         // DEFERRED until after HTML parsing completes, unlike a classic
         // blocking `<script>`. Any inline classic script, inline event

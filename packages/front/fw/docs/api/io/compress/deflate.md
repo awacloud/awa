@@ -22,14 +22,14 @@ const deflate = runtime.resolve('deflate');
 
 ## API
 
-### Synchrone
+### Synchronous
 
 ```js
 const compressed   = deflate.deflateSync(uint8Array, opts?);  // → Uint8Array
 const decompressed = deflate.inflateSync(compressed, opts?);  // → Uint8Array
 ```
 
-### Asynchrone
+### Asynchronous
 
 ```js
 const compressed   = await deflate.deflate(uint8Array, opts?);  // → Uint8Array
@@ -60,6 +60,12 @@ stream.push(compressedChunk);
 stream.push(lastChunk, true);
 ```
 
+Where the deflate stream ends — what a container (a gzip member, a zlib
+trailer) needs to read on: `inflateSync(data, { onEnd(byteLength) })` calls
+`onEnd` with the input bytes the stream used; on a stream, `ended` turns
+`true` once the final block is decoded and `rest()` returns the bytes pushed
+after it (`null` before).
+
 ## Options
 
 ### Compression
@@ -80,6 +86,7 @@ The same options reach `deflate` through `gzip`, `zlib` and `zip`, so
 |--------|------|-------------|
 | `out` | `Uint8Array` | Pre-allocated output buffer |
 | `dictionary` | `Uint8Array` | Dictionary matching the compression |
+| `maxOutput` | `number` | Cap, in bytes, on the decoded output (a non-negative integer; absent = no cap). One byte more throws `EMAXOUT` (errno 7) before the buffer grows past the cap — the bound against a decompression bomb. On `InflateStream` it caps the stream's total. The dictionary does not count |
 
 ## Error codes
 
@@ -87,15 +94,20 @@ Every error thrown by this module is an `Error` carrying a numeric `e.code`.
 The table lists the complete set — verified against the `fail()` call sites in
 `deflate.js`.
 
-| Code | Message | Raised when |
-|------|---------|-------------|
-| 0 | `unexpected EOF` | the input ends inside a block header, a symbol, or a stored body (one-shot decoding, or a stream closed with `final = true`) |
-| 1 | `invalid block type` | `BTYPE = 3` (RFC 1951 §3.2.3 reserved value) |
-| 2 | `invalid length/literal` | a literal/length code has no entry in the active table, or a length symbol above 285 is read |
-| 3 | `invalid distance` | a distance code has no entry, a distance symbol above 29 is read, or the distance reaches back before the start of the output (dictionary included) |
-| 4 | `stream finished` | `push()` after the chunk marked `final` |
-| 5 | `no stream handler` | `push()` on a stream constructed without `ondata` |
-| 8 | `invalid data` | a malformed dynamic header, a stored-block `LEN`/`NLEN` mismatch, or an overflow of the caller-provided `out` buffer (the message states which) |
+| `code` | `errno` | Message | Raised when |
+|---|------|---------|-------------|
+| `EEOF` | 0 | `unexpected EOF` | the input ends inside a block header, a symbol, or a stored body (one-shot decoding, or a stream closed with `final = true`) |
+| `EBADBLOCK` | 1 | `invalid block type` | `BTYPE = 3` (RFC 1951 §3.2.3 reserved value) |
+| `EBADSYMBOL` | 2 | `invalid length/literal` | a literal/length code has no entry in the active table, or a length symbol above 285 is read |
+| `EBADDISTANCE` | 3 | `invalid distance` | a distance code has no entry, a distance symbol above 29 is read, or the distance reaches back before the start of the output (dictionary included) |
+| `ESTREAMEND` | 4 | `stream finished` | `push()` after the chunk marked `final` |
+| `ENOHANDLER` | 5 | `no stream handler` | `push()` on a stream constructed without `ondata` |
+| `EMAXOUT` | 7 | `output limit exceeded` | the decoded output would pass `maxOutput` |
+| `EBADSTREAM` | 8 | `invalid data` | a malformed dynamic header, a stored-block `LEN`/`NLEN` mismatch, or an overflow of the caller-provided `out` buffer (the message states which) |
+
+`e.code` is the string in the first column; `e.errno` keeps the number of the
+earlier convention (the compressor family's one typed convention, shared
+with brotli).
 
 Codes 12 and 13 belong to [gzip](./gzip.md) and [zip](./zip.md); `deflate`
 never emits them.
@@ -135,7 +147,7 @@ with zeros, so an overrun is detected by POSITION, never by an exception:
 `bitPos` is snapshotted before each block header and before each symbol, and a
 read that lands past `input.length * 8` — or a table lookup that returns entry
 `0` while fewer than `maxBits` bits remain — restores the snapshot. In
-one-shot mode that condition fails with code 0; in stream mode it returns
+one-shot mode that condition fails with `EEOF`; in stream mode it returns
 "need input", `InflateStream` keeps the bytes from the last consumed byte
 boundary, and the next `push` re-reads from the snapshot (a partially read
 dynamic header is simply re-parsed, which is bounded by the header size).
@@ -145,7 +157,7 @@ back-reference window.
 **Output growth.** Without `opts.out` the buffer starts at
 `max(64 KiB, 3 × input.length)` and doubles on demand; the result is a
 copy trimmed to the exact length. With `opts.out` the decoder writes directly
-into the caller's buffer, returns a view into it, and raises code 8 rather
+into the caller's buffer, returns a view into it, and raises `EBADSTREAM` rather
 than growing. `opts.dictionary` primes the output with the dictionary's last
 32 KiB so back-references into it are ordinary in-buffer copies; combined with
 `opts.out`, decoding runs in an internal buffer and the payload alone is
@@ -153,7 +165,7 @@ copied across at the end.
 
 **Known limitation.** An over-subscribed or incomplete dynamic Huffman code is
 not validated when the header is read. Such a stream is not silently accepted:
-decoding proceeds and ends in code 2, code 3 or code 8 as soon as a hole in
+decoding proceeds and ends in `EBADSYMBOL`, `EBADDISTANCE` or `EBADSTREAM` as soon as a hole in
 the table is hit.
 
 ### Encoder
@@ -163,7 +175,7 @@ RFC 1951 as well. Its matching pass is the shared [lz77](./lz77.md) module —
 `deflate` owns only the DEFLATE-specific parts: the symbol mapping of §3.2.5,
 the block-type decision, and the canonical Huffman coding of §3.2.6/§3.2.7.
 
-**Matching.** `lz77.encodeTokens` is called once per compression unit with
+**Matching.** One `lz77.createScanner` per compression unit, with
 `windowBits: 15`, `minMatch: 3`, `maxMatch: 258` and an injected `hashFn` —
 the 3-byte Fibonacci hash
 `imul(d[i] | d[i+1] << 8 | d[i+2] << 16, 0x9E3779B1) >>> (32 - hashBits)`,
@@ -206,10 +218,9 @@ other — noise, so one loop and one option rather than two scan functions.
 `min(22, 12 + mem)` bits wide; without it the width tracks the input size,
 `clamp(ceil(log2(inputLength)), 12, 20)`.
 
-**Blocks and cost.** The scan of a compression unit is one
-`lz77.encodeTokens` call whose packed `(len | 0, dist | byte)` pairs are
-read in place: a block is a window `[from, to)` of 16 384 tokens over that
-buffer, tallied in one pass into the literal/length and distance
+**Blocks and cost.** The scanner of a compression unit fills one buffer
+of 16 384 packed `(len | 0, dist | byte)` pairs per block, read in place:
+the block is tallied in one pass into the literal/length and distance
 frequencies and the total of extra bits, then written; the tail block
 carries `BFINAL`. The pairs are never copied into a second layout. For each
 block three exact bit costs are computed and the cheapest wins:
@@ -232,12 +243,12 @@ fixed block — the two bytes `03 00`.
 `BLOCK_TOKENS` stays at 16 384: `huffman.buildTree` uses a frequency
 sentinel of 25 001, so a block's symbol total must stay below it.
 
-**Memory.** The token buffer is the encoder's working set: `deflateSync`
-on N bytes holds an `Int32Array` of `2 × N` entries — 8 bytes per input
-byte — until it returns (up to 8 MiB of it is kept between calls as a
-scratch buffer; larger ones are transient). `DeflateStream` compresses in
-64 KiB units and stays bounded. A resumable scanner filling a fixed
-`BLOCK_TOKENS` buffer would remove this and is the recorded follow-up.
+**Memory.** The encoder holds one block of tokens — a 128 KiB buffer of
+`2 × BLOCK_TOKENS` entries, shared by every call — plus the scan's hash
+table (`2^hashBits` entries) and chain links (one per window position),
+whatever the input size. `deflateSync` on N bytes used to
+hold `8 × N` bytes of tokens until it returned: 256 MiB for a 32 MiB
+input. `DeflateStream` compresses in 64 KiB units.
 
 **Streaming.** `DeflateStream` keeps the last 32 KiB of input as a window and
 buffers pushes until 64 KiB or `final`, then compresses `window ++ pending`
@@ -249,9 +260,8 @@ fall is not part of it, and they differ from the pre-batch engine's.
 
 ## Benchmark
 
-Final gate record on the merged tree (task 03 + the perf landing), full
-baseline sha `b10c8a6da43e8c598645d097a678c38249ddebbc` (`git merge-base
-master HEAD`), with the batch's exact command:
+Measured on the merged tree, baseline sha `b10c8a6da43e8c598645d097a678c38249ddebbc` (`git merge-base
+master HEAD`), with this command:
 
 ```
 bun packages/front/fw/tools/bench/deflate-levels.js \
@@ -305,15 +315,13 @@ disappears when level 4 runs alone or in a directory-to-directory
 interleaved comparison — there this engine is byte-identical to the
 analysis' `p6nl` prototype at every cell and within ±1 % of its time — and
 is unrelated to the engine change. Read the aggregates, not the cells; a
-finer per-corpus verdict needs interleaved A/B repetitions (backlog item
-proposed in the perf-landing session, not yet filed as this task's
-perimeter excludes the bench tool).
+finer per-corpus verdict needs interleaved A/B repetitions, which the bench
+tool does not run yet.
 
 ### `{ lazy: true }` (same engine, lazy matching on) — supplementary, not gated
 
-Measured separately by the perf-landing session at `--warmup 15 --reps 11`
-(not re-run by this task: the batch gate covers only the default
-configuration above).
+Measured separately at `--warmup 15 --reps 11` (not re-run with the gate
+above, which covers the default configuration only).
 
 | Level | Old ms | New ms | Δtime | Old bytes | New bytes | Δbytes |
 |---|---|---|---|---|---|---|

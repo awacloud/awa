@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -57,11 +57,10 @@ import { random } from '../utils/random.js';
  * @typedef {object} SlhDsaInstance
  * @property {SlhDsaLengths} lengths Byte sizes of every artefact.
  * @property {(seed?: Uint8Array) => ({ publicKey: Uint8Array, secretKey: Uint8Array }|false)} keygen Generate a key pair.
- * @property {(msg: Uint8Array, sk: Uint8Array, opts?: SlhDsaSignOpts) => (Uint8Array|false)} sign Pure SLH-DSA sign.
- * @property {(sig: Uint8Array, msg: Uint8Array, publicKey: Uint8Array, opts?: SlhDsaSignOpts) => boolean} verify Pure SLH-DSA verify.
- * @property {(msg: Uint8Array, sk: Uint8Array, hashAlg: string, hashMod: ({hash: Function}|Function|null), opts?: SlhDsaSignOpts) => (Uint8Array|false)} signPh HashSLH-DSA sign.
- * @property {(sig: Uint8Array, msg: Uint8Array, publicKey: Uint8Array, hashAlg: string, hashMod: ({hash: Function}|Function|null), opts?: SlhDsaSignOpts) => boolean} verifyPh HashSLH-DSA verify.
- * @property {{ signInternal: Function, verifyInternal: Function, wrapMessage: Function, wrapMessageHash: Function, computePh: Function }} _internal Test-only escape hatches.
+ * @property {(sk: Uint8Array, msg: Uint8Array, opts?: SlhDsaSignOpts) => (Uint8Array|false)} sign Pure SLH-DSA sign (the fw order: key, message).
+ * @property {(publicKey: Uint8Array, sig: Uint8Array, msg: Uint8Array, opts?: SlhDsaSignOpts) => boolean} verify Pure SLH-DSA verify (the fw order: key, signature, message).
+ * @property {(sk: Uint8Array, msg: Uint8Array, hashAlg: string, hashMod: ({hash: Function}|Function|null), opts?: SlhDsaSignOpts) => (Uint8Array|false)} signPh HashSLH-DSA sign.
+ * @property {(publicKey: Uint8Array, sig: Uint8Array, msg: Uint8Array, hashAlg: string, hashMod: ({hash: Function}|Function|null), opts?: SlhDsaSignOpts) => boolean} verifyPh HashSLH-DSA verify.
  */
 
 /**
@@ -550,8 +549,6 @@ export const slh_dsa = {
             }
 
             // ── HashSLH-DSA wrapper (FIPS 205 §10.2.2 Algorithm 24/25) ──
-            // Iteration E4 of the FIPS 140-3 upgrade plan.
-            //
             //   M' = 0x01 || OctetEncode(|ctx|, 1) || ctx || OID(hashAlg) || PH(message)
             //
             // OID is the DER-encoded ASN.1 OBJECT IDENTIFIER of the hash
@@ -620,7 +617,7 @@ export const slh_dsa = {
             }
 
             // Internal sign - operates on already-wrapped M (per FIPS 205 §6
-            // raw, no §10.2 wrapping). Iteration E4 - extracted for reuse by
+            // raw, no §10.2 wrapping), shared by
             // sign / signPh / signInternal.
             function _signCore(M, sk, opts) {
                 if (!(sk instanceof Uint8Array) || sk.length !== SK_BYTES) {
@@ -691,14 +688,14 @@ export const slh_dsa = {
             }
 
             /** Pure SLH-DSA sign (FIPS 205 §10.2.1 with §6 internal). */
-            function sign(msg, sk, opts) {
+            function sign(sk, msg, opts) {
                 const M = _wrapMessage(msg, opts && opts.context);
                 if (M === false) return false;
                 return _signCore(M, sk, opts);
             }
 
             /** HashSLH-DSA sign (FIPS 205 §10.2.2 algorithm 24). */
-            function signPh(msg, sk, hashAlg, hashMod, opts) {
+            function signPh(sk, msg, hashAlg, hashMod, opts) {
                 const ph = _computePh(msg, hashAlg, hashMod);
                 if (ph === false) return false;
                 const M = _wrapMessageHash(ph, opts && opts.context, hashAlg);
@@ -767,14 +764,14 @@ export const slh_dsa = {
             }
 
             /** Pure SLH-DSA verify (FIPS 205 §10.2.1). */
-            function verify(sig, msg, publicKey, opts) {
+            function verify(publicKey, sig, msg, opts) {
                 const M = _wrapMessage(msg, opts && opts.context);
                 if (M === false) return false;
                 return _verifyCore(sig, M, publicKey);
             }
 
             /** HashSLH-DSA verify (FIPS 205 §10.2.2 algorithm 25). */
-            function verifyPh(sig, msg, publicKey, hashAlg, hashMod, opts) {
+            function verifyPh(publicKey, sig, msg, hashAlg, hashMod, opts) {
                 const ph = _computePh(msg, hashAlg, hashMod);
                 if (ph === false) return false;
                 const M = _wrapMessageHash(ph, opts && opts.context, hashAlg);
@@ -782,24 +779,25 @@ export const slh_dsa = {
                 return _verifyCore(sig, M, publicKey);
             }
 
-            return {
+            return Object.defineProperty({
                 lengths: { publicKey: PK_BYTES, secretKey: SK_BYTES, signature: SIG_BYTES, seed: SEED_BYTES },
                 keygen,
                 sign, verify,
-                // Iteration E4 of the FIPS 140-3 upgrade plan - HashSLH-DSA
+                // HashSLH-DSA
                 // (FIPS 205 §10.2.2 algorithms 24 + 25).
-                signPh, verifyPh,
+                signPh, verifyPh
+            }, Symbol.for('@awacloud/fw/internal'), {
                 // Internal escape hatches (test-only). Bypass §10.2 wrapping ;
                 // M is passed as-is to _signCore / _verifyCore. Used by ACVP
                 // signatureInterface=internal vectors.
-                _internal: {
+                value: {
                     signInternal:    (M, sk, opts) => _signCore(M, sk, opts),
                     verifyInternal:  (sig, M, pk) => _verifyCore(sig, M, pk),
                     wrapMessage:     _wrapMessage,
                     wrapMessageHash: _wrapMessageHash,
                     computePh:       _computePh
                 }
-            };
+            });
         }
 
         return {

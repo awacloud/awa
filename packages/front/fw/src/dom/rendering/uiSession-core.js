@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -87,6 +87,34 @@ export const uiSessionCore = {
             const resolved = { ...item, template: tmpl };
             delete resolved.block;
             return resolved;
+        }
+
+        /**
+         * Order a rendered elm array for prepending: each root (a node whose
+         * parent is not in the array) carries `prepend: true`, and the root
+         * subtrees come in reverse, since each is inserted before the current
+         * first child — the items then end up in their original order.
+         *
+         * @param {Array<Object>} arr - `render.full(...).arr`.
+         * @returns {Array<Object>}
+         */
+        function _prependOrder(arr) {
+            const ids = new Set(arr.map(e => e.id));
+            const groups = [];
+            const groupOf = new Map();
+            for (const e of arr) {
+                const isRoot = e.parent == null || !ids.has(e.parent);
+                if (isRoot) {
+                    const g = [{ ...e, prepend: true }];
+                    groups.push(g);
+                    groupOf.set(e.id, g);
+                } else {
+                    const g = groupOf.get(e.parent);
+                    g.push(e);
+                    groupOf.set(e.id, g);
+                }
+            }
+            return groups.reverse().flat();
         }
 
         const methods = {
@@ -321,9 +349,12 @@ export const uiSessionCore = {
                 return this;
             },
 
-            /** Render and append items into the context (or their attach slot). */
+            /**
+             * Render and append items into the context (or their attach slot).
+             * An item with `prepend: true` goes before the existing children of
+             * its target instead; consecutive prepended items keep their order.
+             */
             add(items) {
-                const resolved = items.map(resolveTemplate);
                 for (const item of items) {
                     if (item && item.id && item.attach && item.attach.elm) {
                         let kids = this._children.get(item.attach.elm);
@@ -331,8 +362,16 @@ export const uiSessionCore = {
                         kids.add(item.id);
                     }
                 }
-                const result = render.full(resolved, this._attach, this._map);
-                template.elms(this._container, result.arr);
+                // Render in runs of the same `prepend` flag, in item order.
+                let start = 0;
+                while (start < items.length) {
+                    const pre = !!(items[start] && items[start].prepend);
+                    let end = start + 1;
+                    while (end < items.length && !!(items[end] && items[end].prepend) === pre) end++;
+                    const result = render.full(items.slice(start, end).map(resolveTemplate), this._attach, this._map);
+                    template.elms(this._container, pre ? _prependOrder(result.arr) : result.arr);
+                    start = end;
+                }
                 this._fireMount(items.map(i => i && i.id).filter(Boolean));
                 return this;
             },
@@ -563,7 +602,13 @@ export const uiSessionCore = {
                 if (!target) throw new Error(`uiSession.portal: no target element resolved for '${name}'`);
 
                 const portalCtxName = `${this._container}\x1fportal\x1f${name}`;
-                template.init(portalCtxName, { to: target });
+                // The portal renders into a host it owns, so clearing or closing
+                // it never touches the target (often `document.body`) or the
+                // target's other children.
+                const host = target.ownerDocument.createElement('div');
+                host.setAttribute('data-fw-portal', String(name));
+                target.appendChild(host);
+                template.init(portalCtxName, { to: host });
 
                 // `this.constructor` avoids a circular dep on the orchestrator.
                 // @ts-ignore - this is a constructor function; TS cannot verify dynamic class construction pattern

@@ -39,14 +39,16 @@
  * ```js
  * {
  *   bodyPr?: xmlNode,    // <a:bodyPr/> preserved verbatim
- *   lstStyle?: xmlNode,  // <a:lstStyle/> preserved verbatim
+ *   lstStyle?: xmlNode | null,  // <a:lstStyle/> preserved verbatim;
+ *                               // null: read without one, written without
  *   paragraphs: [{
  *     pPr?: {
  *       level?: number,           // <a:pPr lvl="N"/>
  *       align?: 'l'|'ctr'|'r'|'just'|'dist',  // algn
  *       indent?: number,
  *       marL?: number,
- *       bullet?: 'none' | { char: string } | { autoNumType: string },
+ *       bullet?: 'none' | { char: string } | { autoNumType: string, startAt?: number },
+ *       extraAttrs?: { [name]: string },  // other <a:pPr> attributes
  *       _extras?: [xmlNode]
  *     },
  *     runs: [textRun | breakRun | fieldRun],
@@ -57,7 +59,10 @@
  * textRun  := { type: 'text', value: string, rPr?: RunProperties }
  * breakRun := { type: 'break', rPr?: RunProperties }
  * fieldRun := { type: 'field', id: string, fieldType?: string,
- *               value?: string, rPr?: RunProperties }
+ *               value?: string, rPr?: RunProperties, pPr? }
+ *
+ * A run's properties keep their other attributes in `extraAttrs` and an
+ * `<a:latin>`'s beyond its typeface in `fontAttrs`; both are written back.
  *
  * RunProperties := {
  *   lang?, size?, bold?, italic?, underline?, strike?, baseline?,
@@ -118,6 +123,22 @@ export const drawingml = {
             'a:latin', 'a:ea', 'a:cs', 'a:sym', 'a:hlinkClick', 'a:hlinkMouseOver', 'a:rtl', 'a:extLst'
         ]);
 
+        // The attributes a parse types; any other is kept in `extraAttrs`
+        // (an `a:latin`'s in `fontAttrs`) and written back.
+        const RPR_TYPED_ATTRS = new Set(['lang', 'sz', 'b', 'i', 'strike', 'u', 'baseline']);
+        const PPR_TYPED_ATTRS = new Set(['lvl', 'algn', 'indent', 'marL']);
+        const LATIN_TYPED_ATTRS = new Set(['typeface']);
+        function otherAttrs(attrs, typed) {
+            const out = {};
+            for (const [k, v] of Object.entries(attrs || {})) if (!typed.has(k)) out[k] = v;
+            return Object.keys(out).length ? out : undefined;
+        }
+        function stringAttrs(o) {
+            const out = {};
+            for (const [k, v] of Object.entries(o || {})) if (v != null && typeof v !== 'object') out[k] = String(v);
+            return out;
+        }
+
         // A run fill's colour, or `undefined` (the fill is then kept
         // verbatim in `_extras`). Default (1.0.0): the `val` of an
         // `a:srgbClr`, transforms dropped. `typedRunColors`: the
@@ -149,6 +170,8 @@ export const drawingml = {
             if (a.strike)   out.strike = a.strike;
             if (a.u)        out.underline = a.u;
             if (a.baseline != null) out.baseline = Number(a.baseline);
+            const extraAttrs = otherAttrs(a, RPR_TYPED_ATTRS);
+            if (extraAttrs) out.extraAttrs = extraAttrs;
             const extras = [];
             for (const c of rPrEl.children) {
                 if (c.type !== 'element') continue;
@@ -158,6 +181,8 @@ export const drawingml = {
                     else extras.push(c);
                 } else if (c.name === 'a:latin') {
                     out.font = c.attrs.typeface;
+                    const fontAttrs = otherAttrs(c.attrs, LATIN_TYPED_ATTRS);
+                    if (fontAttrs) out.fontAttrs = fontAttrs;
                 } else {
                     extras.push(c);
                 }
@@ -168,7 +193,7 @@ export const drawingml = {
 
         function renderRunProperties(rPr) {
             if (!rPr) return null;
-            const a = {};
+            const a = { ...stringAttrs(rPr.extraAttrs) };
             if (rPr.lang)             a.lang = rPr.lang;
             if (rPr.size != null)     a.sz = String(rPr.size);
             if (rPr.bold != null)     a.b = writeBoolAttr(rPr.bold);
@@ -183,7 +208,7 @@ export const drawingml = {
                 if (el) children.push(xml.el('a:solidFill', {}, [el]));
             }
             if (rPr.font) {
-                children.push(xml.el('a:latin', { typeface: rPr.font }));
+                children.push(xml.el('a:latin', { typeface: rPr.font, ...stringAttrs(rPr.fontAttrs) }));
             }
             if (rPr._extras) for (const ex of rPr._extras) children.push(ex);
             return xml.el('a:rPr', a, ordered(children, RPR_SEQ));
@@ -199,12 +224,17 @@ export const drawingml = {
             if (a.algn)           out.align = a.algn;
             if (a.indent != null) out.indent = Number(a.indent);
             if (a.marL != null)   out.marL = Number(a.marL);
+            const extraAttrs = otherAttrs(a, PPR_TYPED_ATTRS);
+            if (extraAttrs) out.extraAttrs = extraAttrs;
             const extras = [];
             for (const c of pPrEl.children) {
                 if (c.type !== 'element') continue;
                 if (c.name === 'a:buNone')         out.bullet = 'none';
                 else if (c.name === 'a:buChar')    out.bullet = { char: c.attrs.char };
-                else if (c.name === 'a:buAutoNum') out.bullet = { autoNumType: c.attrs.type };
+                else if (c.name === 'a:buAutoNum') {
+                    out.bullet = { autoNumType: c.attrs.type };
+                    if (c.attrs.startAt != null) out.bullet.startAt = Number(c.attrs.startAt);
+                }
                 else if (c.name === 'a:defRPr')    out.defRPr = parseRunProperties(c, opts);
                 else extras.push(c);
             }
@@ -214,7 +244,7 @@ export const drawingml = {
 
         function renderParagraphProperties(pPr) {
             if (!pPr) return null;
-            const a = {};
+            const a = { ...stringAttrs(pPr.extraAttrs) };
             if (pPr.level != null)  a.lvl = String(pPr.level);
             if (pPr.align)          a.algn = pPr.align;
             if (pPr.indent != null) a.indent = String(pPr.indent);
@@ -225,7 +255,9 @@ export const drawingml = {
             } else if (pPr.bullet && pPr.bullet.char) {
                 children.push(xml.el('a:buChar', { char: pPr.bullet.char }));
             } else if (pPr.bullet && pPr.bullet.autoNumType) {
-                children.push(xml.el('a:buAutoNum', { type: pPr.bullet.autoNumType }));
+                const ba = { type: pPr.bullet.autoNumType };
+                if (pPr.bullet.startAt != null) ba.startAt = String(pPr.bullet.startAt);
+                children.push(xml.el('a:buAutoNum', ba));
             }
             if (pPr.defRPr) {
                 const dpr = renderRunProperties(pPr.defRPr);
@@ -235,7 +267,7 @@ export const drawingml = {
                 }
             }
             if (pPr._extras) for (const ex of pPr._extras) children.push(ex);
-            if (!Object.keys(a).length && !children.length) return null;
+            // An empty pPr read ({}) is written back as <a:pPr/>.
             return xml.el('a:pPr', a, ordered(children, PPR_SEQ));
         }
 
@@ -268,6 +300,8 @@ export const drawingml = {
             const tEl = xml.findChild(fEl, 'a:t');
             const rPr = parseRunProperties(rPrEl, opts);
             if (rPr) out.rPr = rPr;
+            const pPr = parseParagraphProperties(xml.findChild(fEl, 'a:pPr'), opts);
+            if (pPr) out.pPr = pPr;
             if (tEl) out.value = xml.textContent(tEl);
             return out;
         }
@@ -278,6 +312,9 @@ export const drawingml = {
             const children = [];
             const rPrEl = renderRunProperties(f.rPr);
             if (rPrEl) children.push(rPrEl);
+            // CT_TextField: rPr, pPr, t.
+            const pPrEl = renderParagraphProperties(f.pPr);
+            if (pPrEl) children.push(pPrEl);
             if (f.value != null) children.push(xml.el('a:t', {}, [xml.text(f.value)]));
             return xml.el('a:fld', a, children);
         }
@@ -350,6 +387,8 @@ export const drawingml = {
                 else if (c.name === 'a:lstStyle')  out.lstStyle = c;
                 else if (c.name === 'a:p')         out.paragraphs.push(parseParagraph(c, opts));
             }
+            // Read without one: `null`, written back without one.
+            if (out.lstStyle === undefined) out.lstStyle = null;
             return out;
         }
 
@@ -360,7 +399,7 @@ export const drawingml = {
         function renderTextBody(tb, rootTag = 'a:txBody') {
             const children = [];
             children.push(tb.bodyPr  || xml.el('a:bodyPr',  {}));
-            children.push(tb.lstStyle || xml.el('a:lstStyle', {}));
+            if (tb.lstStyle !== null) children.push(tb.lstStyle || xml.el('a:lstStyle', {}));
             for (const p of tb.paragraphs || []) {
                 children.push(renderParagraph(p));
             }

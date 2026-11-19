@@ -33,7 +33,8 @@ FIPS 186-5 §A.1.3 (probable-prime):
    `qInv = q⁻¹ mod p`. Checks `d > 2^(nlen/2)` (§A.1.1), retries otherwise.
 
 API: `factory(bitArray, bn, random)` → `{ generate, generateProbablePrime,
-_internal: { millerRabin, smallPrimes, divmod, lcm, inverseModAny } }`.
+}`, with `{ millerRabin, smallPrimes, divmod, lcm, inverseModAny }` in its internal slot
+(`internalOf(rsaKeygen)`).
 Output serialized as big-endian `Uint8Array` for `pkc/rsa.js` integration.
 
 ## Test coverage
@@ -66,7 +67,7 @@ candidates.
 
 **Coverage retained**: validate, across each of the 15 NIST keys
 (3 nlen × 5 methods), the §A.1.1 structural invariants that every IUT
-*must* satisfy. The `_internal` primitives (`millerRabin`, `lcm`,
+*must* satisfy. The internal-slot primitives (`millerRabin`, `lcm`,
 `inverseModAny`) are precisely what a CMVP validator exercises:
 
 ```

@@ -43,7 +43,7 @@ fw-bundler bundle [target] [flags]             # from the package root
 | Flag                | Effect |
 | ------------------- | ------ |
 | `--dev`             | `ENV.DEV = true` and preserves `/* dev_only */` blocks. |
-| `--no-log`          | `ENV.LOG = false` — no main logger. |
+| `--no-log`          | `ENV.LOG = false` — no main logger, and `console` is not taken over (see the README's *Logging and `console`*). |
 | `--no-sanity-log`   | Patches `sanity/base.js` with `LOG_ATTEMPTS = false` (silent in production). |
 | `--sanity-only`     | Builds only `dist/build/sanity.min.js`. |
 | `--no-sanity`       | Does not emit `sanity.min.js`. |
@@ -147,7 +147,7 @@ Everything is written to `dist/build/`. Naming convention:
 | `pure`    | `fw.<preset>.pure.min.js` (+ `.pure.js`)       | `fw.pack.<name>.pure.min.js` (+ `.pure.js`)              |
 | `classic` | `fw.<preset>.min.js` (+ `.js`)                 | `fw.pack.<name>.min.js` (+ `.js`)                        |
 
-Each bundle has a paired `.meta.json` with: description, modules listed, env, bytes (min/gz), sha256, builtAt.
+Each bundle has a paired `.meta.json` with: description, modules listed, env, bytes (min/gz), sha256. No build timestamp: the output is reproducible.
 
 ## Architecture
 
@@ -203,7 +203,7 @@ With the `deps` field (cf. [`docs/guide/module-pattern.md`](../guide/module-patt
 
 - Zero npm dependencies — only `Bun.build`, `Bun.gzipSync`, `node:fs`, `node:path`, `node:crypto`.
 - Browser target (`target: 'browser'`, `format: 'esm'`).
-- External source maps (`.map`) for preset and pack bundles.
+- No source maps are emitted.
 - `sanity.min.js` is a classic script (no module syntax).
 
 ## See also

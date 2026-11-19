@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -248,7 +248,7 @@ export const keybindings = {
             const _contextStack = [];
 
             // Pending chord state
-            let _chordPending = null;   // { parsed: Array, matched: number, timer: id }
+            let _chordPending = null;   // { candidates: Binding[], matched: number, timer: id }
 
             let _attached = false;
 
@@ -397,6 +397,11 @@ export const keybindings = {
              * @param {Array}         matched - bindings filtered by context
              * @param {KeyboardEvent} event
              */
+            /** The highest-priority binding of `list` (the first registered on a tie). */
+            function _highest(list) {
+                return list.reduce((a, b) => b.priority > a.priority ? b : a, list[0]);
+            }
+
             function _dispatch(matched, event) {
                 if (matched.length === 0) return;
 
@@ -425,17 +430,23 @@ export const keybindings = {
                 // Note: filtering happens per binding below, but if all candidates
                 // reject repeat we can exit early.
 
-                // ── Phase 1: handle a pending chord ──────────────────────────
+                // ── Step 1: handle a pending chord ──────────────────────────
+                // Every candidate whose segments so far matched is kept, so two
+                // chords sharing a prefix (`g a`, `g h`) can both complete.
                 if (_chordPending) {
-                    const { parsed, matched, timer, binding } = _chordPending;
+                    const { candidates, matched, timer } = _chordPending;
                     clearTimeout(timer);
                     _chordPending = null;
 
                     const nextIdx = matched + 1;
-                    if (_matchesSegment(event, parsed[nextIdx])) {
-                        if (nextIdx === parsed.length - 1) {
-                            // Chord complet
-                            const b = binding;
+                    const survivors = candidates.filter(b => _matchesSegment(event, b.parsed[nextIdx]));
+                    if (survivors.length > 0) {
+                        const complete = survivors.filter(b => b.parsed.length - 1 === nextIdx);
+                        if (complete.length > 0) {
+                            // A chord that completes on this key wins over a longer
+                            // one sharing its prefix; among them the highest
+                            // priority fires (the first registered on a tie).
+                            const b = _highest(complete);
                             if (b.repeat || !event.repeat) {
                                 if (b.preventDefault) event.preventDefault();
                                 try {
@@ -449,19 +460,18 @@ export const keybindings = {
                         } else {
                             // More segments still to come
                             _chordPending = {
-                                parsed,
+                                candidates: survivors,
                                 matched: nextIdx,
-                                binding,
                                 timer: setTimeout(() => { _chordPending = null; }, chordTimeout),
                             };
                         }
                         return; // Ne pas traiter comme binding simple
                     }
-                    // Second keystroke does not match → cancel the chord
+                    // The key matches no candidate → cancel the chord
                     // and continue normal processing
                 }
 
-                // ── Phase 2: look for chord candidates ───────────────────────
+                // ── Step 2: look for chord candidates ───────────────────────
                 const chordCandidates = _bindings.filter(b => {
                     if (!Array.isArray(b.parsed)) return false;
                     if (!_matchesSegment(event, b.parsed[0])) return false;
@@ -472,19 +482,17 @@ export const keybindings = {
                 });
 
                 if (chordCandidates.length > 0) {
-                    // Start the chord with the first candidate (when several, take the highest priority)
-                    const best = chordCandidates.reduce((a, b) => b.priority > a.priority ? b : a, chordCandidates[0]);
+                    // Start the chord with every candidate; the next keys narrow the set.
                     _chordPending = {
-                        parsed:  best.parsed,
+                        candidates: chordCandidates,
                         matched: 0,
-                        binding: best,
                         timer:   setTimeout(() => { _chordPending = null; }, chordTimeout),
                     };
                     // Do not trigger a simple binding immediately
                     return;
                 }
 
-                // ── Phase 3: simple bindings ──────────────────────────────────
+                // ── Step 3: simple bindings ──────────────────────────────────
                 const simpleCandidates = _bindings.filter(b => {
                     if (Array.isArray(b.parsed)) return false;
                     return _matchesSegment(event, b.parsed);

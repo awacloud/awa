@@ -41,6 +41,13 @@
  *                // target / external: set by docx.read when the rId resolves
  *                // in the node's part, consumed by docx.write
  *
+ * smartTag := { type: 'smartTag',
+ *               attrs: { [name]: string },   // w:uri, w:element, as read
+ *               smartTagPr?: xmlNode,         // <w:smartTagPr>, verbatim
+ *               children: [inline],           // typed like a paragraph's
+ *               _extras?: [xmlNode] }         // any other child, verbatim
+ *               // written back in its place, w:smartTagPr first
+ *
  * table := { type: 'table',
  *            tblPr?: TableProperties,   // typed: style, width, borders, cellMargins
  *                                       // (see docxProperties; the rest of
@@ -101,6 +108,48 @@ export const docxStructure = {
         ]);
         // --- Run children: text, break, tab, references, deletion text ---
 
+        // The read option `alternateContent: 'choice'`, set by `docx.read`
+        // around its parse (`withChoiceDrawings`): a run's
+        // `mc:AlternateContent` is then read as the drawing of its Choice
+        // (`choiceDrawing`); false outside such a read.
+        let choiceDrawings = false;
+
+        /** Run `fn` with the run's drawing constructs read as drawings when `on`. */
+        function withChoiceDrawings(on, fn) {
+            const before = choiceDrawings;
+            choiceDrawings = on === true;
+            try { return fn(); } finally { choiceDrawings = before; }
+        }
+
+        // The Choice prefixes whose drawing the typed model reads: Word 2010
+        // shapes, groups and canvases.
+        const CHOICE_PREFIXES = new Set(['wps', 'wpg', 'wpc']);
+
+        /**
+         * The drawing an `mc:AlternateContent` of a run stands for — its one
+         * `mc:Choice` (no attribute but `Requires`, every required prefix a
+         * `CHOICE_PREFIXES` one) holding one `w:drawing`, then at most one
+         * `mc:Fallback`, the construct carrying no attribute — read as any
+         * drawing, with `alternate: { requires, fallback }` (the Choice's
+         * `Requires`, the `mc:Fallback` element or null) for the write.
+         * Null for any other construct.
+         */
+        function choiceDrawing(ac) {
+            const els = ac.children.filter(k => k.type === 'element');
+            const choice = els[0];
+            const fallback = els[1] || null;
+            if (!choice || choice.name !== 'mc:Choice' || els.length > 2 || (fallback && fallback.name !== 'mc:Fallback')) return null;
+            if (Object.keys(ac.attrs).length || Object.keys(choice.attrs).some(k => k !== 'Requires')) return null;
+            const requires = String(choice.attrs.Requires || '');
+            const prefixes = requires.split(/\s+/).filter(Boolean);
+            if (!prefixes.length || !prefixes.every(p => CHOICE_PREFIXES.has(p))) return null;
+            const inner = choice.children.filter(k => k.type === 'element');
+            if (inner.length !== 1 || inner[0].name !== 'w:drawing') return null;
+            const drawing = drawingMod.parseDrawing(inner[0]);
+            drawing.alternate = { requires, fallback };
+            return drawing;
+        }
+
         function parseRunChildren(rEl) {
             const out = [];
             for (const c of rEl.children) {
@@ -141,6 +190,9 @@ export const docxStructure = {
                     }
                     case 'w:drawing':
                         out.push(drawingMod.parseDrawing(c));
+                        break;
+                    case 'mc:AlternateContent':
+                        out.push((choiceDrawings && choiceDrawing(c)) || { type: 'unknown', node: c });
                         break;
                     case 'w:fldChar': {
                         const f = { type: 'fldChar',
@@ -208,7 +260,7 @@ export const docxStructure = {
                         break;
                     }
                     case 'drawing':
-                        out.push(drawingMod.renderDrawing(ch));
+                        out.push(drawingMod.renderRunChild(ch));
                         break;
                     case 'fldChar': {
                         const a = { 'w:fldCharType': ch.kind };
@@ -572,6 +624,18 @@ export const docxStructure = {
                     return parseRevision(c, REVISION_TAGS[c.name]);
                 case 'w:sdt':
                     return parseSdt(c, false);
+                case 'w:smartTag': {
+                    const t = { type: 'smartTag', attrs: { ...(c.attrs || {}) }, children: [] };
+                    const extras = [];
+                    for (const cc of c.children) {
+                        if (cc.type !== 'element') continue;
+                        if (cc.name === 'w:smartTagPr') { t.smartTagPr = cc; continue; }
+                        const node = parseInline(cc);
+                        if (node) t.children.push(node); else extras.push(cc);
+                    }
+                    if (extras.length) t._extras = extras;
+                    return t;
+                }
                 case 'm:oMath':
                     return mathMod.parseOMath(c);
                 case 'w:fldSimple': {
@@ -695,6 +759,14 @@ export const docxStructure = {
                     case 'moveFrom':
                     case 'moveTo':    children.push(renderRevision(c)); break;
                     case 'sdt':       children.push(renderSdt(c)); break;
+                    case 'smartTag': {
+                        const kids = [];
+                        if (c.smartTagPr) kids.push(c.smartTagPr);
+                        kids.push(...renderInlines(c.children));
+                        if (c._extras) kids.push(...c._extras);
+                        children.push(xml.el('w:smartTag', { ...(c.attrs || {}) }, kids));
+                        break;
+                    }
                     case 'oMath':     children.push(mathMod.renderOMath(c)); break;
                     case 'fldSimple': {
                         const a = { 'w:instr': c.instr || '' };
@@ -1162,7 +1234,7 @@ export const docxStructure = {
         return {
             parseRun, renderRun,
             parseHyperlink, renderHyperlink,
-            parseParagraph, renderParagraph, withParaIds,
+            parseParagraph, renderParagraph, withParaIds, withChoiceDrawings,
             parseTable, renderTable,
             parseRow, renderRow,
             parseCell, renderCell,

@@ -1,0 +1,160 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — frames demo</title>
+
+    <!-- 1. SANITY LOCKDOWN — first, before any application module. -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 2. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 2bis. Surface-local layout only (no palette redeclaration). -->
+    <style>
+        #mount { width: 100%; height: 220px; }
+        .frame-jump { margin: 0 0 16px; display: flex; gap: 6px; flex-wrap: wrap; }
+        button.frame-btn { padding: 6px 10px; min-width: 2.4em; }
+        button.frame-btn[aria-current="true"] { border-color: var(--accent); color: var(--accent); }
+        ul.legend {
+            list-style: none;
+            margin: 16px 0 0;
+            padding: 0;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        ul.legend li { margin: 2px 0; }
+    </style>
+</head>
+
+<body data-demo="frames">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to demos</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>Frames — frame-sequence primitive</h1>
+        <p class="demo-lede">A discrete <code>graphic.frames</code> sequence: eight
+            code-generated regular polygons, one more side than the last
+            (triangle&nbsp;&rarr;&nbsp;decagon) — a literal shape-morph-per-frame flip
+            book, played/paused/scrubbed entirely through the frames surface.</p>
+    </header>
+
+    <p class="demo-note" style="margin-top:0;">Variant: <code id="variant-label">…</code> — Frame:
+        <code id="frame-label">…</code> — <code id="playing-label">…</code></p>
+
+    <div class="demo-stage">
+        <svg id="mount" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="demo-controls">
+        <button type="button" id="play">Play</button>
+        <button type="button" id="pause">Pause</button>
+        <button type="button" id="restart">Restart</button>
+    </div>
+
+    <p style="color:var(--muted); font-size:0.85rem; margin: 16px 0 6px;">Jump to frame:</p>
+    <div class="frame-jump" id="frame-jump"></div>
+
+    <ul class="legend">
+        <li>Play: resumes the shared scheduler-driven loop (<code>Frames#play</code>).</li>
+        <li>Pause: freezes on the current frame (<code>Frames#pause</code>).</li>
+        <li>Frame buttons: jump directly (<code>Frames#seek</code>), no autoplay.</li>
+    </ul>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/demos/frames/</code></p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+
+<!-- 3. ENTRY — the `run()` contract. -->
+<script type="module">
+    import { boot } from '../_boot.js';
+    import { run } from './main.js';
+
+    const mount = document.getElementById('mount');
+    const variantLabel = document.getElementById('variant-label');
+    const frameLabel = document.getElementById('frame-label');
+    const playingLabel = document.getElementById('playing-label');
+    const playButton = document.getElementById('play');
+    const pauseButton = document.getElementById('pause');
+    const restartButton = document.getElementById('restart');
+    const frameJump = document.getElementById('frame-jump');
+
+    /** @type {{ dispose(): void, play(): void, pause(): void, seek(i: number): void, frame(): number, frameCount(): number, playing(): boolean }|null} */
+    let handle = null;
+    /** @type {number|null} */
+    let pollHandle = null;
+
+    function stopPolling() {
+        if (pollHandle !== null) {
+            cancelAnimationFrame(pollHandle);
+            pollHandle = null;
+        }
+    }
+
+    function pollReadout() {
+        if (!handle) return;
+        const current = handle.frame();
+        frameLabel.textContent = `${current + 1} / ${handle.frameCount()}`;
+        playingLabel.textContent = handle.playing() ? 'playing' : 'paused';
+        for (const btn of frameJump.children) {
+            btn.setAttribute('aria-current', String(Number(btn.dataset.index) === current));
+        }
+        pollHandle = requestAnimationFrame(pollReadout);
+    }
+
+    function buildFrameJumpButtons(frameCount) {
+        frameJump.textContent = '';
+        for (let i = 0; i < frameCount; i += 1) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'frame-btn';
+            btn.textContent = String(i + 1);
+            btn.dataset.index = String(i);
+            btn.addEventListener('click', () => { if (handle) handle.seek(i); });
+            frameJump.appendChild(btn);
+        }
+    }
+
+    async function start() {
+        stopPolling();
+        if (handle) {
+            handle.dispose();
+            handle = null;
+        }
+        while (mount.firstChild) mount.removeChild(mount.firstChild);
+
+        const { anim, variant } = await boot();
+        variantLabel.textContent = variant;
+        handle = await run({ mount, anim, variant });
+        // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+        requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+        buildFrameJumpButtons(handle.frameCount());
+        pollReadout();
+    }
+
+    playButton.addEventListener('click', () => { if (handle) handle.play(); });
+    pauseButton.addEventListener('click', () => { if (handle) handle.pause(); });
+    restartButton.addEventListener('click', () => { start(); });
+
+    start();
+</script>
+</body>
+</html>

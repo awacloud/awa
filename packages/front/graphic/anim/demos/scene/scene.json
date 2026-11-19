@@ -1,0 +1,41 @@
+{
+    "template": {
+        "tag": "g",
+        "children": [
+            { "tag": "rect", "attrs": { "id": "housing", "x": 8, "y": 8, "width": 64, "height": 144, "rx": 10, "fill": "#20242c", "stroke": "#3a3f4a", "stroke-width": "2" } },
+            { "tag": "circle", "attrs": { "id": "lamp-red", "cx": 40, "cy": 40, "r": 16, "fill": "#5a1414" } },
+            { "tag": "circle", "attrs": { "id": "lamp-yellow", "cx": 40, "cy": 80, "r": 16, "fill": "#5a4c14" } },
+            { "tag": "circle", "attrs": { "id": "lamp-green", "cx": 40, "cy": 120, "r": 16, "fill": "#145a1e" } }
+        ]
+    },
+    "refs": {
+        "red": "lamp-red",
+        "yellow": "lamp-yellow",
+        "green": "lamp-green"
+    },
+    "events": {
+        "warn": {
+            "at": "yellow",
+            "animations": [
+                { "target": "yellow", "property": "fill", "from": "#5a4c14", "to": "#ffdd33", "duration": 260 }
+            ]
+        },
+        "go": {
+            "at": "green",
+            "mode": "parallel",
+            "animations": [
+                { "target": "red", "property": "fill", "from": "#ff3b3b", "to": "#5a1414", "duration": 260 },
+                { "target": "yellow", "property": "fill", "from": "#ffdd33", "to": "#5a4c14", "duration": 260 },
+                { "target": "green", "property": "fill", "from": "#145a1e", "to": "#33e04d", "duration": 260 }
+            ]
+        },
+        "stop": {
+            "at": "red",
+            "mode": "parallel",
+            "animations": [
+                { "target": "green", "property": "fill", "from": "#33e04d", "to": "#145a1e", "duration": 260 },
+                { "target": "red", "property": "fill", "from": "#5a1414", "to": "#ff3b3b", "duration": 260 }
+            ]
+        }
+    }
+}

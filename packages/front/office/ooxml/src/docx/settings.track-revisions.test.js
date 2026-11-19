@@ -40,8 +40,12 @@ describe('docx settings — core trackChanges is w:trackRevisions', () => {
         expect(names(text)).toEqual(['w:zoom', 'w:trackRevisions', 'w:defaultTabStop']);
     });
 
-    test('false or absent writes nothing', () => {
-        expect(names(settingsMod.serialize({ trackChanges: false, defaultTabStop: 720 }))).toEqual(['w:defaultTabStop']);
+    // T71: re-pinned. A stated false is written back (w:val="0"); absent writes nothing.
+    test('false writes w:val="0", absent writes nothing', () => {
+        const out = settingsMod.serialize({ trackChanges: false, defaultTabStop: 720 });
+        expect(names(out)).toEqual(['w:trackRevisions', 'w:defaultTabStop']); // the schema's order
+        expect(out).toContain('<w:trackRevisions w:val="0"/>');
+        expect(names(settingsMod.serialize({ defaultTabStop: 720 }))).toEqual(['w:defaultTabStop']);
     });
 
     test('a real file\'s w:trackRevisions reads as trackChanges, toggle rules included', () => {
@@ -56,8 +60,8 @@ describe('docx settings — core trackChanges is w:trackRevisions', () => {
     test('a typed boolean is not written twice beside an _extras copy', () => {
         const text = settingsMod.serialize({ trackChanges: true, _extras: [xml.el('w:trackRevisions', {}), xml.el('w:trackChanges', {})] });
         expect(names(text)).toEqual(['w:trackRevisions']);
-        // A typed false wins over an _extras copy too: nothing is written.
-        expect(names(settingsMod.serialize({ trackChanges: false, _extras: [xml.el('w:trackRevisions', {})] }))).toEqual([]);
+        // A typed false wins over an _extras copy too: it alone is written (T71: w:val="0").
+        expect(names(settingsMod.serialize({ trackChanges: false, _extras: [xml.el('w:trackRevisions', {})] }))).toEqual(['w:trackRevisions']);
     });
 
     test('docx read → write → read keeps trackChanges, written once', () => {

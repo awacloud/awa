@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -278,6 +278,9 @@ describe('SSR round-trip + hydration', () => {
             );
             expect(ssrNodes).toHaveLength(3);
             const [n1, n2, n3] = ssrNodes;
+            // Each SSR row is addressable by its index; data-fw-id stays shared.
+            expect(ssrNodes.map(n => n.getAttribute('data-fw-row'))).toEqual(['0', '1', '2']);
+            expect(ssrNodes.map(n => n.getAttribute('data-fw-id'))).toEqual(['app:row', 'app:row', 'app:row']);
 
             const rowTpl = parserApi.fromHTML('<li id="row">#{label}</li>');
             const list = ui.list('panel', 'rows', {

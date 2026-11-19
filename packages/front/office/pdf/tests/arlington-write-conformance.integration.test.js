@@ -301,9 +301,10 @@ describe('the walk and the case rules, on a stand-in model', () => {
     });
 });
 
-// Every case the package's writers fail today (2026-10-14, after the
-// CIDSystemInfo strings fix and the derived /ID): the Standard 14 faces
-// written without the opt-in metrics, with their reason.
+// Every case the 1.x writers failed (2026-10-14, after the CIDSystemInfo
+// strings fix and the derived /ID): the Standard 14 faces written without
+// their metrics, with their reason. Since 2.0.0 (T30 (g2), D53) only the
+// legacy registration (`standard14: false`) writes them so.
 const FAILING = [
     ['builder-standard-14 2 0 R FontType1/FirstChar', 'required, absent'],
     ['builder-standard-14 2 0 R FontType1/LastChar', 'required, absent'],
@@ -329,11 +330,15 @@ describe('the measure over the package\'s writers', () => {
     const model = loadModel(TSV);
     const r = checkDocuments(model, docs, rt.resolve('pdf'));
 
+    // T76: re-pinned. The CFF-outline page joins the documents (written and
+    // re-written), its FontFile3 /OpenType programs under Type1 and
+    // CIDFontType0 fonts among the objects walked.
     test('the documents: pdfBuilder from scratch and pdf.write of a read, %PDF-2.0, reproducible', () => {
         expect(docs.map((d) => [d.id, d.writer])).toEqual([
             ['builder-blank', 'pdfBuilder'], ['builder-standard-14', 'pdfBuilder'],
             ['builder-standard-14-metrics', 'pdfBuilder'], ['builder-embedded', 'pdfBuilder'],
-            ['builder-image', 'pdfBuilder'], ['write-standard-14', 'pdf.write'], ['write-embedded', 'pdf.write']
+            ['builder-image', 'pdfBuilder'], ['builder-embedded-cff', 'pdfBuilder'],
+            ['write-standard-14', 'pdf.write'], ['write-embedded', 'pdf.write'], ['write-embedded-cff', 'pdf.write']
         ]);
         for (const d of docs) expect(new TextDecoder().decode(d.bytes.subarray(0, 8))).toBe('%PDF-2.0');
         const again = pdfDocuments(rt);
@@ -347,39 +352,43 @@ describe('the measure over the package\'s writers', () => {
             kinds[k] = (kinds[k] || 0) + 1;
         }
         expect(kinds).toEqual({
-            CIDSystemInfo: 2, Catalog: 7, DocInfo: 2, FileTrailer: 7, FontCIDType2: 2, FontDescriptorCIDType2: 2,
-            FontDescriptorTrueType: 2, FontDescriptorType1: 3, FontFile2: 4, FontTrueType: 2, FontType0: 2, FontType1: 7,
-            PageObject: 9, PageTreeNodeRoot: 7, Resource: 9, Stream: 8, ToUnicodeCMapStream: 4, XObjectImage: 1,
+            CIDSystemInfo: 6, Catalog: 9, DocInfo: 2, Encoding: 2, FileTrailer: 9, FontCIDType0: 4, FontCIDType2: 2,
+            FontDescriptorCIDType0: 4, FontDescriptorCIDType2: 2, FontDescriptorTrueType: 2, FontDescriptorType1: 9,
+            FontFile2: 4, FontFile3OpenType: 6, FontTrueType: 2, FontType0: 6, FontType1: 9,
+            PageObject: 11, PageTreeNodeRoot: 9, Resource: 11, Stream: 10, ToUnicodeCMapStream: 10, XObjectImage: 1,
             XObjectImageSoftMask: 1
         });
     });
 
-    test('the score and every failing case', () => {
-        expect(r.cases.filter((c) => c.ok).length).toBe(327);
-        expect(r.cases.length).toBe(343);
-        expect(failures(r)).toEqual(FAILING);
-        expect(r.skipped.length).toBe(33);
-        expect(r.unevaluated.length).toBe(23);
+    // T30 (g2), D53: re-pinned. The builder writes the Standard 14 metrics
+    // by default, so every case passes (327 / 343 in 1.x: the legacy
+    // measure below).
+    test('the score: every case passes', () => {
+        expect(failures(r)).toEqual([]);
+        expect(r.cases.filter((c) => c.ok).length).toBe(583);
+        expect(r.cases.length).toBe(583);
+        expect(r.skipped.length).toBe(41);
+        expect(r.unevaluated.length).toBe(37);
     });
 });
 
-describe('the sibling measure: the Standard 14 faces through the opt-in metrics', () => {
+describe('the legacy measure: the Standard 14 faces with standard14: false (the 1.x output)', () => {
     const rt = pdfRuntime();
-    const docs = pdfDocuments(rt, { metrics: true });
+    const docs = pdfDocuments(rt, { legacy: true });
     const r = checkDocuments(loadModel(TSV), docs, rt.resolve('pdf'));
 
-    test('the same seven documents, the two Standard 14 ones with the metrics', () => {
+    test('the same nine documents, the two Standard 14 ones without the metrics', () => {
         const plain = pdfDocuments(rt);
         expect(docs.map((d) => d.id)).toEqual(plain.map((d) => d.id));
         const changed = docs.filter((d, i) => Array.from(d.bytes).join() !== Array.from(plain[i].bytes).join()).map((d) => d.id);
         expect(changed).toEqual(['builder-standard-14', 'write-standard-14']);
     });
 
-    test('every case passes', () => {
-        expect(failures(r)).toEqual([]);
-        expect(r.cases.filter((c) => c.ok).length).toBe(387);
-        expect(r.cases.length).toBe(387);
-        expect(r.skipped.length).toBe(33);
-        expect(r.unevaluated.length).toBe(27);
+    test('the score and every failing case', () => {
+        expect(r.cases.filter((c) => c.ok).length).toBe(523);
+        expect(r.cases.length).toBe(539);
+        expect(failures(r)).toEqual(FAILING);
+        expect(r.skipped.length).toBe(41);
+        expect(r.unevaluated.length).toBe(33);
     });
 });

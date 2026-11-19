@@ -41,19 +41,63 @@ so on.
 
 ## The matrix
 
-Module counts are the `meta.json` `modules` closure (identical on both
-surfaces); byte sizes are the `standalone` / `build` dev sizes.
+Module counts are the `meta.json` `modules` closure. A Read root lists the
+same closure on both surfaces. A Read+Write root does not: its `standalone`
+closure inlines 14 `@awacloud/fonts` modules (the Standard 14 and encoding
+lookups `pdfBuilder` uses, their tables and `fontErrors`), which its `build`
+closure leaves out because it declares them instead
+([What a consumer registers](#what-a-consumer-registers)).
 
-| Segment | Read root | modules | Read+Write root | modules | Δ |
+| Segment | Read root | modules | Read+Write root | modules, `standalone` | modules, `build` |
 |---|---|---|---|---|---|
-| bare core | `pdf` | 21 | `pdf-rw` | 35 | +14 |
-| large | `pdf-large` | 43 | `pdf-large-rw` | 57 | +14 |
-| full | `pdf-full` | 49 | `pdf-full-rw` | 63 | +14 |
-| legacy | `pdf-legacy` | 54 | `pdf-legacy-rw` | 68 | +14 |
+| bare core | `pdf` | 27 | `pdf-rw` | 53 | 39 |
+| large | `pdf-large` | 49 | `pdf-large-rw` | 75 | 61 |
+| full | `pdf-full` | 56 | `pdf-full-rw` | 82 | 68 |
+| legacy | `pdf-legacy` | 60 | `pdf-legacy-rw` | 86 | 72 |
 
 The composition is **strictly additive**: every Read root is a subset of its
-Read+Write twin, and adding the Read+Write family left the four Read roots
-unchanged.
+Read+Write twin on each surface, and adding the Read+Write family left the
+four Read roots unchanged.
+
+## What a consumer registers
+
+Each surface states what it needs at runtime, per family:
+
+| Surface | Family | Register on the `@awacloud/fw` runtime |
+|---|---|---|
+| `dist/standalone/` | Read and Read+Write | nothing: `factory()` takes no argument |
+| `dist/build/` | Read | the `@awacloud/fw` modules of `fw_require` |
+| `dist/build/` | Read+Write | `fw_require`, and `@awacloud/fonts`' manifest (its `fw_require` and `modules`, which is pdf's `pkg_require`) |
+
+A `dist/build` Read+Write root declares, after the `fw_require` names,
+the two `@awacloud/fonts` modules it uses, `standard14Lookup` and
+`encodingLookup`, and inlines neither them nor their tables; its
+`.meta.json` names them under `siblingDependencies` (`{ modules, package:
+"@awacloud/fonts" }`), and its `fwDependencies` keeps the fw names only.
+Resolving it on a runtime without fonts' manifest throws the runtime's
+`Module not found: standard14Lookup`. The `dist/standalone` roots inline the
+same modules and need nothing.
+
+```js
+import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
+import { fw_require, pkg_require } from '@awacloud/pdf';
+import { pdfRwPackage } from '@awacloud/pdf/build/pdf-rw.js';
+
+const rt = new ModuleRuntime();
+rt.registerAll(fw_require);
+rt.registerAll(pkg_require);        // @awacloud/fonts' manifest
+rt.register(pdfRwPackage);
+
+const core = rt.resolve('pdfRwPackage');
+const bytes = core.pdfBuilder.builder()
+    .addPage()
+    .addFont({ name: 'F1', baseFont: 'Helvetica' })   // Widths + FontDescriptor
+    .build();
+```
+
+Measured effect of the boundary on the `dist/build` Read+Write roots: about
+32.6 KB less minified each (`pdf-rw.min.js` 226,956 → 194,324 bytes,
+`pdf-legacy-rw.min.js` 377,190 → 344,582) and 60.9 KB less unminified.
 
 ## Write inventory
 
@@ -153,7 +197,8 @@ selects are listed above.
   `pdfLargeBundled.factory()` or `pdfRwBundled.factory()` returns a core with
   its extras registered (`core.usedExtension(name)`). The `dist/build`
   roots need an `@awacloud/fw` runtime to inject their declared
-  dependencies.
+  dependencies, `@awacloud/fonts`' manifest included for the Read+Write
+  roots ([What a consumer registers](#what-a-consumer-registers)).
 - Regeneration is idempotent: `bun run gen:bundles` re-emits byte-identical
   output (no build stamp; every bundle opens with the `/*! … */` licence
   banner at byte 0).

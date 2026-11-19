@@ -27,7 +27,7 @@
  *
  * | Method | Returns |
  * |---|---|
- * | `readBits(buf, bitPos, mask)` | up to 16 bits at `bitPos`, masked |
+ * | `readBits(buf, bitPos, mask)` | `width` bits at `bitPos`, masked, while `width + (bitPos & 7) <= 16` |
  * | `readBits16(buf, bitPos)` | up to 24 bits at `bitPos`, **not** masked |
  * | `writeBits(buf, bitPos, v)` | writes up to 16 bits (OR-into) |
  * | `writeBits16(buf, bitPos, v)` | writes up to 24 bits (OR-into) |
@@ -40,7 +40,7 @@
 /**
  * Public surface of `bitstream.factory()`.
  * @typedef {object} BitstreamAPI
- * @property {(buf: Uint8Array, bitPos: number, mask: number) => number} readBits Read up to 16 bits at `bitPos`, masked by `mask`.
+ * @property {(buf: Uint8Array, bitPos: number, mask: number) => number} readBits Read `width` bits at `bitPos`, masked by `mask` (exact while `width + (bitPos & 7) <= 16`).
  * @property {(buf: Uint8Array, bitPos: number) => number} readBits16 Read up to 24 bits at `bitPos` (unmasked).
  * @property {(buf: Uint8Array, bitPos: number, value: number) => void} writeBits OR up to 16 bits of `value` into `buf` at `bitPos`.
  * @property {(buf: Uint8Array, bitPos: number, value: number) => void} writeBits16 OR up to 24 bits of `value` into `buf` at `bitPos`.

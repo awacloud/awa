@@ -68,6 +68,8 @@ export const fr = Object.freeze({
         position: 'Ln {line}, Col {col}',
         chars: { one: '{count} caractère', other: '{count} caractères' },
         zoom: 'Taille du texte {zoom}',
+        tabInsert: 'Tab insère une tabulation',
+        tabFocus: 'Tab déplace le focus',
         eol: 'Fins de ligne',
         encoding: 'Encodage',
         opened: '{name} est ouvert.',

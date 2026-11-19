@@ -47,39 +47,33 @@ const bytesOf = (rel) => new Uint8Array(readFileSync(join(FILES, ...rel.split('/
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const blobId = (bytes) => createHash('sha1').update(`blob ${bytes.length}`).update(new Uint8Array([0])).update(bytes).digest('hex');
 
-/** The files the reader refuses, with the typed code it throws. */
+/**
+ * The files the reader refuses, with the typed code it throws. Re-measured
+ * at T30 (b): the reader rebuilds a broken cross-reference chain by default,
+ * so 15 files it refused now read, and 6 refuse with another code.
+ */
 const REFUSED = {
     'bad_page_type.pdf': 'pdf/pages/missing-kids',
     'bookmarks_circular.pdf': 'pdf/parser/stream/expected-endstream',
-    // 19-byte xref entries (read since T44), then a trailer with no /Size.
-    'bug_113.pdf': 'pdf/trailer/missing-size',
+    // 19-byte xref entries (read since T44), a trailer with no /Size; the
+    // rebuild (by default since T30 (b)) finds no usable table.
+    'bug_113.pdf': 'pdf/document/missing-xref',
     'bug_1139.pdf': 'pdf/content/unknown-op',
     'bug_1229106.pdf': 'pdf/pages/cycle',
-    'bug_1265.pdf': 'pdf/xref/no-trailer',
-    'bug_1301.pdf': 'pdf/document/no-startxref',
     'bug_1324189.pdf': 'pdf/tokenizer/bad-hex',
     'bug_1324503.pdf': 'pdf/tokenizer/bad-hex',
     'bug_1506.pdf': 'pdf/pages/cycle',
-    'bug_216.pdf': 'pdf/document/no-startxref',
-    'bug_298.pdf': 'pdf/parser/unexpected-keyword',
-    'bug_42270471.pdf': 'pdf/parser/indirect-bad-num',
-    'bug_452455.pdf': 'pdf/trailer/missing-size',
+    'bug_216.pdf': 'pdf/pages/missing-kids',
+    'bug_298.pdf': 'pdf/catalog/missing-pages',
     'bug_454695.pdf': 'pdf/catalog/not-dict',
-    'bug_459580.pdf': 'pdf/trailer/missing-size',
+    'bug_459580.pdf': 'pdf/document/missing-xref',
     'bug_481363.pdf': 'pdf/parser/dict-key-not-name',
-    'bug_487928.pdf': 'pdf/trailer/missing-size',
     'bug_544880.pdf': 'pdf/pages/cycle',
-    'bug_551248.pdf': 'pdf/trailer/missing-size',
     'bug_552046.pdf': 'pdf/content/unknown-op',
     'bug_57.pdf': 'pdf/parser/indirect-missing-endobj',
-    'bug_620428.pdf': 'pdf/trailer/missing-size',
-    'bug_634394.pdf': 'pdf/trailer/missing-size',
-    'bug_634716.pdf': 'pdf/trailer/missing-size',
-    'bug_644.pdf': 'pdf/parser/indirect-bad-num',
-    'bug_664284.pdf': 'pdf/parser/indirect-bad-num',
-    'bug_679649.pdf': 'pdf/parser/indirect-bad-num',
+    'bug_644.pdf': 'pdf/document/encrypted',
+    'bug_664284.pdf': 'pdf/document/missing-xref',
     'bug_680376.pdf': 'pdf/pages/cycle',
-    'bug_709793.pdf': 'pdf/trailer/missing-size',
     'bug_900552.pdf': 'pdf/parser/indirect-missing-endobj',
     'bug_901654.pdf': 'pdf/parser/indirect-missing-endobj',
     'bug_901654_2.pdf': 'pdf/parser/indirect-missing-endobj',
@@ -89,7 +83,6 @@ const REFUSED = {
     'hello_world_2_pages_split_streams.pdf': 'pdf/parser/indirect-missing-endobj',
     'hello_world_brotli.pdf': 'pdf/filter/unsupported',
     'hello_world_brotli_with_length1.pdf': 'pdf/filter/unsupported',
-    'js.pdf': 'pdf/parser/indirect-missing-obj',
     'many_rectangles_brotli.pdf': 'pdf/filter/unsupported',
     'named_dests.pdf': 'pdf/parser/stream/expected-endstream',
     'no_page_count.pdf': 'pdf/pages/cycle',
@@ -100,10 +93,7 @@ const REFUSED = {
     'tagged_table.pdf': 'pdf/content/unknown-op',
     'tagged_table_bad_elem.pdf': 'pdf/content/unknown-op',
     'tagged_table_bad_parent.pdf': 'pdf/content/unknown-op',
-    'trailer_as_hexstring.pdf': 'pdf/xref/trailer-not-dict',
-    'trailer_unterminated.pdf': 'pdf/parser/dict-key-not-name',
     'viewer_ref.pdf': 'pdf/pages/cycle',
-    'xfa/xfa_break_before_after.pdf': 'pdf/document/no-startxref',
     'zero_length_stream.pdf': 'pdf/parser/indirect-missing-endobj',
 };
 

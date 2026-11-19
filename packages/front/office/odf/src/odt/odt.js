@@ -22,7 +22,9 @@
  * the frame stays untyped in the paragraph's `_extras.children` — unless
  * `read(bytes, { framesInRuns: true })`: every paragraph-level frame is then
  * a `{ type: 'frame', ...drawFrame model }` run at its place in the text,
- * and `write` renders a frame run in place (`renderFrame` sink).
+ * and `write` renders a frame run in place (`renderFrame` sink). A typed
+ * note run (`{ type: 'note', … }`) is written as `text:note` through the
+ * `renderNote` sink, its body rendered with the write's style registry.
  *
  * **Other inline elements.** A paragraph, heading or link child no run
  * kind covers (a comment and its end, a bookmark, a field, a change mark,
@@ -130,7 +132,11 @@ export const odt = {
          *   heading or link body as a raw `{ type: 'element', … }` run at its
          *   place instead of an `_extras.children` entry (a frame too, when
          *   `framesInRuns` does not type it). Derived views (`toText`) are
-         *   the same either way.
+         *   the same either way. `notes` (default `false`): `true` types
+         *   every `text:note` of a paragraph, heading, span or link body as
+         *   the note run `{ type: 'note', id?, noteClass, citation, label?,
+         *   body }` at its place, `body` its `text:note-body` parsed as a
+         *   body under the read's ctx; written back, it is the same note.
          * @returns {object}
          */
         function read(bytes, opts) {
@@ -156,6 +162,11 @@ export const odt = {
                         `odt: read opts.${key} must be true or false`,
                         { context: { module: 'odt', argument: `opts.${key}` } });
                 }
+            }
+            if (opts && opts.notes !== undefined && typeof opts.notes !== 'boolean') {
+                throw new ContractError('odf/contract-error/odt',
+                    'odt: read opts.notes must be true or false',
+                    { context: { module: 'odt', argument: 'opts.notes' } });
             }
             const textBoxes = !!(opts && opts.textBoxes);
             if (textBoxes && !(opts && opts.framesInRuns)) {
@@ -183,7 +194,7 @@ export const odt = {
             readSidecars(result, p, { metaMod, settingsMod, stylesMod });
 
             const parsed = parseContent(shared.decodeText(contentBytes), result.styles,
-                !!(opts && opts.framesInRuns), !!(opts && opts.elementsInRuns), semanticStyles, textBoxes);
+                !!(opts && opts.framesInRuns), !!(opts && opts.elementsInRuns), semanticStyles, textBoxes, !!(opts && opts.notes));
             result.body = parsed.body;
             if (parsed.autoStyles) result.autoStyles = parsed.autoStyles;
             if (parsed.fontFaces) result.fontFaces = parsed.fontFaces;
@@ -418,7 +429,7 @@ export const odt = {
          *   nested-list numbering styles state (the read's opt-in).
          * @returns {{body: Array<object>, autoStyles?: object, fontFaces?: Array<object>}}
          */
-        function parseContent(xmlString, stylesModel, framesInRuns, elementsInRuns, semanticStyles, textBoxes) {
+        function parseContent(xmlString, stylesModel, framesInRuns, elementsInRuns, semanticStyles, textBoxes, notes) {
             const root = parseXmlOrThrow(xmlString, 'odt',
                 { part: 'content.xml', module: 'odt' });
             if (root.name !== 'office:document-content') {
@@ -449,7 +460,7 @@ export const odt = {
             // are typed in place and the `elementsInRuns` flag when untyped
             // inline elements stay in place (`consumed` is the same Set
             // either way).
-            const readCtx = framesInRuns || elementsInRuns || semanticStyles
+            const readCtx = framesInRuns || elementsInRuns || semanticStyles || notes
                 ? { ...(resolver || {}),
                     ...(framesInRuns ? { parseFrame: frameMod.parseFrame } : {}),
                     ...(elementsInRuns ? { elementsInRuns: true } : {}),
@@ -469,6 +480,8 @@ export const odt = {
                 boxCtx.parseFrame = (el) => typeBox(frameMod.parseFrame(el), boxCtx);
                 readCtx.parseFrame = boxCtx.parseFrame;
             }
+            // The read option `notes`: a `text:note` is a typed note run.
+            if (notes) readCtx.parseNote = (el) => parseNote(el, readCtx);
             const out = { body: textEl ? contentMod.parseBody(textEl, readCtx) : [] };
             // Every automatic list style as written, consumed or not (the
             // read's opt-in `listStyles`).
@@ -689,7 +702,43 @@ export const odt = {
             ctx.renderFrame = asRead
                 ? (f) => frameMod.renderFrame(boxAsWritten(f, ctx), { mimeTypeAsRead: true })
                 : (f) => frameMod.renderFrame(boxAsWritten(f, ctx));
+            ctx.renderNote = (n) => renderNote(n, ctx);
             return ctx;
+        }
+
+        /**
+         * The read option `notes`: a `text:note` as the typed note run, its
+         * body parsed as a body under the read's `ctx`.
+         */
+        function parseNote(el, ctx) {
+            const kids = (el.children || []).filter((c) => c && c.type === 'element');
+            const cite = kids.find((c) => c.name === 'text:note-citation');
+            const body = kids.find((c) => c.name === 'text:note-body');
+            const a = el.attrs || {};
+            const note = { type: 'note' };
+            if (a['text:id']) note.id = a['text:id'];
+            note.noteClass = a['text:note-class'] === 'endnote' ? 'endnote' : 'footnote';
+            note.citation = cite ? xml.textContent(cite) : '';
+            if (cite && cite.attrs && cite.attrs['text:label']) note.label = cite.attrs['text:label'];
+            note.body = body ? contentMod.parseBody(body, ctx) : [];
+            return note;
+        }
+
+        /**
+         * A typed note run as `text:note`: its `id` (when given), its class
+         * (`footnote` by default), its citation (`text:label` when a
+         * `label` is given) and its body, typed blocks rendered under the
+         * write's `ctx` (its style registry and sinks).
+         */
+        function renderNote(n, ctx) {
+            const attrs = {};
+            if (typeof n.id === 'string' && n.id) attrs['text:id'] = n.id;
+            attrs['text:note-class'] = n.noteClass === 'endnote' ? 'endnote' : 'footnote';
+            const citeAttrs = typeof n.label === 'string' && n.label ? { 'text:label': n.label } : {};
+            return xml.el('text:note', attrs, [
+                xml.el('text:note-citation', citeAttrs, [xml.text(String(n.citation == null ? '' : n.citation))]),
+                xml.el('text:note-body', {}, contentMod.renderBody(Array.isArray(n.body) ? n.body : [], ctx))
+            ]);
         }
 
         /** Names already taken by the passthrough automatic-styles model. */

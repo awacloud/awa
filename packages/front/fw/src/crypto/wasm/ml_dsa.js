@@ -7,7 +7,7 @@
  *
  * A thin, opt-in accelerator over the colocated `ml_dsa` binary (vendored from
  * `@awacloud/fw-wasm-crypto`: PQClean ml-dsa-{44,65,87}), loaded BY NAME through the fw
- * `wasmRuntime` adapter (BATCH_11 ERRATA: no fw-local `.wasm.js`). Post-quantum
+ * `wasmRuntime` adapter (no fw-local `.wasm.js`). Post-quantum
  * Module-Lattice-based Digital Signature Algorithm — the algorithm WebCrypto
  * does NOT cover. Mirrors the pure-JS `crypto/pkc/ml_dsa` surface
  * (keygen/sign/verify over `Uint8Array`), async, no-throw.
@@ -94,7 +94,7 @@ export const wasmMlDsa = {
             87: { ps: 2, pk: 2592, sk: 4896, sig: 4627 },
         };
 
-        /** Default parameter set (plan: ML-DSA-65). */
+        /** Default parameter set (ML-DSA-65). */
         const _DEFAULT = 65;
 
         // ── helpers ────────────────────────────────────────────────────────

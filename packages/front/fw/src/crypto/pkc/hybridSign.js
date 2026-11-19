@@ -5,8 +5,7 @@
 /**
  * @fileoverview Composite (hybrid PQ/T) signatures — `draft-ietf-lamps-pq-composite-sigs`.
  *
- * Productises the W0 spike (`ai/plans/pqc-hybrid/spikes/w0-combiners/FINDINGS.md`,
- * verdict GO) into an `@awacloud/fw` DI-factory module composing ONLY vetted fw
+ * An `@awacloud/fw` DI-factory module composing ONLY vetted fw
  * primitives — no novel cryptography. Two registered variants:
  *
  *   - `mldsa65_ed25519`   — ML-DSA-65 ∧ Ed25519      (OID 1.3.6.1.5.5.7.6.48)
@@ -33,7 +32,7 @@
  * (not a DER-OID Domain). This exact wiring reproduces the official LAMPS
  * interop vectors — do not deviate.
  *
- * ## Digest domain (W1 carry-forward c)
+ * ## Digest domain
  *
  * fw's pure-JS `sha512.hash()` consumes a **bitArray** (word-packed `number[]`),
  * NOT a raw `Uint8Array`. This module hashes message bytes through the bitArray
@@ -60,8 +59,6 @@
  *   - Constant-time is NOT a security boundary in browser JS/WASM (JIT, GC). The
  *     ECDSA-P256 scalar path in fw `ecc` is windowed (cache-timing sensitive).
  *   - Vectors are pinned to `main` commit 1bb9f5c6 (see the vendored vector files).
- *
- * @see ai/plans/pqc-hybrid/spikes/w0-combiners/FINDINGS.md
  */
 
 import { ml_dsa } from './ml_dsa.js';
@@ -80,8 +77,29 @@ import { utf8 } from '../../io/codec/utf8.js';
  *   Generate a composite key pair (independent per-component seeds). TLV-encoded.
  * @property {(secretKey: Uint8Array, message: Uint8Array, ctx?: Uint8Array) => (Uint8Array|false)} sign
  *   Composite sign; `false` on invalid input.
- * @property {(publicKey: Uint8Array, message: Uint8Array, signature: Uint8Array, ctx?: Uint8Array) => boolean} verify
+ * @property {(publicKey: Uint8Array, signature: Uint8Array, message: Uint8Array, ctx?: Uint8Array) => boolean} verify
  *   Composite verify (AND of both components); `false` on any invalid input.
+ * @property {(kind: CompositeKind, parts: CompositeParts) => (Uint8Array|false)} fromComponents
+ *   Build this variant's public key, secret key or signature container from
+ *   its two components; `false` on a wrong length or form.
+ * @property {(kind: CompositeKind, bytes: Uint8Array) => (CompositeParts|false)} toComponents
+ *   Split a container into its two components (copies); `false` when it does
+ *   not decode.
+ */
+
+/**
+ * Which container `fromComponents` / `toComponents` handle.
+ * @typedef {'publicKey' | 'secretKey' | 'signature'} CompositeKind
+ */
+
+/**
+ * The two components of a composite container: `pq` = the ML-DSA-65 bytes,
+ * `trad` = the traditional component — Ed25519 (public key 32, secret key 64 =
+ * seed || public key, signature 64) or ECDSA-P256 (public key SEC1
+ * uncompressed 65 bytes, secret key the 32-byte scalar, signature DER).
+ * @typedef {object} CompositeParts
+ * @property {Uint8Array} pq
+ * @property {Uint8Array} trad
  */
 
 /**
@@ -89,14 +107,13 @@ import { utf8 } from '../../io/codec/utf8.js';
  * @typedef {object} HybridSignApi
  * @property {HybridSignVariant} mldsa65_ed25519 ML-DSA-65 ∧ Ed25519.
  * @property {HybridSignVariant} mldsa65_ecdsaP256 ML-DSA-65 ∧ ECDSA-P-256.
- * @property {object} _internal Test-only escape hatch.
  */
 
 export const hybridSign = {
     name: 'hybridSign',
     version: '1.0.0',
     type: 'fw.crypto.pkc',
-    // NOTE — `sha256` and `random` extend the W0 FINDINGS §2 dependency sketch
+    // NOTE — `sha256` and `random` extend the minimal dependency set
     // (`ml_dsa,ed25519,ecc,sha512,utf8`). Both are load-bearing and vector-/
     // implementation-justified: the ECDSA-P256 component hashes M' with SHA-256
     // (proven against the official vectors — SHA-512/384 fail), and Ed25519
@@ -144,7 +161,7 @@ export const hybridSign = {
 
         // ── byte-domain helpers (pure; replicate bitArray big-endian packing) ──
         // Local wrappers avoid a `bitArray` dependency while still hashing through
-        // the correct (word-packed) domain — the fix for the W0 digest-domain bug.
+        // the correct (word-packed) domain — hashing raw bytes there would give the wrong digest.
         function _partial(len, x, end) {
             if (len === 32) return x;
             return (end ? x | 0 : x << (32 - len)) + len * 0x10000000000;
@@ -305,14 +322,14 @@ export const hybridSign = {
             const context = ctx || new Uint8Array(0);
             if (context.length > 255) return false;
             const mPrime = _buildMprime(LABEL_ED, message, context);
-            const sigMl = MLDSA.sign(mPrime, mldsaSk, LABEL_ED);
+            const sigMl = MLDSA.sign(mldsaSk, mPrime, LABEL_ED);
             if (sigMl === false) return false;
             const sigEd = ed25519.sign(edSk, mPrime);
             if (sigEd === false) return false;
             return _concat([sigMl, sigEd]);         // fixed slices, no randomizer
         }
 
-        function _edVerify(publicKey, message, signature, ctx) {
+        function _edVerify(publicKey, signature, message, ctx) {
             const parts = _decodeTlv(publicKey, SCHEME_ED, 2);
             if (parts === false) return false;
             const [mldsaPk, edPk] = parts;
@@ -323,8 +340,8 @@ export const hybridSign = {
             const mPrime = _buildMprime(LABEL_ED, message, context);
             const sigMl = signature.subarray(0, MLDSA_SIG);
             const sigEd = signature.subarray(MLDSA_SIG);
-            const okMl = MLDSA.verify(sigMl, mPrime, mldsaPk, LABEL_ED);
-            const okEd = ed25519.verify(edPk, mPrime, sigEd);
+            const okMl = MLDSA.verify(mldsaPk, sigMl, mPrime, LABEL_ED);
+            const okEd = ed25519.verify(edPk, sigEd, mPrime);
             return okMl === true && okEd === true;   // AND — both MUST hold
         }
 
@@ -358,7 +375,7 @@ export const hybridSign = {
             const context = ctx || new Uint8Array(0);
             if (context.length > 255) return false;
             const mPrime = _buildMprime(LABEL_EC, message, context);
-            const sigMl = MLDSA.sign(mPrime, mldsaSk, LABEL_EC);
+            const sigMl = MLDSA.sign(mldsaSk, mPrime, LABEL_EC);
             if (sigMl === false) return false;
             const secObj = ecc.deserialize({ type: 'ecdsa', secretKey: true, curve: 'c256', exponent: _toHex(ecSk) });
             if (secObj === false) return false;
@@ -369,7 +386,7 @@ export const hybridSign = {
             return _concat([sigMl, _u16(der.length), der]);        // length-prefixed DER
         }
 
-        function _ecVerify(publicKey, message, signature, ctx) {
+        function _ecVerify(publicKey, signature, message, ctx) {
             const parts = _decodeTlv(publicKey, SCHEME_EC, 2);
             if (parts === false) return false;
             const [mldsaPk, ecPk] = parts;
@@ -382,7 +399,7 @@ export const hybridSign = {
             const mPrime = _buildMprime(LABEL_EC, message, context);
             const sigMl = signature.subarray(0, MLDSA_SIG);
             const der = signature.subarray(MLDSA_SIG + 2);
-            const okMl = MLDSA.verify(sigMl, mPrime, mldsaPk, LABEL_EC);
+            const okMl = MLDSA.verify(mldsaPk, sigMl, mPrime, LABEL_EC);
             if (okMl !== true) return false;
             const rs = _derToRs(der);
             if (rs === false) return false;
@@ -394,7 +411,65 @@ export const hybridSign = {
             return okEc === true;
         }
 
-        return {
+        // ══════════════════ Composite seam (§3) ══════════════════════
+        /**
+         * `fromComponents` / `toComponents` for one variant. The containers are
+         * the ones `keygen` / `sign` produce: the TLV keys, and the signature
+         * as fixed slices (Ed25519) or a length-prefixed DER component (ECDSA).
+         * Results are copies; malformed input is `false`, never a throw.
+         * @param {number} scheme
+         * @param {number} tradPk
+         * @param {number} tradSk
+         * @param {boolean} isEc
+         */
+        function _seam(scheme, tradPk, tradSk, isEc) {
+            const isBytes = (x) => x instanceof Uint8Array;
+            const pkOk = (pq, trad) => pq.length === MLDSA_PK && trad.length === tradPk && (!isEc || trad[0] === 0x04);
+            const skOk = (pq, trad) => pq.length === MLDSA_SK && trad.length === tradSk;
+            const derOk = (der) => der.length <= 0xffff && _derToRs(der) !== false;
+
+            function fromComponents(kind, parts) {
+                if (!parts || !isBytes(parts.pq) || !isBytes(parts.trad)) return false;
+                const { pq, trad } = parts;
+                if (kind === 'publicKey') return pkOk(pq, trad) ? _encodeTlv(scheme, [pq, trad]) : false;
+                if (kind === 'secretKey') return skOk(pq, trad) ? _encodeTlv(scheme, [pq, trad]) : false;
+                if (kind === 'signature') {
+                    if (pq.length !== MLDSA_SIG) return false;
+                    if (!isEc) return trad.length === ED_SIG ? _concat([pq, trad]) : false;
+                    return derOk(trad) ? _concat([pq, _u16(trad.length), trad]) : false;
+                }
+                return false;
+            }
+
+            function toComponents(kind, bytes) {
+                if (!isBytes(bytes)) return false;
+                if (kind === 'publicKey' || kind === 'secretKey') {
+                    const p = _decodeTlv(bytes, scheme, 2);
+                    if (p === false) return false;
+                    if (!(kind === 'publicKey' ? pkOk : skOk)(p[0], p[1])) return false;
+                    return { pq: new Uint8Array(p[0]), trad: new Uint8Array(p[1]) };
+                }
+                if (kind === 'signature') {
+                    if (!isEc) {
+                        if (bytes.length !== MLDSA_SIG + ED_SIG) return false;
+                        return { pq: bytes.slice(0, MLDSA_SIG), trad: bytes.slice(MLDSA_SIG) };
+                    }
+                    if (bytes.length < MLDSA_SIG + 2) return false;
+                    const derLen = (bytes[MLDSA_SIG] << 8) | bytes[MLDSA_SIG + 1];
+                    if (MLDSA_SIG + 2 + derLen !== bytes.length) return false;
+                    const der = bytes.slice(MLDSA_SIG + 2);
+                    return derOk(der) ? { pq: bytes.slice(0, MLDSA_SIG), trad: der } : false;
+                }
+                return false;
+            }
+
+            return { fromComponents, toComponents };
+        }
+
+        const SEAM_ED = _seam(SCHEME_ED, ED_PK, ED_SK, false);
+        const SEAM_EC = _seam(SCHEME_EC, EC_PK, EC_SK, true);
+
+        return Object.defineProperty({
             mldsa65_ed25519: {
                 lengths: Object.freeze({
                     mldsaPk: MLDSA_PK, tradPk: ED_PK, mldsaSk: MLDSA_SK, tradSk: ED_SK,
@@ -405,7 +480,9 @@ export const hybridSign = {
                 }),
                 keygen: _edKeygen,
                 sign: _edSign,
-                verify: _edVerify
+                verify: _edVerify,
+                fromComponents: SEAM_ED.fromComponents,
+                toComponents: SEAM_ED.toComponents
             },
             mldsa65_ecdsaP256: {
                 lengths: Object.freeze({
@@ -417,11 +494,13 @@ export const hybridSign = {
                 }),
                 keygen: _ecKeygen,
                 sign: _ecSign,
-                verify: _ecVerify
-            },
-
-            // Test-only escape hatch (mirrors ecc._internal). Not a public API.
-            _internal: {
+                verify: _ecVerify,
+                fromComponents: SEAM_EC.fromComponents,
+                toComponents: SEAM_EC.toComponents
+            }
+        }, Symbol.for('@awacloud/fw/internal'), {
+            // Test-only internals, in the internal slot (core/internal.js): not API.
+            value: {
                 buildMprime: _buildMprime,
                 sha512Bytes: _sha512Bytes,
                 ui8ToBa: _ui8ToBa,
@@ -432,6 +511,6 @@ export const hybridSign = {
                 labels: { ed: LABEL_ED, ecdsaP256: LABEL_EC },
                 schemes: { ed: SCHEME_ED, ecdsaP256: SCHEME_EC }
             }
-        };
+        });
     }
 };

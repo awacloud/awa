@@ -9,7 +9,7 @@ status: complete
 
 # oconvIrToDocx
 
-> `oconv-ir/v1` → `.docx` bytes, tier 2 structure-to-structure mapping.
+> `oconv-ir/v2` → `.docx` bytes, tier 2 structure-to-structure mapping.
 
 **Module** `oconvIrToDocx` | **Source** `packages/front/office/oconv/src/write/ir-to-docx.js` | **Deps** `oconvIr`, `docx` | **Worker-safe** yes
 

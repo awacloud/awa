@@ -30,6 +30,7 @@ Run kinds:
 | `line-break` | — | `<text:line-break/>` |
 | `link` | `href`, `runs`, `_extras?` | `<text:a>` |
 | `image` | `href`, `mimeType?`, `width?`, `height?`, `name?`, `anchorType?`, `styleName?` | `<draw:frame>` > `<draw:image>` (write side only, through `ctx.renderImage`) |
+| `note` | `id?`, `noteClass?`, `citation`, `label?`, `body` | `<text:note>` (written through `ctx.renderNote`; read when the read ctx carries `parseNote`) |
 
 ### Paragraph attributes
 
@@ -87,6 +88,20 @@ to `ctx.renderImage(run)` and places the returned node at the run's position.
 [odt — Images](../odt/odt.md#images-typed-write)). On read a `draw:frame`
 inside a `text:p` is not typed: it stays in the paragraph's
 `_extras.children`. `textOf` gives an image run no text.
+
+### Note runs (write side)
+
+`{ type: 'note', id?, noteClass?, citation, label?, body }` is a
+**write-side** run kind: `renderRun` hands it to `ctx.renderNote(run)`.
+`odt` provides that sink: a `text:note` with `text:id` (when `id` is
+given) and `text:note-class` (`noteClass`, `footnote` by default), its
+`text:note-citation` holding `citation` (`text:label` when `label` is
+given) and its `text:note-body`, `body` typed blocks rendered with the
+write's style registry. Without a sink the run emits nothing. On read a
+`text:note` is not typed, as before, unless the read ctx carries
+`parseNote` — `odt.read(bytes, { notes: true })` passes it: every
+`text:note` of a paragraph, heading, span or link body is then the note
+run at its place, its body parsed as a body.
 
 ### Frame runs (opt-in)
 

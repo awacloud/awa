@@ -278,14 +278,14 @@ runtime.list({ name: 'hex', version: '2.0.0' }); // combined
 | `version` | `string` | Exact match |
 | `type` | `string` | Exact match, **or prefix if trailing `.`** |
 
-Returns: `ModuleDefinition[]`. Linear — performant up to several hundred modules.
+Returns: `ReadonlyArray<Readonly<ModuleDefinition>>`. Linear — performant up to several hundred modules.
 
-> **`list()` hands out live definitions.** The returned objects are the
-> registered `ModuleDefinition`s themselves — including the live `factory` and
-> the live `dependencies` array, which a caller can splice in place. Use it for
-> discovery inside trusted code; for a **read-only** view (devtools, an
-> inspector panel, anything that only needs to *look*), use
-> [`snapshot()`](#runtimesnapshotfilter) below.
+> **`list()` is read-only.** It returns a frozen array of frozen *copies* of
+> the registered definitions (each `dependencies` a frozen copy too): editing
+> a row cannot reach the registry. A row is not the registered object, so
+> compare by `name` and `version`, not by identity. The `factory` is still the
+> registered function; for metadata without it (devtools, an inspector
+> panel), use [`snapshot()`](#runtimesnapshotfilter) below.
 
 ---
 
@@ -440,7 +440,7 @@ Depth-first topological sort over the transitive closure. Returns `[{name, versi
 {
     name: string,                          // unique identifier
     version?: string,                      // semver — default '0.0.0'
-    type?: string,                         // taxonomy 'fw.<sub>' | 'sd.<sub>' | 'sde.<sub>' | 'sdc.<sub>' | 'lib.<sub>' — regex ^(fw|sd|sde|sdc|lib)\.[a-z][\w.]*$
+    type?: string,                         // taxonomy 'fw.<sub>' | 'sd.<sub>' | 'sde.<sub>' | 'sdc.<sub>' | 'lib.<sub>' | 'app.<sub>' (an application's own modules) — regex ^(fw|sd|sde|sdc|lib|app)\.[a-z][\w.]*$
     dependencies: string[],                // specs ('name' or 'name@version') — runtime contract
     deps?: ModuleDefinition[],             // direct JS refs — bundler-friendly, traversed by registerDeep
     factory: Function                      // factory(...deps) => instance
@@ -476,7 +476,7 @@ rt.resolve('codec@1.0.0');   // → 'v1'
 
 - The "latest" selection is precomputed at `register` — `resolve('foo')` remains O(1) regardless of the number of versions.
 - `unregister` does not touch the `instances` cache: already-obtained references continue to work.
-- `list()` returns **live** definitions (mutable `dependencies`, callable `factory`); `snapshot()` returns frozen metadata copies and instantiates nothing — pick `snapshot()` for any read-only consumer.
+- `list()` returns frozen copies of the definitions (the `factory` included); `snapshot()` returns frozen metadata rows without the `factory` and instantiates nothing — pick `snapshot()` for a view that must not reach a factory.
 - `serialize` emits dependencies in canonical `name@version` form to guarantee exact worker-side resolution.
 - `runtimeSource` exports the private helpers + the class, enabling their injection into a Worker without `import`.
 

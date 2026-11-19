@@ -26,22 +26,22 @@ Public API (`Uint8Array`):
 
 - `keygen(seed?)` → `{ publicKey: 2N, secretKey: 4N }`. seed = 3N bytes
   = `(skSeed ‖ skPRF ‖ pkSeed)`.
-- `sign(msg, sk, opts?)` → signature or `false`. opts.context ≤ 255
+- `sign(sk, msg, opts?)` → signature or `false`. opts.context ≤ 255
   bytes; opts.extraEntropy `false` (deterministic: rnd = pkSeed),
   `undefined` (hedged via random.bytes), or `Uint8Array(N)` (rnd
   injected for reproducibility).
-- `verify(sig, msg, publicKey, opts?)` → `true | false`. Constant-time
+- `verify(publicKey, sig, msg, opts?)` → `true | false`. Constant-time
   on the final recomputed root equality (accumulated XOR), early return
   only on invalid sizes.
 
-**Iteration E4 (FIPS 140-3 upgrade plan)**: added the
+Added the
 **HashSLH-DSA** variants (FIPS 205 §10.2.2 algos 24+25) and the
 **internal** interface (§6 raw, without the M' wrapper):
-- `signPh(msg, sk, hashAlg, hashMod, opts)` / `verifyPh(sig, msg, pk, hashAlg, hashMod, opts)`.
+- `signPh(sk, msg, hashAlg, hashMod, opts)` / `verifyPh(pk, sig, msg, hashAlg, hashMod, opts)`.
   Supported hashes: `SHA2-{224,256,384,512}`, `SHA2-512/{224,256}`,
   `SHA3-{224,256,384,512}`, `SHAKE-{128,256}` (12 algorithms; DER OIDs
-  conforming to FIPS 205, shared with ML-DSA E3).
-- `_internal.signInternal(M, sk, opts)` / `_internal.verifyInternal(sig, M, pk)`:
+  conforming to FIPS 205, shared with ML-DSA).
+- `internalOf(slh_dsa).signInternal(M, sk, opts)` / `internalOf(slh_dsa).verifyInternal(sig, M, pk)`:
   bypasses the §10.2.1 wrapper; M is passed as-is.
 
 Note: SLH-DSA has **NO** externalMu mode (no intermediate mu in
@@ -54,11 +54,11 @@ FIPS 205 §6 — hashing is embedded in the PRFmsg + Hmsg pipeline).
 | Source | ACVP reference | Test (`describe`) | Property verified |
 |---|---|---|---|
 | NIST CAVP / ACVP | `SLH-DSA-keyGen-FIPS205` (36/120 sub-samples) | `SLH-DSA-keyGen-FIPS205 (...36 sub-samples)` | `keygen(skSeed‖skPRF‖pkSeed) == (pk, sk)` byte-exact (12 paramSets × 3 [first/mid/last]) |
-| NIST CAVP / ACVP | `SLH-DSA-sigGen-FIPS205` external+pure det=true 128f | `SLH-DSA-sigGen-FIPS205 / external+pure deterministic` | `sign(msg, sk, {context, extraEntropy:false}) == sig` byte-exact (SHA2-128f + SHAKE-128f, 1 vector each) |
-| NIST CAVP / ACVP | `SLH-DSA-sigVer-FIPS205` external+pure 'f' (15/84 sub-samples) | `SLH-DSA-sigVer-FIPS205 / external+pure (...15 sub-samples)` | `verify(sig, msg, pk, {context})` ↔ `testPassed` (6 paramSets × [length-fail, valid, modified-sig], covers the NIST reasons: *invalid signature - too large/small*, *valid*, *modified signature - SIGFORS/SIGHT/R*) |
+| NIST CAVP / ACVP | `SLH-DSA-sigGen-FIPS205` external+pure det=true 128f | `SLH-DSA-sigGen-FIPS205 / external+pure deterministic` | `sign(sk, msg, {context, extraEntropy:false}) == sig` byte-exact (SHA2-128f + SHAKE-128f, 1 vector each) |
+| NIST CAVP / ACVP | `SLH-DSA-sigVer-FIPS205` external+pure 'f' (15/84 sub-samples) | `SLH-DSA-sigVer-FIPS205 / external+pure (...15 sub-samples)` | `verify(pk, sig, msg, {context})` ↔ `testPassed` (6 paramSets × [length-fail, valid, modified-sig], covers the NIST reasons: *invalid signature - too large/small*, *valid*, *modified signature - SIGFORS/SIGHT/R*) |
 | Pre-existing (noble-pq KAT) | SLH-DSA-SHAKE-128f keygen + sign + verify | `SLH-DSA-SHAKE-128f KAT` (3 tests) | byte-exact pk + sign + verify |
 | Pre-existing (noble-pq KAT) | SLH-DSA-SHA2-128f keygen + sign + verify | `SLH-DSA-SHA2-128f KAT` (3 tests) | byte-exact pk + sign + verify |
-| Pre-existing | SLH-DSA-SHA2-192f keygen + round-trip | `SLH-DSA-SHA2-192f KAT` + round-trip | byte-exact pk + round-trip (SHA-512 lane H1) |
+| Pre-existing | SLH-DSA-SHA2-192f keygen + round-trip | `SLH-DSA-SHA2-192f KAT` + round-trip | byte-exact pk + round-trip (SHA-512 lane) |
 | Pre-existing | tampering signature/message | 3 tests `verify rejects tampered/modified` | rejects bit-flip and message-flip |
 | Pre-existing | determinism | `SLH-DSA-SHAKE-128f deterministic sign is reproducible` | idempotent sign for identical seed |
 
@@ -84,15 +84,15 @@ FIPS 205 §6 — hashing is embedded in the PRFmsg + Hmsg pipeline).
       with 22-byte address compression for SHA2 §11.2).
 - [x] **No `throw`** — early return + `console.warn` (review
       lines 481-505, 552-554).
-- [x] **HashSLH-DSA (preHash variant)** ✅ **Iteration E4** — implemented.
+- [x] **HashSLH-DSA (preHash variant)** ✅ implemented.
       `signPh(msg, sk, hashAlg, hashMod, opts)` / `verifyPh` apply
       PH(msg) with the injected hash + the FIPS 205 §10.2.2 algo 24 wrapper
       (`0x01 || |ctx| || ctx || OID(hashAlg) || PH(msg)`). 12 hashAlg
       values supported. **2 SigGen + 12 SigVer ACVP vectors byte-exact** on
       the 128f variants (aggressive sub-sampling since signing 's' costs
       minutes/op).
-- [x] **"internal" interface** ✅ **Iteration E4** — exposed via
-      `_internal.signInternal(M, sk, opts)` and `_internal.verifyInternal`.
+- [x] **"internal" interface** ✅ exposed via
+      `internalOf(slh_dsa).signInternal(M, sk, opts)` and `internalOf(slh_dsa).verifyInternal`.
       Bypasses the §10.2.1 wrapper; M is passed as-is to _signCore.
       **2 SigGen + 12 SigVer ACVP vectors byte-exact**.
 - [ ] **Exhaustive sign/verify on 's' variants** — sigGen on 256s
@@ -121,9 +121,9 @@ FIPS 205 §6 — hashing is embedded in the PRFmsg + Hmsg pipeline).
 
 ## Known limitations
 
-- **Aggressive sub-sampling** by default. **Iteration H3**: `CRYPTO_FULL=1`
+- **Aggressive sub-sampling** by default. `CRYPTO_FULL=1`
   enables 120/120 keyGen + full external+pure sigVer (180 of 504, the
-  preHash/internal cases covered by the E4 sub-sample) → 385 tests in ~135 s.
+  preHash/internal cases covered by the sub-sample) → 385 tests in ~135 s.
   - keyGen: 36/120 [first/mid/last] by default → **120/120 under CRYPTO_FULL**.
   - sigGen: 2/144 by default (SHA2-128f + SHAKE-128f byte-exact). **Full
     sigGen (624) deliberately not wired even under CRYPTO_FULL**: signing
@@ -131,7 +131,7 @@ FIPS 205 §6 — hashing is embedded in the PRFmsg + Hmsg pipeline).
   - sigVer: 15/168 by default across the 6 `f` paramSets → **180 (full
     external+pure) under CRYPTO_FULL**.
 - ~~**Out of scope: HashSLH-DSA + signatureInterface=internal**~~
-  ✅ **Iteration E4** — implemented and validated ACVP byte-exact (see
+  ✅ implemented and validated ACVP byte-exact (see
   the `[x]` checks above). Still out of scope: the `additionalRandomness`
   path (deterministic=false with ACVP rnd) — coverage redundant with
   byte-exact deterministic=true, and **`externalMu`**, which FIPS 205
@@ -146,7 +146,7 @@ FIPS 205 §6 — hashing is embedded in the PRFmsg + Hmsg pipeline).
 ## Cross-references
 
 - Module: [`pkc/slh_dsa.js`](./slh_dsa.js)
-- Tests: [`pkc/slh_dsa.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/pkc/slh_dsa.test.js) — 97 tests (69 baseline + 28 iteration E4: 2 sigGen-ph + 2 internal + 12 sigVer-ph + 12 sigVer-internal)
+- Tests: [`pkc/slh_dsa.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/pkc/slh_dsa.test.js) — 97 tests (69 baseline + 28 more: 2 sigGen-ph + 2 internal + 12 sigVer-ph + 12 sigVer-internal)
 - Pre-existing KAT: [`pkc/slh_dsa.kat.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/pkc/slh_dsa.kat.js) (noble-pq SLH-DSA-SHAKE-128f + SLH-DSA-SHA2-128f)
 - ACVP draft: `references/NIST/ACVP/src/draft-celi-acvp-slh-dsa.adoc`
 - Vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/SLH-DSA-*-FIPS205/`

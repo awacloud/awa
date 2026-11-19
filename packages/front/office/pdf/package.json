@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/pdf",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Matthieu Bouilloux",
@@ -27,6 +27,7 @@
   "sideEffects": false,
   "files": [
     "src/**/*.js",
+    "src/**/*.md",
     "!src/**/*.test.js",
     "dist/**",
     "docs",

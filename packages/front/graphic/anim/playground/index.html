@@ -1,0 +1,73 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — playground</title>
+
+    <!-- No sanity lockdown here: this gallery page loads NO fw at runtime —
+         it is a static index of links, per `docs/demo-playground.md`
+         §4 ("Absence is legal exactly when the surface loads no fw at
+         runtime... static surface"). Declared in the footer note below.
+         Required so the
+         family title link the generated `packages/front/index.html` block
+         always emits (`<base>index.html`, `tools/dev-portal/src/index.ts`
+         `renderFamilyBlock`) resolves instead of 404ing — mirrors the
+         `demos/index.html` precedent exactly (convention §7 "SHOULD"). -->
+
+    <!-- SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+</head>
+
+<body>
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>@awacloud/graphic-anim — playground</h1>
+        <p class="demo-lede">Interactive author testbeds for the animation engine. No build step — open any link directly.</p>
+    </header>
+
+    <ul class="demo-gallery">
+        <li>
+            <a href="easing-lab/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 20 Q30 20 50 4 T96 4" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="50" cy="12" r="3" fill="currentColor"/>
+                </svg>
+                Easing lab
+            </a>
+            <span class="demo-slug">playground/easing-lab</span>
+        </li>
+        <li>
+            <a href="timeline-lab/index.html">
+                <svg viewBox="0 0 100 24" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <rect x="30" y="4" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" opacity="0.6"/>
+                    <rect x="56" y="4" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+                    <path d="M18 11 H30 M44 11 H56" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"/>
+                </svg>
+                Timeline lab
+            </a>
+            <span class="demo-slug">playground/timeline-lab</span>
+        </li>
+    </ul>
+
+    <footer class="demo-footer">
+        <p>This index is a static gallery — no <code>@awacloud/fw</code> is loaded at runtime here; each linked surface loads its own sanity lockdown and resolves its own fw runtime.</p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+</body>
+</html>

@@ -13,12 +13,14 @@ category: guide
 | `community` | `sanity/community` | ESM, explicit call | Yes | XSS denylist, reduced API surface — tolerates Next/Astro SSR and dev toolbars |
 | `base` | `sanity/base` | ESM, explicit call | Partial | Strict XSS denylist + prototype freeze — breaks frameworks that patch prototypes; Astro disables dev toolbar |
 | `lockdown` | `sanity/lockdown` | ESM, explicit call | No | **Integrity**: tame Function constructors, remove evaluators, transitively freeze all intrinsics (SES-grade) |
+| none | — | — | Yes | Nothing applied. fw works without any tier: no module needs one, and the fw modules that replace a blocked API (`random`, `uuid`, `route`, `clock`) work the same with or without it. The tiers harden the realm against other code |
 
 ### Recommended default
 
 New applications call `lockdown()` once at startup. In a browser realm it also
-applies the `base` DOM/XSS denylist (step 6, `sanity/lockdown.js:383-397`), so
-`lockdown()` is a **superset** of `applyBase()` — there is no reason to call
+applies the `base` DOM/XSS denylist (step 5, `sanity/lockdown.js:403-417`),
+synchronously and before the intrinsic freeze, so `lockdown()` is a
+**superset** of `applyBase()` — there is no reason to call
 both. Choose `community` or `base` alone only when a host framework patches
 prototypes (Next / Astro dev toolbars), which the frozen intrinsics break.
 
@@ -124,7 +126,7 @@ Workers run in a **separate realm** (their own JavaScript global) and communicat
 `@awacloud/fw`'s serializable-modules-run-in-workers design is the framework's confinement story:
 
 - [Worker confinement](./worker-confinement.md) — **the guide**: capability grant via `dependencies`, withholding ambient authority in `workerFw`, applying `lockdown()` inside the worker realm, runnable examples and honest limits.
-- [`docs/notes/worker-confinement-spike.md`](../notes/worker-confinement-spike.md) — the historical spike record (2026-06-15): realm separation, structured-clone boundary, module serialisability constraints, and integration with `workerPool`.
+- [`docs/notes/worker-confinement-spike.md`](../notes/worker-confinement-spike.md) — the historical investigation note (2026-06-15): realm separation, structured-clone boundary, module serialisability constraints, and integration with `workerPool`.
 
 A typical deployment combining integrity and isolation:
 
@@ -199,7 +201,7 @@ These properties are replaced with no-op functions or neutral values:
 |-----|--------------|
 | `document.write` | throw |
 | `document.writeln` | throw |
-| `document.execCommand`, `evaluate`, `implementation`, `createContextualFragment` | throw |
+| `document.execCommand`, `evaluate`, `implementation`, `createContextualFragment` | throw (`Range.prototype.createContextualFragment` is not reached) |
 | `document.open`, `close` | throw |
 | `document.domain` (set) | throw |
 
@@ -338,7 +340,7 @@ Sanity freezes prototypes and blocks `eval`/`Function`. Most modern libraries (l
 - [sanity/community — API reference](../api/sanity/community.md)
 - [sanity/lockdown — API reference](../api/sanity/lockdown.md)
 - [Worker confinement](./worker-confinement.md) — the confinement guide: capability grant, ambient-authority withholding, lockdown inside the worker
-- [docs/notes/worker-confinement-spike.md](../notes/worker-confinement-spike.md) — historical spike record on Worker isolation (confinement)
+- [docs/notes/worker-confinement-spike.md](../notes/worker-confinement-spike.md) — historical investigation note on Worker isolation (confinement)
 - [secPolicy](../api/dom/rendering/secPolicy.md) — shared security policy (URL/CSS/clobber/`on*`/tags)
 - [uuid](../api/crypto/utils/uuid.md) — secure identifier generator
 - [parser](../api/dom/rendering/parser.md) — safe alternative to `innerHTML`

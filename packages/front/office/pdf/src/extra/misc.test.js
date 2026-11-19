@@ -560,3 +560,35 @@ describe('extra/misc — the coordinate systems and the geospatial markup data (
         expect(m.typeMeasurement(obj.dict({ EPSG: obj.name('x') }), 'geographicCS').epsg).toBe(null);
     });
 });
+
+describe('extra/misc — typeSmallObject (T1, the Arlington tail)', () => {
+    test('one kind per object, each listing its Arlington keys', () => {
+        expect(Object.keys(m.SMALL_OBJECT_KEYS).sort()).toEqual(['alternateImage', 'data', 'destDict', 'fixedPrint', 'markInfo',
+            'markedContentReference', 'minimumBitDepth', 'namespace', 'objectReference', 'reference', 'sourceInformation',
+            'timespan', 'urlAlias', 'userProperty', 'winLaunch'].sort());
+        expect(m.SMALL_OBJECT_KEYS.markedContentReference).toEqual(['Type', 'Pg', 'Stm', 'StmOwn', 'MCID']);
+        expect(m.SMALL_OBJECT_KEYS.userProperty).toEqual(['N', 'V', 'F', 'H']);
+    });
+    test('every key copied by its type, a reference as read, the others in _extras', () => {
+        const r = m.typeSmallObject(obj.dict({ Type: obj.name('MCR'), Pg: obj.ref(3, 0), MCID: obj.int(7), X: obj.int(1) }), 'markedContentReference');
+        expect([r.type, r.pg.type, r.mcid]).toEqual(['MCR', 'ref', 7]);
+        expect(Object.keys(r._extras)).toEqual(['X']);
+        const mi = m.typeSmallObject(obj.dict({ Marked: obj.bool(true), Suspects: obj.bool(false) }), 'markInfo');
+        expect([mi.marked, mi.suspects, mi.userproperties]).toEqual([true, false, undefined]);
+        const fp = m.typeSmallObject(obj.dict({ Matrix: obj.array([obj.int(1)]), H: obj.real(0.5) }), 'fixedPrint');
+        expect([fp.matrix.type, fp.h]).toEqual(['array', 0.5]);
+        const w = m.typeSmallObject(obj.dict({ F: obj.string(u8('a.exe')), O: obj.string(u8('open')) }), 'winLaunch');
+        expect(new TextDecoder().decode(w.f)).toBe('a.exe');
+    });
+    test('a key taking any object is copied as read', () => {
+        const v = obj.name('x');
+        expect(m.typeSmallObject(obj.dict({ N: obj.string(u8('n')), V: v }), 'userProperty').v).toBe(v);
+        const priv = obj.dict({});
+        expect(m.typeSmallObject(obj.dict({ Private: priv }), 'data').private).toBe(priv);
+    });
+    test('a stream is read through its dictionary; an unknown kind or a non-dictionary is refused', () => {
+        expect(m.typeSmallObject({ type: 'stream', dict: obj.dict({ V: obj.int(8) }) }, 'minimumBitDepth').v).toBe(8);
+        expect(() => m.typeSmallObject(obj.dict({}), 'nope')).toThrow();
+        expect(() => m.typeSmallObject(obj.int(1), 'timespan')).toThrow();
+    });
+});

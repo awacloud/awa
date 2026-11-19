@@ -1,7 +1,7 @@
 ---
 module: xlsxFullBundle
 category: bundles
-dependencies: [xlsxLargeBundle, smlFormControls, dmlShapesAdvanced, dmlXdrAdvanced, transitional, legacyVml, smlMisc, dmlChartMisc, dmlMainMisc]
+dependencies: [xlsxLargeBundle, smlFormControls, dmlShapesAdvanced, dmlXdrAdvanced, transitional, legacyVml, smlMisc, dmlChartMisc, dmlMainMisc, dmlTextDetails, smlWorkbookDetails, smlPackageParts]
 returns: object
 worker-safe: true
 status: complete
@@ -11,13 +11,17 @@ status: complete
 
 > Pre-wired bundle: `xlsx-large` + further toolkits; none of them types a read.
 
-**Module** `xlsxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/xlsx-full.js` | **Deps** `xlsxLargeBundle` + 8 extras | **Worker-safe** yes
+**Module** `xlsxFullBundle` | **Source** `packages/front/office/ooxml/src/bundles/xlsx-full.js` | **Deps** `xlsxLargeBundle` + 11 extras | **Worker-safe** yes
 
 ## Included
 
 Everything in [`xlsx-large`](./xlsx-large.md) — its extras that type a read and its toolkits — plus:
 
-None of the extras below types a read.
+**Typing a read** — a walker hook runs on every `read()` / `write()`:
+
+- [`smlWorkbookDetails`](../extra/sml-workbook-details.md) — the stylesheet's `slicerStyles`, `timelineStyles` and `colors`, a font's `condense` / `extend` / `outline` / `shadow`, a dxf's `protection`, a table column's `xmlColumnPr` and `calculatedColumnFormula` (in `_extras` through `xlsx-large`)
+- [`dmlTextDetails`](../extra/dml-text-details.md) — a drawing's text: a run's fills, effects and script fonts, a paragraph's spacing, bullets and tabs, `endParaRPr` (in `_extras` through `xlsx-large`)
+- [`smlPackageParts`](../extra/sml-package-parts.md) — the workbook's `calcChain`, `externalLinks`, `xmlMaps`, `connections` and `pivotCaches`, a table's `queryTable`, a sheet's `pivotTables` (in `unmodelledParts` through `xlsx-large`)
 
 **Toolkits** — parse / render functions one calls on raw nodes; a `read()` or `write()` never calls them, so they add no typed field by themselves:
 
@@ -43,7 +47,7 @@ Depends on `xlsxLargeBundle` plus every remaining xlsx-touching extra.
 
 | Resolve key | Returns | Dependencies (auto-wired) |
 |-------------|---------|---------------------------|
-| `'xlsxFullBundle'` | enriched `xlsx` API | `xlsxLargeBundle` + `smlFormControls`, `dmlShapesAdvanced`, `dmlXdrAdvanced`, `transitional`, `legacyVml`, `smlMisc`, `dmlChartMisc`, `dmlMainMisc` |
+| `'xlsxFullBundle'` | enriched `xlsx` API | `xlsxLargeBundle` + `smlFormControls`, `dmlShapesAdvanced`, `dmlXdrAdvanced`, `transitional`, `legacyVml`, `smlMisc`, `dmlChartMisc`, `dmlMainMisc`, `dmlTextDetails`, `smlWorkbookDetails`, `smlPackageParts` |
 
 ## Examples
 

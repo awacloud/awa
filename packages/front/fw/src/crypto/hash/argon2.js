@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -51,10 +51,6 @@
  * @typedef {object} Argon2API
  * @property {(opts: Argon2Options) => (Uint8Array|false)} hash
  *   Argon2id hash → tag bytes of length `tagLen`, or `false` on error.
- * @property {() => false} hashD Argon2d - explicitly rejected (warns, returns `false`).
- * @property {() => false} hashI Argon2i - explicitly rejected (warns, returns `false`).
- * @property {{ Hp: (input: Uint8Array, outLen: number) => Uint8Array, compress: (out: Uint32Array, X: Uint32Array, Y: Uint32Array) => void }} _internal
- *   Internal primitives exposed for KAT tests / debug only.
  */
 
 import { blake2b } from './blake2b.js';
@@ -478,7 +474,7 @@ export const argon2 = {
             return out;
         }
 
-        // ── Iteration G4 - Argon2d / Argon2i explicit reject ─────────────
+        // ── Argon2d / Argon2i explicit reject ─────────────
         //
         // RFC 9106 §4 distinguishes three variants:
         //  - Argon2d  : data-dependent addressing → vulnerable to cache-timing
@@ -493,25 +489,14 @@ export const argon2 = {
         //               This is the recommended choice per RFC 9106 §4 and
         //               OWASP / IETF for general password hashing.
         //
-        // This module only exposes `hash()` (Argon2id, type=2). To pre-empt
-        // any confusion, two exports `hashD` and `hashI` are added that
-        // explicitly refuse.
-        function hashD() {
-            console.warn('[crypto] UNSAFE: argon2: Argon2d is vulnerable to cache-timing attacks (data-dependent addressing). Use hash() (Argon2id) per RFC 9106 §4.');
-            return false;
-        }
-        function hashI() {
-            console.warn('[crypto] DEPRECATED: argon2: Argon2i alone is sub-optimal (Alwen-Blocki 2016 - reduced GPU/ASIC resistance). Use hash() (Argon2id) per RFC 9106 §4.');
-            return false;
-        }
+        // This module only exposes `hash()` (Argon2id, type=2).
 
-        return /** @type {Argon2API} */ (/** @type {any} */ ({
-            hash,
-            // Argon2d / Argon2i - explicit reject (cf. RFC 9106 §4).
-            hashD, hashI,
+        return /** @type {Argon2API} */ (/** @type {any} */ (Object.defineProperty({
+            hash
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal primitives - exposed for KAT tests / debug only.
-            // `_internal.*` convention shared with gcm/cmac/rsa/random/etc.
-            _internal: { Hp: _Hp, compress: _compress }
-        }));
+            // The internal slot (core/internal.js), outside the API.
+            value: { Hp: _Hp, compress: _compress }
+        })));
     }
 };

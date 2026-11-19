@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `pptx` → `oconv-ir/v1` reader — tier 1 (the frozen fidelity
+ * @fileoverview `pptx` → `oconv-ir/v2` reader — tier 1 (the frozen fidelity
  * matrix: "slide order, title + body text as `##` + prose").
  *
  * Converts the value of `@awacloud/ooxml`'s public `pptx.read(bytes)` façade
@@ -19,7 +19,7 @@
  *
  * ## Tier-1 mapping — one slide → one heading + N paragraphs
  *
- * There is no "section" node in the frozen `oconv-ir/v1` vocabulary
+ * There is no "section" node in the `oconv-ir/v2` vocabulary
  * (`../ir/ir.js`), so each slide contributes a flat run of top-level
  * blocks to the document in slide order: an optional `heading{level:2}`
  * for its title, then one `paragraph` per non-empty body-frame paragraph,
@@ -54,9 +54,12 @@
  * - **Media** — any other shape kind found on a slide (`table`, `chart`,
  *   `graphicFrame`) is a real, point-to-able per-slide node this reader
  *   chooses not to map at tier 1: `slides/media-dropped`, detail = the
- *   shape's own `type`. A group shape is not typed by `pptx.read` (it stays
- *   in the slide's raw `_extras`), so nothing inside one reaches this
- *   reader.
+ *   shape's own `type`.
+ * - **Groups** — a group shape (`pptx.read`'s `typedGroups`, which
+ *   `oconv.toMd` asks for) is walked in place, depth first: its shapes are
+ *   read as the slide's (text, pictures, the media recorded). Read
+ *   without that option, a group stays in the slide's raw `_extras` and
+ *   nothing inside one reaches this reader.
  * - **Layout / animations** — permanently out of scope and NEVER reach a
  *   per-node loss (same "documented, not per-node" treatment docx-to-ir
  *   gives page layout/sections/headers/footers): a slide's `layoutRef` is
@@ -193,13 +196,23 @@ export const oconvPptxToIr = {
             return node('image', { name, alt, escapes: { pptx: { bytes: data, contentType } } });
         }
 
+        // A slide's shapes in reading order, a group's in its place.
+        function inOrder(shapes) {
+            const out = [];
+            for (const s of Array.isArray(shapes) ? shapes : []) {
+                if (s && s.type === 'group') out.push(...inOrder(s.shapes));
+                else if (s) out.push(s);
+            }
+            return out;
+        }
+
         /** Normalise one pptx slide's shapes into a format-agnostic SlideModel. */
         function normalizeSlide(slide, losses, deck) {
             let title = null;
             const bodyParagraphs = [];
             let titleTaken = false;
 
-            for (const shape of (slide && slide.shapes) || []) {
+            for (const shape of inOrder(slide && slide.shapes)) {
                 if (shape.type === 'picture') {
                     bodyParagraphs.push(pictureNode(shape, deck, losses));
                     continue;
@@ -231,7 +244,7 @@ export const oconvPptxToIr = {
 
         /**
          * Convert `readResult` (the value of `pptx.read(bytes)`) into an
-         * `oconv-ir/v1` document plus its loss ledger.
+         * `oconv-ir/v2` document plus its loss ledger.
          *
          * @param {object} readResult Value of `pptx.read(bytes)`.
          * @param {{includeNotes?: boolean}} [opts] `includeNotes` defaults

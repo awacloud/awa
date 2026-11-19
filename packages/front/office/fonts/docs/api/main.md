@@ -118,6 +118,9 @@ Every descriptor of `modules` and `bundle` is **also** re-exported by its bindin
 | Glyph model | `fontPath` | [glyph/path.md](./glyph/path.md) |
 | Glyph model | `fontGlyph` | [glyph/glyph.md](./glyph/glyph.md) |
 | Glyph model | `fontCompositeResolve` | [glyph/compositeResolve.md](./glyph/compositeResolve.md) |
+| Type 1 programs | `fontType1Charstring` | [type1/charstring.md](./type1/charstring.md) |
+| Type 1 programs | `fontType1` | [type1/type1.md](./type1/type1.md) |
+| Type 1 programs | `fontCffProgram` | [type1/cff.md](./type1/cff.md) |
 | embed-pdf | `embedClosure` | no page yet |
 | embed-pdf | `embedCmapBuilder` | no page yet |
 | embed-pdf | `embedGlyphRewriter` | no page yet |
@@ -128,6 +131,7 @@ Every descriptor of `modules` and `bundle` is **also** re-exported by its bindin
 | embed-pdf | `embedToUnicodeBuilder` | [embed-pdf/toUnicodeBuilder.md](./embed-pdf/toUnicodeBuilder.md) |
 | Layout, cmap | `layoutClassDefinitions` | [layout/classDefinitions.md](./layout/classDefinitions.md) |
 | Layout, cmap | `cmapToUnicode` | [cmap/toUnicode.md](./cmap/toUnicode.md) |
+| Layout, cmap | `cmapCid` | [cmap/cid.md](./cmap/cid.md) |
 | Standard 14 | `standard14Helvetica` | [standard14/helvetica.md](./standard14/helvetica.md) |
 | Standard 14 | `standard14Times` | [standard14/times.md](./standard14/times.md) |
 | Standard 14 | `standard14Courier` | [standard14/courier.md](./standard14/courier.md) |
@@ -143,6 +147,7 @@ Every descriptor of `modules` and `bundle` is **also** re-exported by its bindin
 | Encodings | `encodingLookup` | [encodings/lookup.md](./encodings/lookup.md) |
 | Encodings | `encodingAglTable` | [encodings/aglTable.md](./encodings/aglTable.md) |
 | Encodings | `encodingAgl` | [encodings/agl.md](./encodings/agl.md) |
+| Encodings | `encodingTexMath` | [encodings/texMath.md](./encodings/texMath.md) |
 | Orchestrator | `fonts` | [fonts.md](./fonts.md) |
 | Bundles | `fontsLargeBundle` | [bundles/fonts-large.md](./bundles/fonts-large.md) |
 | Bundles | `fontsFullBundle` | [bundles/fonts-full.md](./bundles/fonts-full.md) |

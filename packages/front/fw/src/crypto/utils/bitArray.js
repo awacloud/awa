@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -41,8 +41,6 @@
  * @property {(len: number, x: number, _end?: number) => number} partial Build a partial word.
  * @property {(x: number) => number} getPartial Number of bits used by a partial word.
  * @property {(a: number[], b: number[]) => boolean} equal Constant-time equality of two bit arrays.
- * @property {(a: number[], shift: number, carry?: number, out?: number[]) => number[]} _shiftRight Shift a bit array right (private).
- * @property {(x: number[], y: number[]) => number[]} _xor4 XOR two 4-word blocks element-wise (private).
  * @property {(a: number[]) => (number[] | false)} byteswapM Byte-swap each word in place; `false` on a partial word.
  */
 
@@ -114,7 +112,7 @@ export const bitArray = {
              * @return {bitArray} The requested slice.
              */
             bitSlice: function (a, bstart, bend) {
-                a = bitArray._shiftRight(a.slice(bstart / 32), 32 - (bstart & 31)).slice(1);
+                a = _shiftRight(a.slice(bstart / 32), 32 - (bstart & 31)).slice(1);
                 return (bend === undefined) ? a : bitArray.clamp(a, bend - bstart);
             },
 
@@ -155,7 +153,7 @@ export const bitArray = {
                 if (shift === 32) {
                     return a1.concat(a2);
                 } else {
-                    return bitArray._shiftRight(a2, shift, last | 0, a1.slice(0, a1.length - 1));
+                    return _shiftRight(a2, shift, last | 0, a1.slice(0, a1.length - 1));
                 }
             },
 
@@ -238,49 +236,6 @@ export const bitArray = {
                 return (x === 0);
             },
 
-            /** Shift an array right.
-             * @param {bitArray} a The array to shift.
-             * @param {Number} shift The number of bits to shift.
-             * @param {Number} [carry=0] A byte to carry in
-             * @param {bitArray} [out=[]] An array to prepend to the output.
-             * @private
-             */
-            _shiftRight: function (a, shift, carry, out) {
-                let i, last2, shift2;
-                if (out === undefined) {
-                    out = [];
-                }
-
-                for (; shift >= 32; shift -= 32) {
-                    out.push(carry);
-                    carry = 0;
-                }
-                if (shift === 0) {
-                    return out.concat(a);
-                }
-
-                for (i = 0; i < a.length; i++) {
-                    out.push(carry | a[i] >>> shift);
-                    carry = a[i] << (32 - shift);
-                }
-                last2 = a.length ? a[a.length - 1] : 0;
-                shift2 = bitArray.getPartial(last2);
-                out.push(bitArray.partial(shift + shift2 & 31, (shift + shift2 > 32) ? carry : out.pop(), 1));
-                return out;
-            },
-
-            /**
-             * XOR two blocks of exactly 4 words element-wise.
-             *
-             * @param {number[]} x - First 4-word block.
-             * @param {number[]} y - Second 4-word block.
-             * @returns {number[]} New 4-element array with `x[i] ^ y[i]`.
-             * @private
-             */
-            _xor4: function (x, y) {
-                return [x[0] ^ y[0], x[1] ^ y[1], x[2] ^ y[2], x[3] ^ y[3]];
-            },
-
             /**
              * Byte-swap every 32-bit word in `a` **in place**.
              *
@@ -306,6 +261,36 @@ export const bitArray = {
                 return a;
             }
         };
+
+        /** Shift an array right (internal: not part of the API).
+         * @param {bitArray} a The array to shift.
+         * @param {Number} shift The number of bits to shift.
+         * @param {Number} [carry=0] A byte to carry in
+         * @param {bitArray} [out=[]] An array to prepend to the output.
+         */
+        function _shiftRight(a, shift, carry, out) {
+            let i, last2, shift2;
+            if (out === undefined) {
+                out = [];
+            }
+
+            for (; shift >= 32; shift -= 32) {
+                out.push(carry);
+                carry = 0;
+            }
+            if (shift === 0) {
+                return out.concat(a);
+            }
+
+            for (i = 0; i < a.length; i++) {
+                out.push(carry | a[i] >>> shift);
+                carry = a[i] << (32 - shift);
+            }
+            last2 = a.length ? a[a.length - 1] : 0;
+            shift2 = bitArray.getPartial(last2);
+            out.push(bitArray.partial(shift + shift2 & 31, (shift + shift2 > 32) ? carry : out.pop(), 1));
+            return out;
+        }
 
         return bitArray;
     }

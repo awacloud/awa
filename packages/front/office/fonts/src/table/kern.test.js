@@ -54,3 +54,18 @@ describe('tableKern', () => {
         expect(() => parseKern(new Uint8Array(2))).toThrow(ParseError);
     });
 });
+
+// T15 (c), D38: the OpenType coverage bit 0 means horizontal data.
+describe('tableKern — the coverage bits (T15 c)', () => {
+    const withCoverage = (coverage) => {
+        const b = buildMsKernFormat0([{ left: 1, right: 2, value: -10 }]);
+        b[8] = (coverage >> 8) & 0xFF;
+        b[9] = coverage & 0xFF;
+        return b;
+    };
+    test('bit 0 set: horizontal; clear: vertical; bit 2: cross-stream', () => {
+        expect(parseKern(withCoverage(0x0001)).tables[0].horizontal).toBe(true);
+        expect(parseKern(withCoverage(0x0000)).tables[0].horizontal).toBe(false);
+        expect(parseKern(withCoverage(0x0005)).tables[0].crossStream).toBe(true);
+    });
+});

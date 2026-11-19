@@ -9,7 +9,7 @@ status: complete
 
 # oconvIrToPdf
 
-> `oconv-ir/v1` → `.pdf` bytes — the bounded typesetter's writer facade.
+> `oconv-ir/v2` → `.pdf` bytes — the bounded typesetter's writer facade.
 
 **Module** `oconvIrToPdf` | **Source** `packages/front/office/oconv/src/write/ir-to-pdf.js` | **Deps** `oconvIr`, `oconvPdfMetrics`, `oconvPdfBox`, `oconvPdfLinebreak`, `oconvPdfStack`, `oconvPdfRenderText`, `oconvPdfRenderList`, `oconvPdfRenderCode`, `oconvPdfRenderTable`, `oconvPdfRenderImage`, `pdfBuilder`, `pdfFontEmbed`, `fonts`, `oconvDefaultFaces`, `zlib` (optional), `standard14Lookup` (optional, last) | **Worker-safe** yes
 
@@ -70,6 +70,9 @@ Validated in exactly ONE place, `oconvPdfBox.resolveLayout`:
 | `codeSize` | `number` > 0 | `9.5` pt | `oconv: bad pdf option codeSize` |
 | `pageNumbers` | `boolean` | `true` | `oconv: bad pdf option pageNumbers` |
 | `fonts` | `{regular?, bold?, italic?, boldItalic?, mono?: Uint8Array}` | `{}` (pure Standard 14) | accepted-and-forwarded here; failures surface from `oconvPdfMetrics` |
+| `pdfA` | `'4'` \| `'2b'` | absent (no claim) | `oconv: bad pdf option pdfA`; forwarded to `pdfBuilder`'s `builder({ pdfA })` (XMP, sRGB output intent, the profile's version); every drawn style class needs an embedded face, else `oconv: pdf/A needs embedded faces (<classes>)` before writing |
+| `pdfUA` | `1` \| `2` | absent (no claim) | `oconv: bad pdf option pdfUA` (also with `pdfA`); forwarded to `pdfBuilder`'s `builder({ pdfUA, lang })`: the document is tagged (see [Tagged output](#tagged-output-pdfua)); every drawn style class needs an embedded face, else `oconv: pdf/UA needs embedded faces (<classes>)` before writing |
+| `lang` | non-empty `string` (a BCP 47 tag) | absent | `oconv: bad pdf option lang` — required with `pdfUA`, refused without it |
 
 Any other key throws `oconv: bad pdf option <key>`; a non-object,
 non-`undefined`, non-`null` `pdfOpts` throws `oconv: bad pdf option pdf`.
@@ -129,6 +132,32 @@ from the content type a reader carried, else no `format`); nothing resolved
 at all → `reason: 'no-bytes'`, `bytes: 0`. See
 [`pdf-writer.md`](../../pdf-writer.md#images) for the full placement
 geometry and format boundary.
+
+### Tagged output (PDF/UA)
+
+Under `pdfUA` the typesetter marks every drawn item with its structure
+element (`pdfBuilder`'s `openElement` / `markContent` / `closeElement`),
+one `Document` holding:
+
+| IR | Structure |
+|---|---|
+| `heading` | `H1`–`H6` |
+| `paragraph` | `P` |
+| `blockquote` | `BlockQuote` holding its blocks (PDF/UA-2: `Div`) |
+| `list` / `listItem` | `L` (`ListNumbering` as drawn: `Disc`, or `Decimal` / `LowerAlpha` / `LowerRoman` by depth), `LI`, `Lbl` (the marker), `LBody` (the item's blocks) |
+| `table` / `row` / `cell` | `Table`, `TR`, `TH` (a header row's, `Scope Column`) or `TD`, holding the cell's blocks |
+| `codeBlock` | `Code` in a `P` (PDF/UA-2: the `P`) |
+| `image` | `Figure` with its alt text; the placeholder text of a refused image a `P` |
+
+Rules (the thematic break, quote bars, table rules) are artifacts, page
+numbers `/Pagination` artifacts. A picture without alt text is decorative:
+an artifact, recorded `image/decorative` (`{ index, name }`). PDF/UA-2
+writes the PDF 2.0 standard types: it has no `BlockQuote` or `Code`, which
+veraPDF refuses there (rule 8.2.4). The title, required: `writeOpts.title`
+(`fromMd`'s front matter `title`, `convert`'s source title), else the
+first heading's text; neither is `oconv: pdf/UA needs a title (front
+matter or a heading)`. With the default faces, veraPDF 1.30.3 judges the
+documents conforming to the part claimed (`verapdf-pdfua`).
 
 ## Examples
 

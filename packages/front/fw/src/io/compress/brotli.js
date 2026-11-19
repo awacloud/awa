@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -35,7 +35,8 @@
  *
  * One public option: `opts.quality ∈ [0, 11]` (default `6`) - speed/ratio
  * profile (`0` = trivial uncompressed, `1..3` chainDepth 2..4 lazy off,
- * `4..7` lazy on, `8..11` block splitting + chainDepth 16..32).
+ * `4..6` chainDepth 6..10 lazy on, from `6` one literal block split,
+ * `7..11` chainDepth 64..128 with the search ended by a 32..128-byte match).
  *
  * ## Static dictionary
  *
@@ -83,7 +84,6 @@
  * @property {(data: Uint8Array, opts?: object) => Promise<Uint8Array>} brotliDecompress
  * @property {BrotliCompressStreamCtor} BrotliCompressStream
  * @property {BrotliDecompressStreamCtor} BrotliDecompressStream
- * @property {object} _internal
  */
 
 import { bitstream } from './bitstream.js';
@@ -407,6 +407,7 @@ export const brotli = {
 
             // Compressed meta-block: header + body
             const h = _readCompressedMetaBlockHeader(r, state.largeWindow);
+            _reserveOutput(state, mlen);
             _decodeCompressedBody(r, h, state, mlen);
             return { done: islast === 1, last: islast === 1 };
         }
@@ -459,6 +460,9 @@ export const brotli = {
             return {
                 read(_r) { return symbol; },
                 singleSymbol: symbol,
+                // Same shape as a table decoder; `table: null` tells the
+                // decoder's inlined literal read to call `read`.
+                table: null, mask: 0, maxBits: 0,
             };
         }
 
@@ -491,6 +495,9 @@ export const brotli = {
                     return entry >>> 4;
                 },
                 alphabetSize,
+                // Read inline by the literal loop of `_decodeCompressedBody`,
+                // which repeats `read`'s steps on a local bit position.
+                table, mask, maxBits,
             };
         }
 
@@ -551,7 +558,7 @@ export const brotli = {
         }
 
         function _readComplexPrefixCode(r, alphabetSize, hskip) {
-            // --- Phase 1: read code lengths for the CL alphabet (§3.5) ---
+            // --- Part 1: read code lengths for the CL alphabet (§3.5) ---
             //
             // The CL alphabet has 18 symbols (0-15 = literal CL, 16/17 =
             // repeat opcodes). Their CL-of-CL values ∈ [0, 5] are stored in
@@ -596,7 +603,7 @@ export const brotli = {
                     return _makeSingleSymbolDecoder(sym);
                 })();
 
-            // --- Phase 2: read RLE-encoded code lengths for the target alphabet ---
+            // --- Part 2: read RLE-encoded code lengths for the target alphabet ---
 
             const lens = new u8(alphabetSize);
             let i = 0;
@@ -866,6 +873,15 @@ export const brotli = {
             70, 102, 134, 198, 326, 582, 1094, 2118,
         ]);
 
+        // `_splitIacSym` per symbol, tabulated once (704 entries each).
+        const _IAC_INS = new u8(704), _IAC_COPY = new u8(704), _IAC_DZ = new u8(704);
+        for (let sym = 0; sym < 704; ++sym) {
+            const cell = sym >> 6;
+            _IAC_INS[sym] = _IAC_I_BASE[cell] + ((sym >> 3) & 7);
+            _IAC_COPY[sym] = _IAC_C_BASE[cell] + (sym & 7);
+            _IAC_DZ[sym] = cell < 2 ? 1 : 0;
+        }
+
         function _splitIacSym(iacSym) {
             const cell = iacSym >> 6;
             if (cell >= 11) _err('EBADSTREAM', 'iac symbol ' + iacSym + ' out of range');
@@ -874,12 +890,6 @@ export const brotli = {
                 copyCode:   _IAC_C_BASE[cell] + (iacSym & 7),
                 distZero:   cell < 2,
             };
-        }
-
-        function _readLength(r, baseArr, extraArr, code) {
-            const eb = extraArr[code];
-            const extra = eb <= 16 ? _readBits(r, eb) : _readBitsBig(r, eb);
-            return baseArr[code] + extra;
         }
 
         // --- §4 - Distance decoding ---
@@ -1023,10 +1033,35 @@ export const brotli = {
 
         // --- Output buffer growth ---
 
+        // `state.limit` is `maxOutput` (Infinity without a cap): past it the
+        // decoder throws EMAXOUT before growing, and never grows beyond it.
+        /**
+         * Grow the output once for a meta-block of `mlen` bytes (doubling,
+         * capped at the limit), so the body's per-command `_ensureCapacity`
+         * calls find the room already there. It never throws: whether the
+         * limit is exceeded is still decided byte by byte, where it was.
+         * @param {object} state
+         * @param {number} mlen
+         */
+        function _reserveOutput(state, mlen) {
+            const need = Math.min(state.outLen + mlen, state.limit);
+            if (need <= state.out.length) return;
+            let newSize = state.out.length || 1024;
+            while (newSize < need) newSize *= 2;
+            newSize = Math.min(newSize, state.limit);
+            const grown = new u8(newSize);
+            grown.set(state.out.subarray(0, state.outLen));
+            state.out = grown;
+        }
+
         function _ensureCapacity(state, additional) {
+            if (state.outLen + additional > state.limit) {
+                _err('EMAXOUT', 'output limit exceeded (maxOutput ' + state.limit + ')');
+            }
             if (state.outLen + additional > state.out.length) {
-                let newSize = state.out.length;
+                let newSize = state.out.length || 1024;
                 while (newSize < state.outLen + additional) newSize *= 2;
+                newSize = Math.min(newSize, state.limit);
                 const grown = new u8(newSize);
                 grown.set(state.out.subarray(0, state.outLen));
                 state.out = grown;
@@ -1048,6 +1083,86 @@ export const brotli = {
 
         // --- §10 - Command loop for one compressed meta-block ---
 
+        /**
+         * A static-dictionary reference's word (RFC 7932 §8, or the RFC 9841
+         * §3.1 hook), written to the output: out of `_decodeCompressedBody`,
+         * whose hot loop JavaScriptCore optimises less, and less steadily, as it
+         * grows.
+         * @param {object} r
+         * @param {object} h
+         * @param {object} state
+         * @param {number} wordId
+         * @param {number} clen
+         * @param {number} remaining
+         * @param {number} btypeL
+         */
+        function _copyStaticDictRef(r, h, state, wordId, clen, remaining, btypeL) {
+            let transformed;
+
+            if (state.resolveStaticDictRef) {
+                // Extension hook (RFC 9841 §3.1 custom-dict path,
+                // owned by `brotli_shared`). The callback handles
+                // length bounds, dict selection, transform
+                // application - brotli.js stays RFC 7932 here.
+                const cidL = _contextIdLit(h.cmode[btypeL], state.p1, state.p2);
+                transformed = state.resolveStaticDictRef(state, wordId, clen, cidL, r);
+            } else {
+                // RFC 7932 §8 - built-in static dictionary.
+                if (clen < 4 || clen > 24) {
+                    _err('EBADSTREAM', 'static dict ref length ' + clen + ' not in [4, 24]', r.p);
+                }
+                _ensureDictLoaded(r);
+                const nw = brotliDict.NWORDS(clen);
+                const index = wordId % nw;
+                const transformId = (wordId - index) / nw;
+                if (transformId >= 121) _err('EBADSTREAM', 'static dict transform id ' + transformId + ' >= 121', r.p);
+                const baseWord = brotliDict.lookupWord(clen, index);
+                transformed = brotliDict.applyTransform(transformId, baseWord);
+            }
+
+            const writeLen = transformed.length < remaining ? transformed.length : remaining;
+            _ensureCapacity(state, writeLen);
+            // A word is 4-24 bytes plus its transform's affixes: a
+            // plain loop, where a `subarray` + `set` pair cost more
+            // than the copy (44 % of a text decode under V8).
+            const out = state.out;
+            let outLen = state.outLen;
+            for (let k = 0; k < writeLen; ++k) out[outLen++] = transformed[k];
+            state.outLen = outLen;
+        }
+
+        /**
+         * An RFC 9841 §3.2 LZ77-dictionary reference, written to the output
+         * (see `_copyStaticDictRef` for why it is a function).
+         * @param {object} state
+         * @param {number} distance
+         * @param {number} maxAllowed
+         * @param {number} lz77DictLen
+         * @param {number} clen
+         * @param {number} remaining
+         */
+        function _copyLz77DictRef(state, distance, maxAllowed, lz77DictLen, clen, remaining) {
+            // RFC 9841 §3.2: dictionary_address = L + maxAllowed - distance
+            // First copy from lz77Dict[dictAddr..L), then if more
+            // is needed continue from output[windowStart..) (the
+            // oldest byte still in the regular LZ77 window).
+            const dictAddr = lz77DictLen + maxAllowed - distance;
+            const fromDictBytes = lz77DictLen - dictAddr;
+            const writeLen = clen < remaining ? clen : remaining;
+            _ensureCapacity(state, writeLen);
+            const outStart = state.outLen;
+            const windowStart = outStart > state.windowSize ? outStart - state.windowSize : 0;
+            let k = 0;
+            while (k < writeLen && k < fromDictBytes) {
+                state.out[state.outLen++] = state.lz77Dict[dictAddr + k];
+                ++k;
+            }
+            while (k < writeLen) {
+                state.out[state.outLen++] = state.out[windowStart + (k - fromDictBytes)];
+                ++k;
+            }
+        }
+
         function _decodeCompressedBody(r, h, state, mlen) {
             const startLen = state.outLen;
 
@@ -1057,20 +1172,68 @@ export const brotli = {
             let btypeD = 0, prevBtypeD = 1;
             let blenL = h.blenL, blenI = h.blenI, blenD = h.blenD;
 
+            // The command's reads - its insert-and-copy symbol, the two
+            // lengths' extra bits, the literals, the distance symbol and its
+            // extra bits - run on a local bit position `bp`, as
+            // `_makeTableDecoder`'s `read` and `_readBits` would, step for
+            // step (a call per read cost about a sixth of a json decode).
+            // `r.p` is synced around every call that reads the stream or
+            // throws, and when the loop ends. A throw leaves `state` at the
+            // command's start, which the stream's meta-block snapshot
+            // restores anyway.
+            const d = r.d, eofBits = r.eofBits, canMore = r.canExpectMore;
+            const htreeI = h.htreeI, htreeD = h.htreeD, cmapD = h.cmapD;
+            const npostfix = h.npostfix, ndirect = h.ndirect, lastDist = state.lastDist;
+            let bp = r.p;
+
             while (state.outLen - startLen < mlen) {
                 // --- Block-switch for IAC ---
                 if (blenI === 0) {
+                    r.p = bp;
                     const nb = _decodeBlockType(h.htreeBtypeI, h.nbltypesI, btypeI, prevBtypeI, r);
                     prevBtypeI = btypeI; btypeI = nb;
                     blenI = _readBlockCount(r, h.htreeBlenI);
+                    bp = r.p;
                 }
                 blenI--;
 
                 // --- IAC sym → ILEN, CLEN, distZero ---
-                const iacSym = h.htreeI[btypeI].read(r);
-                const { insertCode, copyCode, distZero } = _splitIacSym(iacSym);
-                const ilen = _readLength(r, _INSERT_BASE, _INSERT_EXTRA, insertCode);
-                const clen = _readLength(r, _COPY_BASE,   _COPY_EXTRA,   copyCode);
+                const treeI = htreeI[btypeI];
+                const tableI = treeI.table;
+                let iacSym;
+                if (tableI === null) {
+                    r.p = bp; iacSym = treeI.read(r); bp = r.p;
+                } else {
+                    if (canMore && bp + treeI.maxBits > eofBits) { r.p = bp; _eofThrow(r); }
+                    const o = bp >> 3;
+                    const entry = tableI[((d[o] | (d[o + 1] << 8) | (d[o + 2] << 16)) >>> (bp & 7)) & treeI.mask];
+                    const len = entry & 0x0F;
+                    if (len === 0) _err('EBADSTREAM', 'undefined prefix code', bp);
+                    bp += len;
+                    if (bp > eofBits) { r.p = bp; _eofThrow(r); }
+                    iacSym = entry >>> 4;
+                }
+                if (iacSym >= 704) _err('EBADSTREAM', 'iac symbol ' + iacSym + ' out of range');
+                const distZero = _IAC_DZ[iacSym] === 1;
+                // The extra bits: at most 24 each, a 4-byte load at any
+                // shift (the reader buffer is padded by 4 zero bytes).
+                const icode = _IAC_INS[iacSym], ccode = _IAC_COPY[iacSym];
+                let ilen = _INSERT_BASE[icode];
+                const ie = _INSERT_EXTRA[icode];
+                if (ie > 0) {
+                    if (bp + ie > eofBits) { r.p = bp; _eofThrow(r); }
+                    const o = bp >> 3;
+                    ilen += ((d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24)) >>> (bp & 7)) & ((1 << ie) - 1);
+                    bp += ie;
+                }
+                let clen = _COPY_BASE[ccode];
+                const ce = _COPY_EXTRA[ccode];
+                if (ce > 0) {
+                    if (bp + ce > eofBits) { r.p = bp; _eofThrow(r); }
+                    const o = bp >> 3;
+                    clen += ((d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24)) >>> (bp & 7)) & ((1 << ce) - 1);
+                    bp += ce;
+                }
 
                 // --- Insert ILEN literals ---
                 // §10: "if number of uncompressed bytes produced in the
@@ -1081,22 +1244,46 @@ export const brotli = {
                 // read every literal, write only as many as fit in MLEN.
                 if (ilen > 0) {
                     _ensureCapacity(state, ilen);
+                    // The loop runs once per literal: its state in locals,
+                    // written back after it.
+                    const out = state.out, stop = startLen + mlen;
+                    const htreeL = h.htreeL, cmapL = h.cmapL;
+                    let outLen = state.outLen, p1 = state.p1, p2 = state.p2;
+                    let cmode = h.cmode[btypeL], cbase = 64 * btypeL;
                     for (let k = 0; k < ilen; ++k) {
                         if (blenL === 0) {
+                            r.p = bp;
                             const nb = _decodeBlockType(h.htreeBtypeL, h.nbltypesL, btypeL, prevBtypeL, r);
                             prevBtypeL = btypeL; btypeL = nb;
                             blenL = _readBlockCount(r, h.htreeBlenL);
+                            bp = r.p;
+                            cmode = h.cmode[btypeL]; cbase = 64 * btypeL;
                         }
                         blenL--;
 
-                        const cidL = _contextIdLit(h.cmode[btypeL], state.p1, state.p2);
-                        const treeIdx = h.cmapL[64 * btypeL + cidL];
-                        const lit = h.htreeL[treeIdx].read(r);
-                        if (state.outLen - startLen < mlen) {
-                            state.out[state.outLen++] = lit;
-                            state.p2 = state.p1; state.p1 = lit;
+                        const cidL = cmode === 2 ? (_LUT0[p1] | _LUT1[p2]) : _contextIdLit(cmode, p1, p2);
+                        const tree = htreeL[cmapL[cbase + cidL]];
+                        let lit;
+                        const table = tree.table;
+                        if (table === null) {
+                            r.p = bp; lit = tree.read(r); bp = r.p;
+                        } else {
+                            // `read` of `_makeTableDecoder`, step for step.
+                            if (canMore && bp + tree.maxBits > eofBits) { r.p = bp; _eofThrow(r); }
+                            const o = bp >> 3;
+                            const entry = table[((d[o] | (d[o + 1] << 8) | (d[o + 2] << 16)) >>> (bp & 7)) & tree.mask];
+                            const len = entry & 0x0F;
+                            if (len === 0) _err('EBADSTREAM', 'undefined prefix code', bp);
+                            bp += len;
+                            if (bp > eofBits) { r.p = bp; _eofThrow(r); }
+                            lit = entry >>> 4;
+                        }
+                        if (outLen < stop) {
+                            out[outLen++] = lit;
+                            p2 = p1; p1 = lit;
                         }
                     }
+                    state.outLen = outLen; state.p1 = p1; state.p2 = p2;
                 }
 
                 // --- Last command's copy is ignored if we've reached MLEN ---
@@ -1105,19 +1292,54 @@ export const brotli = {
                 // --- Resolve distance ---
                 let distance, dsym = 0;
                 if (distZero) {
-                    distance = state.lastDist[0];
+                    distance = lastDist[0];
                 } else {
                     if (blenD === 0) {
+                        r.p = bp;
                         const nb = _decodeBlockType(h.htreeBtypeD, h.nbltypesD, btypeD, prevBtypeD, r);
                         prevBtypeD = btypeD; btypeD = nb;
                         blenD = _readBlockCount(r, h.htreeBlenD);
+                        bp = r.p;
                     }
                     blenD--;
 
                     const cidD = clen > 4 ? 3 : clen - 2;
-                    const treeIdx = h.cmapD[4 * btypeD + cidD];
-                    dsym = h.htreeD[treeIdx].read(r);
-                    distance = _decodeDistanceSymbol(r, dsym, state.lastDist, h.npostfix, h.ndirect);
+                    const treeD = htreeD[cmapD[4 * btypeD + cidD]];
+                    const tableD = treeD.table;
+                    if (tableD === null) {
+                        r.p = bp; dsym = treeD.read(r); bp = r.p;
+                    } else {
+                        if (canMore && bp + treeD.maxBits > eofBits) { r.p = bp; _eofThrow(r); }
+                        const o = bp >> 3;
+                        const entry = tableD[((d[o] | (d[o + 1] << 8) | (d[o + 2] << 16)) >>> (bp & 7)) & treeD.mask];
+                        const len = entry & 0x0F;
+                        if (len === 0) _err('EBADSTREAM', 'undefined prefix code', bp);
+                        bp += len;
+                        if (bp > eofBits) { r.p = bp; _eofThrow(r); }
+                        dsym = entry >>> 4;
+                    }
+                    // `_decodeDistanceSymbol`'s two common paths inline: a
+                    // cache code, and a coded distance of at most 24 extra
+                    // bits; the rest through the function.
+                    const ndistbits = dsym >= 16 + ndirect ? 1 + ((dsym - ndirect - 16) >> (npostfix + 1)) : 0;
+                    if (dsym < 16) {
+                        distance = lastDist[_SPECIAL_DIST[dsym * 2]] + _SPECIAL_DIST[dsym * 2 + 1];
+                        if (distance <= 0) _err('EBADSTREAM', 'special distance code ' + dsym + ' resolved to non-positive ' + distance, bp);
+                    } else if (ndistbits === 0) {
+                        distance = dsym - 15;
+                    } else if (ndistbits <= 24) {
+                        if (bp + ndistbits > eofBits) { r.p = bp; _eofThrow(r); }
+                        const o = bp >> 3;
+                        const dextra = ((d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24)) >>> (bp & 7)) & ((1 << ndistbits) - 1);
+                        bp += ndistbits;
+                        const dcOffset = dsym - ndirect - 16;
+                        const offset = ((2 + ((dcOffset >> npostfix) & 1)) << ndistbits) - 4;
+                        distance = ((offset + dextra) << npostfix) + (dcOffset & ((1 << npostfix) - 1)) + ndirect + 1;
+                    } else {
+                        r.p = bp;
+                        distance = _decodeDistanceSymbol(r, dsym, lastDist, npostfix, ndirect);
+                        bp = r.p;
+                    }
                 }
 
                 const maxAllowed = state.outLen < state.windowSize ? state.outLen : state.windowSize;
@@ -1143,61 +1365,26 @@ export const brotli = {
                 // is interpreted permissively: clamp to remaining MLEN.
                 const remaining = mlen - (state.outLen - startLen);
                 if (isStaticDictRef) {
-                    const wordId = distance - maxAllowed - 1 - lz77DictLen;
-                    let transformed;
-
-                    if (state.resolveStaticDictRef) {
-                        // Extension hook (RFC 9841 §3.1 custom-dict path,
-                        // owned by `brotli_shared`). The callback handles
-                        // length bounds, dict selection, transform
-                        // application - brotli.js stays RFC 7932 here.
-                        const cidL = _contextIdLit(h.cmode[btypeL], state.p1, state.p2);
-                        transformed = state.resolveStaticDictRef(state, wordId, clen, cidL, r);
-                    } else {
-                        // RFC 7932 §8 - built-in static dictionary.
-                        if (clen < 4 || clen > 24) {
-                            _err('EBADSTREAM', 'static dict ref length ' + clen + ' not in [4, 24]', r.p);
-                        }
-                        _ensureDictLoaded(r);
-                        const nw = brotliDict.NWORDS(clen);
-                        const index = wordId % nw;
-                        const transformId = (wordId - index) / nw;
-                        if (transformId >= 121) _err('EBADSTREAM', 'static dict transform id ' + transformId + ' >= 121', r.p);
-                        const baseWord = brotliDict.lookupWord(clen, index);
-                        transformed = brotliDict.applyTransform(transformId, baseWord);
-                    }
-
-                    const writeLen = transformed.length < remaining ? transformed.length : remaining;
-                    _ensureCapacity(state, writeLen);
-                    state.out.set(transformed.subarray(0, writeLen), state.outLen);
-                    state.outLen += writeLen;
+                    r.p = bp;
+                    _copyStaticDictRef(r, h, state, distance - maxAllowed - 1 - lz77DictLen, clen, remaining, btypeL);
                 } else if (isLz77DictRef) {
-                    // RFC 9841 §3.2: dictionary_address = L + maxAllowed - distance
-                    // First copy from lz77Dict[dictAddr..L), then if more
-                    // is needed continue from output[windowStart..) (the
-                    // oldest byte still in the regular LZ77 window).
-                    const dictAddr = lz77DictLen + maxAllowed - distance;
-                    const fromDictBytes = lz77DictLen - dictAddr;
-                    const writeLen = clen < remaining ? clen : remaining;
-                    _ensureCapacity(state, writeLen);
-                    const outStart = state.outLen;
-                    const windowStart = outStart > state.windowSize ? outStart - state.windowSize : 0;
-                    let k = 0;
-                    while (k < writeLen && k < fromDictBytes) {
-                        state.out[state.outLen++] = state.lz77Dict[dictAddr + k];
-                        ++k;
-                    }
-                    while (k < writeLen) {
-                        state.out[state.outLen++] = state.out[windowStart + (k - fromDictBytes)];
-                        ++k;
-                    }
+                    _copyLz77DictRef(state, distance, maxAllowed, lz77DictLen, clen, remaining);
                 } else {
                     const writeLen = clen < remaining ? clen : remaining;
-                    _ensureCapacity(state, writeLen);
-                    for (let k = 0; k < writeLen; ++k) {
-                        state.out[state.outLen] = state.out[state.outLen - distance];
-                        state.outLen++;
+                    let outLen = state.outLen;
+                    // `_ensureCapacity`'s two tests, the call only on a miss.
+                    if (outLen + writeLen > state.out.length || outLen + writeLen > state.limit) _ensureCapacity(state, writeLen);
+                    const out = state.out;
+                    if (writeLen >= 32 && distance >= writeLen) {
+                        // A long copy whose source and destination do not overlap.
+                        out.copyWithin(outLen, outLen - distance, outLen - distance + writeLen);
+                        outLen += writeLen;
+                    } else {
+                        for (let k = 0; k < writeLen; ++k, ++outLen) out[outLen] = out[outLen - distance];
                     }
+                    state.outLen = outLen;
+                    // A copy follows at least one byte (distance >= 1).
+                    if (outLen >= 2) { state.p1 = out[outLen - 1]; state.p2 = out[outLen - 2]; continue; }
                 }
 
                 // Update p1, p2 from last 2 emitted bytes
@@ -1209,13 +1396,27 @@ export const brotli = {
                     state.p1 = state.out[state.outLen - 1];
                 }
             }
+            r.p = bp;
         }
 
         // --- Public decompressor ---
 
+        /**
+         * `opts.maxOutput` (bytes) as a decoder limit: `Infinity` when absent.
+         * @param {object} [opts]
+         * @returns {number}
+         */
+        function _limitOf(opts) {
+            const m = opts ? opts.maxOutput : undefined;
+            if (m === undefined || m === null) return Infinity;
+            if (!(Number.isSafeInteger(m) && m >= 0)) _err('EBADARG', 'maxOutput must be a non-negative integer');
+            return m;
+        }
+
         function brotliDecompressSync(data, opts) {
             if (!(data instanceof u8)) _err('EBADARG', 'expected Uint8Array');
             if (data.length === 0) _err('EBADSTREAM', 'empty input');
+            const limit = _limitOf(opts);
 
             // `opts._ext` is the private extension protocol consumed by
             // `brotli_shared`. brotli.js itself accepts only RFC 7932 opts
@@ -1236,8 +1437,9 @@ export const brotli = {
             // `brotli_shared` for RFC 9841 §3.1 / §3.2 - when absent the
             // decoder behaves as a pure RFC 7932 implementation.
             const state = {
-                out: new u8(Math.max(data.length * 4, 1024)),
+                out: new u8(Math.min(Math.max(data.length * 4, 1024), limit)),
                 outLen: 0,
+                limit,
                 p1: 0,
                 p2: 0,
                 lastDist: new Int32Array([4, 11, 15, 16]),
@@ -1283,11 +1485,11 @@ export const brotli = {
         function _encodeUncompressed(data) {
             if (data.length === 0) return new u8([0x06]);
 
-            // Conservative size: WBITS + per-chunk headers (≤4 bytes each
-            // counting alignment) + data + final empty meta-block. The
-            // exact bit math is handled by the writer below.
+            // Exact size: every chunk header takes 3 bytes once aligned (the
+            // first one's 21 bits include WBITS, the others' 20), then the
+            // payload; the final empty meta-block's 2 bits take 1 byte.
             const numChunks = Math.ceil(data.length / 65536);
-            const buf = new u8(data.length + 5 + numChunks * 4);
+            const buf = new u8(data.length + 3 * numChunks + 1);
             let p = 0;
 
             // WBITS = 16 → 1 bit "0" (buf already zero-filled)
@@ -1315,7 +1517,7 @@ export const brotli = {
             p += 2;
             p = (p + 7) & ~7;
 
-            return buf.slice(0, p >> 3);
+            return (p >> 3) === buf.length ? buf : buf.slice(0, p >> 3);
         }
 
         // --- Step 9 - LZ77 + dynamic Huffman encoder ---
@@ -1354,6 +1556,38 @@ export const brotli = {
             return null;
         }
 
+        /**
+         * The distance-cache code (0-15, RFC 7932 §4) the decoder would
+         * resolve to `distance` from the ring `ld`, lowest first, or -1.
+         * @param {number} distance
+         * @param {number[]} ld Last four distances, newest first.
+         * @param {number} allowed Bit mask of the codes that may be used.
+         * @returns {number}
+         */
+        function _cacheCodeFor(distance, ld, allowed) {
+            // The codes in increasing order, as `_SPECIAL_DIST` lists them:
+            // 0-3 the four distances, 4-9 the last ±1..3, 10-15 the one
+            // before ±1..3 (-1, +1, -2, +2, -3, +3).
+            if (distance === ld[0] && (allowed & 1)) return 0;
+            if (distance === ld[1] && (allowed & 2)) return 1;
+            if (distance === ld[2] && (allowed & 4)) return 2;
+            if (distance === ld[3] && (allowed & 8)) return 3;
+            const d0 = distance - ld[0];
+            if (d0 !== 0 && d0 >= -3 && d0 <= 3) {
+                const code = 4 + _NEAR_CODE[d0 + 3];
+                if ((allowed >> code) & 1) return code;
+            }
+            const d1 = distance - ld[1];
+            if (d1 !== 0 && d1 >= -3 && d1 <= 3) {
+                const code = 10 + _NEAR_CODE[d1 + 3];
+                if ((allowed >> code) & 1) return code;
+            }
+            return -1;
+        }
+
+        /** Offset −3..+3 (index + 3) → its position among a code group's six (−1, +1, −2, +2, −3, +3). */
+        const _NEAR_CODE = new Int8Array([4, 2, 0, -1, 1, 3, 5]);
+
         function _findIacSym(iCode, cCode, distZero) {
             const iHi = iCode >> 3, iLo = iCode & 7;
             const cHi = cCode >> 3, cLo = cCode & 7;
@@ -1385,27 +1619,15 @@ export const brotli = {
             const lcodeMask = (1 << npostfix) - 1;
             const lcode = dPrime & lcodeMask;
             const rest = dPrime >> npostfix;
-            for (let k = 1; k <= 24; ++k) {
-                // hbit=0 bucket: offset = ((2 + 0) << k) - 4 = (1<<(k+1)) - 4
-                const evenLo = (1 << (k + 1)) - 4;
-                const evenHi = evenLo + (1 << k) - 1;
-                if (rest >= evenLo && rest <= evenHi) {
-                    const dextra = rest - evenLo;
-                    const hcode = (k - 1) * 2;
-                    const dcOffset = (hcode << npostfix) | lcode;
-                    return { dsym: 16 + ndirect + dcOffset, extra: dextra, extraBits: k };
-                }
-                // hbit=1 bucket: offset = ((2 + 1) << k) - 4 = (3<<k) - 4
-                const oddLo = (3 << k) - 4;
-                const oddHi = oddLo + (1 << k) - 1;
-                if (rest >= oddLo && rest <= oddHi) {
-                    const dextra = rest - oddLo;
-                    const hcode = (k - 1) * 2 + 1;
-                    const dcOffset = (hcode << npostfix) | lcode;
-                    return { dsym: 16 + ndirect + dcOffset, extra: dextra, extraBits: k };
-                }
-            }
-            return null;
+            // The buckets of k extra bits are contiguous: `rest + 4` lies in
+            // [2^(k+1), 3·2^k) for hbit 0 and [3·2^k, 2^(k+2)) for hbit 1, so
+            // k is read off the top bit instead of searched for (k = 1..24).
+            const v = rest + 4;
+            const k = 30 - Math.clz32(v);
+            if (k > 24) return null;
+            const hbit = (v >> k) & 1;
+            const hcode = (k - 1) * 2 + hbit;
+            return { dsym: 16 + ndirect + ((hcode << npostfix) | lcode), extra: v - ((2 + hbit) << k), extraBits: k };
         }
 
         function _makeWriter(initialCapacity) {
@@ -1424,6 +1646,16 @@ export const brotli = {
             return {
                 bits(n, v) {
                     ensure(n);
+                    // `writeBits16` ORs into a 3-byte window: a field wider
+                    // than 16 bits (distance extras up to 24, the 24-bit
+                    // extra of insert code 23, MLEN on 20 or 24) goes in two
+                    // writes, or its top bits are lost past bit 24.
+                    if (n > 16) {
+                        bitstream.writeBits16(buf, bp, v & 0xFFFF);
+                        bp += 16;
+                        n -= 16;
+                        v >>>= 16;
+                    }
                     bitstream.writeBits16(buf, bp, v & ((1 << n) - 1));
                     bp += n;
                 },
@@ -1644,6 +1876,12 @@ export const brotli = {
         // OmitFirstK k values, matching `_OF_TID_BY_K` below.
         const _OF_K_VALUES = [1, 2, 3, 4, 5, 6, 7, 9];
 
+        /** Bloom-filter bit (of 2^18) for a 32-bit dictionary key. */
+        function _bloomBit(h) { return Math.imul(h, 0x9E3779B1) >>> 14; }
+
+        /** Whether the Bloom filter `bits` may hold the key `h`. */
+        function _bloomHas(bits, h) { const b = _bloomBit(h); return (bits[b >>> 3] >> (b & 7)) & 1; }
+
         function _getStaticDictHash() {
             if (_staticDictHash !== null) return _staticDictHash;
             if (_staticDictHashTried) return null;
@@ -1678,7 +1916,19 @@ export const brotli = {
                     }
                 }
             }
-            _staticDictHash = { table, words, ofTables };
+            // A 2^18-bit Bloom filter per table in front of `Map.get`: most
+            // positions of most inputs start no dictionary word, and the
+            // filter answers "absent" without the lookup (it never answers
+            // "absent" for a present key, so the matches found are the same).
+            const bloomOf = (m) => {
+                const bits = new u8(1 << 15);
+                for (const key of m.keys()) { const b = _bloomBit(key); bits[b >>> 3] |= 1 << (b & 7); }
+                return bits;
+            };
+            const bloom = bloomOf(table);
+            const ofBlooms = new Array(10);
+            for (const k of _OF_K_VALUES) ofBlooms[k] = bloomOf(ofTables[k]);
+            _staticDictHash = { table, words, ofTables, bloom, ofBlooms };
             return _staticDictHash;
         }
 
@@ -1749,9 +1999,18 @@ export const brotli = {
                 groups.sort((a, b) => a.prefix.length - b.prefix.length);
                 return groups;
             };
-            _idTransformGroups = finalize(idByPrefix);
-            _ffTransformGroups = finalize(ffByPrefix);
-            _faTransformGroups = finalize(faByPrefix);
+            // Indexed by the input's first byte: the groups whose prefix is
+            // empty or starts with that byte, in their sorted order — the
+            // only groups the scan can match there, met in the same order,
+            // so ties between equal-length matches resolve as before.
+            const byFirst = (groups) => {
+                const idx = new Array(256);
+                for (let b = 0; b < 256; ++b) idx[b] = groups.filter((g) => g.prefix.length === 0 || g.prefix[0] === b);
+                return idx;
+            };
+            _idTransformGroups = byFirst(finalize(idByPrefix));
+            _ffTransformGroups = byFirst(finalize(ffByPrefix));
+            _faTransformGroups = byFirst(finalize(faByPrefix));
             for (const arr of olByK.values()) {
                 arr.sort((a, b) => b.suffix.length - a.suffix.length);
             }
@@ -1784,7 +2043,7 @@ export const brotli = {
             // the hot path branchless.)
 
             // --- Identity scan (+ OmitLastK on partial body match) ---
-            const idGroups = _idTransformGroups;
+            const idGroups = _idTransformGroups[data[pos]];
             for (let gi = 0; gi < idGroups.length; ++gi) {
                 const g = idGroups[gi];
                 const pre = g.prefix;
@@ -1796,6 +2055,7 @@ export const brotli = {
 
                 const hashStart = pos + preLen;
                 const h = (data[hashStart] | (data[hashStart + 1] << 8) | (data[hashStart + 2] << 16) | (data[hashStart + 3] << 24)) >>> 0;
+                if (!_bloomHas(dictHash.bloom, h)) continue;
                 const bucket = dictHash.table.get(h);
                 if (!bucket) continue;
 
@@ -1867,7 +2127,7 @@ export const brotli = {
             // We un-ferment the affected byte to recover the dict-side key,
             // then verify the first codepoint bytes exactly before walking
             // the rest of the body verbatim.
-            const ffGroups = _ffTransformGroups;
+            const ffGroups = _ffTransformGroups[data[pos]];
             for (let gi = 0; gi < ffGroups.length; ++gi) {
                 const g = ffGroups[gi];
                 const pre = g.prefix;
@@ -1904,6 +2164,7 @@ export const brotli = {
                 }
 
                 const h = (u0 | (u1 << 8) | (u2 << 16) | (u3 << 24)) >>> 0;
+                if (!_bloomHas(dictHash.bloom, h)) continue;
                 const bucket = dictHash.table.get(h);
                 if (!bucket) continue;
 
@@ -1954,7 +2215,7 @@ export const brotli = {
             // walk input bytes 0..3 and compute un-fermented values
             // (= dict bytes) for the hash key, then verify the body by
             // walking dict codepoints and applying the same rule.
-            const faGroups = _faTransformGroups;
+            const faGroups = _faTransformGroups[data[pos]];
             for (let gi = 0; gi < faGroups.length; ++gi) {
                 const g = faGroups[gi];
                 const pre = g.prefix;
@@ -2074,6 +2335,7 @@ export const brotli = {
                 if (!validCp || !hasFermented) continue;
 
                 const h = (u0 | (u1 << 8) | (u2 << 16) | (u3 << 24)) >>> 0;
+                if (!_bloomHas(dictHash.bloom, h)) continue;
                 const bucket = dictHash.table.get(h);
                 if (!bucket) continue;
 
@@ -2147,6 +2409,7 @@ export const brotli = {
                     const k = _OF_K_VALUES[ki];
                     const ofTable = dictHash.ofTables[k];
                     if (!ofTable) continue;
+                    if (!_bloomHas(dictHash.ofBlooms[k], h)) continue;
                     const bucket = ofTable.get(h);
                     if (!bucket) continue;
                     const ofTid = _OF_TID_BY_K.get(k);
@@ -2176,9 +2439,10 @@ export const brotli = {
         // Walk the LZ77-produced commands and split literal runs whenever
         // a long-enough static-dict match is found. Replaces "N literals
         // then a copy" with "K literals + dict-ref-copy", followed by the
-        // remainder. Threshold of 6 bytes is empirical - shorter matches
-        // typically don't beat Huffman-coded literals once IAC + distance
-        // overhead is paid.
+        // remainder. The minimum word length is empirical: 4 bytes for the
+        // built-in dictionary (text 2.7 % smaller at q6 than with 6,
+        // json and source no larger), 6 for a custom one (RFC 9841), whose
+        // words carry no measurement here.
         // Augment LZ77 commands with static-dict references. The match
         // finder is either:
         //   - the built-in RFC 7932 Appendix A/B scan (`_findStaticDictMatchAt`,
@@ -2193,7 +2457,7 @@ export const brotli = {
         function _augmentWithStaticDictRefs(commands, data, dictHash, windowSize, customMatchFinder, lz77PrefixLen) {
             const augmented = [];
             let outPos = 0;
-            const MIN_DICT_MATCH = 6;
+            const MIN_DICT_MATCH = customMatchFinder ? 6 : 4;
             const L = lz77PrefixLen | 0;
 
             for (let ci = 0; ci < commands.length; ++ci) {
@@ -2325,13 +2589,10 @@ export const brotli = {
             return kl > 0.3 ? { splitBytePos: half } : null;
         }
 
-        function _pickDistParams(cmds) {
-            // Collect distances from commands (skip insert-only & special).
-            const distances = [];
-            for (let i = 0; i < cmds.length; ++i) {
-                const c = cmds[i];
-                if (c.copyLen > 0 && c.distance > 0) distances.push(c.distance);
-            }
+        // `_pickDistParams` takes the distances collected by
+        // `_assignDistanceCache`: a filter inside its own loop made
+        // JavaScriptCore compile the whole function three times slower.
+        function _pickDistParams(distances) {
             if (distances.length === 0) {
                 return { npostfix: 0, ndirect: 0, distAlphabet: 64 };
             }
@@ -2347,11 +2608,25 @@ export const brotli = {
                 const cnt = new Int32Array(alpha);
                 let extraBitsSum = 0;
                 let valid = true;
-                for (const d of distances) {
-                    const enc = _distanceCodeFor(d, np, nd);
-                    if (!enc || enc.dsym >= alpha) { valid = false; break; }
-                    ++cnt[enc.dsym];
-                    extraBitsSum += enc.extraBits;
+                // `_distanceCodeFor`'s symbol and extra-bit count, inline and
+                // allocation-free (this loop runs 7 times per distance).
+                const lmask = (1 << np) - 1;
+                for (let di = 0; di < distances.length; ++di) {
+                    const d = distances[di];
+                    let dsym, ebits;
+                    if (d <= nd) {
+                        dsym = 16 + d - 1;
+                        ebits = 0;
+                    } else {
+                        const dPrime = d - nd - 1;
+                        const v = (dPrime >> np) + 4;
+                        ebits = 30 - Math.clz32(v);
+                        if (ebits > 24) { valid = false; break; }
+                        dsym = 16 + nd + (((((ebits - 1) * 2) + ((v >> ebits) & 1)) << np) | (dPrime & lmask));
+                    }
+                    if (dsym >= alpha) { valid = false; break; }
+                    ++cnt[dsym];
+                    extraBitsSum += ebits;
                 }
                 if (!valid) continue;
                 // Entropy in bits + extras + alphabet overhead.
@@ -2374,6 +2649,195 @@ export const brotli = {
             return { npostfix: bestNpost, ndirect: bestNdir, distAlphabet: bestAlpha };
         }
 
+        /**
+         * Whether LZ77 found (almost) nothing to copy and the bytes look
+         * uniformly distributed: matches covering under 1 % of the input,
+         * at most one command per 256 bytes, and an order-0 entropy of at
+         * least 7.9 bits a byte over every 16th byte. Such input costs more
+         * compressed than stored (the Huffman codes cannot go below ~8 bits a
+         * literal, and the headers come on top), so the encoder stores it.
+         * With 16 samples a KiB the estimate of a short input stays below the
+         * threshold (log2 of the sample count), which keeps the test
+         * conservative there.
+         *
+         * @param {Uint8Array} data
+         * @param {Array<{insertLen: number}>} commands The LZ77 commands of `data`.
+         * @returns {boolean}
+         */
+        function _looksIncompressible(data, commands) {
+            const len = data.length;
+            if (commands.length > (len >> 8) + 2) return false;
+            let literals = 0;
+            for (let i = 0; i < commands.length; ++i) literals += commands[i].insertLen;
+            if (literals < len * 0.99) return false;
+            return _sampledEntropyHigh(data);
+        }
+
+        /**
+         * Order-0 entropy of every 16th byte of `data` at least 7.9 bits a
+         * byte (below the threshold for any input under ~4 KiB: the estimate
+         * cannot exceed log2 of the sample count).
+         * @param {Uint8Array} data
+         * @returns {boolean}
+         */
+        function _sampledEntropyHigh(data) {
+            const len = data.length;
+            const hist = new Int32Array(256);
+            let n = 0;
+            for (let i = 0; i < len; i += 16) { ++hist[data[i]]; ++n; }
+            let bits = 0;
+            for (let b = 0; b < 256; ++b) {
+                const c = hist[b];
+                if (c) bits -= c * Math.log2(c / n);
+            }
+            return bits >= 7.9 * n;
+        }
+
+        /**
+         * Bytes covered by repeats found through content-defined anchors — a
+         * lower bound of what LZ77 would copy, in one cheap pass. A position
+         * is an anchor when its 4-byte key hashes to 0 in 4 chosen bits
+         * (about 1 in 16); only anchors touch the one-slot table (key and
+         * position side by side), so the pass is mostly arithmetic. Both
+         * copies of a repeated block carry the same anchors, so the second
+         * finds the first; the match is then extended byte by byte and
+         * skipped. With 2^16 slots each holding one anchor in 16 positions, a
+         * repeat about 1 MiB back still survives in ~1 slot in 8 — any
+         * repeat of a few hundred bytes is seen.
+         * @param {Uint8Array} data
+         * @returns {number}
+         */
+        function _probeRepeats(data) {
+            const len = data.length;
+            const slots = new Int32Array(2 << 16).fill(-1);
+            let covered = 0;
+            let i = 0;
+            let key = len >= 4 ? data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24) : 0;
+            while (i + 4 <= len) {
+                const hv = Math.imul(key, 0x9E3779B1);
+                if (((hv >>> 8) & 15) === 0) {
+                    const h = (hv >>> 16) << 1;
+                    const c = slots[h + 1];
+                    const hit = c >= 0 && slots[h] === key;
+                    slots[h] = key;
+                    slots[h + 1] = i;
+                    if (hit) {
+                        let m = 4;
+                        while (i + m < len && data[c + m] === data[i + m]) ++m;
+                        covered += m;
+                        i += m;
+                        if (i + 4 <= len) key = data[i] | (data[i + 1] << 8) | (data[i + 2] << 16) | (data[i + 3] << 24);
+                        continue;
+                    }
+                }
+                ++i;
+                if (i + 4 <= len) key = (key >>> 8) | (data[i + 3] << 24);
+            }
+            return covered;
+        }
+
+        /**
+         * The distance-cache code (RFC 7932 §4) of every command, or -1: the
+         * last four distances, as the decoder keeps them. A copy whose
+         * distance is one of them, or the last or the one before ±1..3,
+         * takes its code 0-15 (no extra bits); code 0 rides on an
+         * implicit-distance insert-and-copy symbol when the lengths allow.
+         * The ring moves exactly as the decoder's: not on code 0, not on a
+         * static-dict ref. A code is worth its place in the distance
+         * alphabet only if it saves more than the symbol costs in the header:
+         * a first pass tallies, per code, the extra bits its uses would save
+         * over full coding; codes below CACHE_MIN_SAVING are dropped and the
+         * ring replayed. (Kept out of `_encodeCompressed`: grown past a size,
+         * that function is optimised less by JavaScriptCore — 25 % slower.)
+         * Also returns the distances still coded in full (copies only, the
+         * dictionary refs included), for `_pickDistParams`.
+         *
+         * With `data`, a copy no cached distance names still takes a cached
+         * distance whose bytes are the same (lowest code first, within the
+         * window and the output so far): the parse and the output do not
+         * change, the distance costs a cache code instead of a full one
+         * (json 0.6 % smaller at q6). `data` is the output itself, so
+         * it is passed only when no LZ77 prefix precedes it.
+         * @param {Array<{insertLen: number, copyLen: number, distance: number}>} cmds
+         * @param {Uint8Array|null} [data]
+         * @param {number} [maxDistance] The window: a larger distance is a dictionary ref.
+         * @returns {{ cacheCodes: Int8Array, distances: number[] }}
+         */
+        function _assignDistanceCache(cmds, data, maxDistance) {
+            const CACHE_MIN_SAVING = 128;
+            const n = cmds.length;
+            const cacheCodes = new Int8Array(n).fill(-1);
+            // Each pass starts from the parse's distances: a substitution
+            // made under one code mask may not hold under the next. (Int32:
+            // a double stored back into `distance` changes the commands'
+            // field representation, and JavaScriptCore deoptimises every
+            // reader of it - 50 % slower on source.)
+            const parsed = new Int32Array(n);
+            for (let ci = 0; ci < n; ++ci) parsed[ci] = cmds[ci].distance;
+            let distances = [];
+            const assign = (allowed) => {
+                const ld = [4, 11, 15, 16];
+                const saved = new Int32Array(16);
+                distances = [];
+                let pos = 0;
+                for (let ci = 0; ci < n; ++ci) {
+                    const c = cmds[ci];
+                    cacheCodes[ci] = -1;
+                    pos += c.insertLen;
+                    if (c.copyLen === 0) continue;
+                    // @ts-ignore - isDictRef and dictOutputLen are present on dictionary refs only
+                    if (c.isDictRef) { pos += c.dictOutputLen != null ? c.dictOutputLen : c.copyLen; if (c.distance > 0) distances.push(c.distance); continue; }
+                    c.distance = parsed[ci];
+                    let code = _cacheCodeFor(c.distance, ld, allowed);
+                    if (code < 0 && data) code = _sameBytesCacheCode(c, data, pos, ld, allowed, maxDistance);
+                    pos += c.copyLen;
+                    if (code < 0 && c.distance > 0) distances.push(c.distance);
+                    cacheCodes[ci] = code;
+                    // Extra bits of the full code (NPOSTFIX 0, NDIRECT 0):
+                    // `_distanceCodeFor`'s k, for d - 1 + 4.
+                    if (code >= 0) saved[code] += 30 - Math.clz32(c.distance + 3);
+                    if (code !== 0) { ld[3] = ld[2]; ld[2] = ld[1]; ld[1] = ld[0]; ld[0] = c.distance; }
+                }
+                return saved;
+            };
+            const saved = assign(0xFFFF);
+            let allowed = 0;
+            for (let code = 0; code < 16; ++code) if (saved[code] >= CACHE_MIN_SAVING) allowed |= 1 << code;
+            if (allowed !== 0xFFFF) assign(allowed);
+            return { cacheCodes, distances };
+        }
+
+        /**
+         * The lowest allowed cache code whose distance copies the same bytes
+         * as `c` at output position `pos`, or -1; on a hit `c.distance`
+         * becomes that distance.
+         * @param {{copyLen: number, distance: number}} c
+         * @param {Uint8Array} data
+         * @param {number} pos
+         * @param {number[]} ld
+         * @param {number} allowed
+         * @param {number} maxDistance
+         * @returns {number}
+         */
+        function _sameBytesCacheCode(c, data, pos, ld, allowed, maxDistance) {
+            const len = c.copyLen;
+            for (let k = 0; k < 16; ++k) {
+                if (!((allowed >> k) & 1)) continue;
+                const cd = ld[_SPECIAL_DIST[k * 2]] + _SPECIAL_DIST[k * 2 + 1];
+                if (cd <= 0 || cd > pos || cd > maxDistance || cd === c.distance) continue;
+                let m = 0;
+                while (m < len && data[pos + m] === data[pos - cd + m]) ++m;
+                if (m === len) { c.distance = cd; return k; }
+            }
+            return -1;
+        }
+
+        /**
+         * @param {Uint8Array} data
+         * @param {object} [opts]
+         * @returns {Uint8Array|null} The compressed stream, or `null` when
+         *   the input looks incompressible (the caller stores it).
+         */
         function _encodeCompressed(data, opts) {
             const len = data.length;
             const ntreesL = _NTREESL_OPT;
@@ -2395,11 +2859,6 @@ export const brotli = {
             const windowSize = wbits >= 31
                 ? Math.pow(2, wbits) - 16
                 : (1 << wbits) - 16;
-
-            // Pick best CMODE for this input (RFC 7932 §7.1). The same
-            // CMODE drives both the frequency-collection pass and the
-            // bit-writing pass; we emit it in the meta-block header.
-            const cmode = _pickCMode(data);
 
             // Extension hook: `opts._ext.lz77Prefix` (Uint8Array) is a
             // virtual prefix to the input, used so that LZ77 can find
@@ -2428,6 +2887,16 @@ export const brotli = {
                 inputBuf.set(data, prefixLen);
             }
 
+            // --- 0. Incompressible input, decided before LZ77 when the
+            //         bytes look uniform and a quick repeat probe finds
+            //         nothing: the caller stores it (RFC 7932 §9.2).
+            if (prefixLen === 0 && _sampledEntropyHigh(data) && _probeRepeats(data) < len / 100) return null;
+
+            // Pick best CMODE for this input (RFC 7932 §7.1). The same
+            // CMODE drives both the frequency-collection pass and the
+            // bit-writing pass; we emit it in the meta-block header.
+            const cmode = _pickCMode(data);
+
             // --- 1. LZ77 commands --------------------------------------
             const commands = [];
             let insertStart = 0;
@@ -2442,34 +2911,48 @@ export const brotli = {
                 quality <= 1 ? { chainDepth: 2,  lazy: false } :
                 quality <= 3 ? { chainDepth: 4,  lazy: false } :
                 quality <= 5 ? { chainDepth: 6,  lazy: true  } :
-                quality <= 7 ? { chainDepth: 10, lazy: true  } :
-                quality <= 9 ? { chainDepth: 16, lazy: true  } :
-                               { chainDepth: 32, lazy: true  };
-            lz77.encode(inputBuf, { windowBits: 21, minMatch: 4, ...qParams }, {
-                literal(pos) {
-                    if (pos < prefixLen) return;  // dict prefix, not output
-                    const dpos = pos - prefixLen;
-                    if (insertLen === 0) insertStart = dpos;
-                    insertLen++;
-                },
-                match(pos, mlen, dist) {
-                    if (pos < prefixLen) return;  // match fully inside dict, not output
-                    while (insertLen > 22593) {
-                        commands.push({ insertStart, insertLen: 22593, copyLen: 2, distance: 1 });
-                        insertStart += 22593;
-                        insertLen -= 22593;
+                // q6, the default, keeps its speed; q7 trades encode time for
+                // ratio (json 2 % smaller, 20-50 % slower at 256 KiB).
+                quality <= 6 ? { chainDepth: 10, lazy: true  } :
+                quality <= 7 ? { chainDepth: 64, lazy: true, niceLength: 32, goodLength: 8, maxLazy: 16 } :
+                quality <= 9 ? { chainDepth: 64, lazy: true, niceLength: 64, goodLength: 16, maxLazy: 32 } :
+                               { chainDepth: 128, lazy: true, niceLength: 128, goodLength: 32, maxLazy: 64 };
+            // The token stream `lz77.encode` would replay through callbacks,
+            // read straight from the packed pairs (same commands, no call
+            // per token).
+            const scan = lz77.encodeTokens(inputBuf, { windowBits: 21, minMatch: 4, ...qParams });
+            const tokens = scan.tokens;
+            for (let k = 0, p = 0, pos = 0; k < scan.count; ++k, p += 2) {
+                const mlen = tokens[p];
+                if (mlen === 0) {
+                    if (pos >= prefixLen) {       // a dict-prefix literal is not output
+                        if (insertLen === 0) insertStart = pos - prefixLen;
+                        insertLen++;
                     }
-                    commands.push({ insertStart, insertLen, copyLen: mlen, distance: dist });
+                    pos += 1;
+                    continue;
+                }
+                if (pos >= prefixLen) {           // a match fully inside the dict prefix is not output
+                    // Any insert length fits one command: insert code 23
+                    // reaches 22594 + 2^24 - 1 (RFC 7932 §5).
+                    commands.push({ insertStart, insertLen, copyLen: mlen, distance: tokens[p + 1] });
                     insertStart = 0;
                     insertLen = 0;
-                },
-            });
+                }
+                pos += mlen;
+            }
             if (insertLen > 0) {
                 commands.push({ insertStart, insertLen, copyLen: 0, distance: 0 });
             }
             if (commands.length === 0) {
                 commands.push({ insertStart: 0, insertLen: 0, copyLen: 0, distance: 0 });
             }
+
+            // --- 1a. Incompressible input: the caller emits uncompressed
+            //         meta-blocks (RFC 7932 §9.2), before the dictionary
+            //         scan and the entropy coding would spend their time on
+            //         bytes they cannot shrink.
+            if (_looksIncompressible(data, commands)) return null;
 
             // --- 1b. Augment with static-dict references.
             // Priority: custom-dict hook (RFC 9841 §3.1) over built-in
@@ -2480,9 +2963,12 @@ export const brotli = {
                 ? _augmentWithStaticDictRefs(commands, data, dictHash, windowSize, customMatchFinder, prefixLen)
                 : commands;
 
+            // --- 1b'. Distance cache (RFC 7932 §4): see `_assignDistanceCache`.
+            const { cacheCodes, distances: fullDistances } = _assignDistanceCache(cmds, prefixLen === 0 ? data : null, windowSize);
+
             // --- 1c. Pick distance encoding params (NPOSTFIX, NDIRECT)
-            //        based on the actual distance distribution.
-            const distParams = _pickDistParams(cmds);
+            //        based on the distances still coded in full.
+            const distParams = _pickDistParams(fullDistances);
             const npostfix = distParams.npostfix;
             const ndirect = distParams.ndirect;
             const distAlphabet = distParams.distAlphabet;
@@ -2542,17 +3028,23 @@ export const brotli = {
                 const cc = _copyCodeFor(effCopyLen);
                 if (!ic || !cc) _err('EINTERNAL', 'cannot encode I=' + c.insertLen + ' C=' + effCopyLen);
 
-                const iacSym = _findIacSym(ic.code, cc.code, false);
+                const cacheCode = cacheCodes[ci];
+                // Code 0 needs no distance symbol at all when an implicit-
+                // distance cell holds the lengths (insert code < 8, copy < 16).
+                const implicit = cacheCode === 0 && _findIacSym(ic.code, cc.code, true) >= 0;
+                const iacSym = _findIacSym(ic.code, cc.code, implicit);
                 if (iacSym < 0) _err('EINTERNAL', 'no IAC sym for I=' + ic.code + ' C=' + cc.code);
                 ++iacFreq[iacSym];
 
                 let distEnc = null;
                 if (!isLastNoCopy) {
-                    distEnc = _distanceCodeFor(c.distance, npostfix, ndirect);
-                    if (!distEnc || distEnc.dsym >= distAlphabet) {
+                    distEnc = implicit ? null
+                        : cacheCode >= 0 ? { dsym: cacheCode, extra: 0, extraBits: 0 }
+                        : _distanceCodeFor(c.distance, npostfix, ndirect);
+                    if (!implicit && (!distEnc || distEnc.dsym >= distAlphabet)) {
                         _err('EINTERNAL', 'distance ' + c.distance + ' outside alphabet');
                     }
-                    ++distFreq[distEnc.dsym];
+                    if (distEnc) ++distFreq[distEnc.dsym];
 
                     // Advance p1, p2 across the copy.
                     // - Static dict ref: copied bytes = data[inputPos + k]
@@ -2759,6 +3251,10 @@ export const brotli = {
                 if (aux.distEnc) {
                     w.bits(distLens[aux.distEnc.dsym], distMap[aux.distEnc.dsym]);
                     if (aux.distEnc.extraBits > 0) w.bits(aux.distEnc.extraBits, aux.distEnc.extra);
+                }
+                // The copy moves the context bytes whether or not a distance
+                // symbol was written (an implicit-distance command has none).
+                if (c.copyLen > 0) {
                     // @ts-ignore - isDictRef/dictOutputLen are present when isDictRef===true; TS cannot narrow union from this field
                     if (c.isDictRef) {
                         const inputPos = c.insertStart + c.insertLen;
@@ -2802,6 +3298,7 @@ export const brotli = {
             try {
                 const compressed = _encodeCompressed(data, opts);
                 const trivial = _encodeUncompressed(data);
+                if (compressed === null) return trivial;
                 return compressed.length <= trivial.length ? compressed : trivial;
             } catch (e) {
                 if (e.code === 'EINTERNAL') return _encodeUncompressed(data);
@@ -2955,9 +3452,11 @@ export const brotli = {
                     const wbits = wbitsInfo.wbits;
                     const windowSize = wbits >= 31 ? Math.pow(2, wbits) - 16 : (1 << wbits) - 16;
 
+                    const limit = _limitOf(this._opts);
                     this._state = {
-                        out: new u8(1024),
+                        out: new u8(Math.min(1024, limit)),
                         outLen: 0,
+                        limit,
                         p1: 0,
                         p2: 0,
                         lastDist: new Int32Array([4, 11, 15, 16]),
@@ -3032,18 +3531,19 @@ export const brotli = {
             }
         };
 
-        return {
+        return Object.defineProperty({
             brotliCompressSync,
             brotliDecompressSync,
             brotliCompress,
             brotliDecompress,
             BrotliCompressStream,
             BrotliDecompressStream,
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal primitives shared with the codec's own tests and
             // potentially with future companion modules (e.g. a brotli
-            // inspector / debugger). Same `_internal` convention as
+            // inspector / debugger). The internal slot (core/internal.js), as
             // chacha20, sha256, argon2, etc.
-            _internal: {
+            value: {
                 makeReader: _makeReader,
                 readBit: _readBit,
                 readBits: _readBits,
@@ -3067,7 +3567,7 @@ export const brotli = {
                 COPY_BASE: _COPY_BASE,
                 COPY_EXTRA: _COPY_EXTRA,
                 encodeUncompressed: _encodeUncompressed,
-            },
-        };
+            }
+        });
     }
 };

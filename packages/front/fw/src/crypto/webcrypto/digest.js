@@ -28,8 +28,6 @@
  * @property {(data: Uint8Array) => Promise<Uint8Array|false>} sha256 SHA-256 shorthand.
  * @property {(data: Uint8Array) => Promise<Uint8Array|false>} sha384 SHA-384 shorthand.
  * @property {(data: Uint8Array) => Promise<Uint8Array|false>} sha512 SHA-512 shorthand.
- * @property {(data: Uint8Array) => Promise<Uint8Array|false>} sha1
- *   SHA-1 shorthand — emits a deprecation warning; use SHA-256+ for new code.
  */
 
 export const webcryptoDigest = {
@@ -119,18 +117,6 @@ export const webcryptoDigest = {
             return digest('SHA-512', data);
         }
 
-        /**
-         * SHA-1 digest of `data`.
-         *
-         * @deprecated SHA-1 is cryptographically broken; use SHA-256+ for new code.
-         * @param {Uint8Array} data
-         * @returns {Promise<Uint8Array|false>}
-         */
-        function sha1(data) {
-            console.warn('[crypto] DEPRECATED: SHA-1 is broken; use SHA-256+');
-            return digest('SHA-1', data);
-        }
-
-        return { isAvailable, digest, sha256, sha384, sha512, sha1 };
+        return { isAvailable, digest, sha256, sha384, sha512 };
     }
 };

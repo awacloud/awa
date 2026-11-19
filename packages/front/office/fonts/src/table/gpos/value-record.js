@@ -71,7 +71,13 @@ export const tableGposValueRecord = {
             return records;
         }
 
-        /** Parse an Anchor table at `bytes`+`offset`. Returns null on offset 0. */
+        /**
+         * Parse an Anchor table at `bytes`+`offset`. Returns null on offset 0.
+         * A format 3 anchor whose device is a VariationIndex table
+         * (`deltaFormat` 0x8000) also carries `xVariation` / `yVariation`:
+         * `{ outer, inner }`, its delta-set index in GDEF's item variation
+         * store.
+         */
         function parseAnchor(bytes, offset) {
             if (!offset) return null;
             const r = new BinaryReader(bytes, offset, bytes.length - offset);
@@ -83,6 +89,15 @@ export const tableGposValueRecord = {
             else if (format === 3) {
                 a.xDeviceOffset = r.readUint16();
                 a.yDeviceOffset = r.readUint16();
+                const variation = (dev) => {
+                    const at = offset + dev;
+                    if (!dev || at + 6 > bytes.length) return null;
+                    const word = (k) => (bytes[at + k] << 8) | bytes[at + k + 1];
+                    return word(4) === 0x8000 ? { outer: word(0), inner: word(2) } : null;
+                };
+                const xv = variation(a.xDeviceOffset), yv = variation(a.yDeviceOffset);
+                if (xv) a.xVariation = xv;
+                if (yv) a.yVariation = yv;
             }
             return a;
         }

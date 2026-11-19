@@ -10,7 +10,7 @@
  * A thin, opt-in accelerator over the colocated `x25519` binary (vendored from
  * `@awacloud/fw-wasm-crypto`: libsodium curve25519 ref10 closure, impl-struct-direct,
  * no runtime dispatcher), loaded BY NAME through the fw `wasmRuntime` adapter
- * (BATCH_11 ERRATA-2: no fw-local `.wasm.js`). Provides keygen + X25519 scalar
+ * (no fw-local `.wasm.js`). Provides keygen + X25519 scalar
  * multiplication (shared secret derivation) over `Uint8Array`, async, no-throw.
  *
  * This is the **Tier-2 fallback** for environments where `crypto.subtle` is

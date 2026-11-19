@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -17,9 +17,13 @@
  * Worker-safe : no - depends on `document`, `matchMedia`, `window`.
  *
  * Each `create()` call returns an isolated instance with its own dedicated
- * `<style>` element (unique id per instance - multiple instances can coexist
- * without clobbering each other). Calling `dispose()` removes the element
- * and detaches all listeners ; subsequent method calls become safe no-ops.
+ * `<style id="data-fw-theme-tokens-N">` element (unique id per instance -
+ * multiple instances can coexist without clobbering each other), attached
+ * through the `styleSheet` module (the element carries the page's
+ * `<meta name="csp-nonce">` nonce when there is one; under
+ * `styleSheet.mode('adopted')` there is no element, a constructable
+ * stylesheet is used). Calling `dispose()` removes the style and detaches all
+ * listeners ; subsequent method calls become safe no-ops.
  *
  * @example
  * const themeTokens = runtime.resolve('themeTokens');
@@ -48,19 +52,20 @@
  */
 
 import { dom } from '../query/dom.js';
+import { styleSheet } from './styleSheet.js';
 
 export const themeTokens = {
     name: 'themeTokens',
     version: '1.1.0',
     type: 'fw.dom.rendering',
-    dependencies: ['dom'],
-    deps: [dom],
+    dependencies: ['dom', 'styleSheet'],
+    deps: [dom, styleSheet],
 
     /**
      * @param {Object} dom - The fw `dom` module instance.
      * @returns {ThemeTokensAPI}
      */
-    factory(dom) {
+    factory(dom, styleSheet) {
 
         // Monotonic counter used to mint unique <style> ids per instance.
         let _instanceSeq = 0;
@@ -179,6 +184,10 @@ export const themeTokens = {
 
             // Set to true by dispose() ; subsequent method calls become no-ops.
             let _disposed = false;
+
+            // Lazily created styleSheet handle (null without styleSheet or before the first apply).
+            /** @type {{set: function(string): void, detach: function(): void}|null} */
+            let _handle = null;
 
             // ── Internal state ────────────────────────────────────────────────
 
@@ -323,6 +332,12 @@ export const themeTokens = {
              */
             function _apply() {
                 const css = _buildCSS();
+                if (styleSheet) {
+                    if (_handle) _handle.set(css);
+                    else _handle = styleSheet.attach(css, { id: _styleId });
+                    return;
+                }
+                // hand-wired without styleSheet: the element path, as before
                 const el = _getStyleEl();
                 el.textContent = css;
             }
@@ -492,6 +507,11 @@ export const themeTokens = {
                 _mqDark = _mqContrast = _mqMotion = _mqForced = null;
                 _mqDarkHandler = _mqContrastHandler = _mqMotionHandler = _mqForcedHandler = null;
                 _listeners.clear();
+                if (_handle) {
+                    _handle.detach();
+                    _handle = null;
+                    return;
+                }
                 const el = document.getElementById(_styleId);
                 if (el) el.remove();
             }

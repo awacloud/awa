@@ -10,7 +10,8 @@ Modules for querying and manipulating the DOM, managing events, and responding t
 | [dom](./dom.md) | `object` | `secPolicy` | Selection, attributes, styles, scroll, focus (CSS filtering via `secPolicy`) |
 | [events](./events.md) | `object` | none | Named events with lifecycle management |
 | [gesture](./gesture.md) | `object` | `events` | Touch/pointer gestures: tap, swipe, pan, pinch |
-| [media](./media.md) | `object` | none | JS media queries |
+| [media](./media.md) | `object` | none | Camera, microphone and screen streams (`getUserMedia`, `getDisplayMedia`), device registry |
+| [sound](./sound.md) | `object` | none | Short sound clips in memory: record from a microphone stream, trim / normalize, WAV bytes, play at any rate |
 
 ## Common pattern
 

@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-19
+
+### Changed
+
+- **The wasi-sdk lookup works from a linked git worktree**: a worktree has no
+  `build-env/sdk/` of its own, so `discoverWasiSdk` now falls back to the main
+  checkout's `build-env/sdk/`, derived from the git common dir (no git spawn).
+  Search order: explicit `roots` (the whole scope when given), then the tree's
+  own `build-env/sdk/`, then the main checkout's; a tree with its own SDK keeps
+  using it. The new `mainCheckoutSdkDir` helper is exported from
+  `build-env/toolchain.ts`.
+- **README**: documents the worktree fallback, its search order and the helper.
+
 ## [0.1.0] - 2026-09-29
 
 ### Fixed

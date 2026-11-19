@@ -1,7 +1,7 @@
 ---
 module: encodingAgl
 category: encodings/agl
-dependencies: [encodingAglTable]
+dependencies: [encodingAglTable, encodingZapfDingbatsGlyphs]
 returns: object
 worker-safe: true
 status: complete
@@ -9,15 +9,15 @@ status: complete
 
 # encodingAgl
 
-> `glyphNameToUnicode(name)` — Adobe Glyph List name-to-Unicode resolver.
+> `glyphNameToUnicode(name)` — Adobe Glyph List name-to-Unicode resolver; `dingbatsNameToUnicode(name)` for a Zapf Dingbats font.
 
-**Module** `encodingAgl` | **Source** `packages/front/office/fonts/src/encodings/agl.js` | **Deps** `encodingAglTable` | **Worker-safe** yes
+**Module** `encodingAgl` | **Source** `packages/front/office/fonts/src/encodings/agl.js` | **Deps** `encodingAglTable`, `encodingZapfDingbatsGlyphs` | **Worker-safe** yes
 
 ## Resolve
 
 ```js
-const { glyphNameToUnicode } = runtime.resolve('encodingAgl');
-// Returns: { glyphNameToUnicode }
+const { glyphNameToUnicode, dingbatsNameToUnicode } = runtime.resolve('encodingAgl');
+// Returns: { glyphNameToUnicode, dingbatsNameToUnicode }
 ```
 
 ## API
@@ -25,6 +25,7 @@ const { glyphNameToUnicode } = runtime.resolve('encodingAgl');
 | Method | Signature | Returns |
 |--------|-----------|---------|
 | `glyphNameToUnicode` | `(name: string) => number[] \| null` | Unicode code point sequence for a PostScript glyph name, or `null` when unresolvable. Never throws. |
+| `dingbatsNameToUnicode` | `(name: string) => number[] \| null` | For a glyph of a Zapf Dingbats font: the ITC Zapf Dingbats Glyph List first (`a1` to `a206`, `encodingZapfDingbatsGlyphs`), then `glyphNameToUnicode`. Never throws. |
 
 ## Examples
 
@@ -37,6 +38,9 @@ glyphNameToUnicode('uni0041');       // [0x0041]
 glyphNameToUnicode('uni00410042');   // [0x0041, 0x0042] — a 2-codepoint sequence
 glyphNameToUnicode('u1F600');        // [0x1F600] — astral-plane single codepoint
 glyphNameToUnicode('not-a-glyph');   // null
+glyphNameToUnicode('a73');           // null — a Zapf Dingbats name, not an AGL one
+dingbatsNameToUnicode('a73');        // [0x25A0] — for a Zapf Dingbats font
+dingbatsNameToUnicode('space');      // [0x0020] — then as glyphNameToUnicode
 ```
 
 ## Resolution algorithm
@@ -62,7 +66,7 @@ A name that matches none of the three resolves to `null`.
 ## Worker Usage
 
 ```js
-const worker = fw.createWorker([encodingAglTable, encodingAgl]);
+const worker = fw.createWorker([encodingAglTable, encodingZapfDingbatsGlyphs, encodingAgl]);
 ```
 
 ## Notes
@@ -72,9 +76,13 @@ const worker = fw.createWorker([encodingAglTable, encodingAgl]);
   fonts use both cases; this only widens what resolves).
 - Consumers should treat a `null` result as "no Unicode mapping known"
   rather than "the glyph name is invalid".
+- `dingbatsNameToUnicode` is for a font the caller knows to be a Zapf
+  Dingbats one: other fonts use names of the `aNN` form for unrelated
+  glyphs, so `glyphNameToUnicode` never reads the Zapf Dingbats list.
 
 ## See also
 
 - [lookup](./lookup.md) — the byte-to-glyph-name encoding dispatcher this
   module complements (glyph name → Unicode, vs. byte → glyph name).
+- [zapfDingbatsGlyphs](./zapfDingbatsGlyphs.md) — the ITC Zapf Dingbats Glyph List behind `dingbatsNameToUnicode`.
 - `../../src/encodings/AGL-PROVENANCE.md` — vendoring provenance + regeneration recipe.

@@ -336,4 +336,21 @@ describe('wasmRsa — input validation → false (no-throw)', () => {
         // OAEP unpad of random bytes fails → false (no throw, no plaintext).
         expect(out).toBe(false);
     }, 30000);
+
+    test('an OAEP decryption failure is reported at warn level, not error', async () => {
+        const api = wasmRsa.factory(wasmRuntime.factory());
+        const { privateKey } = fixedKey();
+        const garbage = crypto.getRandomValues(new Uint8Array(256));
+        const _logs = { warn: [], error: [] };
+        const _w = console.warn, _e = console.error;
+        console.warn = (...a) => { _logs.warn.push(a.join(' ')); };
+        console.error = (...a) => { _logs.error.push(a.join(' ')); };
+        let r;
+        try { r = await api.decrypt(privateKey, garbage, undefined, 256); } finally {
+        console.warn = _w; console.error = _e;
+        }
+        expect(r).toBe(false);
+        expect(_logs.error.length).toBe(0);
+        expect(_logs.warn.some((m) => m.includes('CORRUPT'))).toBe(true);
+    }, 30000);
 });

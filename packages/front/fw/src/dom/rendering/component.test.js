@@ -1,11 +1,11 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 try { GlobalRegistrator.register(); } catch { /* already registered */ }
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { component } from './component.js';
 import { reactiveBind } from './reactiveBind.js';
 import { uiSession }       from './uiSession.js';
@@ -19,6 +19,9 @@ import { secPolicy } from './secPolicy.js';
 import { signal } from '../../io/utils/signal.js';
 import { dom } from '../query/dom.js';
 import { events } from '../query/events.js';
+import { styleSheet } from './styleSheet.js';
+import { ModuleRuntime } from '../../core/runtime.js';
+import modules from '../../core/modules.js';
 
 /**
  * Shared signal factory instance. All tests that use signals and reactiveBind
@@ -52,7 +55,7 @@ describe('component module', () => {
         expect(component.name).toBe('component');
         expect(component.version).toBe('1.3.0');
         expect(component.type).toBe('fw.dom.rendering');
-        expect(component.dependencies).toEqual(['reactiveBind']);
+        expect(component.dependencies).toEqual(['reactiveBind', 'styleSheet']);
     });
 
     describe('define + create', () => {
@@ -589,5 +592,71 @@ describe('component module', () => {
             for (const s of styles) scopes.add(s.getAttribute('data-fw-component'));
             expect(scopes.size).toBe(2);
         });
+    });
+});
+
+describe('component through styleSheet', () => {
+    let ui, root, ss;
+
+    beforeEach(() => {
+        document.head.innerHTML = '';
+        document.adoptedStyleSheets = [];
+        root = document.createElement('div');
+        document.body.appendChild(root);
+        ui = makeSession('cx-ss', root);
+        ss = styleSheet.factory();
+    });
+
+    afterEach(() => {
+        document.head.innerHTML = '';
+        document.adoptedStyleSheets = [];
+    });
+
+    test('element mode: same <style data-fw-component> as the hand-wired path, nonce from the meta tag', () => {
+        const meta = document.createElement('meta');
+        meta.setAttribute('name', 'csp-nonce');
+        meta.setAttribute('content', 'n0nce');
+        document.head.appendChild(meta);
+        const comp = component.factory(rb, ss);
+        comp.define({ template: ui.parse('<div id="root">x</div>'), css: '& { color: red; }' });
+        const styles = document.head.querySelectorAll('style[data-fw-component]');
+        expect(styles.length).toBe(1);
+        expect(styles[0].getAttribute('data-fw-component')).toMatch(/^fw-comp-\d+$/);
+        expect(styles[0].textContent).toMatch(/\.fw-comp-\d+ \{ color: red; \}/);
+        expect(styles[0].getAttribute('nonce')).toBe('n0nce');
+    });
+
+    test('adopted mode: no <style> element, one sheet per blueprint', () => {
+        const comp = component.factory(rb, ss);
+        ss.mode('adopted');
+        const Card = comp.define({ template: ui.parse('<div id="root">x</div>'), css: '& { color: red; }' });
+        expect(document.querySelectorAll('style[data-fw-component]').length).toBe(0);
+        expect(document.adoptedStyleSheets.length).toBe(1);
+        // creating instances of the same blueprint adds no sheet
+        Card({ ui, id: 'a' });
+        Card({ ui, id: 'b' });
+        expect(document.adoptedStyleSheets.length).toBe(1);
+        comp.define({ template: ui.parse('<div id="root">y</div>'), css: '& { color: blue; }' });
+        expect(document.adoptedStyleSheets.length).toBe(2);
+        expect(document.querySelectorAll('style').length).toBe(0);
+    });
+
+    test('hand-wired without styleSheet (legacy call): still injects the <style> element', () => {
+        const comp = component.factory(rb);
+        comp.define({ template: ui.parse('<div id="root">x</div>'), css: '& { color: red; }' });
+        expect(document.head.querySelectorAll('style[data-fw-component]').length).toBe(1);
+        expect(document.adoptedStyleSheets.length).toBe(0);
+    });
+
+    test('resolved path: component shares the resolved styleSheet instance', () => {
+        const rt = new ModuleRuntime();
+        rt.registerAll(modules);
+        const comp = rt.resolve('component');
+        expect(rt.resolve('template')).toBeDefined();
+        expect(rt.resolve('themeTokens')).toBeDefined();
+        rt.resolve('styleSheet').mode('adopted');
+        comp.define({ template: ui.parse('<div id="root">x</div>'), css: '& { color: red; }' });
+        expect(document.querySelectorAll('style[data-fw-component]').length).toBe(0);
+        expect(document.adoptedStyleSheets.length).toBe(1);
     });
 });

@@ -4,6 +4,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-19
+
+### Fixed
+- **Argon2id interoperability**: the own core started the data-independent
+  address-word cursor at word 0 in the first segment of pass 0, which
+  begins at block 2; RFC 9106 §3.4.1.2 takes word `i mod 128` for block `i`.
+  Every parameter set whose segment length (`m / (4·p)`) is 4 or more —
+  every realistic one — produced a tag that no other Argon2id
+  implementation reproduces. The RFC 9106 §5.3 vector (segment length 2)
+  could not see it. Tags produced by 0.1.0 at such parameters do not
+  verify with this release.
+- **Argon2id runs the OWASP parameters**: `argon2id_hash` returned `-2`
+  for `m ≥ 16384` KiB because the block matrix came from the shared 16 MiB
+  scratch arena. The matrix now lives in linear memory grown for the call
+  and reused by later calls; the arena, and every other module, are
+  unchanged. Linear memory never shrinks, so that memory stays allocated
+  for the life of the instance; the matrix is zeroed after every call.
+
+### Added
+- **Argon2id memory ceiling**: `m` above 1048576 KiB (1 GiB) is refused up
+  front with `ARGON2_ERR_PARAM` (`-1`), before any memory growth.
+
 ## [0.1.0] - 2026-09-29
 
 ### Added

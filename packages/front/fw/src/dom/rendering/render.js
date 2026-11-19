@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -478,8 +478,10 @@ export const render = {
          * @param {ElmNode} elm           - Bound elm node (data/text already applied).
          * @param {Map}     kidsByParent  - Map<parentId, ElmNode[]>.
          * @param {Object}  opts          - SSR options (slots, iterates, hydrate, idPrefix).
+         * @param {number}  [rowIndex]    - Set on the root(s) of an iterate row:
+         *   its 0-based index, emitted as `data-fw-row` when hydrating.
          */
-        function _ssrNode(elm, kidsByParent, opts) {
+        function _ssrNode(elm, kidsByParent, opts, rowIndex) {
             const outTag = _ssrTagFor(elm.tag);
             const isVoid = VOID_TAGS_SSR.has(outTag);
 
@@ -503,6 +505,12 @@ export const render = {
             if (opts.hydrate && elm.id) {
                 const id = opts.idPrefix ? opts.idPrefix + ':' + elm.id : elm.id;
                 parts.push(' data-fw-id="' + _ssrEscape(id) + '"');
+            }
+            // Rows of an iterate block share their parser ids (UIList.adopt
+            // finds each node inside its own row); the index makes a row
+            // addressable on its own.
+            if (opts.hydrate && rowIndex !== undefined) {
+                parts.push(' data-fw-row="' + rowIndex + '"');
             }
 
             const openTag = '<' + outTag + parts.join('');
@@ -529,7 +537,7 @@ export const render = {
                             const bound = elms(subTpl, rowData);
                             const bIdx = _ssrIndex(bound);
                             for (const root of bIdx.roots) {
-                                lines.push(_ssrNode(root, bIdx.kids, opts));
+                                lines.push(_ssrNode(root, bIdx.kids, opts, i));
                             }
                         }
                         body = lines.join('');
@@ -564,7 +572,9 @@ export const render = {
          *   optional `iterates`) or a raw elm-array.
          * @param {Object} [data]    - Variable bindings for `#{var}`.
          * @param {Object} [opts]
-         * @param {boolean} [opts.hydrate=true] - Emit `data-fw-id` markers.
+         * @param {boolean} [opts.hydrate=true] - Emit `data-fw-id` markers, and
+         *   `data-fw-row="<i>"` on the root(s) of each iterate row (the rows
+         *   share their `data-fw-id` values; the index addresses one row).
          * @param {string}  [opts.idPrefix]     - Namespace prefix for `data-fw-id`,
          *   useful when multiple SSR blocks coexist on one page.
          * @param {Object<string,string|Function>} [opts.slots] - Map of

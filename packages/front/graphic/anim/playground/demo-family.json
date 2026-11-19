@@ -1,0 +1,7 @@
+{
+  "title": "@awacloud/graphic-anim — playground",
+  "scope": "packages/front",
+  "base": "/packages/front/graphic/anim/playground/",
+  "description": "Interactive author testbeds for the animation engine — easing and timeline labs.",
+  "serve": "dev"
+}

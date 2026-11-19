@@ -29,7 +29,7 @@ export const myModule = {
 **Absolute rules** inside `factory(...)` :
 - ❌ `window`, `document`, `globalThis.<DOM>`
 - ❌ `Math.random`, `crypto.randomUUID`
-- ❌ `eval`, `new Function(...)`, dynamic `import()`
+- ❌ `eval`, `new Function(...)`, dynamic `import()` — one sanctioned exception: `crypto/wasm/runtime.js` lazily imports the `sanity/wasm-gate.js` capability module, a fw file, never user input
 - ❌ `performance.now`/`performance.mark` (timing-channel)
 - ❌ Side-effects at instantiation (no `fetch`, listeners, console at top-level)
 - ❌ Closures over main-thread values (non-serialisable for workers)
@@ -163,7 +163,7 @@ status: complete|stub
 
 ### Canonical skeleton
 
-```markdown
+````markdown
 # <name>
 
 > One-line description — ≤ 15 words.
@@ -204,7 +204,7 @@ const worker = fw.createWorker(...);
 ## See also
 
 Relative links, one per line — `[<module>](./<module>.md) — relationship`.
-
+````
 
 **Mandatory sections**: Frontmatter, H1 + tagline, metadata line, `## Resolve`, `## API`, `## Examples`, `## Notes` (≥2 bullets), `## See also` (≥1 link). `## Worker Usage` if worker-safe.
 
@@ -234,7 +234,7 @@ docs/README.md (exhaustive table)
 
 ## 6. Task workflow — 7 phases
 
-1. Implement `packages/front/fw/<path>/<name>.js` following the plan's prescriptive API.
+1. Implement `packages/front/fw/<path>/<name>.js` with exactly the API the module page specifies.
 2. Write `<name>.test.js` following § 3.
 3. `bun test <test-file>` → **100% pass** (max 3 correction iterations, otherwise `failed`).
 4. Write `docs/api/<path>/<name>.md` following § 4.
@@ -303,7 +303,7 @@ Mapping for `BATCH_N.md`: `done` → `Delivered`, `partial` → `Partial`, `bloc
 | Modify `sanity/base.js` | Immutable lock |
 | `test.skip` / `test.only` committed | Tests green or deleted |
 | Skip the README cascade | Discoverability broken |
-| Speculative API (methods beyond the plan) | Plan = prescriptive |
+| Speculative API (methods beyond the specified one) | The specified API is prescriptive |
 | Generous out-of-scope | `## Out` = as prescriptive as `## In` |
 
 ---

@@ -93,6 +93,12 @@ export const webcryptoAes = {
          */
         function _fail(method, e) {
             const msg = e instanceof Error ? e.message : String(e);
+            if (method.startsWith('decrypt') && e && /** @type {{name?: string}} */ (e).name === 'OperationError') {
+                // WebCrypto rejects a failed authentication with OperationError:
+                // an expected outcome, reported at warn level (logging policy).
+                console.warn('[crypto] CORRUPT: webcryptoAes.' + method + ': authentication failed');
+                return false;
+            }
             console.error('[crypto] FAIL: webcryptoAes.' + method + ': ' + msg);
             return false;
         }
@@ -114,7 +120,7 @@ export const webcryptoAes = {
          *
          * @param {'GCM'|'CBC'|'CTR'} mode AES mode.
          * @param {128|192|256} [lengthBits=256] Key length in bits.
-         * @param {boolean} [extractable=true] Whether the key can be exported.
+         * @param {boolean} [extractable=false] Whether the key can be exported.
          * @returns {Promise<CryptoKey|false>}
          */
         async function generateKey(mode, lengthBits, extractable) {
@@ -124,7 +130,7 @@ export const webcryptoAes = {
             if (length !== 128 && length !== 192 && length !== 256) {
                 return _invalid('invalid key length ' + length + ' (must be 128, 192, or 256)');
             }
-            const isExtractable = extractable ?? true;
+            const isExtractable = extractable ?? false;
             try {
                 return await crypto.subtle.generateKey(
                     { name: 'AES-' + mode, length },

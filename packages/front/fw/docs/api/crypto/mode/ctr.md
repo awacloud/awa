@@ -1,7 +1,7 @@
 ---
 module: ctr
 category: crypto/mode
-dependencies: [bitArray, aes]
+dependencies: [bitArray]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > AES-CTR (SP 800-38A §6.5) — stream mode, no padding, encrypt/decrypt involution.
 
-**Module** `ctr` | **Source** `packages/front/fw/src/crypto/mode/ctr.js` | **Deps** `bitArray`, `aes` | **Worker-safe** yes
+**Module** `ctr` | **Source** `packages/front/fw/src/crypto/mode/ctr.js` | **Deps** `bitArray` | **Worker-safe** yes
 
 CTR = stream cipher derived from a block cipher. **Unauthenticated**: use GCM for AEAD. **Nonce reuse is catastrophic**: 2 messages under an identical (key, IV) → keystream recovery.
 
@@ -61,6 +61,5 @@ const worker = fw.createWorker(
 ## See also
 
 - [aes](../cipher/aes.md), [aes_modes](../utils/aes_modes.md) — Uint8Array wrapper
-- [aes_ctr](../utils/aes_ctr.md) — legacy wrapper with PKCS#7 (deprecated)
 - [gcm](./gcm.md) — recommended AEAD
 - [Conformance ctr.acvp.md](../../../../src/crypto/mode/ctr.acvp.md)

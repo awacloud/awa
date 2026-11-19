@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -77,4 +77,27 @@ describe('adler32 module', () => {
             expect(v).toBeGreaterThan(0);
         });
     });
+});
+
+describe('adler32 against the reference implementation', () => {
+	test('equals the Adler-32 trailer node:zlib writes, for several inputs', async () => {
+		const nz = (await import('node:zlib')).default;
+		const Adler32 = adler32.factory();
+		const inputs = ['', '123456789', 'a', 'The quick brown fox jumps over the lazy dog'.repeat(300)];
+		for (const s of inputs) {
+			const bytes = new TextEncoder().encode(s);
+			const z = nz.deflateSync(bytes);
+			const trailer = ((z[z.length - 4] << 24) | (z[z.length - 3] << 16) | (z[z.length - 2] << 8) | z[z.length - 1]) >>> 0;
+			const a = new Adler32();
+			a.append(bytes);
+			expect(a.get()).toBe(trailer);
+		}
+		// 70 000 bytes: past the 5552-byte block where the sums must be reduced
+		const big = Uint8Array.from({ length: 70000 }, (_, i) => 255 - (i % 251));
+		const z = nz.deflateSync(big);
+		const trailer = ((z[z.length - 4] << 24) | (z[z.length - 3] << 16) | (z[z.length - 2] << 8) | z[z.length - 1]) >>> 0;
+		const a = new Adler32();
+		a.append(big);
+		expect(a.get()).toBe(trailer);
+	});
 });

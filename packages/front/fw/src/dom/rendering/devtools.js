@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -251,7 +251,7 @@ export const devtools = {
         // descriptors (`src/core/runtime.js`) — so `_clock` here already IS
         // the `ClockAPI` object (`{ now, monotonic, since, iso, format }`),
         // not `clock` the module. Call `monotonic()` on it directly; no
-        // `.factory()` hop (BL-466 — that hop TypeError'd on the canonical
+        // `.factory()` hop (that hop threw a TypeError on the canonical
         // `runtime.resolve('devtools')` path, e.g. sde-core's taskmgr).
 
         /**

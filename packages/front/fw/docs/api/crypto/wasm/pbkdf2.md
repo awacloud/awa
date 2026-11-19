@@ -29,7 +29,7 @@ const wasmPbkdf2 = runtime.resolve('wasmPbkdf2');
 | Method | Signature | Returns |
 |--------|-----------|---------|
 | `isAvailable` | `() => boolean` | `true` when `WebAssembly` is present (mirrors `wasmRuntime`) |
-| `deriveBits` | `(password: Uint8Array, salt: Uint8Array, dkLen: number, iterations?: number, hash?: 256\|384\|512) => Promise<Uint8Array\|false>` | `dkLen`-byte derived key, or `false` on any failure |
+| `deriveBits` | `(password: Uint8Array, salt: Uint8Array, lengthBits: number, iterations?: number, hash?: 256\|384\|512) => Promise<Uint8Array\|false>` | `lengthBits / 8`-byte derived key, or `false` on any failure |
 
 ### Parameter constraints
 
@@ -37,13 +37,13 @@ const wasmPbkdf2 = runtime.resolve('wasmPbkdf2');
 |-----------|---------|-----------|
 | `password` | — | `Uint8Array`; any byte length including `0` (empty password is valid per RFC 8018) |
 | `salt` | — | `Uint8Array`; any byte length (≥ 16 bytes recommended by SP 800-132) |
-| `dkLen` | — | Integer ≥ 1 (bytes) |
+| `lengthBits` | — | A positive multiple of 8 (**bits**, as the pure and WebCrypto tiers) |
 | `iterations` | `600000` | Integer ≥ 1 (OWASP 2023 default for PBKDF2-HMAC-SHA-256) |
 | `hash` | `256` | One of `256` / `384` / `512` (selects HMAC-SHA-2 PRF) |
 
 `deriveBits` resolves `false` (never rejects) when:
 
-- a parameter is invalid: `password` or `salt` not a `Uint8Array`; `iterations < 1` or non-integer; `dkLen < 1` or non-integer; `hash ∉ {256, 384, 512}` — logged as `[crypto] INVALID: …`;
+- a parameter is invalid: `password` or `salt` not a `Uint8Array`; `iterations < 1` or non-integer; `lengthBits` not a positive multiple of 8; `hash ∉ {256, 384, 512}` — logged as `[crypto] INVALID: …`;
 - the binary cannot load — `WebAssembly` unavailable, fetch/compile failure, or ABI mismatch — logged as `[crypto] FAIL: …` by `wasmRuntime.load`;
 - the WASM call returns a non-zero status (`WC_EBADPARAM = -1`).
 
@@ -56,7 +56,7 @@ const wasmPbkdf2 = runtime.resolve('wasmPbkdf2');
 
 const password = new TextEncoder().encode('my-passphrase');
 const salt = crypto.getRandomValues(new Uint8Array(16));
-const dk = await wasmPbkdf2.deriveBits(password, salt, 32);
+const dk = await wasmPbkdf2.deriveBits(password, salt, 256);   // 256 bits = 32 bytes
 // dk is a 32-byte Uint8Array, or false on failure.
 if (dk === false) {
     // WASM unavailable — fall back to webcrypto/pbkdf2 or hash/pbkdf2.
@@ -67,7 +67,7 @@ if (dk === false) {
 
 ```js
 // 100 000 iterations, HMAC-SHA-512, 64-byte output.
-const dk = await wasmPbkdf2.deriveBits(password, salt, 64, 100_000, 512);
+const dk = await wasmPbkdf2.deriveBits(password, salt, 512, 100_000, 512);
 ```
 
 ### RFC 7914 §11 published vector (c=1, SHA-256)
@@ -75,7 +75,7 @@ const dk = await wasmPbkdf2.deriveBits(password, salt, 64, 100_000, 512);
 ```js
 const pw   = new TextEncoder().encode('password');
 const salt = new TextEncoder().encode('salt');
-const dk   = await wasmPbkdf2.deriveBits(pw, salt, 32, 1, 256);
+const dk   = await wasmPbkdf2.deriveBits(pw, salt, 256, 1, 256);
 // hex(dk) === '120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b'
 ```
 
@@ -87,8 +87,8 @@ const dk   = await wasmPbkdf2.deriveBits(pw, salt, 32, 1, 256);
 const worker = fw.createWorker(() => {
     const wasmPbkdf2 = runtime.resolve('wasmPbkdf2');
     self.onmessage = async ({ data }) => {
-        const { password, salt, dkLen } = data;
-        const dk = await wasmPbkdf2.deriveBits(password, salt, dkLen);
+        const { password, salt, lengthBits } = data;
+        const dk = await wasmPbkdf2.deriveBits(password, salt, lengthBits);
         self.postMessage(dk);
     };
 });

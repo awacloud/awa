@@ -60,7 +60,15 @@ export const pdf = {
 
         const usedExtensions = new Set();
         const api = {
-            read(bytes, opts) { return readDocument(bytes, opts); },
+            /**
+             * Read a document from its bytes, or from a byte source
+             * `{ byteLength, read(offset, length) }` read by windows
+             * (`pdfDocument.readDocument`).
+             *
+             * @param {Uint8Array | {byteLength: number, read: (offset: number, length: number) => Uint8Array}} input
+             * @param {object} [opts]
+             */
+            read(input, opts) { return readDocument(input, opts); },
             header(bytes) { return readHeader(bytes); },
             /**
              * Serialize a document model back to bytes.

@@ -100,6 +100,7 @@ route.replace('/login');           // without a new history entry
 
 - **Re-entry guard**: if a handler calls `route.go(...)`, the chained dispatch accumulates cleanly — no infinite recursion or double-fire.
 - **`go()` on the same hash** still forces a dispatch (equivalent to clicking the active link).
+- **`go()` dispatches once.** It dispatches directly; the `hashchange` its own hash assignment causes is ignored (the listener skips an event whose hash equals the last dispatched one), so a handler that fetches runs one request, not two. A real `hashchange` — back, a link, a manual assignment — dispatches as usual.
 - **Multiple routes match** (without parent/child relationship): handlers are invoked in **registration order** — all match independently. For "unique match", use a single route per canonical path.
 - **Downstream chain invalidation**: when a parent route guard returns `false`, all children in the chain are short-circuited — dispatch stops at the first refusal.
 - Native `pushState`/`replaceState` are blocked by sanity. `replace` uses `location.replace(url)`, which bypasses this limitation but triggers a full reload **if the URL changes outside the fragment** — `replace` here only acts on the hash, without reload.

@@ -4,7 +4,7 @@
 
 // playground/integrations/nodejs/app.mjs
 //
-// Node-pure consumer of `@awacloud/fw` — "à la carte", no bundler.
+// Node-pure consumer of `@awacloud/fw` — pick-and-choose, no bundler.
 //
 // Imports the typed-runtime facade plus a few worker-safe modules by subpath,
 // deep-registers them (transitive `deps` come along), resolves them, and runs a

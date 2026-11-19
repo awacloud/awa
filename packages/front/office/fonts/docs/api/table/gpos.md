@@ -45,6 +45,7 @@ const kern = gpos.features.find(f => f.tag === 'kern');
 - Reuses `parseScriptList` / `parseFeatureList` / `parseLookupList` from GSUB.
 - `buildKerningTable` only captures `value1.xAdvance` — consumers needing richer ValueRecords should walk `gpos.lookups` directly.
 - Sub-lookup logic is split across `./gpos/value-record.js`, `./gpos/type1-single.js`, `./gpos/type2-pair.js`, `./gpos/type3-cursive.js`, `./gpos/type4-6-mark.js`, `./gpos/type7-8-context.js`, `./gpos/type9-extension.js`.
+- A format 3 anchor whose device is a VariationIndex table (`deltaFormat` 0x8000) carries `xVariation` / `yVariation`: `{ outer, inner }`, its delta-set index in GDEF's item variation store; [`fontShaper`](../extra/shaper.md) applies them at `opts.coords`. Value-record devices keep their offsets only.
 
 ## See also
 

@@ -268,6 +268,11 @@ dom.style(ui.get('card', 'title'), 'fontWeight', 'bold');
 dom.attr(ui.get('card', 'link'), 'href', '/detail/1');
 ```
 
+## Notes
+
+- Only `style` writes are filtered (`secPolicy.isSafeCss`: `expression(…)`, `url(javascript:…)`, `behavior`). `attr` calls `setAttribute` with the value as given — it does not check URL-bearing attributes or refuse `on*` names, so a value that is not yours goes through the rendering path (`template`, `render`) or `sanitize`, which do.
+- The helpers take and return plain DOM nodes and keep no reference to them: a node removed from the document is collected as usual.
+
 ## See also
 
 - [events](./events.md) — event management

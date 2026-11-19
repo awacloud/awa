@@ -1,11 +1,15 @@
 Third-party notice - Adobe Glyph List
 
-One source file of @awacloud/fonts, src/encodings/aglTable.js, is
-generated from the Adobe Glyph List (src/encodings/glyphlist.txt, table
-version 2.0, https://github.com/adobe-type-tools/agl-aglfn).
+Two source files of @awacloud/fonts are generated from the Adobe Glyph
+List repository (https://github.com/adobe-type-tools/agl-aglfn):
+src/encodings/aglTable.js from the Adobe Glyph List
+(src/encodings/glyphlist.txt, table version 2.0), and
+src/encodings/zapfDingbatsGlyphs.js from the ITC Zapf Dingbats Glyph List
+(src/encodings/zapfdingbats.txt, table version 2.0).
 
 The copyright notice and BSD 3-clause licence text below are reproduced
-verbatim from the comment header of src/encodings/glyphlist.txt.
+verbatim from the comment header of src/encodings/glyphlist.txt; the
+header of src/encodings/zapfdingbats.txt carries the same text.
 
 ---------------------------------------------------------------------
 

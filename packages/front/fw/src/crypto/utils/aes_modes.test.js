@@ -106,3 +106,37 @@ describe('aes_modes wrapper', () => {
         });
     });
 });
+
+// ── node:crypto oracle: one known answer per mode through the wrapper ─────
+describe('aes_modes - node:crypto oracle', () => {
+    const bytes = (n, k) => new Uint8Array(n).map((_, i) => (i * k + 3) & 0xff);
+    const pt = new TextEncoder().encode('aes_modes oracle: 37 bytes of plaintext');
+    let nodeCrypto;
+    const run = (alg, key, iv, data, opts) => {
+        const c = nodeCrypto.createCipheriv(alg, key, iv, opts);
+        return Buffer.concat([c.update(data), c.final()]);
+    };
+
+    test('cbc (PKCS#7), ctr and gcm match node:crypto for 128, 192 and 256-bit keys', async () => {
+        nodeCrypto = await import('node:crypto');
+        for (const bits of [128, 192, 256]) {
+            const key = bytes(bits / 8, 11);
+            const iv16 = bytes(16, 5);
+            const iv12 = bytes(12, 9);
+            const aad = new TextEncoder().encode('header');
+            expect(Buffer.from(M.cbc.encrypt(key, iv16, pt)).toString('hex'))
+                .toBe(run('aes-' + bits + '-cbc', key, iv16, pt).toString('hex'));
+            expect(Buffer.from(M.ctr.encrypt(key, iv16, pt)).toString('hex'))
+                .toBe(run('aes-' + bits + '-ctr', key, iv16, pt).toString('hex'));
+            const g = nodeCrypto.createCipheriv('aes-' + bits + '-gcm', key, iv12);
+            g.setAAD(aad);
+            const gct = Buffer.concat([g.update(pt), g.final()]);
+            const out = M.gcm.encrypt(key, iv12, pt, aad, 128);
+            expect(Buffer.from(out.ct).toString('hex')).toBe(gct.toString('hex'));
+            expect(Buffer.from(out.tag).toString('hex')).toBe(g.getAuthTag().toString('hex'));
+            // and back
+            expect(Buffer.from(M.cbc.decrypt(key, iv16, run('aes-' + bits + '-cbc', key, iv16, pt))).toString())
+                .toBe(Buffer.from(pt).toString());
+        }
+    });
+});

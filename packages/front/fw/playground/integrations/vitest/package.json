@@ -10,5 +10,8 @@
     "devDependencies": {
         "vitest": "^4.1.8",
         "@happy-dom/global-registrator": "^20.10.2"
+    },
+    "playground": {
+        "page": false
     }
 }

@@ -299,3 +299,33 @@ describe('bitstream module', () => {
         });
     });
 });
+
+describe('readBits window guard (the brotli code-length peek relies on it)', () => {
+    const bs = bitstream.factory();
+    const buf = Uint8Array.from({ length: 64 }, (_, i) => (i * 167 + 59) & 0xFF);
+    const refBits = (pos, width) => {
+        let v = 0;
+        for (let k = 0; k < width; k++) {
+            const p = pos + k;
+            v |= ((buf[p >>> 3] >>> (p & 7)) & 1) << k;
+        }
+        return v;
+    };
+
+    test('every bit offset 0-7 and every width up to 16 - offset matches a reference reader', () => {
+        for (let byte = 0; byte < 40; byte++) {
+            for (let off = 0; off < 8; off++) {
+                for (let width = 1; width <= 16 - off; width++) {
+                    const pos = byte * 8 + off;
+                    expect(bs.readBits(buf, pos, (1 << width) - 1)).toBe(refBits(pos, width));
+                }
+            }
+        }
+    });
+
+    test("brotli's 4-bit peek fits the window at every offset", () => {
+        for (let pos = 0; pos < 200; pos++) {
+            expect(bs.readBits(buf, pos, 0x0F)).toBe(refBits(pos, 4));
+        }
+    });
+});

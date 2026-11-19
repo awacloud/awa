@@ -24,7 +24,7 @@ CommonMark/GFM body:
 ```yaml
 ---
 profile: v1
-ir: oconv-ir/v1
+ir: oconv-ir/v2
 sourceFormat: docx
 sourceName: report.docx
 title: "Quarterly report"
@@ -32,7 +32,7 @@ sourceBytes: 1556
 sourceSha256: 7be541047cdb2255188fdf68ed6ddc98c47ed22332093df494dcb3f5c7f60b7c
 convertedAt: 2026-07-20T00:00:00Z
 converter: oconv
-converterVersion: 1.2.0
+converterVersion: 2.0.0
 engine: bun
 blocks: 6
 anchors:
@@ -62,7 +62,7 @@ Every front-matter key below is emitted **exactly in this order** by
 | Key | Meaning | Why this audience needs it |
 |---|---|---|
 | `profile` | Wire-profile version (`v1`), independent of `ir` | The RAG ingestion pipeline can pin its parser to a profile version even after the pivot evolves. |
-| `ir` | The pivot IR version that produced this document (`oconv-ir/v1`) | Traceability to the exact internal model — useful when auditing a conversion discrepancy. |
+| `ir` | The pivot IR version that produced this document (`oconv-ir/v2`) | Traceability to the exact internal model — useful when auditing a conversion discrepancy. |
 | `sourceFormat` | `docx` \| `odt` \| `xlsx` \| `ods` \| `pptx` \| `odp` \| `pdf` | Which reader ran. |
 | `sourceName` | Original file name | Human/audit trail back to the source document. |
 | `title` | The source's own title, when it states a non-empty one: for a pdf its XMP `dc:title` (`x-default` first), else its Info `/Title`, decoded and trimmed; for a docx, xlsx or pptx its core properties' `dc:title` (`opcCoreProperties`), for an odt, ods or odp its `meta.xml` `dc:title`; omitted otherwise. Carried as stated: a deck often states its application's placeholder (`PowerPoint Presentation`) | A file name is often not a title; a retrieval index or a citation shows the document's real title. An added key: the profile stays `v1`, its readers read it as they read `count`. |
@@ -192,6 +192,15 @@ shipped readers and the `md` writer:
 | `list/nesting-flattened` | No longer emitted: the docx reader keeps nested list levels. Kept here so a consumer reading an older output can name it. |
 | `heading/level-clamped` | (odt only) An `outlineLevel` above 6 was clamped to 6. |
 | `heading/subtitle-degraded` | (docx only) A paragraph whose style is the built-in `Subtitle` (resolved by its `w:name` through `styles.xml`) was kept as a plain paragraph — no heading level is guessed for it; `detail` is the style ID, one record per subtitle paragraph. Pinned by `src/read/docx-to-ir.test.js`, including the committed French-styled fixture `docx-fr-styles.docx`. |
+| `layout/sections-merged` | (docx only, under the opt-in `docxInclude: ['layout']` / `convert`'s `layout`) A document of several sections: the IR page (`oconv-ir/v2` `document.page`) is the last section's (the body's `sectPr`); `detail` = `<n> sections`. Pinned by `src/read/docx-to-ir.test.js` § "the page under include layout". |
+| `layout/margin-negative` | (docx only, same opt-in) A negative top or bottom page margin (Word's "exactly") is kept as its absolute value; `detail` = the side. Same pin. |
+| `layout/gutter-dropped` | (docx only, same opt-in) A page gutter is not carried; `detail` = its width (`<n>pt`). Same pin. |
+| `layout/align-approximated` | (docx only, same opt-in) A paragraph's `jc` with no IR alignment: `distribute`, the kashida values and `thaiDistribute` read as `justify`, any other value as none; `detail` = the value. Pinned by `src/read/docx-to-ir.test.js` § "alignment and page breaks under include layout". |
+| `layout/breaks-merged` | (docx only, same opt-in) Several page breaks before one paragraph or heading are carried as one; `detail` = `<n> breaks`. Same pin. |
+| `layout/break-inside` | (docx only, same opt-in) A page break inside a paragraph's text is not carried (it stays the space it is without the opt-in); `detail` = the paragraph's text (at most 60 characters). Same pin. |
+| `layout/break-dropped` | (docx only, same opt-in) A page break that reaches a block that cannot hold one is not carried; `detail` = `table`, `codeBlock`, `blockquote`, `textBox` (the end of a text box) or `end` (the end of the document). Same pin, and `src/read/docx-to-ir.text-boxes.test.js`. |
+| `layout/font-theme-unresolved` | (docx only, same opt-in) A run's font is given through the theme and the document's theme part does not name it: the run carries no font; `detail` = the theme slot (`minorHAnsi`, `majorHAnsi`, …), once per slot and document. Pinned by `src/read/docx-to-ir.test.js` § "run properties under include layout". |
+| `layout/underline-approximated` | (docx only, same opt-in) An underline other than `single` (double, dotted, wave, words, …) is carried as a single underline; `detail` = the kind, once per kind and document. Same pin. |
 | `image/unresolved` | (odt only) A frame that is not an image — a text box, an embedded object — has no IR equivalent (inside a span, a frame holding text keeps that text). |
 | `image/bytes-unavailable` | (docx, odt, pptx) An image's bytes were not found: a docx drawing's `r:embed` relationship never resolved, an odt image frame names a missing or external picture part, or a pptx picture is linked; `detail` names the drawing, frame or picture shape. The image reference is kept. Pinned by `src/read/docx-to-ir.test.js`. |
 | `inline/dropped` | (odt only, this reader's own sense) An unmapped inline XML element inside a run; `detail` names the element. Also the target of an image inside a link (`detail: 'link-target'` — an IR image has no link prop; the image is kept). Same code name as the `fromMd` reader's `inline/dropped` below — a different domain, the same "unmapped node, kept as loss" shape. |
@@ -217,7 +226,7 @@ Remaining reader codes:
 | `sheet/merge-dropped` | (xlsx/ods) Recorded once per sheet, first merged/spanned range seen. |
 | `sheet/chart-dropped` | (xlsx/ods) Recorded once per sheet, first embedded chart/drawing seen. |
 | `sheet/tsv-escaped` | (xlsx/ods, opt-in: the `toMd` `sheets: 'tsv'` input) A cell's backslash, tab, LF or CR was written as a two-character escape in the sheet's TSV block. Once per sheet. |
-| `sheet/sparse-form` | (xlsx/ods, opt-in: the `toMd` `sheetCellBudget` input) A sheet whose padded table would hold more cells than the budget was written unpadded instead — one `<A1 address>: <text>` paragraph per value (its rows unpadded under `sheets` `'csv'` / `'tsv'`); every value is kept. Once per sheet; `detail` is `<sheet>: <n> padded cells, <k> kept`. |
+| `sheet/sparse-form` | (xlsx/ods: the `toMd` `sheetCellBudget` input, 5,000,000 padded cells by default since 2.0.0) A sheet whose padded table would hold more cells than the budget was written unpadded instead — one `<A1 address>: <text>` paragraph per value (its rows unpadded under `sheets` `'csv'` / `'tsv'`); every value is kept. Once per sheet; `detail` is `<sheet>: <n> padded cells, <k> kept`. |
 | `slides/untitled` | (pptx/odp) The slide carries no title placeholder/frame, or its only one has no non-empty text. |
 | `slides/media-dropped` | (pptx/odp) A non-text shape/frame (pptx: table, chart, graphic frame — a picture is carried; odp: image, object) was dropped at tier 1; `detail` names its kind. |
 | `slides/notes-omitted` | (odp; documented no-op for pptx) The slide has speaker notes but `includeNotes` was `false` (the default). |
@@ -234,7 +243,13 @@ Remaining reader codes:
 | `struct/dropped` | (pdf, tagged fast path) A `Table`/`L` struct container was flattened; its descendant text is kept as paragraphs. |
 | `text/running-dropped` | (pdf, untagged path, opt-in: the `toMd` `pdfInfer: ['running']` input) A running header or footer line — near the top or bottom of the page, its text (digits read as `#`) recurring at the same height on half the pages and 3 — left out of every page; `detail` is its pattern. |
 | `struct/positional` | (pdf, untagged path, opt-in: the `toMd` `pdfDeclare: ['positional']` input) The structure was built from the text's positions, not stated by the file — once per document; `detail` names what was built (`paragraphs`, then `headings` and `tables` under `pdfInfer`). |
-| `doc/truncated` | (every source, opt-in: the `toMd` `outputBudget` input with `overflow: 'truncate'`) The text past the budget was cut: the top-level blocks that fit are kept, with a crossing table's leading rows that fit. Once per document; `detail` is `kept <n> bytes of text; <b> blocks and <r> table rows dropped`. |
+| `pdf/document/xref-rebuilt` | (pdf) The cross-reference chain could not be used and was rebuilt from the file (`pdfRecoverXref: false` refuses it instead); `detail` is `<cause>, <n> entries`, the walk's error and the objects found. |
+| `pdf/document/xref-tolerated` | (pdf) A cross-reference section in a shape outside the standard was read; `detail` is `<shape> at <offset>`. |
+| `pdf/document/free-entry-fallback` | (pdf) An object the newest section marks free was resolved through an older section that defines it; `detail` is `object <num> <gen>`. |
+| `pdf/document/free-object` | (pdf) A reference to an object every section marks free read as null; `detail` is `object <num> <gen>`. |
+| `pdf/document/reference-cycle` | (pdf) A reference to an object being read (a stream's `/Length` naming the stream) read as null; `detail` is `object <num> <gen>`. |
+| `pdf/opened-with-empty-user-password` | (pdf) The source is encrypted and was opened with the empty password, read with no `pdfPassword` (`pdfEmptyPassword: false` refuses it instead); `detail` is `permissions <P>`, the `/P` bits, which no reader enforces. |
+| `doc/truncated` | (every source: the `toMd` `outputBudget` input, or `irToMd`'s, with `overflow: 'truncate'`; the budget is 256 MiB by default since 2.0.0, so a missing `bytes` cuts there) The text past the budget was cut: the top-level blocks that fit are kept, with a crossing table's leading rows that fit. Once per document; `detail` is `kept <n> bytes of text; <b> blocks and <r> table rows dropped`. |
 
 `xobject/form-dropped`, `xobject/form-cycle`, `xobject/form-depth`,
 `xobject/form-budget`, `content/undecodable`, `text/font-unresolved` and
@@ -352,7 +367,7 @@ not a profile-v1 document; the facade's result (`anchors`, `lossy`,
 ## Versioning
 
 `profile` and `ir` are independent keys on purpose: the wire profile can
-stay `v1` across pivot IR revisions (`oconv-ir/v1` → `v2` → …) as long as
+stay `v1` across pivot IR revisions (`oconv-ir/v1` → `oconv-ir/v2` → …) as long as
 the front-matter/body contract itself does not change; a profile-breaking
 change gets its own `profile: v2`.
 

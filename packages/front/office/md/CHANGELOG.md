@@ -7,6 +7,18 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-19
+
+### Fixed
+
+- **`renderMarkdown` takes time linear in its output on deep block
+  nesting.** A block quote or a list item re-split and re-prefixed its whole
+  rendered text at every level, so the time grew with the square of the
+  depth (with the limits lifted, 100,000 levels took 2.5 s for quotes and
+  20 s for list items holding quotes; the default `maxDepth` of 1000 bounded
+  it). The blocks now carry their text as lines, each level prefixing each
+  line once (30 to 45 ms at 100,000 levels). The output is unchanged.
+
 ## [1.2.0] - 2026-11-02
 
 ### Added
@@ -193,7 +205,7 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   maxUrlLength })` (defaults `1000` / `100000` / `8192`). Exceeding any
   throws `ContractError('md/limit-exceeded', …)` with structured
   `context`. Pass `Infinity` to opt out.
-- **Sanitization** consumed via [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.0/packages/front/fw/docs/api/dom/rendering/sanitize.md).
+- **Sanitization** consumed via [`@awacloud/fw/dom/rendering/sanitize.js`](https://github.com/awacloud/awa/blob/@awacloud/md@1.2.1/packages/front/fw/docs/api/dom/rendering/sanitize.md).
   `createMd({ sanitize: true })` pipes the rendered HTML through the fw
   sanitizer with strict defaults. Override with `sanitizeOpts`
   (`allowedTags`, `allowedAttributes`, `urlSchemes`, `dropDangerousContent`).

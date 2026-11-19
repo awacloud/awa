@@ -31,6 +31,7 @@ const playgroundRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Axis order is fixed (matches playground/README.md) — stable JSON ordering.
 const AXES = [
     { id: 'integrations', label: 'Integrations' },
+    { id: 'usecases', label: 'Use cases' },
 ];
 
 const DESC_MAX = 160;
@@ -142,13 +143,24 @@ function scanAxis(axisId) {
                 catch { /* unreadable README → fallbacks below */ }
             }
             const hasIndex = existsSync(join(dir, 'index.html'));
+            // A project with a package.json declares the page its launch
+            // command serves (`playground.page`, a path or false): a
+            // bundler's source index.html is not an openable page.
+            let page = hasIndex ? 'index.html' : false;
+            const pkgPath = join(dir, 'package.json');
+            if (existsSync(pkgPath)) {
+                try {
+                    const decl = JSON.parse(readFileSync(pkgPath, 'utf8')).playground;
+                    if (decl && 'page' in decl) page = decl.page;
+                } catch { /* unreadable package.json: keep the index.html default */ }
+            }
             return {
                 name,
                 dir: `./${axisId}/${name}/`,
                 title: meta.title ?? name,
                 description: meta.description ?? '',
                 run: meta.run ?? '',
-                browser: hasIndex ? `./${axisId}/${name}/index.html` : false,
+                browser: page ? `./${axisId}/${name}/${page}` : false,
                 install: existsSync(join(dir, 'package.json')),
             };
         });
@@ -163,4 +175,4 @@ const target = join(playgroundRoot, 'examples.json');
 writeFileSync(target, JSON.stringify(out, null, 4) + '\n', 'utf8');
 
 const total = out.axes.reduce((n, a) => n + a.items.length, 0);
-console.log(`[gen-index] ${target} — ${total} exemples (${out.axes.map((a) => `${a.id}:${a.items.length}`).join(', ')})`);
+console.log(`[gen-index] ${target} — ${total} examples (${out.axes.map((a) => `${a.id}:${a.items.length}`).join(', ')})`);

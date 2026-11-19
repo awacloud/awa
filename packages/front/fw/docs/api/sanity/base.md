@@ -31,11 +31,11 @@ For zero-bundler deployment (static HTML), load the built classic artifact inste
 
 ## API
 
-`applyBase()` applies 15 sequential steps that lock down the realm. Returns `{ applied: boolean, reason?: string, steps: string[] }` — the step list records the order and is useful for debugging.
+`applyBase()` applies 15 sequential steps that lock down the realm. Returns `{ applied: boolean, reason?: string, steps: string[], failures: { step, target, message }[] }` — the step list records the order; `failures` lists every slot a step could not harden (a non-configurable property, a frozen namespace), `[]` on a clean apply.
 
 | Section | Method / Property | Effect |
 |---------|-------------------|--------|
-| **window** | `eval`, `Function`, `Reflect` | Throws `'not allowed'` |
+| **window** | `eval`, `Function`, `Reflect` | Throws `'not allowed'` — the global slots only: `({}).constructor.constructor('code')` still builds an evaluator under this tier alone (`lockdown()` closes it) |
 | **window** | `alert`, `confirm`, `prompt`, `open` | Throws `'not allowed'` |
 | **window** | `importScripts` | Throws `'not allowed'` |
 | **window** | `import()` (dynamic) | **Not intercepted** — the `window.import` property throws on access, but the syntactic `import()` form is language syntax, not a property, so it cannot be poisoned by slot replacement. Closed by a server CSP (`script-src`) or a Worker, not this tier. |
@@ -43,9 +43,10 @@ For zero-bundler deployment (static HTML), load the built classic artifact inste
 | **window** | `crypto.randomUUID` | Throws `'not allowed'` |
 | **window** | `performance.now`, `performance.mark`, `performance.measure`, `performance.getEntries` | Throws `'not allowed'` |
 | **document** | `write`, `writeln`, `open`, `close`, `execCommand`, `execScript`, `evaluate`, `implementation`, `createContextualFragment` | Throws `'not allowed'` |
+| **Range.prototype** | `createContextualFragment` | Throws `'not allowed'` — the markup parser `document.createRange()` reaches (blocked in the `Element.prototype` step; measured in Chromium) |
 | **document** | `domain` (set) | Throws `'not allowed'` |
 | **history** | `pushState`, `replaceState`, `go`, `back`, `forward` | Throws `'not allowed'` |
-| **Element.prototype** | `innerHTML` (set), `outerHTML` (set), `insertAdjacentHTML` (set) | Redirected to `innerText` / `outerText` / `insertAdjacentText` — no exception raised |
+| **Element.prototype** | `innerHTML` (set), `outerHTML` (set), `insertAdjacentHTML(position, html)` (call) | Redirected to `innerText` / `outerText` / `insertAdjacentText` — no exception raised; the getters keep working |
 | **Date** | `Date.now` | Rounded to 100 ms (`Math.floor(ts / 100) * 100`) |
 | **Timing** | `setTimeout`, `setInterval`, `requestAnimationFrame` with a string | Throws `'not allowed'` |
 | **JSON** | `JSON.parse(text, reviver)` | Throws `'not allowed'` if reviver is present |
@@ -62,7 +63,9 @@ String.prototype    Number.prototype    Boolean.prototype
 Date.prototype      RegExp.prototype    Error.prototype
 ```
 
-On each prototype, `__proto__` (set) → throws, `constructor` → non-writable / non-configurable.
+Only these nine. The other built-in prototypes (`Map`, `Set`, `Promise`, the typed arrays) and the DOM prototypes (`Element`, `Node`, `EventTarget`) stay unfrozen under this tier; `lockdown()` freezes every intrinsic.
+
+On each prototype, `constructor` → non-writable / non-configurable. Setting `__proto__` throws: the guarded setter is installed on `Object.prototype`, the one prototype that owns the accessor, so every object inherits it and `[].__proto__` still reads `Array.prototype`.
 
 ## Examples
 
@@ -71,7 +74,7 @@ On each prototype, `__proto__` (set) → throws, `constructor` → non-writable 
 ```js
 // app.js — first import
 import { applyBase } from '@awacloud/fw/sanity/base';
-const result = applyBase();  // → { applied: true, steps: ['freezePrototypes', 'window', ...] }
+const result = applyBase();  // → { applied: true, steps: ['freezePrototypes', 'window', ...], failures: [] }
 // Now safe to import and use the framework
 import { runtime } from '@awacloud/fw';
 ```
@@ -123,6 +126,7 @@ random.bytes(buf); // CTR_DRBG-AES-256
 - Prototype freezing is irreversible for the duration of the session — call `applyBase()` before any library that attempts to modify prototypes.
 - Dangerous elements covered: `iframe`, `object`, `embed`. `community.js` covers the same set with relaxed restrictions to remain compatible with popular frameworks.
 - **Playwright drivability consequence**: Observe a hardened realm over the network, never through the evaluation channel. `applyBase()` makes a page undrivable by Playwright — its blocked-property getter (at `base.js:100`) throws inside the injected UtilityScript in both Chromium and Firefox engines (measured). End-to-end test legs must use network observation with a barrier request afterwards to confirm confinement, never via `page.evaluate()` on an applyBase'd page; absent requests and unobserved requests are indistinguishable without the barrier.
+- **What this tier does not do (measured in Chromium).** It does not close the `({}).constructor.constructor` evaluator escape and does not affect the `debugger` statement (the `disableDebugger` step only caps `Error.stackTraceLimit`; a `debugger` statement is language syntax and never consults `window.debugger`). For the integrity guarantees use `lockdown()`, which composes this tier.
 - **Dynamic `import()` survives `applyBase()` (measured)**: `src/crypto/wasm/runtime.js` performs a live in-factory dynamic import after `applyBase()` has already run, in the same realm — direct proof that the syntactic form is not intercepted by this tier's property poisoning (see the `import()` row above).
 
 ## See also

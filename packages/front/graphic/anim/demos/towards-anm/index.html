@@ -1,0 +1,104 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — towards-anm demo</title>
+
+    <!-- 1. SANITY LOCKDOWN — first, before any application module. -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 2. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 2bis. Surface-local layout + a forced-dark override: this ACCEPTANCE
+         demo reproduces the legacy TOWARDS-ANM page verbatim (see
+         `towards-notes.md`), which is dark-only by content, not by generic
+         demo-chrome preference — overriding the shell's OWN token names on
+         `:root`, never redeclaring/copying the palette. -->
+    <style>
+        :root {
+            --bg: #1b1b1b;
+            --fg: #e8e8e8;
+            --muted: #9a9a9a;
+            --card-bg: #111111;
+            --card-border: #333333;
+            --accent: #f0a35e;
+        }
+        /* The composition is authored in an 800×400 viewBox — keep that ratio. */
+        #stage {
+            width: 100%;
+            max-width: 1200px;
+            aspect-ratio: 2 / 1;
+        }
+        #status { font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+
+<body data-demo="towards-anm">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to demos</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>towards-anm</h1>
+        <p class="demo-lede">Acceptance demo — legacy <code>TOWARDS-ANM</code> choreography, modern engine only.</p>
+    </header>
+
+    <p class="demo-note" style="margin-top:0;">
+        <a href="?variant=standalone">standalone</a> · <a href="?variant=fw">fw</a> —
+        <span id="status">booting…</span>
+    </p>
+
+    <div class="demo-stage">
+        <svg id="stage" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"
+             xmlns="http://www.w3.org/2000/svg" aria-label="TOWARDS animated composition"></svg>
+    </div>
+
+    <p class="demo-note">
+        27 tweens on one <code>Timeline</code>, one shared rAF loop, targets bound by
+        reference at build time. The reproduction map and the honest gap list are in
+        <code>towards-notes.md</code>; the SVG artwork under <code>img/</code> is the
+        site owner's own first-party content, copied from the legacy page.
+    </p>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/demos/towards-anm/</code></p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+
+<!-- 3. ENTRY — the `run()` contract. -->
+<script type="module">
+    import { boot } from '../_boot.js';
+    import { run } from './main.js';
+
+    const stage = document.getElementById('stage');
+    const status = document.getElementById('status');
+
+    const { anim, variant } = await boot();
+    const handle = await run({ mount: stage, anim, variant });
+    // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+
+    status.textContent = `variant=${variant} · running`;
+
+    // Free the shared scheduler when the page goes away.
+    globalThis.addEventListener('pagehide', () => handle.dispose(), { once: true });
+</script>
+</body>
+</html>

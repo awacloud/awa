@@ -141,7 +141,7 @@ kb.bind('0', reset, { preventDefault: false });
 
 - The `event.code` strategy makes alphanumeric shortcuts independent of the keyboard layout (AZERTY/QWERTY). Named keys (`Escape`, `F1`, etc.) use `event.key`.
 - Punctuation keys ignore Shift on the event side and refuse it on the binding side: the shifted character is already the key (`+` = Shift+`=`), so `Shift+Plus` and `Shift+=` throw at parse time. Ctrl, Alt and Meta still qualify them (`Ctrl+Plus`).
-- Chord: if the first keystroke matches a chord prefix, a `chordTimeout` timer starts. If the second keystroke does not match, the chord is cancelled and processing resumes with simple bindings on the next keystroke.
+- Chord: if the first keystroke matches a chord prefix, a `chordTimeout` timer starts. Every chord whose segments so far matched stays a candidate, so chords sharing a prefix (`Ctrl+K Ctrl+A`, `Ctrl+K Ctrl+H`) all complete; each keystroke narrows the set. When chords complete on the same keystroke, the highest `priority` fires (the first registered on a tie), and a completed chord wins over a longer one sharing its prefix. A keystroke that matches no candidate cancels the chord and is processed as a simple binding.
 - When a context is active (non-empty stack), only bindings for that context trigger. Bindings without a context are suspended until `popContext()`.
 - Each trigger emits `keybindings:matched` on the instance's internal `eventBus` — consumed by the command palette to display active shortcuts.
 - `dispose()` detaches listeners and clears bindings, but does not delete references to the instance. Create a fresh instance if needed.

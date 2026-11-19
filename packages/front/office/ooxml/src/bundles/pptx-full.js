@@ -9,7 +9,9 @@
  * Pure fw factory descriptor that extends `pptxLargeBundle` with every
  * remaining opt-in extra that touches pptx : advanced custom-geometry
  * shapes, residual misc sweepers, and the part-4 transitional +
- * standalone legacy VML mappers.
+ * standalone legacy VML mappers; the text, part-level and package
+ * details (`dmlTextDetails`, `pmlPartDetails`, `pmlPackageParts`: the
+ * notes slides, the notes and handout masters, the unused layouts).
  *
  * Consumption is exclusively declarative — register the descriptor in a
  * `ModuleRuntime` and call `runtime.resolve('pptxFullBundle')`.
@@ -25,21 +27,27 @@ import { pmlMisc } from '../extra/pml-misc.js';
 import { dmlChartMisc } from '../extra/dml-chart-misc.js';
 import { dmlMainMisc } from '../extra/dml-main-misc.js';
 import { mathMisc } from '../extra/math-misc.js';
+import { dmlTextDetails } from '../extra/dml-text-details.js';
+import { pmlPartDetails } from '../extra/pml-part-details.js';
+import { pmlPackageParts } from '../extra/pml-package-parts.js';
 
 export const pptxFullBundle = {
     name: 'pptxFullBundle',
     dependencies: [
         'pptxLargeBundle',
         'dmlShapesAdvanced', 'transitional', 'legacyVml',
-        'pmlMisc', 'dmlChartMisc', 'dmlMainMisc', 'mathMisc'
+        'pmlMisc', 'dmlChartMisc', 'dmlMainMisc', 'mathMisc',
+        'dmlTextDetails', 'pmlPartDetails', 'pmlPackageParts'
     ],
-    deps: [pptxLargeBundle, dmlShapesAdvanced, transitional, legacyVml, pmlMisc, dmlChartMisc, dmlMainMisc, mathMisc],
+    deps: [pptxLargeBundle, dmlShapesAdvanced, transitional, legacyVml, pmlMisc, dmlChartMisc, dmlMainMisc, mathMisc, dmlTextDetails, pmlPartDetails, pmlPackageParts],
     factory(pptxLargeBundle,
             dmlShapesAdvanced, transitional, legacyVml,
-            pmlMisc, dmlChartMisc, dmlMainMisc, mathMisc) {
+            pmlMisc, dmlChartMisc, dmlMainMisc, mathMisc,
+            dmlTextDetails, pmlPartDetails, pmlPackageParts) {
         pptxLargeBundle.use(
             dmlShapesAdvanced, transitional, legacyVml,
-            pmlMisc, dmlChartMisc, dmlMainMisc, mathMisc
+            pmlMisc, dmlChartMisc, dmlMainMisc, mathMisc,
+            dmlTextDetails, pmlPartDetails, pmlPackageParts
         );
         return pptxLargeBundle;
     }

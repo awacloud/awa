@@ -34,12 +34,13 @@ const wasmRuntime = runtime.resolve('wasmRuntime');
 | `withBytes` | `(loaded: Handle, input: Uint8Array) => { ptr, len, free }` | Copies `input` INTO linear memory; returns ptr/len + a `free()` thunk |
 | `readBytes` | `(loaded: Handle, ptr: number, len: number) => Uint8Array` | Copies `len` bytes OUT of linear memory into a fresh `Uint8Array` |
 | `run` | `(loaded: Handle, fnName: string, args: number[]) => number` | Calls an export, returns its `i32` status; a trap throws to the caller's try/catch |
+| `configure` | `({ baseUrl: string \| URL \| null }) => void` | Sets the asset base every later `load` uses — the algorithm wrappers included; `null` restores this module's directory. Throws `TypeError` when the base is not an absolute URL |
 
-`load` options (`opts`): `variant` (`'simd' | 'scalar'`) forces a variant (default = runtime selection); `fetchBytes(wasmModule, variant) => Promise<Uint8Array>` is a documented **test seam** overriding the colocated fetch. The success handle exposes: `instance`, `memory` (and a `mem` alias), `alloc`, `free`, `exports`, and `variant`.
+`load` options (`opts`): `variant` (`'simd' | 'scalar'`) forces a variant (default = runtime selection); `baseUrl` (an absolute URL, the directory that holds the binaries; a missing trailing `/` is added) overrides the asset base for this call; `fetchBytes(wasmModule, variant) => Promise<Uint8Array>` is a documented **test seam** overriding the colocated fetch. The success handle exposes: `instance`, `memory` (and a `mem` alias), `alloc`, `free`, `exports`, and `variant`.
 
 `load` resolves `false` when:
 - `WebAssembly` is unavailable (`[crypto] NOT READY: WebAssembly unavailable` logged)
-- the fetch/compile/instantiate fails, or the zero-import invariant or a `memory`/`alloc`/`free`/`expectedExports` entry is missing (`[crypto] FAIL: wasmRuntime.load: <message>` logged)
+- `baseUrl` is not an absolute URL, or the fetch/compile/instantiate fails, or the zero-import invariant or a `memory`/`alloc`/`free`/`expectedExports` entry is missing (`[crypto] FAIL: wasmRuntime.load: <message>` logged)
 
 ## Canonical WASM ABI
 
@@ -60,8 +61,15 @@ The binaries are **committed assets** next to this module:
 so the browser/worker cache can share the asset across page loads — the same
 rationale as `brotli_dict.bin`.
 
-`load` resolves `new URL('./<wasmModule>.<variant>.wasm', import.meta.url)` and
-`fetch`es it. The **SIMD win** comes from `load` fetching `<wasmModule>.simd.wasm`
+`load` resolves `new URL('./<wasmModule>.<variant>.wasm', base)` and `fetch`es
+it, where `base` is the call's `baseUrl`, else the `configure` base, else
+`import.meta.url` (this module's directory). A module name is `[a-z0-9_]+`, so
+it never walks out of the base. Every `load` fetches and compiles afresh: a
+compile memo is withheld because, under JavaScriptCore (Bun, and the engine of
+Safari), `chacha20poly1305.simd.wasm` returns a wrong Poly1305 tag once one
+`WebAssembly.Module` has run `aead_seal` about six times, while V8 and a fresh
+module per load are correct (`src/crypto/wasm/chacha-simd-jsc.test.js` pins
+it). The **SIMD win** comes from `load` fetching `<wasmModule>.simd.wasm`
 when `hasSimd()` is true; scalar-only targets (no `.simd.wasm` colocated) must be
 loaded with `{ variant: 'scalar' }`. Wrappers always **load by name** — they never
 import a binary directly.
@@ -79,16 +87,24 @@ for a scalar-only target then fails — `load` resolves `false` per its no-throw
 contract rather than retrying scalar. Passing `{ variant: 'scalar' }` is part of
 a scalar-only wrapper's contract, not an optimisation.
 
-### Asset resolution binds to this module's own URL
+### Asset base: this module's own URL, unless configured
 
-The colocated fetch is `new URL('./<wasmModule>.<variant>.wasm',
+The default fetch is `new URL('./<wasmModule>.<variant>.wasm',
 import.meta.url)` evaluated **inside `factory()`**, so the base is wherever
 `runtime.js` itself was loaded from. A build step that inlines a descriptor by
 stringifying its factory (`factory.toString()`) re-binds `import.meta.url` to
 the *generated* file, and every wasm-tier path in that artifact then fails to
 fetch its binary while a tier-audit surface may still report the tier as
-effective. Ship `wasmRuntime` as a real module file, or supply
-`opts.fetchBytes`, when a bundler re-hosts factory source.
+effective. Name the directory that holds the binaries instead:
+
+```js
+const wasmRuntime = runtime.resolve('wasmRuntime');
+wasmRuntime.configure({ baseUrl: 'https://cdn.example.com/fw/crypto/wasm/' });
+// every wasm* wrapper resolved on this runtime now fetches from there
+```
+
+The base is a place to fetch from, never bytes, so it stays open under
+`lockdown()` — unlike `opts.fetchBytes`, which the gate refuses once armed.
 
 **Provenance.** The bytes are build artifacts of the `@awacloud/fw-wasm-crypto` package
 (`dist/<wasmModule>.{simd,scalar}.wasm`, emitted by `tools/wasm-crypto build`),
@@ -146,8 +162,9 @@ const fast = await wasmRuntime.hasSimd(); // true ⇒ load() picks the SIMD vari
 ```js
 const worker = fw.createWorker(
     function ({ libs }) {
-        // The colocated .wasm is fetched by name (resolved from import.meta.url)
-        // inside the worker — no main-thread closure is serialized.
+        // The colocated .wasm is fetched by name (resolved from import.meta.url,
+        // or from libs.wasmRuntime.configure({ baseUrl }) when the worker is
+        // served elsewhere) — no main-thread closure is serialized.
         libs.wasmRuntime.load('blake2b', ['blake2b']).then((h) => {
             self.postMessage(h !== false);
         });

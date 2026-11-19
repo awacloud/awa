@@ -2,7 +2,7 @@
 
 > Operational plan for adding a module to the framework. Aimed primarily at an LLM (Claude Sonnet 4.6+) or a developer running the procedure for the first time.
 
-This page is an **execution plan**, not a course. For each phase, it points to the reference guides to load.
+This page is an **execution plan**, not a course. For each step, it points to the reference guides to load.
 
 ---
 
@@ -15,11 +15,11 @@ This page is an **execution plan**, not a course. For each phase, it points to t
 | [`test-format.md`](./test-format.md) | `*.test.js` file convention (bun) |
 | [`doc-format.md`](./doc-format.md) | `docs/api/*.md` page convention + README cascade |
 
-Load these 4 files into context before phase 1.
+Load these 4 files into context before step 1.
 
 ---
 
-## Phase 0 — Discovery / scoping
+## Step 0 — Discovery / scoping
 
 **Goal**: avoid duplicates, identify reusable dependencies.
 
@@ -77,7 +77,7 @@ If the module doesn't fit anywhere: ask the question before creating a new folde
 
 ---
 
-## Phase 1 — Source implementation
+## Step 1 — Source implementation
 
 **Target**: `packages/front/fw/<path>/<name>.js`
 
@@ -154,7 +154,7 @@ export [...]` at the bottom. **No named exports.** Add:
 
 ---
 
-## Phase 2 — Tests
+## Step 2 — Tests
 
 **Target**: `packages/front/fw/<path>/<name>.test.js`
 
@@ -195,7 +195,7 @@ bun test packages/front/fw/<path>/
 
 ---
 
-## Phase 3 — Documentation
+## Step 3 — Documentation
 
 **Target**: `docs/api/<path>/<name>.md`
 
@@ -219,7 +219,7 @@ All links must be **relative** and functional. No absolute URLs to the repo.
 
 ---
 
-## Phase 4 — README cascade
+## Step 4 — README cascade
 
 **Every** module creation impacts a README chain. Update **in order**:
 
@@ -253,7 +253,7 @@ Maintain consistent ordering (grouped by category as in the existing file).
 
 ---
 
-## Phase 5 — Final verification
+## Step 5 — Final verification
 
 ```bash
 # 1. All tests in the directory pass

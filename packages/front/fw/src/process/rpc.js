@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -35,6 +35,7 @@ export const processRPC = {
         const LEAF_VAL        = 'val';
         const RPC_INIT        = '__rpc_init';
         const DEFAULT_TIMEOUT = 30000;
+        const MAX_TIMEOUT = 2147483647;
 
         /** Property names that must never be exposed or traversed. */
         const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
@@ -161,12 +162,15 @@ export const processRPC = {
          * @param {MessagePort} port The transferred port.
          * @param {object} [options]
          * @param {number} [options.timeout=30000] ms before a call or
-         *   the initial handshake is considered failed.
+         *   the initial handshake is considered failed; clamped to
+         *   2^31-1 ms (`Infinity` = that maximum).
          * @returns {Promise<Proxy>}
          */
         const open = (port, options = {}) => {
+            // A timer holds at most 2^31-1 ms; a longer delay (Infinity
+            // included) would fire at once, so it is clamped to that maximum.
             const timeout = typeof options.timeout === 'number' && options.timeout > 0
-                ? options.timeout
+                ? Math.min(options.timeout, MAX_TIMEOUT)
                 : DEFAULT_TIMEOUT;
 
             const pending = new Map();

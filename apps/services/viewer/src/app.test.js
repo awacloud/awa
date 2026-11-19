@@ -50,6 +50,34 @@ describe('boot', () => {
         v.destroy();
     });
 
+    test('the header line carries the open document name, the tagline with none, the name through a language switch', async () => {
+        const v = load(handoffKv().kv);
+        const line = /** @type {HTMLElement} */ (document.querySelector('.app-tagline'));
+        const tagline = line.textContent;
+        expect(tagline).toBe('Open a document and read it on your device.');
+        expect(line.hasAttribute('data-doc')).toBe(false);
+        const long = `${'x'.repeat(200)}\u{1F4C4}.txt`;
+        await v.open(new File(['hello'], long));
+        expect(line.textContent).toBe(long);
+        expect(line.title).toBe(long);
+        expect(line.hasAttribute('data-doc')).toBe(true);
+        expect(line.hasAttribute('data-i18n')).toBe(false);
+        const select = /** @type {HTMLSelectElement} */ (document.getElementById('app-lang'));
+        select.value = 'fr';
+        select.dispatchEvent(new Event('change'));
+        expect(line.textContent).toBe(long);
+        v.close();
+        expect(line.textContent).toBe('Ouvrez un document et lisez-le sur votre appareil.');
+        expect(line.hasAttribute('data-doc')).toBe(false);
+        expect(line.hasAttribute('title')).toBe(false);
+        select.value = 'en';
+        select.dispatchEvent(new Event('change'));
+        expect(line.textContent).toBe(tagline);
+        await v.open(new File(['a'], 'a.txt'));
+        expect(line.textContent).toBe('a.txt');
+        v.destroy();
+    });
+
     test('three files dropped: the first opens, the next opens in a new window that takes it over', async () => {
         const h = handoffKv();
         const v = load(h.kv);

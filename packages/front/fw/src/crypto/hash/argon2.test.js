@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,6 +6,7 @@ import { describe, test, expect } from 'bun:test';
 import { argon2 } from './argon2.js';
 import { blake2b } from './blake2b.js';
 import { hex } from '../../io/codec/hex.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _hex = hex.factory();
 const _blake2b = blake2b.factory();
@@ -133,18 +134,18 @@ describe('argon2 module (RFC 9106 - Argon2id)', () => {
     // ========================================================================
 
     test('_Hp produces requested length (≤64 single-call path)', () => {
-        const out32 = A._internal.Hp(new Uint8Array([1, 2, 3]), 32);
+        const out32 = A[INTERNAL].Hp(new Uint8Array([1, 2, 3]), 32);
         expect(out32.length).toBe(32);
-        const out64 = A._internal.Hp(new Uint8Array([1, 2, 3]), 64);
+        const out64 = A[INTERNAL].Hp(new Uint8Array([1, 2, 3]), 64);
         expect(out64.length).toBe(64);
     });
 
     test('_Hp produces requested length (>64 multi-block path: outLen=100, 200, 1024)', () => {
         for (const outLen of [100, 200, 1024]) {
-            const out = A._internal.Hp(new Uint8Array([1, 2, 3]), outLen);
+            const out = A[INTERNAL].Hp(new Uint8Array([1, 2, 3]), outLen);
             expect(out.length).toBe(outLen);
             // Determinism
-            const out2 = A._internal.Hp(new Uint8Array([1, 2, 3]), outLen);
+            const out2 = A[INTERNAL].Hp(new Uint8Array([1, 2, 3]), outLen);
             expect(_hex.fromBytes(out)).toBe(_hex.fromBytes(out2));
         }
     });
@@ -193,26 +194,9 @@ describe('argon2 module (RFC 9106 - Argon2id)', () => {
     });
 
     // ── Iteration G4 - Argon2d / Argon2i explicit reject ────────────────────
-    describe('Argon2d / Argon2i explicit reject (iteration G4)', () => {
-        test('hashD returns false + warns UNSAFE (cache-timing)', () => {
-            const calls = [];
-            const orig = console.warn; console.warn = (m) => calls.push(m);
-            try { expect(A.hashD()).toBe(false); }
-            finally { console.warn = orig; }
-            expect(calls[0]).toContain('UNSAFE');
-            expect(calls[0]).toContain('Argon2d');
-            expect(calls[0]).toContain('cache-timing');
-            expect(calls[0]).toContain('Argon2id');
-        });
-
-        test('hashI returns false + warns DEPRECATED (Alwen-Blocki)', () => {
-            const calls = [];
-            const orig = console.warn; console.warn = (m) => calls.push(m);
-            try { expect(A.hashI()).toBe(false); }
-            finally { console.warn = orig; }
-            expect(calls[0]).toContain('DEPRECATED');
-            expect(calls[0]).toContain('Argon2i');
-            expect(calls[0]).toContain('Argon2id');
-        });
+    test('the `hashD` / `hashI` reject stubs are gone: Argon2id `hash` only (D9 G3)', () => {
+        expect(A.hashD).toBeUndefined();
+        expect(A.hashI).toBeUndefined();
+        expect(typeof A.hash).toBe('function');
     });
 });

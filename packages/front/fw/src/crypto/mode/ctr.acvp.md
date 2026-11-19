@@ -86,8 +86,8 @@ many) and verify the CT byte-exact against the same source. The
 - **MCT not specified for CTR by the ACVP**: the official suite is
   limited to AFT (unlike AES-CBC/ECB). Not a coverage gap —
   confirmed by inspecting `ACVP-AES-CTR-1.0/prompt.json` (6 testGroups,
-  all `testType=AFT`, no `MCT`). **Iteration D4 of the FIPS 140-3
-  upgrade plan**: CBC gets its 6 MCTs, CTR stays AFT-only by construction.
+  all `testType=AFT`, no `MCT`): CBC has its 6 MCTs, CTR stays AFT-only
+  by construction.
 - **No F.5.2/F.5.3/F.5.4 vector (AES-192/256-CTR)** integrated
   manually — covered indirectly by the ACVP encrypt/decrypt × 192/256.
 - **No anti-IV-reuse guard**: if the same (K, IV) pair is

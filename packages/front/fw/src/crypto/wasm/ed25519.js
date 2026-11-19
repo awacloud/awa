@@ -9,7 +9,7 @@
  * A thin, opt-in accelerator over the colocated `ed25519` binary (vendored from
  * `@awacloud/fw-wasm-crypto`: libsodium ref10 framed by the package's arena + SHA-512
  * seam + staged-entropy rng seam), loaded BY NAME through the fw `wasmRuntime`
- * adapter (BATCH_11 ERRATA-2: no fw-local `.wasm.js`). Mirrors the pure-JS
+ * adapter (no fw-local `.wasm.js`). Mirrors the pure-JS
  * `crypto/pkc/ed25519` surface for the Ed25519 signature scheme — keygen / sign
  * / verify — over `Uint8Array`, async, no-throw.
  *

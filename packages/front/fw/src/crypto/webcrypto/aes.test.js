@@ -274,6 +274,25 @@ describe('webcryptoAes — GCM auth failure resolves false', () => {
             console.error = origError;
         }
     });
+
+    test('an authentication failure is reported at warn level, not error', async () => {
+        const key = await _aes.generateKey('GCM', 128);
+        const iv = fromHex('cafebabefacedbaddecaf888');
+        const ctWithTag = await _aes.encryptGcm(key, iv, new TextEncoder().encode('log level'));
+        const corrupted = new Uint8Array(ctWithTag);
+        corrupted[corrupted.length - 1] ^= 0x01;
+        const _logs = { warn: [], error: [] };
+        const _w = console.warn, _e = console.error;
+        console.warn = (...a) => { _logs.warn.push(a.join(' ')); };
+        console.error = (...a) => { _logs.error.push(a.join(' ')); };
+        let r;
+        try { r = await _aes.decryptGcm(key, iv, corrupted); } finally {
+        console.warn = _w; console.error = _e;
+        }
+        expect(r).toBe(false);
+        expect(_logs.error.length).toBe(0);
+        expect(_logs.warn.some((m) => m.includes('CORRUPT'))).toBe(true);
+    });
 });
 
 // ── round-trip tests (generateKey) ───────────────────────────────────────────

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -238,16 +238,7 @@ describe('chacha20 (RFC 8439)', () => {
         });
     });
 
-    describe('xchacha20 explicit reject (iteration G3)', () => {
-        test('xchacha20() returns false + warns NOT-IMPLEMENTED', () => {
-            const calls = [];
-            const orig = console.warn; console.warn = (m) => calls.push(m);
-            let r;
-            try { r = _cc.xchacha20(); }
-            finally { console.warn = orig; }
-            expect(r).toBe(false);
-            expect(calls[0]).toContain('NOT-IMPLEMENTED');
-            expect(calls[0]).toContain('XChaCha20');
-        });
+    test('the `xchacha20` reject stub is gone (D9 G3)', () => {
+        expect(_cc.xchacha20).toBeUndefined();
     });
 });

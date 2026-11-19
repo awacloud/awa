@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -54,7 +54,9 @@ export const workerPool = {
          * @param {Function} opts.factory - () => Worker | WorkerLike
          * @param {number} [opts.size] - Number of workers (default: navigator.hardwareConcurrency || 4)
          * @param {number} [opts.maxQueue] - Max queued jobs (default: Infinity)
-         * @param {boolean} [opts.respawnOnCrash] - Respawn after crash (default: true)
+         * @param {boolean} [opts.respawnOnCrash] - Respawn after crash (default: true).
+         *   An aborted in-flight job always gets its slot a fresh worker.
+         * @throws {Error} When `opts.factory` is not a function.
          * @returns {{ run, size, idle, pending, resize, terminate }}
          */
         function create(opts) {
@@ -162,11 +164,15 @@ export const workerPool = {
                 let abortHandler = null;
                 if (item.signal) {
                     abortHandler = () => {
-                        // Job in flight - terminate the worker
+                        // Job in flight - terminate the worker. An abort is not a
+                        // crash: a slot still in the pool always gets a fresh
+                        // worker (`respawnOnCrash` does not apply), or it would
+                        // keep a dead one and the next job would never settle.
+                        // A slot `resize()` removed gets none.
                         slot.busy = false;
                         slot.pendingJob = null;
                         try { slot.worker.terminate(); } catch (_) {}
-                        if (_respawnOnCrash && !_terminated) {
+                        if (!_terminated && _slots.includes(slot)) {
                             slot.worker = _spawnWorker(slot);
                         }
                         const abortErr = new Error('AbortError');
@@ -309,6 +315,7 @@ export const workerPool = {
              * Increase: new workers spawned immediately.
              * Decrease: surplus workers terminated after their current job.
              * @param {number} n
+             * @throws {Error} When `n` is not a positive integer.
              */
             function resize(n) {
                 if (typeof n !== 'number' || n < 1 || Math.floor(n) !== n) {

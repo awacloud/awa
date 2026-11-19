@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -15,8 +15,6 @@
  * Object returned by `chacha20.factory()`.
  * @typedef {object} ChaCha20API
  * @property {(key: Uint8Array, nonce: Uint8Array, data: Uint8Array, initialCounter?: number) => (Uint8Array|false)} xor XOR `data` with the ChaCha20 keystream; `false` on invalid key/nonce or counter overflow.
- * @property {() => false} xchacha20 Explicit reject for the unimplemented XChaCha20 variant (always `false`).
- * @property {{ block: (key32: Int32Array, counter: number, nonce32: Int32Array, out32: Int32Array) => void }} _internal Internal block primitive (debug/introspection only).
  */
 
 export const chacha20 = {
@@ -28,36 +26,71 @@ export const chacha20 = {
     /** @returns {ChaCha20API} */
     factory() {
 
-        const _SIGMA = [0x61707865, 0x3320646e, 0x79622d32, 0x6b206574]; // "expand 32-byte k"
+        // The constants "expand 32-byte k" are the j0..j3 of `_blockInto`.
 
-        function _rotl(v, n) { return ((v << n) | (v >>> (32 - n))) | 0; }
-
-        function _qr(s, a, b, c, d) {
-            s[a] = (s[a] + s[b]) | 0; s[d] = _rotl(s[d] ^ s[a], 16);
-            s[c] = (s[c] + s[d]) | 0; s[b] = _rotl(s[b] ^ s[c], 12);
-            s[a] = (s[a] + s[b]) | 0; s[d] = _rotl(s[d] ^ s[a], 8);
-            s[c] = (s[c] + s[d]) | 0; s[b] = _rotl(s[b] ^ s[c], 7);
-        }
-
-        function _block(key32, counter, nonce32, out32) {
-            const s = new Int32Array(16);
-            s[0] = _SIGMA[0]; s[1] = _SIGMA[1]; s[2] = _SIGMA[2]; s[3] = _SIGMA[3];
-            for (let i = 0; i < 8; i++) s[4 + i] = key32[i];
-            s[12] = counter | 0;
-            s[13] = nonce32[0]; s[14] = nonce32[1]; s[15] = nonce32[2];
-
-            const x = new Int32Array(s);
+        /**
+         * One ChaCha20 block (RFC 8439 §2.3) into `ks` (16 words): the state on
+         * locals, the 20 rounds as 10 double rounds of inline quarter-rounds.
+         * @param {Int32Array} k 8 key words
+         * @param {number} counter
+         * @param {Int32Array} n 3 nonce words
+         * @param {Int32Array} ks output, 16 words
+         */
+        function _blockInto(k, counter, n, ks) {
+            const j0 = 0x61707865, j1 = 0x3320646e, j2 = 0x79622d32, j3 = 0x6b206574;
+            const j4 = k[0], j5 = k[1], j6 = k[2], j7 = k[3], j8 = k[4], j9 = k[5], j10 = k[6], j11 = k[7];
+            const j12 = counter | 0, j13 = n[0], j14 = n[1], j15 = n[2];
+            let x0 = j0, x1 = j1, x2 = j2, x3 = j3, x4 = j4, x5 = j5, x6 = j6, x7 = j7, x8 = j8, x9 = j9, x10 = j10, x11 = j11, x12 = j12, x13 = j13, x14 = j14, x15 = j15;
             for (let i = 0; i < 10; i++) {
-                _qr(x, 0, 4,  8, 12);
-                _qr(x, 1, 5,  9, 13);
-                _qr(x, 2, 6, 10, 14);
-                _qr(x, 3, 7, 11, 15);
-                _qr(x, 0, 5, 10, 15);
-                _qr(x, 1, 6, 11, 12);
-                _qr(x, 2, 7,  8, 13);
-                _qr(x, 3, 4,  9, 14);
+                x0 = (x0 + x4) | 0; x12 ^= x0; x12 = (x12 << 16) | (x12 >>> 16);
+                x8 = (x8 + x12) | 0; x4 ^= x8; x4 = (x4 << 12) | (x4 >>> 20);
+                x0 = (x0 + x4) | 0; x12 ^= x0; x12 = (x12 << 8) | (x12 >>> 24);
+                x8 = (x8 + x12) | 0; x4 ^= x8; x4 = (x4 << 7) | (x4 >>> 25);
+                x1 = (x1 + x5) | 0; x13 ^= x1; x13 = (x13 << 16) | (x13 >>> 16);
+                x9 = (x9 + x13) | 0; x5 ^= x9; x5 = (x5 << 12) | (x5 >>> 20);
+                x1 = (x1 + x5) | 0; x13 ^= x1; x13 = (x13 << 8) | (x13 >>> 24);
+                x9 = (x9 + x13) | 0; x5 ^= x9; x5 = (x5 << 7) | (x5 >>> 25);
+                x2 = (x2 + x6) | 0; x14 ^= x2; x14 = (x14 << 16) | (x14 >>> 16);
+                x10 = (x10 + x14) | 0; x6 ^= x10; x6 = (x6 << 12) | (x6 >>> 20);
+                x2 = (x2 + x6) | 0; x14 ^= x2; x14 = (x14 << 8) | (x14 >>> 24);
+                x10 = (x10 + x14) | 0; x6 ^= x10; x6 = (x6 << 7) | (x6 >>> 25);
+                x3 = (x3 + x7) | 0; x15 ^= x3; x15 = (x15 << 16) | (x15 >>> 16);
+                x11 = (x11 + x15) | 0; x7 ^= x11; x7 = (x7 << 12) | (x7 >>> 20);
+                x3 = (x3 + x7) | 0; x15 ^= x3; x15 = (x15 << 8) | (x15 >>> 24);
+                x11 = (x11 + x15) | 0; x7 ^= x11; x7 = (x7 << 7) | (x7 >>> 25);
+                x0 = (x0 + x5) | 0; x15 ^= x0; x15 = (x15 << 16) | (x15 >>> 16);
+                x10 = (x10 + x15) | 0; x5 ^= x10; x5 = (x5 << 12) | (x5 >>> 20);
+                x0 = (x0 + x5) | 0; x15 ^= x0; x15 = (x15 << 8) | (x15 >>> 24);
+                x10 = (x10 + x15) | 0; x5 ^= x10; x5 = (x5 << 7) | (x5 >>> 25);
+                x1 = (x1 + x6) | 0; x12 ^= x1; x12 = (x12 << 16) | (x12 >>> 16);
+                x11 = (x11 + x12) | 0; x6 ^= x11; x6 = (x6 << 12) | (x6 >>> 20);
+                x1 = (x1 + x6) | 0; x12 ^= x1; x12 = (x12 << 8) | (x12 >>> 24);
+                x11 = (x11 + x12) | 0; x6 ^= x11; x6 = (x6 << 7) | (x6 >>> 25);
+                x2 = (x2 + x7) | 0; x13 ^= x2; x13 = (x13 << 16) | (x13 >>> 16);
+                x8 = (x8 + x13) | 0; x7 ^= x8; x7 = (x7 << 12) | (x7 >>> 20);
+                x2 = (x2 + x7) | 0; x13 ^= x2; x13 = (x13 << 8) | (x13 >>> 24);
+                x8 = (x8 + x13) | 0; x7 ^= x8; x7 = (x7 << 7) | (x7 >>> 25);
+                x3 = (x3 + x4) | 0; x14 ^= x3; x14 = (x14 << 16) | (x14 >>> 16);
+                x9 = (x9 + x14) | 0; x4 ^= x9; x4 = (x4 << 12) | (x4 >>> 20);
+                x3 = (x3 + x4) | 0; x14 ^= x3; x14 = (x14 << 8) | (x14 >>> 24);
+                x9 = (x9 + x14) | 0; x4 ^= x9; x4 = (x4 << 7) | (x4 >>> 25);
             }
-            for (let i = 0; i < 16; i++) out32[i] = (x[i] + s[i]) | 0;
+            ks[0] = (x0 + j0) | 0;
+            ks[1] = (x1 + j1) | 0;
+            ks[2] = (x2 + j2) | 0;
+            ks[3] = (x3 + j3) | 0;
+            ks[4] = (x4 + j4) | 0;
+            ks[5] = (x5 + j5) | 0;
+            ks[6] = (x6 + j6) | 0;
+            ks[7] = (x7 + j7) | 0;
+            ks[8] = (x8 + j8) | 0;
+            ks[9] = (x9 + j9) | 0;
+            ks[10] = (x10 + j10) | 0;
+            ks[11] = (x11 + j11) | 0;
+            ks[12] = (x12 + j12) | 0;
+            ks[13] = (x13 + j13) | 0;
+            ks[14] = (x14 + j14) | 0;
+            ks[15] = (x15 + j15) | 0;
         }
 
         function _u32leFromBytes(bytes, off) {
@@ -86,21 +119,21 @@ export const chacha20 = {
             const nonce32 = new Int32Array(3);
             for (let i = 0; i < 3; i++) nonce32[i] = _u32leFromBytes(nonce, i * 4);
 
-            // ── Iteration G3 - Counter overflow guard (32-bit) ────────────
+            // ── Counter overflow guard (32-bit) ────────────
             // RFC 8439 §2.3 : ChaCha20 IETF variant uses a 32-bit block
             // counter. After 2^32 blocks (256 GiB) under a single (key, nonce)
             // the counter wraps and starts re-using keystream blocks → catastrophic
             // (XOR of two ciphertexts cancels the keystream). The XChaCha20
             // draft (`draft-irtf-cfrg-xchacha`) extends to 192-bit nonce +
             // 32-bit counter to defer the limit, but it is *not* implemented
-            // here (see `xchacha20()` reject below). Active guard : refuse
+            // here. Active guard: refuse
             // any call that would push the counter past 2^32 - 1.
             const startCounter = (initialCounter >>> 0);  // unsigned 32-bit view
             const blocksNeeded = Math.ceil(data.length / 64);
             // (startCounter + blocksNeeded - 1) is the LAST counter value used.
             // Reject if this would overflow the 32-bit space.
             if (blocksNeeded > 0 && startCounter + blocksNeeded > 0x100000000) {
-                console.warn('[crypto] LIMIT-EXCEEDED: chacha20: counter overflow (>256 GiB on this (key, nonce) pair). Rotate key or use a fresh nonce; XChaCha20 is not implemented (see xchacha20()).');
+                console.warn('[crypto] LIMIT-EXCEEDED: chacha20: counter overflow (>256 GiB on this (key, nonce) pair). Rotate key or use a fresh nonce; XChaCha20 is not implemented.');
                 return false;
             }
 
@@ -108,40 +141,37 @@ export const chacha20 = {
             const block = new Int32Array(16);
             let counter = (initialCounter | 0) || 0;
             let off = 0;
-            while (off < data.length) {
-                _block(key32, counter, nonce32, block);
-                const remaining = data.length - off;
-                const n = remaining < 64 ? remaining : 64;
-                for (let i = 0; i < n; i++) {
-                    const w = block[i >>> 2];
-                    const b = (w >>> ((i & 3) * 8)) & 0xff;
-                    out[off + i] = data[off + i] ^ b;
+            const len = data.length;
+            while (off < len) {
+                _blockInto(key32, counter, nonce32, block);
+                if (len - off >= 64) {
+                    // A whole block: four bytes per keystream word (a typed-
+                    // array store keeps the low 8 bits).
+                    for (let w = 0, o = off; w < 16; w++, o += 4) {
+                        const v = block[w];
+                        out[o] = data[o] ^ v;
+                        out[o + 1] = data[o + 1] ^ (v >>> 8);
+                        out[o + 2] = data[o + 2] ^ (v >>> 16);
+                        out[o + 3] = data[o + 3] ^ (v >>> 24);
+                    }
+                    off += 64;
+                } else {
+                    for (let i = 0; off < len; i++, off++) {
+                        out[off] = data[off] ^ (block[i >>> 2] >>> ((i & 3) * 8));
+                    }
                 }
-                off += n;
                 counter = (counter + 1) | 0;
             }
             return out;
         }
 
-        // ── Iteration G3 - XChaCha20 explicit reject ────────────────────
-        // XChaCha20 (`draft-irtf-cfrg-xchacha-03`, expired) extends the IETF
-        // ChaCha20 to 192-bit nonces via HChaCha20 sub-key derivation. It is
-        // popular (libsodium, Wireguard) but NOT a finalised IETF/NIST
-        // standard. Rather than ship a half-tested variant, we expose an
-        // explicit reject : any caller that needs XChaCha20 should use a
-        // dedicated library (e.g. libsodium-wasm) and must do so consciously.
-        function xchacha20() {
-            console.warn('[crypto] NOT-IMPLEMENTED: chacha20: XChaCha20 (draft-irtf-cfrg-xchacha) is not implemented. Use a fresh 12-byte nonce per message with chacha20.xor(), or an external library if 192-bit nonces are required.');
-            return false;
-        }
-
-        return /** @type {ChaCha20API} */ (/** @type {any} */ ({
-            xor,
-            xchacha20,
+        return /** @type {ChaCha20API} */ (/** @type {any} */ (Object.defineProperty({
+            xor
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal primitive - exposed for debug / introspection (public tests
-            // exercise it indirectly via `xor(zero, …)`). Convention
-            // `_internal.*` shared with gcm/cmac/rsa/random/etc.
-            _internal: { block: _block }
-        }));
+            // exercise it indirectly via `xor(zero, …)`). The internal slot
+            // (core/internal.js), outside the API.
+            value: { block: _blockInto }
+        })));
     }
 };

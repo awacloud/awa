@@ -97,6 +97,103 @@ export const docxProperties = {
             return null;
         }
 
+        // --- Canonical element equality (the typing extensions' guard) ---
+        // Two elements are the same when their names, attributes and
+        // children are, an element's whitespace-only text left out and a
+        // childless element's toggle value compared by meaning (`true`,
+        // `1`, `on` or none = on; `false`, `0`, `off` = off).
+        function toggleForm(v) {
+            if (v === undefined || v === 'true' || v === '1' || v === 'on') return 'on';
+            if (v === 'false' || v === '0' || v === 'off') return 'off';
+            return v;
+        }
+        function significant(children) {
+            return (children || []).filter(c => !(c && c.type === 'text' && /^\s*$/.test(String(c.value ?? c.text ?? ''))));
+        }
+        function sameElement(a, b) {
+            if (!a || !b || a.type !== b.type) return false;
+            if (a.type !== 'element') return String(a.value ?? a.text ?? '') === String(b.value ?? b.text ?? '');
+            if (a.name !== b.name) return false;
+            const ka = significant(a.children), kb = significant(b.children);
+            const aa = a.attrs || {}, ba = b.attrs || {};
+            const keys = new Set([...Object.keys(aa), ...Object.keys(ba)]);
+            for (const k of keys) {
+                if (k === 'w:val' && ka.length === 0 && kb.length === 0) {
+                    if (toggleForm(aa[k]) !== toggleForm(ba[k])) return false;
+                } else if (aa[k] !== ba[k]) return false;
+            }
+            if (ka.length !== kb.length) return false;
+            for (let i = 0; i < ka.length; i++) if (!sameElement(ka[i], kb[i])) return false;
+            return true;
+        }
+
+        /**
+         * Type a property bag's `_extras` losslessly: each element is typed
+         * alone (`typeBag({ _extras: [el] })`), written back
+         * (`untypeBag(probe)._extras`) and kept typed only when that gives
+         * the same element and its fields are not set yet; any other
+         * element (a shape the typing does not keep whole, an empty one, a
+         * name the bag holds twice, unless every occurrence types into an
+         * array) stays in `_extras` as read. Array fields of
+         * repeated elements are concatenated, object fields merged when
+         * their keys are new (a group of elements typed into one object; a
+         * `_` side table always). Mutates and returns `bag`.
+         */
+        function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+        function hydrateLossless(bag, typeBag, untypeBag) {
+            if (!bag || !Array.isArray(bag._extras)) return bag;
+            const count = new Map();
+            for (const c of bag._extras) if (c && c.type === 'element') count.set(c.name, (count.get(c.name) || 0) + 1);
+            // First every element's verdict: its probe, or null (kept as read).
+            // The keys an object field already holds (the bag's own, then
+            // the probes kept so far): a group's field merges only when
+            // its keys are new.
+            const claimed = new Map();
+            const keysOf = (k) => {
+                if (!claimed.has(k)) claimed.set(k, new Set(isPlain(bag[k]) ? Object.keys(bag[k]) : []));
+                return claimed.get(k);
+            };
+            const verdicts = bag._extras.map((c) => {
+                if (!c || c.type !== 'element') return null;
+                const probe = typeBag({ _extras: [c] }) || {};
+                const fields = Object.keys(probe).filter(k => k !== '_extras');
+                const repeated = count.get(c.name) > 1;
+                // A name the bag holds twice is typed only into arrays (a repeated list).
+                if (repeated && !fields.every(k => Array.isArray(probe[k]))) return null;
+                const merges = (k) => (Array.isArray(probe[k]) && (bag[k] === undefined || Array.isArray(bag[k])))
+                    || (isPlain(probe[k]) && (bag[k] === undefined || isPlain(bag[k]))
+                        && (k[0] === '_' || Object.keys(probe[k]).every(s => !keysOf(k).has(s))));
+                const taken = (k) => bag[k] !== undefined || claimed.has(k);
+                const clash = fields.some(k => taken(k) && !merges(k));
+                if (fields.length === 0 || (probe._extras || []).length > 0 || clash) return null;
+                const back = (untypeBag({ ...probe }) || {})._extras || [];
+                if (back.length !== 1 || !sameElement(back[0], c)) return null;
+                for (const k of fields) {
+                    const keys = keysOf(k);
+                    if (isPlain(probe[k])) for (const s of Object.keys(probe[k])) keys.add(s);
+                }
+                return { name: c.name, probe, fields };
+            });
+            // A repeated name is typed all or nothing, so its occurrences keep their order.
+            const refused = new Set();
+            bag._extras.forEach((c, i) => {
+                if (c && c.type === 'element' && count.get(c.name) > 1 && verdicts[i] === null) refused.add(c.name);
+            });
+            const remaining = [];
+            bag._extras.forEach((c, i) => {
+                const v = verdicts[i];
+                if (v === null || refused.has(v.name)) { remaining.push(c); return; }
+                for (const k of v.fields) {
+                    if (Array.isArray(v.probe[k])) bag[k] = (Array.isArray(bag[k]) ? bag[k] : []).concat(v.probe[k]);
+                    else if (isPlain(bag[k])) bag[k] = { ...bag[k], ...v.probe[k] };
+                    else bag[k] = v.probe[k];
+                }
+            });
+            if (remaining.length) bag._extras = remaining;
+            else delete bag._extras;
+            return bag;
+        }
+
         // --- Helpers for w:val-bearing elements ---
         function valOf(el) { return el ? el.attrs['w:val'] : undefined; }
         function elVal(name, val) { return xml.el(name, { 'w:val': String(val) }); }
@@ -578,7 +675,8 @@ export const docxProperties = {
             parseParagraphProperties, renderParagraphProperties,
             parseTableProperties, renderTableProperties,
             readToggle, writeToggle, valOf, elVal,
-            sequence, orderBySequence
+            sequence, orderBySequence,
+            sameElement, hydrateLossless
         };
     }
 };

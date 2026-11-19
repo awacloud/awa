@@ -104,6 +104,60 @@ export const tableCff = {
             'Bold', 'Book', 'Light', 'Medium', 'Regular', 'Roman', 'Semibold'
         ]);
 
+        // The predefined charsets past ISOAdobe (CFF specification,
+        // Appendix C), as SIDs.
+        const EXPERT_CHARSET = Object.freeze([
+            0, 1, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 13, 14, 15, 99, 239, 240, 241, 242,
+            243, 244, 245, 246, 247, 248, 27, 28, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260,
+            261, 262, 263, 264, 265, 266, 109, 110, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278,
+            279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298,
+            299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318,
+            158, 155, 163, 319, 320, 321, 322, 323, 324, 325, 326, 150, 164, 169, 327, 328, 329, 330, 331, 332,
+            333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350, 351, 352,
+            353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372,
+            373, 374, 375, 376, 377, 378
+        ]);
+        const EXPERT_SUBSET_CHARSET = Object.freeze([
+            0, 1, 231, 232, 235, 236, 237, 238, 13, 14, 15, 99, 239, 240, 241, 242, 243, 244, 245, 246,
+            247, 248, 27, 28, 249, 250, 251, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265,
+            266, 109, 110, 267, 268, 269, 270, 272, 300, 301, 302, 305, 314, 315, 158, 155, 163, 320, 321, 322,
+            323, 324, 325, 326, 150, 164, 169, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339,
+            340, 341, 342, 343, 344, 345, 346
+        ]);
+        // The predefined encodings (Appendix B): code to SID, 0 an empty
+        // slot. The Expert table is pdf.js 4.10.38's ExpertEncoding
+        // (src/core/encodings.js) through the standard strings.
+        const STANDARD_ENCODING = Object.freeze([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
+            9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+            29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+            49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68,
+            69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
+            89, 90, 91, 92, 93, 94, 95, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 0, 111, 112, 113,
+            114, 0, 115, 116, 117, 118, 119, 120, 121, 122, 0, 123, 0, 124, 125, 126, 127, 128, 129, 130,
+            131, 0, 132, 133, 0, 134, 135, 136, 137, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 138, 0, 139, 0, 0, 0, 0, 140, 141, 142, 143, 0, 0, 0, 0,
+            0, 144, 0, 0, 0, 145, 0, 0, 146, 147, 148, 149, 0, 0, 0, 0
+        ]);
+        const EXPERT_ENCODING = Object.freeze([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 229, 230, 0, 231, 232, 233, 234,
+            235, 236, 237, 238, 13, 14, 15, 99, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 27, 28,
+            249, 250, 251, 252, 0, 253, 254, 255, 256, 257, 0, 0, 0, 258, 0, 0, 259, 260, 261, 262,
+            0, 0, 263, 264, 265, 0, 266, 109, 110, 267, 268, 269, 0, 270, 271, 272, 273, 274, 275, 276,
+            277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296,
+            297, 298, 299, 300, 301, 302, 303, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 304, 305, 306, 0, 0, 307, 308, 309, 310, 311, 0, 312, 0, 0, 313, 0, 0, 314, 315,
+            0, 0, 316, 317, 318, 0, 0, 0, 158, 155, 163, 319, 320, 321, 322, 323, 324, 325, 0, 0,
+            326, 150, 164, 169, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342,
+            343, 344, 345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362,
+            363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376, 377, 378
+        ]);
+
         function bytesToAscii(u8) {
             let s = ''; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
             return s;
@@ -148,6 +202,10 @@ export const tableCff = {
                 // Malformed data gives null, never a throw.
                 font.charset = readCharset(bytes, topDict.get(15), font.charStringsIndex ? font.charStringsIndex.count : 0);
                 font.glyphNames = font.charset && !topDict.has(0x0C1E) ? glyphNamesOf(font.charset, stringIndex) : null;
+                // The built-in encoding of a name-keyed font: 256 names.
+                const enc = topDict.has(0x0C1E) ? null : readEncoding(bytes, topDict.get(16), font.glyphNames, stringIndex);
+                font.encoding = enc ? enc.names : null;
+                font.encodingKind = enc ? enc.kind : null;
                 // CID-keyed font: per-glyph Font DICTs (FDArray) and their
                 // selector (FDSelect). Malformed data gives null, never a throw.
                 font.fdArray = readFdArray(bytes, topDict.get(0x0C24));
@@ -163,9 +221,9 @@ export const tableCff = {
         /**
          * The charset (§13): the SID — CID in a CID-keyed font — of every
          * glyph, glyph 0 being 0; formats 0, 1 and 2 and the predefined
-         * ISOAdobe charset (offset 0, also when the operator is absent). The
-         * predefined Expert charsets (1, 2), malformed or out-of-range data
-         * give null.
+         * ISOAdobe charset (offset 0, also when the operator is absent) and
+         * the predefined Expert (1) and ExpertSubset (2) charsets. Malformed
+         * or out-of-range data give null.
          */
         function readCharset(bytes, op, nGlyphs) {
             if (nGlyphs <= 0) return null;
@@ -173,6 +231,11 @@ export const tableCff = {
             if (off === 0) {
                 if (nGlyphs > 229) return null; // ISOAdobe holds SIDs 0..228
                 return Uint16Array.from({ length: nGlyphs }, (_, gid) => gid);
+            }
+            if (off === 1 || off === 2) {
+                const set = off === 1 ? EXPERT_CHARSET : EXPERT_SUBSET_CHARSET;
+                if (nGlyphs > set.length) return null;
+                return Uint16Array.from(set.slice(0, nGlyphs));
             }
             if (off < 3 || off >= bytes.length) return null;
             const u8 = (at) => (at < bytes.length ? bytes[at] : -1);
@@ -198,6 +261,64 @@ export const tableCff = {
                 for (let k = 0; k <= nLeft && gid < nGlyphs; k++) out[gid++] = first + k;
             }
             return out;
+        }
+
+        /** The string a SID names, or null. */
+        function sidName(sid, stringIndex) {
+            if (sid < CFF_STANDARD_STRINGS.length) return CFF_STANDARD_STRINGS[sid];
+            const k = sid - CFF_STANDARD_STRINGS.length;
+            return k < stringIndex.count ? bytesToAscii(stringIndex.items[k]) : null;
+        }
+
+        /**
+         * The Encoding (§12) of a name-keyed font: `{ kind, names }`, `names`
+         * 256 glyph names (`null` an empty slot). Offset 0 (or no operator)
+         * is the predefined Standard encoding, 1 the Expert one; else
+         * formats 0 and 1 map codes to the glyphs from glyph 1 on, and the
+         * supplements (the format's high bit) a code to a SID's string.
+         * Malformed data gives null.
+         */
+        function readEncoding(bytes, op, glyphNames, stringIndex) {
+            const off = op && op.length === 1 ? op[0] : 0;
+            const names = new Array(256).fill(null);
+            if (off === 0 || off === 1) {
+                const table = off === 0 ? STANDARD_ENCODING : EXPERT_ENCODING;
+                for (let c = 0; c < 256; c++) names[c] = table[c] ? CFF_STANDARD_STRINGS[table[c]] : null;
+                return { kind: off === 0 ? 'standard' : 'expert', names };
+            }
+            if (off < 0 || off >= bytes.length) return null;
+            const u8 = (at) => (at < bytes.length ? bytes[at] : -1);
+            const nameOf = (gid) => (glyphNames && gid < glyphNames.length ? glyphNames[gid] : null);
+            const fmt = bytes[off];
+            let p = off + 1;
+            if ((fmt & 0x7F) === 0) {
+                const n = u8(p++);
+                if (n < 0) return null;
+                for (let gid = 1; gid <= n; gid++) {
+                    const code = u8(p++);
+                    if (code < 0) return null;
+                    if (code !== 0) names[code] = nameOf(gid);
+                }
+            } else if ((fmt & 0x7F) === 1) {
+                const n = u8(p++);
+                if (n < 0) return null;
+                let gid = 1;
+                for (let i = 0; i < n; i++, p += 2) {
+                    const first = u8(p), left = u8(p + 1);
+                    if (first < 0 || left < 0) return null;
+                    for (let k = 0; k <= left; k++, gid++) if (first + k < 256) names[first + k] = nameOf(gid);
+                }
+            } else return null;
+            if (fmt & 0x80) {
+                const n = u8(p++);
+                if (n < 0) return null;
+                for (let i = 0; i < n; i++, p += 3) {
+                    const code = u8(p), sid = p + 2 < bytes.length ? (bytes[p + 1] << 8) | bytes[p + 2] : -1;
+                    if (code < 0 || sid < 0) return null;
+                    names[code] = sidName(sid, stringIndex);
+                }
+            }
+            return { kind: 'custom', names };
         }
 
         /** The glyph names of a name-keyed charset, or null when a SID names no string. */

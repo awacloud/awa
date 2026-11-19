@@ -39,7 +39,7 @@ Full index: [`api/README.md`](./api/README.md) — every sub-domain, its modules
 | [Embedded (§7.11)](./api/embedded/README.md) | `pdfFileSpec`, `pdfEmbeddedFile`, `pdfCollection` |
 | [Linearization (Annex F)](./api/linearization/README.md) | `pdfLinearization` |
 | [Metadata (§14.3)](./api/metadata/README.md) | `pdfInfo`, `pdfXmp` |
-| [Prepress (§14.11)](./api/prepress/README.md) | `pdfOutputIntent`, `pdfPageBoundary` |
+| [Prepress (§14.11)](./api/prepress/README.md) | `pdfOutputIntent`, `pdfPageBoundary`, `pdfSrgbIcc` |
 | [Associated Files (PDF 2.0)](./api/associatedFiles/README.md) | `pdfAssociatedFiles` |
 | [Extras](./api/extra/README.md) | 32 opt-in modules (P0/P1/P2/P3/legacy) |
 | [Bundles](./api/bundles/README.md) | `pdf-large`, `pdf-full`, `pdf-legacy` |
@@ -49,5 +49,5 @@ Full index: [`api/README.md`](./api/README.md) — every sub-domain, its modules
 
 - [README package](../README.md)
 - [CHANGELOG](../CHANGELOG.md)
-- [`@awacloud/fw` doc format spec](https://github.com/awacloud/awa/blob/@awacloud/pdf@1.2.0/packages/front/fw/docs/guide/doc-format.md)
-- [`@awacloud/ooxml`](https://github.com/awacloud/awa/blob/@awacloud/pdf@1.2.0/packages/front/office/ooxml/docs/README.md) — sibling factory + bundles archetype
+- [`@awacloud/fw` doc format spec](https://github.com/awacloud/awa/blob/@awacloud/pdf@2.0.0/packages/front/fw/docs/guide/doc-format.md)
+- [`@awacloud/ooxml`](https://github.com/awacloud/awa/blob/@awacloud/pdf@2.0.0/packages/front/office/ooxml/docs/README.md) — sibling factory + bundles archetype

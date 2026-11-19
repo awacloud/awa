@@ -108,3 +108,12 @@ describe('pdfDocumentParts module', () => {
         expect(typeof m.walkDParts).toBe('function');
     });
 });
+
+describe('typeDPart — /AF (T1)', () => {
+    test('the associated files are copied, not left in _extras', () => {
+        const af = obj.array([obj.ref(9, 0)]);
+        const r = typeDPart(obj.dict({ Type: obj.name('DPart'), Parent: obj.ref(2, 0), AF: af }));
+        expect(r.af).toBe(af);
+        expect(r._extras.AF).toBeUndefined();
+    });
+});

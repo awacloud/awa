@@ -1,0 +1,68 @@
+{
+  "id": "root",
+  "label": "Root",
+  "children": [
+    {
+      "id": "branch-a",
+      "label": "Branch A",
+      "children": [
+        { "id": "leaf-a1", "label": "Leaf A1" },
+        {
+          "id": "leaf-a2",
+          "label": "Leaf A2",
+          "info": "A leaf with information."
+        },
+        { "id": "leaf-a3", "label": "Leaf A3" }
+      ],
+      "action": "#branch-a",
+      "info": "The first branch, with three leaves."
+    },
+    {
+      "id": "branch-b",
+      "label": "Branch B",
+      "children": [
+        { "id": "leaf-b1", "label": "Leaf B1" },
+        { "id": "leaf-b2", "label": "Leaf B2" },
+        { "id": "leaf-b3", "label": "Leaf B3" }
+      ]
+    },
+    {
+      "id": "branch-c",
+      "label": "Branch C",
+      "children": [
+        { "id": "leaf-c1", "label": "Leaf C1" },
+        { "id": "leaf-c2", "label": "Leaf C2" },
+        { "id": "leaf-c3", "label": "Leaf C3" }
+      ],
+      "info": "A branch with information only."
+    },
+    {
+      "id": "branch-d",
+      "label": "Branch D",
+      "children": [
+        { "id": "leaf-d1", "label": "Leaf D1" },
+        { "id": "leaf-d2", "label": "Leaf D2" },
+        { "id": "leaf-d3", "label": "Leaf D3" }
+      ]
+    },
+    {
+      "id": "branch-e",
+      "label": "Branch E",
+      "children": [
+        { "id": "leaf-e1", "label": "Leaf E1" },
+        { "id": "leaf-e2", "label": "Leaf E2" },
+        { "id": "leaf-e3", "label": "Leaf E3" }
+      ],
+      "action": "#branch-e"
+    },
+    {
+      "id": "branch-f",
+      "label": "Branch F",
+      "children": [
+        { "id": "leaf-f1", "label": "Leaf F1" },
+        { "id": "leaf-f2", "label": "Leaf F2" },
+        { "id": "leaf-f3", "label": "Leaf F3" }
+      ]
+    }
+  ]
+}

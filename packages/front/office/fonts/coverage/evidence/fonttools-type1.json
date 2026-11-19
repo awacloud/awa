@@ -1,0 +1,1728 @@
+{
+  "schema": "office-scorecard-evidence/v1",
+  "suite": {
+    "id": "fonttools-type1",
+    "version": "fonttools@4.66.1",
+    "source": "https://github.com/fonttools/fonttools/tree/4.66.1"
+  },
+  "oracle": {
+    "image": "awa-oracle-fonttools:4.66.1",
+    "imageId": "sha256:cffe1d79143a91d446bb3ce3f673d8c407e176f92fd0c08df9dd7a25fb774c4e",
+    "version": "fonttools@4.66.1"
+  },
+  "criterion": "per Type 1 program, fontTools 4.66.1 (t1Lib.T1Font, every glyph drawn through DecomposingRecordingPen) and fonts fontType1.readType1 give the same glyph names, and per glyph the same advance and the same moveTo / lineTo / curveTo / closePath commands at 1/1000 unit (endPath, an open contour's end, is no command), and the same 256 built-in encoding slots (.notdef an empty slot); a program fontTools cannot read is skipped with its error; the programs: every /FontFile of the pinned pypdf-benchmarks and wild PDFs (decoded by the pdf package, deduplicated by SHA-256; the oracle reads the cleartext, one line feed, the eexec section and the 512 zeros with cleartomark, fontType1 the program as embedded) and the fetched fonttools Tests/t1Lib PFA and PFB files; documents: 285 (285 written, 0 round trips)",
+  "documents": [
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--676.t1",
+      "kind": "written",
+      "sha256": "0979555244100ed4e66ee1e0ed7ecc4a41ca8063672b3b68cea057d3ee91f982",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--679.t1",
+      "kind": "written",
+      "sha256": "cc2de91f1f6890be56bf9742b92ac61d793ad07fc5351776b736f79b99c78c5f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--681.t1",
+      "kind": "written",
+      "sha256": "184711423edd26d717afe23f6bee776dff0cfec389e584b3d4af771e64278add",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--683.t1",
+      "kind": "written",
+      "sha256": "eddf08bbdc7006d137427e4d96e0ca20728ee5d3a029898ef5cd1b957c8e9d34",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--685.t1",
+      "kind": "written",
+      "sha256": "8664361eb53a8d751c4f12eaa6112b038c3df2b7c5f3f15f9ca4866cf1fc31bc",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--687.t1",
+      "kind": "written",
+      "sha256": "5964515089bce9cbb45506ace71489a446628f4c1538761a5ffa591d565f1066",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--689.t1",
+      "kind": "written",
+      "sha256": "4193ae83c8fbf86970f808f1fc65bcfb62bd126deb67ed45f755e5aecde8ff49",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--691.t1",
+      "kind": "written",
+      "sha256": "5495c45f18fa353d742256c5454a213e4dbacaff7dc090ab2a88f4075cd5f047",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--693.t1",
+      "kind": "written",
+      "sha256": "f766a68c3539bb3391c27a51af799cf7674b2a83d2ee7bbc0b80907ca417ea7b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--695.t1",
+      "kind": "written",
+      "sha256": "fca067b34f471863f020a9ebb862124ca5dabb9229eb82edb4e8f117f9e768e1",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--697.t1",
+      "kind": "written",
+      "sha256": "11b85a80cf1cac78703e94af3f744a42f421688d5784ff7b48d67c4389d0a1ae",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--699.t1",
+      "kind": "written",
+      "sha256": "86a3cc5a79331ada6d8b9d28ce870ac5425b7e96b2e6483e5722ee6900b50445",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--701.t1",
+      "kind": "written",
+      "sha256": "a9c36e30f006cf21c98c2fdfc9cc187583e56c1a039ba4cf4c5c013c4fa322f0",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--703.t1",
+      "kind": "written",
+      "sha256": "4680b059301920e4decd8f2fcf83b21e3df3aa560ae49f42d05faf44e6b6b831",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--705.t1",
+      "kind": "written",
+      "sha256": "46b6ec657708700b07c7df3f77fd03522346a90b846d82648dd359f7d3e70a3e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--707.t1",
+      "kind": "written",
+      "sha256": "16761cce4cda91cebbc32e21c35a538c05344856eefe7bb7c426e7a57b063394",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--709.t1",
+      "kind": "written",
+      "sha256": "fe51fc22c7164a02454836693f5cef98eb7bc46ef8473157d3ae75a879f62423",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--711.t1",
+      "kind": "written",
+      "sha256": "9dc20295a294819e15b9c8150599bd248e2436e7319738121e752ea381bdec38",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--713.t1",
+      "kind": "written",
+      "sha256": "09a786243544f62dfed0100820add2ebe815258c3538cc75719947f6462f6fd0",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--715.t1",
+      "kind": "written",
+      "sha256": "16452f737b0a537b723dcd765180b8a8c6b5e78e939fd35911b20a070442c1ee",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--717.t1",
+      "kind": "written",
+      "sha256": "66d83a8d4c57c5e7d728051ed95ef21d54f2670af3b63c75e8f8b17be01badc8",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--719.t1",
+      "kind": "written",
+      "sha256": "64fdde7b570adda3d64a29f75418a69879843bbe0bbd310cd60999b75b797f27",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--721.t1",
+      "kind": "written",
+      "sha256": "3fefdc52e48219c263a1a473def2be3837e7ab6757105ef647f4f5bbf72fbf01",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--723.t1",
+      "kind": "written",
+      "sha256": "8745ed2fcd959ca28a83df2e7acdb5099055908bd3282e9320bbc93ebe955940",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--725.t1",
+      "kind": "written",
+      "sha256": "ddf80c4414c85f6e402e07a13a41b779ec426805ab69d47be8bb3f6015f84648",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--727.t1",
+      "kind": "written",
+      "sha256": "7e2564b3e0b116db866de5c5cdb22a3d82303dc1ce04fa8612098cbe867c3662",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--729.t1",
+      "kind": "written",
+      "sha256": "b32b90be9e7a9a5c321a7bc80b7daf34254854dbeee34e0a35b7e6441c57bc0e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00021.pdf--731.t1",
+      "kind": "written",
+      "sha256": "48540a117fe76a0334d0941b9844e8f79bd053f13de5e28d2cfd858f0fb70edb",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--709.t1",
+      "kind": "written",
+      "sha256": "ed3ba99f2a2a10bf52786e3411fe24c8790520a22298f59082dd0b8401628899",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--711.t1",
+      "kind": "written",
+      "sha256": "a12bac3a5b6b992cdc9cc807314cd4d6026f28f84d833a508096a45d7ae68ea8",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--713.t1",
+      "kind": "written",
+      "sha256": "4a77bff8a44d9648e8348b7d1e787913ed151cb9cc92676ce1a6358c36990e4f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--715.t1",
+      "kind": "written",
+      "sha256": "2442912085c3e4a8663435872ca2103f8743d7ceb567fbb8fe2084f8da84f28b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--717.t1",
+      "kind": "written",
+      "sha256": "ecea1887d5cc463faa47a6808ad8720b8e566debc02369f6ffa009da233302b7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--719.t1",
+      "kind": "written",
+      "sha256": "ff5d92debaaa03df8776f5d906fead88eec751f12dfb142bbe13440beb7bd8ea",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--721.t1",
+      "kind": "written",
+      "sha256": "8eb37253907b7ed69c9425590fee01ed06e77c12f700a3f6c95a865a9dde1ec6",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--723.t1",
+      "kind": "written",
+      "sha256": "b7c0f61f2f43c4562311f1213e94c63015a20b98175c7ce8c9821edd98340460",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--725.t1",
+      "kind": "written",
+      "sha256": "f0bc8269f0c3a7c95938ff8909ef98f98abd252d72abc9a33985c0238bf1c20e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--727.t1",
+      "kind": "written",
+      "sha256": "524a445b85af557ffffdb56c35de3d39c0c032cda6fc0cd4d8027cb2c888e41d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--729.t1",
+      "kind": "written",
+      "sha256": "80ad2a63acd7c1ad39779776d49ddbdc40e55c354a793ca1685d31057428bf06",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--731.t1",
+      "kind": "written",
+      "sha256": "e8069dc0e6c6ae02eb3d7a9b9fdcd0dc054539454c7d7925741141d3d877e270",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00069.pdf--733.t1",
+      "kind": "written",
+      "sha256": "1fbe421f438b98127f8b0482561f394dbb1cd94e5b60f0ad8a4c39401f8e9c9c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1063.t1",
+      "kind": "written",
+      "sha256": "5bf5047204df80a57d3f310ddb12754fb5635888f150dd3ebd2f2bb3dc2149c8",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1065.t1",
+      "kind": "written",
+      "sha256": "227f771d3cc5958617def07d7cde7ef79ae86e253e2e76fe2b1ecca1669b117c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1067.t1",
+      "kind": "written",
+      "sha256": "430d2a27a60e8853c08db931bac66c63bddc16fdee04b8d144243a9a6906d4ec",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1069.t1",
+      "kind": "written",
+      "sha256": "f64e9800c59e35ec051c8fa3b1d52c13caf603045eec8fa84be684598bf0ea6a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1071.t1",
+      "kind": "written",
+      "sha256": "3e504383e44a8e0b0ab65f55c787b128fdfd14fe395a83599f75e8338402c142",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1073.t1",
+      "kind": "written",
+      "sha256": "a00cbcc19e30b31323cd84b30adafad3be018303a057c908254142c7ebdc61bc",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1075.t1",
+      "kind": "written",
+      "sha256": "7f17688b6b12df7b814c7ea00774ccbfa3aedd18abc0266e047083aa0cdf424d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1077.t1",
+      "kind": "written",
+      "sha256": "3b0e319844c7f9bdbcb0bb67a985eb44d6947f37cc8c2ea12ee79b40ab259987",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1079.t1",
+      "kind": "written",
+      "sha256": "edfc30813cc64474821245069b13c9f99d6005085b719d33078cf597f596362a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1081.t1",
+      "kind": "written",
+      "sha256": "e14d6ed4a0592a521bfee925bf342cdecad8d603543336cd263decb93ebc9f46",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1083.t1",
+      "kind": "written",
+      "sha256": "e5acdf7590752e1ca31ed061970aced83e91f7958c9928111e600db0029ce983",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1085.t1",
+      "kind": "written",
+      "sha256": "10cb222a988b6af5baac1fd3a34184a9a1ad8e46913758d4762f6b02dca0c6ff",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1088.t1",
+      "kind": "written",
+      "sha256": "ee6d3135e96fdea1f97032467f09472d6987640c6f5bb2ad4a93389ec38a18af",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1090.t1",
+      "kind": "written",
+      "sha256": "7748cc93086fb1c93c48b4663d69abe81dfacdaaa3b661120d5c66875f27ef96",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1092.t1",
+      "kind": "written",
+      "sha256": "70a915b7a57d6fe71efd15639f977c11dfd8f9a592a036edd705b982dd808abc",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1094.t1",
+      "kind": "written",
+      "sha256": "cc94f0ecf5d9170888fae51f14ac0b4b78517d5decfbe6ebdce23c02c41bf6e4",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1096.t1",
+      "kind": "written",
+      "sha256": "aaf6def81500b793777608be4ae4bb29fac1f7825d71e4f9bce251ab4c7cb443",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1098.t1",
+      "kind": "written",
+      "sha256": "a9bc4a6a8244cde2b62d597c17d3b9e0596aecf1cf767e603e6c483a3ca2779b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1100.t1",
+      "kind": "written",
+      "sha256": "c25811949a75450a39aaa2c3c7bd33bde350a7a815b5a9281fa3383ad185bb67",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00022.pdf--1102.t1",
+      "kind": "written",
+      "sha256": "8a8e32276fc645dd794f51bf4f23cdd3a45d98d96a51571730776a43d53a436a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--318.t1",
+      "kind": "written",
+      "sha256": "dddaa77086659593aa75625f94297312201b80e9c89d6f36d03d71ef37588e93",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--320.t1",
+      "kind": "written",
+      "sha256": "873043edc3567ff547e7ac3e0dee2abf4d1f75f05d7bbca57429c3ef7cd12050",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--322.t1",
+      "kind": "written",
+      "sha256": "829faa09beafcae807d5eb09f3e9e57b4092121fbde2756af0a6f02b6370df2e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--324.t1",
+      "kind": "written",
+      "sha256": "e8d2531a86e6e6409a3189e0b635fb506b425fc3b82e9258dd156e292b297632",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--326.t1",
+      "kind": "written",
+      "sha256": "062085c843ad7bf494817aadf55d56fff527088716558e6df2527fa185022d3c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--328.t1",
+      "kind": "written",
+      "sha256": "fa118bbd6d6e3b6aca13ba0ec084b68af6ee933e6eb66f47b1b3530c8ad3dc6e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--330.t1",
+      "kind": "written",
+      "sha256": "663465cda6b13bb73028b88a750b4823b9d683830cc374e4f4b2c650d6dc50ff",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--332.t1",
+      "kind": "written",
+      "sha256": "e3c78f97d11d374d7d1a4b589106f5cbde4c583e6a233903d232e6e749ca5767",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--334.t1",
+      "kind": "written",
+      "sha256": "cdd52221641ddada0b0e6353b72697bfe1e9e0e39d8d55eddca93a850bd7c67b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--336.t1",
+      "kind": "written",
+      "sha256": "74d01fca70ac61c9a51310148002ac8ddf7dfa83e5bbfa3252a1f74f805e7426",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--338.t1",
+      "kind": "written",
+      "sha256": "9dff507c523127857b739482eccdc86899098d888d004d5be8b2249fe4431498",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--340.t1",
+      "kind": "written",
+      "sha256": "99f50225878d2e3737ed8470ec264ae4d948822c30c75aff2d96c64f5947639e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--342.t1",
+      "kind": "written",
+      "sha256": "341579a01fbe6ebf0bc87e33b8cdb03e390405659782c328da5ad96823efb5ca",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--344.t1",
+      "kind": "written",
+      "sha256": "55ca24667070cb37abde9618c2392d6ef0eefba3b4f2451d5971c0a99c122180",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--346.t1",
+      "kind": "written",
+      "sha256": "5b86f5608360756bec40536c54d8815ca217544694116d7049f25e6804706034",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1601.03642.pdf--348.t1",
+      "kind": "written",
+      "sha256": "557fa0ac6bde6a816a74b92e1843e59210d24d7443b5e649ea37610be56131ae",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--903.t1",
+      "kind": "written",
+      "sha256": "804b889535ccceb9183f2adadd503114ecae3b58fb0378641139e432acaa9a98",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--905.t1",
+      "kind": "written",
+      "sha256": "d19e25edd03539d818cbffb5ea749cd0f43aba5a183d1e3227ef5164c2ce7f9e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--907.t1",
+      "kind": "written",
+      "sha256": "d753ad54c46be916e8584e7e19fc31df59a148e177658169eb14cd9f63c3995f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--909.t1",
+      "kind": "written",
+      "sha256": "d2b0afec3c73718680cf49f834afc8a8945edaa4b247955e560c111d12182531",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--911.t1",
+      "kind": "written",
+      "sha256": "81112d77f5bf9293ec2587ea0d1cdb44fca6d068b99796acb9689fcbb3c41a30",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--913.t1",
+      "kind": "written",
+      "sha256": "d9cfea055a55642ee5e7dab228bb317ae788aa805d354ef3b55659e54c0fc446",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--915.t1",
+      "kind": "written",
+      "sha256": "2b5d07343c299235f6fa9e0e67fc17b8faeb9f5c9a53f4a63b1474fa79c64322",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--917.t1",
+      "kind": "written",
+      "sha256": "966f81fa4e9d0056a00c6fb6fece3ba662b5ccc413faba800dc3eecebbf36d04",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--919.t1",
+      "kind": "written",
+      "sha256": "b27903e4c5e10561d85cad887d6f6925f49e85b815a3affd0e4a0aab2d990b24",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--921.t1",
+      "kind": "written",
+      "sha256": "15be4fb9219cd24ee781657ffc9abdd3127ffc55ed322daf9e386d367ec53330",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--923.t1",
+      "kind": "written",
+      "sha256": "9281970259789c4ae35fabe83c17ca3488cd0dd496af302cf102d44a2196cac7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--927.t1",
+      "kind": "written",
+      "sha256": "840074d632ac87a9aaf02e04d8cec409b3fd03abe1edf6f55c161902a7387390",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--929.t1",
+      "kind": "written",
+      "sha256": "5833d5b962b4681e91c9bdc9140b3cf79f4335a97425ab70c911050b35a891f3",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--931.t1",
+      "kind": "written",
+      "sha256": "33fd5c4cd3569ef67d6e8aac624ce2e584d464e59f92a0bcc304df8641edfcb2",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--933.t1",
+      "kind": "written",
+      "sha256": "0907aab7e98a23f4c9ed5edb3f5e8210fa27bb2d2cf40bd0646f44926631a902",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--935.t1",
+      "kind": "written",
+      "sha256": "df02f594cb4bf7035afe3064b94a66d7e823b3386b2ba6780fdf0ffa0451c02c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--937.t1",
+      "kind": "written",
+      "sha256": "7a5e73c30e9ecd910944a6402fc5a06f61cd17f6cc19adabdfba49dd64796b1c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--941.t1",
+      "kind": "written",
+      "sha256": "1ed0b9409f1547dee887758ee273a4e41f2b925798c716a211f4e46d0f9db7a4",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--944.t1",
+      "kind": "written",
+      "sha256": "1b257e6f3127f67beff10f4c8e9f916396cc2c52dd0c3fcb0c49a3620cee270e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--948.t1",
+      "kind": "written",
+      "sha256": "c41f3c0c19c19ea649e38c9979c33439214c94b9f9922b96d3917e656e9355be",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1602.06541.pdf--950.t1",
+      "kind": "written",
+      "sha256": "10810e04b4e28444a982fe65617bf53e5c93129365340384980771d45032fd34",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--463.t1",
+      "kind": "written",
+      "sha256": "da001ea71e9fdbf14ffba871195f429a32efcdc9972a062129ea4ed0d9c02713",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--465.t1",
+      "kind": "written",
+      "sha256": "bec956e9eaabc9cbccb5e86883b2ca99967f2ea29808dbfed2bfd2394d232fd1",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--467.t1",
+      "kind": "written",
+      "sha256": "1c91c4676ed98285a9ccf2696aa223f73a82d498af8340f71b5ae119c6424d84",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--469.t1",
+      "kind": "written",
+      "sha256": "63093372d1530e88c9cfea419b9fe79f975dabecaf1b30ee71531b16094e50ee",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--471.t1",
+      "kind": "written",
+      "sha256": "d780f4aeff1b199b2c5515d2c00ded4783c8cc4b37258755909912bd347323f0",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--473.t1",
+      "kind": "written",
+      "sha256": "729ab4df08ed28f5efcc3aa8c86f927d4ab4770cd5637348a079efd841191307",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--475.t1",
+      "kind": "written",
+      "sha256": "11b10f34d8f7c0cf0e4806b3f4b59db2be7094fc25ced126c5994290aef80542",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--477.t1",
+      "kind": "written",
+      "sha256": "484d8fb952c9048116d7d7bd188cc7a03390c5761152e2cc7a88dd102bd25864",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--479.t1",
+      "kind": "written",
+      "sha256": "c7cc7d399cc49c630377cc305673187443c6480bf8d84dcbd08f659c4d98e19b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--481.t1",
+      "kind": "written",
+      "sha256": "c5c7a3aa8e36d1deccf14cb363ce9e666d1377fc5efb8ad05f4c66316bb319e8",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--483.t1",
+      "kind": "written",
+      "sha256": "f056a26238d8962f00b6a28fda6ffad04696c0a47c9019252b55681cce41b08c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--485.t1",
+      "kind": "written",
+      "sha256": "c07bb17a404dcaebadd478c9c21df5e8758d584d8cac61827463a9e8599e3c81",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--487.t1",
+      "kind": "written",
+      "sha256": "109a6b76b28798a9113df5d9897401570499bd4c4bd5144fa730916a8ac31072",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--489.t1",
+      "kind": "written",
+      "sha256": "3a5f6583d109ee3072b8a9cb43708e21ed313894a171d430e4d18c2d926a1723",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--491.t1",
+      "kind": "written",
+      "sha256": "1ccb7573922b3b41c8fa2d351ecff601b6d36e10ba2e640ad9aa4a6d3bec5caf",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--493.t1",
+      "kind": "written",
+      "sha256": "d9a2666040515ec497a8910a13664edf180bbd1469d0a43dd7af1f749599d054",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--495.t1",
+      "kind": "written",
+      "sha256": "07cf2bdea10c59fc07791d84e654cc464af7339618350843eb7cffefcdfd98f1",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--497.t1",
+      "kind": "written",
+      "sha256": "31078e92bfb4a7077eca30ec07519ba36e434733c63d28adcfa9866993528cf5",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--499.t1",
+      "kind": "written",
+      "sha256": "2c7152c484e84e580b4a85c29d396f9880d171a614aa3dfb256c97370b274a9d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--501.t1",
+      "kind": "written",
+      "sha256": "af9269aeda70fd80ebf9d9c463245455e0c02410aed249fd9ed4a1c052e21962",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--503.t1",
+      "kind": "written",
+      "sha256": "a3eb591fa0b25b8a18cfc3336b4883e73067288237d7c47580b904e2268c0e31",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--505.t1",
+      "kind": "written",
+      "sha256": "e520703b8806de8c7cd50f1c06da1ad299feea2db72610af13e15df00f8545da",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--507.t1",
+      "kind": "written",
+      "sha256": "84653bd7217fafc67bd7ae6fc32f4a4bc38ddae7360418532ee3648b9bbc9109",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--509.t1",
+      "kind": "written",
+      "sha256": "0d039e6f86a21294abc7a8f75c52fdbb74d4347be17a1d4be736c8f93770845a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--511.t1",
+      "kind": "written",
+      "sha256": "44942a57ae6df120f99a7fb83d742a75d79e5e7706bde23e0cc422db0a9040c7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--513.t1",
+      "kind": "written",
+      "sha256": "e6453003501fed52822a89d4d054004e39225fd72f493a3b90ded53b414da17e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--515.t1",
+      "kind": "written",
+      "sha256": "1cf7b2b417805b7c33504c4f5e9becdeb58fd87260f35a4e3742344b1cfc1347",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--517.t1",
+      "kind": "written",
+      "sha256": "54903befae353bf1b0bd33f2b352db48ae2b02c24e913cc73f9464d9e0933600",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--519.t1",
+      "kind": "written",
+      "sha256": "d6fd507777da7be62452d8a7319629e160ca890295552c5376e3df6bdf407e2d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00037.pdf--521.t1",
+      "kind": "written",
+      "sha256": "2a8107f0768c236399692c0333cbb7381d2759bbee0e6dfe4835dd2ee7f5bd15",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2606.t1",
+      "kind": "written",
+      "sha256": "da3e20c5e9670798bdb6a8ffee2e74e0edc1fd07968a9fde4bcc6206fc042f7c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2608.t1",
+      "kind": "written",
+      "sha256": "16b2b23aa7ec064f57b898e068c2acbdd9082a5a798b14d7ac84c2e65d0d0c90",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2610.t1",
+      "kind": "written",
+      "sha256": "9b5d249d2e34f1648d58b6d764f7f93aed6684eeb006c6d5c09d3ef5843f61c4",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2612.t1",
+      "kind": "written",
+      "sha256": "bad482c259b1b3a8ac86a65dc86707721c4d206ec7e468ce8ecd7b3cdd0415e4",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2614.t1",
+      "kind": "written",
+      "sha256": "9afbe5a2c4aeeae7deb94d45d09a6feaa39d622a33d4983b371ac0ac42a29f88",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2616.t1",
+      "kind": "written",
+      "sha256": "ddadef3719f065a5a19a9ff1da837d7d76923366fd5661acaac14d2a46c3b77d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2618.t1",
+      "kind": "written",
+      "sha256": "6a384b7dc3c2d520a74686f61d3d1524b15d1be838bcbd128f9cbcd5d569567c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2621.t1",
+      "kind": "written",
+      "sha256": "5d54e178aca98e862caf94f67c065b5f311c248070c9964acab057753d5679d9",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2623.t1",
+      "kind": "written",
+      "sha256": "993693e91c4dbfc8910d8f2cc9787c993f70f946b2c34b27adeffd0ce932451b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2625.t1",
+      "kind": "written",
+      "sha256": "f8c3f72cc09d7aebc4d67e6b65194b535fbad786d6d6cf3061c31e3f72ec0be4",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2627.t1",
+      "kind": "written",
+      "sha256": "382f479ffd29b20403650dfc51a34a48955d37c40635fef9ac2e57b512dc9fa1",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2629.t1",
+      "kind": "written",
+      "sha256": "917a8d773d43af4eea3d470b4f754da8dd3ba5de4f2aeefc2a4b02087a915363",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2631.t1",
+      "kind": "written",
+      "sha256": "4d7d3607aa4ed2ede77d247184376570b6100c2234b9f5ba0b314e061cd091ce",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2633.t1",
+      "kind": "written",
+      "sha256": "e85984398f136e1056d94dcf3ee502f05c5f5c0f4d343710a8daef37129892bb",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2635.t1",
+      "kind": "written",
+      "sha256": "fa51e8f1dc942b8d55053882622842955bf2047854b2d4af7de02b95b4d1e324",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2637.t1",
+      "kind": "written",
+      "sha256": "8db30ac2719d739db3c6bc4cb687dd9a5405b30e38e16e9b55d54abaa4b84b7d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2639.t1",
+      "kind": "written",
+      "sha256": "c379b3312d067a73ea5a4951dcc3a684453c1ce6a4268ac7e0ddcda154867bbf",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2641.t1",
+      "kind": "written",
+      "sha256": "ba30b990eb358869a58131e6fbb9a205e090d85ff9b63e43f63bec0de30ceabc",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2643.t1",
+      "kind": "written",
+      "sha256": "d37d9c75883b8d13481869162d099d974476e712944879c5a1ecfae833a66641",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2645.t1",
+      "kind": "written",
+      "sha256": "8f64c6ab443b9836f1513ccb6fe7b50b19053e4a963ed6bd57c347c84a5a5712",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2647.t1",
+      "kind": "written",
+      "sha256": "405078fc7559142c97516b7a5a462386a317e595d6243a38b0bb7a2ca598479a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2649.t1",
+      "kind": "written",
+      "sha256": "74398286dc1ba9bbf9755e2d12c7fcec40f02bd04e31ffb2e088bd4ac37aa050",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2653.t1",
+      "kind": "written",
+      "sha256": "3e5bf25884f0a0d610a5713a1c4d8dd266107eaa071b6cd2473d4860bf78ff1f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2655.t1",
+      "kind": "written",
+      "sha256": "0cdc1a888dca2091beb43bda0a5f1ee4d42cdd8d5f809930ce386fd4def05b98",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2657.t1",
+      "kind": "written",
+      "sha256": "cee1af53084c74ebe58ccf347b69523023bc1ac1e781448a8179021498884a5e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2659.t1",
+      "kind": "written",
+      "sha256": "9a9f3dde875372b2636a6a0c91278427a6c4487a0feb8acb8fc8f4d3bde763ae",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2661.t1",
+      "kind": "written",
+      "sha256": "dc3765aacc4325368547565ce593c7ec305f791d2579018479ebae48cf669992",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2663.t1",
+      "kind": "written",
+      "sha256": "efdaf30ba55dc12d0c7832dd5256aecbb7d77f5d58be935aa48053e24f7f9dcd",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2665.t1",
+      "kind": "written",
+      "sha256": "6e2933cd395b3ad45baf0898d78167aa2de91a3e3b41af428e1465b12679757f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2667.t1",
+      "kind": "written",
+      "sha256": "503577ad0e98ed202869faf657d41a9acdb75dbc35a7d12a224812971fef801e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2669.t1",
+      "kind": "written",
+      "sha256": "b0f04ed48fe825610433ba8e39d3e8cf1e081a80305261ee947520045e72acd5",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2671.t1",
+      "kind": "written",
+      "sha256": "6355bce87b4787215ef6140c74c259e08b47c31a40ba8aa15f527c552c73d79b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2673.t1",
+      "kind": "written",
+      "sha256": "ca658e4be818557c33004bf85fb908fc0a5c5e52639f447daa35d63ef25634d0",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2675.t1",
+      "kind": "written",
+      "sha256": "0afc46951ecea2cd337c0a6045ce792c83bd13406b069b077a46e7e92a759442",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2677.t1",
+      "kind": "written",
+      "sha256": "07a6a823305b04402bb1f6f34cd07c045929739b10b2443416d1bce41b47c99b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2679.t1",
+      "kind": "written",
+      "sha256": "0c4e382afe2525ee796b31d0f6b74e48c2f65daaa7faeebaf39d002def7042dd",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2681.t1",
+      "kind": "written",
+      "sha256": "12fe6523172421486613ba02ddca39cbaf211acee0560b0e32433d553238e77a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2683.t1",
+      "kind": "written",
+      "sha256": "f2c3bf45c2edbddd6bd399fe95f2f26cd2b1be26638dcea79fadebaeb0a78493",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2685.t1",
+      "kind": "written",
+      "sha256": "2e683552b3a3a2520e2132473010741275c0306eee365a48e95960cb81060506",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2687.t1",
+      "kind": "written",
+      "sha256": "5e0f1b26219986ede17c0cac9518e65284f79a69ade89bcf5b2dc64105c7c66d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2689.t1",
+      "kind": "written",
+      "sha256": "a37e729c4af7f9383a176d4cefc0c1e4b6539321589cf0a4e39f907ba4daaadb",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2691.t1",
+      "kind": "written",
+      "sha256": "8d5ce5cadd622b0c8831e0478b93e8a67e437ab283491853a376d2198b11abfa",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2693.t1",
+      "kind": "written",
+      "sha256": "abd0e4ab608452d22b5e699f14bbce7eee9d4bda9371150c9ba0b363e3ef2c25",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2695.t1",
+      "kind": "written",
+      "sha256": "d3d959049c1790c20185f31268c10d56fced122ca1bc2a79c69c01cecaba8669",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2697.t1",
+      "kind": "written",
+      "sha256": "10441ad164f3faeb02d93d65c33e54e6d04a5f3b9094f33da7ff2d481cf46ce3",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2699.t1",
+      "kind": "written",
+      "sha256": "cc415bc336478c3728575db1968db3426e02c2e00b1bcb2045176860e1b1b195",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2701.t1",
+      "kind": "written",
+      "sha256": "3970d2f07e449f871decacc775e04c18eeb33091a67f7f78ce2e01aa59802055",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2703.t1",
+      "kind": "written",
+      "sha256": "02e223320b60a0b6d0a576efad449e8c8da42ca89d0de97df155fc5eed19829c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2705.t1",
+      "kind": "written",
+      "sha256": "c2dbb6a7a16a0e173e7f599c1eae751f33fdfb0d7ffda922c0f44ac2f6ca22e3",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--1707.09725.pdf--2707.t1",
+      "kind": "written",
+      "sha256": "24d39c0ed3be7dc158eddb402a7dd35449a54924ab8eade086ce2cf4a28323d6",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--691.t1",
+      "kind": "written",
+      "sha256": "00a6bfee0efd8f0c28efa4affb932cdbbc79afae6ee2d34963de29fed1431de2",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--693.t1",
+      "kind": "written",
+      "sha256": "f5358ce639c5ca1c75d8410d724ec273a59a4769e1b85e246f7923d0ac218e8f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--695.t1",
+      "kind": "written",
+      "sha256": "b3199c6755eed505a9c75e91dc714563b473a0431b1e7e21c0ae13551f60c513",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--697.t1",
+      "kind": "written",
+      "sha256": "c612a94a76a39ad18b1af4b456fe146389058eb87d187a0236ef152bbd7b30c3",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--699.t1",
+      "kind": "written",
+      "sha256": "60e6374baf50102edb30f3ce5c4da29270f370cb0c04024b40d431e22cc28457",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--701.t1",
+      "kind": "written",
+      "sha256": "fbd8534f659992b0d22f5947ebbc14c95e6108453ffa41c46180b8790b74ca3e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--703.t1",
+      "kind": "written",
+      "sha256": "cf7c507b2d86a8b13aae3064844846b86cc79da1a1e48c95f9249a02a6feae58",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--705.t1",
+      "kind": "written",
+      "sha256": "93931f322d8f5e42ce1bc3ba9964c39312ca9d288bd348e9cde2adb61c79453b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--707.t1",
+      "kind": "written",
+      "sha256": "a8de63f018fcffab35563f544d8fbe87e8e18ae5a65b4c4b6ea245149d10d99f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--709.t1",
+      "kind": "written",
+      "sha256": "26be7e68c85cf6aaae858a193893b82acb1709586b401f7040f58efe1f814e3f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--711.t1",
+      "kind": "written",
+      "sha256": "d07424de556f924496d3e7eb16e717bbb10d0e6a7d884fd0e63b7e599492f5dd",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--713.t1",
+      "kind": "written",
+      "sha256": "b5b3e54e99ae6dae37b4d828ece0ace9f85f14fb57ff91c91e35ddce9721216f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--715.t1",
+      "kind": "written",
+      "sha256": "18bd8af41a5709c84829fd934513d7552d53db1eb3f8a735caad0a5e9f9779bf",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--717.t1",
+      "kind": "written",
+      "sha256": "905e7716097516b84f508b3621e4ed46b28f2a6f5883c7f73e83c72843ab3d56",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--719.t1",
+      "kind": "written",
+      "sha256": "25b241cfa508cbc5a05bbc30ddbb522cb3851e5a118029bef1c18c230877e830",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--721.t1",
+      "kind": "written",
+      "sha256": "16cb269456c2de9913d4913ab697e22c1e9ad37deb02a51876471729e43baf33",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--723.t1",
+      "kind": "written",
+      "sha256": "45986dc52bc2b536e860c27bd2b48d0be79f104d5df62fd40383a779c4283233",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--725.t1",
+      "kind": "written",
+      "sha256": "16949ee6e823774d5fc7adf1f0a02d33977ae752f2a75ad40613c881dc66e517",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--727.t1",
+      "kind": "written",
+      "sha256": "935c536b8a0760d229a57e710b28499cf7334fb7e95f734ae0b0980917378efb",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--729.t1",
+      "kind": "written",
+      "sha256": "104e6e719225d1e2bc5b5fea6cb4dc8c5ad24d630f1b2f845279b945729a4480",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--732.t1",
+      "kind": "written",
+      "sha256": "7cff38f5809b82b62184557d3324e01127258ae5bcb96706e37917fdbb3a16eb",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--734.t1",
+      "kind": "written",
+      "sha256": "73394e82bd853f6463fcdd32f0887087bc96a2fe6f6560368eaee09a6147af9c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--736.t1",
+      "kind": "written",
+      "sha256": "9c534d15cc9ac0217ee9df2a36156e8819df6fec5928cfafc249e7df77f623fe",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--738.t1",
+      "kind": "written",
+      "sha256": "6da5c2adbdf516de07f0b004c8ca059f5a20f3b069219e14d4c270e8f5ce01a8",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--740.t1",
+      "kind": "written",
+      "sha256": "c337b640c96acf357fb1cb924cd9e52c2119c7426005031b0c18e47f635e5fb1",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--742.t1",
+      "kind": "written",
+      "sha256": "3da589ef848d16c137b184423dd5e9a21ec112fcce64df1b29f5c46d3f47b5ce",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--744.t1",
+      "kind": "written",
+      "sha256": "6ce8cefb6327492c88c98f4102add5b4604cdf0161cd58e8ec934e76148ff441",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--746.t1",
+      "kind": "written",
+      "sha256": "606943a4956a1369f4622d3f555b6c04703bdd12454ad8aeeb739fb072069bd6",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--748.t1",
+      "kind": "written",
+      "sha256": "caae7cf19ad095c82433b8f11804d23dc41271755273ae00ef794571de67603a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--750.t1",
+      "kind": "written",
+      "sha256": "a631f7fd8a65557c34d62814d96a1c6919028a00e49194a8bef569d2ba88cfc0",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--752.t1",
+      "kind": "written",
+      "sha256": "41f57d6ab749af569f602b2abbc9ec18ec7b7002e4c3315610ee60d88e0d4d7a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--754.t1",
+      "kind": "written",
+      "sha256": "55ea315b2d3729a5db4e8a910f14cedf151aadb1505e5f6f53f0ec644ab1763a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--756.t1",
+      "kind": "written",
+      "sha256": "5ecc58df2ba2a65b3a3f080bcc9b286510d6781c26c2a1adb01559045b5b6113",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00178.pdf--758.t1",
+      "kind": "written",
+      "sha256": "7502d5374777355d76205a54deb7a5ac5fdbd5e0272bd8e1ac0b30155dd55d0b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--540.t1",
+      "kind": "written",
+      "sha256": "e8fa39284354fe7c12f1a7cf9b4d7d1be69750c704fb2f04db2d71465cdecf1d",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--542.t1",
+      "kind": "written",
+      "sha256": "5a3d9f4508c9f013322e99412c4c245f0e41fda83546321ac50c9959355c434e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--546.t1",
+      "kind": "written",
+      "sha256": "0f8790b9323d61c4928f6db4e986d2facf84149b992570f1d0e346782eed5d15",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--548.t1",
+      "kind": "written",
+      "sha256": "00eb7d8df34ba244ab6c8d59864f9a7fd14843d2a4e432ac7a3d36fefd85d91a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--550.t1",
+      "kind": "written",
+      "sha256": "5f3e2745e51edc38932db87163595e2e5e05c46a176f054c3f494e9a8a3db247",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--554.t1",
+      "kind": "written",
+      "sha256": "cce5f5a170361305ae06e85bb3be0c8b84bec9e6b09fc1d7f3f72a6c01d9e624",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--556.t1",
+      "kind": "written",
+      "sha256": "5158fe389bb4fbb8e5c8d92e5728b0686b2e9f70d411499d0371fc884731a2c0",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--558.t1",
+      "kind": "written",
+      "sha256": "7cf90dc30784286ed6b864a11ebcf60dd3103a64f00dbfde0260c684d7a53497",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--560.t1",
+      "kind": "written",
+      "sha256": "e16c2c4ed13d73b04a9cb4443df300cfa28a567513f5e1a479d9b425a68f2c77",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00201.pdf--564.t1",
+      "kind": "written",
+      "sha256": "214748e5dfed1651b45f5373c0e19179b4d10dcd0ed7cd7bd742bf2d37846011",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--360.t1",
+      "kind": "written",
+      "sha256": "2b60ea8c801c529eb8fb01cf9cd54c7ea595bdfd06ac03672190dcd52b8c56d4",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--362.t1",
+      "kind": "written",
+      "sha256": "1eb8a4b9c6a273bd289570a0f5798c90d883014c564ea7503d32f059de9756c7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--364.t1",
+      "kind": "written",
+      "sha256": "557cee33f372b6521586c264c79c7dd11fbd0eb274e204173b5c7235ca0e80cb",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--366.t1",
+      "kind": "written",
+      "sha256": "b4a59f37dced57e0c3c80050f2bd7c84b33d84e18806d5830d84bdbb5c56966c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--368.t1",
+      "kind": "written",
+      "sha256": "ebbd1bd0017881647eaa4c34cfa7651f7185f2ff16304bf509644c0720b26f7b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--370.t1",
+      "kind": "written",
+      "sha256": "7e57a87ac14dcf33e9ac13d7cd68d1347c052388a84792a1e3e0abcbd3db380b",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--372.t1",
+      "kind": "written",
+      "sha256": "534458de8bf5c3eab2327ad25bf7a4ab34998b7a9d9bb7b91d5b0ec82882144e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--374.t1",
+      "kind": "written",
+      "sha256": "846ce089c798b7f2201f91b0f0c6c6294177a7ad2372f32568448b502ddcb759",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--376.t1",
+      "kind": "written",
+      "sha256": "f54b310953ceffefb5b525df27d894ad876ae5d3d328b0443be8f4b2f25dc5ce",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--378.t1",
+      "kind": "written",
+      "sha256": "7b0c3675ce56a998a3cdac81e1fd7380f362f935dcaee766f7bb9cd3af9bcfdc",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--380.t1",
+      "kind": "written",
+      "sha256": "6ee0b0d4f0da4088c637cb9da04090b82fb0dbe15283626a46cbe16ba281b9b7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--2201.00200.pdf--382.t1",
+      "kind": "written",
+      "sha256": "f57e67c4374933d7c915785cb5a4c82aa5fc125913551a3802b53052f394b3bd",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3964.t1",
+      "kind": "written",
+      "sha256": "66037751c434863bf15bf5f0a3beb4b3b6ba0c58d7bdac8455268b4c57c6060c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3971.t1",
+      "kind": "written",
+      "sha256": "3241cd8a7f9c151d9dbc32bb2f82de39b11fee0fcb01b13038f352bda750fbf7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3975.t1",
+      "kind": "written",
+      "sha256": "eba5df36cdb37a1635760bcd8341fcd0458d4dc49e52331cd48a3c27107acd28",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3985.t1",
+      "kind": "written",
+      "sha256": "74d814bc7cdb6b61e72e048e3f247b09b121efef48a8f503e5e619cbffa88030",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3982.t1",
+      "kind": "written",
+      "sha256": "85f954f8319d9a94f30fac97cd1dd56137f5b281dd9f75a74aad43f3a5f3931a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3989.t1",
+      "kind": "written",
+      "sha256": "47357210332e55dbf7ec8b29dbf4c88e4cd11394399aaa4c538022f5104a276e",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3972.t1",
+      "kind": "written",
+      "sha256": "6e30d122634d2232589011ecbde11680f1d1a485e93fe3f30ea08c5f6f80a8c5",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3986.t1",
+      "kind": "written",
+      "sha256": "465d275a3115c54aaa8d20e169fa8a2c8b69ee0debba60e35aae6cc9f27101ef",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3965.t1",
+      "kind": "written",
+      "sha256": "7db74e505614095e7dca33c9640c18a64430db25a3ce45a12787de416b625dc3",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3967.t1",
+      "kind": "written",
+      "sha256": "b7a27ede119cfe00d54bdce82b7466dc04be6fa62fe037c78aa0056f096b4de8",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3969.t1",
+      "kind": "written",
+      "sha256": "aa540bc9ce470eee63125c19e1a7e98f758d4e05b880d9c19343e65f87475978",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3973.t1",
+      "kind": "written",
+      "sha256": "8e1f296c3fcf168e1d6e6270fe697bb66c2f23daa0f16fe8008eda7e415a9d26",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3976.t1",
+      "kind": "written",
+      "sha256": "8acff6f577997d3237e3ec7b48b116668a10f5efbafc1000451ccbfa27c741ab",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3978.t1",
+      "kind": "written",
+      "sha256": "68a4543fd6bd78d928df1aeff574fd4099b820257d2bfca102fa3418e51294b8",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3980.t1",
+      "kind": "written",
+      "sha256": "fc4a385f5e1a2d8ea5112aa1835c3196700566d7e958ddc4f345689a02700b90",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3983.t1",
+      "kind": "written",
+      "sha256": "4fced491e70467fa08f94956fbd42949ad909e3ece8f24082667d686def6be3c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3987.t1",
+      "kind": "written",
+      "sha256": "b2e39906031855d11d3bb6ef220946cd99afad5b9df9a6700d3ee7bcccfaaa84",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3990.t1",
+      "kind": "written",
+      "sha256": "776bbab968daedd82f43404496d7595d54df4aec0bc16f1f86849e15ccf427b1",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3992.t1",
+      "kind": "written",
+      "sha256": "eab918bdaa8e677272a79f383b17ebe60af3e83291c3364f65ca751afee058d9",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3994.t1",
+      "kind": "written",
+      "sha256": "971843c1107c2ccb510f5c748f272e6059613620039abdaedb751a440d13150f",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3996.t1",
+      "kind": "written",
+      "sha256": "8bea35bbe022524144c13dcd8c171813eb0b55180fce4d14ba5ec1604b34fa30",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--3998.t1",
+      "kind": "written",
+      "sha256": "feb458d86e0402dea73e1853549fbd22f4691475093151067dc9f79f4199d41c",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4000.t1",
+      "kind": "written",
+      "sha256": "d8576f3327c33028037fe86520bddc2add4d4d4b5e3a14651a7d22f1e2ac0edb",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4002.t1",
+      "kind": "written",
+      "sha256": "6c69e95fcceab05e1290585ab1dc0943b9ade7ff45c003477697e9d3fbcf0b15",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4004.t1",
+      "kind": "written",
+      "sha256": "917dcb78560615ac96e68cabf5c0f865e6c20bc610fb10d3199fd2bf854c875a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4006.t1",
+      "kind": "written",
+      "sha256": "3bbbf54f02e2e33ad8ba38ccf04e35274f6ba7112a183b146bb6e19dd961f319",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4008.t1",
+      "kind": "written",
+      "sha256": "8b791983734bf5e57e79da28928d6eb49ef7b7e143aa4c8204bf4ac0b8e76de9",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4010.t1",
+      "kind": "written",
+      "sha256": "dc26389efa9e5646ec0215cca8ce612af0c6113f7e467088b138b11566a8f23a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4012.t1",
+      "kind": "written",
+      "sha256": "e5a26ffe9b444d31c9c175c47dd0bc97120bf1c6be60459750b8407a96761d75",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4014.t1",
+      "kind": "written",
+      "sha256": "ce9669f43cbf4d2877f5157cab85861bcd76d2b45e375164584177c2d0d556c7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4016.t1",
+      "kind": "written",
+      "sha256": "6eccf23f82cb16ac9a1a0f7104f5c0df069a4b3fa6fff043616fde061bdee9d4",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4018.t1",
+      "kind": "written",
+      "sha256": "1b43403a7ad5c5055296c6186ed09ded1f272408af076a30037b97f941f8e479",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4020.t1",
+      "kind": "written",
+      "sha256": "4217728c37aa33930202e076d8be444698e1ceb410f0c772bac0e9af558e9dde",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4022.t1",
+      "kind": "written",
+      "sha256": "53ad0b9d57f6716691dda7e61c857e4d33b9bf56fa80c94c0dd1ba1f6ad73882",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4024.t1",
+      "kind": "written",
+      "sha256": "9ef6cc13c48a0f71dc2a9effed94720cccf34c7c7fec4bae2035391bb42194b9",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4026.t1",
+      "kind": "written",
+      "sha256": "98606e6de792c426cb6edb076bd6324180dc764b2bd7123762b6ee7c2747d9d7",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4028.t1",
+      "kind": "written",
+      "sha256": "814777acffd5c0705b8cf57c15671851231990150ee99d4f937cbb921582a250",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4030.t1",
+      "kind": "written",
+      "sha256": "8d354acca8c9ee795b45a8ab1c2dce92e1f99b6aa0508332e5821ba2f02da4ba",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4032.t1",
+      "kind": "written",
+      "sha256": "14387d230c512f1955a99b87012ab03e704cf8328b1018b018fd4e2bb535dce6",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4034.t1",
+      "kind": "written",
+      "sha256": "e9ba79538460ebd70c56fea74267f89e1161ef07860b637361a0a4dfbedfe5bc",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4036.t1",
+      "kind": "written",
+      "sha256": "9a758a19cba2e56d715ab6c80abb07b5a7f54ed92f69ca3da67235c49b545995",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4038.t1",
+      "kind": "written",
+      "sha256": "6624510e977e196586cab2811080df55b1f44cf847615122894205ac3a3a6c53",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4040.t1",
+      "kind": "written",
+      "sha256": "6c6f22e3a694feb185c47a64a1f22604dc1e54d9f5786084d98fd389aca5c49a",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4042.t1",
+      "kind": "written",
+      "sha256": "7c97bafefb1809e50a11360eea0db39564958e9860df59689df8d7dc917577a3",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4044.t1",
+      "kind": "written",
+      "sha256": "9ff95d036d292948e75e01e69b0a72ea77fe35a7839d0b81d9c928cc01f4bcf0",
+      "errors": []
+    },
+    {
+      "file": "pypdf-benchmarks--pdf--GeoTopo-book.pdf--4046.t1",
+      "kind": "written",
+      "sha256": "b47e1e07c6eff01506fa75d774adce60eeeee6af3786d20b743940ebbd2938e2",
+      "errors": []
+    },
+    {
+      "file": "wild--qpdf--qpdf--qtest--qpdf--qpdfjob-ctest3.pdf--12.t1",
+      "kind": "written",
+      "sha256": "45d5df21bf02e2e62a3c05ba8759a1f24ada05d981127eb22f6a351450349215",
+      "errors": []
+    },
+    {
+      "file": "fonttools--Tests--t1Lib--data--TestT1-Regular.pfa",
+      "kind": "written",
+      "sha256": "4231be15444404469e74678c0c3746325c521a2878686f970ea215e54f1982dc",
+      "errors": []
+    },
+    {
+      "file": "fonttools--Tests--t1Lib--data--TestT1-Regular.pfb",
+      "kind": "written",
+      "sha256": "ccc479c812b34808de53db44c4dc080461d006e5a51e87a8b0662a57aa802410",
+      "errors": []
+    },
+    {
+      "file": "fonttools--Tests--t1Lib--data--TestT1-ellipsis-hinted.pfa",
+      "kind": "written",
+      "sha256": "2b4c43681b5f813d739bfd2d13d0fe5a8ee30b6a1a6d1a27d67040eadac3281b",
+      "errors": []
+    },
+    {
+      "file": "fonttools--Tests--t1Lib--data--TestT1-weird-zeros.pfa",
+      "kind": "written",
+      "sha256": "60d638ec57358627992dacbb3a24ae15aff1cbc33e4f97e2783212fe2e3d481f",
+      "errors": []
+    }
+  ],
+  "date": "2026-11-10",
+  "commit": "4364ececae04640f2ffaca65807e1d76c23bec9c"
+}

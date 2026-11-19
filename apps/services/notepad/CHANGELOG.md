@@ -9,33 +9,7 @@ See [`README.md`](./README.md) for the usage guide.
 
 ## [Unreleased]
 
-### Added
-
-- **Icons Windows draws without downsampling.** The manifest lists 16, 32,
-  48 and 256 px icons beside 192 and 512 px, for the `.ico` Chrome writes
-  when the app is installed on Windows, and the pages link a multi-size
-  `favicon.ico` (16 to 256 px). All drawn by `bun run icons` from the
-  shapes of `icon.svg`. The README says what this does and does not prove
-  about the lost-icon symptom, and how to repair a lost icon.
-
-### Changed
-
-- **Precompressed JavaScript.** `bun run build` now ends with the demos'
-  `gzip-dist` step: every file of 512 B or more that is not already
-  compressed gets a gzip-9 `.gz` twin (`src/main.js` 121,544 B →
-  42,115 B), which the site host serves to a client that accepts gzip.
-  The service worker's pre-cache list is unchanged (no `.gz`).
-- The file picker fallback and the OS file drop, the install prompt, the update flow
-  and the service worker now use `@awacloud/fw`'s `fileIntake`, `installPrompt`,
-  `swUpdate` and `precache`; behaviour unchanged.
-
-### Fixed
-
-- `public/sw.js` is valid UTF-8 again: two em dashes in its comments had
-  been saved as Windows-1252 bytes. A guard test now checks that every
-  text file under `public/` decodes as UTF-8.
-
-## [0.1.0] — 2026-10-19
+## [0.1.0] - 2026-11-19
 
 ### Added
 
@@ -70,5 +44,38 @@ See [`README.md`](./README.md) for the usage guide.
   Escape, in English and French: open, save and rename, find and undo,
   encodings, keyboard shortcuts, recovery, installing in each browser,
   updates and offline use.
+- **Icons Windows draws without downsampling.** The manifest lists 16, 32,
+  48 and 256 px icons beside 192 and 512 px, for the `.ico` Chrome writes
+  when the app is installed on Windows, and the pages link a multi-size
+  `favicon.ico` (16 to 256 px). All drawn by `bun run icons` from the
+  shapes of `icon.svg`. The README says what this does and does not prove
+  about the lost-icon symptom, and how to repair a lost icon.
+- **Tab inserts a tab.** In the text, Tab inserts a tab (a selection over several
+  lines is indented), Shift+Tab outdents, each in one step for Undo. To leave the
+  text by keyboard: Escape, then Tab, or Ctrl+M, which switches Tab between
+  "inserts" and "moves the focus" (announced in the status bar, kept for the
+  session only). The Help pages say so, in English and French.
+
+### Changed
+
+- **About in the Help form.** The About dialog takes the Help dialog's look, its height fitted to
+  its content (long content scrolls inside): the
+  title with the version under it and a `×` close button in the head, a scrollable
+  body (copyright, check for updates, offline line, "Made by AwaCloud", licences)
+  and the Close button after it; the focus returns to the About button.
+- **Precompressed JavaScript.** `bun run build` now ends with the demos'
+  `gzip-dist` step: every file of 512 B or more that is not already
+  compressed gets a gzip-9 `.gz` twin (`src/main.js` 121,544 B →
+  42,115 B), which the site host serves to a client that accepts gzip.
+  The service worker's pre-cache list is unchanged (no `.gz`).
+- The file picker fallback and the OS file drop, the install prompt, the update flow
+  and the service worker now use `@awacloud/fw`'s `fileIntake`, `installPrompt`,
+  `swUpdate` and `precache`; behaviour unchanged.
+
+### Fixed
+
+- `public/sw.js` is valid UTF-8 again: two em dashes in its comments had
+  been saved as Windows-1252 bytes. A guard test now checks that every
+  text file under `public/` decodes as UTF-8.
 
 Live on `notepad.awacloud.com` since 2026-10-19.

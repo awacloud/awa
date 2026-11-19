@@ -1,7 +1,7 @@
 ---
 module: storage
 category: dom/fs
-dependencies: ['broadcastChannel']
+dependencies: [broadcastChannel]
 returns: object
 worker-safe: false
 status: complete

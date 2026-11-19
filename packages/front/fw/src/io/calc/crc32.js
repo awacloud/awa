@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -55,6 +55,17 @@ export const crc32 = {
 			table[i] = t;
 		}
 
+		// Slicing-by-16: slice k (entries 256k .. 256k + 255) holds the CRC of
+		// byte i followed by k zero bytes, so sixteen input bytes fold into
+		// the state with sixteen independent lookups instead of sixteen
+		// dependent ones. One flat table (16 KiB), read through a local.
+		const slices = new Uint32Array(16 * 256);
+		slices.set(table);
+		for (let k = 256; k < 16 * 256; k++) {
+			const prev = slices[k - 256];
+			slices[k] = (prev >>> 8) ^ table[prev & 0xFF];
+		}
+
 		/**
 		 * CRC32 constructor - Creates a new CRC32 instance for calculating checksums.
 		 * Each instance maintains its own CRC state and can process data incrementally.
@@ -88,7 +99,22 @@ export const crc32 = {
 		Crc32.prototype.append = function(data) {
    // @ts-ignore - crc is a private field; accessed from subclass-like context, safe at runtime
 			let crc = this.crc | 0;
-			for (let offset = 0, length = data.length | 0; offset < length; offset++) {
+			const length = data.length | 0;
+			let offset = 0;
+			if (data instanceof Uint8Array) {
+				// Sixteen bytes a step; an array of numbers (whose elements the
+				// byte loop masks to 8 bits) and the last 0-15 bytes take the
+				// byte loop.
+				const t = slices;
+				for (const end = length - 15; offset < end; offset += 16) {
+					const a = crc ^ (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
+					crc = t[3840 + (a & 0xFF)] ^ t[3584 + ((a >>> 8) & 0xFF)] ^ t[3328 + ((a >>> 16) & 0xFF)] ^ t[3072 + (a >>> 24)] ^
+						t[2816 + data[offset + 4]] ^ t[2560 + data[offset + 5]] ^ t[2304 + data[offset + 6]] ^ t[2048 + data[offset + 7]] ^
+						t[1792 + data[offset + 8]] ^ t[1536 + data[offset + 9]] ^ t[1280 + data[offset + 10]] ^ t[1024 + data[offset + 11]] ^
+						t[768 + data[offset + 12]] ^ t[512 + data[offset + 13]] ^ t[256 + data[offset + 14]] ^ t[data[offset + 15]];
+				}
+			}
+			for (; offset < length; offset++) {
 				crc = (crc >>> 8) ^ table[(crc ^ data[offset]) & 0xFF];
 			}
    // @ts-ignore - crc is a private field; accessed from subclass-like context, safe at runtime

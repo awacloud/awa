@@ -6,11 +6,13 @@ See the integration: [`@awacloud/fw/jest`](../../../integrations/jest/README.md)
 
 ## Run
 
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
+
 ```sh
-npm i && node --experimental-vm-modules node_modules/jest/bin/jest.js -c jest.config.mjs
+bun install && bun run test
 ```
 
-Run from this directory (or `npm test`).
+`bun run test` runs Jest on the ESM test files.
 
 ## Mechanism
 

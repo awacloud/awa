@@ -59,7 +59,11 @@ written back — `read()` lists it in `unmodelledParts`. The read loads the
 slides, the layouts they use, the slide masters and the first master's theme;
 typical entries are therefore speaker notes and the notes master, the layouts
 no slide uses, any other theme, presentation and view properties, table styles,
-document properties and the thumbnail. `write()` takes `result.presentation`,
+document properties and the thumbnail. Through `pptxFullBundle`
+([`pmlPackageParts`](../extra/pml-package-parts.md)) the notes slides, the
+notes and handout masters with their themes and, with one slide master, the
+unused layouts are read and written back, each only when it is written back
+as read. `write()` takes `result.presentation`,
 not this envelope.
 
 A picture carries its bytes as `image: { data, contentType, rId }`,
@@ -137,7 +141,9 @@ those names is registered but never invoked. See the
 
 - `opts.maxParts`, `opts.maxUncompressed`, `opts.maxRatio` and `opts.maxDepth` override the archive limits of [`opc.read`](../opc/package.md) (defaults kept; `0` disables a check).
 - `opts.typedRunColors: true` types the text-run fills that a bare `'RRGGBB'` cannot express (theme colours, colour transforms) as `rPr.color = { rgb | schemeColor, mods? }` in slides, layouts, masters and table cells; by default such fills stay verbatim in `rPr._extras` and an `srgbClr` reads as its `'RRGGBB'` (see [drawingml](../drawingml/drawingml.md#text-body-model)).
-- `opts.slideExtrasByPart: true` keeps the leftovers of each slide, layout and master's `<p:cSld>` in `cSldExtras` (an array, empty when there are none) and those of its root in `_extras`. By default both go to `_extras`, and a root with leftovers of its own replaces those of `<p:cSld>` (for example a `<p:cSld>` `<p:extLst>` beside a `<p:timing>`). `write` puts a split model's elements back at the level each came from — see [pptx-slide](./slide.md#model).
+- `opts.typedGroups: true` types a group shape (`p:grpSp`) as `{ type: 'group', shapes, _extras }`, at any depth, in slides, layouts and masters: its shapes are parsed as the slide's, a picture inside gets its image and a chart its part, and the write puts it back as a `p:grpSp` at its place. By default a group stays verbatim in `spTreeExtras` and is written after the typed shapes (see [slide](./slide.md)).
+- `opts.typedLineColors: true` types a shape's line colour the same way (`shapeProps.line.color = { rgb | schemeColor, mods? }`, a bare `srgbClr` still `'RRGGBB'`) in slides, layouts and masters; by default a theme line colour stays verbatim in `line._extras` and an `srgbClr` reads as its `'RRGGBB'`, transforms dropped (see [drawingmlShape](../drawingml/shape.md)).
+- `opts.slideExtrasByPart: true` keeps the leftovers of each slide, layout and master's `<p:cSld>` in `cSldExtras` (an array, empty when there are none) and those of its root in `_extras`. By default they go to `_extras` when the root has none, and to `cSldExtras` when it has some (its own then in `_extras`). `write` puts a split model's elements back at the level each came from — see [pptx-slide](./slide.md#model).
 - `sldSize` defaults to `{ cx: 9144000, cy: 6858000, type: 'screen4x3' }` — 10×7.5 inches, i.e. 4:3. For standard widescreen 16:9 pass `{ cx: 12192000, cy: 6858000, type: 'screen16x9' }`.
 - `markupCompatibility.process(root)` is called on read with its default options — no `supportedPrefixes`, so every `mc:Choice` falls through to its Fallback branch.
 - Binary images go to `/ppt/media/imageN.<ext>`; chart XML to `/ppt/charts/chartN.xml`.

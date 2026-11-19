@@ -1,0 +1,48 @@
+{
+  "kind": "build",
+  "variant": "fw",
+  "name": "graphic-svg3d",
+  "package": "@awacloud/graphic-anim",
+  "root": "graphic.svg3d",
+  "modules": [
+    "svg3d.vec3",
+    "svg3d.mesh",
+    "svg3d.project",
+    "svg3d.apply",
+    "graphic.svgBuild",
+    "graphic.scopedIds",
+    "graphic.timeline",
+    "graphic.tween",
+    "graphic.svgApply",
+    "graphic.scheduler"
+  ],
+  "fwDependencies": [
+    "secPolicy",
+    "dom",
+    "interp",
+    "easing",
+    "clock"
+  ],
+  "siblingDependencies": {
+    "modules": [
+      "graphic.scopedIds",
+      "graphic.svgApply",
+      "graphic.svgBuild",
+      "graphic.scheduler",
+      "graphic.tween",
+      "graphic.timeline"
+    ],
+    "package": "@awacloud/graphic-anim"
+  },
+  "bytes": {
+    "dev": 29404,
+    "min": 15362
+  },
+  "domBound": true,
+  "workerSafeSlice": [
+    "svg3d.vec3",
+    "svg3d.mesh",
+    "svg3d.project"
+  ],
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

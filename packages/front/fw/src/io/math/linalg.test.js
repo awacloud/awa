@@ -266,6 +266,50 @@ describe('linalg module', () => {
                 mat3.transpose(out, m);
                 expect([...out]).toEqual([1, 4, 7, 2, 5, 8, 3, 6, 9]);
             });
+
+            test('transpose is correct when out and m alias the same matrix', () => {
+                const m = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+                mat3.transpose(m, m);
+                expect([...m]).toEqual([1, 4, 7, 2, 5, 8, 3, 6, 9]);
+            });
+        });
+
+        describe('output aliased to an input', () => {
+            const L = { vec2, vec3, vec4, mat3, mat4 };
+            const fill = (n, seed) => Float32Array.from({ length: n }, (_, i) => ((i * 7 + seed) % 11) - 4.5 + (i === 0 ? 3 : 0));
+            const cases = [];
+            for (const [V, n] of [['vec2', 2], ['vec3', 3], ['vec4', 4]]) {
+                for (const op of ['add', 'sub', 'mul', 'cross']) {
+                    if (L[V][op]) cases.push([V, op, n, (f, o, a, b) => f(o, a, b), true]);
+                }
+                cases.push([V, 'scale', n, (f, o, a) => f(o, a, 1.7), false]);
+                cases.push([V, 'normalize', n, (f, o, a) => f(o, a), false]);
+                cases.push([V, 'lerp', n, (f, o, a, b) => f(o, a, b, 0.3), true]);
+            }
+            for (const [M, n, v] of [['mat3', 9, 2], ['mat4', 16, 3]]) {
+                cases.push([M, 'multiply', n, (f, o, a, b) => f(o, a, b), true]);
+                cases.push([M, 'invert', n, (f, o, a) => f(o, a), false]);
+                cases.push([M, 'transpose', n, (f, o, a) => f(o, a), false]);
+                cases.push([M, 'translate', n, (f, o, a) => f(o, a, fill(v, 3)), false]);
+                cases.push([M, 'scale', n, (f, o, a) => f(o, a, fill(v, 5)), false]);
+                cases.push([M, 'rotate', n, (f, o, a) => (M === 'mat3' ? f(o, a, 0.4) : f(o, a, 0.4, Float32Array.of(0, 0, 1))), false]);
+            }
+            for (const [K, op, n, call, binary] of cases) {
+                test(`${K}.${op}: out === a${binary ? ' and out === b' : ''} give the non-aliased result`, () => {
+                    const f = L[K][op].bind(L[K]);
+                    const a = fill(n, 1), b = fill(n, 2);
+                    const ref = new Float32Array(n);
+                    call(f, ref, a.slice(), b.slice());
+                    const x = a.slice();
+                    call(f, x, x, b.slice());
+                    for (let i = 0; i < n; i++) expect(x[i]).toBeCloseTo(ref[i], 5);
+                    if (binary) {
+                        const y = b.slice();
+                        call(f, y, a.slice(), y);
+                        for (let i = 0; i < n; i++) expect(y[i]).toBeCloseTo(ref[i], 5);
+                    }
+                });
+            }
         });
 
         describe('mat4 (remaining ops)', () => {

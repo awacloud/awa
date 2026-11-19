@@ -63,4 +63,4 @@ const worker = fw.createWorker(
 
 ## See also
 
-- [cbc](../mode/cbc.md), [aes_modes](./aes_modes.md), [aes_ctr](./aes_ctr.md) — consumers
+- [cbc](../mode/cbc.md), [aes_modes](./aes_modes.md) — consumers

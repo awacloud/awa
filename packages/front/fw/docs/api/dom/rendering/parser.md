@@ -1,4 +1,4 @@
-﻿---
+---
 module: parser
 category: dom/rendering
 dependencies: [secPolicy]
@@ -30,12 +30,14 @@ const parser = runtime.resolve('parser');
 |---------|-----------|-------------|
 | `fromHTML` | `(html: string, options?: FromHTMLOptions) => ParseResult` | HTML → elm-array + iterates |
 | `toHTML` | `(input: ElmNode[]\|ParseResult) => string` | elm-array → HTML (reverse) |
+| `createCache` | `(opts?: { max?: number }) => SharedParseCache` | A parse cache several instances share through `fromHTML(html, { cache })` (`size()`, `clear()`, `stats()`; `max` defaults to 64, `0` disables it) |
 
 ### Typedef: FromHTMLOptions
 
 | Field | Type | Description |
 |---|---|---|
 | `reserveIds` | `Iterable<string>` | Explicit ids the caller knows the assembled document will contain, declared **up front**. Reserved for the whole parser instance — this call and every later one — so an auto `p<n>` never collides with an explicit id the instance has not met yet. Empty and non-string entries are ignored. Supplying the option **bypasses the `ParseResult` cache** (read *and* write), because the reservation changes which ids are minted. |
+| `cache` | `SharedParseCache` | A cache from `createCache`, used **instead of** this instance's own. It is **transparent**: a hit returns exactly what a fresh parse on this instance would — the document's explicit ids join the instance's reserved set and every auto `p<n>` is minted by this instance's counter, in the original order — so instances with different histories (one per route of a site build) share it without an id collision. Only the parse itself is saved. |
 
 ### `parser.fromHTML(html)`
 
@@ -185,8 +187,9 @@ const page = parser.toHTML([...head.template, ...body.template]);
 
 ## Notes
 
+- **Cache.** Identical input strings are parsed once per instance (`cache.stats()`, `cache.setMax(n)`, `cache.clear()`). Every call returns its own deep copy of the cached `ParseResult`, hit or miss: mutating a result never reaches the cache or another caller, and two calls never return the same object. A hit of this per-instance cache returns the ids of the first parse; a shared cache (`createCache`) re-mints them instead, see `FromHTMLOptions.cache`.
 - SVG children: `svg_` prefix (e.g. `svg_use`, `svg_rect`, `svg_path`).
-- Mixed text nodes: synthetic tag `"text"`.
+- Mixed text nodes: synthetic tag `"text"`. A text node keeps the boundary space on the side of an inline sibling (`or <b>this</b>` keeps `"or "`); whitespace beside block elements or at the parent's edges is dropped, and so is a whitespace-only node, even between two inline elements (a synthetic text node renders as a `<span>`: put such a space inside an element, or write `&#32;`). A leaf's sole text is trimmed.
 - HTML ids are preserved in `elm.id`; otherwise auto-incremented (`p0`, `p1`, ...).
 - The auto counter is scoped to the parser **instance** and keeps running across `fromHTML` calls, so a site build that shares one parser gets stable, non-repeating ids. Within a single `fromHTML` call the ids are **guaranteed unique for that document**: a `pN` value already used as an explicit `id` anywhere in the parsed markup is skipped (the whole document is scanned before the first mint, so an explicit id further down the tree counts too). Feeding parser output back through `fromHTML` is therefore safe.
 - **Multi-call document assembly.** A consumer that builds one logical document from *several* `fromHTML` calls on a shared instance gets the guarantee across that seam too, in two layers. (1) *Accumulation, always on*: every explicit id seen by a call is reserved for the instance, so a later call never re-mints it. (2) *Caller-supplied reservation*: pass the full explicit-id set of the assembled document as `fromHTML(html, { reserveIds })` on the **first** call — this is the only way to cover the opposite direction, an explicit `pN` that only arrives in a *later* call, which accumulation cannot foresee. A reservation is instance-wide and permanent; it applies to every subsequent call with no options. Reservation only affects *future* mints, so it must be declared before the first parse of the assembly. Uniqueness matters because `buildTree` merges nodes by id with last-write-wins: a collision **deletes** a subtree from the assembled output rather than duplicating it.

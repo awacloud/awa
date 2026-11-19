@@ -46,6 +46,7 @@
     "extraShaperCjk",
     "extraWoff2Write",
     "extraDsig",
+    "aatLookup",
     "aatMorx",
     "aatKerx",
     "aatAnkr",
@@ -67,8 +68,8 @@
     "brotli"
   ],
   "bytes": {
-    "dev": 164817,
-    "min": 91576
+    "dev": 178642,
+    "min": 98305
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

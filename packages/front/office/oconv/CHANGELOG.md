@@ -9,6 +9,372 @@ See [`README.md`](./README.md) for the usage guide.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-19
+
+### Breaking
+
+- **`convert`'s `layout` is on by default where a pair honours it.** An
+  absent `layout` is `true` on `docx → odt` (the page, the paragraphs'
+  alignment and breaks, the runs' values, the headers and footers, the
+  page fields and the notes reach the odt) and `false` on every other
+  pair. `layout: false` gives tier 2, the output of 1.x; `layout: true`
+  on another pair still throws `oconv: layout needs docx to odt`. The
+  worker forwards a convert message's `layout`, so a worker caller can
+  turn it off.
+
+- **The odt reader reads a `text:note` as the IR `note`.** It reads with
+  `@awacloud/odf`'s `notes`, so `toMd` of an odt with notes, and odt →
+  docx and → pdf, drop each note with `note/dropped` instead of running
+  its citation and body into the paragraph (`inline/flattened` in 1.x).
+
+- **The pdf reader is built on `@awacloud/pdf`'s `pdfFontDecoder` and
+  `pdfPageText`; `oconvPdfFontDecoder` is gone.** oconv kept its own copy
+  of pdf's font decoder (and of its page walk) since pdf gained them as
+  extras; the copy leaves the manifest, and `modules` registers pdf's
+  `pdfFontDecoder` and `pdfPageText` in its place. A composer that
+  resolved `oconvPdfFontDecoder` resolves `pdfFontDecoder` (the same
+  `buildDecoder` and `decodeShow`). `oconvPdfTextExtract` keeps its name
+  and its output: it is `pdfPageText.extractPage` with its rules, image
+  items and pictures built on the walk's `visit` hook, equal to the 1.x
+  walk on every page of 1,706 corpus PDFs, with and without `rules`,
+  `images` and `cellKerns`. `pkg_require` names `pdfFontDecoder` and
+  `pdfPageText`, and no longer the pdf and fonts modules only the copy
+  used (`pdfFont`, `pdfFontEncoding`, `pdfResources`, `pdfContentStream`,
+  `cmapToUnicode`, `encodingLookup`, `encodingAgl`, `encodingTexMath`).
+
+- **A document past 256 MiB of text throws `oconv: output too large` by
+  default.** The output budget moves into `irToMd` (`opts.outputBudget`,
+  `toMd` forwarding its own) and takes `{ bytes: 268435456, overflow:
+  'throw' }` when absent, so `toMd`, the worker and every caller of the
+  renderer, oview's copy among them, fail by name before any markdown is
+  built, where 1.x rendered until it ran out of memory (a 110 KB xlsx whose
+  cells share one 1 MB string reached 2.2 GB and a `RangeError`). A missing
+  `bytes` takes 256 MiB, so `{ overflow: 'truncate' }` alone truncates
+  there and `{}` is the default; `bytes: Number.MAX_SAFE_INTEGER` renders
+  as 1.x did. Of 5,586 corpus documents, that xlsx is the one refused; the
+  largest other output is 11.4 MB.
+
+- **A sheet past 5,000,000 padded cells takes the sparse form by
+  default.** `xlsxToIr` and `odsToIr` take `opts.cellBudget` 5,000,000
+  when it is absent (ooxml's own `maxCellsPerSheet`), so `toMd`'s
+  `sheetCellBudget`, `convert` and every caller of the readers do too: a
+  sheet whose padded table would hold more cells is written one
+  `<A1 address>: <text>` paragraph per value (its rows unpadded under
+  `sheets` `'csv'` / `'tsv'`), recorded `sheet/sparse-form`, where 1.x
+  padded it (one wide row in a long sheet made tens of millions of cells
+  and tens of GB). `Number.MAX_SAFE_INTEGER` pads every sheet as 1.x did.
+  No corpus spreadsheet changes: the widest of 787 pads to 1,010,025
+  cells.
+
+- **`toMd` opens an encrypted pdf with the empty password by default**
+  (`@awacloud/pdf`'s default; RC4 files too, oconv passing
+  `pdfLegacyRc4Read` to every pdf read). The conversion carries one
+  `pdf/opened-with-empty-user-password` loss, its detail the permission
+  bits, so it is `lossy`; a file the empty password does not open still
+  throws `pdf/document/encrypted`. `pdfEmptyPassword: false` keeps the
+  1.x refusal. On the corpus, 17 of 42 encrypted files convert this way,
+  among them ISO 32000-1 itself.
+
+- **`toMd` reads a pdf whose cross-reference chain is broken.**
+  `@awacloud/pdf` rebuilds an unusable chain by default, so such a file
+  converts with no `pdfRecoverXref`; `pdfRecoverXref: false` is now
+  forwarded and reads strictly, the chain's error thrown as in 1.x.
+
+- **An untagged pdf infers headings and tables by default.** `toMd` with
+  no `pdfInfer` reads a pdf as `pdfInfer: ['headings', 'tables']`:
+  headings from font size and weight, tables from rules or aligned text.
+  Pass `pdfInfer: []` for the text-first read of 1.x. A tagged pdf is
+  read through its structure tree as before. opendataloader-bench,
+  default read: 0.5754 → 0.8370. On 2,422 corpus PDFs, 105 read
+  differently (the untagged ones the inference changes), at +9.5 % of
+  the pdf-to-IR time on those. The default sits in
+  `oconvPdfToIr.pdfToIr` itself: an absent `opts.infer` reads as
+  `['headings', 'tables']`, so a read chain composed without `toMd`
+  (oview's copy, an app's own chain) infers as `toMd` does; `infer: []`
+  is the text-first read.
+
+### Changed
+
+- **The TeXCMMaths fonts read as the signs they draw.** A simple font of
+  the `TeXCMMathsSymbols`, `TeXCMMathsItalic` or `TeXCMMathsExtension`
+  family names each glyph by a Computer Modern position, and its
+  ToUnicode repeats the names: `=` was read as `¼`, `+` as `þ`, `(` and
+  `)` as `ð` and `Þ`, the minus sign as U+FFFD, `/` as `=`. The decoder
+  now reads those three families through `@awacloud/fonts`'
+  `encodingTexMath` before the ToUnicode (the glyph name gives the
+  position); every other font is read as before. The decoder depends on
+  `encodingTexMath`, which `@awacloud/fonts`' manifest registers.
+
+- **A table drawn with horizontal rules only reads as a table.** Under
+  `'tables'`, a line between two horizontal rules that span it (one within
+  1 em below its baseline, one within 2 em above) is cut into cells at a
+  gap over 0.4 em instead of 0.8 em, so the tables oconv's own md → pdf
+  writes (rules above and under every row, columns 0.55 em apart) come
+  back as tables in md → pdf → md. No table of 2,422 corpus PDFs changes;
+  opendataloader-bench holds at 0.8375.
+
+- **The heading inference keeps labels, values and table rows out.** On
+  an untagged pdf, a line the `'headings'` inference would make a heading
+  stays a paragraph when it has more digits than letters (a leading
+  section number set aside), ends with a space and a colon with no
+  section number, is a short label ` : ` a numeric value, holds an email
+  address, a URL or an amount with a currency, or is an address (two
+  commas and a 4- or 5-digit number that is no year); and a bold line of
+  three cells or more (a table's header row) is no bold heading. The
+  Factur-X sample invoice reads 1 heading, not 11; opendataloader-bench 0.8370 →
+  0.8375.
+
+- **md → pdf takes a face without a `name` table.** With
+  `@awacloud/fonts` reading such a font by default, a face posted in
+  `opts.pdf.fonts` (or a default face) that has no `name` table embeds,
+  its subset named `<prefix>+Font`, where 1.x threw `oconv: bad pdf font
+  <style>`.
+
+- **Breaking: the worker is `@awacloud/oconv/worker.js`, a bundle.**
+  `src/worker.js` is now a self-contained build of the worker's
+  source, `src/worker/entry.js` (`bun run gen:worker`): it imports
+  nothing, so a static page starts it with no import map (a module worker
+  has none). Its `exports` key is `./worker.js` → `./src/worker.js`, the
+  `/vendor` identity rule (`@awacloud/oconv/<p>` → `src/<p>`); the 1.x
+  key `./src/worker.js` is removed. The message protocol is unchanged.
+
+- **Breaking: the pivot IR is `oconv-ir/v2`.** v2 is v1's 13 node kinds
+  and props plus optional typed props for styles and page layout
+  (tier 3): `document.page`; `align` and `breakBefore` on `paragraph` and
+  `heading`; `size`, `font`, `color`, `underline` and `script` on `run`;
+  the document's header and footer, `document.header` and
+  `document.footer` (`null`, or the slots `default`, `first` and `even`,
+  each an array of blocks, `first` and `even` `null` when not distinct);
+  and one inline kind, `field` (`name` `'page'` or `'pages'`, `text` the
+  value the source shows, and a run's formatting props) and one inline
+  container, `note` (`class` `'footnote'` or `'endnote'`, `mark` a custom
+  mark or `null`, its children the note's blocks), so `KINDS` has 15
+  kinds. `withoutNotes` gives a tree without its notes, for a writer
+  without notes. `withFieldsAsRuns`
+  gives a tree's fields as plain runs, for a writer without fields. A node without them, as a v1 producer writes it,
+  validates unchanged; `node()` gives each its default, so a reader's
+  `document` node now carries `page: null, header: null, footer: null`, every `paragraph` and
+  `heading` `align: null, breakBefore: false`, and every `run`
+  `size: null, font: null, color: null, underline: false, script: null`.
+  `IR_VERSION` and the `ir` key of `toMd`'s front matter now say
+  `oconv-ir/v2`; `profile` stays `v1`. A consumer that compares either
+  with `oconv-ir/v1` must accept v2.
+
+### Added
+
+- **Zapf Dingbats glyph names and the Standard 14 symbol fonts read as
+  characters** (the pdf reader). A font whose family names Dingbats
+  resolves its glyph names through the ITC Zapf Dingbats Glyph List
+  (`a73` → `■`), and a non-embedded `Symbol` or `ZapfDingbats` font with
+  no base in `/Encoding` takes its built-in encoding (`a24` → `✘`, not
+  `8`). On 2,422 corpus PDFs (first 60 pages each), the undecodable
+  codes fall from 3,017 to 2,744.
+
+- **Symbol and Wingdings private-use text read as characters** (the pdf
+  reader). A ToUnicode entry at 0xF020–0xF0FF in a `Symbol`, `SymbolMT`
+  or `Wingdings` font is read again: Symbol's through `SymbolEncoding`
+  and the AGL (U+F0B7 → `•`), Wingdings' for the pairs Word itself
+  writes (U+F0A7 → `▪`, U+F0FC → `✓`). On 2,422 corpus PDFs (first 60
+  pages each), the private-use characters fall from 50,675 to 438.
+
+- **`pdfInfer: ['tables']` reads ruled tables drawn in segments.** Two
+  touching segments of one rule line, such as a vertical cut at every row
+  border, now make one line of the grid. A grid in which the aligned-text
+  rule finds more rows than the grid has is left to that rule: it is a
+  grid without rules between its body rows. opendataloader-bench layout:
+  0.8313 → 0.8367, 3 documents up and none down. The default read is
+  unchanged.
+
+- **`pdfInfer: ['tables']` reads rows on several baselines and one long
+  column.** On the lines no table holds, a region where the content order
+  goes back up inside a row (cells drawn one by one, a cell centred
+  against a two-line neighbour) is re-cut by baseline: baselines closer
+  than 0.75 em are one row, and each cell is joined top down. Such a table
+  needs 3 rows, one size and whole lines. With 3 columns or more, one
+  column other than the first may hold cells of up to 120 characters.
+  opendataloader-bench layout: 0.8239 → 0.8313, 4 documents up and none
+  down. The default read is unchanged.
+
+- **The pdf reader reads a symbolic font's built-in encoding.**
+  `oconvPdfFontDecoder` (the copy of pdf's `pdfFontDecoder`) decodes a
+  symbolic `Type1` or `MMType1` font through its embedded Type 1 or CFF
+  program's built-in encoding when its `/Encoding` names no base (ISO
+  32000-2 §9.6.6.1). Before, `StandardEncoding` was used. pdfLaTeX's
+  Computer Modern text and math without `/ToUnicode` now converts to
+  Markdown as text instead of wrong punctuation or `text/undecodable`
+  losses.
+
+- **`convert`'s opt-in `layout` carries the footnotes and endnotes on
+  `docx → odt`.** With `layout: true`, a docx note reads as an IR `note`
+  at its reference, holding the note's blocks, and the odt writer writes
+  it as `text:note` (`@awacloud/odf`'s typed note run): its class, its
+  number among its class's automatic notes or its custom mark, its body
+  typed as the body is. A reference whose note did not read is recorded
+  (`note/unresolved`); a note in a note's body is not written
+  (`note/dropped`, detail `nested`). The md, docx and pdf writers write no
+  note and record each (`note/dropped`, detail its class).
+
+- **`convert`'s opt-in `layout` carries the headers and footers on
+  `docx → odt`.** With `layout: true`, the docx's last section gives the
+  odt's master page its header and footer: the default one, the first
+  page's under `titlePg` and the even pages' under the settings'
+  `evenAndOddHeaders` (`style:header`, `style:header-first`,
+  `style:header-left`, and the footers'), read and written as the body
+  is, their styles in `styles.xml` (`MP<n>`, `MT<n>`).
+  - A `PAGE` field reads as a page number and is written as
+    `text:page-number`; `NUMPAGES` and `SECTIONPAGES` as
+    `text:page-count`. This holds in the body too, under `layout`.
+  - Another field in a header or footer keeps the text it shows
+    (`field/static`, once per name).
+  - A reference whose part did not read is recorded
+    (`layout/region-unresolved`).
+  - The md, docx and pdf writers write a field as its text, and record a
+    stated header or footer as `layout/region-dropped`.
+
+- **`convert`'s opt-in `layout` carries the page on `docx → odt`.** With
+  `layout: true`, the docx body's page size, orientation and margins
+  reach the odt as its page layout (`document.page`, in points).
+  - A document of several sections takes its last section's page
+    (`layout/sections-merged`).
+  - A gutter is dropped (`layout/gutter-dropped`).
+  - A negative top or bottom margin is kept as its absolute value
+    (`layout/margin-negative`).
+  - A `layout` that is not a boolean throws `oconv: bad layout option`;
+    on another pair, `oconv: layout needs docx to odt`.
+  - The docx reader takes it as `docxInclude: ['layout']`.
+
+  It also carries each paragraph's and heading's effective alignment (its
+  `jc`, else up its style chain, else `docDefaults`) and its page breaks
+  (`pageBreakBefore`, a break alone in or at the end of the paragraph
+  before, one at its start), written as automatic paragraph styles. A
+  `distribute` or kashida alignment reads as `justify`
+  (`layout/align-approximated`); several breaks before one block are one
+  (`layout/breaks-merged`); a break inside a paragraph stays a space
+  (`layout/break-inside`); one that reaches a table, a code block, a
+  quote, the end of a text box or of the document is dropped
+  (`layout/break-dropped`).
+
+  And each run's effective size, font, colour, underline and super- or
+  subscript (its `rPr`, its character style's chain, its paragraph
+  style's chain, `docDefaults`; a theme font read from the theme part),
+  written as automatic text styles. A theme font the theme does not name
+  is dropped (`layout/font-theme-unresolved`); another underline kind is
+  written as single (`layout/underline-approximated`).
+
+  Without the option the output is unchanged.
+
+- **`pdfInclude: ['images']` places inline images and CMYK pictures.** An
+  inline image (`BI … EI`) is read as an image XObject is, its colour
+  space looked up in the resources when it is a name, and named after
+  its bytes (`image-inline-<hash>`). Raw DeviceCMYK, ICCBased with `/N` 4
+  and Indexed on them are converted to RGB without a profile. Over
+  1,763 PDFs, the dropped pictures go from 3,847 to 159. The default
+  read is unchanged.
+- **`pdfInfer: ['tables']` reads a table row drawn as one `TJ`.** On an
+  untagged document, a `TJ` array with 2 or more kerns of over 1 em
+  between its strings is cut there into one piece per cell, so the
+  aligned-text rule sees its columns (`oconvPdfTextExtract`'s new
+  `opts.cellKerns`). On opendataloader-bench, read with `['headings',
+  'tables']`: 0.8176 → 0.8239. The default read is unchanged.
+- **`pdfInfer` finds more headings and fewer false ones.** Four rules, on
+  the untagged path under the opt-in only:
+  - a font named with URW's bold suffix (`-Medi`, `-MediItal`) is bold;
+  - a figure or table caption (`Figure 3.`, `Table 2:` …) set in bold or
+    larger stays a paragraph;
+  - a title set at two heading sizes on one line (small caps) is one
+    heading;
+  - a table of contents (entries, then page numbers that do not
+    decrease) stays text under `'tables'`.
+
+  On opendataloader-bench, read with `['headings', 'tables']`: 0.7949 →
+  0.8176. The default read is unchanged.
+- **The text and pictures of a pptx group shape.** The pptx reader reads
+  with `pptx.read`'s `typedGroups` and walks a group's shapes in place:
+  their text, pictures and media are read as the slide's. Earlier releases
+  dropped them without a loss (in the wild corpus, 620 paragraphs and 132
+  pictures in 17 decks).
+- **`opts.pdf.pdfUA` and `opts.pdf.lang`: md → pdf and docx / odt → pdf
+  claiming PDF/UA-1 or PDF/UA-2.** The document is built with
+  `pdfBuilder`'s `pdfUA` and its structure API: headings, paragraphs,
+  quotes, lists (`L` / `LI` / `Lbl` / `LBody`), tables (`TH` scoped to its
+  column), code blocks and pictures (`Figure` with the alt text) are
+  tagged, every drawn item marked; rules and page numbers are artifacts.
+  A picture without alt text is an artifact, recorded `image/decorative`.
+  The title is the front matter's `title`, the source's, else the first
+  heading's (`oconv: pdf/UA needs a title (front matter or a heading)`);
+  every drawn style class needs an embedded face (`oconv: pdf/UA needs
+  embedded faces (<classes>)`); `lang` is required with `pdfUA`, and
+  `pdfUA` is refused with `pdfA` (`oconv: bad pdf option <key>`). With the
+  default faces, veraPDF 1.30.3 judges the documents conforming. Without
+  `pdfUA` the output is unchanged.
+- **`opts.pdf.pdfA`: md → pdf and docx / odt → pdf claiming PDF/A-4 or
+  PDF/A-2b.** The document is built with `pdfBuilder`'s `pdfA` (XMP
+  metadata, an sRGB output intent, the profile's version) and every font
+  embedded: each style class drawn needs an embedded face — the caller's
+  `opts.pdf.fonts` or the registered default faces (`@awacloud/oconv-fonts`)
+  — else `oconv: pdf/A needs embedded faces (<classes>)` before anything is
+  written; another value is `oconv: bad pdf option pdfA`. With the default
+  faces, veraPDF 1.30.3 judges the documents conforming. Without `pdfA`
+  the output is unchanged.
+
+### Fixed
+
+- **A span whose style states no emphasis is no longer a loss** (the odt
+  reader). A span with no emphasis flag recorded `run/format-unresolved`
+  even when its style is defined and states none, a size, a font or a
+  colour alone; the code now fires only for an undefined style, or one
+  whose chain states an emphasis property. oconv's own docx → odt runs
+  read back clean (60,591 such losses on the 1,469 wild docx converted by
+  default, before).
+
+- **A dropped note's custom mark is dropped with it** (the docx reader,
+  without `layout`). The text that follows a footnote or endnote reference
+  with `customMarkFollows` is the note's mark; it was kept as body text
+  when the note was not read (a stray `*`, or an invisible Symbol-font
+  character on a line of its own).
+
+- **A ToUnicode entry of U+FFFD no longer hides a glyph name that
+  reads.** The entry says the producer knew no character; the decoder now
+  reads the code through the font's encoding instead, and keeps U+FFFD
+  only when that reads nothing either. With `@awacloud/fonts`' fuller
+  glyph-name reading, `one.SP` reads `1` where the text had U+FFFD.
+
+- **A docx smart tag's text is written.** `docxToIr` reads a smart tag's
+  runs in place (`@awacloud/ooxml` types it now), where they were dropped
+  without a loss: 90 of 90 smart-tag words in the wild docx, from 48.
+
+- **A pdf read's own losses reach the ledger.** `pdfToIr` puts
+  the read document's records first in its ledger, read after the
+  extraction: `pdf/document/xref-rebuilt`, `pdf/document/xref-tolerated`,
+  `pdf/document/free-entry-fallback`, `pdf/document/free-object`,
+  `pdf/document/reference-cycle`, and the empty password as
+  `pdf/opened-with-empty-user-password` (moved here from `toMd`, so an
+  app's own read chain records it too, once). A pdf read by a tolerance
+  or a rebuild no longer converts as lossless: 54 of 2,422 corpus PDFs.
+
+- **`Q` restores the text font.** The pdf page walk: `q` now saves the
+  font in force, its size and the leading with the CTM, `Tc`, `Tw` and
+  `Tz`, and `Q` brings them back (ISO 32000-2 §8.4.1). Text drawn after
+  a `q … Tf … Q`, as after a list label in a bullet font, was decoded
+  through the font set inside the `q`. On 2,422 corpus PDFs (first 60
+  pages each), the undecodable codes fall from 14,410 to 3,017.
+
+- **Text boxes are read from a docx, and a shape is no longer an
+  image.** The docx reader dropped the content of every text box without
+  a loss. Each `w:txbxContent` — in a run's VML (`w:pict`, `w:object`:
+  the fallback of a Word 2010 shape, which the read takes, or VML alone)
+  or in a Word 2010 shape, group or canvas drawing — is now read as body
+  blocks after the paragraph that anchors it (after its list or quote
+  when it is in one), a picture in it with its bytes. Such a drawing is
+  not written as an image any more: one holding no text box records
+  `inline/dropped` (detail `wps:wsp`, `wpg:wgp` or `wpc:wpc`) instead of
+  an image reference with `image/bytes-unavailable`. In the real-world
+  docx files of the test corpus, 191 hold 502 text boxes in their body (3,418 words, of which at most 413 reached the Markdown);
+  3,340 do now, the rest being a word split across two runs, which the
+  Markdown joins, smart-tag runs, which the body drops too, and one
+  shape whose fallback differs from it. 189 files change output; the
+  `oconvDocxToIr` module now depends on `docxStructure`.
+
 ## [1.2.0] - 2026-11-02
 
 ### Added

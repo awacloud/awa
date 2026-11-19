@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -33,27 +33,15 @@ import { bitArray } from '../utils/bitArray.js';
  */
 
 /**
- * Ed448 explicit-reject stub group (NOT-IMPLEMENTED guards).
- * @typedef {object} Ed25519Ed448Reject
- * @property {() => false} keyPair
- * @property {() => false} sign
- * @property {() => false} verify
- * @property {() => false} signPh
- * @property {() => false} verifyPh
- */
-
-/**
  * Public API returned by `ed25519.factory()`.
  * @typedef {object} Ed25519API
  * @property {(seed: Uint8Array) => (Ed25519KeyPair|false)} keyPair Generate a key pair from a 32-byte seed.
  * @property {(privateKey: Uint8Array, message: Uint8Array) => (Uint8Array|false)} sign Pure Ed25519 sign (64-byte signature).
- * @property {(publicKey: Uint8Array, message: Uint8Array, signature: Uint8Array) => boolean} verify Pure Ed25519 verify.
+ * @property {(publicKey: Uint8Array, signature: Uint8Array, message: Uint8Array) => boolean} verify Pure Ed25519 verify (the fw order: key, signature, message).
  * @property {(privateKey: Uint8Array, message: Uint8Array, context?: Uint8Array) => (Uint8Array|false)} signPh Ed25519ph (preHash) sign.
- * @property {(publicKey: Uint8Array, message: Uint8Array, signature: Uint8Array, context?: Uint8Array) => boolean} verifyPh Ed25519ph verify.
+ * @property {(publicKey: Uint8Array, signature: Uint8Array, message: Uint8Array, context?: Uint8Array) => boolean} verifyPh Ed25519ph verify.
  * @property {(privateKey: Uint8Array, message: Uint8Array, context: Uint8Array) => (Uint8Array|false)} signCtx Ed25519ctx sign.
- * @property {(publicKey: Uint8Array, message: Uint8Array, signature: Uint8Array, context: Uint8Array) => boolean} verifyCtx Ed25519ctx verify.
- * @property {Ed25519Ed448Reject} ed448 Ed448 explicit-reject stubs.
- * @property {{ isValidPublicKey: (pk: Uint8Array) => boolean, dom2: (F: number, ctx: (Uint8Array|null)) => (Uint8Array|false) }} _internal Test-only escape hatch.
+ * @property {(publicKey: Uint8Array, signature: Uint8Array, message: Uint8Array, context: Uint8Array) => boolean} verifyCtx Ed25519ctx verify.
  */
 
 export const ed25519 = {
@@ -142,34 +130,283 @@ export const ed25519 = {
 
         function _A(o, a, b) { for (let i = 0; i < 16; i++) o[i] = a[i] + b[i]; }
         function _Z(o, a, b) { for (let i = 0; i < 16; i++) o[i] = a[i] - b[i]; }
+        /**
+         * Field multiply, unrolled into locals (no allocation): o = a * b.
+         * `o` may alias `a` or `b`. Exact in doubles for inputs below 2^18.
+         * @param {Float64Array} o
+         * @param {Float64Array} a
+         * @param {Float64Array} b
+         */
         function _M(o, a, b) {
-            const t = new Float64Array(31);
-            for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) t[i + j] += a[i] * b[j];
-            for (let i = 0; i < 15; i++) t[i] += 38 * t[i + 16];
-            for (let i = 0; i < 16; i++) o[i] = t[i];
-            _car25519(o); _car25519(o);
+            const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7], a8 = a[8], a9 = a[9], a10 = a[10], a11 = a[11], a12 = a[12], a13 = a[13], a14 = a[14], a15 = a[15];
+            const b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3], b4 = b[4], b5 = b[5], b6 = b[6], b7 = b[7], b8 = b[8], b9 = b[9], b10 = b[10], b11 = b[11], b12 = b[12], b13 = b[13], b14 = b[14], b15 = b[15];
+            let t0 = a0 * b0;
+            let t1 = a0 * b1 + a1 * b0;
+            let t2 = a0 * b2 + a1 * b1 + a2 * b0;
+            let t3 = a0 * b3 + a1 * b2 + a2 * b1 + a3 * b0;
+            let t4 = a0 * b4 + a1 * b3 + a2 * b2 + a3 * b1 + a4 * b0;
+            let t5 = a0 * b5 + a1 * b4 + a2 * b3 + a3 * b2 + a4 * b1 + a5 * b0;
+            let t6 = a0 * b6 + a1 * b5 + a2 * b4 + a3 * b3 + a4 * b2 + a5 * b1 + a6 * b0;
+            let t7 = a0 * b7 + a1 * b6 + a2 * b5 + a3 * b4 + a4 * b3 + a5 * b2 + a6 * b1 + a7 * b0;
+            let t8 = a0 * b8 + a1 * b7 + a2 * b6 + a3 * b5 + a4 * b4 + a5 * b3 + a6 * b2 + a7 * b1 + a8 * b0;
+            let t9 = a0 * b9 + a1 * b8 + a2 * b7 + a3 * b6 + a4 * b5 + a5 * b4 + a6 * b3 + a7 * b2 + a8 * b1 + a9 * b0;
+            let t10 = a0 * b10 + a1 * b9 + a2 * b8 + a3 * b7 + a4 * b6 + a5 * b5 + a6 * b4 + a7 * b3 + a8 * b2 + a9 * b1 + a10 * b0;
+            let t11 = a0 * b11 + a1 * b10 + a2 * b9 + a3 * b8 + a4 * b7 + a5 * b6 + a6 * b5 + a7 * b4 + a8 * b3 + a9 * b2 + a10 * b1 + a11 * b0;
+            let t12 = a0 * b12 + a1 * b11 + a2 * b10 + a3 * b9 + a4 * b8 + a5 * b7 + a6 * b6 + a7 * b5 + a8 * b4 + a9 * b3 + a10 * b2 + a11 * b1 + a12 * b0;
+            let t13 = a0 * b13 + a1 * b12 + a2 * b11 + a3 * b10 + a4 * b9 + a5 * b8 + a6 * b7 + a7 * b6 + a8 * b5 + a9 * b4 + a10 * b3 + a11 * b2 + a12 * b1 + a13 * b0;
+            let t14 = a0 * b14 + a1 * b13 + a2 * b12 + a3 * b11 + a4 * b10 + a5 * b9 + a6 * b8 + a7 * b7 + a8 * b6 + a9 * b5 + a10 * b4 + a11 * b3 + a12 * b2 + a13 * b1 + a14 * b0;
+            let t15 = a0 * b15 + a1 * b14 + a2 * b13 + a3 * b12 + a4 * b11 + a5 * b10 + a6 * b9 + a7 * b8 + a8 * b7 + a9 * b6 + a10 * b5 + a11 * b4 + a12 * b3 + a13 * b2 + a14 * b1 + a15 * b0;
+            let t16 = a1 * b15 + a2 * b14 + a3 * b13 + a4 * b12 + a5 * b11 + a6 * b10 + a7 * b9 + a8 * b8 + a9 * b7 + a10 * b6 + a11 * b5 + a12 * b4 + a13 * b3 + a14 * b2 + a15 * b1;
+            let t17 = a2 * b15 + a3 * b14 + a4 * b13 + a5 * b12 + a6 * b11 + a7 * b10 + a8 * b9 + a9 * b8 + a10 * b7 + a11 * b6 + a12 * b5 + a13 * b4 + a14 * b3 + a15 * b2;
+            let t18 = a3 * b15 + a4 * b14 + a5 * b13 + a6 * b12 + a7 * b11 + a8 * b10 + a9 * b9 + a10 * b8 + a11 * b7 + a12 * b6 + a13 * b5 + a14 * b4 + a15 * b3;
+            let t19 = a4 * b15 + a5 * b14 + a6 * b13 + a7 * b12 + a8 * b11 + a9 * b10 + a10 * b9 + a11 * b8 + a12 * b7 + a13 * b6 + a14 * b5 + a15 * b4;
+            let t20 = a5 * b15 + a6 * b14 + a7 * b13 + a8 * b12 + a9 * b11 + a10 * b10 + a11 * b9 + a12 * b8 + a13 * b7 + a14 * b6 + a15 * b5;
+            let t21 = a6 * b15 + a7 * b14 + a8 * b13 + a9 * b12 + a10 * b11 + a11 * b10 + a12 * b9 + a13 * b8 + a14 * b7 + a15 * b6;
+            let t22 = a7 * b15 + a8 * b14 + a9 * b13 + a10 * b12 + a11 * b11 + a12 * b10 + a13 * b9 + a14 * b8 + a15 * b7;
+            let t23 = a8 * b15 + a9 * b14 + a10 * b13 + a11 * b12 + a12 * b11 + a13 * b10 + a14 * b9 + a15 * b8;
+            let t24 = a9 * b15 + a10 * b14 + a11 * b13 + a12 * b12 + a13 * b11 + a14 * b10 + a15 * b9;
+            let t25 = a10 * b15 + a11 * b14 + a12 * b13 + a13 * b12 + a14 * b11 + a15 * b10;
+            let t26 = a11 * b15 + a12 * b14 + a13 * b13 + a14 * b12 + a15 * b11;
+            let t27 = a12 * b15 + a13 * b14 + a14 * b13 + a15 * b12;
+            let t28 = a13 * b15 + a14 * b14 + a15 * b13;
+            let t29 = a14 * b15 + a15 * b14;
+            let t30 = a15 * b15;
+            t0 += 38 * t16;
+            t1 += 38 * t17;
+            t2 += 38 * t18;
+            t3 += 38 * t19;
+            t4 += 38 * t20;
+            t5 += 38 * t21;
+            t6 += 38 * t22;
+            t7 += 38 * t23;
+            t8 += 38 * t24;
+            t9 += 38 * t25;
+            t10 += 38 * t26;
+            t11 += 38 * t27;
+            t12 += 38 * t28;
+            t13 += 38 * t29;
+            t14 += 38 * t30;
+            let c = 0, v;
+            v = t0 + c; c = Math.floor(v / 65536); t0 = v - c * 65536;
+            v = t1 + c; c = Math.floor(v / 65536); t1 = v - c * 65536;
+            v = t2 + c; c = Math.floor(v / 65536); t2 = v - c * 65536;
+            v = t3 + c; c = Math.floor(v / 65536); t3 = v - c * 65536;
+            v = t4 + c; c = Math.floor(v / 65536); t4 = v - c * 65536;
+            v = t5 + c; c = Math.floor(v / 65536); t5 = v - c * 65536;
+            v = t6 + c; c = Math.floor(v / 65536); t6 = v - c * 65536;
+            v = t7 + c; c = Math.floor(v / 65536); t7 = v - c * 65536;
+            v = t8 + c; c = Math.floor(v / 65536); t8 = v - c * 65536;
+            v = t9 + c; c = Math.floor(v / 65536); t9 = v - c * 65536;
+            v = t10 + c; c = Math.floor(v / 65536); t10 = v - c * 65536;
+            v = t11 + c; c = Math.floor(v / 65536); t11 = v - c * 65536;
+            v = t12 + c; c = Math.floor(v / 65536); t12 = v - c * 65536;
+            v = t13 + c; c = Math.floor(v / 65536); t13 = v - c * 65536;
+            v = t14 + c; c = Math.floor(v / 65536); t14 = v - c * 65536;
+            v = t15 + c; c = Math.floor(v / 65536); t15 = v - c * 65536;
+            t0 += 38 * c; c = 0;
+            v = t0 + c; c = Math.floor(v / 65536); t0 = v - c * 65536;
+            v = t1 + c; c = Math.floor(v / 65536); t1 = v - c * 65536;
+            v = t2 + c; c = Math.floor(v / 65536); t2 = v - c * 65536;
+            v = t3 + c; c = Math.floor(v / 65536); t3 = v - c * 65536;
+            v = t4 + c; c = Math.floor(v / 65536); t4 = v - c * 65536;
+            v = t5 + c; c = Math.floor(v / 65536); t5 = v - c * 65536;
+            v = t6 + c; c = Math.floor(v / 65536); t6 = v - c * 65536;
+            v = t7 + c; c = Math.floor(v / 65536); t7 = v - c * 65536;
+            v = t8 + c; c = Math.floor(v / 65536); t8 = v - c * 65536;
+            v = t9 + c; c = Math.floor(v / 65536); t9 = v - c * 65536;
+            v = t10 + c; c = Math.floor(v / 65536); t10 = v - c * 65536;
+            v = t11 + c; c = Math.floor(v / 65536); t11 = v - c * 65536;
+            v = t12 + c; c = Math.floor(v / 65536); t12 = v - c * 65536;
+            v = t13 + c; c = Math.floor(v / 65536); t13 = v - c * 65536;
+            v = t14 + c; c = Math.floor(v / 65536); t14 = v - c * 65536;
+            v = t15 + c; c = Math.floor(v / 65536); t15 = v - c * 65536;
+            t0 += 38 * c;
+            o[0] = t0;
+            o[1] = t1;
+            o[2] = t2;
+            o[3] = t3;
+            o[4] = t4;
+            o[5] = t5;
+            o[6] = t6;
+            o[7] = t7;
+            o[8] = t8;
+            o[9] = t9;
+            o[10] = t10;
+            o[11] = t11;
+            o[12] = t12;
+            o[13] = t13;
+            o[14] = t14;
+            o[15] = t15;
         }
-        function _S(o, a) { _M(o, a, a); }
+
+        /**
+         * Field square by the symmetry of the products (136 instead of 256):
+         * o = a * a; `o` may alias `a`.
+         * @param {Float64Array} o
+         * @param {Float64Array} a
+         */
+        function _S(o, a) {
+            const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7], a8 = a[8], a9 = a[9], a10 = a[10], a11 = a[11], a12 = a[12], a13 = a[13], a14 = a[14], a15 = a[15];
+            const d0 = 2 * a0, d1 = 2 * a1, d2 = 2 * a2, d3 = 2 * a3, d4 = 2 * a4, d5 = 2 * a5, d6 = 2 * a6, d7 = 2 * a7, d8 = 2 * a8, d9 = 2 * a9, d10 = 2 * a10, d11 = 2 * a11, d12 = 2 * a12, d13 = 2 * a13, d14 = 2 * a14;
+            let t0 = a0 * a0;
+            let t1 = d0 * a1;
+            let t2 = d0 * a2 + a1 * a1;
+            let t3 = d0 * a3 + d1 * a2;
+            let t4 = d0 * a4 + d1 * a3 + a2 * a2;
+            let t5 = d0 * a5 + d1 * a4 + d2 * a3;
+            let t6 = d0 * a6 + d1 * a5 + d2 * a4 + a3 * a3;
+            let t7 = d0 * a7 + d1 * a6 + d2 * a5 + d3 * a4;
+            let t8 = d0 * a8 + d1 * a7 + d2 * a6 + d3 * a5 + a4 * a4;
+            let t9 = d0 * a9 + d1 * a8 + d2 * a7 + d3 * a6 + d4 * a5;
+            let t10 = d0 * a10 + d1 * a9 + d2 * a8 + d3 * a7 + d4 * a6 + a5 * a5;
+            let t11 = d0 * a11 + d1 * a10 + d2 * a9 + d3 * a8 + d4 * a7 + d5 * a6;
+            let t12 = d0 * a12 + d1 * a11 + d2 * a10 + d3 * a9 + d4 * a8 + d5 * a7 + a6 * a6;
+            let t13 = d0 * a13 + d1 * a12 + d2 * a11 + d3 * a10 + d4 * a9 + d5 * a8 + d6 * a7;
+            let t14 = d0 * a14 + d1 * a13 + d2 * a12 + d3 * a11 + d4 * a10 + d5 * a9 + d6 * a8 + a7 * a7;
+            let t15 = d0 * a15 + d1 * a14 + d2 * a13 + d3 * a12 + d4 * a11 + d5 * a10 + d6 * a9 + d7 * a8;
+            let t16 = d1 * a15 + d2 * a14 + d3 * a13 + d4 * a12 + d5 * a11 + d6 * a10 + d7 * a9 + a8 * a8;
+            let t17 = d2 * a15 + d3 * a14 + d4 * a13 + d5 * a12 + d6 * a11 + d7 * a10 + d8 * a9;
+            let t18 = d3 * a15 + d4 * a14 + d5 * a13 + d6 * a12 + d7 * a11 + d8 * a10 + a9 * a9;
+            let t19 = d4 * a15 + d5 * a14 + d6 * a13 + d7 * a12 + d8 * a11 + d9 * a10;
+            let t20 = d5 * a15 + d6 * a14 + d7 * a13 + d8 * a12 + d9 * a11 + a10 * a10;
+            let t21 = d6 * a15 + d7 * a14 + d8 * a13 + d9 * a12 + d10 * a11;
+            let t22 = d7 * a15 + d8 * a14 + d9 * a13 + d10 * a12 + a11 * a11;
+            let t23 = d8 * a15 + d9 * a14 + d10 * a13 + d11 * a12;
+            let t24 = d9 * a15 + d10 * a14 + d11 * a13 + a12 * a12;
+            let t25 = d10 * a15 + d11 * a14 + d12 * a13;
+            let t26 = d11 * a15 + d12 * a14 + a13 * a13;
+            let t27 = d12 * a15 + d13 * a14;
+            let t28 = d13 * a15 + a14 * a14;
+            let t29 = d14 * a15;
+            let t30 = a15 * a15;
+            t0 += 38 * t16;
+            t1 += 38 * t17;
+            t2 += 38 * t18;
+            t3 += 38 * t19;
+            t4 += 38 * t20;
+            t5 += 38 * t21;
+            t6 += 38 * t22;
+            t7 += 38 * t23;
+            t8 += 38 * t24;
+            t9 += 38 * t25;
+            t10 += 38 * t26;
+            t11 += 38 * t27;
+            t12 += 38 * t28;
+            t13 += 38 * t29;
+            t14 += 38 * t30;
+            let c = 0, v;
+            v = t0 + c; c = Math.floor(v / 65536); t0 = v - c * 65536;
+            v = t1 + c; c = Math.floor(v / 65536); t1 = v - c * 65536;
+            v = t2 + c; c = Math.floor(v / 65536); t2 = v - c * 65536;
+            v = t3 + c; c = Math.floor(v / 65536); t3 = v - c * 65536;
+            v = t4 + c; c = Math.floor(v / 65536); t4 = v - c * 65536;
+            v = t5 + c; c = Math.floor(v / 65536); t5 = v - c * 65536;
+            v = t6 + c; c = Math.floor(v / 65536); t6 = v - c * 65536;
+            v = t7 + c; c = Math.floor(v / 65536); t7 = v - c * 65536;
+            v = t8 + c; c = Math.floor(v / 65536); t8 = v - c * 65536;
+            v = t9 + c; c = Math.floor(v / 65536); t9 = v - c * 65536;
+            v = t10 + c; c = Math.floor(v / 65536); t10 = v - c * 65536;
+            v = t11 + c; c = Math.floor(v / 65536); t11 = v - c * 65536;
+            v = t12 + c; c = Math.floor(v / 65536); t12 = v - c * 65536;
+            v = t13 + c; c = Math.floor(v / 65536); t13 = v - c * 65536;
+            v = t14 + c; c = Math.floor(v / 65536); t14 = v - c * 65536;
+            v = t15 + c; c = Math.floor(v / 65536); t15 = v - c * 65536;
+            t0 += 38 * c; c = 0;
+            v = t0 + c; c = Math.floor(v / 65536); t0 = v - c * 65536;
+            v = t1 + c; c = Math.floor(v / 65536); t1 = v - c * 65536;
+            v = t2 + c; c = Math.floor(v / 65536); t2 = v - c * 65536;
+            v = t3 + c; c = Math.floor(v / 65536); t3 = v - c * 65536;
+            v = t4 + c; c = Math.floor(v / 65536); t4 = v - c * 65536;
+            v = t5 + c; c = Math.floor(v / 65536); t5 = v - c * 65536;
+            v = t6 + c; c = Math.floor(v / 65536); t6 = v - c * 65536;
+            v = t7 + c; c = Math.floor(v / 65536); t7 = v - c * 65536;
+            v = t8 + c; c = Math.floor(v / 65536); t8 = v - c * 65536;
+            v = t9 + c; c = Math.floor(v / 65536); t9 = v - c * 65536;
+            v = t10 + c; c = Math.floor(v / 65536); t10 = v - c * 65536;
+            v = t11 + c; c = Math.floor(v / 65536); t11 = v - c * 65536;
+            v = t12 + c; c = Math.floor(v / 65536); t12 = v - c * 65536;
+            v = t13 + c; c = Math.floor(v / 65536); t13 = v - c * 65536;
+            v = t14 + c; c = Math.floor(v / 65536); t14 = v - c * 65536;
+            v = t15 + c; c = Math.floor(v / 65536); t15 = v - c * 65536;
+            t0 += 38 * c;
+            o[0] = t0;
+            o[1] = t1;
+            o[2] = t2;
+            o[3] = t3;
+            o[4] = t4;
+            o[5] = t5;
+            o[6] = t6;
+            o[7] = t7;
+            o[8] = t8;
+            o[9] = t9;
+            o[10] = t10;
+            o[11] = t11;
+            o[12] = t12;
+            o[13] = t13;
+            o[14] = t14;
+            o[15] = t15;
+        }
+
+        /**
+         * o = z^(2^250 - 1) and, on the way, z11 = z^11 — the common prefix of
+         * the inversion and square-root exponents. 249 squarings and 10
+         * multiplies (the loop form multiplied at almost every bit).
+         * @param {Float64Array} z
+         * @param {Float64Array} o z^(2^250 - 1)
+         * @param {Float64Array} z11 z^11
+         */
+        function _pow22501(z, o, z11) {
+            const t0 = _gf(), t1 = _gf(), t2 = _gf();
+            _S(t0, z);                                   // z^2
+            _S(t1, t0); _S(t1, t1);                      // z^8
+            _M(t1, t1, z);                               // z^9
+            _M(z11, t1, t0);                             // z^11
+            _S(t0, z11);                                 // z^22
+            _M(t0, t0, t1);                              // z^(2^5 - 1)
+            _S(t1, t0); for (let i = 1; i < 5; i++) _S(t1, t1);
+            _M(t0, t1, t0);                              // z^(2^10 - 1)
+            _S(t1, t0); for (let i = 1; i < 10; i++) _S(t1, t1);
+            _M(t1, t1, t0);                              // z^(2^20 - 1)
+            _S(t2, t1); for (let i = 1; i < 20; i++) _S(t2, t2);
+            _M(t1, t2, t1);                              // z^(2^40 - 1)
+            for (let i = 0; i < 10; i++) _S(t1, t1);
+            _M(t0, t1, t0);                              // z^(2^50 - 1)
+            _S(t1, t0); for (let i = 1; i < 50; i++) _S(t1, t1);
+            _M(t1, t1, t0);                              // z^(2^100 - 1)
+            _S(t2, t1); for (let i = 1; i < 100; i++) _S(t2, t2);
+            _M(t1, t2, t1);                              // z^(2^200 - 1)
+            for (let i = 0; i < 50; i++) _S(t1, t1);
+            _M(o, t1, t0);                               // z^(2^250 - 1)
+        }
+
+        /** o = i^(p - 2) = i^(2^255 - 21), the inverse (0 for 0). */
         function _inv25519(o, i) {
-            const c = _gf();
-            for (let a = 0; a < 16; a++) c[a] = i[a];
-            for (let a = 253; a >= 0; a--) { _S(c, c); if (a !== 2 && a !== 4) _M(c, c, i); }
-            for (let a = 0; a < 16; a++) o[a] = c[a];
+            const t = _gf(), z11 = _gf();
+            _pow22501(i, t, z11);
+            for (let k = 0; k < 5; k++) _S(t, t);       // z^(2^255 - 32)
+            _M(o, t, z11);                               // z^(2^255 - 21)
         }
+
+        /** o = i^((p - 5) / 8) = i^(2^252 - 3), for the square root in `_unpackneg`; o may be i. */
         function _pow2523(o, i) {
-            const c = _gf();
-            for (let a = 0; a < 16; a++) c[a] = i[a];
-            for (let a = 250; a >= 0; a--) { _S(c, c); if (a !== 1) _M(c, c, i); }
-            for (let a = 0; a < 16; a++) o[a] = c[a];
+            const t = _gf(), z11 = _gf();
+            _pow22501(i, t, z11);
+            _S(t, t); _S(t, t);                          // z^(2^252 - 4)
+            _M(o, t, i);                                 // z^(2^252 - 3)
         }
 
         // ── Group operations on extended Edwards points (P, Q): [4]gf ───
 
         function _set25519(r, a) { for (let i = 0; i < 16; i++) r[i] = a[i]; }
 
+        // Scratch field elements of the group operations (no allocation per
+        // call; nothing here re-enters).
+        const _ga = _gf(), _gb = _gf(), _gc = _gf(), _gd = _gf(), _ge = _gf(),
+              _gff = _gf(), _gg = _gf(), _gh = _gf(), _gt = _gf();
+
+        /** p = p + q (RFC 8032 §5.1.4 addition; complete; q may be p). */
         function _add(p, q) {
-            const a = _gf(), b = _gf(), c = _gf(), d = _gf(), e = _gf(),
-                  f = _gf(), g = _gf(), h = _gf(), t = _gf();
+            const a = _ga, b = _gb, c = _gc, d = _gd, e = _ge, f = _gff, g = _gg, h = _gh, t = _gt;
             _Z(a, p[1], p[0]); _Z(t, q[1], q[0]); _M(a, a, t);
             _A(b, p[0], p[1]); _A(t, q[0], q[1]); _M(b, b, t);
             _M(c, p[3], q[3]); _M(c, c, _D2);
@@ -184,8 +421,41 @@ export const ed25519 = {
             _M(p[3], e, h);
         }
 
-        function _cswap(p, q, b) {
-            for (let i = 0; i < 4; i++) _sel25519(p[i], q[i], b);
+        /** p = 2p (RFC 8032 §5.1.4 doubling: 4 multiplies, 4 squares). */
+        function _dbl(p) {
+            const a = _ga, b = _gb, c = _gc, e = _ge, f = _gff, g = _gg, h = _gh, t = _gt;
+            _S(a, p[0]);                 // A = X^2
+            _S(b, p[1]);                 // B = Y^2
+            _S(c, p[2]); _A(c, c, c);    // C = 2 Z^2
+            _A(h, a, b);                 // H = A + B
+            _A(t, p[0], p[1]); _S(t, t);
+            _Z(e, h, t);                 // E = H - (X + Y)^2
+            _Z(g, a, b);                 // G = A - B
+            _A(f, c, g);                 // F = C + G
+            _M(p[0], e, f);
+            _M(p[1], g, h);
+            _M(p[2], f, g);
+            _M(p[3], e, h);
+        }
+
+        /**
+         * p = p + n, n an affine point in the form (y + x, y - x, 2d·x·y)
+         * (the base table's entries): the addition with Z2 = 1, 7 multiplies.
+         */
+        function _addNiels(p, n) {
+            const a = _ga, b = _gb, c = _gc, d = _gd, e = _ge, f = _gff, g = _gg, h = _gh;
+            _Z(a, p[1], p[0]); _M(a, a, n[1]);
+            _A(b, p[0], p[1]); _M(b, b, n[0]);
+            _M(c, p[3], n[2]);
+            _A(d, p[2], p[2]);
+            _Z(e, b, a);
+            _Z(f, d, c);
+            _A(g, d, c);
+            _A(h, b, a);
+            _M(p[0], e, f);
+            _M(p[1], h, g);
+            _M(p[2], g, f);
+            _M(p[3], e, h);
         }
 
         function _pack(r, p) {
@@ -197,32 +467,133 @@ export const ed25519 = {
             r[31] ^= _par25519(tx) << 7;
         }
 
-        // Constant-time scalar multiplication: fixed-iteration double-and-add
-        // with conditional swap on each scalar bit. The swap is implemented
-        // via `_sel25519` (bitmask only - no data-dependent branch), so the
-        // memory access pattern is independent of the secret scalar. This is
-        // the side-channel guarantee that EdDSA signing relies on.
-        function _scalarmult(p, q, s) {
-            _set25519(p[0], _gf0);
-            _set25519(p[1], _gf1);
-            _set25519(p[2], _gf1);
-            _set25519(p[3], _gf0);
-            for (let i = 255; i >= 0; --i) {
-                const b = (s[(i / 8) | 0] >> (i & 7)) & 1;
-                _cswap(p, q, b);
-                _add(q, p);
-                _add(p, p);
-                _cswap(p, q, b);
-            }
+        /** A field element brought to its canonical 16-bit limbs (0..65535). */
+        function _canon(o, a) {
+            const bytes = new Uint8Array(32);
+            _pack25519(bytes, a);
+            for (let i = 0; i < 16; i++) o[i] = bytes[2 * i] + (bytes[2 * i + 1] << 8);
         }
 
+        /**
+         * The base table: entry [i][j - 1] = j · 256^i · B (i < 32, j = 1..8) as
+         * (y + x, y - x, 2d·x·y), canonical limbs. Built once per factory on
+         * first use: 224 additions, 248 doublings and one inversion shared by
+         * all 256 points (prefix products).
+         * @type {Float64Array[][][]|null}
+         */
+        let _baseTable = null;
+
+        function _buildBaseTable() {
+            const points = [];
+            const P = [_gf(), _gf(), _gf(), _gf()];
+            _set25519(P[0], _X); _set25519(P[1], _Y); _set25519(P[2], _gf1); _M(P[3], _X, _Y);
+            for (let i = 0; i < 32; i++) {
+                const Q = P.map((c) => Float64Array.from(c));
+                for (let j = 1; j <= 8; j++) {
+                    points.push(Q.map((c) => Float64Array.from(c)));
+                    if (j < 8) _add(Q, P);
+                }
+                if (i < 31) for (let k = 0; k < 8; k++) _dbl(P);
+            }
+            // One inversion for every Z: prefix products, then back.
+            const n = points.length;
+            const prefix = new Array(n);
+            prefix[0] = Float64Array.from(points[0][2]);
+            for (let k = 1; k < n; k++) { prefix[k] = _gf(); _M(prefix[k], prefix[k - 1], points[k][2]); }
+            const inv = _gf();
+            _inv25519(inv, prefix[n - 1]);
+            const table = [];
+            for (let i = 0; i < 32; i++) table.push(new Array(8));
+            const zi = _gf(), x = _gf(), y = _gf(), t = _gf();
+            for (let k = n - 1; k >= 0; k--) {
+                if (k > 0) { _M(zi, inv, prefix[k - 1]); _M(inv, inv, points[k][2]); } else _set25519(zi, inv);
+                _M(x, points[k][0], zi);
+                _M(y, points[k][1], zi);
+                const yPx = _gf(), yMx = _gf(), xy2d = _gf();
+                _A(t, y, x); _canon(yPx, t);
+                _Z(t, y, x); _canon(yMx, t);
+                _M(t, x, y); _M(t, t, _D2); _canon(xy2d, t);
+                table[k >> 3][k & 7] = [yPx, yMx, xy2d];
+            }
+            return table;
+        }
+
+        /** a = bit ? b : a, by mask (bit is 0 or 1; limbs are 32-bit integers). */
+        function _cmov(a, b, bit) {
+            const m = -bit;
+            for (let i = 0; i < 16; i++) a[i] ^= m & (a[i] ^ b[i]);
+        }
+
+        const _sel = [_gf(), _gf(), _gf()], _negXy2d = _gf();
+
+        /**
+         * _sel = digit · 256^i · B in (y + x, y - x, 2d·x·y) form, digit in
+         * [-8, 8], in constant time: all eight entries are read and merged by
+         * mask, then the result is negated by mask (swap the first two, negate
+         * the third). The digit selects no branch and no index.
+         */
+        function _selectBase(i, digit) {
+            const row = _baseTable[i];
+            const negMask = digit >> 31;                 // -1 for a negative digit, else 0
+            const abs = (digit ^ negMask) - negMask;
+            const s0 = _sel[0], s1 = _sel[1], s2 = _sel[2];
+            for (let k = 0; k < 16; k++) { s0[k] = 0; s1[k] = 0; s2[k] = 0; }
+            s0[0] = 1; s1[0] = 1;                        // the identity: (1, 1, 0)
+            for (let j = 1; j <= 8; j++) {
+                const eq = ((abs ^ j) - 1) >>> 31;       // 1 iff abs === j
+                const e = row[j - 1];
+                _cmov(s0, e[0], eq); _cmov(s1, e[1], eq); _cmov(s2, e[2], eq);
+            }
+            const neg = negMask & 1;
+            _sel25519(s0, s1, neg);
+            _Z(_negXy2d, _gf0, s2);
+            _cmov(s2, _negXy2d, neg);
+            return _sel;
+        }
+
+        const _digits = new Int32Array(64);
+
+        /**
+         * p = s · B (s: 32 little-endian bytes below 2^255) in constant time:
+         * s as 64 signed radix-16 digits in [-8, 8]; the odd digits through the
+         * table, four doublings, then the even digits (h = Σ e_i 16^i B with
+         * entry [i >> 1] holding 256^(i >> 1) B = 16^(i - 1) B for odd i).
+         */
         function _scalarbase(p, s) {
-            const q = [_gf(), _gf(), _gf(), _gf()];
-            _set25519(q[0], _X);
-            _set25519(q[1], _Y);
-            _set25519(q[2], _gf1);
-            _M(q[3], _X, _Y);
-            _scalarmult(p, q, s);
+            if (_baseTable === null) _baseTable = _buildBaseTable();
+            const e = _digits;
+            for (let i = 0; i < 32; i++) { e[2 * i] = s[i] & 15; e[2 * i + 1] = (s[i] >> 4) & 15; }
+            let carry = 0;
+            for (let i = 0; i < 63; i++) {
+                e[i] += carry;
+                carry = (e[i] + 8) >> 4;
+                e[i] -= carry << 4;
+            }
+            e[63] += carry;
+            _set25519(p[0], _gf0); _set25519(p[1], _gf1); _set25519(p[2], _gf1); _set25519(p[3], _gf0);
+            for (let i = 1; i < 64; i += 2) _addNiels(p, _selectBase(i >> 1, e[i]));
+            _dbl(p); _dbl(p); _dbl(p); _dbl(p);
+            for (let i = 0; i < 64; i += 2) _addNiels(p, _selectBase(i >> 1, e[i]));
+            for (let i = 0; i < 64; i++) e[i] = 0;
+        }
+
+        /**
+         * p = s · q for PUBLIC s and q only (`verify`): a 4-bit fixed window,
+         * 4 doublings and one addition per nibble. Variable time: the nibbles
+         * index the window table.
+         */
+        function _scalarmultPublic(p, q, s) {
+            const win = [[_gf(), _gf1.slice(), _gf1.slice(), _gf()]];
+            for (let j = 1; j < 16; j++) {
+                const w = win[j - 1].map((c) => Float64Array.from(c));
+                _add(w, q);
+                win.push(w);
+            }
+            _set25519(p[0], _gf0); _set25519(p[1], _gf1); _set25519(p[2], _gf1); _set25519(p[3], _gf0);
+            for (let i = 63; i >= 0; i--) {
+                if (i < 63) { _dbl(p); _dbl(p); _dbl(p); _dbl(p); }
+                _add(p, win[(s[i >> 1] >> ((i & 1) << 2)) & 15]);
+            }
         }
 
         // ── L = 2^252 + 27742317777372353535851937790883648493 ──────────
@@ -280,7 +651,7 @@ export const ed25519 = {
         }
 
         // ── RFC 8032 §5.1 dom2 prefix (Ed25519ph + Ed25519ctx) ─────────
-        // Iteration E1 of the FIPS 140-3 upgrade plan / FIPS 186-5 §7.6.
+        // FIPS 186-5 §7.6.
         //
         // dom2(F, C) = "SigEd25519 no Ed25519 collisions" (32 ASCII bytes)
         //              || octet(F)          // 1=ph, 0=ctx
@@ -492,7 +863,7 @@ export const ed25519 = {
             _reduce(k);
 
             const p = [_gf(), _gf(), _gf(), _gf()];
-            _scalarmult(p, q, k);
+            _scalarmultPublic(p, q, k);
 
             const Rcheck = [_gf(), _gf(), _gf(), _gf()];
             _scalarbase(Rcheck, signature.subarray(32, 64));
@@ -507,12 +878,12 @@ export const ed25519 = {
         }
 
         /** Pure Ed25519 verify (RFC 8032 §5.1.7). */
-        function verify(publicKey, message, signature) {
+        function verify(publicKey, signature, message) {
             return _verifyCore(publicKey, message, signature, null);
         }
 
         /** Ed25519ph verify (RFC 8032 §5.1.1 / FIPS 186-5 §7.6.2). */
-        function verifyPh(publicKey, message, signature, context) {
+        function verifyPh(publicKey, signature, message, context) {
             const dom = _dom2(1, context);
             if (dom === false) return false;
             const ph = _h(message);
@@ -520,7 +891,7 @@ export const ed25519 = {
         }
 
         /** Ed25519ctx verify (RFC 8032 §5.1 with F=0). */
-        function verifyCtx(publicKey, message, signature, context) {
+        function verifyCtx(publicKey, signature, message, context) {
             if (!(context instanceof Uint8Array) || context.length === 0 || context.length > 255) {
                 console.warn('[crypto] INVALID: ed25519: verifyCtx context must be 1..255 bytes');
                 return false;
@@ -530,53 +901,41 @@ export const ed25519 = {
             return _verifyCore(publicKey, message, signature, dom);
         }
 
-        // ── Ed448 explicit reject (Iteration E2 of the FIPS 140-3 upgrade plan)
-        //
-        // FIPS 186-5 §7.7 admits Ed448 (edwards448 curve + SHAKE-256, output
-        // pk 57 bytes, sig 114 bytes). This module only implements
-        // Ed25519/edwards25519 (RFC 8032 §5.1). To prevent any silent use
-        // of an Ed448 function by a consumer that has confused the two
-        // variants, explicit stubs are exposed returning `false` +
-        // typed warning `NOT-IMPLEMENTED`.
-        //
-        // If Ed448 becomes necessary (CMVP lab, specific interop), create
-        // a separate module `ed448.js` (distinct curve + hash; does NOT share
-        // the Ed25519 compression function). Implementation to derive
-        // directly from RFC 8032 §5.2 (Edwards448 + SHAKE-256).
-        function _ed448Reject(method) {
-            console.warn('[crypto] NOT-IMPLEMENTED: ed25519: Ed448 (FIPS 186-5 §7.7 / RFC 8032 §5.2) is a separate curve (edwards448 + SHAKE-256, 57-byte pk / 114-byte sig) and is NOT implemented in this module. Use Ed25519 (' + method + '() instead) or implement a separate ed448.js module if Ed448 is required for CMVP / interop.');
-            return false;
-        }
-        const ed448 = {
-            keyPair: () => _ed448Reject('keyPair'),
-            sign:    () => _ed448Reject('sign'),
-            verify:  () => _ed448Reject('verify'),
-            signPh:  () => _ed448Reject('signPh'),
-            verifyPh: () => _ed448Reject('verifyPh')
-        };
-
-        return /** @type {Ed25519API} */ (/** @type {any} */ ({
+        return /** @type {Ed25519API} */ (/** @type {any} */ (Object.defineProperty({
             keyPair,
             sign, verify,
-            // Iteration E1 of the FIPS 140-3 upgrade plan - Ed25519ph variants
+            // Ed25519ph variants
             // (preHash, RFC 8032 §5.1.1) and Ed25519ctx (context bytes,
             // RFC 8032 §5.1).
             signPh, verifyPh,
-            signCtx, verifyCtx,
-            // Iteration E2 - Ed448 explicit reject (NOT-IMPLEMENTED guards).
-            ed448,
+            signCtx, verifyCtx
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Test-only escape hatch: ACVP EDDSA-KeyVer-1.0 needs a way to
             // probe public-key validity (point decompression + on-curve check)
             // independently of signature verification. Not part of the public
             // API contract; do not call from production code.
-            _internal: {
+            value: {
                 isValidPublicKey(pk) {
                     if (!(pk instanceof Uint8Array) || pk.length !== 32) return false;
                     const q = [_gf(), _gf(), _gf(), _gf()];
                     return _unpackneg(q, pk) === 0;
                 },
-                dom2: _dom2
+                dom2: _dom2,
+                // s · B through the constant-time base table and through the
+                // public 4-bit window: two independent paths, for tests.
+                baseMulBoth(sc) {
+                    const B = [_gf(), _gf(), _gf(), _gf()];
+                    _set25519(B[0], _X); _set25519(B[1], _Y); _set25519(B[2], _gf1); _M(B[3], _X, _Y);
+                    const p1 = [_gf(), _gf(), _gf(), _gf()], p2 = [_gf(), _gf(), _gf(), _gf()];
+                    _scalarbase(p1, sc);
+                    _scalarmultPublic(p2, B, sc);
+                    const t = new Uint8Array(32), w = new Uint8Array(32);
+                    _pack(t, p1); _pack(w, p2);
+                    return { table: t, window: w };
+                },
+                /** The source of the base multiplication, for the structural constant-time test. */
+                baseMulSource: () => String(_selectBase) + String(_scalarbase),
             }
-        }));
+        })));
     }
 };

@@ -1,5 +1,7 @@
 # @awacloud/tool-convert
 
+`@awacloud/oconv` document conversion at the command line and as an MCP server: to Markdown, from Markdown, document to document, Markdown to HTML. The CLI runs on bun, node and deno.
+
 Document conversion (`@awacloud/oconv`) at the command line and over MCP.
 The CLI runs on **bun, node and deno**, from a repository checkout or from
 an installed copy (see "Running it" below); the MCP server runs on
@@ -7,8 +9,8 @@ an installed copy (see "Running it" below); the MCP server runs on
 
 ```bash
 bun src/index.ts to-md <file> [--format <fmt>] [--at <iso>] [--out <file>] [to-md options]
-bun src/index.ts from-md <file.md> --target <fmt> [--out <file>]
-bun src/index.ts convert <file> --target <fmt> [--format <fmt>] [--out <file>]
+bun src/index.ts from-md <file.md> --target <fmt> [--out <file>] [--pdf-a <4|2b> | --pdf-ua <1|2> --pdf-lang <tag>] [--pdf-fonts <dir>]
+bun src/index.ts convert <file> --target <fmt> [--format <fmt>] [--out <file>] [--layout | --no-layout] [--pdf-a <4|2b> | --pdf-ua <1|2> --pdf-lang <tag>] [--pdf-fonts <dir>]
 bun src/index.ts to-html <file.md> [--out <file>]
 bun src/index.ts --help | -h
 bun src/index.ts --version | -v
@@ -24,6 +26,10 @@ the full API reference (core functions, types, CLI verbs, MCP tools) is
 ```bash
 npm install @awacloud/tool-convert
 ```
+
+`@awacloud/oconv-fonts` is an optional dependency: `--pdf-a` and `--pdf-ua`
+embed its Liberation faces when no `--pdf-fonts` is given, and it is
+installed unless the install is made without optional dependencies.
 
 It has no `bin` field: run its entry file
 by path with bun, node or deno (see "Running it" below and "Exposed
@@ -137,6 +143,23 @@ POSIX host runs them for real.
   (`oconv.convert`). Supported pairs: `docx>odt`, `odt>docx`, `docx>pdf`,
   `odt>pdf` — no other source/target combination is accepted, including any
   `xlsx`/`ods`/`pptx`/`odp`/`pdf` source and any same-format pair.
+- **PDF/A** — with a pdf target, `from-md` and `convert` take `--pdf-a
+  <4|2b>` (a document claiming PDF/A-4 or PDF/A-2b: XMP metadata, an sRGB
+  output intent, every font embedded) and `--pdf-fonts <dir>`, the TrueType
+  faces to embed (`regular.ttf`, `bold.ttf`, `italic.ttf`, `boldItalic.ttf`,
+  `mono.ttf`, each optional). Without `--pdf-fonts`, the Liberation faces
+  of the optional package `@awacloud/oconv-fonts` are used when it is
+  installed; when it is not, `--pdf-a` is a usage error (exit 2) naming
+  the five faces and the install command. The Liberation faces give
+  documents veraPDF 1.30.3 judges conforming.
+- **PDF/UA** — with a pdf target, `from-md` and `convert` take `--pdf-ua
+  <1|2>` (a tagged document claiming PDF/UA-1 or PDF/UA-2: headings,
+  paragraphs, lists, tables and pictures with their alt text tagged, rules
+  and page numbers artifacts, the title from the front matter or the first
+  heading) with `--pdf-lang <tag>`, the document language, and
+  `--pdf-fonts <dir>`, or without it the faces of the optional package
+  (a usage error without the language, or without a face source). With the
+  Liberation faces, veraPDF 1.30.3 judges the documents conforming.
 - **`to-html <file.md>`** — Markdown to HTML through `@awacloud/md`'s
   `renderHtmlMod` (via the `md` facade's `.renderHtml`) — a plain HTML
   fragment, no embedded CSS, no table of contents. **Safe and sanitised**:
@@ -173,10 +196,12 @@ comma-separated.
 | Flag | Source formats | Default | Meaning |
 |---|---|---|---|
 | `--sheets <mode>` | `xlsx`, `ods` | `table` | `table` (GFM tables), `csv` or `tsv`: each sheet a fenced `csv` / `tsv` block, much smaller than a table on a dense sheet |
-| `--pdf-infer <list>` | `pdf` | none | inference on an untagged pdf: `headings`, `tables`, `running` (running headers and footers left out) |
+| `--pdf-infer <list>` | `pdf` | `headings,tables` | inference on an untagged pdf: `headings`, `tables`, `running` (running headers and footers left out); `none` for no inference |
 | `--pdf-declare <list>` | `pdf` | none | `positional` records one `struct/positional` loss when the structure was built from positions |
 | `--pdf-include <list>` | `pdf` | none | `images` places each JPEG, JPEG 2000 and raw-pixel picture as a Markdown image (write them with `--assets-dir`) |
-| `--pdf-recover-xref` | `pdf` | off | rebuild an unusable cross-reference chain |
+| `--pdf-recover-xref` | `pdf` | on | rebuild an unusable cross-reference chain |
+| `--no-pdf-recover-xref` | `pdf` | off | read strictly: a broken cross-reference chain is an error |
+| `--no-pdf-empty-password` | `pdf` | off | with no `--password-file`, refuse an encrypted pdf (by default the empty password is tried) |
 | `--pdf-line-hyphens <mode>` | `pdf` | `infor- mation` (kept, with a space) | `drop` joins a word a hyphen cuts at a line end without the hyphen, `keep` with it |
 | `--password-file <file>` | `pdf` | none | the user or owner password of an encrypted pdf, read from this file; one trailing line break is dropped. A password is never taken on the command line, where the process list would show it |
 | `--form-op-budget <n>` | `pdf` | `1000000` | per-page Form XObject operator budget |
@@ -188,8 +213,8 @@ comma-separated.
 | `--max-uncompressed <bytes>` | the same six | 256 MiB | archive limit on total inflated bytes |
 | `--max-ratio <n>` | the same six | 200 | archive limit on the inflated / compressed ratio per entry |
 | `--max-depth <n>` | `docx`, `xlsx`, `pptx` | 1000 | archive limit on the element depth of an XML part |
-| `--output-budget <bytes>` | every format | none | a bound on the document's text (UTF-8 bytes), checked before the markdown is built |
-| `--output-overflow <mode>` | every format | `throw` | with `--output-budget`: `throw` fails the conversion, `truncate` keeps what fits and records `doc/truncated` |
+| `--output-budget <bytes>` | every format | 268435456 (256 MiB) | a bound on the document's text (UTF-8 bytes), checked before the markdown is built; `9007199254740991` renders everything |
+| `--output-overflow <mode>` | every format | `throw` | past the budget, `throw` fails the conversion, `truncate` keeps what fits and records `doc/truncated` (alone, at 256 MiB) |
 | `--front-matter <mode>` | every format | `full` | `full`, `compact` (the loss ledger counted per code and detail) or `none` (the body alone) |
 | `--assets-dir <dir>` | every format | none | write each image whose bytes the conversion returned (a pdf's under `--pdf-include images`, a docx's, odt's or pptx's) under `<dir>`, at the relative path the markdown names, so pass the directory the markdown is written to; an image without bytes or with an unsafe name gets a stderr line and is not written ([`assetFiles`](./docs/api/assetFiles.md)) |
 
@@ -254,9 +279,9 @@ gating a request. The mirror is exported as `TO_MD_FORMATS`,
 This tool advertises no conversion pair `@awacloud/oconv` does not
 measurably deliver, and lossy pairs say so (via the stderr loss count) —
 see `@awacloud/oconv`'s
-[loss matrix](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.2.0/packages/front/office/oconv/docs/loss-matrix.md)
+[loss matrix](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@2.0.0/packages/front/office/oconv/docs/loss-matrix.md)
 for the fidelity table per pair, and its
-[convert guide](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.2.0/packages/front/office/oconv/docs/convert.md)
+[convert guide](https://github.com/awacloud/awa/blob/@awacloud/tool-convert@2.0.0/packages/front/office/oconv/docs/convert.md)
 for the cross-format pairs.
 
 ## MCP server
@@ -287,7 +312,7 @@ error and a generic one.
 |---|---|---|
 | `to_md` | `path` **or** (`bytesBase64` + `name`); optional `format`, `includeNotes`, `sheets`, `pdfInfer`, `pdfDeclare`, `pdfInclude`, `pdfRecoverXref`, `pdfLineHyphens`, `pdfPasswordPath`, `formOpBudget`, `odtInclude`, `docxInclude`, `sheetCellBudget`, `archiveLimits`, `outputBudget`, `frontMatter`, `assetsDir`, `at`, `outPath`, `lossView` | presentation/layout formatting and most inline styling beyond basic emphasis/headings — see the result's `losses` array |
 | `from_md` | `markdown` **or** `path`; required `target`; optional `name`, `outPath`, `lossView` | nothing this step introduces on its own — only as rich as the input Markdown; see `losses` |
-| `convert` | `path` **or** (`bytesBase64` + `name`); required `target`; optional `format`, `outPath`, `lossView` | whatever the docx/odt/pdf loss matrix records for that pair — see `losses`; a `pdf` target is one-way |
+| `convert` | `path` **or** (`bytesBase64` + `name`); required `target`; optional `format`, `layout`, `outPath`, `lossView` | whatever the docx/odt/pdf loss matrix records for that pair — see `losses`; a `pdf` target is one-way |
 | `to_html` | `markdown` **or** `path`; optional `outPath` | raw HTML (a block with its content; inline tags keep their text); `javascript:`, `vbscript:`, `file:` and `data:` URLs (images included) become an empty `href`/`src`; anything outside the sanitiser allowlist (task-list checkboxes stay, as disabled inputs); no embedded CSS, no table of contents, no footnotes, front matter or math; no `losses` field — the renderer does not itemise its drops |
 
 `to_md`'s options are the CLI's, under oconv's own names (the table under
@@ -297,15 +322,16 @@ an option left out leaves oconv's behaviour):
 | Argument | Type | CLI flag | Notes |
 |---|---|---|---|
 | `sheets` | string | `--sheets` | `table` (default), `csv`, `tsv` |
-| `pdfInfer`, `pdfDeclare`, `pdfInclude` | array of string | `--pdf-infer`, `--pdf-declare`, `--pdf-include` | a list, not a comma-separated string |
-| `pdfRecoverXref` | boolean | `--pdf-recover-xref` | |
+| `pdfInfer`, `pdfDeclare`, `pdfInclude` | array of string | `--pdf-infer`, `--pdf-declare`, `--pdf-include` | a list, not a comma-separated string; `pdfInfer` defaults to `["headings", "tables"]`, `[]` for none |
+| `pdfRecoverXref` | boolean | `--pdf-recover-xref`, `--no-pdf-recover-xref` | default `true`; `false` reads strictly |
+| `pdfEmptyPassword` | boolean | `--no-pdf-empty-password` | default `true`; `false` refuses an encrypted pdf read with no password |
 | `pdfLineHyphens` | string | `--pdf-line-hyphens` | `drop` or `keep` |
 | `pdfPasswordPath` | string | `--password-file` | a path to a file holding the password; no argument carries the password itself. An unreadable file is a usage error (`cannot read pdfPasswordPath: …`) |
 | `formOpBudget` | integer | `--form-op-budget` | default `1000000` |
 | `odtInclude`, `docxInclude` | array of string | `--odt-include`, `--docx-include` | `["toc"]` |
-| `sheetCellBudget` | integer | `--sheet-cell-budget` | |
+| `sheetCellBudget` | integer | `--sheet-cell-budget` | default `5000000`; `9007199254740991` (`Number.MAX_SAFE_INTEGER`) pads every sheet |
 | `archiveLimits` | object | `--max-parts`, `--max-uncompressed`, `--max-ratio`, `--max-depth` | `{ maxParts, maxUncompressed, maxRatio, maxDepth }`, any of them; `0` disables a check |
-| `outputBudget` | object | `--output-budget`, `--output-overflow` | `{ bytes, overflow }`, `overflow` `throw` (default) or `truncate` |
+| `outputBudget` | object | `--output-budget`, `--output-overflow` | `{ bytes, overflow }`, `bytes` 268435456 (256 MiB) when absent, `overflow` `throw` (default) or `truncate` |
 | `frontMatter` | string | `--front-matter` | `full` (default), `compact`, `none` |
 | `assetsDir` | string | `--assets-dir` | the result lists `assets` (`{ name, path, bytesLength }`) and `assetsSkipped` (`{ name, reason }`) |
 
@@ -446,14 +472,15 @@ published.
 ## Licence
 
 AGPL-3.0-only — see [`LICENSE`](LICENSE) in this package.
+A commercial licence is also available; [`NOTICE`](NOTICE) gives the contact.
 
 Copyright (c) 2026 AwaCloud SAS
 
 ## Project
 
-- Website: https://awaforge.eu
-- Source: [`tools/convert`](https://github.com/awacloud/awa/tree/@awacloud/tool-convert@1.2.0/tools/convert)
+- Website: https://awaforge.eu/
+- Source: [`tools/convert`](https://github.com/awacloud/awa/tree/@awacloud/tool-convert@2.0.0/tools/convert)
 - Issues: https://github.com/awacloud/awa/issues (the package declares no
   `bugs` URL of its own)
 - Security policy and release verification:
-  https://github.com/awacloud/awa/blob/@awacloud/tool-convert@1.2.0/SECURITY.md
+  https://github.com/awacloud/awa/blob/@awacloud/tool-convert@2.0.0/SECURITY.md

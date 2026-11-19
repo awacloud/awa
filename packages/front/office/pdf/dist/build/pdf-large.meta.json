@@ -27,6 +27,7 @@
     "pdfAesGcm",
     "pdfStandardV5",
     "pdfStandardV6",
+    "pdfInfo",
     "pdfDocument",
     "pdfWriter",
     "pdf",
@@ -82,8 +83,8 @@
     "ed25519"
   ],
   "bytes": {
-    "dev": 313094,
-    "min": 181504
+    "dev": 327784,
+    "min": 190234
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

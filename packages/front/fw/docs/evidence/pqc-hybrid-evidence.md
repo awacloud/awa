@@ -22,9 +22,9 @@ primitives — no novel cryptography:
 | `hybridKem` | X-Wing hybrid KEM (X25519 + ML-KEM-768) | [`src/crypto/pkc/hybridKem.js`](../../src/crypto/pkc/hybridKem.js) | [`hybridKem.md`](../api/crypto/pkc/hybridKem.md) |
 | `hybridSign` | Composite PQ/T signatures (ML-DSA-65 ∧ Ed25519 / ECDSA-P-256) | [`src/crypto/pkc/hybridSign.js`](../../src/crypto/pkc/hybridSign.js) | [`hybridSign.md`](../api/crypto/pkc/hybridSign.md) |
 
-**Package identity.** `@awacloud/fw` version `0.1.0`, maturity **L3** (per
+**Package identity.** `@awacloud/fw` version `1.0.0`, maturity **L4** (per
 `packages/front/fw/package.json`). Browser framework, ESM-only, zero npm
-runtime dependencies. The package manifest declares `"license": "Apache-2.0"` and the package root ships a `LICENSE` file — both stamped from the ratified licence matrix (`docs/publication/license-matrix.json`) by the `license-stamp` tool on 2026-09-05. The package's release SBOM (§7) records this manifest value as its declared licence.
+runtime dependencies. The package manifest declares `"license": "Apache-2.0"` and the package root ships a `LICENSE` file — both stamped from the monorepo's ratified licence matrix on 2026-09-05 (the matrix and the stamping tool live in the source repository, not in this package). The package's release SBOM (§7) records this manifest value as its declared licence.
 
 **Build provenance.** No bundler is required; modules resolve via HTML
 import maps. Two deployment surfaces per module (both delivered): the DI descriptor (`runtime.resolve('hybridKem' | 'hybridSign')`)
@@ -153,7 +153,7 @@ The combiner constructions themselves are **draft-stage** (X-Wing -06, LAMPS
 
 The composite/KEM constructions have **no** NIST validation program of their
 own (§4.3). The underlying primitives carry their own validation evidence,
-**cited here, not re-executed by this task**:
+**cited here, not re-executed for this page**:
 
 | Primitive | Validation | Evidence |
 |---|---|---|
@@ -192,7 +192,7 @@ evidence is in the `*.acvp.md` files cited in §4.1.
 ### 4.3 Coverage gaps (reproduced verbatim from the module docs)
 
 The following two blocks are reproduced **verbatim** from the *Coverage gaps*
-sections authored by task 01 in
+sections of
 [`hybridKem.md`](../api/crypto/pkc/hybridKem.md) and
 [`hybridSign.md`](../api/crypto/pkc/hybridSign.md); the relative links inside
 them resolve from `docs/api/crypto/pkc/`.
@@ -413,9 +413,9 @@ Mirrors the -19 re-vendor outcome
 |---|---|
 | Document | PQC-hybrid combiners — evaluation-evidence dossier |
 | Covers | `@awacloud/fw` `hybridKem`, `hybridSign` (`fw.crypto.pkc`) |
-| Package version | `@awacloud/fw` 0.1.0 (maturity L3) |
+| Package version | `@awacloud/fw` 1.0.0 (maturity L4) |
 | Repository commit | The commit the signed release tag names — see [`verify-releases.md`](https://github.com/awacloud/awa/blob/main/docs/publication/verify-releases.md) |
-| Snapshot date | 2026-09-23 |
+| Snapshot date | 2026-11-11 |
 | Signature | This document carries **no signature of its own**. Its integrity is that of the release it ships in: the release tag is signed over SSH by the tag key `awa-tag-2026` (ed25519, classical), and the release's per-file digest manifest is signed by a detached hybrid envelope (ML-DSA-65 + ECDSA P-256, both must verify) — the manifest is the authoritative half. Keys: [`SECURITY.md`](https://github.com/awacloud/awa/blob/main/SECURITY.md) § Release keys; procedure: [`verify-releases.md`](https://github.com/awacloud/awa/blob/main/docs/publication/verify-releases.md) |
 | Contact | security@awacloud.com — the reporting channel named in [`SECURITY.md`](https://github.com/awacloud/awa/blob/main/SECURITY.md) (§8) |
 
@@ -425,6 +425,7 @@ Mirrors the -19 re-vendor outcome
 |---|---|---|
 | 1 | 2026-07-09 | Initial issue. Constructions X-Wing -06, LAMPS composite-sigs -19; vectors 19 (X-Wing) + 32 (composite) green; combiner regen byte-identical. |
 | 2 | 2026-09-23 | Supply-chain and document-control re-issue; §2–§6 and §9 unchanged. §7: SBOM generated per release in CycloneDX 1.6 + SPDX 2.3, unsigned in this release (was "pending"). §8: repo-as-SBOM rationale kept as the reason the SBOM is small (was "export pending"). §8: disclosure and maintenance policies now published (`SECURITY.md`, `MAINTENANCE.md`); the OpenPGP key is named as the reporting-channel key only. §10: maturity L3 (was L2). §10: "PGP signature" row replaced by "Signature" — no own signature; release tag (SSH) + hybrid-signed digest manifest. §10: contact is the `SECURITY.md` reporting channel. §1: internal tracking reference removed; licence fact kept. |
+| 3 | 2026-11-11 | Package re-issue: maturity L4 (§1, §10). The API follows fw's one signature order, `verify(publicKey, signature, message, ctx?)` on both composite variants (it was `(publicKey, message, signature, ctx?)`); ML-DSA signs hedged by default, so the composite self-KAT signatures were regenerated through its deterministic DRBG (keys unchanged, provenance digest updated); the test-only primitives moved to the module's internal slot, outside the API. Constructions (X-Wing -06, LAMPS composite-sigs -19) and the official vectors unchanged, all green. |
 
 **Re-issue triggers** (§1): a pinned construction/vector revision change; a
 closed coverage gap (§4); a supply-chain inventory change (§8); SBOM signing

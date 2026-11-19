@@ -17,11 +17,10 @@
  */
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
-// Relative import of the sibling @awacloud/pdf manifest — see font-decoder.test.js
-// for why the bare specifier is not used here (task 06 adds the package dep).
-import { fw_require, pkg_require, modules } from '../../../../pdf/src/main.js';
+// Relative import of the sibling @awacloud/pdf manifest; its extras carry
+// pdfFontDecoder and pdfPageText, the walk this module is built on.
+import { fw_require, pkg_require, modules, extras } from '../../../../pdf/src/main.js';
 import { crc32 } from '@awacloud/fw/io/calc/crc32.js';
-import { oconvPdfFontDecoder } from './font-decoder.js';
 import { oconvPdfImagePng } from './image-png.js';
 import { oconvPdfTextExtract } from './text-extract.js';
 import { groupParagraphs } from './paragraph-group.js';
@@ -37,8 +36,8 @@ beforeAll(() => {
     rt.registerAll(fw_require);
     rt.registerAll(pkg_require);
     rt.registerAll(modules);
+    for (const m of extras) if (m.name === 'pdfFontDecoder' || m.name === 'pdfPageText') rt.register(m);
     rt.register(crc32);
-    rt.register(oconvPdfFontDecoder);
     rt.register(oconvPdfImagePng);
     rt.register(oconvPdfTextExtract);
 
@@ -468,6 +467,44 @@ describe('oconvPdfTextExtract — piece end position (advance model)', () => {
         expect(ends(items)).toEqual([['a b', 0, 15]]);
     });
 
+    // T25 (e): the font and its size, and the leading, are text state, which
+    // is part of the graphics state (ISO 32000-2 §8.4.1). A list label drawn
+    // as `q /F2 Tf (label) Tj Q` leaves the body text after it in the font
+    // set before the `q`.
+    const bulletFont = () => {
+        const w = [];
+        for (let c = 32; c <= 122; c++) w.push(obj.int(500));
+        return obj.dict({
+            Type: obj.name('Font'), Subtype: obj.name('Type1'), BaseFont: obj.name('Bullets'),
+            Encoding: obj.dict({
+                BaseEncoding: obj.name('WinAnsiEncoding'),
+                Differences: obj.array([obj.int(97), obj.name('bullet')])
+            }),
+            FirstChar: obj.int(32), LastChar: obj.int(122), Widths: obj.array(w)
+        });
+    };
+    const twoFonts = (content) => extract({
+        contentBytes: enc(content),
+        resourcesEntries: { Font: obj.dict({ F1: obj.ref(FONT, 0), F2: obj.ref(FONT + 1, 0) }) },
+        extraIndirects: [{ num: FONT, gen: 0, value: obj.dict({
+            Type: obj.name('Font'), Subtype: obj.name('Type1'),
+            BaseFont: obj.name('Flat'), Encoding: obj.name('WinAnsiEncoding'),
+            FirstChar: obj.int(32), LastChar: obj.int(122), Widths: obj.array(widths500())
+        }) }, { num: FONT + 1, gen: 0, value: bulletFont() }]
+    });
+
+    test('Q restores the font, its size and the leading set before q', () => {
+        const out = twoFonts('BT /F1 10 Tf 12 TL q /F2 20 Tf 30 TL (a) Tj Q (a) Tj T* (a) Tj ET\n');
+        expect(out.items.map((i) => [i.text, i.x, i.xEnd, i.y])).toEqual([
+            ['\u2022', 0, 10, 0], ['a', 10, 15, 0], ['a', 0, 5, -12]
+        ]);
+    });
+
+    test('a Q with nothing saved keeps the font in force', () => {
+        const out = twoFonts('BT /F2 10 Tf Q (a) Tj ET\n');
+        expect(out.items.map((i) => i.text)).toEqual(['\u2022']);
+    });
+
     test("' moves to the next line then shows; \" sets Tw and Tc first", () => {
         // `'`: T* (leading 12) then show "ab" — 10 wide, from x 0.
         const q1 = run('BT /F1 10 Tf 12 TL 0 100 Td (ab) \' ET\n');
@@ -511,8 +548,9 @@ describe('oconvPdfTextExtract — piece end position (advance model)', () => {
     });
 
     test('drift: the TJ word-space threshold equals the line pass default wordGap', () => {
-        // `text-extract.js` and `paragraph-group.js` each hold the 0.15 em
-        // constant (fw/no-factory-capture: no shared import); this sweep
+        // pdf's `pdfPageText` (the walk this module is built on) and
+        // `paragraph-group.js` each hold the 0.15 em constant
+        // (fw/no-factory-capture: no shared import); this sweep
         // pins them equal to the thousandth of an em. For each n the TJ
         // pass sees an adjustment of −n thousandths; the line pass sees two
         // pieces n thousandths of an em apart (em = 1000, so exact).
@@ -845,5 +883,48 @@ describe('oconvPdfTextExtract — rules on request (A14b1)', () => {
     test('a closed path with h, a fill-and-stroke B: each side once', () => {
         expect(rules('0 0 m 100 0 l 100 40 l 0 40 l h S\n')).toEqual([[0, 0, 100, 0], [100, 0, 100, 40], [0, 40, 100, 40], [0, 0, 0, 40]]);
         expect(rules('0 0 100 40 re B\n').length).toBe(4);
+    });
+});
+
+// T25 (b) — a table row drawn as one TJ, cut at its cell gaps on request.
+
+describe('oconvPdfTextExtract — a TJ cut at its cell gaps, opts.cellKerns (T25 b)', () => {
+    const FONT = 50;
+    const widths500 = () => {
+        const w = [];
+        for (let c = 32; c <= 122; c++) w.push(obj.int(500));
+        return w;
+    };
+    /** Extract `content` shown with /F1 = a flat-500 simple font, under `opts`. */
+    function run(content, opts) {
+        return extract({
+            contentBytes: enc(content),
+            resourcesEntries: { Font: obj.dict({ F1: obj.ref(FONT, 0) }) },
+            extraIndirects: [{ num: FONT, gen: 0, value: obj.dict({
+                Type: obj.name('Font'), Subtype: obj.name('Type1'),
+                BaseFont: obj.name('Flat'), Encoding: obj.name('WinAnsiEncoding'),
+                FirstChar: obj.int(32), LastChar: obj.int(122), Widths: obj.array(widths500())
+            }) }]
+        }, opts);
+    }
+    const ends = (items) => items.map((i) => [i.text, i.x, i.xEnd]);
+    const ROW = 'BT /F1 10 Tf [(Name) -2000 (12) -1500 (3.40)] TJ ET\n';
+
+    test('two gaps over 1 em between drawn strings: one piece per part, each where its first string is drawn', () => {
+        // Name 0..20, a 2 em gap (20), 12 40..50, a 1.5 em gap (15), 3.40 65..85.
+        expect(ends(run(ROW, { cellKerns: true }).items)).toEqual([['Name', 0, 20], ['12', 40, 50], ['3.40', 65, 85]]);
+        expect(run(ROW, { cellKerns: true }).counts.decoded).toBe(run(ROW).counts.decoded);
+    });
+
+    test('without the option, one gap, gaps of 1 em or less, or a trailing or leading kern: one piece', () => {
+        expect(ends(run(ROW).items)).toEqual([['Name 12 3.40', 0, 85]]);
+        expect(ends(run(ROW, { cellKerns: false }).items)).toEqual([['Name 12 3.40', 0, 85]]);
+        const one = (content) => run(content, { cellKerns: true }).items.map((i) => i.text);
+        expect(one('BT /F1 10 Tf [(4) -2000 (Results)] TJ ET\n')).toEqual(['4 Results']);
+        expect(one('BT /F1 10 Tf [(a) -1000 (b) -1000 (c)] TJ ET\n')).toEqual(['a b c']);
+        expect(one('BT /F1 10 Tf [(a) -2000 (b) -2000] TJ ET\n')).toEqual(['a b ']);
+        // A leading kern is a word space before the piece, as without the option.
+        expect(one('BT /F1 10 Tf [-3000 (a) -2000 (b)] TJ ET\n')).toEqual([' a b']);
+        expect(one('BT /F1 10 Tf [(a) -2000 () -2000 (b)] TJ ET\n')).toEqual(['a b']);
     });
 });

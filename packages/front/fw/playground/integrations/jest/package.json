@@ -10,5 +10,8 @@
     "devDependencies": {
         "jest": "^30.4.2",
         "@jest/globals": "^30.4.1"
+    },
+    "playground": {
+        "page": false
     }
 }

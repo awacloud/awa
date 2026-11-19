@@ -41,7 +41,9 @@ const BROTLI_DICT = new URL('../../../../fw/src/io/compress/brotli_dict.bin', im
 /** Font file extensions: such a file is a case of the fonts suite. */
 const FONT_FILE = /\.(otf|ttf|ttc|woff2?)$/i;
 /** Formats the package does not claim. */
-const NOT_CLAIMED = /\.(pfa|pfb|lwfn|dfont)$/i;
+const NOT_CLAIMED = /\.(lwfn|dfont)$/i;
+/** Type 1 programs: read by `fontType1`, measured by the axis-C suite fonttools-type1. */
+const TYPE1 = /\.(pfa|pfb)$/i;
 /** A raw table split into one file per table (`<stem>.<tag>.bin`). */
 const TABLE_SET = /^(.*)\.(head|maxp|loca|glyf)\.bin$/;
 
@@ -309,7 +311,9 @@ export function measure(files, rt = fontsRuntime(), opts = {}) {
         const kind = classify(bytes);
         const isFont = FONT_FILE.test(path) && kind !== 'other' && kind !== 'cff';
         if (!isFont) {
-            if (NOT_CLAIMED.test(path)) {
+            if (TYPE1.test(path)) {
+                out.fonts.skipped.push({ case: path, reason: 'a Type 1 program, measured by fonttools-type1' });
+            } else if (NOT_CLAIMED.test(path)) {
                 out.fonts.skipped.push({ case: path, reason: 'Type 1 or Mac resource-fork font: not a format the package claims' });
             } else {
                 out.fonts.skipped.push({ case: path, reason: 'a raw table file, measured by fonttools-tables' });

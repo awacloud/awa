@@ -92,13 +92,13 @@ the constant-time IV+length+padding check (KWP).
 - [x] **Rejection of empty input in KWP** — `kwp: plaintext must not be empty`.
 - [x] **Rejection of non-multiple-of-8 input in KW** — `kw: plaintext length
   must be a positive multiple of 8 bytes`.
-- [x] **`kwCipher=inverse` variant** ✅ **Iteration D2** — explicit reject.
+- [x] **`kwCipher=inverse` variant** ✅ explicit reject.
   Exports `wrapInverseCipher()` / `unwrapInverseCipher()` return
   `false` + a typed `NOT-IMPLEMENTED` warning. Avoids any silent use
   of the SP 800-38F §6.3 variant (`CIPH_K⁻¹` in the wrap direction,
   rare outside embedded TPM). If documented need arises, the
   implementation will need to be added and separately audited.
-- [x] **Rejection of TDES (and other non-AES)** ✅ **Iteration D2** — `_checkBlockSize`
+- [x] **Rejection of TDES (and other non-AES)** ✅ `_checkBlockSize`
   rejects any PRF with `blockSize !== 16` (TDES = 8 bytes). SP 800-131A
   §2.4 deprecates 3DES since 2024; SP 800-38F §6.2 mandates AES.
 - [ ] **Side-channel on AES** — delegated to `aes.js`.
@@ -121,7 +121,7 @@ the constant-time IV+length+padding check (KWP).
   Our `kw.js` only implements the `cipher` variant (forward `W`), which
   is the dominant form in TLS/PKCS#8/JOSE. The ACVP provides 3600
   `inverse` vectors per suite (50 % of the total) which are filtered
-  out. **Iteration D2**: added `wrapInverseCipher()` / `unwrapInverseCipher()`
+  out. `wrapInverseCipher()` / `unwrapInverseCipher()`
   exports that return `false` + `console.warn('NOT-IMPLEMENTED')` to
   prevent any silent use by a consumer that believes it has inverse KW-AE.
 - **No asymmetric KW-AE/KW-AD**: the `wrap`/`unwrap`
@@ -139,7 +139,7 @@ the constant-time IV+length+padding check (KWP).
 ## Cross-references
 
 - Module: [`mode/kw.js`](./kw.js)
-- Tests: [`mode/kw.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/kw.test.js) — 240 tests (233 baseline + 7 iteration D2: KW-AE inverse explicit reject + TDES guards)
+- Tests: [`mode/kw.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/kw.test.js) — 240 tests (233 baseline + 7 more: KW-AE inverse explicit reject + TDES guards)
 - ACVP draft: `references/NIST/ACVP/src/draft-celi-acvp-symmetric.adoc`
 - Vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ACVP-AES-KW-1.0/` + `ACVP-AES-KWP-1.0/`
 - Overall conformance: [`NIST_CONFORMANCE.md`](../NIST_CONFORMANCE.md)

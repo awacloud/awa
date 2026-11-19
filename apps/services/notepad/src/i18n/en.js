@@ -71,6 +71,8 @@ export const en = Object.freeze({
         position: 'Ln {line}, Col {col}',
         chars: { one: '{count} character', other: '{count} characters' },
         zoom: 'Text size {zoom}',
+        tabInsert: 'Tab inserts a tab',
+        tabFocus: 'Tab moves the focus',
         eol: 'Line endings',
         encoding: 'Encoding',
         opened: '{name} is open.',

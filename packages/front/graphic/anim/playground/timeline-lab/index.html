@@ -1,0 +1,117 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — timeline-lab playground</title>
+
+    <!-- 1. IMPORT MAP — FIRST, before ANY module script (the measured
+         Firefox failure class: a module script above the map reds the
+         whole page — measured: real Firefox 153.0.1 reds deterministically, 6/6
+         page×variant, 5/5 repeat, on pages that put a module script above
+         the map; Chromium tolerates the wrong order, Firefox does not).
+         DERIVED BY WALKING THE MODULE GRAPH from this page's entry
+         (`./main.js`), never copied from the demos map. `main.js` itself
+         imports two bare specifiers (`@awacloud/fw/core/runtime.js`,
+         `@awacloud/graphic-anim`); walking on from `@awacloud/graphic-anim`
+         -> `src/main.js` reaches two more real fw imports
+         (`src/main.js:27-28`) plus — via `src/main.js`'s own
+         `createPageflip`/`createHypertree` re-exports (`:223-224`) —
+         `src/{pageflip,hypertree}/create.js`'s `@awacloud/fw/core/runtime.js`
+         import (the same key). Deliberately EXACT keys, never
+         the `"@awacloud/fw/": ".../src/"` prefix form of the convention's §2
+         sample — a prefix key would make every present and future fw
+         specifier trivially "declared" and blunt the browser-resolution
+         gate (`tests/playground-smoke.integration.test.js`) over exactly
+         the package whose undeclared specifiers killed two `demos/` pages
+         twice. -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@awacloud/fw/core/runtime.js":            "/packages/front/fw/src/core/runtime.js",
+            "@awacloud/fw/dom/query/dom.js":            "/packages/front/fw/src/dom/query/dom.js",
+            "@awacloud/fw/dom/rendering/secPolicy.js":  "/packages/front/fw/src/dom/rendering/secPolicy.js",
+            "@awacloud/fw/io/math/interp.js":           "/packages/front/fw/src/io/math/interp.js",
+            "@awacloud/fw/io/calc/easing.js":           "/packages/front/fw/src/io/calc/easing.js",
+            "@awacloud/fw/io/timing/clock.js":          "/packages/front/fw/src/io/timing/clock.js",
+            "@awacloud/graphic-anim":                   "/packages/front/graphic/anim/src/main.js"
+        }
+    }
+    </script>
+
+    <!-- 2. SANITY LOCKDOWN — before any OTHER application module (must
+         still precede the entry script at the bottom of this page; the
+         import map above is not a module script itself, so this ordering
+         still satisfies "before any application module"). -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 3. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 3bis. Surface-local layout only (no palette redeclaration). -->
+    <style>
+        #mount { display: flex; flex-direction: column; gap: 12px; }
+        #mount svg { width: 100%; max-width: 420px; height: auto; }
+        .demo-controls button { margin-right: 8px; }
+    </style>
+</head>
+
+<body data-demo="timeline-lab">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to playground</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>Timeline lab — staged rects, one Timeline</h1>
+        <p class="demo-lede">
+            Three rects driven by a single <code>Timeline</code> built from three
+            offset <code>.add()</code> steps. Play starts a fresh run; Stop cancels
+            it mid-flight. The controls re-enable through <code>onSettle</code>,
+            which fires on <em>either</em> ending — natural completion or an
+            explicit <code>stop()</code> — unlike <code>onComplete</code>, which
+            skips a manual stop. See also the sibling
+            <a href="../easing-lab/index.html">easing-lab</a> playground.
+        </p>
+    </header>
+
+    <div class="demo-stage">
+        <div id="mount"></div>
+    </div>
+
+    <p class="demo-note">
+        No build step: this page runs straight off the filesystem via a static
+        server, and resolves its own <code>@awacloud/fw</code> runtime — it does
+        not share the <code>demos/</code> family's boot helper.
+    </p>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/playground/timeline-lab/</code></p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+
+<!-- 4. ENTRY — the `run()` contract. -->
+<script type="module">
+    import { run } from './main.js';
+
+    const mount = document.getElementById('mount');
+    await run({ mount });
+    // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+</script>
+</body>
+</html>

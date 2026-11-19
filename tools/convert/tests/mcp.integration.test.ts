@@ -99,6 +99,9 @@ describe('convert MCP server — spawned contract', () => {
         const listResult = list.result as { tools: Array<{ name: string; description: string }> };
         expect(listResult.tools.map((t) => t.name).sort()).toEqual(['convert', 'from_md', 'to_html', 'to_md']);
         for (const t of listResult.tools) expect(t.description.length).toBeGreaterThan(0);
+        // T82: convert's layout states the default, on for docx to odt.
+        const convertTool = (list.result as { tools: Array<{ name: string; inputSchema: { properties: Record<string, { description: string }> } }> }).tools.find((t) => t.name === 'convert')!;
+        expect(convertTool.inputSchema.properties.layout!.description).toContain('Default true for docx to odt; false keeps tier 2.');
 
         // to_md
         server.send({

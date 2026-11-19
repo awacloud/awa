@@ -427,6 +427,9 @@ describe('fidelity — odp fixtures (first-party, tier 1, both includeNotes path
     });
 });
 
+// The F5 bounds are the text-first read: since T30 (a) an untagged pdf
+// infers headings and tables by default, so the untagged legs below ask for
+// the text-first read with `pdfInfer: []`.
 describe('fidelity — pdf fixtures (F5 bounds: tier 1, text-first, no layout inference)', () => {
     test('tagged-structured.pdf — tagged fast path: headings + paragraphs from the struct tree, Table container flattened', async () => {
         const bytes = fixtureBytes('./_fixtures/corpus/pdf-tagged/tagged-structured.pdf');
@@ -448,7 +451,7 @@ describe('fidelity — pdf fixtures (F5 bounds: tier 1, text-first, no layout in
     test('facturx-minimum-sample.pdf — real invoice corpus: ToUnicode text decode, one image/dropped loss (embedded logo raster)', async () => {
         const bytes = fixtureBytes('./_fixtures/corpus/pdf/facturx-minimum-sample.pdf');
         const result = await oconv.toMd({
-            name: 'facturx-minimum-sample.pdf', bytes, convertedAt: FIXED_AT
+            name: 'facturx-minimum-sample.pdf', bytes, convertedAt: FIXED_AT, pdfInfer: []
         });
         // Measured decode coverage on this exact fixture is 100.00%
         // (4128/4128 codes, 0 undecodable — task 05's report, published in
@@ -471,7 +474,7 @@ describe('fidelity — pdf fixtures (F5 bounds: tier 1, text-first, no layout in
     test('facturx-minimum-sample.pdf — front matter parses and sourceSha256 matches the fixture bytes', async () => {
         const bytes = fixtureBytes('./_fixtures/corpus/pdf/facturx-minimum-sample.pdf');
         const result = await oconv.toMd({
-            name: 'facturx-minimum-sample.pdf', bytes, convertedAt: FIXED_AT
+            name: 'facturx-minimum-sample.pdf', bytes, convertedAt: FIXED_AT, pdfInfer: []
         });
 
         const { frontmatter } = frontmatterApi.stripFrontmatter(result.markdown);

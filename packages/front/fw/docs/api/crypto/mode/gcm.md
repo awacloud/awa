@@ -1,7 +1,7 @@
 ---
 module: gcm
 category: crypto/mode
-dependencies: [bitArray, aes]
+dependencies: [bitArray]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > AES-GCM (SP 800-38D) — authenticated AEAD + GMAC, IV-reuse catastrophic.
 
-**Module** `gcm` | **Source** `packages/front/fw/src/crypto/mode/gcm.js` | **Deps** `bitArray`, `aes` | **Worker-safe** yes
+**Module** `gcm` | **Source** `packages/front/fw/src/crypto/mode/gcm.js` | **Deps** `bitArray` | **Worker-safe** yes
 
 Recommended AEAD mode for TLS / file encryption. **IV reuse under the same key is catastrophic**: loss of the GHASH authentication key + leak of the XOR of plaintexts.
 
@@ -19,7 +19,7 @@ Recommended AEAD mode for TLS / file encryption. **IV reuse under the same key i
 
 ```js
 const gcm = runtime.resolve('gcm');
-// Returns: { encrypt, decrypt, gmac, gmacVerify, nonceTracker, _internal }
+// Returns: { encrypt, decrypt, gmac, gmacVerify, nonceTracker }
 ```
 
 ## API
@@ -31,7 +31,7 @@ const gcm = runtime.resolve('gcm');
 | `gmac(prf, aadBa, ivBa, tagLenBits)` | — | Tag (no PT) |
 | `gmacVerify(prf, aadBa, ivBa, tagBa, tagLenBits)` | — | `boolean` |
 | `nonceTracker(prf)` | `({encrypt}) => {encrypt, decrypt, seenNonces}` | Anti-IV-reuse wrapper (in-process) |
-| `_internal.{ghash, gctr}` | — | Debug primitives |
+| `internalOf(gcm).{ghash, gctr}` | — | Debug primitives |
 
 ### `tagLenBits`
 
@@ -83,7 +83,7 @@ const worker = fw.createWorker(
 ## Notes
 
 - **Unique IV** per (key, message): use `random.bytes(12)` or a monotonic counter. `nonceTracker` detects reuse in-process.
-- **Tag mismatch → `false`** + `console.error('CORRUPT: gcm: authentication tag mismatch')`. Plaintext is **never** released on an invalid tag.
+- **Tag mismatch → `false`** + `console.warn('CORRUPT: gcm: authentication tag mismatch')` (an expected outcome; nonce reuse stays at `console.error`). Plaintext is **never** released on an invalid tag.
 - **AES-128/192/256**: `cipher` can be scheduled on any of the 3 key sizes (key-size-agnostic via `aes.fn`).
 
 ## See also

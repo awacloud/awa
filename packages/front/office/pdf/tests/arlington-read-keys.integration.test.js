@@ -163,17 +163,17 @@ describe('the handled test on stand-in typers', () => {
     });
 
     test('several typers for one object: a key counts when one of them handles it', () => {
-        const m = new Map([['Catalog', model.get('Catalog')], ['PageObject', model.get('PageObject')]]);
+        const m = new Map([['Catalog', model.get('Catalog')], ['InteractiveForm', model.get('InteractiveForm')]]);
         for (const name of ['FontMap', 'ArrayOfFields']) m.set(name, model.get(name));
         const info = { typer: 'pdfInfo.typeInfo', call: (f, v) => f(v) };
         const r = measure(m, { Catalog: [{ typer: 'pdfCatalog.typeCatalog', call: (f, v) => f(v) }, info],
-            PageObject: [{ typer: 'pdfPage.typePage', call: (f, v) => f(v) }, info] });
-        expect(r.bound).toEqual(['Catalog', 'PageObject']);
+            InteractiveForm: [{ typer: 'pdfAcroForm.typeAcroForm', call: (f, v) => f(v) }, info] });
+        expect(r.bound).toEqual(['Catalog', 'InteractiveForm']);
         // in the info typer's _extras, handled by the catalog typer
         expect(r.cases.find((c) => c.case === 'Catalog/Pages')).toEqual({ case: 'Catalog/Pages', ok: true });
-        // in both: each typer's reason, in binding order
-        expect(r.cases.find((c) => c.case === 'PageObject/Hid')).toEqual({
-            case: 'PageObject/Hid', ok: false, detail: 'in _extras; in _extras'
+        // in both: each typer's reason, in binding order (T1 typed PageObject/Hid, the former example)
+        expect(r.cases.find((c) => c.case === 'InteractiveForm/XFA')).toEqual({
+            case: 'InteractiveForm/XFA', ok: false, detail: 'in _extras; in _extras'
         });
         expect(r.skipped.map((s) => s.case)).toEqual(['FontMap', 'ArrayOfFields']); // model order
     });
@@ -185,17 +185,17 @@ describe('the measure over the package typers (pinned)', () => {
 
     test('score: handled keys over included keys; bound and unbound objects', () => {
         expect(r.cases.length).toBe(3357);
-        expect(r.cases.filter((c) => c.ok).length).toBe(3289);
-        expect([r.bound.length, r.unbound.length, r.skipped.length]).toEqual([345, 19, 308]);
+        // T2: the public-key handler's 14 keys (3,289 before); T1: the tail's 52 (3,303 before),
+        // every object bound; the 2 left by invariant are InteractiveForm/XFA and SoundObject/CP
+        expect(r.cases.filter((c) => c.ok).length).toBe(3355);
+        expect([r.bound.length, r.unbound.length, r.skipped.length]).toEqual([364, 0, 308]);
     });
 
     test('every typer that throws on its dictionary, with the reason', () => {
         const thrown = r.cases.filter((c) => !c.ok && / throws /.test(c.detail || ''))
             .map((c) => `${c.case}: ${c.detail}`);
-        expect(thrown).toEqual([
-            // the public-key security handler is not claimed (Standard handler only): /R is required
-            'EncryptionPublicKey/Recipients: pdfSecurity.typeEncryptDict throws pdf/crypto/encrypt-dict/missing-V-R; in _extras'
-        ]);
+        // T2: the public-key handler types without /R (it threw missing-V-R on /Recipients)
+        expect(thrown).toEqual([]);
     });
 
     test('a collection schema types with its optional /Type', () => {
@@ -206,9 +206,9 @@ describe('the measure over the package typers (pinned)', () => {
         expect(r.cases.find((c) => c.case === 'ActionECMAScript/JS')).toEqual({ case: 'ActionECMAScript/JS', ok: true });
     });
 
-    test('the catalog: every key handled; the page: one key left in _extras', () => {
+    test('the catalog and the page: every key handled (T1 typed PageObject/Hid)', () => {
         expect(fails('Catalog/').map((c) => c.case)).toEqual([]);
-        expect(fails('PageObject/').map((c) => c.case)).toEqual(['PageObject/Hid']);
+        expect(fails('PageObject/').map((c) => c.case)).toEqual([]);
     });
 
     test('annotations: the markup and PDF 2.0 entries reach typeMarkupEntries; a widget /T, the field name, the field companion', () => {
@@ -248,10 +248,9 @@ describe('the measure over the package typers (pinned)', () => {
         expect(r.cases.filter((c) => c.case.startsWith('ViewerPreferences/')).map((c) => c.ok)).toEqual(Array(18).fill(true));
     });
 
-    test('an unbound object counts every included key as not handled', () => {
-        const o = r.unbound[0];
-        expect(fails(`${o}/`).length).toBeGreaterThan(0);
-        expect(fails(`${o}/`).every((c) => c.detail === 'no typer')).toBe(true);
+    test('no object is left unbound (T1); the keys left are the two kept by invariant', () => {
+        expect(r.unbound).toEqual([]);
+        expect(r.cases.filter((c) => !c.ok).map((c) => c.case)).toEqual(['InteractiveForm/XFA', 'SoundObject/CP']);
     });
 });
 
@@ -264,19 +263,16 @@ describe('the surfaced measure: keys that reach the typed record (pinned)', () =
     test('same keys, objects and skips as the ruled measure; its own score', () => {
         expect(s.cases.map((c) => c.case)).toEqual(ruled.cases.map((c) => c.case));
         expect([s.bound, s.unbound, s.skipped]).toEqual([ruled.bound, ruled.unbound, ruled.skipped]);
-        expect(okSurfaced.size).toBe(3280);
+        expect(okSurfaced.size).toBe(3350);
     });
 
-    test('every surfaced key is handled; 9 handled keys never reach the record, each for a stated reason', () => {
+    test('every surfaced key is handled; 5 handled keys never reach the record, each for a stated reason', () => {
         expect([...okSurfaced].filter((k) => !okRuled.has(k))).toEqual([]);
         const knownOnly = [...okRuled].filter((k) => !okSurfaced.has(k)).sort();
         expect(knownOnly).toEqual([
             // a direct dictionary cannot name the parent annotation: only the reference form is typed
             // (a widget's /Parent, its field, reaches the field companion's record)
             'AnnotPopup/Parent',
-            // the public-key security handler is not claimed (Standard handler only)
-            'EncryptionPublicKey/EncryptMetadata', 'EncryptionPublicKey/Filter',
-            'EncryptionPublicKey/P', 'EncryptionPublicKey/SubFilter',
             // the stream form would widen the values of the existing v and dv fields (a major change)
             'FieldTx/DV', 'FieldTx/V',
             // one attribute, two spellings (PDF 1.7 checked, ISO 32000-2 Checked) read into one field:

@@ -187,3 +187,51 @@ describe('codec-levels bench harness — lz4 modes', () => {
         expect(json.levels['-'].corpora.repeat.newBytes).toBeGreaterThan(0);
     });
 });
+
+// ── per-process timing (BL-1704) ─────────────────────────────────────────────
+
+import { spreadOf, verdictOf, mergePerProcess, runBenchPerProcess } from './codec-levels.js';
+
+describe('codec-levels per-process timing', () => {
+    test('spreadOf and verdictOf', () => {
+        expect(spreadOf([10, 12, 11])).toBeCloseTo(2 / 11, 12);
+        expect(spreadOf([5])).toBeNull();
+        expect(verdictOf(10, 9, 0.05)).toBe('faster');
+        expect(verdictOf(10, 11, 0.05)).toBe('slower');
+        expect(verdictOf(10, 10.4, 0.05)).toBe('within noise');
+        expect(verdictOf(0, 1, 0.05)).toBe('within noise');
+    });
+
+    test('mergePerProcess takes each side from its own children', () => {
+        const run = (oe, ne, od, nd) => ({ levels: { '-': { corpora: { text: { oldEncMs: oe, newEncMs: ne, oldDecMs: od, newDecMs: nd } } } } });
+        const legs = { codec: 'lz4', levels: { '-': { corpora: { text: { oldBytes: 7, newBytes: 7, oracle: null } } } } };
+        const oldRuns = [run(10, 99, 4, 99), run(11, 99, 4, 99), run(12, 99, 4, 99)];
+        const newRuns = [run(99, 8, 99, 4), run(99, 8, 99, 4), run(99, 8, 99, 4)];
+        const m = mergePerProcess(oldRuns, newRuns, legs, { procs: 3, floor: 0.03 });
+        const c = m.levels['-'].corpora.text;
+        expect(m.timing).toBe('per-process');
+        expect([c.oldEncMs, c.newEncMs, c.oldDecMs, c.newDecMs]).toEqual([11, 8, 4, 4]);
+        expect(c.thresholdEncPct).toBeCloseTo(200 / 11, 9);
+        expect(c.verdictEnc).toBe('faster');
+        expect(c.verdictDec).toBe('within noise');
+        expect(c.oldBytes).toBe(7);
+    });
+
+    test('runBench in-process says so; a side builds both sides from one engine', async () => {
+        const r = await runBench({ codec: 'lz4', corpora: ['text'], reps: 1, warmup: 0 });
+        expect(r.timing).toBe('in-process');
+        const side = await runBench({ codec: 'lz4', corpora: ['text'], reps: 1, warmup: 0, side: 'old' });
+        expect(side.levels['-'].corpora.text.oracle).toBeNull();
+        await expect(runBench({ codec: 'lz4', side: 'both' })).rejects.toThrow('unknown side');
+    });
+
+    test('a per-process run spawns alternating children and merges them', async () => {
+        const r = await runBenchPerProcess({ codec: 'lz4', corpora: ['text'], reps: 2, warmup: 1 }, { procs: 2, argv: ['--codec', 'lz4', '--corpora', 'text', '--reps', '2', '--warmup', '1'] });
+        const c = r.levels['-'].corpora.text;
+        expect(r.timing).toBe('per-process');
+        expect(r.procs).toBe(2);
+        expect(c.oldEncMs).toBeGreaterThan(0);
+        expect(['faster', 'slower', 'within noise']).toContain(c.verdictEnc);
+        expect(c.oldBytes).toBe(c.newBytes);
+    }, 120000);
+});

@@ -164,4 +164,4 @@ add new codes; removals are documented in `CHANGELOG.md`.
 
 - [`errors.js`](../../src/errors.js) — class definitions
 - [`README.md`](../../README.md#security) — security policy
-- [`tests/fuzz.test.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.2.0/packages/front/office/ooxml/tests/fuzz.test.js) — regression fence
+- [`tests/fuzz.test.js`](https://github.com/awacloud/awa/blob/@awacloud/ooxml@1.3.0/packages/front/office/ooxml/tests/fuzz.test.js) — regression fence

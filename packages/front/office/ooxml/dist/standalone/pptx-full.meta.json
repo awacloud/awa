@@ -39,12 +39,16 @@
     "pmlMisc",
     "dmlChartMisc",
     "dmlMainMisc",
-    "mathMisc"
+    "mathMisc",
+    "docxProperties",
+    "dmlTextDetails",
+    "pmlPartDetails",
+    "pmlPackageParts"
   ],
   "fwDependencies": [],
   "bytes": {
-    "dev": 529463,
-    "min": 311622
+    "dev": 591006,
+    "min": 345900
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

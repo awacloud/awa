@@ -13,7 +13,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { brokenXrefPdf, encryptedPdf, jpegPdf, JPEG_BYTES, PAGE_TEXT, plainPdf } from './pdf-fixtures.ts';
+import { brokenXrefPdf, encryptedPdf, jpegPdf, JPEG_BYTES, PAGE_TEXT, pagedDocx, plainPdf, TITLE_TEXT, titledPdf } from './pdf-fixtures.ts';
 
 const ROOT = join(import.meta.dir, '..', '..', '..');
 const CLI_ENTRY = join(ROOT, 'tools', 'convert', 'src', 'index.ts');
@@ -80,6 +80,36 @@ describe('convert CLI — contract', () => {
         const r = spawnCli(['from-md', SAMPLE_DOCX]);
         expect(r.code).toBe(2);
         expect(r.stderr).toContain('--target');
+    });
+
+    // T82: layout is on by default for docx -> odt; --no-layout turns it off.
+    test('convert (docx -> odt) writes the bytes of --layout by default; --no-layout writes others', () => {
+        const paged = freshOutFile('paged.docx');
+        writeFileSync(paged, pagedDocx());
+        const on = spawnCli(['convert', paged, '--target', 'odt', '--layout']);
+        const dflt = spawnCli(['convert', paged, '--target', 'odt']);
+        const off = spawnCli(['convert', paged, '--target', 'odt', '--no-layout']);
+        expect([on.code, dflt.code, off.code]).toEqual([0, 0, 0]);
+        expect(dflt.stdout.equals(on.stdout)).toBe(true);
+        expect(off.stdout.equals(on.stdout)).toBe(false);
+    });
+
+    test('--layout with --no-layout exits 2; --no-layout outside convert exits 2', () => {
+        const both = spawnCli(['convert', SAMPLE_DOCX, '--target', 'odt', '--layout', '--no-layout']);
+        expect(both.code).toBe(2);
+        expect(both.stderr).toContain('--layout and --no-layout');
+        const md = spawnCli(['to-md', SAMPLE_DOCX, '--no-layout']);
+        expect(md.code).toBe(2);
+        expect(md.stderr).toContain('--no-layout is a convert flag');
+    });
+
+    test('--layout outside convert, or on another pair, exits 2', () => {
+        const md = spawnCli(['to-md', SAMPLE_DOCX, '--layout']);
+        expect(md.code).toBe(2);
+        expect(md.stderr).toContain('--layout is a convert flag');
+        const pdf = spawnCli(['convert', SAMPLE_DOCX, '--target', 'pdf', '--layout']);
+        expect(pdf.code).toBe(2);
+        expect(pdf.stderr).toContain('layout needs docx to odt');
     });
 
     test('unsupported --target on convert exits 2', () => {
@@ -277,6 +307,21 @@ describe('convert CLI — every toMd opt-in (T35)', () => {
         expect(other.stderr).toContain('docx include needs format docx');
     });
 
+    // T30 (a), D43: an untagged pdf infers headings and tables by default;
+    // `--pdf-infer none` is the read without inference.
+    test('to-md infers a heading by default; --pdf-infer none reads without inference', () => {
+        const path = freshOutFile('titled.pdf');
+        writeFileSync(path, titledPdf());
+        const dflt = spawnCli(['to-md', path, '--at', AT]);
+        expect(dflt.code).toBe(0);
+        expect(dflt.stdout.toString('utf8')).toContain(`# ${TITLE_TEXT}`);
+        const none = spawnCli(['to-md', path, '--at', AT, '--pdf-infer', 'none']);
+        expect(none.code).toBe(0);
+        const md = none.stdout.toString('utf8');
+        expect(md).toContain(TITLE_TEXT);
+        expect(md).not.toContain(`# ${TITLE_TEXT}`);
+    });
+
     test('--pdf-infer takes a comma-separated list; an unknown name is a usage error', () => {
         const path = freshOutFile('plain.pdf');
         writeFileSync(path, plainPdf());
@@ -285,6 +330,19 @@ describe('convert CLI — every toMd opt-in (T35)', () => {
         const bad = spawnCli(['to-md', path, '--at', AT, '--pdf-infer', 'headings,x']);
         expect(bad.code).toBe(2);
         expect(bad.stderr).toContain('bad pdf infer');
+    });
+
+    // T30 (c): an empty user password is tried by default; --no-pdf-empty-password refuses.
+    test('an empty-user-password pdf converts by default; --no-pdf-empty-password exits 1', () => {
+        const path = freshOutFile('empty-user.pdf');
+        writeFileSync(path, encryptedPdf(''));
+        const r = spawnCli(['to-md', path, '--at', AT]);
+        expect(r.code).toBe(0);
+        expect(r.stdout.toString('utf8')).toContain(PAGE_TEXT);
+        expect(spawnCli(['to-md', path, '--at', AT, '--no-pdf-empty-password']).code).toBe(1);
+        const locked = freshOutFile('locked-user.pdf');
+        writeFileSync(locked, encryptedPdf());
+        expect(spawnCli(['to-md', locked, '--at', AT]).code).toBe(1);
     });
 
     test('--password-file opens an encrypted pdf, its trailing line break stripped', () => {
@@ -322,22 +380,26 @@ describe('convert CLI — every toMd opt-in (T35)', () => {
         const cut = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--output-budget', '1', '--output-overflow', 'truncate']);
         expect(cut.code).toBe(0);
         expect(cut.stdout.toString('utf8')).toContain('doc/truncated');
+        // T30 (e), D47 (3) b: alone, it truncates at the 256 MiB default.
         const alone = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--output-overflow', 'truncate']);
-        expect(alone.code).toBe(2);
-        expect(alone.stderr).toContain('bad output budget');
+        expect(alone.code).toBe(0);
+        expect(alone.stdout.toString('utf8')).not.toContain('doc/truncated');
         const parts = spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--max-parts', '2']);
         expect(parts.code).toBe(1);
         expect(parts.stderr).toContain('too many parts');
         expect(spawnCli(['to-md', SAMPLE_DOCX, '--at', AT, '--max-parts', 'x']).code).toBe(2);
     });
 
-    test('--pdf-recover-xref converts a pdf whose startxref points nowhere', () => {
+    // T30 (b): pdf rebuilds a broken chain by default; --no-pdf-recover-xref
+    // reads strictly.
+    test('a pdf whose startxref points nowhere converts by default; --no-pdf-recover-xref exits 1', () => {
         const path = freshOutFile('broken.pdf');
         writeFileSync(path, brokenXrefPdf());
-        expect(spawnCli(['to-md', path, '--at', AT]).code).toBe(1);
-        const r = spawnCli(['to-md', path, '--at', AT, '--pdf-recover-xref']);
+        const r = spawnCli(['to-md', path, '--at', AT]);
         expect(r.code).toBe(0);
         expect(r.stdout.toString('utf8')).toContain(PAGE_TEXT);
+        expect(spawnCli(['to-md', path, '--at', AT, '--pdf-recover-xref']).code).toBe(0);
+        expect(spawnCli(['to-md', path, '--at', AT, '--no-pdf-recover-xref']).code).toBe(1);
     });
 
     test('--front-matter none drops the front matter; a bad value is a usage error', () => {

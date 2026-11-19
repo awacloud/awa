@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +7,9 @@ try { GlobalRegistrator.register(); } catch {}
 
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { themeTokens } from './themeTokens.js';
+import { styleSheet } from './styleSheet.js';
+import { ModuleRuntime } from '../../core/runtime.js';
+import modules from '../../core/modules.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,7 +47,7 @@ describe('themeTokens module', () => {
         expect(themeTokens.name).toBe('themeTokens');
         expect(themeTokens.version).toBe('1.1.0');
         expect(themeTokens.type).toBe('fw.dom.rendering');
-        expect(themeTokens.dependencies).toEqual(['dom']);
+        expect(themeTokens.dependencies).toEqual(['dom', 'styleSheet']);
         expect(typeof themeTokens.factory).toBe('function');
     });
 
@@ -394,5 +397,85 @@ describe('themeTokens module', () => {
                 t.dispose();
             });
         });
+    });
+});
+
+describe('themeTokens through styleSheet', () => {
+    let ss;
+
+    beforeEach(() => {
+        document.head.innerHTML = '';
+        document.adoptedStyleSheets = [];
+        ss = styleSheet.factory();
+    });
+
+    afterEach(() => {
+        document.head.innerHTML = '';
+        document.adoptedStyleSheets = [];
+    });
+
+    test('element mode: style#data-fw-theme-tokens-N with the token variables', () => {
+        const inst = themeTokens.factory({}, ss);
+        const t = inst.create();
+        t.define({ a: '#fff' });
+        const els = document.querySelectorAll('style[id^="data-fw-theme-tokens-"]');
+        expect(els.length).toBe(1);
+        expect(els[0].textContent).toContain('--a: #fff');
+        expect(els[0].hasAttribute('nonce')).toBe(false);
+        t.dispose();
+        expect(document.querySelectorAll('style[id^="data-fw-theme-tokens-"]').length).toBe(0);
+    });
+
+    test('a csp-nonce meta tag present at factory time: the element carries the nonce', () => {
+        const meta = document.createElement('meta');
+        meta.setAttribute('name', 'csp-nonce');
+        meta.setAttribute('content', 'tok3n');
+        document.head.appendChild(meta);
+        const t = themeTokens.factory({}, styleSheet.factory()).create();
+        t.define({ a: '#fff' });
+        const el = document.querySelector('style[id^="data-fw-theme-tokens-"]');
+        expect(el.getAttribute('nonce')).toBe('tok3n');
+        t.dispose();
+    });
+
+    test('adopted mode: no <style>, one sheet per instance, dispose removes only its own', () => {
+        ss.mode('adopted');
+        const inst = themeTokens.factory({}, ss);
+        const t1 = inst.create();
+        const t2 = inst.create();
+        t1.define({ a: '#111' });
+        t2.define({ b: '#222' });
+        expect(document.querySelectorAll('style').length).toBe(0);
+        expect(document.adoptedStyleSheets.length).toBe(2);
+        const [s1, s2] = document.adoptedStyleSheets;
+        t1.define({ c: '#333' });
+        expect(document.adoptedStyleSheets.length).toBe(2);
+        t1.dispose();
+        expect(document.adoptedStyleSheets).toEqual([s2]);
+        expect(document.adoptedStyleSheets).not.toContain(s1);
+        t2.dispose();
+        expect(document.adoptedStyleSheets.length).toBe(0);
+    });
+
+    test('hand-wired without styleSheet (legacy call): still injects the <style> element', () => {
+        const t = themeTokens.factory({}).create();
+        t.define({ a: '#fff' });
+        expect(document.querySelectorAll('style[id^="data-fw-theme-tokens-"]').length).toBe(1);
+        t.dispose();
+        expect(document.querySelectorAll('style[id^="data-fw-theme-tokens-"]').length).toBe(0);
+    });
+
+    test('resolved path: themeTokens shares the resolved styleSheet instance', () => {
+        const rt = new ModuleRuntime();
+        rt.registerAll(modules);
+        const inst = rt.resolve('themeTokens');
+        expect(rt.resolve('component')).toBeDefined();
+        expect(rt.resolve('template')).toBeDefined();
+        rt.resolve('styleSheet').mode('adopted');
+        const t = inst.create();
+        t.define({ a: '#fff' });
+        expect(document.querySelectorAll('style').length).toBe(0);
+        expect(document.adoptedStyleSheets.length).toBe(1);
+        t.dispose();
     });
 });

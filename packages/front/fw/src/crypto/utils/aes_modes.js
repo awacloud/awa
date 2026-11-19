@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,7 +6,7 @@
  * @fileoverview High-level AES wrapper exposing all standard modes through a
  * uniform Uint8Array-friendly API.
  *
- * Generalises the earlier `aes_ctr` helper to cover:
+ * Covers:
  *   - CBC (NIST SP 800-38A) with PKCS#7 padding handled internally
  *   - CTR (NIST SP 800-38A) - stream, no padding
  *   - GCM (NIST SP 800-38D) - AEAD with AAD support

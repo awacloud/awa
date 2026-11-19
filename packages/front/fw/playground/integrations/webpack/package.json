@@ -6,10 +6,14 @@
     "scripts": {
         "postinstall": "node ../../_tools/link-fw.mjs",
         "setup": "node ../../_tools/link-fw.mjs",
-        "build": "webpack"
+        "build": "webpack",
+        "start": "webpack && node ../../_tools/serve.mjs dist"
     },
     "devDependencies": {
         "webpack": "^5.107.2",
         "webpack-cli": "^7.0.3"
+    },
+    "playground": {
+        "page": "dist/index.html"
     }
 }

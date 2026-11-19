@@ -9,7 +9,7 @@ status: complete
 
 # oconvIrToMd
 
-> `oconv-ir/v1` → structured-markdown profile v1, the frozen wire contract.
+> `oconv-ir/v2` → structured-markdown profile v1, the frozen wire contract.
 
 **Module** `oconvIrToMd` | **Source** `packages/front/office/oconv/src/write/ir-to-md.js` | **Deps** `oconvIr`, `md`, `mdNode` | **Worker-safe** yes
 
@@ -34,13 +34,15 @@ it directly is for tooling that wants the profile-v1 writer in isolation.
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `irToMd` | `(ir: object, meta: OconvMeta, opts?: object) => OconvMdResult` | `{markdown, anchors, lossy, losses, assets}` | — (no input validation; a malformed `ir` produces malformed output rather than throwing — the caller-facing facade `oconv.toMd` validates upstream) |
+| `irToMd` | `(ir: object, meta: OconvMeta, opts?: object) => OconvMdResult` | `{markdown, anchors, lossy, losses, assets}` | `oconv: bad front matter`, `oconv: bad output budget`, `oconv: output too large` (no other input validation; a malformed `ir` produces malformed output rather than throwing — the caller-facing facade `oconv.toMd` validates upstream) |
 
 `OconvMeta` (all caller-supplied provenance — this module reads no clock and
 computes no hash): `sourceFormat`, `sourceName`, optional `title` (written right after `sourceName` when it is a non-empty string, trimmed), `sourceBytes`,
 `sourceSha256`, `convertedAt`, `converter`, `converterVersion`, `engine`,
 optional `losses` (reader losses, merged FIRST into the returned ledger).
 `opts.frontMatter` (opt-in): `'full'` (the default) writes the front matter above; `'compact'` writes the same keys, its `losses` one entry per distinct `(code, detail)` in first-occurrence order with a `count` (`- { code: inline/dropped, detail: text:bookmark, count: 3 }`); `'none'` writes no front matter — the body alone, which is not a profile-v1 document, the result's `anchors` / `lossy` / `losses` / `assets` being the caller's sidecar. The result's `losses` is the full ledger in every form. Any other value throws `oconv: bad front matter`; other `opts` keys are ignored.
+
+`opts.outputBudget` (since 2.0.0; `toMd` forwards its own): `{ bytes?, overflow? }`, a bound on the IR's text measured before the render. Past `bytes` (a positive safe integer, **256 MiB when absent**; `Number.MAX_SAFE_INTEGER` renders everything), `overflow` `'throw'` (also when absent) throws `oconv: output too large` before any markdown is built; `'truncate'` keeps the top-level blocks that fit and a crossing table's leading rows, recorded `doc/truncated`, the first of the render's losses. With no `outputBudget`, a document past 256 MiB of text throws. Another shape throws `oconv: bad output budget`.
 
 `OconvMdResult`: `markdown` (front matter + rendered body), `anchors`
 (`{level, anchor}[]`, document order), `lossy` (`losses.length > 0`),
@@ -66,7 +68,7 @@ const ir = doc([
 const meta = {
     sourceFormat: 'docx', sourceName: 'x.docx', sourceBytes: 10,
     sourceSha256: 'abc123', convertedAt: '2026-09-15T00:00:00Z',
-    converter: 'oconv', converterVersion: '1.2.0', engine: 'bun'
+    converter: 'oconv', converterVersion: '2.0.0', engine: 'bun'
 };
 const { markdown, anchors, lossy } = oconvIrToMd.irToMd(ir, meta);
 // markdown starts with the YAML front matter, then "# Title\n\nHello **world**\n"
@@ -75,7 +77,7 @@ const { markdown, anchors, lossy } = oconvIrToMd.irToMd(ir, meta);
 ```
 
 Executed against the live package (2026-10-03): the front matter opens
-`---\nprofile: v1\nir: oconv-ir/v1\n…`, the body renders `# Title` followed
+`---\nprofile: v1\nir: oconv-ir/v2\n…`, the body renders `# Title` followed
 by `Hello **world**`, `anchors` is exactly `[{ level: 1, anchor: 'title' }]`
 and `lossy` is `false`.
 
@@ -128,8 +130,8 @@ and `lossy` is `false`.
   algorithm is re-declared inside this module's factory rather than
   imported from `./anchors.js`, and a drift test pins the two copies
   identical.
-- `opts.frontMatter` is the one writer option; other keys are
-  read nowhere.
+- `opts.frontMatter` and `opts.outputBudget` are the writer's options;
+  other keys are read nowhere.
 
 ## See also
 

@@ -4,9 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "bun build.ts",
-        "start": "bun run src/app.js"
+        "start": "bun build.ts && bun dist/app.js"
     },
-    "dependencies": {
-        "@awacloud/fw": "*"
+    "playground": {
+        "page": false
     }
 }

@@ -362,8 +362,14 @@ describe('CFF charset and glyph names', () => {
         expect(f.glyphNames).toBe(null);
     });
 
-    test('a predefined Expert charset, an unknown format, a truncated table or a missing string give null', () => {
-        for (const opts of [{ n: 3, charsetOffset: 1 }, { n: 3, charset: [7, 0, 1] }, { n: 3, charset: [0, 0] },
+    test('the predefined Expert and ExpertSubset charsets (T17 b)', () => {
+        expect(parseCff(cffWith({ n: 3, charsetOffset: 1 })).fonts[0].glyphNames).toEqual(['.notdef', 'space', 'exclamsmall']);
+        expect(parseCff(cffWith({ n: 3, charsetOffset: 2 })).fonts[0].glyphNames).toEqual(['.notdef', 'space', 'dollaroldstyle']);
+        expect(parseCff(cffWith({ n: 200, charsetOffset: 2 })).fonts[0].charset).toBe(null);
+    });
+
+    test('an unknown format, a truncated table or a missing string give null', () => {
+        for (const opts of [{ n: 3, charset: [7, 0, 1] }, { n: 3, charset: [0, 0] },
             { n: 3, charset: [0, ...u16(34), ...u16(400)], strings: ['x'] }]) {
             expect(parseCff(cffWith(opts)).fonts[0].glyphNames).toBe(null);
         }

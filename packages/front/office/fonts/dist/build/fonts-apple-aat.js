@@ -2383,7 +2383,7 @@ export const fontsAppleAatPackage = {
         throw new ParseError("fonts/missing-hmtx", "font is missing the required `hmtx` table");
       if (!sfnt.tables.cmap)
         throw new ParseError("fonts/missing-cmap", "font is missing the required `cmap` table");
-      if (!sfnt.tables.name && !(opts && opts.allowMissingName))
+      if (!sfnt.tables.name && opts && opts.allowMissingName === !1)
         throw new ParseError("fonts/missing-name", "font is missing the required `name` table");
       const head = parseHead(sfnt.tables.head.bytes), maxp = parseMaxp(sfnt.tables.maxp.bytes), hhea = parseHhea(sfnt.tables.hhea.bytes), hmtx = parseHmtx(sfnt.tables.hmtx.bytes, hhea.numberOfHMetrics, maxp.numGlyphs), cmap = parseCmap(sfnt.tables.cmap.bytes), nameTable = sfnt.tables.name ? parseName(sfnt.tables.name.bytes) : null, os2 = sfnt.tables["OS/2"] ? parseOs2(sfnt.tables["OS/2"].bytes) : null, post = sfnt.tables.post ? parsePost(sfnt.tables.post.bytes, maxp.numGlyphs) : null;
       let loca = null, glyphTable = null;
@@ -4221,9 +4221,209 @@ export const fontsAppleAatPackage = {
       DSIG_FORMAT_PKCS7: 1
     };
   } });
-    __register({ name: "aatMorx", dependencies: ["fontErrors","fontReader"], factory: function(errors, reader) {
-    const { ParseError } = errors, { BinaryReader } = reader;
-    function parseMorx(bytes) {
+    __register({ name: "aatLookup", dependencies: ["fontErrors"], factory: function(errors) {
+    const { ParseError } = errors, u16 = (b, o) => b[o] << 8 | b[o + 1], u32 = (b, o) => (b[o] << 24 >>> 0) + (b[o + 1] << 16 | b[o + 2] << 8 | b[o + 3]);
+    function need(bytes, end, code, what) {
+      if (end > bytes.length)
+        throw new ParseError(code, `${what} runs past the table`, { context: { end, length: bytes.length } });
+    }
+    function checkBytes(bytes, offset, fn) {
+      if (!(bytes instanceof Uint8Array))
+        throw new ParseError("fonts/aat-input", `${fn} expects Uint8Array`, { context: { actual: typeof bytes } });
+      if (!Number.isSafeInteger(offset) || offset < 0)
+        throw new ParseError("fonts/aat-input", `${fn}: bad offset`, { context: { offset } });
+    }
+    function search(first, size, n, cmp) {
+      let lo = 0, hi = n - 1;
+      while (lo <= hi) {
+        const mid = lo + hi >> 1, c = cmp(first + mid * size);
+        if (c < 0)
+          hi = mid - 1;
+        else if (c > 0)
+          lo = mid + 1;
+        else
+          return first + mid * size;
+      }
+      return -1;
+    }
+    function parseLookup(bytes, offset, opts) {
+      checkBytes(bytes, offset, "parseLookup");
+      const o = opts || {}, vs = o.valueSize === 4 ? 4 : 2, val = vs === 4 ? u32 : u16;
+      need(bytes, offset + 2, "fonts/aat-lookup-short", "lookup header");
+      const format = u16(bytes, offset), valid = (g) => Number.isInteger(g) && g >= 0 && g <= 65535;
+      switch (format) {
+        case 0: {
+          const start = offset + 2, avail = Math.floor((bytes.length - start) / vs), n = o.numGlyphs !== void 0 ? Math.min(o.numGlyphs, avail) : avail;
+          return { format, get: (g) => valid(g) && g < n ? val(bytes, start + vs * g) : null };
+        }
+        case 2:
+        case 4:
+        case 6: {
+          need(bytes, offset + 12, "fonts/aat-lookup-short", "binary-search header");
+          const unitSize = u16(bytes, offset + 2);
+          let n = u16(bytes, offset + 4);
+          const first = offset + 12, keyWords = format === 6 ? 1 : 2;
+          if (unitSize < 2 * keyWords + (format === 4 ? 2 : vs))
+            throw new ParseError("fonts/aat-lookup-unit", `lookup format ${format} unit of ${unitSize} bytes`, { context: { format, unitSize } });
+          need(bytes, first + unitSize * n, "fonts/aat-lookup-short", "binary-search units");
+          if (n > 0) {
+            const last = first + (n - 1) * unitSize;
+            let terminator = !0;
+            for (let k = 0;k < keyWords; k++)
+              if (u16(bytes, last + 2 * k) !== 65535)
+                terminator = !1;
+            if (terminator)
+              n--;
+          }
+          if (format === 6)
+            return {
+              format,
+              get(g) {
+                if (!valid(g))
+                  return null;
+                const at = search(first, unitSize, n, (u) => g - u16(bytes, u));
+                return at < 0 ? null : val(bytes, at + 2);
+              }
+            };
+          const seg = (g) => search(first, unitSize, n, (u) => g < u16(bytes, u + 2) ? -1 : g > u16(bytes, u) ? 1 : 0);
+          if (format === 2)
+            return { format, get: (g) => {
+              if (!valid(g))
+                return null;
+              const at = seg(g);
+              return at < 0 ? null : val(bytes, at + 4);
+            } };
+          return {
+            format,
+            get(g) {
+              if (!valid(g))
+                return null;
+              const at = seg(g);
+              if (at < 0)
+                return null;
+              const v = offset + u16(bytes, at + 4) + vs * (g - u16(bytes, at + 2));
+              return v + vs <= bytes.length ? val(bytes, v) : null;
+            }
+          };
+        }
+        case 8: {
+          need(bytes, offset + 6, "fonts/aat-lookup-short", "trimmed-array header");
+          const firstGlyph = u16(bytes, offset + 2), count = u16(bytes, offset + 4);
+          need(bytes, offset + 6 + vs * count, "fonts/aat-lookup-short", "trimmed-array values");
+          return { format, get: (g) => valid(g) && g >= firstGlyph && g - firstGlyph < count ? val(bytes, offset + 6 + vs * (g - firstGlyph)) : null };
+        }
+        case 10: {
+          need(bytes, offset + 8, "fonts/aat-lookup-short", "extended trimmed-array header");
+          const unitSize = u16(bytes, offset + 2), firstGlyph = u16(bytes, offset + 4), count = u16(bytes, offset + 6);
+          if (unitSize !== 1 && unitSize !== 2 && unitSize !== 4)
+            throw new ParseError("fonts/aat-lookup-unit", `lookup format 10 unit of ${unitSize} bytes`, { context: { format, unitSize } });
+          need(bytes, offset + 8 + unitSize * count, "fonts/aat-lookup-short", "extended trimmed-array values");
+          const read = unitSize === 1 ? (p) => bytes[p] : unitSize === 2 ? (p) => u16(bytes, p) : (p) => u32(bytes, p);
+          return { format, get: (g) => valid(g) && g >= firstGlyph && g - firstGlyph < count ? read(offset + 8 + unitSize * (g - firstGlyph)) : null };
+        }
+        default:
+          throw new ParseError("fonts/aat-lookup-format", `unknown lookup format ${format}`, { context: { format } });
+      }
+    }
+    function parseStateTable(bytes, offset, entryWords, opts) {
+      checkBytes(bytes, offset, "parseStateTable");
+      need(bytes, offset + 16, "fonts/aat-state-short", "state table header");
+      const nClasses = u32(bytes, offset);
+      if (nClasses < 4 || nClasses > 65535)
+        throw new ParseError("fonts/aat-state-classes", `state table with ${nClasses} classes`, { context: { nClasses } });
+      const classes = parseLookup(bytes, offset + u32(bytes, offset + 4), opts), stateBase = offset + u32(bytes, offset + 8), entryBase = offset + u32(bytes, offset + 12), entrySize = 4 + 2 * entryWords;
+      let nStates = 1, nEntries = 0, rows = 0;
+      const entries = [];
+      while (rows < nStates || entries.length < nEntries) {
+        need(bytes, stateBase + 2 * nClasses * nStates, "fonts/aat-state-short", `state array of ${nStates} states`);
+        for (;rows < nStates; rows++)
+          for (let k = 0;k < nClasses; k++)
+            nEntries = Math.max(nEntries, u16(bytes, stateBase + 2 * (rows * nClasses + k)) + 1);
+        need(bytes, entryBase + entrySize * nEntries, "fonts/aat-state-short", `entry table of ${nEntries} entries`);
+        for (let e = entries.length;e < nEntries; e++) {
+          const at = entryBase + entrySize * e, data = [];
+          for (let w = 0;w < entryWords; w++)
+            data.push(u16(bytes, at + 4 + 2 * w));
+          const entry = { newState: u16(bytes, at), flags: u16(bytes, at + 2), data };
+          entries.push(entry);
+          nStates = Math.max(nStates, entry.newState + 1);
+        }
+      }
+      return {
+        nClasses,
+        nStates,
+        entries,
+        classOf(glyph) {
+          if (glyph === 65535)
+            return 2;
+          const v = classes.get(glyph);
+          return v === null ? 1 : v;
+        },
+        entry(state, klass) {
+          const k = klass < nClasses ? klass : 1;
+          return entries[u16(bytes, stateBase + 2 * (state * nClasses + k))];
+        }
+      };
+    }
+    return { parseLookup, parseStateTable, DELETED_GLYPH: 65535 };
+  } });
+    __register({ name: "aatMorx", dependencies: ["fontErrors","fontReader","aatLookup"], factory: function(errors, reader, lookups) {
+    const { ParseError } = errors, { BinaryReader } = reader, u32 = (b, o) => (b[o] << 24 >>> 0) + (b[o + 1] << 16 | b[o + 2] << 8 | b[o + 3]), u16 = (b, o) => b[o] << 8 | b[o + 1];
+    function valuesAt(body, base, size) {
+      const read = size === 4 ? u32 : u16;
+      return (i) => Number.isInteger(i) && i >= 0 && base + size * (i + 1) <= body.length ? read(body, base + size * i) : null;
+    }
+    function offsets(body, n, code, what) {
+      if (body.length < 16 + 4 * n)
+        throw new ParseError(code, `${what} subtable header truncated`, { context: { length: body.length } });
+      const out = [];
+      for (let i = 0;i < n; i++) {
+        const off = u32(body, 16 + 4 * i);
+        if (off > body.length)
+          throw new ParseError(code, `${what} subtable offset past the body`, { context: { offset: off, length: body.length } });
+        out.push(off);
+      }
+      return out;
+    }
+    function decodeBody(type, body, numGlyphs) {
+      const opts = numGlyphs !== void 0 ? { numGlyphs } : void 0;
+      if (type === 0)
+        return { stateTable: lookups.parseStateTable(body, 0, 0, opts) };
+      if (type === 4)
+        return { lookup: lookups.parseLookup(body, 0, opts) };
+      if (type === 2) {
+        const [actionOff, componentOff, ligatureOff] = offsets(body, 3, "fonts/morx-ligature-short", "ligature");
+        return {
+          stateTable: lookups.parseStateTable(body, 0, 1, opts),
+          action: valuesAt(body, actionOff, 4),
+          component: valuesAt(body, componentOff, 2),
+          ligature: valuesAt(body, ligatureOff, 2)
+        };
+      }
+      if (type === 5) {
+        const [insertionOff] = offsets(body, 1, "fonts/morx-insertion-short", "insertion");
+        return { stateTable: lookups.parseStateTable(body, 0, 2, opts), insertion: valuesAt(body, insertionOff, 2) };
+      }
+      if (type !== 1)
+        return null;
+      const stateTable = lookups.parseStateTable(body, 0, 2, opts);
+      if (body.length < 20)
+        throw new ParseError("fonts/morx-contextual-short", "contextual subtable header truncated", { context: { length: body.length } });
+      const listOff = u32(body, 16);
+      let count = 0;
+      for (const e of stateTable.entries)
+        for (const i of e.data)
+          if (i !== 65535)
+            count = Math.max(count, i + 1);
+      if (listOff + 4 * count > body.length)
+        throw new ParseError("fonts/morx-contextual-short", "contextual substitution list runs past the subtable", { context: { listOff, count } });
+      const substitutions = [];
+      for (let i = 0;i < count; i++)
+        substitutions.push(lookups.parseLookup(body, listOff + u32(body, listOff + 4 * i), opts));
+      return { stateTable, substitutions };
+    }
+    function parseMorx(bytes, opts) {
+      const numGlyphs = opts && opts.numGlyphs;
       if (!(bytes instanceof Uint8Array))
         throw new ParseError("fonts/morx-input", "parseMorx expects Uint8Array", { context: { actual: typeof bytes } });
       if (bytes.length < 8)
@@ -4236,10 +4436,10 @@ export const fontsAppleAatPackage = {
         throw new ParseError("fonts/morx-chains", `implausible chain count ${nChains}`, { context: { nChains } });
       const chains = Array(nChains);
       for (let i = 0;i < nChains; i++)
-        chains[i] = parseChain(r, i);
+        chains[i] = parseChain(r, i, numGlyphs);
       return { version, nChains, chains };
     }
-    function parseChain(r, index) {
+    function parseChain(r, index, numGlyphs) {
       const chainStart = r.pos;
       if (r.length - chainStart < 16)
         throw new ParseError("fonts/morx-chain-short", `chain ${index} header truncated`, { context: { index, remaining: r.length - chainStart } });
@@ -4259,19 +4459,18 @@ export const fontsAppleAatPackage = {
       }
       const subtables = Array(nSubtables);
       for (let i = 0;i < nSubtables; i++)
-        subtables[i] = parseSubtable(r, chainStart + chainLength, index, i);
+        subtables[i] = parseSubtable(r, chainStart + chainLength, index, i, numGlyphs);
       r.seek(chainStart + chainLength);
       return { defaultFlags, chainLength, features, subtables };
     }
-    function parseSubtable(r, chainEnd, chainIdx, subIdx) {
+    function parseSubtable(r, chainEnd, chainIdx, subIdx, numGlyphs) {
       const subStart = r.pos;
       if (subStart + 12 > chainEnd)
         throw new ParseError("fonts/morx-sub-short", `chain ${chainIdx} subtable ${subIdx} header truncated`, { context: { chain: chainIdx, sub: subIdx } });
       const length = r.readUint32(), coverage = r.readUint32(), subFeatureFlags = r.readUint32();
       if (length < 12 || subStart + length > chainEnd)
         throw new ParseError("fonts/morx-sub-length", `chain ${chainIdx} subtable ${subIdx} length invalid`, { context: { chain: chainIdx, sub: subIdx, length } });
-      const bodyLen = length - 12, body = r.readBytes(bodyLen), type = coverage & 255, vertical = !!(coverage & 2147483648), descending = !!(coverage & 1073741824), bothOrientations = !!(coverage & 536870912), logicalOrder = !!(coverage & 268435456);
-      return {
+      const bodyLen = length - 12, body = r.readBytes(bodyLen), type = coverage & 255, vertical = !!(coverage & 2147483648), descending = !!(coverage & 1073741824), bothOrientations = !!(coverage & 536870912), logicalOrder = !!(coverage & 268435456), sub = {
         length,
         coverage: coverage >>> 0,
         type,
@@ -4283,12 +4482,64 @@ export const fontsAppleAatPackage = {
         body,
         parsed: !1
       };
+      try {
+        const decoded = decodeBody(type, body, numGlyphs);
+        if (decoded)
+          Object.assign(sub, decoded, { parsed: !0 });
+      } catch (e) {
+        if (!(e instanceof ParseError))
+          throw e;
+        sub.error = e.code;
+      }
+      return sub;
     }
     return { parseMorx };
   } });
-    __register({ name: "aatKerx", dependencies: ["fontErrors","fontReader"], factory: function(errors, reader) {
-    const { ParseError } = errors, { BinaryReader } = reader;
-    function parseKerx(bytes) {
+    __register({ name: "aatKerx", dependencies: ["fontErrors","fontReader","aatLookup"], factory: function(errors, reader, lookups) {
+    const { ParseError } = errors, { BinaryReader } = reader, u16 = (b, o) => b[o] << 8 | b[o + 1], u32 = (b, o) => (b[o] << 24 >>> 0) + (b[o + 1] << 16 | b[o + 2] << 8 | b[o + 3]), i16 = (b, o) => u16(b, o) << 16 >> 16, i32 = (b, o) => u32(b, o) | 0;
+    function valuesAt(b, base, size, read) {
+      return (i) => Number.isInteger(i) && i >= 0 && base + size * (i + 1) <= b.length ? read(b, base + size * i) : null;
+    }
+    function need(b, n, format) {
+      if (b.length < n)
+        throw new ParseError("fonts/kerx-format-short", `kerx format ${format} header truncated`, { context: { format, length: b.length } });
+    }
+    function decode(format, sub, body, numGlyphs) {
+      const opts = numGlyphs !== void 0 ? { numGlyphs } : void 0;
+      if (format === 1) {
+        need(body, 20, 1);
+        return { stateTable: lookups.parseStateTable(body, 0, 1, opts), action: valuesAt(body, u32(body, 16), 2, i16) };
+      }
+      if (format === 4) {
+        need(body, 20, 4);
+        const flags = u32(body, 16);
+        return {
+          stateTable: lookups.parseStateTable(body, 0, 1, opts),
+          actionType: flags >>> 30,
+          data: valuesAt(body, flags & 16777215, 2, u16)
+        };
+      }
+      if (format === 2) {
+        need(body, 16, 2);
+        const left = lookups.parseLookup(sub, u32(body, 4), opts), right = lookups.parseLookup(sub, u32(body, 8), opts), value = valuesAt(sub, u32(body, 12), 2, i16);
+        return {
+          rowWidth: u32(body, 0),
+          kern(l, r) {
+            return value((left.get(l) || 0) + (right.get(r) || 0)) || 0;
+          }
+        };
+      }
+      need(body, 20, 6);
+      const long = !!(u32(body, 0) & 1), lopts = { ...opts, valueSize: long ? 4 : 2 }, rows = lookups.parseLookup(sub, u32(body, 8), lopts), cols = lookups.parseLookup(sub, u32(body, 12), lopts), value = valuesAt(sub, u32(body, 16), long ? 4 : 2, long ? i32 : i16);
+      return {
+        long,
+        kern(l, r) {
+          return value((rows.get(l) || 0) + (cols.get(r) || 0)) || 0;
+        }
+      };
+    }
+    function parseKerx(bytes, opts) {
+      const numGlyphs = opts && opts.numGlyphs;
       if (!(bytes instanceof Uint8Array))
         throw new ParseError("fonts/kerx-input", "parseKerx expects Uint8Array", { context: { actual: typeof bytes } });
       if (bytes.length < 8)
@@ -4302,10 +4553,10 @@ export const fontsAppleAatPackage = {
         throw new ParseError("fonts/kerx-ntables", `implausible kerx subtable count ${nTables}`, { context: { nTables } });
       const tables = Array(nTables);
       for (let i = 0;i < nTables; i++)
-        tables[i] = parseSubtable(r, i);
+        tables[i] = parseSubtable(r, i, bytes, numGlyphs);
       return { version, nTables, tables };
     }
-    function parseSubtable(r, index) {
+    function parseSubtable(r, index, bytes, numGlyphs) {
       const start = r.pos;
       if (start + 12 > r.length)
         throw new ParseError("fonts/kerx-sub-short", `kerx subtable ${index} header truncated`, { context: { index } });
@@ -4320,7 +4571,13 @@ export const fontsAppleAatPackage = {
       const bodyLen = length - 12, body = r.readBytes(bodyLen);
       if (format !== 1 && format !== 2 && format !== 4 && format !== 6)
         return { ...meta, body, parsed: !1, unknown: !0 };
-      return { ...meta, body, parsed: !1 };
+      try {
+        return { ...meta, body, ...decode(format, bytes.subarray(start, start + length), body, numGlyphs), parsed: !0 };
+      } catch (e) {
+        if (!(e instanceof ParseError))
+          throw e;
+        return { ...meta, body, parsed: !1, error: e.code };
+      }
     }
     function parseFormat0(r, end, index) {
       if (r.pos + 16 > end)
@@ -4346,9 +4603,9 @@ export const fontsAppleAatPackage = {
     }
     return { parseKerx };
   } });
-    __register({ name: "aatAnkr", dependencies: ["fontErrors","fontReader"], factory: function(errors, reader) {
+    __register({ name: "aatAnkr", dependencies: ["fontErrors","fontReader","aatLookup"], factory: function(errors, reader, lookups) {
     const { ParseError } = errors, { BinaryReader } = reader;
-    function parseAnkr(bytes) {
+    function parseAnkr(bytes, opts) {
       if (!(bytes instanceof Uint8Array))
         throw new ParseError("fonts/ankr-input", "parseAnkr expects Uint8Array", { context: { actual: typeof bytes } });
       if (bytes.length < 12)
@@ -4362,6 +4619,7 @@ export const fontsAppleAatPackage = {
       if (lookupBytes.length < 2)
         throw new ParseError("fonts/ankr-lookup-short", "ankr lookup region too short", { context: { length: lookupBytes.length } });
       const lookupFormat = lookupBytes[0] << 8 | lookupBytes[1];
+      let table;
       return {
         version,
         flags,
@@ -4369,7 +4627,27 @@ export const fontsAppleAatPackage = {
         glyphDataTableOffset,
         lookupFormat,
         lookupBytes,
-        glyphDataBytes
+        glyphDataBytes,
+        anchors(glyph) {
+          if (table === void 0)
+            try {
+              table = lookups.parseLookup(lookupBytes, 0, opts && opts.numGlyphs !== void 0 ? { numGlyphs: opts.numGlyphs } : void 0);
+            } catch (e) {
+              if (!(e instanceof ParseError))
+                throw e;
+              table = null;
+            }
+          const off = table ? table.get(glyph) : null;
+          if (off === null)
+            return [];
+          try {
+            return readAnchorBlock(glyphDataBytes, off);
+          } catch (e) {
+            if (!(e instanceof ParseError))
+              throw e;
+            return [];
+          }
+        }
       };
     }
     function readAnchorBlock(glyphDataBytes, offset) {
@@ -4385,7 +4663,7 @@ export const fontsAppleAatPackage = {
     }
     return { parseAnkr, readAnchorBlock };
   } });
-    __register({ name: "aatProp", dependencies: ["fontErrors","fontReader"], factory: function(errors, reader) {
+    __register({ name: "aatProp", dependencies: ["fontErrors","fontReader","aatLookup"], factory: function(errors, reader, lookups) {
     const PROP_BITS_CONST = Object.freeze({
       DIRECTION_MASK: 31,
       IS_FLOATER: 32768,
@@ -4394,7 +4672,7 @@ export const fontsAppleAatPackage = {
       USES_COMPLEX_OT: 4096,
       ATTACHING: 128
     }), { ParseError } = errors, { BinaryReader } = reader;
-    function parseProp(bytes) {
+    function parseProp(bytes, opts) {
       if (!(bytes instanceof Uint8Array))
         throw new ParseError("fonts/prop-input", "parseProp expects Uint8Array", { context: { actual: typeof bytes } });
       if (bytes.length < 8)
@@ -4414,16 +4692,26 @@ export const fontsAppleAatPackage = {
       const lookupBytes = bytes.subarray(8);
       if (lookupBytes.length < 2)
         throw new ParseError("fonts/prop-lookup-short", "prop lookup region too short", { context: { length: lookupBytes.length } });
-      const lookupFormat = lookupBytes[0] << 8 | lookupBytes[1];
+      const lookupFormat = lookupBytes[0] << 8 | lookupBytes[1], numGlyphs = opts && opts.numGlyphs;
+      let table;
+      try {
+        table = lookups.parseLookup(lookupBytes, 0, numGlyphs !== void 0 ? { numGlyphs } : void 0);
+      } catch (e) {
+        if (!(e instanceof ParseError))
+          throw e;
+        return { version, format, defaultProps, lookupFormat, lookupBytes, parsed: !1, error: e.code, lookup: () => defaultProps };
+      }
       return {
         version,
         format,
         defaultProps,
         lookupFormat,
         lookupBytes,
-        parsed: !1,
-        reason: "aat-state-machine-deferred",
-        lookup: () => defaultProps
+        parsed: !0,
+        lookup(glyph) {
+          const v = table.get(glyph);
+          return v === null ? defaultProps : v;
+        }
       };
     }
     return { parseProp, PROP_BITS: PROP_BITS_CONST };

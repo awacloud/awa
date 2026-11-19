@@ -35,7 +35,7 @@ const webcryptoEcc = runtime.resolve('webcryptoEcc');
 | `importKey` | `(format: 'raw'\|'spki'\|'pkcs8'\|'jwk', keyData: Uint8Array\|object, kind: 'ECDSA'\|'ECDH', curve: 'P-256'\|'P-384'\|'P-521', usages: string[], extractable?: boolean) => Promise<CryptoKey\|false>` | `CryptoKey` or `false` |
 | `exportKey` | `(format: 'raw'\|'spki'\|'pkcs8'\|'jwk', key: CryptoKey) => Promise<Uint8Array\|object\|false>` | `Uint8Array` (DER/raw), object (jwk), or `false` |
 
-ECDSA hash defaults to `SHA-256`; curve defaults to `P-256`. `generateKey` assigns usages by kind — ECDSA → `['sign','verify']`, ECDH → `['deriveBits','deriveKey']`. `importKey` defaults `extractable` to `false` for `pkcs8` (private keys), `true` otherwise. `'raw'` carries the public point only.
+ECDSA hash defaults to `SHA-256`; curve defaults to `P-256`. `generateKey` makes the private key non-extractable unless `extractable` is `true`, and assigns usages by kind — ECDSA → `['sign','verify']`, ECDH → `['deriveBits','deriveKey']`. `importKey` defaults `extractable` to `false` for `pkcs8` (private keys), `true` otherwise. `'raw'` carries the public point only.
 
 Operations resolve `false` when:
 - `crypto.subtle` is unavailable (`[crypto] NOT READY` logged)

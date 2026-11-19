@@ -17,7 +17,7 @@ status: complete
 
 ```js
 const buf = runtime.resolve('buffer');
-// Returns: { out, in, consume, clone, concat, const }
+// Returns: { out, in, consume, clone, concat }
 ```
 
 ## Binary format

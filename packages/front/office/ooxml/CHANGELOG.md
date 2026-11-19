@@ -4,6 +4,240 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-19
+
+### Added
+
+- **docx smart tags typed.** A `w:smartTag` among a paragraph's (or a
+  revision's, a content control's, another smart tag's) inline children
+  reads as `{ type: 'smartTag', attrs, smartTagPr?, children, _extras? }`,
+  its inlines typed as a paragraph's, and is written back in its place;
+  `docx.toText` reads its text. It used to sit in the paragraph's
+  `_extras`.
+
+- **pptx group shapes typed, opt-in.** A new read option, `typedGroups`,
+  on `pptx.read` types a `p:grpSp` (in slides, layouts and masters, at any
+  depth) as `{ type: 'group', shapes, _extras }`. Its shapes are parsed as
+  the slide's, its pictures' images and its charts read and written as a
+  top-level shape's, and the write puts it back at its place. The pptx
+  walker reaches a group's shapes. The default read is unchanged: a group
+  stays verbatim in `spTreeExtras`.
+- **A line's colour typed, opt-in.** A new read option,
+  `typedLineColors`, on `pptx.read` and `xlsx.read` (threaded to
+  `drawingmlShape.parseShapeProperties(spPr, opts)`) types a shape's line
+  colour as the fill's is: `'RRGGBB'` for a bare `a:srgbClr`, else
+  `{ rgb | schemeColor, mods? }` (an `a:srgbClr`'s transforms kept). The
+  writer writes either form. The default is unchanged.
+- **The xlsx calculation chain, external links, XML maps, connections and
+  query tables read and written through `xlsxFullBundle`.** A new extra,
+  `smlPackageParts`, on a new xlsx walker hook pair, `hydratePackage` /
+  `dehydratePackage` (called inside `xlsx.read`'s pass and after
+  `xlsx.write` has built its package). Each part is read only when it is
+  written back as read, in the Transitional namespace, with relationships
+  the write rebuilds. The write adds those parts, their relationships, the
+  workbook's `externalReferences` and their content types. The
+  calculation chain keeps only the entries whose cell holds a formula in
+  the written model, named by the written sheet ids. The pivot caches
+  (`workbook.pivotCaches`, with their records) and a sheet's pivot tables
+  (`sheet.pivotTables`) are read through `smlPivotTables`. `xlsxLargeBundle`
+  reads as before.
+- **The xlsx workbook details and a drawing's text typed through
+  `xlsxFullBundle`.** A new extra, `smlWorkbookDetails` (on
+  `hydrateWorkbook` / `dehydrateWorkbook`), types, each only when it is
+  written back as read:
+  - the stylesheet's `slicerStyles` / `timelineStyles` (its `extLst`) and
+    `colors`;
+  - a font's `condense` / `extend` / `outline` / `shadow`;
+  - a dxf's `protection`;
+  - a table column's `xmlColumnPr` and `calculatedColumnFormula`.
+
+  The xlsx walker now dispatches the DrawingML text hooks
+  (`hydrateRunProperties`, `hydrateParagraphProperties`,
+  `hydrateParagraph`) over each drawing's text body, and `xlsxFullBundle`
+  registers `dmlTextDetails`. `xlsxLargeBundle` reads as before.
+- **The pptx notes slides, notes and handout masters and unused layouts
+  read and written through `pptxFullBundle`.** A new extra,
+  `pmlPackageParts`, on a new pptx walker hook pair, `hydratePackage` /
+  `dehydratePackage` (called inside `pptx.read`'s pass and after
+  `pptx.write` has built its package). Each part is read only when it is
+  written back as read and names only parts the write rebuilds:
+  - a notes slide becomes its slide's `notes`;
+  - the notes and handout masters become `notesMaster` / `handoutMaster`,
+    each with its `theme`;
+  - with one slide master, the layouts no slide uses join `slideLayouts`
+    in the master's list order (`layoutRef` and `layoutIds` follow).
+
+  The write adds those parts, their relationships, the presentation's
+  `p:notesMasterIdLst` / `p:handoutMasterIdLst` and their content types.
+  The walker visits the notes parts like slides and their themes like the
+  theme. `pptxSlide` gains `parseNotesSlide` / `parseNotesMaster` /
+  `parseHandoutMaster` and their serializers; `ooxmlShared` the notes
+  relationship and content types. `pptxLargeBundle` reads as before.
+- **The slides', layouts' and masters' transition, timing and header /
+  footer flags typed through `pptxFullBundle`.** A new extra,
+  `pmlPartDetails`, types `transition` (`pmlTransitions`), `timing`
+  (`pmlAnimations`) and `hf` (`pmlNotes`), each only when it is written
+  back as read. The pptx walker dispatches a new hook pair,
+  `hydrateSlidePart` / `dehydrateSlidePart`, once per slide, layout and
+  master. `pptxLargeBundle` reads as before.
+- **The pptx text details and the theme's script fonts typed through
+  `pptxFullBundle`.** A new extra, `dmlTextDetails`, types each element
+  only when it is written back as read:
+  - a run's fill colour, `effectLst`, `gradFill`, `highlight`, `ea` / `cs`
+    / `sym` fonts, hyperlinks and `uFillTx` / `uLnTx` / `noFill`;
+  - a paragraph's `lnSpc` / `spcBef` / `spcAft`, bullet colour, size and
+    font, and `tabLst`;
+  - a paragraph's `endParaRPr`;
+  - the theme's `majorFont` / `minorFont` script fonts (`fonts`).
+
+  The pptx walker now reaches table cells' text bodies and dispatches
+  `hydrateParagraph` / `dehydrateParagraph` and `hydrateTheme` /
+  `dehydrateTheme`. `pptxLargeBundle` reads as before.
+- **The docx body's, sections' and settings' details typed through
+  `docxFullBundle`.** A new extra, `wmlDocumentDetails`: a run's `rtl` and
+  character `spacing`, a paragraph mark's revisions, `rPrChange`; a
+  paragraph's `shd`, `pBdr`, own `sectPr`, `pPrChange`; a cell's `shd`; a
+  row's `tblPrEx`; a section's `docGrid`, `cols`, `pgNumType`,
+  `textDirection`, `formProt` and its other attribute-only children;
+  settings' `mathPr` and remaining toggles, `compat`'s legacy toggles —
+  each only when it is written back as read. The docx walker now
+  dehydrates in reverse registration order and dispatches
+  `hydrateSection` / `dehydrateSection` (the body's `sectPr`, a typed
+  paragraph `pPr.sectPr`); `hydrateLossless` merges an object field
+  whose keys are new (a group of elements). `docxLargeBundle` reads as
+  before.
+- **The styles' and numbering's details typed through `docxFullBundle`.**
+  A new extra, `wmlStyleDetails` (`hydrateStyles` / `dehydrateStyles`,
+  `hydrateNumbering` / `dehydrateNumbering`): a style's `autoRedefine`,
+  `hidden`, `semiHidden`, `unhideWhenUsed`, `qFormat`, `locked`,
+  `personal*` (booleans), `aliases`, `link`, `rsid`, `uiPriority`, a table
+  style's `tblStylePr` (its `pPr` / `rPr` typed by the run and paragraph
+  hooks: the walker visits them; an empty property element as `{}`), the
+  part's `latentStyles`; the numbering part's `numIdMacAtCleanup`, an
+  abstract numbering's `nsid`, `tmpl`, `styleLink`, `numStyleLink`, a
+  level's `suff`, `pStyle`, `isLgl`, `legacy`, `lvlRestart`,
+  `lvlPicBulletId`. `docxFullBundle` registers it; `docxLargeBundle` reads
+  these elements in `_extras` as before. Every element is typed only when
+  it is written back as read (`hydrateLossless`, which now types a
+  repeated name all or nothing).
+- **The docx walker reaches the styles' defaults and the numbering.** The
+  run and paragraph hooks visit `styles.docDefaults` and every numbering
+  level's `rPr` / `pPr`; two hook pairs, `hydrateStyles` /
+  `dehydrateStyles` and `hydrateNumbering` / `dehydrateNumbering`, take the
+  whole part (hydrate before its properties, dehydrate after); `docx.write`
+  dehydrates `numbering` and writes the styles and numbering parts from
+  what the hooks return. Through `docxLargeBundle`, a numbering level's
+  tabs and the defaults' run and paragraph properties are now typed.
+- **`docxProperties.sameElement` and `hydrateLossless`.** Canonical
+  element equality, and the lossless typing of a property bag's `_extras`
+  the typing extensions now share (see Fixed).
+- **`alternateContent: 'choice'` read option of `docx.read`.** A run's
+  `mc:AlternateContent` whose one `mc:Choice` requires only `wps`, `wpg`
+  or `wpc` and holds one `w:drawing` — a Word 2010 shape, text box, group
+  or drawing canvas with its VML fallback — reads as that drawing, typed
+  as any other, with the new optional field `alternate: { requires,
+  fallback }`; every other construct reads as under `'keep'`. The write
+  wraps an untouched one back in its construct, Fallback included, and
+  writes an edited one alone. `docxDrawing.renderRunChild` is the
+  writer; `typedFields` leaves `alternate` out. Of the 1,469 real-world
+  docx files of the test corpus, 220 hold 464 such constructs: the default
+  read keeps their VML fallback and `'keep'` keeps them opaque, while
+  `'choice'` types all 464 and its untouched save-back writes the same
+  constructs as `'keep'`'s. The defaults are unchanged.
+
+### Fixed
+
+- **An empty DrawingML `a:pPr` is written back.** A paragraph read with
+  an empty `<a:pPr/>` (`pPr: {}`) was written without it; it now keeps
+  the element, so `pmlPackageParts` models `tdf128550.pptx`'s notes
+  master (its round trip equals its source).
+
+- **A docx settings toggle stated false is written back.** `docxSettings`
+  wrote `w:evenAndOddHeaders`, `w:updateFields` and `w:trackRevisions`
+  only when true, so a save-back dropped one the document stated false;
+  it is now written `w:val="0"`. 3 of 1,469 wild docx kept it only
+  through the `wmlSettings` extension.
+
+- **A docx save-back keeps a smart tag's text in its place.** A smart tag
+  kept in `_extras` was written after the paragraph's typed children, so
+  its text moved to the paragraph's end: 36 paragraphs in 12 of 1,478 wild
+  docx came back reordered, none now.
+
+- **`smlPivotTables` writes a pivot table's children in the schema's
+  order.** `renderPivotTable` wrote `colFields` before `rowItems`,
+  `rowItems` / `colItems` after `dataFields`, and the formats, chart and
+  conditional formats, hierarchies and filters out of
+  `CT_pivotTableDefinition`'s sequence.
+- **xlsx rows keep their numbers through a read then a write.** The read
+  stored a sheet's rows densely and the write numbered them 1..n, so the
+  rows after an empty one moved up (in the wild corpus 31,825 cells with
+  content in 81 files changed address). The read now keeps each row's
+  number in `sheet.rowNumbers` when one is not its index + 1, and the
+  write numbers rows and cells by it. `sheet.rows` is unchanged.
+- **xlsx formulas and tables write back what they read.** A read then a
+  write through the core lost:
+  - a shared formula's follower cells (their `<f t="shared" si="…"/>`), a
+    shared master's `t`, `ref` and `si`, and an array formula's
+    `t="array"` and `ref`: a cell now keeps `formulaType`, `formulaRef`,
+    `sharedIndex` and `formulaAttrs`, a follower `formula: ''`. Every
+    formula of the wild corpus is now written back (8,290 of 27,365
+    before);
+  - a table's other root attributes (`tableType`, `insertRow`, the dxf ids,
+    `xr:uid` …), a column's other attributes, an `autoFilter`'s attributes
+    and children, and the table's `sortState` / `extLst`: now `rootAttrs`,
+    `extraAttrs`, `autoFilter.extraAttrs` / `_extras` and `_extras`.
+- **pptx themes write back what they read.** `pptxTheme.parse` then
+  `serialize` lost:
+  - a font's attributes beyond `typeface` (`panose`, `pitchFamily`,
+    `charset`), now kept in the font kind's `fontAttrs`;
+  - a colour or font scheme's empty name, written `"Office"`;
+  - the root's `a:custClrLst` and `a:extLst`, now kept in `_extras`;
+  - the absence of `a:objectDefaults` / `a:extraClrSchemeLst`, written
+    empty: a theme read without one now holds `null` there and is written
+    without it.
+- **pptx slides, layouts and masters write back their root and shape
+  properties.** A read then a write through the core lost:
+  - a layout's `type` (now read into `layoutType`, which the writer
+    already used) and the other root attributes of a slide, layout or
+    master (`show`, `showMasterSp`, `showMasterPhAnim`, `preserve`,
+    `userDrawn`, `matchingName` …), now kept in `rootAttrs`;
+  - a `p:spPr`'s `bwMode`, now `shapeProps.bwMode`;
+  - a `<p:cSld>`'s leftovers (`p:extLst`, `p:custDataLst`, `p:controls`)
+    when the root had leftovers too: the default read now keeps them in
+    `cSldExtras`, as `slideExtrasByPart` always did.
+
+  A `p:extLst` (or an unknown element) of a model without `cSldExtras` is
+  written once, inside `<p:cSld>`; it was written there and at the root.
+- **The DrawingML text model writes back what it reads.** Through the core
+  (pptx slides, layouts and masters; docx and xlsx DrawingML text bodies),
+  a read then a write lost these, now kept in new fields of the model:
+  - a run's (and `defRPr`'s) attributes beyond the typed ones (`kern`,
+    `spc`, `cap`, `dirty`, `smtClean`, `altLang`, `err` …): `rPr.extraAttrs`;
+  - an `a:latin`'s `panose` / `pitchFamily` / `charset`: `rPr.fontAttrs`;
+  - a paragraph's other `a:pPr` attributes (`marR`, `rtl`, `defTabSz`,
+    `eaLnBrk`, `fontAlgn`, `hangingPunct` …): `pPr.extraAttrs`;
+  - a field's `a:pPr`: the field's `pPr`;
+  - an auto-numbered bullet's `startAt`: `bullet.startAt`.
+
+  A text body read without `a:lstStyle` gets `lstStyle: null` and is
+  written without one; a model without the field still gets an empty one.
+  The pptx walker passes a field's `pPr` to the paragraph-properties hooks.
+- **`pmlAnimations` writes back what it reads.** `parseTimeNode` dropped a
+  sequence's `p:prevCondLst` / `p:nextCondLst` and a motion path's
+  `p:rCtr`; `renderTimeNode` wrote `p:by` / `p:from` / `p:to` and a
+  `cTn`'s `p:endSync` out of the schema's order, and an end sync's
+  children not at all.
+- **The docx bundles' hooks save back what they read.** Through
+  `docxLargeBundle` (and `docxFullBundle`), a read then a write lost what
+  a hook typed only in part: `w:cnfStyle`'s conditional attributes,
+  `w:stylePaneFormatFilter`'s and `w:themeFontLang`'s empty ones, a
+  shading's theme attributes, empty `w:trPr` / `w:tcBorders` /
+  `w:tblBorders` / `w:framePr` / `w:lang` / `w:tabs`, a second `w:compat`
+  (measured on the wild docx corpus: 288 of 1,469 save-backs differed
+  from the core's). `wmlRunFormatting`, `wmlParagraphFormatting`,
+  `wmlTableProperties` and `wmlSettings` now type an element only when it
+  is written back as read; the others stay in `_extras`.
+
 ## [1.2.0] - 2026-11-02
 
 ### Added

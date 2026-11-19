@@ -123,10 +123,13 @@ describe('drawingml module', () => {
             expect(b.bullet).toEqual({ autoNumType: 'arabicPeriod' });
         });
 
-        test('returns null on empty input', () => {
+        // T72: re-pinned. An empty pPr ({}) is an <a:pPr/> read, written back.
+        test('returns null on no input; an empty pPr renders an empty a:pPr', () => {
             expect(m.parseParagraphProperties(null)).toBeUndefined();
             expect(m.renderParagraphProperties(null)).toBeNull();
-            expect(m.renderParagraphProperties({})).toBeNull();
+            const el = m.renderParagraphProperties({});
+            expect(el.name).toBe('a:pPr');
+            expect(el.children).toEqual([]);
         });
     });
 
@@ -205,5 +208,28 @@ describe('drawingml module', () => {
             expect(p.children[0].children[0].name).toBe('a:t');
             expect(xml.textContent(p.children[0].children[0])).toBe('X');
         });
+    });
+});
+
+// T72: an empty <a:pPr/> read is written back (pmlPackageParts' guard
+// compares a notes master's round trip with its source).
+describe('drawingml — an empty a:pPr kept (T72)', () => {
+    const xml = ooxmlXml.factory();
+    const m = drawingml.factory(xml, ooxmlMath.factory(_errors, xml), _shared);
+    const A = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"';
+    const names = (el) => el.children.filter((c) => c.type === 'element').map((c) => c.name);
+
+    test('a paragraph read with an empty a:pPr is written with it, a fixed point', () => {
+        const p = m.parseParagraph(xml.parse(`<a:p ${A}><a:pPr/><a:r><a:t>x</a:t></a:r></a:p>`));
+        expect(p.pPr).toEqual({});
+        const el = m.renderParagraph(p);
+        expect(names(el)).toEqual(['a:pPr', 'a:r']);
+        expect(m.parseParagraph(el)).toEqual(p);
+    });
+
+    test('a paragraph without a:pPr is written without it', () => {
+        const p = m.parseParagraph(xml.parse(`<a:p ${A}><a:r><a:t>x</a:t></a:r></a:p>`));
+        expect(p.pPr).toBeUndefined();
+        expect(names(m.renderParagraph(p))).toEqual(['a:r']);
     });
 });

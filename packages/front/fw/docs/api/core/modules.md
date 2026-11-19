@@ -9,11 +9,11 @@ status: complete
 
 # modules
 
-> Aggregated catalogue exported as `default` — flat array of all ~175 fw module descriptors, to pass to `runtime.registerAll(...)`.
+> Aggregated catalogue exported as `default` — flat array of all 208 fw module descriptors, to pass to `runtime.registerAll(...)`.
 
 **Module** `modules` | **Source** `packages/front/fw/src/core/modules.js` | **Deps** none | **Worker-safe** yes (individual descriptors remain worker-safe according to their own status)
 
-`src/core/modules.js` is not a module in the runtime sense (no `name`, `factory`, `dependencies`) — it is not resolved via `runtime.resolve()`. Its role is to import each framework module and export the flat array (`export default [...]`) to facilitate batch registration via `runtime.registerAll(...)` (or `runtime.registerAllDeep(...)`).
+`src/core/modules.js` is not a module in the runtime sense (no `name`, `factory`, `dependencies`) — it is not resolved via `runtime.resolve()`. Its role is to import each framework module and export the flat array, frozen (`export default Object.freeze([...])`: an importer cannot add, drop or replace a module), to facilitate batch registration via `runtime.registerAll(...)` (or `runtime.registerAllDeep(...)`).
 
 > **Recent change** — this file no longer exposes **named exports**. `import { sanitize } from '@awacloud/fw/core/modules.js'` is broken. For an isolated module, use the direct subpath: e.g. `import { sanitize } from '@awacloud/fw/dom/rendering/sanitize.js'`.
 
@@ -66,7 +66,7 @@ This file provides no API of its own. Its sole export is an **array** of module 
 | `download`, `fsAccess`, `indexedDB`, `remoteStore`, `storage` | dom/fs | Files / storage |
 | `ajax`, `ws` | dom/net | Classic networking |
 | `entropyCollector`, `clipboard`, `ua` | dom/utils | Browser utilities |
-| `bitArray`, `asn1`, `asn1Oid`, `pem`, `aes_modes`, `bn`, `pad`, `random`, `aes_ctr` | crypto/utils | Cryptographic utilities |
+| `bitArray`, `asn1`, `asn1Oid`, `pem`, `aes_modes`, `bn`, `pad`, `random` | crypto/utils | Cryptographic utilities |
 | `sha256`, `sha224`, `sha512`, `sha512_224`, `sha512_256`, `sha384`, `hmac`, `pbkdf2`, `hkdf`, `sha3`, `adf`, `poly1305`, `blake2b`, `argon2` | crypto/hash | Hashing |
 | `aes`, `chacha20` | crypto/cipher | Symmetric encryption |
 | `ctr`, `cbc`, `gcm`, `cmac`, `kw`, `chacha20poly1305` | crypto/mode | Cipher modes |

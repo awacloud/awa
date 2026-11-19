@@ -48,7 +48,7 @@ Reference pages for the `@awacloud/fonts` modules, organised like `src/`. Each p
 ## Variable fonts
 - [table/fvar](./table/fvar.md) [table/avar](./table/avar.md) [table/stat](./table/stat.md) — axes and named instances
 - [table/gvar](./table/gvar.md) [table/hvar](./table/hvar.md) [table/mvar](./table/mvar.md) — variation deltas
-- [variable/](./variable/README.md) — [coordsConvert](./variable/coordsConvert.md), [instance](./variable/instance.md) — variable-font helpers
+- [variable/](./variable/README.md) — [coordsConvert](./variable/coordsConvert.md), [instance](./variable/instance.md), [itemVariationStore](./variable/itemVariationStore.md), [glyph](./variable/glyph.md), [instantiate](./variable/instantiate.md) — variable-font helpers, a glyph at coordinates, a static instance
 
 ## Colour and bitmap
 - [table/colr](./table/colr.md) [table/cpal](./table/cpal.md) [table/sbix](./table/sbix.md) [table/svg](./table/svg.md) [table/cbdt](./table/cbdt.md) [table/cblc](./table/cblc.md)
@@ -59,12 +59,15 @@ Reference pages for the `@awacloud/fonts` modules, organised like `src/`. Each p
 - [glyph/glyph](./glyph/glyph.md) — `Glyph` wrapper
 - [glyph/compositeResolve](./glyph/compositeResolve.md) — recursive composite resolution
 
+## Type 1 programs
+- [type1/](./type1/README.md) — [type1](./type1/type1.md), [charstring](./type1/charstring.md), [cff](./type1/cff.md) — a PFB, PFA or PDF `/FontFile` program, or a bare CFF (`/FontFile3`), read and drawn
+
 ## Layout
 - [layout/classDefinitions](./layout/classDefinitions.md) — Coverage + ClassDef
 - [table/gdef](./table/gdef.md) [table/gsub](./table/gsub.md) [table/gpos](./table/gpos.md) — layout tables
 
 ## Encodings
-- [encodings/](./encodings/README.md) — winAnsi, macRoman, macExpert, standard, symbol, zapfDingbats, lookup, aglTable ([encodings/aglTable](./encodings/aglTable.md))
+- [encodings/](./encodings/README.md) — winAnsi, macRoman, macExpert, standard, symbol, zapfDingbats, lookup, aglTable ([encodings/aglTable](./encodings/aglTable.md)), zapfDingbatsGlyphs ([encodings/zapfDingbatsGlyphs](./encodings/zapfDingbatsGlyphs.md))
 - [cmap/toUnicode](./cmap/toUnicode.md) — ToUnicode CMap (Adobe TN #5014)
 
 ## Embed-PDF
@@ -81,7 +84,7 @@ Reference pages for the `@awacloud/fonts` modules, organised like `src/`. Each p
 - [extra/woff2-write](./extra/woff2-write.md) — WOFF2 encoder
 - [extra/dsig](./extra/dsig.md) — Digital Signature
 - [extra/math](./extra/math.md) [extra/jstf](./extra/jstf.md)
-- [extra/shaper-arabic](./extra/shaper-arabic.md) [extra/shaper-indic](./extra/shaper-indic.md) [extra/shaper-cjk](./extra/shaper-cjk.md)
+- [extra/shaper-arabic](./extra/shaper-arabic.md) [extra/shaper-indic](./extra/shaper-indic.md) [extra/shaper-cjk](./extra/shaper-cjk.md) [extra/shaper](./extra/shaper.md)
 - [extra/apple-aat/](./extra/apple-aat/README.md) — morx, kerx, ankr, prop, lcar, feat, index
 
 ## Bundles

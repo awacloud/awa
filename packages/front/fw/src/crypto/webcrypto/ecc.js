@@ -103,10 +103,10 @@ export const webcryptoEcc = {
          *
          * @param {'ECDSA'|'ECDH'} kind
          * @param {'P-256'|'P-384'|'P-521'} [curve='P-256']
-         * @param {boolean} [extractable=true]
+         * @param {boolean} [extractable=false]
          * @returns {Promise<CryptoKeyPair|false>}
          */
-        async function generateKey(kind, curve = 'P-256', extractable = true) {
+        async function generateKey(kind, curve = 'P-256', extractable = false) {
             if (!_ready()) return false;
             if (!_KINDS.has(kind)) {
                 console.error(`[crypto] INVALID: webcryptoEcc.generateKey: unsupported kind '${kind}'`);

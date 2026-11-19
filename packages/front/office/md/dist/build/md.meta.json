@@ -41,8 +41,8 @@
     "url"
   ],
   "bytes": {
-    "dev": 115646,
-    "min": 58132
+    "dev": 117097,
+    "min": 58776
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

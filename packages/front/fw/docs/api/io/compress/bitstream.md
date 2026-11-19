@@ -29,7 +29,7 @@ const bs = runtime.resolve('bitstream');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `readBits` | `(buf: Uint8Array, bitPos: number, mask: number) => number` | up to 16 bits at `bitPos`, masked |
+| `readBits` | `(buf: Uint8Array, bitPos: number, mask: number) => number` | `width` bits at `bitPos`, masked, while `width + (bitPos & 7) <= 16` |
 | `readBits16` | `(buf: Uint8Array, bitPos: number) => number` | up to 24 bits at `bitPos`, **not** masked |
 | `writeBits` | `(buf: Uint8Array, bitPos: number, v: number) => void` | writes up to 16 bits (OR-into) |
 | `writeBits16` | `(buf: Uint8Array, bitPos: number, v: number) => void` | writes up to 24 bits (OR-into) |
@@ -40,8 +40,11 @@ const bs = runtime.resolve('bitstream');
 
 ### `readBits(buf, bitPos, mask)`
 
-Reads up to 16 bits starting at bit position `bitPos` (absolute index from
-the beginning of `buf`). The `mask` must be pre-computed by the caller as
+Reads `width` bits starting at bit position `bitPos` (absolute index from
+the beginning of `buf`) through a two-byte window: the result is exact while
+`width + (bitPos & 7) <= 16` — 16 bits at a byte boundary, 9 at the worst
+offset. Wider reads take `readBits16`. A guard test pins every offset and
+width, and brotli's 4-bit code-length peek relies on it. The `mask` must be pre-computed by the caller as
 `(1 << nbits) - 1`. The explicit pattern allows the mask to be hoisted out
 of hot loops.
 

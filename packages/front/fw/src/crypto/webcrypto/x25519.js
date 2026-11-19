@@ -74,10 +74,10 @@ export const webcryptoX25519 = {
          * - `crypto.subtle` is unavailable
          * - the runtime does not support `'X25519'` (subtle rejects)
          *
-         * @param {boolean} [extractable=true]
+         * @param {boolean} [extractable=false]
          * @returns {Promise<CryptoKeyPair|false>}
          */
-        async function generateKey(extractable = true) {
+        async function generateKey(extractable = false) {
             if (!_hasSubtle) return _notReady();
             try {
                 // X25519 generateKey always yields a key pair (asymmetric scheme).

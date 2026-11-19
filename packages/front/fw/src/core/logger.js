@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -18,15 +18,25 @@
  * @property {function(): void} clear
  * @property {function(LogEntry): void} [__push]
  * @property {function(function): function} subscribe
+ * @property {function(boolean=): boolean} native Opt out of the takeover's
+ *   printing policy: with `native(true)` every `console` call of the realm
+ *   prints as the native console does (in production too, without the
+ *   appended stack) and is still recorded; `native(false)` restores the
+ *   policy (printed only in dev). Returns `false` when the realm's console
+ *   is not an fw console (locked by another script), `true` otherwise.
  */
 
 /**
  * Create a lightweight in-memory logger and optionally proxy to the real console.
  * Note: In a browser-shaped realm (`window` defined) this replaces
- * `window.console` with a non-modifiable wrapper. Under bare Node or a
- * worker-shaped realm (no `window`), the console Proxy install is SKIPPED —
- * Node's console is non-configurable territory and is never seized; logging
- * still works as a plain passthrough via `globalThis.console`.
+ * `window.console` with a non-modifiable wrapper: every call is recorded in
+ * the buffer, and printed only when `dev` is true; assigning a console
+ * method is refused (a warning). A later call in the same realm (a second
+ * fw entry) joins that wrapper — its buffer records the same calls — instead
+ * of redefining it; a console another script locked is left alone. Under
+ * bare Node or a worker-shaped realm (no `window`), the console Proxy
+ * install is SKIPPED — logging still works as a plain passthrough via
+ * `globalThis.console`.
  * @param {boolean} dev When true, forward logs to the original console.
  * @returns {LoggerAPI}
  */
@@ -130,16 +140,30 @@ const main = function(dev) {
         return stack.split('\n');
     };
 
+    // The loggers fed by an fw console proxy: the one that installed it, then
+    // every later fw entry of the same realm, which joins instead of
+    // redefining the locked `console` (that threw: "readonly property").
+    const SINKS = Symbol.for('@awacloud/fw/console-sinks');
+    // The realm's printing mode, shared by every logger fed by the proxy.
+    const MODE = Symbol.for('@awacloud/fw/console-mode');
+
     const createConsoleProxy = function (target) {
+        const sinks = [log];
+        const mode = { native: false };
         return new Proxy(target, {
             get: function (obj, prop) {
+                if (prop === SINKS) return sinks;
+                if (prop === MODE) return mode;
                 const value = obj[prop];
                 if (typeof value !== 'function') {
                     return value;
                 }
                 return function () {
                     const err = new Error().stack;
-                    log(String(prop), [...arguments], err);
+                    for (let i = 0; i < sinks.length; i++) sinks[i](String(prop), [...arguments], err);
+                    if (mode.native) {
+                        return value.apply(obj, arguments);
+                    }
                     if (dev) {
                         return value.apply(obj, [...arguments, formatStack(err)]);
                     }
@@ -153,16 +177,33 @@ const main = function(dev) {
     };
 
     if (hasWindow) {
-        const currentConsole = createConsoleProxy(consoleHolder);
-        Object.defineProperty(window, 'console', {
-            value: currentConsole,
-            writable: false,
-            enumerable: false,
-            configurable: false
-        });
+        const joined = consoleHolder && consoleHolder[SINKS];
+        if (Array.isArray(joined)) {
+            // An fw console already: record through it too.
+            joined.push(log);
+        } else {
+            const desc = Object.getOwnPropertyDescriptor(window, 'console');
+            // A console locked by something else is left as it is.
+            if (!desc || desc.configurable || desc.writable) {
+                const currentConsole = createConsoleProxy(consoleHolder);
+                Object.defineProperty(window, 'console', {
+                    value: currentConsole,
+                    writable: false,
+                    enumerable: false,
+                    configurable: false
+                });
+            }
+        }
     }
 
-    return { get, setLen, clear, __push, subscribe };
+    const native = function (on) {
+        const m = hasWindow && window.console ? window.console[MODE] : null;
+        if (!m || typeof m !== 'object') return false;
+        m.native = on !== false;
+        return true;
+    };
+
+    return { get, setLen, clear, __push, subscribe, native };
 };
 
 /**
@@ -332,16 +373,30 @@ const worker = function(dev, port) {
         return stack.split('\n');
     };
 
+    // The loggers fed by an fw console proxy: the one that installed it, then
+    // every later fw entry of the same realm, which joins instead of
+    // redefining the locked `console` (that threw: "readonly property").
+    const SINKS = Symbol.for('@awacloud/fw/console-sinks');
+    // The realm's printing mode, shared by every logger fed by the proxy.
+    const MODE = Symbol.for('@awacloud/fw/console-mode');
+
     const createConsoleProxy = function (target) {
+        const sinks = [log];
+        const mode = { native: false };
         return new Proxy(target, {
             get: function (obj, prop) {
+                if (prop === SINKS) return sinks;
+                if (prop === MODE) return mode;
                 const value = obj[prop];
                 if (typeof value !== 'function') {
                     return value;
                 }
                 return function () {
                     const err = new Error().stack;
-                    log(String(prop), [...arguments], err);
+                    for (let i = 0; i < sinks.length; i++) sinks[i](String(prop), [...arguments], err);
+                    if (mode.native) {
+                        return value.apply(obj, arguments);
+                    }
                     if (dev) {
                         return value.apply(obj, [...arguments, formatStack(err)]);
                     }
@@ -354,15 +409,32 @@ const worker = function(dev, port) {
         });
     };
 
-    const currentConsole = createConsoleProxy(consoleHolder);
-    Object.defineProperty(self, 'console', {
-        value: currentConsole,
-        writable: false,
-        enumerable: false,
-        configurable: false
-    });
+    const joined = consoleHolder && consoleHolder[SINKS];
+    if (Array.isArray(joined)) {
+        // An fw console already (a second logger in this worker): record through it too.
+        joined.push(log);
+    } else {
+        const desc = Object.getOwnPropertyDescriptor(self, 'console');
+        // A console locked by something else is left as it is.
+        if (!desc || desc.configurable || desc.writable) {
+            const currentConsole = createConsoleProxy(consoleHolder);
+            Object.defineProperty(self, 'console', {
+                value: currentConsole,
+                writable: false,
+                enumerable: false,
+                configurable: false
+            });
+        }
+    }
 
-    return {get, setLen, clear, subscribe};
+    const native = function (on) {
+        const m = self.console ? self.console[MODE] : null;
+        if (!m || typeof m !== 'object') return false;
+        m.native = on !== false;
+        return true;
+    };
+
+    return {get, setLen, clear, subscribe, native};
 };
 
 const logger = {

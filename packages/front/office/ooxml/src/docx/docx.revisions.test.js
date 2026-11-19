@@ -36,7 +36,7 @@ const RICH_INS = '<w:ins w:id="1" w:author="Ann" w:date="2026-01-01T00:00:00Z">'
     + `<w:sdt><w:sdtContent>${run('tag')}</w:sdtContent></w:sdt>`
     + '<m:oMath><m:r><m:t>x</m:t></m:r></m:oMath>'
     + '<w:del w:id="2" w:author="Bob"><w:r><w:delText>gone</w:delText></w:r></w:del>'
-    + '<w:smartTag w:element="place"/>'
+    + '<w:customXml w:element="place"/>' // T68: w:smartTag is typed now; customXml stays an unknown child
     + '</w:ins>';
 
 describe('docxStructure — a revision keeps every child', () => {
@@ -48,14 +48,14 @@ describe('docxStructure — a revision keeps every child', () => {
         expect(ins.children.map((c) => c.type)).toEqual(['run', 'hyperlink', 'fldSimple', 'sdt', 'oMath', 'del']);
         expect(ins.children[1].rId).toBe('rIdLink');
         expect(ins.children[5].author).toBe('Bob');
-        expect(ins._extras.map((e) => e.name)).toEqual(['w:smartTag']);
+        expect(ins._extras.map((e) => e.name)).toEqual(['w:customXml']);
     });
 
     test('parse → render → parse is a fixed point, and the XML holds every child', () => {
         const once = s.parseParagraph(para(RICH_INS));
         const rendered = s.renderParagraph(once);
         const insEl = rendered.children.find((c) => c.name === 'w:ins');
-        expect(elementNames(insEl)).toEqual(['w:r', 'w:hyperlink', 'w:fldSimple', 'w:sdt', 'm:oMath', 'w:del', 'w:smartTag']);
+        expect(elementNames(insEl)).toEqual(['w:r', 'w:hyperlink', 'w:fldSimple', 'w:sdt', 'm:oMath', 'w:del', 'w:customXml']);
         expect(s.parseParagraph(xml.parse(xml.serialize(rendered).replace('<w:p>', `<w:p ${NS}>`)))).toEqual(once);
     });
 

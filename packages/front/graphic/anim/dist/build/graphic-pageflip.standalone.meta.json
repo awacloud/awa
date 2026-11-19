@@ -1,0 +1,27 @@
+{
+  "kind": "build",
+  "variant": "standalone",
+  "name": "graphic-pageflip",
+  "package": "@awacloud/graphic-anim",
+  "root": "graphic.pageflip",
+  "modules": [
+    "graphic.svgBuild",
+    "graphic.scopedIds",
+    "graphic.timeline",
+    "graphic.tween",
+    "graphic.svgApply",
+    "pageflip.fold",
+    "pageflip.compose"
+  ],
+  "fwDependencies": [],
+  "bytes": {
+    "dev": 102381,
+    "min": 55827
+  },
+  "domBound": true,
+  "workerSafeSlice": [
+    "pageflip.fold",
+    "pageflip.compose"
+  ],
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

@@ -80,9 +80,11 @@ import {
     type Asset,
     type Loss,
     type LossSummaryEntry,
+    type PdfFonts,
     type ToMdInput,
 } from './core.ts';
 import { passwordFromFile } from './password.ts';
+import { readPdfFonts } from './pdf-fonts.ts';
 import { timestampError } from './timestamp.ts';
 
 const VERSION: string = typeof pkg.version === 'string' ? pkg.version : '0.0.0';
@@ -303,6 +305,7 @@ function toMdOptions(args: Record<string, unknown>): Partial<ToMdInput> | { erro
         pdfInclude: args.pdfInclude as string[] | undefined,
         pdfPassword,
         pdfRecoverXref: args.pdfRecoverXref as boolean | undefined,
+        pdfEmptyPassword: args.pdfEmptyPassword as boolean | undefined,
         pdfLineHyphens: args.pdfLineHyphens as string | undefined,
         odtInclude: args.odtInclude as string[] | undefined,
         docxInclude: args.docxInclude as string[] | undefined,
@@ -356,16 +359,36 @@ async function handleToMd(args: Record<string, unknown>): Promise<Record<string,
     return deliverText(result.markdown, 'md', 'markdown', args.outPath as string | undefined, { ...lossFields(result, view), ...assets });
 }
 
+/** `pdfA`, `pdfUA`, `pdfLang` and the faces of the `pdfFonts` directory, for a pdf target; a usage error when the directory holds no face. */
+function pdfArgs(args: Record<string, unknown>): { error: string; usage: true } | { error: null; pdfA?: string; pdfUA?: number; pdfLang?: string; pdfFonts?: PdfFonts } {
+    const out: { error: null; pdfA?: string; pdfUA?: number; pdfLang?: string; pdfFonts?: PdfFonts } = { error: null };
+    if (args.pdfA !== undefined) out.pdfA = args.pdfA as string;
+    if (args.pdfUA !== undefined) out.pdfUA = args.pdfUA as number;
+    if (args.pdfLang !== undefined) out.pdfLang = args.pdfLang as string;
+    if (args.pdfFonts !== undefined) {
+        const read = readPdfFonts(args.pdfFonts as string);
+        if (read.error !== null) return { error: read.error, usage: true };
+        out.pdfFonts = read.fonts;
+    }
+    return out;
+}
+
 async function handleFromMd(args: Record<string, unknown>): Promise<Record<string, unknown>> {
     const view = readLossView(args.lossView);
     if (typeof view === 'object') return { error: view.error, usage: true };
     const input = readTextInput({ path: args.path as string | undefined, text: args.markdown as string | undefined });
     if (isInputError(input)) return { error: input.error, usage: true };
+    const pdf = pdfArgs(args);
+    if (pdf.error !== null) return pdf;
 
     const result = await coreFromMd({
         markdown: input.text,
         name: args.name as string | undefined,
         target: args.target as string | undefined,
+        pdfA: pdf.pdfA,
+        pdfUA: pdf.pdfUA,
+        pdfLang: pdf.pdfLang,
+        pdfFonts: pdf.pdfFonts,
     });
     if (isCoreError(result)) return { error: result.error, usage: result.usage };
     return deliverBinary(
@@ -385,12 +408,19 @@ async function handleConvert(args: Record<string, unknown>): Promise<Record<stri
         name: args.name as string | undefined,
     });
     if (isInputError(input)) return { error: input.error, usage: true };
+    const pdf = pdfArgs(args);
+    if (pdf.error !== null) return pdf;
 
     const result = await coreConvert({
         name: input.name,
         bytes: input.bytes,
         format: args.format as string | undefined,
         target: args.target as string,
+        pdfA: pdf.pdfA,
+        pdfUA: pdf.pdfUA,
+        pdfLang: pdf.pdfLang,
+        pdfFonts: pdf.pdfFonts,
+        ...(args.layout !== undefined ? { layout: args.layout as boolean } : {}),
     });
     if (isCoreError(result)) return { error: result.error, usage: result.usage };
     return deliverBinary(
@@ -428,12 +458,12 @@ export const TOOLS: ToolDef[] = [
             `sheet) chooses how sheets are written, "at" pins the ISO-8601 provenance timestamp ` +
             `(default: now — @awacloud/oconv never defaults it itself). The other options are @awacloud/oconv's ` +
             `toMd inputs of the same name, each for the source format it names: "pdfInfer" (headings, tables on an ` +
-            `untagged pdf), "pdfDeclare", "pdfInclude" (["images"]: the pictures, written under "assetsDir"), ` +
-            `"pdfRecoverXref", "pdfLineHyphens" ("drop" or "keep": a word cut by a line-end hyphen joined), "pdfPasswordPath" (a file holding the password of an encrypted pdf — no argument ` +
+            `untagged pdf, the default; [] for none), "pdfDeclare", "pdfInclude" (["images"]: the pictures, written under "assetsDir"), ` +
+            `"pdfRecoverXref", "pdfEmptyPassword" (false refuses an encrypted pdf read with no password; by default the empty password is tried), "pdfLineHyphens" ("drop" or "keep": a word cut by a line-end hyphen joined), "pdfPasswordPath" (a file holding the password of an encrypted pdf — no argument ` +
             `takes the password itself), "formOpBudget", "odtInclude" (["toc"]), "docxInclude" (["toc"]), "sheetCellBudget" (xlsx/ods: a ` +
-            `sheet whose padded table would pass it is written one addressed line per value), "archiveLimits" ` +
+            `sheet whose padded table would pass it, 5,000,000 by default, is written one addressed line per value), "archiveLimits" ` +
             `(office formats: the reader's maxParts, maxUncompressed, maxRatio, maxDepth), "outputBudget" ` +
-            `({bytes, overflow}: past bytes of text the conversion fails, or with overflow "truncate" keeps what ` +
+            `({bytes, overflow}: past bytes of text, 256 MiB by default, the conversion fails, or with overflow "truncate" keeps what ` +
             `fits) and "frontMatter" ("compact" or ` +
             `"none" shrink the front matter); one on another source format, or a value oconv refuses, is a usage ` +
             `error. "assetsDir" writes each image whose bytes the conversion returned under that directory and ` +
@@ -456,7 +486,7 @@ export const TOOLS: ToolDef[] = [
                 pdfInfer: {
                     type: 'array',
                     items: { type: 'string', enum: ['headings', 'tables', 'running'] },
-                    description: 'pdf only: inference on an untagged pdf — headings from type size and weight, tables from rules or aligned text, running headers and footers left out.',
+                    description: 'pdf only: inference on an untagged pdf — headings from type size and weight, tables from rules or aligned text, running headers and footers left out. Default ["headings", "tables"]; [] for none.',
                 },
                 pdfDeclare: {
                     type: 'array',
@@ -468,7 +498,8 @@ export const TOOLS: ToolDef[] = [
                     items: { type: 'string', enum: ['images'] },
                     description: 'pdf only: "images" places JPEG, JPEG 2000 and raw-pixel pictures; their bytes are written under "assetsDir".',
                 },
-                pdfRecoverXref: { type: 'boolean', description: 'pdf only: true rebuilds an unusable cross-reference chain.' },
+                pdfRecoverXref: { type: 'boolean', description: 'pdf only: an unusable cross-reference chain is rebuilt by default; false reads strictly.' },
+                pdfEmptyPassword: { type: 'boolean', description: 'pdf only: with no password, an encrypted pdf is opened with the empty password when it opens (the default); false refuses it.' },
                 pdfLineHyphens: {
                     type: 'string',
                     enum: ['drop', 'keep'],
@@ -491,7 +522,7 @@ export const TOOLS: ToolDef[] = [
                 },
                 sheetCellBudget: {
                     type: 'integer',
-                    description: 'xlsx/ods only: a sheet whose padded table would hold more cells is written unpadded, one "<A1 address>: <text>" line per value (loss sheet/sparse-form).',
+                    description: 'xlsx/ods only, default 5000000: a sheet whose padded table would hold more cells is written unpadded, one "<A1 address>: <text>" line per value (loss sheet/sparse-form).',
                 },
                 archiveLimits: {
                     type: 'object',
@@ -505,9 +536,9 @@ export const TOOLS: ToolDef[] = [
                 },
                 outputBudget: {
                     type: 'object',
-                    description: 'Every format: a bound on the document\'s text (UTF-8 bytes), checked before the markdown is built.',
+                    description: 'Every format: a bound on the document\'s text (UTF-8 bytes), checked before the markdown is built; 256 MiB "throw" by default.',
                     properties: {
-                        bytes: { type: 'integer', description: 'The budget, a positive integer.' },
+                        bytes: { type: 'integer', description: 'The budget, a positive integer; 268435456 (256 MiB) when absent.' },
                         overflow: { type: 'string', enum: ['throw', 'truncate'], description: '"throw" (default) fails; "truncate" keeps what fits (loss doc/truncated).' },
                     },
                 },
@@ -549,6 +580,10 @@ export const TOOLS: ToolDef[] = [
                 path: { type: 'string', description: 'Path to a Markdown file on disk (alternative to "markdown").' },
                 name: { type: 'string', description: 'Output file name — its extension drives target detection when "target" is omitted.' },
                 target: { type: 'string', description: `Required. Target format: ${FROM_MD_TARGETS.join(' | ')}.` },
+                pdfA: { type: 'string', description: "pdf target: claim PDF/A-4 or PDF/A-2b ('4' | '2b'); PDF/A embeds every font: without \"pdfFonts\", the Liberation faces of the optional package @awacloud/oconv-fonts are used when it is installed." },
+                pdfUA: { type: 'number', description: 'pdf target: claim PDF/UA-1 or PDF/UA-2 (1 | 2), a tagged document (the title from the front matter or the first heading); needs "pdfLang"; faces as for pdfA (without "pdfFonts", the optional package @awacloud/oconv-fonts when installed).' },
+                pdfLang: { type: 'string', description: 'pdf target: the document language under "pdfUA" (a BCP 47 tag, such as en-GB).' },
+                pdfFonts: { type: 'string', description: 'pdf target: a directory holding the TrueType faces to embed, each optional: regular.ttf, bold.ttf, italic.ttf, boldItalic.ttf, mono.ttf.' },
                 outPath: { type: 'string', description: 'Write the output bytes to this file instead of base64-inlining them.' },
                 lossView: { type: 'string', description: LOSS_VIEW_DESCRIPTION },
             },
@@ -577,6 +612,11 @@ export const TOOLS: ToolDef[] = [
                 name: { type: 'string', description: 'Source file name (drives format detection). Required with bytesBase64.' },
                 format: { type: 'string', description: 'Explicit source format, overrides name-based detection.' },
                 target: { type: 'string', description: `Required. Target format: ${CONVERT_PAIRS.map((p) => p.split('>')[1]).join(' | ')}.` },
+                pdfA: { type: 'string', description: "pdf target: claim PDF/A-4 or PDF/A-2b ('4' | '2b'); PDF/A embeds every font: without \"pdfFonts\", the Liberation faces of the optional package @awacloud/oconv-fonts are used when it is installed." },
+                pdfUA: { type: 'number', description: 'pdf target: claim PDF/UA-1 or PDF/UA-2 (1 | 2), a tagged document (the title from the front matter or the first heading); needs "pdfLang"; faces as for pdfA (without "pdfFonts", the optional package @awacloud/oconv-fonts when installed).' },
+                pdfLang: { type: 'string', description: 'pdf target: the document language under "pdfUA" (a BCP 47 tag, such as en-GB).' },
+                pdfFonts: { type: 'string', description: 'pdf target: a directory holding the TrueType faces to embed, each optional: regular.ttf, bold.ttf, italic.ttf, boldItalic.ttf, mono.ttf.' },
+                layout: { type: 'boolean', description: 'docx to odt only: carry the page (size, orientation, margins), the alignment and page breaks of its paragraphs, and the size, font, colour, underline and script of its runs to the odt, with its headers, footers, page fields and notes. Default true for docx to odt; false keeps tier 2.' },
                 outPath: { type: 'string', description: 'Write the output bytes to this file instead of base64-inlining them.' },
                 lossView: { type: 'string', description: LOSS_VIEW_DESCRIPTION },
             },

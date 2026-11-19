@@ -28,7 +28,7 @@ const log = fw.log;
 
 ### `logger.main(dev)` — main thread variant
 
-Creates the main-thread logger and replaces `window.console` with a non-modifiable Proxy.
+Creates the main-thread logger and replaces `window.console` with a non-modifiable Proxy: every `console` call is recorded in the buffer; it is also printed when `dev` is true. Assigning a console method (`console.error = …`) is refused with a warning — observe calls with `subscribe` instead. A later call in the same realm (a second fw entry: two bundles, or several test files importing fw in one process) **joins** that Proxy — its buffer records the same calls, and printing follows the first logger's `dev` — instead of redefining `console` (which threw a `TypeError` on the locked property). A `console` another script made non-configurable is left as it is. Without `window` (Node, Bun, a worker-shaped realm) nothing is replaced. The `--no-log` build creates no logger at all.
 
 | Param | Type | Description |
 |-------|------|-------------|
@@ -55,6 +55,7 @@ Returns: `{ get, setLen, clear, subscribe }`
 | `setLen(n)` | `(n: number) => void` | Max buffer size (1–65536, default 1024) |
 | `clear()` | `() => void` | Empties the buffer |
 | `subscribe(fn)` | `(fn: (LogEntry) => void) => () => void` | Registers a single listener; returns `unsubscribe` |
+| `native(on?)` | `(on?: boolean) => boolean` | `native()` / `native(true)`: every `console` call of the realm prints as the native console does (in production too, no appended stack) and is still recorded; `native(false)` restores the default (printed only in dev). Shared by every fw entry of the realm. `false` when the realm's console is not an fw console |
 | `__push(entry)` *(main only)* | `(LogEntry) => void` | Internal use — receives worker logs |
 
 ### `log.subscribe(fn)`

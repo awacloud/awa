@@ -85,7 +85,7 @@
  *
  * | Member | Shape |
  * |---|---|
- * | `pageContent(page, fonts, layout, losses)` | `{bytes: Uint8Array, usedFonts: Set<string>}` |
+ * | `pageContent(page, fonts, layout, losses, mark?)` | `{bytes: Uint8Array, usedFonts: Set<string>}` |
  *
  * @type {{name: string, dependencies: string[],
  *         factory: (metrics: object) => object}}
@@ -243,11 +243,17 @@ export const oconvPdfRenderText = {
          *   for every class this document actually uses.
          * @param {object} layout `oconvPdfBox.resolveLayout()`.
          * @param {object[]} losses Scratch sink (see above).
+         * @param {(item: object) => string|null} [mark] A tagged document's
+         *   marker: called once per item (and with the page-number item,
+         *   `kind: 'pageNumber'`), it returns the operator opening the
+         *   item's marked-content sequence (`/P <</MCID 0>> BDC`,
+         *   `/Artifact BMC`, …), closed by an `EMC` after the item's
+         *   operators; absent, nothing is marked.
          * @returns {{bytes: Uint8Array, usedFonts: Set<string>}} `usedFonts`
          *   holds the PDF resource NAMES this stream references — exactly
          *   what the caller must register on the page.
          */
-        function pageContent(page, fonts, layout, losses) {
+        function pageContent(page, fonts, layout, losses, mark) {
             const encoder = new TextEncoder();
             /** @type {number[]} */
             const out = [];
@@ -297,7 +303,14 @@ export const oconvPdfRenderText = {
                 put(' Tj ET\n');
             };
 
+            const opened = (item) => {
+                const op = typeof mark === 'function' ? mark(item) : null;
+                if (op) put(`${op}\n`);
+                return !!op;
+            };
+
             for (const item of page.items || []) {
+                const marked = opened(item);
                 if (item.rule) {
                     const r = item.rule;
                     put(`${num(r.x)} ${num(r.y)} ${num(r.w)} ${num(r.h)} re f\n`);
@@ -326,6 +339,7 @@ export const oconvPdfRenderText = {
                     if (seg.text === '') continue;
                     putSegment(item, seg);
                 }
+                if (marked) put('EMC\n');
             }
 
             if (layout.pageNumbers) {
@@ -338,7 +352,7 @@ export const oconvPdfRenderText = {
                 }
                 if (entry && label !== '') {
                     const width = entry.widthOf(label, layout.baseSize);
-                    putSegment({
+                    const item = {
                         x: (layout.pageWidth - width) / 2,
                         y: layout.margin * PAGE_NUMBER_MARGIN_RATIO,
                         style: 'regular',
@@ -346,11 +360,14 @@ export const oconvPdfRenderText = {
                         text: label,
                         index: `page:${page.number}`,
                         kind: 'pageNumber'
-                    }, {
+                    };
+                    const marked = opened(item);
+                    putSegment(item, {
                         style: 'regular',
                         text: label,
                         x: (layout.pageWidth - width) / 2
                     });
+                    if (marked) put('EMC\n');
                 }
             }
 

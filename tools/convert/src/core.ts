@@ -12,7 +12,7 @@
  * result object that carries either the operation's output or an `error`
  * STRING — never a thrown exception across this boundary, mirroring
  * `@awacloud/oconv`'s own worker envelope
- * (`packages/front/office/oconv/src/worker.js`).
+ * (`packages/front/office/oconv/src/worker/entry.js`).
  *
  * Runtime-agnostic means measurable, not aspirational: this module touches
  * no `Bun.*` global and no Node built-in through a bare specifier — only
@@ -26,7 +26,7 @@
  *
  * `@awacloud/oconv` and `@awacloud/md` are `fw` dependency-injection module
  * descriptor sets (`fw_require` + `modules`), not plain function exports —
- * the SAME pattern `packages/front/office/oconv/src/worker.js` and
+ * the SAME pattern `packages/front/office/oconv/src/worker/entry.js` and
  * `apps/demo/office-reader/src/convert.js` use to obtain the `oconv`/`md`
  * facades outside a browser, without a `Worker`:
  *
@@ -56,7 +56,7 @@
  * (`SUPPORTED_FORMATS`, `SUPPORTED_TARGETS`, `SUPPORTED_PAIRS`) that are
  * declared INSIDE its factory closure and never exported — `@awacloud/oconv`'s
  * `package.json` `exports` map publishes exactly two subpaths (`.` and
- * `./src/worker.js`), neither of which carries a capability accessor, and
+ * `./worker.js`), neither of which carries a capability accessor, and
  * no other public constant exists anywhere in the package. Detection
  * itself needs no duplicate: this module forwards `name` verbatim and lets
  * `oconv`'s OWN `extensionFormat`/`extensionTarget` resolve it (identical
@@ -75,6 +75,7 @@ import { fw_require as oconvFwRequire, modules as oconvModules } from '@awacloud
 import { extras as mdExtras, fw_require as mdFwRequire, modules as mdModules } from '@awacloud/md';
 import { toModuleDefinitions } from './descriptors.ts';
 import { summarizeLosses } from './loss-summary.ts';
+import { MISSING_FACES_MESSAGE, loadPackagedPdfFonts } from './pdf-fonts.ts';
 import { timestampError } from './timestamp.ts';
 
 /** Mirrors `oconv.js`'s `SUPPORTED_FORMATS` — message-hint use only, see the module doc. */
@@ -132,7 +133,7 @@ function appendSupportedHint(message: string): string {
 
 /** The `toMd` options whose refusal by `oconv` is the caller's mistake (`bad …` / `… needs format …`). */
 const OPTION_MESSAGE =
-    /^oconv: (bad (sheets|pdf infer|pdf declare|pdf include|odt include|docx include|form op budget|pdf recover xref|front matter|cell budget|archive limits|output budget|pdf line hyphens)|(sheets|sheet cell budget) needs format xlsx or ods|(pdf infer|pdf declare|pdf include|pdf password|pdf recover xref|pdf line hyphens|form op budget) needs format pdf|odt include needs format odt|docx include needs format docx|archive limits need an office source)$/;
+    /^oconv: (bad (sheets|pdf infer|pdf declare|pdf include|odt include|docx include|form op budget|pdf recover xref|front matter|cell budget|archive limits|output budget|pdf line hyphens)|(sheets|sheet cell budget) needs format xlsx or ods|(pdf infer|pdf declare|pdf include|pdf password|pdf recover xref|pdf line hyphens|form op budget) needs format pdf|odt include needs format odt|docx include needs format docx|archive limits need an office source|bad layout option|layout needs docx to odt)$/;
 
 function isUsageMessage(message: string): boolean {
     return /^oconv: unsupported (format|target|pair)$/.test(message) || OPTION_MESSAGE.test(message);
@@ -162,6 +163,7 @@ interface OconvFacade {
         pdfDeclare?: string[];
         pdfInclude?: string[];
         pdfPassword?: string | Uint8Array;
+        pdfEmptyPassword?: boolean;
         pdfRecoverXref?: boolean;
         pdfLineHyphens?: string;
         odtInclude?: string[];
@@ -171,13 +173,13 @@ interface OconvFacade {
         outputBudget?: OutputBudget;
         opts?: { frontMatter?: string };
     }): Promise<{ markdown: string; losses: Loss[]; lossy: boolean; assets: Asset[] }>;
-    fromMd(input: { markdown: string; name?: string; target?: string }): Promise<{
+    fromMd(input: { markdown: string; name?: string; target?: string; opts?: { pdf: OconvPdfOpts } }): Promise<{
         bytes: Uint8Array;
         target: string;
         losses: Loss[];
         lossy: boolean;
     }>;
-    convert(input: { bytes: Uint8Array; name?: string; format?: string; target: string }): Promise<{
+    convert(input: { bytes: Uint8Array; name?: string; format?: string; target: string; opts?: { pdf: OconvPdfOpts }; layout?: boolean }): Promise<{
         bytes: Uint8Array;
         format: string;
         target: string;
@@ -263,6 +265,8 @@ export interface ToMdInput {
     pdfInclude?: string[];
     /** `pdf` only: the user or owner password of an encrypted pdf. */
     pdfPassword?: string | Uint8Array;
+    /** `pdf` only: with no password, the empty one is tried (the default); `false` keeps the refusal. */
+    pdfEmptyPassword?: boolean;
     /** `pdf` only: `true` rebuilds an unusable cross-reference chain. */
     pdfRecoverXref?: boolean;
     /** `pdf` only: a word a hyphen cuts at a line end joined — `'drop'` (without the hyphen) or `'keep'` (with it). */
@@ -289,9 +293,9 @@ export interface ArchiveLimits {
     maxDepth?: number;
 }
 
-/** `oconv.toMd`'s `outputBudget`: `bytes` of text, then `'throw'` (default) or `'truncate'`. */
+/** `oconv.toMd`'s `outputBudget`: `bytes` of text (256 MiB when absent), then `'throw'` (default) or `'truncate'`. */
 export interface OutputBudget {
-    bytes: number;
+    bytes?: number;
     overflow?: 'throw' | 'truncate';
 }
 
@@ -366,12 +370,82 @@ export function assetFiles(assets: Asset[]): { files: { name: string; bytes: Uin
     return { files, skipped };
 }
 
+/** Embedded TrueType faces per style class, for a pdf target (oconv's `opts.pdf.fonts`). */
+export interface PdfFonts {
+    regular?: Uint8Array;
+    bold?: Uint8Array;
+    italic?: Uint8Array;
+    boldItalic?: Uint8Array;
+    mono?: Uint8Array;
+}
+
+/** The pdf options this tool forwards to oconv. */
+interface OconvPdfOpts {
+    pdfA?: string;
+    pdfUA?: number;
+    lang?: string;
+    fonts?: PdfFonts;
+}
+
+/** The pdf inputs of `fromMd` and `convert`. */
+interface PdfInput {
+    pdfA?: string;
+    pdfUA?: number;
+    pdfLang?: string;
+    pdfFonts?: PdfFonts;
+}
+
+/**
+ * oconv's `opts` for `pdfA` / `pdfUA` / `pdfLang` / `pdfFonts`, or a usage
+ * error: `pdfA` and `pdfUA` embed every font; without `pdfFonts`, the
+ * Liberation faces of the optional package `@awacloud/oconv-fonts` are used
+ * when it is installed, else a usage error names the missing faces;
+ * `pdfUA` is 1 or 2 and needs `pdfLang`, which needs `pdfUA`.
+ */
+async function pdfOpts(input: PdfInput): Promise<CoreError | { error: null; opts?: { pdf: OconvPdfOpts } }> {
+    if (input.pdfUA !== undefined && input.pdfUA !== 1 && input.pdfUA !== 2) {
+        return { error: 'pdfUA must be 1 or 2', usage: true };
+    }
+    if (input.pdfUA !== undefined && (typeof input.pdfLang !== 'string' || input.pdfLang === '')) {
+        return { error: 'pdfUA needs pdfLang, the document language (a BCP 47 tag)', usage: true };
+    }
+    if (input.pdfLang !== undefined && input.pdfUA === undefined) {
+        return { error: 'pdfLang needs pdfUA', usage: true };
+    }
+    if (input.pdfA === undefined && input.pdfUA === undefined && input.pdfFonts === undefined) return { error: null };
+    let fonts = input.pdfFonts;
+    if (fonts === undefined) {
+        const packaged = await loadPackagedPdfFonts();
+        if (packaged.error !== null) {
+            const label = input.pdfA !== undefined ? 'pdfA' : 'pdfUA';
+            return { error: packaged.error === MISSING_FACES_MESSAGE ? `${label}: ${packaged.error}` : packaged.error, usage: packaged.usage };
+        }
+        fonts = packaged.fonts;
+    }
+    const pdf: OconvPdfOpts = {};
+    if (input.pdfA !== undefined) pdf.pdfA = input.pdfA;
+    if (input.pdfUA !== undefined) {
+        pdf.pdfUA = input.pdfUA;
+        pdf.lang = input.pdfLang;
+    }
+    pdf.fonts = fonts;
+    return { error: null, opts: { pdf } };
+}
+
 export interface FromMdInput {
     markdown: string;
     /** Output file name — its extension drives target detection when `target` is omitted. */
     name?: string;
     /** `'docx'` | `'odt'` | `'pdf'`. Explicit value wins over `name`'s extension. */
     target?: string;
+    /** pdf target: claim PDF/A-4 or PDF/A-2b (`'4'` | `'2b'`); without `pdfFonts`, the Liberation faces of the optional package `@awacloud/oconv-fonts` are used when it is installed. */
+    pdfA?: string;
+    /** pdf target: claim PDF/UA-1 or PDF/UA-2 (`1` | `2`), a tagged document; needs `pdfLang`; faces as for `pdfA`. */
+    pdfUA?: number;
+    /** pdf target: the document language under `pdfUA` (a BCP 47 tag). */
+    pdfLang?: string;
+    /** pdf target: the embedded faces per style class (the CLI and MCP server read them with `readPdfFonts`). */
+    pdfFonts?: PdfFonts;
 }
 
 export interface FromMdOutput {
@@ -388,9 +462,11 @@ export type FromMdResult = CoreError | FromMdOutput;
 
 /** Markdown to a target format — `oconv.fromMd`. */
 export async function fromMd(input: FromMdInput): Promise<FromMdResult> {
+    const pdf = await pdfOpts(input);
+    if (pdf.error !== null) return pdf;
     return guard(async () => {
         const oconv = buildOconv();
-        const result = await oconv.fromMd(input);
+        const result = await oconv.fromMd({ markdown: input.markdown, name: input.name, target: input.target, ...(pdf.opts ? { opts: pdf.opts } : {}) });
         return {
             bytes: result.bytes, target: result.target,
             losses: result.losses, lossSummary: summarizeLosses(result.losses), lossy: result.lossy,
@@ -406,6 +482,16 @@ export interface ConvertInput {
     format?: string;
     /** `'docx'` | `'odt'` | `'pdf'` — REQUIRED, never derived (`name` names the SOURCE). */
     target: string;
+    /** pdf target: claim PDF/A-4 or PDF/A-2b (`'4'` | `'2b'`); without `pdfFonts`, the Liberation faces of the optional package `@awacloud/oconv-fonts` are used when it is installed. */
+    pdfA?: string;
+    /** pdf target: claim PDF/UA-1 or PDF/UA-2 (`1` | `2`), a tagged document; needs `pdfLang`; faces as for `pdfA`. */
+    pdfUA?: number;
+    /** pdf target: the document language under `pdfUA` (a BCP 47 tag). */
+    pdfLang?: string;
+    /** pdf target: the embedded faces per style class (the CLI and MCP server read them with `readPdfFonts`). */
+    pdfFonts?: PdfFonts;
+    /** Tier 3: the source's page, its paragraphs' alignment and page breaks, its runs' size, font, colour, underline and script, its headers, footers, page fields and notes carried to the target — `oconv.convert`'s `layout`, docx -> odt only. Absent: oconv's default, on for docx -> odt; `false`: tier 2. */
+    layout?: boolean;
 }
 
 export interface ConvertOutput {
@@ -423,9 +509,11 @@ export type ConvertResult = CoreError | ConvertOutput;
 
 /** Cross-format pair, one of the four `oconv` ships (`docx>odt`, `odt>docx`, `docx>pdf`, `odt>pdf`) — `oconv.convert`. */
 export async function convert(input: ConvertInput): Promise<ConvertResult> {
+    const pdf = await pdfOpts(input);
+    if (pdf.error !== null) return pdf;
     return guard(async () => {
         const oconv = buildOconv();
-        const result = await oconv.convert(input);
+        const result = await oconv.convert({ bytes: input.bytes, name: input.name, format: input.format, target: input.target, ...(pdf.opts ? { opts: pdf.opts } : {}), ...(input.layout !== undefined ? { layout: input.layout } : {}) });
         return {
             bytes: result.bytes, format: result.format, target: result.target,
             losses: result.losses, lossSummary: summarizeLosses(result.losses), lossy: result.lossy,

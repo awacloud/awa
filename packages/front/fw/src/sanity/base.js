@@ -58,6 +58,7 @@ const BLOCKED_DOCUMENT_APIS = [
     'write', 'writeln', 'open', 'close', 'execCommand', 'execScript', 'evaluate', 'implementation', 'createContextualFragment'
 ];
 const BLOCKED_ELEMENT_APIS = ['setHTML', 'evaluate'];
+const BLOCKED_RANGE_APIS = ['createContextualFragment'];
 
 const BLOCKED_HISTORY_APIS = [
     'pushState', 'replaceState', 'go', 'back', 'forward'
@@ -88,7 +89,7 @@ function logAttempt(api, operation) {
     }
 }
 
-function blockPropertyAccess(obj, propertyNames, objName = 'object') {
+function blockPropertyAccess(obj, propertyNames, objName = 'object', fail = null) {
     if (!obj) return;
     propertyNames.forEach(propertyName => {
         try {
@@ -109,26 +110,41 @@ function blockPropertyAccess(obj, propertyNames, objName = 'object') {
             });
         } catch (e) {
             console.warn(`Cannot block ${objName}.${propertyName}:`, e.message);
+            if (fail) fail(`${objName}.${propertyName}`, e);
         }
     });
 }
 
-function redirectPropertySetter(obj, sourceProperties, targetProperties) {
+function redirectPropertySetter(obj, sourceProperties, targetProperties, fail = null) {
     sourceProperties.forEach((sourceProp, index) => {
         const targetProp = targetProperties[index];
         try {
-            Object.defineProperty(obj, sourceProp, {
-                set: function (value) {
-                    this[targetProp] = value;
-                }
-            });
+            const current = Object.getOwnPropertyDescriptor(obj, sourceProp);
+            if (current && typeof current.value === 'function') {
+                // A METHOD (insertAdjacentHTML): a set-only accessor would leave
+                // no getter, so the call would throw instead of inserting text.
+                Object.defineProperty(obj, sourceProp, {
+                    value: function (position, value) {
+                        return this[targetProp](position, value);
+                    }
+                });
+            } else {
+                // An accessor (innerHTML, outerHTML): only the setter is
+                // replaced; the existing getter is kept.
+                Object.defineProperty(obj, sourceProp, {
+                    set: function (value) {
+                        this[targetProp] = value;
+                    }
+                });
+            }
         } catch (e) {
             console.warn(`Cannot redirect ${sourceProp}:`, e.message);
+            if (fail) fail(`Element.prototype.${sourceProp}`, e);
         }
     });
 }
 
-function freezePrototypes() {
+function freezePrototypes(fail = null) {
     const prototypes = [
         Object.prototype,
         Array.prototype,
@@ -142,14 +158,20 @@ function freezePrototypes() {
     ];
 
     prototypes.forEach(proto => {
+        const protoName = (proto.constructor && proto.constructor.name) + '.prototype';
         try {
-            // Prevent __proto__ manipulation
-            Object.defineProperty(proto, '__proto__', {
-                set: function () {
-                    logAttempt('prototype.__proto__', 'set');
-                    throw new Error(BLOCKED_MESSAGE);
-                }
-            });
+            // Prevent __proto__ manipulation. Only Object.prototype owns the
+            // __proto__ accessor: a set-only accessor defined on any other
+            // prototype would shadow the inherited getter (`[].__proto__` would
+            // read undefined). Every object inherits the guarded setter.
+            if (proto === Object.prototype) {
+                Object.defineProperty(proto, '__proto__', {
+                    set: function () {
+                        logAttempt('prototype.__proto__', 'set');
+                        throw new Error(BLOCKED_MESSAGE);
+                    }
+                });
+            }
 
             Object.defineProperty(proto, 'constructor', {
                 writable: false,
@@ -159,6 +181,7 @@ function freezePrototypes() {
             Object.freeze(proto);
         } catch (e) {
             console.warn('Cannot freeze prototype:', e.message);
+            if (fail) fail(protoName, e);
         }
     });
 }
@@ -215,7 +238,7 @@ function blockJSONParsing() {
     Object.freeze(JSON);
 }
 
-function blockDangerousElements() {
+function blockDangerousElements(fail = null) {
     // The tag→constructor table is built HERE, not at module scope: it
     // references HTMLIFrameElement/HTMLObjectElement/HTMLEmbedElement, which do
     // not exist in a non-browser realm. At module scope it would throw a
@@ -242,6 +265,7 @@ function blockDangerousElements() {
                 });
             } catch (e) {
                 console.warn(`Cannot block ${tag}.${prop}:`, e.message);
+                if (fail) fail(`${tag}.${prop}`, e);
             }
         });
     });
@@ -263,7 +287,7 @@ function disableDebugger() {
     }
 }
 
-function blockPerformanceAPIs() {
+function blockPerformanceAPIs(fail = null) {
     // Block high-resolution timing
     try {
         const originalNow = Date.now;
@@ -276,10 +300,11 @@ function blockPerformanceAPIs() {
         });
     } catch (e) {
         console.warn('Cannot modify Date.now:', e.message);
+        if (fail) fail('Date.now', e);
     }
 }
 
-function blockMathRandom() {
+function blockMathRandom(fail = null) {
     // Replace Math.random with blocked version (should use crypto.getRandomValues in production)
     const blockedRandom = function () {
         logAttempt('Math.random', 'call');
@@ -294,6 +319,7 @@ function blockMathRandom() {
         });
     } catch (e) {
         console.warn('Cannot block Math.random:', e.message);
+        if (fail) fail('Math.random', e);
     }
 }
 
@@ -310,45 +336,64 @@ function blockMathRandom() {
  *
  * The returned `steps` list names each hardening pass in application order.
  * Prototype freezing runs FIRST by design (most critical, and later passes
- * install setters that must survive it).
+ * install setters that must survive it). A pass is listed once it ran; the
+ * individual slots it could not harden (a non-configurable property, a frozen
+ * namespace) are listed in `failures`, one `{ step, target, message }` entry
+ * each, `[]` on a clean apply. They are also warned on the console.
  *
- * @returns {{applied: boolean, reason?: string, steps: string[]}} report of what was applied
+ * @returns {{applied: boolean, reason?: string, steps: string[],
+ *   failures: Array<{step: string, target: string, message: string}>}}
+ *   report of what was applied
  */
 export function applyBase() {
-    if (_applied) return { applied: false, reason: 'already-applied', steps: [] };
+    if (_applied) return { applied: false, reason: 'already-applied', steps: [], failures: [] };
     if (typeof window === 'undefined' || typeof document === 'undefined') {
-        return { applied: false, reason: 'non-browser-realm', steps: [] };
+        return { applied: false, reason: 'non-browser-realm', steps: [], failures: [] };
     }
     _applied = true;
 
     /** @type {string[]} */
     const steps = [];
+    /** @type {Array<{step: string, target: string, message: string}>} */
+    const failures = [];
+    let step = '';
+    const fail = (target, e) => {
+        failures.push({ step, target, message: String(e && e.message ? e.message : e) });
+    };
 
     // Freeze prototypes first (most critical)
-    freezePrototypes(); steps.push('freezePrototypes');
+    step = 'freezePrototypes'; freezePrototypes(fail); steps.push(step);
 
-    blockPropertyAccess(window, BLOCKED_WINDOW_APIS, 'window'); steps.push('window');
-    blockPropertyAccess(document, BLOCKED_DOCUMENT_APIS, 'document'); steps.push('document');
-    blockPropertyAccess(Element.prototype, BLOCKED_ELEMENT_APIS, 'Element.prototype'); steps.push('Element.prototype');
+    step = 'window'; blockPropertyAccess(window, BLOCKED_WINDOW_APIS, 'window', fail); steps.push(step);
+    step = 'document'; blockPropertyAccess(document, BLOCKED_DOCUMENT_APIS, 'document', fail); steps.push(step);
+    // The element step also closes `Range.prototype.createContextualFragment`,
+    // the markup parser `document.createRange()` still reached (the step list
+    // of the report is unchanged).
+    step = 'Element.prototype'; blockPropertyAccess(Element.prototype, BLOCKED_ELEMENT_APIS, 'Element.prototype', fail);
+    if (typeof Range !== 'undefined' && Range.prototype) blockPropertyAccess(Range.prototype, BLOCKED_RANGE_APIS, 'Range.prototype', fail);
+    steps.push(step);
 
-    blockPropertyAccess(window.history, BLOCKED_HISTORY_APIS, 'history'); steps.push('history');
+    step = 'history'; blockPropertyAccess(window.history, BLOCKED_HISTORY_APIS, 'history', fail); steps.push(step);
 
     if (window.performance) {
-        blockPropertyAccess(window.performance, BLOCKED_PERF_APIS, 'performance'); steps.push('performance');
+        step = 'performance'; blockPropertyAccess(window.performance, BLOCKED_PERF_APIS, 'performance', fail); steps.push(step);
     }
 
     if (window.crypto) {
-        blockPropertyAccess(window.crypto, BLOCKED_CRYPTO_APIS, 'crypto'); steps.push('crypto');
+        step = 'crypto'; blockPropertyAccess(window.crypto, BLOCKED_CRYPTO_APIS, 'crypto', fail); steps.push(step);
     }
 
+    step = 'htmlRedirect';
     redirectPropertySetter(
         Element.prototype,
         HTML_PROPERTY_REPLACEMENTS.sources,
-        HTML_PROPERTY_REPLACEMENTS.targets
+        HTML_PROPERTY_REPLACEMENTS.targets,
+        fail
     );
-    steps.push('htmlRedirect');
+    steps.push(step);
 
     // Block document.domain
+    step = 'document.domain';
     try {
         Object.defineProperty(document, 'domain', {
             set: function (value) {
@@ -360,15 +405,16 @@ export function applyBase() {
         steps.push('document.domain');
     } catch (e) {
         console.warn('Cannot block document.domain:', e.message);
+        fail('document.domain', e);
     }
 
     // Additional measures
-    wrapTimingFunctions(); steps.push('wrapTimingFunctions');
-    blockJSONParsing(); steps.push('blockJSONParsing');
-    blockDangerousElements(); steps.push('blockDangerousElements');
-    disableDebugger(); steps.push('disableDebugger');
-    blockPerformanceAPIs(); steps.push('blockPerformanceAPIs');
-    blockMathRandom(); steps.push('blockMathRandom');
+    step = 'wrapTimingFunctions'; wrapTimingFunctions(); steps.push(step);
+    step = 'blockJSONParsing'; blockJSONParsing(); steps.push(step);
+    step = 'blockDangerousElements'; blockDangerousElements(fail); steps.push(step);
+    step = 'disableDebugger'; disableDebugger(); steps.push(step);
+    step = 'blockPerformanceAPIs'; blockPerformanceAPIs(fail); steps.push(step);
+    step = 'blockMathRandom'; blockMathRandom(fail); steps.push(step);
 
-    return { applied: true, steps };
+    return { applied: true, steps, failures };
 }

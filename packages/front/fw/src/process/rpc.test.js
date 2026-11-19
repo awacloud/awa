@@ -79,5 +79,52 @@ describe('processRPC module', () => {
 
             await expect(proxy.never()).rejects.toThrow('RPC timeout: never');
         });
+
+        test('timeout: Infinity is the longest timer, not an immediate failure', async () => {
+            const target = { slow: () => new Promise(r => setTimeout(() => r('done'), 40)) };
+            const { port } = api.create(target);
+            const proxy = await api.open(port[0], { timeout: Infinity });
+            await expect(proxy.slow()).resolves.toBe('done');
+        });
+
+        test('a timeout above the timer range is clamped, not wrapped', async () => {
+            const target = { slow: () => new Promise(r => setTimeout(() => r('ok'), 40)) };
+            const { port } = api.create(target);
+            const proxy = await api.open(port[0], { timeout: 2 ** 40 });
+            await expect(proxy.slow()).resolves.toBe('ok');
+        });
+
+        test('the handshake times out when no descriptor arrives', async () => {
+            const channel = new MessageChannel();
+            await expect(api.open(channel.port1, { timeout: 20 }))
+                .rejects.toThrow('RPC open timeout: descriptor not received');
+            channel.port1.close();
+            channel.port2.close();
+        });
+
+        test('forbidden keys are neither exposed nor reachable', async () => {
+            const target = { ok: () => 1 };
+            const { port } = api.create(target);
+            const proxy = await api.open(port[0]);
+            expect(proxy.__proto__).toBeUndefined();
+            expect(proxy.constructor).toBeUndefined();
+            expect(proxy.prototype).toBeUndefined();
+        });
+
+        test('a nested namespace is called by its path', async () => {
+            const target = { math: { deep: { twice: (x) => x * 2 } } };
+            const { port } = api.create(target);
+            const proxy = await api.open(port[0]);
+            await expect(proxy.math.deep.twice(21)).resolves.toBe(42);
+        });
+
+        test('close() ends the exposure: a later call does not resolve', async () => {
+            const target = { ping: () => 'pong' };
+            const { port, close } = api.create(target);
+            const proxy = await api.open(port[0], { timeout: 50 });
+            await expect(proxy.ping()).resolves.toBe('pong');
+            close();
+            await expect(proxy.ping()).rejects.toThrow('RPC timeout: ping');
+        });
     });
 });

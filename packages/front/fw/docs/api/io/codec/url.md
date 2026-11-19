@@ -19,7 +19,7 @@ status: complete
 - No nested parsing `user[name]=Alice`.
 - No `sort` or `skipNull` option.
 
-`url.parseURL` / `url.buildURL` use the native `URL` under the hood — they are simple wrappers that add the decomposed query and a symmetric API for building URLs.
+`url.parseURL` uses the native `URL` under the hood and adds the decomposed query; `url.buildURL` is fw's own builder, the symmetric API. `buildURL(parseURL(x))` gives back `new URL(x).href`, except that a `+` in the query is written `%20`: `parseURL`'s `query` reads `+` as a space, as `URLSearchParams` and HTML forms do (`?q=fw+examples` → `{ q: 'fw examples' }`), so the round trip keeps the meaning; `parseURL(x, base, { space: 'percent' })` keeps a literal `+`, and a `%2B` is a `+` either way.
 
 ## Resolve
 
@@ -34,7 +34,7 @@ const url = runtime.resolve('url');
 |--------|-----------|---------|
 | `parseQuery` | `(str: string, options?) => Object` | Object from querystring |
 | `stringifyQuery` | `(obj: Object, options?) => string` | Querystring (without leading `?`) |
-| `parseURL` | `(str: string, base?: string) => URLParts` | Decomposed URL + parsed `.query` |
+| `parseURL` | `(str: string, base?: string, options?: {space?: 'plus'\|'percent'}) => URLParts` | Decomposed URL + parsed `.query` (`+` = space by default) |
 | `buildURL` | `(parts: Object) => string` | Reconstructed URL |
 | `encodeSafe` | `(s: string, options?) => string` | URI encoded CommonMark / mdurl@2 style |
 | `decodeSafe` | `(s: string) => string` | Best-effort percent decoding (fail-soft) |
@@ -252,8 +252,9 @@ const worker = fw.createWorker(
 - Keys and values are percent-decoded/encoded via native `encodeURIComponent` / `decodeURIComponent`. An invalid decode (`%ZZ`) returns the raw string (fail-soft).
 - `arrayFormat: 'comma'` does **not** encode the `,` separator (common practice, compatible with OpenAPI `form` style). If values contain literal commas, use a different format.
 - `nested` is additive to `arrayFormat: brackets/indices` — both rely on the `[...]` notation in the key.
-- `parseURL` delegates to the native `URL` when available (browsers + workers + modern bun/node); a regex fallback exists for ultra-minimal environments.
+- `parseURL` delegates to the native `URL` when available (browsers + workers + modern bun/node); a regex fallback exists for ultra-minimal environments. The fallback splits an already-normalised URL like `URL` does (IPv6 hosts included) but normalises nothing: no host case-folding, no default-port removal, no `.` / `..` path segments resolved, no percent-encoding of spaces or non-ASCII.
 - `buildURL` accepts `query` as an object **or** a string (e.g. an already-serialized query).
+- `buildURL` writes `//` after the scheme when there is a host, or for a special scheme (`http`, `https`, `ws`, `wss`, `ftp`, `file`): `mailto:`, `urn:` and `data:` URLs rebuild without it.
 - Duplicate keys in `'none'` mode: the last one wins. In array modes, all occurrences are collected.
 - `encodeSafe` faithfully reproduces the `mdurl@2` (CommonMark) algorithm: default safe-set `";/?:@&=+$,-_.!~*'()#"`, pass-through of valid `%HH`, re-encoding of invalid `%`, surrogates → U+FFFD. Worker-safe (no DOM or side-effects).
 - `decodeSafe` is a fail-soft wrapper on `decodeURIComponent`: invalid sequences are returned as-is rather than throwing an exception.

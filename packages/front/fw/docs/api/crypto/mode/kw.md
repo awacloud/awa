@@ -1,7 +1,7 @@
 ---
 module: kw
 category: crypto/mode
-dependencies: [bitArray, aes]
+dependencies: [bitArray]
 returns: object
 worker-safe: true
 status: complete
@@ -11,7 +11,7 @@ status: complete
 
 > AES-KW + KWP (SP 800-38F / RFC 3394 / RFC 5649) — symmetric key wrapping.
 
-**Module** `kw` | **Source** `packages/front/fw/src/crypto/mode/kw.js` | **Deps** `bitArray`, `aes` | **Worker-safe** yes
+**Module** `kw` | **Source** `packages/front/fw/src/crypto/mode/kw.js` | **Deps** `bitArray` | **Worker-safe** yes
 
 KW (RFC 3394) wraps payloads that are multiples of 64 bits. KWP (RFC 5649) adds padding for arbitrary-length payloads. Inverse-cipher variant (SP 800-38F §6.3) explicitly rejected.
 
@@ -19,7 +19,7 @@ KW (RFC 3394) wraps payloads that are multiples of 64 bits. KWP (RFC 5649) adds 
 
 ```js
 const kw = runtime.resolve('kw');
-// Returns: { wrap, unwrap, wrapPad, unwrapPad, wrapInverseCipher, unwrapInverseCipher, _internal }
+// Returns: { wrap, unwrap, wrapPad, unwrapPad, wrapInverseCipher, unwrapInverseCipher }
 ```
 
 ## API
@@ -32,7 +32,7 @@ const kw = runtime.resolve('kw');
 | `unwrapPad(prf, ctBa)` | — | PT or `false` |
 | `wrapInverseCipher()` | `() => false` | **NOT-IMPLEMENTED** explicit reject |
 | `unwrapInverseCipher()` | `() => false` | **NOT-IMPLEMENTED** explicit reject |
-| `_internal.{...}` | — | Debug primitives |
+| `internalOf(kw).{...}` | — | Debug primitives |
 
 ## Examples
 

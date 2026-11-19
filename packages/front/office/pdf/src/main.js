@@ -146,6 +146,7 @@ import { pdfPages }           from './document/pages.js';
 import { pdfPage }            from './document/page.js';
 import { pdfDocument }        from './document/document.js';
 import { pdfWriter }          from './document/writer.js';
+import { pdfMerge }           from './document/merge.js';
 import { pdfBuilder }         from './document/builder.js';
 import { pdfEncryptedWriter } from './document/encryptedWriter.js';
 import { pdfIncrementalWriter } from './document/incrementalWriter.js';
@@ -169,6 +170,7 @@ import { pdfFontEmbed }       from './font/embed.js';
 // AcroForm (L2)
 import { pdfAcroForm }        from './form/acroform.js';
 import { pdfFieldTree }       from './form/fieldTree.js';
+import { pdfFormFill }        from './form/fill.js';
 import { pdfButtonField }     from './form/button.js';
 import { pdfTextField }       from './form/text.js';
 import { pdfChoiceField }     from './form/choice.js';
@@ -238,6 +240,7 @@ import { pdfCollection }      from './embedded/collection.js';
 import { pdfLinearization }   from './linearization/linearization.js';
 import { pdfInfo }            from './metadata/info.js';
 import { pdfXmp }             from './metadata/xmp.js';
+import { pdfSrgbIcc }         from './prepress/srgb-icc.js';
 import { pdfOutputIntent }    from './prepress/outputIntent.js';
 import { pdfPageBoundary }    from './prepress/pageBoundary.js';
 import { pdfAssociatedFiles } from './associatedFiles/associatedFiles.js';
@@ -260,14 +263,14 @@ export const modules = [
     // Crypto (fw-bound; the document reader decrypts with them)
     pdfSecurity, pdfAesGcm, pdfStandardV4, pdfStandardV5, pdfStandardV6, pdfPermissions,
     // Document
-    pdfCatalog, pdfPages, pdfPage, pdfDocument, pdfWriter, pdfBuilder, pdfIncrementalWriter, pdfResources,
+    pdfCatalog, pdfPages, pdfPage, pdfInfo, pdfDocument, pdfWriter, pdfMerge, pdfXmp, pdfSrgbIcc, pdfBuilder, pdfIncrementalWriter, pdfResources,
     pdfXrefStreamWriter,
     // Content
     pdfContentOps, pdfContentStream, pdfGraphics, pdfText, pdfColor, pdfImages,
     // Font
     pdfFont, pdfFontEncoding, pdfType3, pdfFontEmbed,
     // Form
-    pdfAcroForm, pdfFieldTree, pdfButtonField, pdfTextField,
+    pdfAcroForm, pdfFieldTree, pdfFormFill, pdfButtonField, pdfTextField,
     pdfChoiceField, pdfSignatureField, pdfAppearance,
     // Annotations
     pdfAnnot, pdfTextAnnot, pdfLinkAnnot, pdfMarkupAnnot, pdfShapeAnnot,
@@ -289,7 +292,7 @@ export const modules = [
     // Embedded
     pdfFileSpec, pdfEmbeddedFile, pdfCollection,
     // Linearization / Metadata / Prepress / Associated
-    pdfLinearization, pdfInfo, pdfXmp, pdfOutputIntent, pdfPageBoundary,
+    pdfLinearization, pdfOutputIntent, pdfPageBoundary,
     pdfAssociatedFiles,
     // Top-level
     pdf
@@ -308,6 +311,9 @@ import { pdfShadingTyped }            from './extra/shading-typed.js';
 import { pdfTransparencyTyped }       from './extra/transparency-typed.js';
 import { pdfSigPades }                from './extra/sig-pades.js';
 import { pdfSigAesGcm }               from './extra/sig-aes-gcm.js';
+import { pdfCryptPublicKey }          from './extra/crypt-public-key.js';
+import { pdfFontDecoder }             from './extra/font-decoder.js';
+import { pdfPageText }                from './extra/page-text.js';
 import { pdfDocumentParts }           from './extra/document-parts.js';
 import { pdfRedactionIso32005 }       from './extra/redaction-iso32005.js';
 import { pdfAOutputIntent }           from './extra/pdf-a-output-intent.js';
@@ -339,7 +345,7 @@ export const extras = [
     pdfOptionalContentExtended, pdfEmbeddedFilesPortfolio,
     pdfAssociatedFiles2, pdfXmpExtended,
     pdfLinearizationWrite, pdf3dRichMedia, pdfJbig2Read, pdfMisc,
-    pdfInfoDictDeprecated, pdfSandbox,
+    pdfInfoDictDeprecated, pdfSandbox, pdfCryptPublicKey, pdfFontDecoder, pdfPageText,
     pdfLegacyXfaRead, pdfLegacyRc4Read,
     pdfCcittFaxDecoder,
     pdfLegacyDeprecatedFilters, pdfLegacyDeprecatedAnnots
@@ -373,14 +379,14 @@ export {
     pdfSerializer, pdfFlate, pdfAsciiHex, pdfAscii85, pdfRunLength,
     pdfFilterDispatch, pdfObjStream, pdfCrossRefStream,
     // Document
-    pdfCatalog, pdfPages, pdfPage, pdfDocument, pdfWriter, pdfBuilder,
+    pdfCatalog, pdfPages, pdfPage, pdfDocument, pdfWriter, pdfMerge, pdfBuilder, pdfSrgbIcc,
     pdfEncryptedWriter, pdfIncrementalWriter, pdfXrefStreamWriter, pdfResources,
     // Content
     pdfContentOps, pdfContentStream, pdfGraphics, pdfText, pdfColor, pdfImages,
     // Font
     pdfFont, pdfFontEncoding, pdfType3, pdfFontEmbed,
     // Form
-    pdfAcroForm, pdfFieldTree, pdfButtonField, pdfTextField, pdfChoiceField,
+    pdfAcroForm, pdfFieldTree, pdfFormFill, pdfButtonField, pdfTextField, pdfChoiceField,
     pdfSignatureField, pdfAppearance,
     // Annotations
     pdfAnnot, pdfTextAnnot, pdfLinkAnnot, pdfMarkupAnnot, pdfShapeAnnot,

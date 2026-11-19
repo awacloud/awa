@@ -304,6 +304,8 @@ describe('crossformat docx->odt — exact loss ledgers (6 fixtures)', () => {
         expect(direct.assets[0].name).toBe('Grafik 1');
         expect(bodyOf(direct.markdown)).toContain('![');
 
+        // T84: the default convert (layout on): its run styles state no emphasis
+        // and read back with no loss.
         const out = await oconv.convert({ name: 'poi-with-gif.docx', bytes, target: 'odt' });
         const via = await oconv.toMd({ name: 'x.odt', bytes: out.bytes, convertedAt: FIXED_AT });
         expect(via.losses).toEqual([]);
@@ -550,6 +552,7 @@ describe('crossformat — inline code survives md -> docx -> odt -> md', () => {
         const written = await oconv.fromMd({ markdown: src, target: 'docx' });
         expect(written.losses).toEqual([]);
 
+        // T84: the default convert (layout on since T82); every ledger EMPTY.
         const converted = await oconv.convert({
             bytes: written.bytes, format: 'docx', target: 'odt'
         });

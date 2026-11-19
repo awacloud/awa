@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -115,7 +115,7 @@ export const kw = {
             return { aHi, aLo, R };
         }
 
-        // Iteration D2 of the FIPS 140-3 upgrade plan - TDES rejection.
+        // TDES rejection.
         // SP 800-131A §2.4 marks Triple-DES as deprecated since 2024 and
         // disallowed for cryptographic protection beyond 2023. SP 800-38F
         // §6.2 explicitly requires a 128-bit block cipher (AES-128/192/256).
@@ -193,7 +193,7 @@ export const kw = {
             // skip the second XOR depending on the first).
             const diff = ((aHi ^ _IV_KW_HI) | (aLo ^ _IV_KW_LO)) >>> 0;
             if (diff !== 0) {
-                console.error('[crypto] CORRUPT: kw: integrity check failed');
+                console.warn('[crypto] CORRUPT: kw: integrity check failed');
                 return false;
             }
             return R;
@@ -287,7 +287,7 @@ export const kw = {
                 bad |= padded[i] & (-inPad);
             }
             if (bad !== 0) {
-                console.error('[crypto] CORRUPT: kwp: integrity check failed');
+                console.warn('[crypto] CORRUPT: kwp: integrity check failed');
                 return false;
             }
             return padded.subarray(0, mli);
@@ -297,7 +297,7 @@ export const kw = {
         // applies CIPH_K⁻¹ (decrypt) in the wrap direction. ACVP includes
         // about 50 % of its KW vectors with this variant for completeness,
         // but it is rare in practice (legacy embedded TPM only). Iteration
-        // D2 of the FIPS 140-3 upgrade plan - explicit reject with a typed
+        // Explicit reject with a typed
         // export to prevent any silent use. If a consumer has a
         // documented need, the implementation must be added separately
         // and audited.

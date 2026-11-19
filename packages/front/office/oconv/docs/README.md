@@ -1,6 +1,6 @@
 # Documentation `@awacloud/oconv`
 
-Document conversion through the `oconv-ir/v1` pivot representation:
+Document conversion through the `oconv-ir/v2` pivot representation:
 document-to-Markdown readers, the structured-markdown profile, the
 `md → docx` / `md → odt` / `md → pdf` writers, and the `convert`
 cross-format pairs. The [package README](../README.md) gives the overview,

@@ -35,6 +35,6 @@ Apple AAT state machines not decoded) are listed in the package README.
 
 ## See also
 
-- `@awacloud/ooxml` ([docs](https://github.com/awacloud/awa/tree/@awacloud/fonts@1.2.0/packages/front/office/ooxml/docs)) — the sibling package whose docs layout (`api/` + `bundles/` + `guide/`) this one follows.
+- `@awacloud/ooxml` ([docs](https://github.com/awacloud/awa/tree/@awacloud/fonts@2.0.0/packages/front/office/ooxml/docs)) — the sibling package whose docs layout (`api/` + `bundles/` + `guide/`) this one follows.
 - OpenType spec: <https://learn.microsoft.com/en-us/typography/opentype/spec/>.
 - TrueType Reference Manual: <https://developer.apple.com/fonts/TrueType-Reference-Manual/>.

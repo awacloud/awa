@@ -14,12 +14,12 @@ title: "@awacloud/oconv — the convert facade member (allowlisted cross-format 
 >
 > **Prerequisites.** The `@awacloud/oconv` main entry (`fw_require` and
 > `modules`, registered on an `@awacloud/fw` `ModuleRuntime` as below); the
-> `@awacloud/oconv/src/worker.js` sub-path for the worker message. Runs in a
+> `@awacloud/oconv/worker.js` sub-path for the worker message. Runs in a
 > browser or on the runtimes the package's `engines` field names (Bun ≥ 1.0,
 > Node ≥ 20); the conversion itself performs no network or filesystem access.
 
 `convert` is pure wiring, additive to the frozen `oconv` facade:
-`read <format> → oconv-ir/v1 → write <target>`,
+`read <format> → oconv-ir/v2 → write <target>`,
 the same two pipelines `toMd` and `fromMd` already implement, composed back
 to back for exactly four shipped pairs. It adds no dependency to the
 `oconv` module descriptor and no new office-package wiring — every reader
@@ -102,6 +102,8 @@ from the same linear if-chain in `src/oconv.js`'s `convert()`.
 | 5 | `opts.pdf` is supplied for a `target` other than `'pdf'` | `oconv: pdf options need target pdf` |
 | 6 | `defaultFaces` is supplied for a `target` other than `'pdf'` (checked LAST, after `opts.pdf`) | `oconv: default faces need target pdf` |
 | 7 | `defaultFaces` is supplied and is not a non-null, non-array object whose every own value is a `Uint8Array` | `oconv: bad default faces` |
+| 8 | `layout` is supplied and is not a boolean | `oconv: bad layout option` |
+| 9 | `layout` is `true` and the pair is not `docx → odt` (checked LAST) | `oconv: layout needs docx to odt` |
 
 A bad `opts.pdf` key (once `target === 'pdf'`) surfaces the pdf writer's
 own single validator error, `oconv: bad pdf option <key>` /
@@ -114,7 +116,7 @@ own single validator error, `oconv: bad pdf option <key>` /
 
 | Pair | Reader | Writer | Measured tier | Matrix row |
 |---|---|---|---|---|
-| `docx → odt` | `oconvDocxToIr` | `oconvIrToOdt` | 2 | [`docs/loss-matrix.md` § Cross-format pairs](./loss-matrix.md#cross-format-pairs) |
+| `docx → odt` | `oconvDocxToIr` | `oconvIrToOdt` | 3 under `layout` (the default): the page, the paragraphs' alignment and breaks, the runs' size, font, colour, underline and script, the headers and footers, the page fields and the notes; 2 with `layout: false` | [`docs/loss-matrix.md` § Cross-format pairs](./loss-matrix.md#cross-format-pairs) |
 | `odt → docx` | `oconvOdtToIr` | `oconvIrToDocx` | 2 | [`docs/loss-matrix.md` § Cross-format pairs](./loss-matrix.md#cross-format-pairs) |
 | `docx → pdf` | `oconvDocxToIr` | `oconvIrToPdf` | 2 (bounded typesetter) | [`docs/loss-matrix.md` § Cross-format pairs](./loss-matrix.md#cross-format-pairs) |
 | `odt → pdf` | `oconvOdtToIr` | `oconvIrToPdf` | 2 (bounded typesetter) | [`docs/loss-matrix.md` § Cross-format pairs](./loss-matrix.md#cross-format-pairs) |
@@ -141,6 +143,60 @@ built-in `styles.xml` (`Standard`, `Text_20_body`, `Heading`,
 styles carried over. `docx →
 odt`/`odt → docx` reach tier 2 (both writers do); `→ pdf`
 is the bounded typesetter (see [`docs/pdf-writer.md`](./pdf-writer.md)).
+
+**Tier 3: `layout`**, on by default on `docx → odt` (the one pair that
+honours it, since 2.0.0); an absent `layout` is off on every other pair,
+and `layout: true` there throws. The docx is read with
+`docxInclude: ['layout']`, so the IR (`oconv-ir/v2`)
+carries the page of the body's `sectPr` as `document.page`: the size and
+the margins in points (twips / 20), the orientation (`orient` when given,
+else from the size). The odt writer writes it as one page layout used by
+the master page `Standard`. A document of several sections takes its last
+section's page (`layout/sections-merged`); a gutter is dropped
+(`layout/gutter-dropped`); a negative top or bottom margin is kept as its
+absolute value (`layout/margin-negative`).
+
+Each paragraph's and heading's effective alignment (its `jc`, else up its
+style's `basedOn` chain, else `docDefaults`) and its page breaks (a
+`pageBreakBefore`, direct or styled; a page break alone in a paragraph or
+at its end goes on the next one, one at its start on its own) reach the
+odt as automatic paragraph styles (`fo:text-align`,
+`fo:break-before="page"`). Recorded: `distribute` and the kashida values
+read as `justify`, another value as none (`layout/align-approximated`);
+several breaks before one block are one (`layout/breaks-merged`); a break
+inside a paragraph stays a space (`layout/break-inside`); one that reaches
+a table, a code block, a quote, the end of a text box or of the document
+is dropped (`layout/break-dropped`).
+
+Each run's effective size, font, colour, underline and super- or
+subscript (its `rPr`, its character style's chain, its paragraph style's
+chain, `docDefaults`; a theme font read from the theme part) reach the
+odt as automatic text styles. Recorded: a theme font the document's theme
+does not resolve (`layout/font-theme-unresolved`), an underline other
+than single, written as single (`layout/underline-approximated`).
+Highlight, character spacing, caps and the other run properties are not
+carried.
+
+The last section's headers and footers reach the odt's master page
+`Standard`: the default one (`style:header`), the first page's under
+`titlePg` (`style:header-first`), the even pages' under the settings'
+`evenAndOddHeaders` (`style:header-left`), and the footers' alike, each
+read and written as the body is (their styles `MP<n>` and `MT<n>` in
+`styles.xml`). A `PAGE` field, there or in the body, is written as
+`text:page-number`, `NUMPAGES` and `SECTIONPAGES` as `text:page-count`.
+Recorded: another field in a header or footer keeps the text it shows
+(`field/static`, once per name); a reference whose part did not read
+(`layout/region-unresolved`).
+
+Footnotes and endnotes reach the odt as `text:note` at their reference:
+the class, the number among the class's automatic notes or the custom
+mark, the body read and written as the body is. Recorded: a reference
+whose note did not read (`note/unresolved`).
+
+With `layout: false` the output is tier 2, the bytes of 1.x. Named styles are not carried yet. The measures are the
+suites `crossformat-docx-odt-layout`, `crossformat-docx-odt-paragraphs`,
+`crossformat-docx-odt-runs`, `crossformat-docx-odt-headers` and
+`crossformat-docx-odt-notes` ([coverage](./guide/coverage.md)).
 The **measured tier** column above mirrors, for a reader at the call
 site, the tier column of [`docs/loss-matrix.md`](./loss-matrix.md)'s own
 "Cross-format pairs" table — that table, backed by the

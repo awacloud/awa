@@ -1,4 +1,13 @@
 node_modules/
+# The playgrounds install with bun (their bun.lock files are tracked); an
+# `npm i` would add an untracked package-lock.json beside them.
+package-lock.json
+# check-usecases.mjs writes its report here when no --out is given.
+usecases/.report/
+# Next rewrites next-env.d.ts on every dev/build (dev vs build variant) and
+# keeps its telemetry state in cache/: run output, never source.
+integrations/next/next-env.d.ts
+integrations/next/cache/
 dist/
 .vite/
 *.tsbuildinfo

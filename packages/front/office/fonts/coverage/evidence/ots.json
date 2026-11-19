@@ -10,7 +10,7 @@
     "imageId": "sha256:33f848fc437b3d712a9c61175624539812ea46adf576e9d6d06d9d644961239e",
     "version": "ots 9.3.0"
   },
-  "criterion": "OTS 9.3.0 (ots-sanitize, the default table actions) exits 0 and reports no ERROR message for the subset (WARNING messages are recorded, not failing); a subset counts only when OTS accepts its source face too — a face it refuses, or one subsetForPdf refuses with a typed error, is skipped with the reason; documents: 42 (0 written, 42 round trips)",
+  "criterion": "OTS 9.3.0 (ots-sanitize, the default table actions) exits 0 and reports no ERROR message for the subset (WARNING messages are recorded, not failing); a subset counts only when OTS accepts its source face too — a face it refuses, or one subsetForPdf refuses with a typed error, is skipped with the reason; documents: 46 (0 written, 46 round trips)",
   "documents": [
     {
       "file": "caladea-bold--text.ttf",
@@ -1027,8 +1027,56 @@
           "text": "glyf: empty gid 2006 used as component in glyph 2037"
         }
       ]
+    },
+    {
+      "file": "source-sans-3-regular--text.otf",
+      "kind": "round-trip",
+      "sha256": "d3ca74888454dacfa7b5a8f445700c8d68e4007a347d0b399cb83cbbd24ada27",
+      "errors": []
+    },
+    {
+      "file": "source-sans-3-regular--text.source.otf",
+      "kind": "source",
+      "sha256": "08df266400933d3178d081a45f94a08814c3e55b4b7dd2e0ff69cb1329f13ab6",
+      "errors": []
+    },
+    {
+      "file": "source-sans-3-regular--full.otf",
+      "kind": "round-trip",
+      "sha256": "e8c1d6181a9c103130b70a083cbf64a39f664ff5ed36642a2e5317345def5a4c",
+      "errors": []
+    },
+    {
+      "file": "source-sans-3-regular--full.source.otf",
+      "kind": "source",
+      "sha256": "08df266400933d3178d081a45f94a08814c3e55b4b7dd2e0ff69cb1329f13ab6",
+      "errors": []
+    },
+    {
+      "file": "source-sans-3-vf-upright--text.otf",
+      "kind": "round-trip",
+      "sha256": "5daa33f2cea6d7abc22e09798b771f8ea156dff238872b70fc56b3814ebe3134",
+      "errors": []
+    },
+    {
+      "file": "source-sans-3-vf-upright--text.source.otf",
+      "kind": "source",
+      "sha256": "3d0dfd6a3a644ab3d462a737923ffac41fb0ae007ce9ba83c24e6bfa76aa56c7",
+      "errors": []
+    },
+    {
+      "file": "source-sans-3-vf-upright--full.otf",
+      "kind": "round-trip",
+      "sha256": "b4014c8182802f686b853184211c2cbfcb4fb376f7d0cb2b534f7b0429df66bd",
+      "errors": []
+    },
+    {
+      "file": "source-sans-3-vf-upright--full.source.otf",
+      "kind": "source",
+      "sha256": "3d0dfd6a3a644ab3d462a737923ffac41fb0ae007ce9ba83c24e6bfa76aa56c7",
+      "errors": []
     }
   ],
-  "date": "2026-10-24",
-  "commit": "ae11503649e334242baa417e3c352ee69af03b64"
+  "date": "2026-11-08",
+  "commit": "50fba1dc292db494c83b388211588c754eb9523a"
 }

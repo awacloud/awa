@@ -1,6 +1,9 @@
 # awa
 
-`awa` is the published part of the awa platform. It carries two sets of
+> Zero-dependency JavaScript browser framework, WebAssembly crypto, and office libraries for PDF, Word, Excel, ODF and Markdown.
+
+`awa` is the published part of the awa platform, for developers who want to
+build on plain ES modules without a mandatory bundler. It carries two sets of
 packages: the Apache-2.0 core — the `@awacloud/fw` browser framework (zero
 npm runtime dependencies), its WebAssembly crypto companion, and the three
 build tools that produce them — and the AGPL-3.0-only / commercial office
@@ -13,13 +16,40 @@ packages; it is not part of this repository's published subset. The
 repository also carries the sources of two browser apps, AWA Viewer and AWA
 Notepad (see [Apps](#apps)).
 
+## Quick start
+
+Install one package, here the framework, from the npm registry:
+
+```bash
+npm i @awacloud/fw
+```
+
+Then, on Bun (or any ESM runtime that resolves the package), import the entry
+and resolve modules from the runtime:
+
+```js
+import fw from '@awacloud/fw';
+import modules from '@awacloud/fw/core/modules.js';
+fw.runtime.registerAll(modules);
+
+const hex = fw.runtime.resolve('hex');
+const utf8 = fw.runtime.resolve('utf8');
+console.log(hex.fromBytes(utf8.toBytes('fw')));   // 6677
+```
+
+The package's own README covers the browser setup with an import map; the
+other packages are listed below, each with its own README.
+
 ## Published packages
 
 The Apache-2.0 packages were first published at `0.1.0` on 2026-09-29 (lot
 1); the office libraries were published at `1.0.0` on 2026-10-07 (lot 2),
-and seven of them at `1.1.0` on 2026-10-21 (`@awacloud/oconv-fonts` stays at
-`1.0.0`). The `Published` column gives the latest version on the npm registry
-and the day it was published.
+seven of them at `1.1.0` on 2026-10-21 (`@awacloud/oconv-fonts` was not
+re-released then), and eight of them again on 2026-11-04, all at `1.2.0`
+but `@awacloud/oconv-fonts` at `1.1.0`: `@awacloud/pdf`, `@awacloud/ooxml`,
+`@awacloud/odf`, `@awacloud/oconv`, `@awacloud/tool-convert`, `@awacloud/md`,
+`@awacloud/fonts` and `@awacloud/oconv-fonts`. The `Published` column gives
+the latest version on the npm registry and the day it was published.
 
 | Package | Directory | Repository | npm | Published | Lot | Licence |
 |---|---|---|---|---|---|---|
@@ -28,14 +58,14 @@ and the day it was published.
 | `@awacloud/tool-fw-bundler` | [`tools/fw-bundler`](tools/fw-bundler/) | [`awacloud/tool-fw-bundler`](https://github.com/awacloud/tool-fw-bundler) | [`@awacloud/tool-fw-bundler`](https://www.npmjs.com/package/@awacloud/tool-fw-bundler) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
 | `@awacloud/tool-fw-codegen` | [`tools/fw-codegen`](tools/fw-codegen/) | [`awacloud/tool-fw-codegen`](https://github.com/awacloud/tool-fw-codegen) | [`@awacloud/tool-fw-codegen`](https://www.npmjs.com/package/@awacloud/tool-fw-codegen) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
 | `@awacloud/tool-wasm-crypto` | [`tools/wasm-crypto`](tools/wasm-crypto/) | [`awacloud/tool-wasm-crypto`](https://github.com/awacloud/tool-wasm-crypto) | [`@awacloud/tool-wasm-crypto`](https://www.npmjs.com/package/@awacloud/tool-wasm-crypto) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
-| `@awacloud/pdf` | [`packages/front/office/pdf`](packages/front/office/pdf/) | [`awacloud/pdf`](https://github.com/awacloud/pdf) | [`@awacloud/pdf`](https://www.npmjs.com/package/@awacloud/pdf) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
-| `@awacloud/ooxml` | [`packages/front/office/ooxml`](packages/front/office/ooxml/) | [`awacloud/ooxml`](https://github.com/awacloud/ooxml) | [`@awacloud/ooxml`](https://www.npmjs.com/package/@awacloud/ooxml) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
-| `@awacloud/odf` | [`packages/front/office/odf`](packages/front/office/odf/) | [`awacloud/odf`](https://github.com/awacloud/odf) | [`@awacloud/odf`](https://www.npmjs.com/package/@awacloud/odf) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
-| `@awacloud/md` | [`packages/front/office/md`](packages/front/office/md/) | [`awacloud/md`](https://github.com/awacloud/md) | [`@awacloud/md`](https://www.npmjs.com/package/@awacloud/md) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
-| `@awacloud/fonts` | [`packages/front/office/fonts`](packages/front/office/fonts/) | [`awacloud/fonts`](https://github.com/awacloud/fonts) | [`@awacloud/fonts`](https://www.npmjs.com/package/@awacloud/fonts) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
-| `@awacloud/oconv` | [`packages/front/office/oconv`](packages/front/office/oconv/) | [`awacloud/oconv`](https://github.com/awacloud/oconv) | [`@awacloud/oconv`](https://www.npmjs.com/package/@awacloud/oconv) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
-| `@awacloud/oconv-fonts` | [`packages/front/office/oconv-fonts`](packages/front/office/oconv-fonts/) | [`awacloud/oconv-fonts`](https://github.com/awacloud/oconv-fonts) | [`@awacloud/oconv-fonts`](https://www.npmjs.com/package/@awacloud/oconv-fonts) | `1.0.0` · 2026-10-07 | 2 | AGPL-3.0-only |
-| `@awacloud/tool-convert` | [`tools/convert`](tools/convert/) | [`awacloud/tool-convert`](https://github.com/awacloud/tool-convert) | [`@awacloud/tool-convert`](https://www.npmjs.com/package/@awacloud/tool-convert) | `1.1.0` · 2026-10-21 | 2 | AGPL-3.0-only |
+| `@awacloud/pdf` | [`packages/front/office/pdf`](packages/front/office/pdf/) | [`awacloud/pdf`](https://github.com/awacloud/pdf) | [`@awacloud/pdf`](https://www.npmjs.com/package/@awacloud/pdf) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/ooxml` | [`packages/front/office/ooxml`](packages/front/office/ooxml/) | [`awacloud/ooxml`](https://github.com/awacloud/ooxml) | [`@awacloud/ooxml`](https://www.npmjs.com/package/@awacloud/ooxml) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/odf` | [`packages/front/office/odf`](packages/front/office/odf/) | [`awacloud/odf`](https://github.com/awacloud/odf) | [`@awacloud/odf`](https://www.npmjs.com/package/@awacloud/odf) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/md` | [`packages/front/office/md`](packages/front/office/md/) | [`awacloud/md`](https://github.com/awacloud/md) | [`@awacloud/md`](https://www.npmjs.com/package/@awacloud/md) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/fonts` | [`packages/front/office/fonts`](packages/front/office/fonts/) | [`awacloud/fonts`](https://github.com/awacloud/fonts) | [`@awacloud/fonts`](https://www.npmjs.com/package/@awacloud/fonts) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/oconv` | [`packages/front/office/oconv`](packages/front/office/oconv/) | [`awacloud/oconv`](https://github.com/awacloud/oconv) | [`@awacloud/oconv`](https://www.npmjs.com/package/@awacloud/oconv) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/oconv-fonts` | [`packages/front/office/oconv-fonts`](packages/front/office/oconv-fonts/) | [`awacloud/oconv-fonts`](https://github.com/awacloud/oconv-fonts) | [`@awacloud/oconv-fonts`](https://www.npmjs.com/package/@awacloud/oconv-fonts) | `1.1.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/tool-convert` | [`tools/convert`](tools/convert/) | [`awacloud/tool-convert`](https://github.com/awacloud/tool-convert) | [`@awacloud/tool-convert`](https://www.npmjs.com/package/@awacloud/tool-convert) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
 
 ### Install
 
@@ -90,15 +120,17 @@ carried here for reading and audit; their build and tests run from the full
 monorepo, and the viewer's core is a package that is not part of this
 repository's published subset.
 
-## Project
+## Experimental packages
 
-- Security: [SECURITY.md](SECURITY.md) — vulnerability reporting and
-  release verification ([§ Release integrity](SECURITY.md#release-integrity),
-  [§ Release keys](SECURITY.md#release-keys)).
-- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
-- Maintenance: [MAINTENANCE.md](MAINTENANCE.md) — versioning, support
-  windows and release discipline.
-- Website: https://awaforge.eu.
+Work in progress - Experimental - R&D: these packages are shared as source
+only and are not published to npm, so there is no `npm i` line for them;
+their API may change or disappear and they carry no support commitment.
+
+| Package | Directory | Licence |
+|---|---|---|
+| `@awacloud/media-audio` | [`packages/front/media/audio`](packages/front/media/audio/) | AGPL-3.0-only |
+| `@awacloud/media-stream` | [`packages/front/media/stream`](packages/front/media/stream/) | AGPL-3.0-only |
+| `@awacloud/media-video` | [`packages/front/media/video`](packages/front/media/video/) | AGPL-3.0-only |
 
 ## Licence
 
@@ -115,3 +147,13 @@ of the AGPL-3.0, and names where the commercial licence is offered:
 https://awacloud.com/offers.
 
 AWACLOUD and AWA are trademarks of Towards Conseil, used under licence.
+
+## Project
+
+- Security: [SECURITY.md](SECURITY.md) — vulnerability reporting and
+  release verification ([§ Release integrity](SECURITY.md#release-integrity),
+  [§ Release keys](SECURITY.md#release-keys)).
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
+- Maintenance: [MAINTENANCE.md](MAINTENANCE.md) — versioning, support
+  windows and release discipline.
+- Website: https://awaforge.eu/ — documentation.

@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `oconvMdToIr` — markdown text → `oconv-ir/v1` reader.
+ * @fileoverview `oconvMdToIr` — markdown text → `oconv-ir/v2` reader.
  *
  * Converts a markdown string into the FROZEN pivot IR (`oconvIr`,
  * `../ir/ir.js`), composing `@awacloud/md`'s public `md.parse` and
@@ -75,7 +75,7 @@ export const oconvMdToIr = {
         const { node: irNode, doc: irDoc } = oconvIrMod;
 
         /**
-         * Convert a markdown string into an `oconv-ir/v1` document plus its
+         * Convert a markdown string into an `oconv-ir/v2` document plus its
          * loss ledger and detected front matter.
          *
          * @param {string} markdown

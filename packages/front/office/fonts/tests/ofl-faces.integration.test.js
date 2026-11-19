@@ -116,6 +116,20 @@ describe('the measure’s own rules', () => {
         });
     });
 
+    test('a changed CFF outline fails the round-trip of a CFF face (T11)', () => {
+        const ss3 = face('source-sans-3-regular').bytes;
+        expect(subsetRoundTrip(ss3, rt)).toMatchObject({ missing: 0, widthDiffs: 0, pathDiffs: 0 });
+        // The subset's CFF table (shorter than the source's) read with its charstrings reversed.
+        const real = rt.resolve('tableCff');
+        const srcLength = tablesOf(ss3)['CFF '].bytes.length;
+        const reversed = { ...real, parseCff(b) {
+            const p = real.parseCff(b);
+            if (b.length < srcLength) p.fonts[0].charStringsIndex.items.reverse();
+            return p;
+        } };
+        expect(subsetRoundTrip(ss3, standIn('tableCff', reversed)).pathDiffs).toBeGreaterThan(1000);
+    });
+
     test('a parse failure, or a CharStrings count other than numGlyphs, fails the parse case', () => {
         const bad = lib.slice();
         const name = tablesOf(bad).name;
@@ -155,29 +169,30 @@ describe('the measure’s own rules', () => {
 });
 
 describe('the OFL faces', () => {
-    test('ofl-faces: 7 of 7 cases; the two CFF subsets skipped', () => {
+    test('ofl-faces: 9 of 9 cases; no subset skipped (T11: the CFF one, T12: the CFF2 one)', () => {
         expect(result.cases).toEqual([
             { case: 'liberation-sans-regular :: parse', ok: true },
             { case: 'liberation-sans-regular :: subset round-trip', ok: true },
             { case: 'source-sans-3-regular :: parse', ok: true },
+            { case: 'source-sans-3-regular :: subset round-trip', ok: true },
             { case: 'source-sans-3-vf-upright :: parse', ok: true },
+            { case: 'source-sans-3-vf-upright :: subset round-trip', ok: true },
             { case: 'kalnia-glaze :: parse', ok: true },
             { case: 'kalnia-glaze :: colr-v1 paints', ok: true },
             { case: 'kalnia-glaze :: subset round-trip', ok: true }
         ]);
-        expect(result.skipped).toEqual([
-            { case: 'source-sans-3-regular :: subset round-trip', reason: SUBSET_SKIP },
-            { case: 'source-sans-3-vf-upright :: subset round-trip', reason: SUBSET_SKIP }
-        ]);
+        expect(result.skipped).toEqual([]);
+        expect(SUBSET_SKIP).toContain('fonts/subset-bad-font');
     });
 
-    test('the CFF and CFF2 faces are refused by subsetForPdf with the typed fonts/subset-bad-font', () => {
+    test('without { cff: true } the CFF and CFF2 faces are refused by the typed fonts/subset-bad-font', () => {
         const { subsetForPdf } = rt.resolve('embedSubsetForPdf');
         const { ContractError } = rt.resolve('fontErrors');
-        for (const id of ['source-sans-3-regular', 'source-sans-3-vf-upright']) {
+        const cases = [['source-sans-3-regular', undefined], ['source-sans-3-vf-upright', undefined]];
+        for (const [id, opts] of cases) {
             const font = rt.resolve('fonts').read(face(id).bytes);
             let err;
-            try { subsetForPdf(font, new Set([0x41])); } catch (e) { err = e; }
+            try { subsetForPdf(font, new Set([0x41]), opts); } catch (e) { err = e; }
             expect([id, err instanceof ContractError, err && err.code]).toEqual([id, true, 'fonts/subset-bad-font']);
         }
     });

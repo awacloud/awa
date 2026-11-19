@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -14,6 +14,7 @@ import { aes } from '../cipher/aes.js';
 import { bitArray } from '../utils/bitArray.js';
 import { utf8 } from '../../io/codec/utf8.js';
 import { hex } from '../../io/codec/hex.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _ba = bitArray.factory();
 const _utf8 = utf8.factory();
@@ -86,6 +87,22 @@ describe('ecc module', () => {
             const sig = sec.sign(_sha256.hash('original'));
             const result = pub.verify(_sha256.hash('tampered'), sig);
             expect(result).toBe(false);
+        });
+
+        test('a signature that does not verify is reported at warn level, not error', () => {
+            const { pub, sec } = _ecc.ecdsa.generateKeys(256);
+            const sig = sec.sign(_sha256.hash('original'));
+        const _logs = { warn: [], error: [] };
+        const _w = console.warn, _e = console.error;
+        console.warn = (...a) => { _logs.warn.push(a.join(' ')); };
+        console.error = (...a) => { _logs.error.push(a.join(' ')); };
+            let r;
+            try { r = pub.verify(_sha256.hash('tampered'), sig); } finally {
+        console.warn = _w; console.error = _e;
+            }
+            expect(r).toBe(false);
+            expect(_logs.error.length).toBe(0);
+            expect(_logs.warn.some((m) => m.includes('CORRUPT'))).toBe(true);
         });
 
         test('RFC 6979 deterministic - same (msg, sk) gives identical signatures', () => {
@@ -422,7 +439,7 @@ const _ECC_KEYVER = [
     { tg: 4, tc: 12, curve: 'P-521', js_curve: 'c521', qx: '01E70C8B3B501B9537FD0A182DDF9A1244D5F6885E1BA03EB23E6A5B0B558BE03CDF0B282F72BEEDCC9417CEDEA7CB6C6188E567105A5CB0FD89648FB6A55148B891', qy: '00B1949040F8C34F8F201EE63C1A203BA01154FA02EF9A80BA1F8D2A6438FE73EAD16B9A7867A8AAB03559C80948A08B8B44E90DF90B94ED8F0CE3062EC98BE7290A', pass: true }
 ];
 
-describe('ecc - ACVP ECDSA-KeyVer-FIPS186-5 (subgroup check, iteration C1)', () => {
+describe('ecc - ACVP ECDSA-KeyVer-FIPS186-5 (subgroup check)', () => {
     test.each(_ECC_KEYVER)(
         'tgId=$tg tcId=$tc ($curve, expected=$pass): _internal.isValidPublicKey',
         (v) => {
@@ -430,7 +447,7 @@ describe('ecc - ACVP ECDSA-KeyVer-FIPS186-5 (subgroup check, iteration C1)', () 
             // by ecc.deserialize / curve.fromBits. Both halves are zero-padded
             // to the full coordinate byte-length already in the ACVP fixture.
             const pointHex = v.qx + v.qy;
-            const ok = _ecc._internal.isValidPublicKey(v.js_curve, pointHex);
+            const ok = _ecc[INTERNAL].isValidPublicKey(v.js_curve, pointHex);
             expect(ok).toBe(v.pass);
         },
         15_000

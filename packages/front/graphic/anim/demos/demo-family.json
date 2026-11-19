@@ -1,0 +1,19 @@
+{
+  "title": "@awacloud/graphic-anim — demos",
+  "scope": "packages/front",
+  "base": "/packages/front/graphic/anim/demos/",
+  "description": "One runnable page per graphic.anim capability — clock, engine, frames, hypertree, lumen-rail, neon-boot, pageflip, scene, svg3d, towards-anm.",
+  "serve": "dev",
+  "demos": [
+    { "slug": "clock", "title": "Clock", "summary": "Analog clock — legacy clock.js reproduction (scene + tween + scheduler).", "static": false },
+    { "slug": "engine", "title": "Engine", "summary": "Tween + timeline + stagger on real <svg> shapes.", "static": false },
+    { "slug": "frames", "title": "Frames", "summary": "Discrete frame-sequence primitive, play/pause/scrub.", "static": false },
+    { "slug": "hypertree", "title": "Hypertree", "summary": "Radial tree, click-to-focus, re-entrancy guard.", "static": false },
+    { "slug": "lumen-rail", "title": "Lumen Rail", "summary": "A one-minute rail shooter: pooled sprites (no DOM node per frame), the svg3d kernels for the perspective, keys or drag to steer, an autopilot.", "static": false },
+    { "slug": "neon-boot", "title": "Neon Grid", "summary": "An 11 s, five-act boot sequence on one timeline, then a pure function of time: scrub it, slow it down, read the code of each act.", "static": false },
+    { "slug": "pageflip", "title": "Pageflip", "summary": "Six-page book, page-curl fold, rapid-turn guard.", "static": false },
+    { "slug": "scene", "title": "Scene", "summary": "JSON to SVG scene/event DSL, a traffic light.", "static": false },
+    { "slug": "svg3d", "title": "Svg3d", "summary": "Software-3D heightmap terrain in SVG, orbiting camera.", "static": false },
+    { "slug": "towards-anm", "title": "Towards anm", "summary": "Acceptance demo — legacy TOWARDS-ANM choreography, modern engine only.", "static": false }
+  ]
+}

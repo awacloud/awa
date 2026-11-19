@@ -98,9 +98,13 @@ export declare function asTyped(runtime: ModuleRuntime): TypedModuleRuntime;
  * a literal). Only `resolve(name)` for modules you injected ; an unregistered
  * name type-checks but throws "Module not found" at runtime.
  *
- * @param modules Array of module definitions, or a namespace object whose values
- *   are module definitions (the shape of `@awacloud/fw/core/modules`).
+ * @param modules An array of module definitions (the default export of
+ *   `@awacloud/fw/core/modules`), an object whose values are module
+ *   definitions, or a module namespace whose values are such arrays
+ *   (`import * as ns from '@awacloud/fw/core/modules'`).
  */
 export declare function createRuntime(
-    modules?: readonly ModuleDefinition[] | Record<string, ModuleDefinition>
+    modules?:
+        | readonly ModuleDefinition[]
+        | Record<string, ModuleDefinition | readonly ModuleDefinition[]>
 ): TypedModuleRuntime;

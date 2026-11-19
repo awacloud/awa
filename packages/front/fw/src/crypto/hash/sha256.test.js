@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -366,4 +366,41 @@ describe('sha256 - ACVP SHA2-256-1.0', () => {
         }, 5 * 60 * 1000);  // 5 min upper bound
     });
 
+});
+
+// ── Uint8Array input: hashed as its bytes (FIPS 180-4) ─────────────────────
+// A Uint8Array used to be treated as a bitArray of 32-bit words, so
+// `hash(utf8 'abc' bytes)` returned a wrong but deterministic digest. The
+// oracle is the bitArray route, itself pinned by the FIPS vectors above.
+describe('sha256 - Uint8Array input', () => {
+    const toBa = (u8) => _ba.ui8_to_ba(u8);
+
+    test('hash(Uint8Array) equals hash(bitArray of the same bytes)', () => {
+        const msg = _utf8.toBytes('abc');
+        expect(toHex(_sha.hash(msg))).toBe(toHex(_sha.hash(toBa(msg))));
+    });
+
+    test('hash(Uint8Array) of the FIPS "abc" message gives the FIPS digest', () => {
+        expect(toHex(_sha.hash(_utf8.toBytes('abc')))).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+    });
+
+    test('empty and non-word-aligned lengths match the bitArray route', () => {
+        for (const n of [0, 1, 3, 5, 63, 64, 65, 127, 128, 129, 1000]) {
+            const u8 = new Uint8Array(n);
+            for (let i = 0; i < n; i++) u8[i] = (i * 31 + 7) & 0xff;
+            expect(toHex(_sha.hash(u8))).toBe(toHex(_sha.hash(toBa(u8))));
+        }
+    });
+
+    test('streaming update() mixes Uint8Array, bitArray and string chunks', () => {
+        const parts = [_utf8.toBytes('hello '), toBa(_utf8.toBytes('wide ')), 'world'];
+        const h = new _sha.fn();
+        for (const p of parts) h.update(p);
+        expect(toHex(h.finalize())).toBe(toHex(_sha.hash('hello wide world')));
+    });
+
+    test('a Uint8Array view is hashed over its own window only', () => {
+        const big = _utf8.toBytes('xxabcxx');
+        expect(toHex(_sha.hash(big.subarray(2, 5)))).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+    });
 });

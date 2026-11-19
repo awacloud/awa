@@ -37,8 +37,8 @@ import { errorDetail, fontsRuntime, measure } from './fonttools.js';
 /** The fixture directory (`MANIFEST.json`, `vendor/`). */
 export const FIXTURE_DIR = fileURLToPath(new URL('../_fixtures/ofl-faces/', import.meta.url));
 
-/** Reason a CFF / CFF2 face's round-trip is not run. */
-export const SUBSET_SKIP = 'subsetForPdf subsets glyf outlines only (README known limit; it refuses a CFF or CFF2 font with the typed fonts/subset-bad-font)';
+/** Reason a face's round-trip is not run: neither glyf, CFF nor CFF2 outlines. */
+export const SUBSET_SKIP = 'subsetForPdf subsets glyf, CFF and CFF2 outlines (it refuses any other font with the typed fonts/subset-bad-font)';
 
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 
@@ -94,8 +94,51 @@ export function paintGraphs(colrBytes, rt) {
 }
 
 /**
- * Subset a `glyf` font to every code point it maps, read the subset back
- * and compare each code point's advance and outline.
+ * A face's CFF outlines: `(gid) => string`, the commands its charstring
+ * decodes to (`tableCff.decodeCharstring`, with its global and local
+ * subroutines, its width defaults and its `seac` components), as JSON;
+ * null for a face without a `CFF ` table.
+ * @param {Uint8Array} bytes
+ * @param {{ resolve(name: string): any }} rt
+ * @returns {((gid: number) => string) | null}
+ */
+export function cffOutlines(bytes, rt) {
+    const tables = rt.resolve('fontSfnt').parseSfnt(bytes).tables;
+    const cffMod = rt.resolve('tableCff');
+    if (!tables['CFF '] && tables.CFF2) {
+        // CFF2: the default instance (blend at its default operands).
+        const cff2Mod = rt.resolve('tableCff2');
+        const p = cff2Mod.parseCff2(tables.CFF2.bytes);
+        const priv = p.fdArray[0].private;
+        const regionCounts = p.vstore ? cff2Mod.regionCounts(p.vstore.data) : [];
+        const local = priv && priv.localSubrIndex ? priv.localSubrIndex.items : [];
+        return (gid) => JSON.stringify(cffMod.decodeCharstring(p.charStringsIndex.items[gid], {
+            globalSubrs: p.globalSubrIndex.items, localSubrs: local, cff2: { regionCounts, vsindex: priv ? priv.vsindex : 0 }
+        }).commands);
+    }
+    const table = tables['CFF '];
+    if (!table) return null;
+    const cff = cffMod.parseCff(table.bytes);
+    const f = cff.fonts[0];
+    const std = rt.resolve('encodingStandard').STANDARD;
+    const byName = new Map((f.glyphNames || []).map((n, g) => [n, g]));
+    return (gid) => {
+        const { privateDict, localSubrIndex } = cffMod.privateForGlyph(f, gid);
+        const num = (op, d) => { const v = privateDict && privateDict.get(op); return v && v.length ? v[0] : d; };
+        const r = cffMod.decodeCharstring(f.charStringsIndex.items[gid], {
+            globalSubrs: cff.globalSubrIndex.items,
+            localSubrs: localSubrIndex ? localSubrIndex.items : [],
+            nominalWidthX: num(21, 0), defaultWidthX: num(20, 0),
+            seacGlyph: (code) => { const g = byName.get(std[code]); return g === undefined ? null : f.charStringsIndex.items[g]; }
+        });
+        return JSON.stringify(r.commands);
+    };
+}
+
+/**
+ * Subset a `glyf` or name-keyed CFF font (`{ cff: true }`) to every code
+ * point it maps, read the subset back and compare each code point's
+ * advance and outline (a CFF glyph's by `cffOutlines`).
  * @param {Uint8Array} bytes
  * @param {{ resolve(name: string): any }} rt
  * @returns {{ codePoints: number, glyphs: number, subsetGlyphs: number, missing: number, widthDiffs: number, pathDiffs: number, first: string|null }}
@@ -105,8 +148,11 @@ export function subsetRoundTrip(bytes, rt) {
     const { subsetForPdf } = rt.resolve('embedSubsetForPdf');
     const font = api.read(bytes);
     const cps = [...font.unicodeMap.keys()].sort((a, b) => a - b);
-    const back = api.read(subsetForPdf(font, new Set(cps)).subsetBytes);
+    const subsetBytes = subsetForPdf(font, new Set(cps), font.glyphTable ? undefined : { cff: true }).subsetBytes;
+    const back = api.read(subsetBytes);
     const r = { codePoints: cps.length, glyphs: font.numGlyphs, subsetGlyphs: back.numGlyphs, missing: 0, widthDiffs: 0, pathDiffs: 0, first: null };
+    const srcCff = cffOutlines(bytes, rt);
+    const backCff = srcCff ? cffOutlines(subsetBytes, rt) : null;
     const svg = (g) => (g.path ? g.path.toSvgPath() : '');
     for (const cp of cps) {
         const u = `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`;
@@ -115,7 +161,8 @@ export function subsetRoundTrip(bytes, rt) {
         const a = font.getGlyphByCodePoint(cp);
         const b = back.getGlyphByIndex(gid);
         if (a.advanceWidth !== b.advanceWidth) { r.widthDiffs++; r.first = r.first || `${u} advance ${a.advanceWidth} -> ${b.advanceWidth}`; }
-        if (svg(a) !== svg(b)) { r.pathDiffs++; r.first = r.first || `${u} outline differs`; }
+        const differs = srcCff ? srcCff(font.glyphIndexForCodePoint(cp, { strict: true })) !== backCff(gid) : svg(a) !== svg(b);
+        if (differs) { r.pathDiffs++; r.first = r.first || `${u} outline differs`; }
     }
     return r;
 }
@@ -171,7 +218,7 @@ export function measureFaces(faces, rt = fontsRuntime()) {
         }
 
         const id = `${face.id} :: subset round-trip`;
-        if (!tables.glyf) { out.skipped.push({ case: id, reason: SUBSET_SKIP }); continue; }
+        if (!tables.glyf && !tables['CFF '] && !tables.CFF2) { out.skipped.push({ case: id, reason: SUBSET_SKIP }); continue; }
         try {
             const r = subsetRoundTrip(face.bytes, rt);
             const bad = r.missing + r.widthDiffs + r.pathDiffs;

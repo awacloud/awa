@@ -10,7 +10,12 @@
  *
  * The three element types (slide, slide layout, slide master) share the
  * same body content : `<p:cSld>` containing a `<p:spTree>` of shapes,
- * group shapes, pictures, tables and charts. This module covers `<p:sp>`
+ * group shapes, pictures, tables and charts (a group shape, `p:grpSp`, is
+ * typed as `{ type: 'group', shapes, _extras }` with the `typedGroups`
+ * read option, else kept verbatim). So do a notes slide
+ * (`<p:notes>`), the notes master and the handout master, parsed and
+ * written by the same code (`parseNotesSlide` …): the core's read does not
+ * load those parts, an extension may (`pptxFullBundle`). This module covers `<p:sp>`
  * (shapes with text bodies) — the dominant case — and preserves the
  * rest verbatim through `_extras`.
  *
@@ -56,13 +61,15 @@ export const pptxSlide = {
         const A_NS = NS.A;
         const R_NS = NS.R;
 
-        // `_extras` of a slide object holds the leftovers of the root AND of
-        // <p:cSld>: each is written where the schema places it. Slide-level
-        // elements (CT_Slide, CT_SlideLayout, CT_SlideMaster) never go into
-        // <p:cSld>, <p:cSld>-only ones (CT_CommonSlideData) never go to the
-        // root; a name allowed in both (p:extLst) or unknown goes to both.
+        // `_extras` of a slide object holds the leftovers of the root, or of
+        // <p:cSld> when the object has no `cSldExtras`: each is written where
+        // the schema places it. Slide-level elements (CT_Slide,
+        // CT_SlideLayout, CT_SlideMaster) never go into <p:cSld>,
+        // <p:cSld>-only ones (CT_CommonSlideData) never go to the root; a
+        // name allowed in both (p:extLst) or unknown is written once, at the
+        // level its list belongs to.
         const ROOT_ONLY = new Set(['p:transition', 'p:timing', 'p:hf', 'p:clrMap',
-            'p:clrMapOvr', 'p:sldLayoutIdLst', 'p:txStyles']);
+            'p:clrMapOvr', 'p:sldLayoutIdLst', 'p:txStyles', 'p:notesStyle']);
         const CSLD_ONLY = new Set(['p:custDataLst', 'p:controls']);
         // An mc:AlternateContent is placed as the element it holds.
         function placedName(c) {
@@ -79,7 +86,7 @@ export const pptxSlide = {
         const ordered = (children, seq) => (seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children);
         const CSLD_SEQ = orderSeq(['p:bg', 'p:spTree', 'p:custDataLst', 'p:controls', 'p:extLst']);
         const ROOT_SEQ = orderSeq(['p:cSld', ['p:clrMap', 'p:clrMapOvr'], 'p:sldLayoutIdLst',
-            'p:transition', 'p:timing', 'p:hf', 'p:txStyles', 'p:extLst']);
+            'p:transition', 'p:timing', 'p:hf', ['p:txStyles', 'p:notesStyle'], 'p:extLst']);
 
         // --- Shape ---
 
@@ -112,7 +119,7 @@ export const pptxSlide = {
                 // Also expose typed shape properties for shapes that
                 // carry preset geometry / fill / line — placeholders
                 // typically don't, free-form shapes do.
-                const typed = shapeMod.parseShapeProperties(spPr);
+                const typed = shapeMod.parseShapeProperties(spPr, opts);
                 if (typed) out.shapeProps = typed;
             }
             const styleEl = xml.findChild(spEl, 'p:style');
@@ -187,6 +194,12 @@ export const pptxSlide = {
                         shapes.push({ type: 'graphicFrame', node: c });
                         break;
                     }
+                    case 'p:grpSp':
+                        // `opts.typedGroups`: a group shape, typed as the
+                        // tree is; else kept verbatim (the default).
+                        if (opts && opts.typedGroups) shapes.push(parseGroup(c, opts));
+                        else extras.push(c);
+                        break;
                     case 'p:nvGrpSpPr':
                     case 'p:grpSpPr':
                         extras.push(c);
@@ -198,7 +211,17 @@ export const pptxSlide = {
             return { shapes, extras };
         }
 
-        function renderSpTree({ shapes, extras }) {
+        // A group shape (`p:grpSp`, CT_GroupShape, the tree's own type): its
+        // shapes, and its `p:nvGrpSpPr` / `p:grpSpPr` and other children in
+        // `_extras`.
+        function parseGroup(el, opts) {
+            const tree = parseSpTree(el, opts);
+            const out = { type: 'group', shapes: tree.shapes };
+            if (tree.extras.length) out._extras = tree.extras;
+            return out;
+        }
+
+        function renderSpTree({ shapes, extras }, tag = 'p:spTree') {
             const children = [];
             // Header siblings (nvGrpSpPr + grpSpPr) appear before shapes
             // — emit preserved extras first.
@@ -222,9 +245,10 @@ export const pptxSlide = {
                 else if (sp.type === 'table')          children.push(tblMod.renderGraphicFrame(sp));
                 else if (sp.type === 'chart')          children.push(chartMod.renderGraphicFrame(sp));
                 else if (sp.type === 'graphicFrame' && sp.node) children.push(sp.node);
+                else if (sp.type === 'group') children.push(renderSpTree({ shapes: sp.shapes || [], extras: sp._extras }, 'p:grpSp'));
             }
             for (const ex of tailExtras) children.push(ex);
-            return xml.el('p:spTree', {}, children);
+            return xml.el(tag, {}, children);
         }
 
         // --- cSld (common slide data) ---
@@ -269,8 +293,8 @@ export const pptxSlide = {
             // `opts.typedRunColors`: see `drawingml.parseTextBody`.
             // `opts.slideExtrasByPart`: the leftovers of <p:cSld> go to
             // `cSldExtras` (always an array) and only the root's to
-            // `_extras`; without it both go to `_extras`, the root's
-            // replacing <p:cSld>'s (the 1.0.0 model).
+            // `_extras`; without it the same when the root has leftovers,
+            // else <p:cSld>'s go to `_extras`.
             return function parse(input, opts) {
                 let root;
                 if (input && input.type === 'element') {
@@ -286,9 +310,20 @@ export const pptxSlide = {
                     throw new ParseError(`pptx/${rootTag.replace(/^p:/, '')}-bad-root`, `pptx ${rootTag}: expected <${rootTag}>, got <${root.name}>`, { context: { expected: rootTag, elementName: root && root.name } });
                 }
                 const out = { type: defaults.type };
+                // The root's attributes: a layout's `type` as `layoutType`,
+                // every other one (namespace declarations and
+                // `mc:Ignorable` aside) in `rootAttrs`.
+                const rootAttrs = {};
+                for (const [k, v] of Object.entries(root.attrs || {})) {
+                    if (k === 'xmlns' || k.startsWith('xmlns:') || k === 'mc:Ignorable') continue;
+                    if (k === 'type' && rootTag === 'p:sldLayout') out.layoutType = v;
+                    else rootAttrs[k] = v;
+                }
+                if (Object.keys(rootAttrs).length) out.rootAttrs = rootAttrs;
                 const cSld = xml.findChild(root, 'p:cSld');
                 if (cSld) Object.assign(out, parseCSld(cSld, opts));
-                if (opts && opts.slideExtrasByPart) {
+                const byPart = !!(opts && opts.slideExtrasByPart);
+                if (byPart) {
                     out.cSldExtras = out._extras || [];
                     delete out._extras;
                 }
@@ -300,7 +335,15 @@ export const pptxSlide = {
                     else if (c.name === 'p:sldLayoutIdLst')
                         out.layoutIds = parseSldLayoutIdLst(c);
                     else if (c.name === 'p:txStyles') out.txStyles = c;
+                    else if (c.name === 'p:notesStyle') out.notesStyle = c;
                     else extras.push(c);
+                }
+                // With leftovers of its own, the root's go to `_extras` and
+                // <p:cSld>'s to `cSldExtras` (possibly none); without, the
+                // `_extras` are <p:cSld>'s.
+                if (extras.length && !byPart) {
+                    out.cSldExtras = out._extras || [];
+                    delete out._extras;
                 }
                 if (extras.length) out._extras = extras;
                 return out;
@@ -310,6 +353,7 @@ export const pptxSlide = {
         function buildSerializer(rootTag, defaultName, extraNs) {
             return function serialize(obj) {
                 const ns = {
+                    ...rootAttrsOf(obj),
                     'xmlns:p': P_NS,
                     'xmlns:a': A_NS,
                     'xmlns:r': R_NS,
@@ -320,11 +364,29 @@ export const pptxSlide = {
                 if (obj.clrMapOvr)     children.push(obj.clrMapOvr);
                 if (obj.layoutIds)     children.push(renderSldLayoutIdLst(obj.layoutIds));
                 if (obj.txStyles)      children.push(obj.txStyles);
+                if (obj.notesStyle)    children.push(obj.notesStyle);
+                // With `cSldExtras` the `_extras` are the root's; without,
+                // they are <p:cSld>'s, and only a root-only element of
+                // theirs is written here (an ambiguous one, p:extLst or an
+                // unknown, stays in <p:cSld>).
+                const rootOwn = Array.isArray(obj.cSldExtras);
                 if (obj._extras) {
-                    for (const ex of obj._extras) if (!CSLD_ONLY.has(placedName(ex))) children.push(ex);
+                    for (const ex of obj._extras) {
+                        const name = placedName(ex);
+                        if (rootOwn ? !CSLD_ONLY.has(name) : ROOT_ONLY.has(name)) children.push(ex);
+                    }
                 }
                 return xml.serialize(xml.el(rootTag, ns, ordered(children, ROOT_SEQ)));
             };
+        }
+
+        // A model's `rootAttrs`, as strings.
+        function rootAttrsOf(obj) {
+            const out = {};
+            for (const [k, v] of Object.entries((obj && obj.rootAttrs) || {})) {
+                if (v != null && typeof v !== 'object') out[k] = String(v);
+            }
+            return out;
         }
 
         // <p:sldLayoutIdLst> inside slide master.
@@ -359,6 +421,16 @@ export const pptxSlide = {
             return xmlText;
         }
         const serializeSlideMaster = buildSerializer('p:sldMaster', null);
+
+        // A notes slide, the notes master and the handout master: the same
+        // `<p:cSld>` model; `clrMapOvr` (notes) or `clrMap`, a notes
+        // master's `notesStyle`, the rest in `_extras`.
+        const parseNotesSlide      = buildParser('p:notes',         { type: 'notes' });
+        const parseNotesMaster     = buildParser('p:notesMaster',   { type: 'notesMaster' });
+        const parseHandoutMaster   = buildParser('p:handoutMaster', { type: 'handoutMaster' });
+        const serializeNotesSlide    = buildSerializer('p:notes', null);
+        const serializeNotesMaster   = buildSerializer('p:notesMaster', null);
+        const serializeHandoutMaster = buildSerializer('p:handoutMaster', null);
 
         function slideBytes(obj)       { return encodeText(serializeSlide(obj)); }
         function slideLayoutBytes(obj) { return encodeText(serializeSlideLayout(obj)); }
@@ -414,6 +486,8 @@ export const pptxSlide = {
             parseShape, renderShape,
             parseSlide, parseSlideLayout, parseSlideMaster,
             serializeSlide, serializeSlideLayout, serializeSlideMaster,
+            parseNotesSlide, parseNotesMaster, parseHandoutMaster,
+            serializeNotesSlide, serializeNotesMaster, serializeHandoutMaster,
             slideBytes, slideLayoutBytes, slideMasterBytes,
             parseCSld, renderCSld,
             parseSpTree, renderSpTree,
@@ -424,9 +498,15 @@ export const pptxSlide = {
             REL_TYPE_SLIDE: REL_TYPE.SLIDE,
             REL_TYPE_SLIDE_LAYOUT: REL_TYPE.SLIDE_LAYOUT,
             REL_TYPE_SLIDE_MASTER: REL_TYPE.SLIDE_MASTER,
+            REL_TYPE_NOTES_SLIDE: REL_TYPE.NOTES_SLIDE,
+            REL_TYPE_NOTES_MASTER: REL_TYPE.NOTES_MASTER,
+            REL_TYPE_HANDOUT_MASTER: REL_TYPE.HANDOUT_MASTER,
             CT_SLIDE: CT.SLIDE,
             CT_SLIDE_LAYOUT: CT.SLIDE_LAYOUT,
-            CT_SLIDE_MASTER: CT.SLIDE_MASTER
+            CT_SLIDE_MASTER: CT.SLIDE_MASTER,
+            CT_NOTES_SLIDE: CT.NOTES_SLIDE,
+            CT_NOTES_MASTER: CT.NOTES_MASTER,
+            CT_HANDOUT_MASTER: CT.HANDOUT_MASTER
         };
     }
 };

@@ -36,6 +36,7 @@ import { pdfShadingTyped } from '../extra/shading-typed.js';
 import { pdfTransparencyTyped } from '../extra/transparency-typed.js';
 import { pdfSigPades } from '../extra/sig-pades.js';
 import { pdfSigAesGcm } from '../extra/sig-aes-gcm.js';
+import { pdfCryptPublicKey } from '../extra/crypt-public-key.js';
 import { pdfDocumentParts } from '../extra/document-parts.js';
 import { pdfRedactionIso32005 } from '../extra/redaction-iso32005.js';
 import { pdfXPrepress } from '../extra/pdf-x-prepress.js';
@@ -63,9 +64,9 @@ export const pdfFullBundle = {
         'pdfOptionalContentExtended', 'pdfEmbeddedFilesPortfolio',
         'pdfAssociatedFiles2', 'pdfXmpExtended',
         'pdfLinearizationWrite', 'pdf3dRichMedia', 'pdfJbig2Read', 'pdfMisc',
-        'pdfInfoDictDeprecated', 'pdfSandbox'
+        'pdfInfoDictDeprecated', 'pdfSandbox', 'pdfCryptPublicKey'
     ],
-    deps: [pdf, pdfContentOpsExtended, pdfFontCidTyped, pdfFontColorTagging, pdfTaggedPdfTyped, pdfAnnotExtended, pdfAOutputIntent, pdfUaTagged, pdfFormActionsExtended, pdfColorSpacesExtended, pdfShadingTyped, pdfTransparencyTyped, pdfSigPades, pdfSigAesGcm, pdfDocumentParts, pdfRedactionIso32005, pdfXPrepress, pdfWellTagged, pdfOptionalContentExtended, pdfEmbeddedFilesPortfolio, pdfAssociatedFiles2, pdfXmpExtended, pdfLinearizationWrite, pdf3dRichMedia, pdfJbig2Read, pdfMisc, pdfInfoDictDeprecated, pdfSandbox],
+    deps: [pdf, pdfContentOpsExtended, pdfFontCidTyped, pdfFontColorTagging, pdfTaggedPdfTyped, pdfAnnotExtended, pdfAOutputIntent, pdfUaTagged, pdfFormActionsExtended, pdfColorSpacesExtended, pdfShadingTyped, pdfTransparencyTyped, pdfSigPades, pdfSigAesGcm, pdfDocumentParts, pdfRedactionIso32005, pdfXPrepress, pdfWellTagged, pdfOptionalContentExtended, pdfEmbeddedFilesPortfolio, pdfAssociatedFiles2, pdfXmpExtended, pdfLinearizationWrite, pdf3dRichMedia, pdfJbig2Read, pdfMisc, pdfInfoDictDeprecated, pdfSandbox, pdfCryptPublicKey],
     factory(pdf, ...instances) {
         const names = [
             'pdfContentOpsExtended', 'pdfFontCidTyped', 'pdfFontColorTagging',
@@ -76,7 +77,7 @@ export const pdfFullBundle = {
             'pdfOptionalContentExtended', 'pdfEmbeddedFilesPortfolio',
             'pdfAssociatedFiles2', 'pdfXmpExtended',
             'pdfLinearizationWrite', 'pdf3dRichMedia', 'pdfJbig2Read', 'pdfMisc',
-            'pdfInfoDictDeprecated', 'pdfSandbox'
+            'pdfInfoDictDeprecated', 'pdfSandbox', 'pdfCryptPublicKey'
         ];
         for (let i = 0; i < names.length; i++) {
             const name = names[i];

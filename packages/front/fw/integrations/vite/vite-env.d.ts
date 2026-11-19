@@ -17,20 +17,23 @@
 // IMPORTANT — this file is a *global script* (no top-level import/export) so the
 // `declare module 'virtual:...'` blocks are ambient. Cross-package types are
 // pulled in via inline `import('...')` type queries, which do NOT turn the file
-// into a module.
+// into a module. They use RELATIVE paths, like `types/typed.d.ts`: a package
+// specifier (`@awacloud/fw/typed`) does not resolve when this file is read by
+// path under `moduleResolution: "node"` (which ignores `exports`), and the
+// types would silently become `any`.
 
 declare module 'virtual:@awacloud/fw/preset/*' {
     /** Pre-instantiated runtime, narrowed by module name. */
-    export const runtime: import('@awacloud/fw/typed').TypedModuleRuntime;
+    export const runtime: import('../../types/typed').TypedModuleRuntime;
     /** Names of the top-level modules registered for this preset. */
     export const moduleNames: string[];
 }
 
 declare module 'virtual:@awacloud/fw/side-bundle/*' {
     /** Register every module of this side-bundle onto a runtime. */
-    export function install(runtime: import('@awacloud/fw/core/runtime').ModuleRuntime): void;
+    export function install(runtime: import('../../dist/types/core/runtime').ModuleRuntime): void;
     /** The side-bundle's module definitions. */
-    export const modules: import('@awacloud/fw/core/runtime').ModuleDefinition[];
+    export const modules: import('../../dist/types/core/runtime').ModuleDefinition[];
     /** Names of the modules in this side-bundle. */
     export const moduleNames: string[];
 }

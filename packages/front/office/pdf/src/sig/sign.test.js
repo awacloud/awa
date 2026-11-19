@@ -2539,3 +2539,36 @@ describe('sign — Ed25519 declares ISO/TS 32002', () => {
         });
     }
 });
+
+/**
+ * `bytes` with a letter in one in-use entry of its last cross-reference
+ * table (`startxref` still right): a damaged base the reader refuses
+ * strictly and rebuilds by default, while the section is still found.
+ */
+function damagedXrefEntry(bytes) {
+    const s = new TextDecoder('latin1').decode(bytes);
+    const table = s.lastIndexOf('\nxref');
+    const entry = s.indexOf(' n', table) - 16;
+    const moved = s.slice(0, entry) + 'x' + s.slice(entry + 1);
+    return Uint8Array.from(moved, (c) => c.charCodeAt(0));
+}
+
+// T30 (b): `readDocument` rebuilds a broken cross-reference chain by default,
+// but a signature is an incremental update chained to the base's own
+// section: signing reads its base with `recoverXref: false`, so a damaged
+// base is refused, never signed over a rebuilt view.
+describe('pdfSign.sign — a damaged base is refused (T30 b)', () => {
+    test('a base with a broken cross-reference entry: the signing refuses', () => {
+        const damaged = damagedXrefEntry(_pdfBase);
+        const seed = new Uint8Array(32);
+        for (let i = 0; i < 32; i++) seed[i] = i + 3;
+        const kp = _edm.keyPair(seed);
+        const cert = _buildTestCert({ issuerCn: 'Damaged Base', serial: 3, sigAlgOid: '1.3.101.112' });
+        let err = null;
+        try { _sign.sign(damaged, { algorithm: 'ed25519', cert, privateKey: kp.privateKey }); } catch (e) { err = e; }
+        expect(err).not.toBeNull();
+        expect(String(err.code)).toMatch(/^pdf\//);
+        // The same base signs once its startxref is right.
+        expect(_sign.sign(_pdfBase, { algorithm: 'ed25519', cert, privateKey: kp.privateKey })).toBeInstanceOf(Uint8Array);
+    });
+});

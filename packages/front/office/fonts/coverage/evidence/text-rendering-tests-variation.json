@@ -1,0 +1,945 @@
+{
+  "suite": {
+    "id": "text-rendering-tests-variation",
+    "version": "text-rendering-tests@26cfb96d0",
+    "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+  },
+  "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; rendered from the fonts package's varGlyph at each case's coordinates (gvar with IUP, HVAR or phantom advances)",
+  "value": 1,
+  "fidelity": "the ported comparison gives the report's verdict on 1056 of 1056 cases of 8 reports; 132 of 132 cases pass",
+  "comparators": [
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-variation",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "Allsorts 0.15.0 (derived: its report of June 30, 2025, 127 of the 132 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.9621,
+        "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/Allsorts.html",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-variation",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "macOS 14.0.0 and CoreText 0xd0000 (derived: its report of November 23, 2023, 70 of the 132 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.5303,
+        "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/CoreText.html",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-variation",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "HarfBuzz 2.8.2, FreeType 2.11.0, FriBidi 1.0.1 and Raqm 0.10.1 (derived: its report of November 23, 2023, 132 of the 132 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 1,
+        "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/FreeStack.html",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-variation",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "OpenType.js 1.3.4, NPM 10.2.0 and Node 21.1.0 (derived: its report of November 23, 2023, 0 of the 132 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0,
+        "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/OpenType.js.html",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-variation",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "Swash 0.2.1 (derived: its report of March 16, 2025, 112 of the 132 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.8485,
+        "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/Swash.html",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-variation",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "FreeType 2.11.0, SheenBidi 2.0 and SheenFigure 1.5 (derived: its report of November 23, 2023, 130 of the 132 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.9848,
+        "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/TehreerStack.html",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-variation",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "daegun 1.1.6 (derived: its report of August 22, 2026, 132 of the 132 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 1,
+        "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/daegun.html",
+      "date": "2026-11-10"
+    },
+    {
+      "axis": "E",
+      "suite": {
+        "id": "text-rendering-tests-variation",
+        "version": "text-rendering-tests@26cfb96d0",
+        "source": "https://github.com/unicode-org/text-rendering-tests/tree/26cfb96d094befc3c8b08228577bf400b04b83a1"
+      },
+      "tool": "fontkit 2.0.2, NPM 10.2.0 and Node 21.1.0 (derived: its report of November 23, 2023, 131 of the 132 cases passed)",
+      "result": {
+        "kind": "score",
+        "value": 0.9924,
+        "metric": "share of the 132 variation cases (GVAR-1..9, AVAR-1, HVAR-1..2, CFF2-1, CVAR-1..2, GPOS-5) whose rendering matches the expected SVG under the suite's is_similar (same tokens, numbers within 1.0), 0–1; the engine's own rendering as its report shows it"
+      },
+      "source": "https://github.com/unicode-org/text-rendering-tests/blob/26cfb96d094befc3c8b08228577bf400b04b83a1/reports/fontkit.html",
+      "date": "2026-11-10"
+    }
+  ],
+  "details": {
+    "pass": 132,
+    "total": 132,
+    "cases": [
+      {
+        "id": "GVAR-1/300",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-1/350",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-1/400",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-1/450",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-1/500",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-1/550",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-1/600",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-1/650",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-1/700",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/300",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/350",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/400",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/450",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/500",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/550",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/600",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/650",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-2/700",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/300",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/350",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/400",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/450",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/500",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/550",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/600",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/650",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-3/700",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/1",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/2",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/3",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/4",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/5",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/6",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/7",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/8",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/9",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/10",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-4/11",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/1",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/2",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/3",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/4",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/5",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/6",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/7",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/8",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/9",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/10",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-5/11",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/1",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/2",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/3",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/4",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/5",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/6",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/7",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/8",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/9",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/10",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-6/11",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-7/150",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-7/200",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-7/250",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-7/300",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-7/350",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-7/400",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-7/450",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-8/1",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-8/2",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-8/3",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-8/4",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-8/5",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-8/6",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/1",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/2",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/3",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/4",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/5",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/6",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/7",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/8",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/9",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GVAR-9/10",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/100",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/150",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/200",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/250",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/300",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/350",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/400",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/450",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/500",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/550",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/600",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/650",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/700",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/750",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/800",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/850",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "AVAR-1/900",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-1/0",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-1/200",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-1/400",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-1/600",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-1/800",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-1/1000",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-2/0",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-2/200",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-2/400",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-2/600",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-2/800",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "HVAR-2/1000",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/100",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/200",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/300",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/400",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/500",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/600",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/700",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/800",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CFF2-1/900",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CVAR-1/28",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CVAR-1/94",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CVAR-1/194",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CVAR-2/28",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CVAR-2/94",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "CVAR-2/194",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GPOS-5/100",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GPOS-5/300",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GPOS-5/500",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GPOS-5/700",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      },
+      {
+        "id": "GPOS-5/900",
+        "pass": true,
+        "difference": null,
+        "errors": []
+      }
+    ],
+    "portCheck": {
+      "verdicts": 1056,
+      "agree": 1056,
+      "disagree": []
+    }
+  },
+  "commit": "c3c04890d0539fa4e52492e1438a74ee60454c5f",
+  "date": "2026-11-10"
+}

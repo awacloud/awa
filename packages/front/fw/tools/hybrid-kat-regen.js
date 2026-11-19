@@ -19,8 +19,8 @@
  *      inputs, matching the official `ekPrefix` / `ctPrefix` / full `ss` bytes.
  *   2. Composite — reproduces a deterministic self-KAT: a fixed per-variant seed
  *      drives a SHAKE-256 DRBG that seeds ML-DSA-65 keygen, the traditional
- *      component keygen and the deterministic sign path (ML-DSA zero-entropy
- *      hedge + Ed25519 / RFC-6979 ECDSA), matching the committed pk/sig bytes,
+ *      component keygen and the sign path (ML-DSA hedged, its rnd from the
+ *      same DRBG + Ed25519 / RFC-6979 ECDSA), matching the committed pk/sig bytes,
  *      and re-verifies each signature through the frozen `verify()`.
  *
  * Usage:
@@ -158,7 +158,7 @@ function computeCompositeCase(c, message) {
     if (kp === false) return { error: 'keygen returned false' };
     const sig = variant.sign(kp.secretKey, message);
     if (sig === false) return { error: 'sign returned false' };
-    const verified = variant.verify(kp.publicKey, message, sig);
+    const verified = variant.verify(kp.publicKey, sig, message);
     return { pk: toHex(kp.publicKey), sig: toHex(sig), verified: verified === true };
 }
 

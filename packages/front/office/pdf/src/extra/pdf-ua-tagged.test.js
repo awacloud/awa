@@ -49,7 +49,7 @@ describe('validatePdfUa', () => {
         });
         expect(r.errors.some(e => e.includes('accessible'))).toBe(true);
     });
-    test('warns on missing ViewerPreferences', () => {
+    test('errs on missing ViewerPreferences (DisplayDocTitle is a "shall" of both parts)', () => {
         const r = validatePdfUa({
             catalog: { entries: {
                 StructTreeRoot: obj.ref(2, 0),
@@ -57,7 +57,9 @@ describe('validatePdfUa', () => {
                 MarkInfo: obj.dict({ Marked: obj.bool(true) })
             } }
         });
-        expect(r.warnings.length).toBeGreaterThan(0);
+        expect(r.pass).toBe(false);
+        expect(r.errors).toEqual(['catalog requires /ViewerPreferences /DisplayDocTitle true']);
+        expect(r.findings).toEqual([{ rule: '7.1-t10', severity: 'error', message: 'catalog requires /ViewerPreferences /DisplayDocTitle true' }]);
     });
     test('rejects bad input', () => {
         expect(() => validatePdfUa(null)).toThrow(ParseError);

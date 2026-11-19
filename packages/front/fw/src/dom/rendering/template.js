@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -72,6 +72,7 @@
  */
 
 import { secPolicy } from './secPolicy.js';
+import { styleSheet } from './styleSheet.js';
 
 /**
  * Public API object returned by `template.factory()` (the internal `cmd`).
@@ -110,11 +111,11 @@ import { secPolicy } from './secPolicy.js';
 export const template = {
     name: 'template',
     type: 'fw.dom.rendering',
-    dependencies: ['secPolicy'],
-    deps: [secPolicy],
+    dependencies: ['secPolicy', 'styleSheet'],
+    deps: [secPolicy, styleSheet],
 
     /** @returns {TemplateAPI} */
-    factory(secPolicy) {
+    factory(secPolicy, styleSheet) {
 
         const contexts = {};
         const tpl = {};
@@ -216,18 +217,44 @@ export const template = {
          *
          * @param {string} ctxName - Name of the render context.
          * @param {import('./parser').ElmNode} data - Elm node to materialise.
-         * @returns {Element|null} The cloned and populated node, or `null` when no
-         *   matching template entry exists for the tag.
+         * A tag outside the context's catalogue is created directly
+         * ({@link createUncatalogued}) rather than dropped.
+         *
+         * @returns {Element|null} The cloned (or created) and populated node, or
+         *   `null` for a blocked tag or a name that is not a valid element name.
          */
         function cloneAndApply(ctxName, data) {
             const tplKey = contexts[ctxName].tpl;
             const tag = data.tag === 'text' ? 'span' : data.tag;
 
-            if(!Object.prototype.hasOwnProperty.call(tpl[tplKey], tag)){
-                return null;
-            } else {
+            if (Object.prototype.hasOwnProperty.call(tpl[tplKey], tag)) {
                 return applyAttributes(tpl[tplKey][tag].cloneNode(), data);
             }
+            const node = createUncatalogued(tag);
+            return node === null ? null : applyAttributes(node, data);
+        }
+
+        /** Element names a tag outside the catalogue may carry (custom elements included). */
+        const ELEMENT_NAME_RE = /^[a-zA-Z][a-zA-Z0-9-]*$/;
+
+        /**
+         * Create an element for a tag the catalogue does not hold: an
+         * `svg_<name>` tag in the SVG namespace, any other valid element name
+         * through `document.createElement`. A blocked tag
+         * (`secPolicy.isBlockedTag`) or an invalid name yields `null` — the
+         * node is not rendered.
+         *
+         * @param {string} tag - Internal tag name.
+         * @returns {Element|null}
+         */
+        function createUncatalogued(tag) {
+            if (typeof tag !== 'string') return null;
+            if (tag.startsWith('svg_')) {
+                const local = tag.slice(4);
+                return ELEMENT_NAME_RE.test(local) ? document.createElementNS(SVG_NS, local) : null;
+            }
+            if (!ELEMENT_NAME_RE.test(tag) || secPolicy.isBlockedTag(tag.toLowerCase())) return null;
+            return document.createElement(tag);
         }
 
         /**
@@ -413,6 +440,7 @@ export const template = {
                     ctx: pageDoc.body,
                     map: {},
                     styles: {},
+                    styleHandles: {},
                     scripts: {}
                 };
             } else {
@@ -673,7 +701,8 @@ export const template = {
 
                 if(data.tag && typeof data.tag === 'string') {
                     if(!data.id || typeof data.id !== 'string'){
-                        data.id = (Date.now().toString(36) + index.toString() + crypto.getRandomValues(new Uint32Array(1))[0].toString(36))
+                        // The generated id goes on a copy: the caller's node is never written.
+                        data = { ...data, id: (Date.now().toString(36) + index.toString() + crypto.getRandomValues(new Uint32Array(1))[0].toString(36)) };
                     }
                     const ctx = contexts[name];
 
@@ -828,6 +857,18 @@ export const template = {
          */
         cmd.style = function (name, id, css) {
             const ctx = contexts[name];
+            if (styleSheet) {
+                const existing = ctx.styleHandles[id];
+                if (existing) {
+                    existing.set(css);
+                    return;
+                }
+                const handle = styleSheet.attach(css, { id, head: ctx.head, nonce: cspNonce });
+                ctx.styleHandles[id] = handle;
+                if (handle.element) ctx.styles[id] = handle.element;
+                return;
+            }
+            // hand-wired without styleSheet: the element path, as before
             if (ctx.styles[id]) {
                 ctx.styles[id].textContent = css;
                 return;
@@ -849,6 +890,12 @@ export const template = {
          */
         cmd.removeStyle = function (name, id) {
             const ctx = contexts[name];
+            if (ctx.styleHandles && ctx.styleHandles[id]) {
+                ctx.styleHandles[id].detach();
+                delete ctx.styleHandles[id];
+                delete ctx.styles[id];
+                return;
+            }
             if (ctx.styles[id]) {
                 ctx.styles[id].remove();
                 delete ctx.styles[id];
@@ -909,13 +956,25 @@ export const template = {
          * Completely tear down a named context: remove its container element from
          * the DOM and delete the context entry.
          *
+         * A **page** context (`init(name, { to: document, page: true })`)
+         * renders into `document.body`, which is never removed: its children
+         * are cleared, and the `<style>` / `<script>` elements the context added
+         * to `<head>` are removed.
+         *
          * @param {string} name - Context name to destroy.
          */
         cmd.clearContext = function (name) {
-            if (contexts[name]) {
-                contexts[name].ctx.remove();
-                delete contexts[name];
+            const c = contexts[name];
+            if (!c) return;
+            if (c.page) {
+                c.ctx.replaceChildren();
+                if (c.styleHandles) for (const id of Object.keys(c.styleHandles)) c.styleHandles[id].detach();
+                for (const id of Object.keys(c.styles)) c.styles[id].remove();
+                for (const id of Object.keys(c.scripts)) c.scripts[id].remove();
+            } else {
+                c.ctx.remove();
             }
+            delete contexts[name];
         };
 
         /**

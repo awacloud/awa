@@ -87,7 +87,7 @@ describe('oconvPptxToIr — slide order, title + body mapping', () => {
         ({ ir, losses } = pptxToIr(readResult));
     });
 
-    test('validates against the frozen oconv-ir/v1 schema', () => {
+    test('validates against the oconv-ir/v2 schema', () => {
         expect(validate(ir).ok).toBe(true);
     });
 
@@ -230,5 +230,25 @@ describe('oconvPptxToIr — drift test (fw/no-factory-capture)', () => {
                 expect(losses).toEqual(expected.losses);
             }
         }
+    });
+});
+
+describe('oconvPptxToIr — group shapes (T24, BL-2888)', () => {
+    test('a group\'s text and picture, nested, read in place; a table inside recorded', () => {
+        const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+        const bytes = pptxApi.write({
+            slides: [{ shapes: [
+                { type: 'shape', id: 2, placeholder: { type: 'title' },
+                  txBody: { paragraphs: [{ runs: [{ type: 'text', value: 'Grouped' }] }] } },
+                textBoxShape(3, ['before']),
+                { type: 'group', shapes: [textBoxShape(5, ['inner']),
+                    { type: 'group', shapes: [pptxApi.picture(png, { name: 'g.png' }), tableShape()] }] },
+                textBoxShape(4, ['after'])
+            ] }]
+        });
+        const { ir, losses } = pptxToIr(pptxApi.read(bytes, { typedGroups: true }));
+        expect(validate(ir).ok).toBe(true);
+        expect(ir.children.map((n) => n.kind)).toEqual(['heading', 'paragraph', 'paragraph', 'image', 'paragraph']);
+        expect(losses).toEqual([{ code: 'slides/media-dropped', detail: 'table' }]);
     });
 });

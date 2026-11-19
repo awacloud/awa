@@ -9,8 +9,22 @@
  * This is the only file in `@awacloud/pdf` that knows about
  * `@awacloud/fonts/embed-pdf`. It takes a parsed font (the output of
  * `fonts.read(bytes)`) and a set of code points to embed, and produces the
- * PDF dicts needed for a simple (`/TrueType` + `/WinAnsiEncoding`) or a
- * composite (`/Type0` + `/Identity-H` + `/CIDFontType2`) embedding.
+ * PDF dicts needed for a simple (`/WinAnsiEncoding`) or a composite
+ * (`/Type0` + `/Identity-H`) embedding. The dictionaries follow the
+ * subset's outlines (ISO 32000-2 Table 124):
+ *
+ * - **TrueType outlines** (`FontFile2`): `/TrueType`, or a `/CIDFontType2`
+ *   CIDFont with `/CIDToGIDMap /Identity`;
+ * - **CFF outlines** (`FontFile3`, an `OpenType` program: `subsetForPdf`
+ *   is always asked for `{ cff: true }`, a no-op on a `glyf` font): a
+ *   simple font is `/Type1`, its codes reaching their glyphs by name
+ *   (§9.6.5.2, §9.9.1: `/BaseEncoding /WinAnsiEncoding` and a
+ *   `/Differences` of the subset program's glyph names); a composite one
+ *   a `/CIDFontType0` CIDFont without `/CIDToGIDMap` (§9.7.4.2), its codes
+ *   the program's CIDs (a CID-keyed program's from its charset, which a
+ *   CID-keyed subset keeps; another's the new glyph ids). A CID-keyed
+ *   program (a CFF2 font's subset is one) has no simple form:
+ *   `embedSimple` refuses it (`pdf/embed/cid-keyed-simple`).
  *
  * **Re-derived against the REAL `@awacloud/fonts` contract.**
  * The `@awacloud/fonts/embed-pdf` `subsetForPdf(font, codePoints, opts?)` result
@@ -47,9 +61,10 @@
  *    and reference (the serializer refuses an inline stream).
  *
  * 3. **`/ToUnicode` is keyed by character code, so its source is
- *    route-dependent.** `embedCid` uses `subset.toUnicodeCmap` as-is (under
- *    `Identity-H` the code IS the CID = the subset's new gid, exactly how
- *    the subsetter keys it); `embedSimple` builds its own byte-keyed map
+ *    route-dependent.** `embedCid` uses `subset.toUnicodeCmap` as-is when
+ *    the code IS the subset's new gid (under `Identity-H` the code is the
+ *    CID), and builds a CID-keyed one when a CID-keyed program's CIDs are
+ *    not its glyph ids; `embedSimple` builds its own byte-keyed map
  *    through `embedBuildToUnicode` (with `{ codeBytes: 1 }`: a one-byte
  *    `<00> <FF>` codespace), because a WinAnsi font's codes are bytes, not
  *    gids. Never both for one route.
@@ -65,22 +80,31 @@ import { embedSubsetForPdf } from '@awacloud/fonts/embed-pdf/subsetForPdf.js';
 import { embedFontDescriptor } from '@awacloud/fonts/embed-pdf/fontDescriptor.js';
 import { embedCidSystemInfo } from '@awacloud/fonts/embed-pdf/cidSystemInfo.js';
 import { embedToUnicodeBuilder } from '@awacloud/fonts/embed-pdf/toUnicodeBuilder.js';
+import { fontSfnt } from '@awacloud/fonts';
+import { fontCffProgram } from '@awacloud/fonts';
 
 export const pdfFontEmbed = {
     name: 'pdfFontEmbed',
     dependencies: [
         'pdfErrors',
         'embedSubsetForPdf', 'embedFontDescriptor',
-        'embedCidSystemInfo', 'embedToUnicodeBuilder'
+        'embedCidSystemInfo', 'embedToUnicodeBuilder',
+        'fontSfnt', 'fontCffProgram'
     ],
-    deps: [pdfErrors, embedSubsetForPdf, embedFontDescriptor, embedCidSystemInfo, embedToUnicodeBuilder],
-    factory(errors, subsetMod, fontDescriptorMod, cidSystemInfoMod, toUnicodeBuilderMod) {
+    deps: [pdfErrors, embedSubsetForPdf, embedFontDescriptor, embedCidSystemInfo, embedToUnicodeBuilder, fontSfnt, fontCffProgram],
+    factory(errors, subsetMod, fontDescriptorMod, cidSystemInfoMod, toUnicodeBuilderMod, sfntMod, cffMod) {
         const { ContractError } = errors;
         const fontsEmbedPdf = {
             subsetForPdf:        subsetMod.subsetForPdf,
             buildFontDescriptor: fontDescriptorMod.buildFontDescriptor,
             buildCidSystemInfo:  cidSystemInfoMod.buildCidSystemInfo,
-            embedBuildToUnicode: toUnicodeBuilderMod.embedBuildToUnicode
+            embedBuildToUnicode: toUnicodeBuilderMod.embedBuildToUnicode,
+            // The subset's CFF program (`FontFile3`): its glyph names and CIDs.
+            readCff: (subsetBytes) => {
+                const t = sfntMod.parseSfnt(subsetBytes).tables['CFF '];
+                if (!t) throw new ContractError('pdf/embed/no-cff', 'a FontFile3 subset carries no CFF table', {});
+                return cffMod.readCff(t.bytes);
+            }
         };
 
         // Minimal `obj.*` helpers — duplicated rather than depending on
@@ -351,8 +375,14 @@ export const pdfFontEmbed = {
                     }
                 }
 
-                const subset = deps.subsetForPdf(parsedFont, cps, opts);
+                const subset = deps.subsetForPdf(parsedFont, cps, { ...(opts || {}), cff: true });
                 const { descriptor, fontFile, fontFileKey } = descriptorOf(parsedFont, subset);
+                const cff = fontFileKey === 'FontFile3' ? deps.readCff(subset.subsetBytes) : null;
+                if (cff && cff.cidKeyed) {
+                    throw new ContractError('pdf/embed/cid-keyed-simple',
+                        'a CID-keyed CFF program has no simple font form; use embedCid',
+                        { context: { postScriptName: subset.postScriptName } });
+                }
 
                 const byteToUnicode = new Map();
                 for (const cp of cps) byteToUnicode.set(WIN_ANSI_BYTE.get(cp), String.fromCodePoint(cp));
@@ -387,11 +417,29 @@ export const pdfFontEmbed = {
                     return byCp.has(cp) ? byCp.get(cp) : 0;
                 }
 
+                // A Type1 font reaches its glyphs by name: each code's glyph
+                // name in the subset program, over WinAnsi.
+                let encoding = obj.name('WinAnsiEncoding');
+                if (cff) {
+                    const glyphMap = (subset.glyphMap instanceof Map) ? subset.glyphMap : new Map();
+                    const diffs = [];
+                    for (const cp of cps) {
+                        const gid = glyphMap.get(cp);
+                        const n = gid != null && cff.glyphNames ? cff.glyphNames[gid] : null;
+                        diffs.push(obj.int(WIN_ANSI_BYTE.get(cp)), obj.name(n || '.notdef'));
+                    }
+                    encoding = obj.dict({
+                        Type: obj.name('Encoding'),
+                        BaseEncoding: obj.name('WinAnsiEncoding'),
+                        Differences: obj.array(diffs)
+                    });
+                }
+                const subtype = cff ? 'Type1' : 'TrueType';
                 const fontDict = obj.dict({
                     Type:      obj.name('Font'),
-                    Subtype:   obj.name('TrueType'),
+                    Subtype:   obj.name(subtype),
                     BaseFont:  obj.name(baseFontName(subset)),
-                    Encoding:  obj.name('WinAnsiEncoding'),
+                    Encoding:  encoding,
                     FirstChar: obj.int(firstChar),
                     LastChar:  obj.int(lastChar),
                     Widths:    obj.array(widths),
@@ -400,7 +448,7 @@ export const pdfFontEmbed = {
                 });
 
                 return {
-                    subtype: 'TrueType',
+                    subtype,
                     fontDict,
                     descriptor,
                     toUnicodeStream,
@@ -425,14 +473,30 @@ export const pdfFontEmbed = {
                 assertFont(parsedFont);
                 const cps = normaliseCodePoints(codePoints);
 
-                const subset = deps.subsetForPdf(parsedFont, cps, { ...(opts || {}), cid: true });
+                const subset = deps.subsetForPdf(parsedFont, cps, { ...(opts || {}), cid: true, cff: true });
                 const { descriptor, fontFile, fontFileKey } = descriptorOf(parsedFont, subset);
-                const toUnicodeStream = toUnicodeStreamForCid(deps, subset);
+                const cff = fontFileKey === 'FontFile3' ? deps.readCff(subset.subsetBytes) : null;
+                // The code is the CID: a CID-keyed program's from its charset,
+                // else the new glyph id.
+                const cids = cff && cff.cidKeyed && Array.isArray(cff.cids) ? cff.cids : null;
+                const cidOf = (gid) => (cids && cids[gid] != null ? cids[gid] : gid);
+                const remapped = !!cids && cids.some((c, g) => c !== g);
                 const cidSys = wrapCidSysInfo(deps.buildCidSystemInfo(parsedFont));
 
                 const byCp  = scaledWidthByCp(parsedFont, subset, cps);
                 const byGid = scaledWidthByGid(parsedFont, subset);
                 const glyphMap = (subset.glyphMap instanceof Map) ? subset.glyphMap : new Map();
+                let toUnicodeStream;
+                let byCid = byGid;
+                if (remapped) {
+                    const cidToUnicode = new Map();
+                    for (const [cp, ng] of glyphMap) cidToUnicode.set(cidOf(ng), String.fromCodePoint(cp));
+                    toUnicodeStream = streamOfCmap(deps.embedBuildToUnicode(cidToUnicode, {}));
+                    byCid = new Map();
+                    for (const [g, w] of byGid) byCid.set(cidOf(g), w);
+                } else {
+                    toUnicodeStream = toUnicodeStreamForCid(deps, subset);
+                }
 
                 function encode(text) {
                     const out = [];
@@ -440,7 +504,8 @@ export const pdfFontEmbed = {
                         const cp = ch.codePointAt(0);
                         let gid = glyphMap.get(cp);
                         if (gid == null) { gid = 0; encode.missing++; }
-                        out.push((gid >> 8) & 0xFF, gid & 0xFF);
+                        const code = cidOf(gid);
+                        out.push((code >> 8) & 0xFF, code & 0xFF);
                     }
                     return Uint8Array.from(out);
                 }
@@ -450,16 +515,18 @@ export const pdfFontEmbed = {
                 }
 
                 const baseFont = baseFontName(subset);
-                const cidFontDict = obj.dict({
+                const cidEntries = {
                     Type:           obj.name('Font'),
-                    Subtype:        obj.name('CIDFontType2'),
+                    Subtype:        obj.name(cff ? 'CIDFontType0' : 'CIDFontType2'),
                     BaseFont:       obj.name(baseFont),
                     CIDSystemInfo:  cidSys,
                     FontDescriptor: descriptor,
                     DW:             obj.int(1000),
-                    W:              compactWArray(byGid),
-                    CIDToGIDMap:    obj.name('Identity')
-                });
+                    W:              compactWArray(byCid)
+                };
+                // A CIDFontType0 selects by CID (§9.7.4.2): no /CIDToGIDMap.
+                if (!cff) cidEntries.CIDToGIDMap = obj.name('Identity');
+                const cidFontDict = obj.dict(cidEntries);
                 const type0Dict = obj.dict({
                     Type:            obj.name('Font'),
                     Subtype:         obj.name('Type0'),

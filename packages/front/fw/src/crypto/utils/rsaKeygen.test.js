@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -11,6 +11,7 @@ import { bitArray } from './bitArray.js';
 import { aes } from '../cipher/aes.js';
 import { sha256 } from '../hash/sha256.js';
 import { utf8 } from '../../io/codec/utf8.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _ba = bitArray.factory();
 const _utf8 = utf8.factory(_ba);
@@ -36,13 +37,13 @@ describe('rsaKeygen module', () => {
 
         test('accepts small known primes', () => {
             for (const p of [5, 7, 11, 13, 17, 19, 23, 29, 31, 65537]) {
-                expect(K._internal.millerRabin(new _bn.bn(p), 5, drbg)).toBe(true);
+                expect(K[INTERNAL].millerRabin(new _bn.bn(p), 5, drbg)).toBe(true);
             }
         });
 
         test('rejects small known composites', () => {
             for (const c of [9, 15, 21, 25, 27, 33, 91, 121, 169, 65535]) {
-                expect(K._internal.millerRabin(new _bn.bn(c), 5, drbg)).toBe(false);
+                expect(K[INTERNAL].millerRabin(new _bn.bn(c), 5, drbg)).toBe(false);
             }
         });
     });
@@ -54,7 +55,7 @@ describe('rsaKeygen module', () => {
             const p = K.generateProbablePrime(256, e, drbg);
             expect(p).not.toBe(false);
             expect(p.bitLength()).toBe(256);
-            expect(K._internal.millerRabin(p, 10, drbg)).toBe(true);
+            expect(K[INTERNAL].millerRabin(p, 10, drbg)).toBe(true);
             // gcd(p-1, e) = 1  ⇒  (p-1) mod e ≠ 0
             const ONE = new _bn.bn(1);
             const pm1 = p.sub(ONE).normalize();
@@ -191,8 +192,8 @@ describe('RSA-KeyGen-FIPS186-5 (NIST CAVP, validator-style, 15/15 vectors)', () 
             const n = _bnFromHex(v.n);
 
             // 1. Miller-Rabin on p and q (k=4 -- FIPS 186-5 Table B.1 auditor profile)
-            expect(K._internal.millerRabin(p, 4, _drbgForMR)).toBe(true);
-            expect(K._internal.millerRabin(q, 4, _drbgForMR)).toBe(true);
+            expect(K[INTERNAL].millerRabin(p, 4, _drbgForMR)).toBe(true);
+            expect(K[INTERNAL].millerRabin(q, 4, _drbgForMR)).toBe(true);
 
             // 2. n == p * q (byte-exact modulus correctness)
             expect(_bnEqHex(p.mul(q).normalize(), v.n)).toBe(true);
@@ -201,12 +202,12 @@ describe('RSA-KeyGen-FIPS186-5 (NIST CAVP, validator-style, 15/15 vectors)', () 
             //    bn.inverseMod requires an odd modulus)
             const pm1 = p.sub(ONE).normalize();
             const qm1 = q.sub(ONE).normalize();
-            expect(K._internal.inverseModAny(e, pm1)).not.toBe(false);
-            expect(K._internal.inverseModAny(e, qm1)).not.toBe(false);
+            expect(K[INTERNAL].inverseModAny(e, pm1)).not.toBe(false);
+            expect(K[INTERNAL].inverseModAny(e, qm1)).not.toBe(false);
 
             // 4. d = e^-1 mod lcm(p-1, q-1); d must exceed 2^(nlen/2)
-            const lambda = K._internal.lcm(pm1, qm1);
-            const d = K._internal.inverseModAny(e, lambda);
+            const lambda = K[INTERNAL].lcm(pm1, qm1);
+            const d = K[INTERNAL].inverseModAny(e, lambda);
             expect(d).not.toBe(false);
             expect(d.bitLength()).toBeGreaterThan(v.nlen >>> 1);
 

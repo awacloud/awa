@@ -1,4 +1,4 @@
-# Playground — Node.js ("à la carte" consumption)
+# Playground — Node.js (pick-and-choose consumption)
 
 **Runtime** example: consuming `@awacloud/fw` under **plain Node**, without a
 bundler, by importing a few worker-safe modules by subpath then resolving
@@ -8,11 +8,13 @@ See the reference integration: [`integrations/nodejs/README.md`](../../../integr
 
 ## Run
 
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
+
 ```sh
-node app.mjs
+bun install && bun run start
 ```
 
-Run from this directory (or `npm start` — the `start` script runs `node app.mjs`).
+`bun install` links `node_modules/@awacloud/fw` (postinstall; there is nothing to download); `bun run start` runs `node app.mjs`.
 
 ## What `app.mjs` does
 

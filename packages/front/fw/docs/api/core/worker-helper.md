@@ -37,6 +37,8 @@ const createWorker = fw.createWorker;
 | `options.workerFw` | `Function` | DEFAULT_WORKER_FRAMEWORK | Worker bootstrap: `(runtime, modules, args) => context` |
 | `options.args` | `any[]` | `[]` | JSON-serialisable arguments passed to `workerFw` |
 | `options.terminate` | `Function` | no-op | Cleanup callback before native `Worker.terminate()` |
+| `options.revoke` | `string[]` | `[]` | Globals removed inside the worker before `workerFn` (e.g. `['fetch', 'XMLHttpRequest', 'WebSocket']`), from every owner on the global's prototype chain. A name still reachable afterwards throws in the worker (`error` event) — fail closed. A name that is not an identifier is a `TypeError` |
+| `options.lockdown` | `boolean \| { url }` | `false` | `true` runs `lockdown()` inside the worker before `workerFn` (after `revoke`), importing the `sanity/lockdown.js` next to `worker-helper.js`; `{ url }` names that module by an absolute URL (a bundled or re-hosted build). The worker becomes a **module** worker (`importScripts` is unavailable there) |
 
 ## Examples
 
@@ -74,7 +76,8 @@ const worker = fw.createWorker(
         // Send a message to the main thread
         process.postMessage({ type: 'result', value: 42 });
     },
-    { dependencies: ['processMessage'], workerFw: processMessage.workerFramework }
+    // workerFramework lives on the resolved instance, not on the descriptor
+    { dependencies: ['processMessage'], workerFw: fw.runtime.resolve('processMessage').workerFramework }
 );
 
 worker.onmessage = function(event) {
@@ -97,9 +100,15 @@ myWorkerFn({ libs, process: {}, args: ['arg1'] });
 2. runtimeSource (constants + private helpers + ModuleRuntime class)
 3. new ModuleRuntime()
 4. Registration of ALL modules in the graph (entry + transitive dependencies)
+0. import { lockdown } from <sanity/lockdown.js>   (options.lockdown only; module worker)
 5. workerFw(runtime, dependenciesUserSpecs, args)  → runtime.context
-6. workerFn(runtime.context)
+6. revoke each options.revoke name                 (fails closed)
+7. lockdown()                                      (options.lockdown only)
+8. workerFn(runtime.context)
 ```
+
+What `workerFw` resolves is the explicit grant (it runs before the confinement);
+the user function meets the confined realm.
 
 > **Note (since semver introduction)**: the injected code includes
 > `runtimeSource` which combines the `ModuleRuntime` class AND its private helpers
@@ -170,6 +179,7 @@ revoked before rethrowing — no leak.
 - Transitive dependencies are registered in the worker runtime but are not exposed in `libs` by default — declare them explicitly in `dependencies` to access them.
 - `worker.terminate()` is idempotent — subsequent calls are no-ops (URL not re-revoked, callback not re-invoked).
 - If `new Worker(blobUrl)` fails, the Blob URL is revoked before rethrowing — no leak.
+- Under **Bun** (measured on 1.3.13), calling `lockdown()` in the PARENT realm before `createWorker` breaks the worker start (`TypeError … FunctionPrototypeCall` from Bun's lazily initialised internals); browsers are unaffected. See [worker confinement § Limits](../../guide/worker-confinement.md#limits-honest).
 
 ## See also
 

@@ -5,7 +5,7 @@
     "source": "https://github.com/opendataloader-project/opendataloader-bench/tree/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109"
   },
   "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the benchmark's own scorers ported, on the Markdown body of oconv toMd (no OCR; the profile-v1 front matter removed)",
-  "value": 0.5753,
+  "value": 0.8376,
   "fidelity": "the port reproduces 9874 of 9878 stored scores of 11 engines within 1e-9; 2 MHS higher where Python apted's distance is not the minimum (opendataloader-hybrid-hydrogen 01030000000181 (MHS 0.6190 vs 0.5795), unstructured 01030000000183 (MHS 0.0778 vs 0.0712))",
   "comparators": [
     {
@@ -22,7 +22,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/opendataloader-hybrid/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -38,7 +38,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/nutrient/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -54,7 +54,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/docling/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -70,7 +70,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/marker/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -86,7 +86,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/unstructured-hires/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -102,7 +102,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/edgeparse/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -118,7 +118,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/opendataloader/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -134,7 +134,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/mineru/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -150,7 +150,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/pymupdf4llm/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -166,7 +166,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/unstructured/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -182,7 +182,7 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/markitdown/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     },
     {
       "axis": "E",
@@ -198,74 +198,74 @@
         "metric": "Overall: mean over the 200 documents of the mean of NID (reading order), TEDS (tables) and MHS (headings) where the ground truth defines them, 0–1; the engine's Markdown as the benchmark stores it"
       },
       "source": "https://github.com/opendataloader-project/opendataloader-bench/blob/7af1d8f4d0c09f51ea1a5c6ba5f66e993286d109/prediction/liteparse/evaluation.json",
-      "date": "2026-10-16"
+      "date": "2026-11-13"
     }
   ],
   "details": {
     "means": {
-      "nid": 0.8645334461476882,
-      "nid_s": 0.8411020783367184,
-      "teds": 0,
-      "teds_s": 0,
-      "mhs": 0,
-      "mhs_s": 0,
-      "overall": 0.5753052141573821
+      "nid": 0.8839100872879232,
+      "nid_s": 0.8784315208219197,
+      "teds": 0.7308353935864735,
+      "teds_s": 0.7573763143861177,
+      "mhs": 0.7426628539080807,
+      "mhs_s": 0.8404023157527827,
+      "overall": 0.8375957583536288
     },
     "documents": [
       {
         "id": "01030000000001",
         "scores": {
-          "overall": 0.49511577424023157,
-          "nid": 0.9902315484804631,
-          "nid_s": 0.9902315484804631,
+          "overall": 0.984439983215438,
+          "nid": 0.9909584086799277,
+          "nid_s": 0.9909584086799277,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9779215577509482,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000002",
         "scores": {
-          "overall": 0.49311041704942127,
-          "nid": 0.9862208340988425,
-          "nid_s": 0.9862208340988425,
+          "overall": 0.9833324019681311,
+          "nid": 0.9869605142332415,
+          "nid_s": 0.9869605142332415,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9797042897030206,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000003",
         "scores": {
-          "overall": 0.48716496791241976,
-          "nid": 0.9743299358248395,
-          "nid_s": 0.9743299358248395,
+          "overall": 0.9664106883682355,
+          "nid": 0.9747169811320755,
+          "nid_s": 0.9747169811320755,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9581043956043956,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000004",
         "scores": {
-          "overall": 0.49303452453058755,
-          "nid": 0.9860690490611751,
-          "nid_s": 0.9860690490611751,
+          "overall": 0.989899430317945,
+          "nid": 0.9872855701311807,
+          "nid_s": 0.9872855701311807,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9925132905047094,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000005",
         "scores": {
-          "overall": 0.890625,
-          "nid": 0.890625,
-          "nid_s": 0.890625,
+          "overall": 0.9047619047619048,
+          "nid": 0.9047619047619048,
+          "nid_s": 0.9047619047619048,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -275,9 +275,9 @@
       {
         "id": "01030000000006",
         "scores": {
-          "overall": 0.9281767955801105,
-          "nid": 0.9281767955801105,
-          "nid_s": 0.9281767955801105,
+          "overall": 0.9523809523809523,
+          "nid": 0.9523809523809523,
+          "nid_s": 0.9523809523809523,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -287,13 +287,13 @@
       {
         "id": "01030000000007",
         "scores": {
-          "overall": 0.48858560794044664,
-          "nid": 0.9771712158808933,
-          "nid_s": 0.9771712158808933,
+          "overall": 0.7924639159349087,
+          "nid": 0.983495145631068,
+          "nid_s": 0.983495145631068,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.6014326862387496,
+          "mhs_s": 0.8571428571428572
         }
       },
       {
@@ -311,9 +311,9 @@
       {
         "id": "01030000000009",
         "scores": {
-          "overall": 0.7347740667976425,
-          "nid": 0.7347740667976425,
-          "nid_s": 0.7347740667976425,
+          "overall": 0.7351290684624018,
+          "nid": 0.7351290684624018,
+          "nid_s": 0.7351290684624018,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -359,21 +359,21 @@
       {
         "id": "01030000000013",
         "scores": {
-          "overall": 0.4666814749000444,
-          "nid": 0.9333629498000888,
-          "nid_s": 0.9333629498000888,
+          "overall": 0.8473499814247775,
+          "nid": 0.9338365896980462,
+          "nid_s": 0.9338365896980462,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.7608633731515088,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000014",
         "scores": {
-          "overall": 0.9252182118424157,
-          "nid": 0.9252182118424157,
-          "nid_s": 0.9252182118424157,
+          "overall": 0.9110336817653891,
+          "nid": 0.9110336817653891,
+          "nid_s": 0.9464285714285714,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -383,9 +383,9 @@
       {
         "id": "01030000000015",
         "scores": {
-          "overall": 0.6270491803278688,
-          "nid": 0.6270491803278688,
-          "nid_s": 0.6270491803278688,
+          "overall": 0.6278688524590164,
+          "nid": 0.6278688524590164,
+          "nid_s": 0.6278688524590164,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -395,13 +395,13 @@
       {
         "id": "01030000000016",
         "scores": {
-          "overall": 0.4995014955134596,
-          "nid": 0.9990029910269193,
-          "nid_s": 0.9990029910269193,
+          "overall": 1,
+          "nid": 1,
+          "nid_s": 1,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 1,
+          "mhs_s": 1
         }
       },
       {
@@ -419,25 +419,25 @@
       {
         "id": "01030000000018",
         "scores": {
-          "overall": 0.4851908396946565,
-          "nid": 0.970381679389313,
-          "nid_s": 0.970381679389313,
+          "overall": 0.9767011492400067,
+          "nid": 0.9710100701861458,
+          "nid_s": 0.9710100701861458,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9823922282938676,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000019",
         "scores": {
-          "overall": 0.4983792544570502,
-          "nid": 0.9967585089141004,
-          "nid_s": 0.9967585089141004,
+          "overall": 0.8692480878061594,
+          "nid": 0.9967602591792657,
+          "nid_s": 0.9967602591792657,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.741735916433053,
+          "mhs_s": 0.75
         }
       },
       {
@@ -455,13 +455,13 @@
       {
         "id": "01030000000021",
         "scores": {
-          "overall": 0.49795560747663553,
-          "nid": 0.9959112149532711,
-          "nid_s": 0.9959112149532711,
+          "overall": 0.8728048995326376,
+          "nid": 0.9964973730297724,
+          "nid_s": 0.9964973730297724,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.7491124260355029,
+          "mhs_s": 0.75
         }
       },
       {
@@ -527,9 +527,9 @@
       {
         "id": "01030000000027",
         "scores": {
-          "overall": 0.22797650827549387,
-          "nid": 0.22797650827549387,
-          "nid_s": 0.22797650827549387,
+          "overall": 0.22791566586602616,
+          "nid": 0.22791566586602616,
+          "nid_s": 0.22791566586602616,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -539,33 +539,33 @@
       {
         "id": "01030000000028",
         "scores": {
-          "overall": 0.31737683803799505,
-          "nid": 0.6347536760759901,
-          "nid_s": 0.6347536760759901,
+          "overall": 0.5630418077088655,
+          "nid": 0.6354278361569805,
+          "nid_s": 0.6354278361569805,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.49065577926075055,
+          "mhs_s": 0.5
         }
       },
       {
         "id": "01030000000029",
         "scores": {
-          "overall": 0.3321186881832379,
-          "nid": 0.6642373763664758,
-          "nid_s": 0.6642373763664758,
+          "overall": 0.6390447518880196,
+          "nid": 0.6677761597670064,
+          "nid_s": 0.6677761597670064,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.6103133440090327,
+          "mhs_s": 0.75
         }
       },
       {
         "id": "01030000000030",
         "scores": {
-          "overall": 0.7063987063987064,
-          "nid": 0.7063987063987064,
-          "nid_s": 0.7063987063987064,
+          "overall": 0.7092231328639039,
+          "nid": 0.7092231328639039,
+          "nid_s": 0.7092231328639039,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -575,37 +575,37 @@
       {
         "id": "01030000000031",
         "scores": {
-          "overall": 0.30036117907491555,
-          "nid": 0.6007223581498311,
-          "nid_s": 0.6007223581498311,
+          "overall": 0.598298916287686,
+          "nid": 0.6048678234540584,
+          "nid_s": 0.6048678234540584,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.5917300091213133,
+          "mhs_s": 0.6666666666666667
         }
       },
       {
         "id": "01030000000032",
         "scores": {
-          "overall": 0.48716619134042,
-          "nid": 0.97433238268084,
-          "nid_s": 0.97433238268084,
+          "overall": 0.9825424709965058,
+          "nid": 0.9751424132573796,
+          "nid_s": 0.9751424132573796,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9899425287356322,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000033",
         "scores": {
-          "overall": 0.48038490007401924,
-          "nid": 0.9607698001480385,
-          "nid_s": 0.9607698001480385,
+          "overall": 0.9721031001857142,
+          "nid": 0.9612823674475955,
+          "nid_s": 0.9612823674475955,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9829238329238329,
+          "mhs_s": 1
         }
       },
       {
@@ -623,69 +623,69 @@
       {
         "id": "01030000000035",
         "scores": {
-          "overall": 0.46434494195688225,
-          "nid": 0.9286898839137645,
-          "nid_s": 0.9286898839137645,
+          "overall": 0.8062180274196848,
+          "nid": 0.9281767955801105,
+          "nid_s": 0.9281767955801105,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.6842592592592592,
+          "mhs_s": 0.75
         }
       },
       {
         "id": "01030000000036",
         "scores": {
-          "overall": 0.47165341005246236,
-          "nid": 0.9433068201049247,
-          "nid_s": 0.9433068201049247,
+          "overall": 0.6541492088207552,
+          "nid": 0.9327309236947792,
+          "nid_s": 0.954125299554947,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.3755674939467313,
+          "mhs_s": 0.75
         }
       },
       {
         "id": "01030000000037",
         "scores": {
-          "overall": 0.4367421642644704,
-          "nid": 0.8734843285289408,
-          "nid_s": 0.8734843285289408,
+          "overall": 0.8301332145332145,
+          "nid": 0.8740571428571429,
+          "nid_s": 0.8740571428571429,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.7862092862092862,
+          "mhs_s": 0.8333333333333334
         }
       },
       {
         "id": "01030000000038",
         "scores": {
-          "overall": 0.3800114547537228,
-          "nid": 0.7600229095074456,
-          "nid_s": 0.7600229095074456,
+          "overall": 0.7590633768230981,
+          "nid": 0.7607326846021751,
+          "nid_s": 0.7607326846021751,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.757394069044021,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000039",
         "scores": {
-          "overall": 0.4547854785478548,
-          "nid": 0.9095709570957096,
-          "nid_s": 0.9095709570957096,
+          "overall": 0.893190657296478,
+          "nid": 0.9102902374670184,
+          "nid_s": 0.9102902374670184,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8760910771259375,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000040",
         "scores": {
-          "overall": 0.9577297082754515,
-          "nid": 0.9577297082754515,
-          "nid_s": 0.9577297082754515,
+          "overall": 0.9573497321959928,
+          "nid": 0.9573497321959928,
+          "nid_s": 0.9573497321959928,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -695,9 +695,9 @@
       {
         "id": "01030000000041",
         "scores": {
-          "overall": 0.8781268761256754,
-          "nid": 0.8781268761256754,
-          "nid_s": 0.8781268761256754,
+          "overall": 0.8758716875871687,
+          "nid": 0.8758716875871687,
+          "nid_s": 0.8758716875871687,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -719,9 +719,9 @@
       {
         "id": "01030000000043",
         "scores": {
-          "overall": 0.6603023070803501,
-          "nid": 0.6603023070803501,
-          "nid_s": 0.6603023070803501,
+          "overall": 0.6568187813241889,
+          "nid": 0.6568187813241889,
+          "nid_s": 0.6568187813241889,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -731,23 +731,23 @@
       {
         "id": "01030000000044",
         "scores": {
-          "overall": 0.4650793650793651,
-          "nid": 0.9301587301587302,
-          "nid_s": 0.9301587301587302,
+          "overall": 0.6205389444562672,
+          "nid": 0.9228346456692913,
+          "nid_s": 0.9228346456692913,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.31824324324324327,
+          "mhs_s": 0.6
         }
       },
       {
         "id": "01030000000045",
         "scores": {
-          "overall": 0.3804100227790433,
-          "nid": 0.7608200455580866,
-          "nid_s": 0.6024844720496895,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.5618800876050286,
+          "nid": 0.8066062866275973,
+          "nid_s": 0.6539325842696629,
+          "teds": 0.31715388858245996,
+          "teds_s": 0.3513513513513513,
           "mhs": null,
           "mhs_s": null
         }
@@ -755,11 +755,11 @@
       {
         "id": "01030000000046",
         "scores": {
-          "overall": 0.32621173469387754,
-          "nid": 0.6524234693877551,
-          "nid_s": 0.44894894894894893,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.8788255272728445,
+          "nid": 0.8780872306883868,
+          "nid_s": 0.7043580683156655,
+          "teds": 0.8795638238573021,
+          "teds_s": 0.8804347826086957,
           "mhs": null,
           "mhs_s": null
         }
@@ -767,11 +767,11 @@
       {
         "id": "01030000000047",
         "scores": {
-          "overall": 0.29566003616636527,
-          "nid": 0.5913200723327305,
-          "nid_s": 0.13655761024182078,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.7524610222279898,
+          "nid": 0.8207115181401902,
+          "nid_s": 0.27350427350427353,
+          "teds": 0.6842105263157895,
+          "teds_s": 0.8552631578947368,
           "mhs": null,
           "mhs_s": null
         }
@@ -779,13 +779,13 @@
       {
         "id": "01030000000048",
         "scores": {
-          "overall": 0.49767540152155537,
-          "nid": 0.9953508030431107,
-          "nid_s": 0.9953508030431107,
+          "overall": 0.9973441432008964,
+          "nid": 0.9957752429235319,
+          "nid_s": 0.9957752429235319,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9989130434782608,
+          "mhs_s": 1
         }
       },
       {
@@ -815,23 +815,23 @@
       {
         "id": "01030000000051",
         "scores": {
-          "overall": 0.2776365946632783,
-          "nid": 0.8329097839898348,
-          "nid_s": 0.841506129597198,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.9736879708158414,
+          "nid": 0.9561527581329562,
+          "nid_s": 0.9958634953464323,
+          "teds": 0.9986618906455863,
+          "teds_s": 1,
+          "mhs": 0.9662492636689812,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000052",
         "scores": {
-          "overall": 0.40991692627206644,
-          "nid": 0.8198338525441329,
-          "nid_s": 0.8772423496306718,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9768348623853211,
+          "nid": 0.9536697247706422,
+          "nid_s": 0.9932297889287136,
+          "teds": 1,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -839,25 +839,25 @@
       {
         "id": "01030000000053",
         "scores": {
-          "overall": 0.2813953488372093,
-          "nid": 0.8441860465116279,
-          "nid_s": 0.908284023668639,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.9738825173705119,
+          "nid": 0.9568852887379148,
+          "nid_s": 0.9911361804995971,
+          "teds": 1,
+          "teds_s": 1,
+          "mhs": 0.964762263373621,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000054",
         "scores": {
-          "overall": 0.4984745364937808,
-          "nid": 0.9969490729875616,
-          "nid_s": 0.9969490729875616,
+          "overall": 0.9975671284246974,
+          "nid": 0.9974196575181797,
+          "nid_s": 0.9974196575181797,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9977145993312152,
+          "mhs_s": 1
         }
       },
       {
@@ -899,13 +899,13 @@
       {
         "id": "01030000000058",
         "scores": {
-          "overall": 0.4618705035971223,
-          "nid": 0.9237410071942446,
-          "nid_s": 0.9237410071942446,
+          "overall": 0.8197639435315899,
+          "nid": 0.9242569511025887,
+          "nid_s": 0.9242569511025887,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.7152709359605911,
+          "mhs_s": 0.75
         }
       },
       {
@@ -935,9 +935,9 @@
       {
         "id": "01030000000061",
         "scores": {
-          "overall": 0.9270516717325228,
-          "nid": 0.9270516717325228,
-          "nid_s": 0.9270516717325228,
+          "overall": 0.8980392156862745,
+          "nid": 0.8980392156862745,
+          "nid_s": 0.9252286175363098,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -947,13 +947,13 @@
       {
         "id": "01030000000062",
         "scores": {
-          "overall": 0.47255080376099484,
-          "nid": 0.9451016075219897,
-          "nid_s": 0.9451016075219897,
+          "overall": 0.712435417392314,
+          "nid": 0.9448484848484848,
+          "nid_s": 0.9448484848484848,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.480022349936143,
+          "mhs_s": 0.6
         }
       },
       {
@@ -971,11 +971,11 @@
       {
         "id": "01030000000064",
         "scores": {
-          "overall": 0.43872371283538797,
-          "nid": 0.8774474256707759,
-          "nid_s": 0.9388111888111889,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9401768617796493,
+          "nid": 0.961986376620523,
+          "nid_s": 0.9934640522875817,
+          "teds": 0.9183673469387755,
+          "teds_s": 0.9183673469387755,
           "mhs": null,
           "mhs_s": null
         }
@@ -983,13 +983,13 @@
       {
         "id": "01030000000065",
         "scores": {
-          "overall": 0.49831523773867464,
-          "nid": 0.9966304754773493,
-          "nid_s": 0.9966304754773493,
+          "overall": 0.9965394511068886,
+          "nid": 0.9977544910179641,
+          "nid_s": 0.9977544910179641,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9953244111958129,
+          "mhs_s": 1
         }
       },
       {
@@ -1007,21 +1007,21 @@
       {
         "id": "01030000000067",
         "scores": {
-          "overall": 0.4392549346677787,
-          "nid": 0.8785098693355574,
-          "nid_s": 0.8785098693355574,
+          "overall": 0.889658763258161,
+          "nid": 0.8788888888888889,
+          "nid_s": 0.8788888888888889,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9004286376274329,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000068",
         "scores": {
-          "overall": 0.9634815515610218,
-          "nid": 0.9634815515610218,
-          "nid_s": 0.9634815515610218,
+          "overall": 0.963495365992056,
+          "nid": 0.963495365992056,
+          "nid_s": 0.963495365992056,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -1031,21 +1031,21 @@
       {
         "id": "01030000000069",
         "scores": {
-          "overall": 0.48242377160613714,
-          "nid": 0.9648475432122743,
-          "nid_s": 0.9648475432122743,
+          "overall": 0.8931336454666476,
+          "nid": 0.965262953619251,
+          "nid_s": 0.965262953619251,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8210043373140442,
+          "mhs_s": 0.8333333333333334
         }
       },
       {
         "id": "01030000000070",
         "scores": {
-          "overall": 0.5671462829736211,
-          "nid": 0.5671462829736211,
-          "nid_s": 0.5671462829736211,
+          "overall": 0.5658129839189994,
+          "nid": 0.5658129839189994,
+          "nid_s": 0.5658129839189994,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -1055,21 +1055,21 @@
       {
         "id": "01030000000071",
         "scores": {
-          "overall": 0.46497764530551416,
-          "nid": 0.9299552906110283,
-          "nid_s": 0.9299552906110283,
+          "overall": 0.9429180378895553,
+          "nid": 0.9304865938430983,
+          "nid_s": 0.9304865938430983,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9553494819360123,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000072",
         "scores": {
-          "overall": 0.6363636363636364,
-          "nid": 0.6363636363636364,
-          "nid_s": 0.6363636363636364,
+          "overall": 0.6364094805849723,
+          "nid": 0.6364094805849723,
+          "nid_s": 0.6364094805849723,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -1079,9 +1079,9 @@
       {
         "id": "01030000000073",
         "scores": {
-          "overall": 0.7865470852017937,
-          "nid": 0.7865470852017937,
-          "nid_s": 0.7865470852017937,
+          "overall": 0.78584229390681,
+          "nid": 0.78584229390681,
+          "nid_s": 0.78584229390681,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -1103,9 +1103,9 @@
       {
         "id": "01030000000075",
         "scores": {
-          "overall": 0.9795180722891567,
-          "nid": 0.9795180722891567,
-          "nid_s": 0.9795180722891567,
+          "overall": 0.9659135949266746,
+          "nid": 0.9659135949266746,
+          "nid_s": 0.9643880474826033,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -1115,9 +1115,9 @@
       {
         "id": "01030000000076",
         "scores": {
-          "overall": 0.8874528809908454,
-          "nid": 0.8874528809908454,
-          "nid_s": 0.8874528809908454,
+          "overall": 0.8864981172673481,
+          "nid": 0.8864981172673481,
+          "nid_s": 0.8864981172673481,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -1127,23 +1127,23 @@
       {
         "id": "01030000000077",
         "scores": {
-          "overall": 0.48494983277591974,
-          "nid": 0.9698996655518395,
-          "nid_s": 0.9698996655518395,
+          "overall": 0.9585766551648134,
+          "nid": 0.9703915950334289,
+          "nid_s": 0.9703915950334289,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.946761715296198,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000078",
         "scores": {
-          "overall": 0.3672936259143156,
-          "nid": 0.7345872518286312,
-          "nid_s": 0.7560192616372392,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.7573862117870911,
+          "nid": 0.8391548081069427,
+          "nid_s": 0.9137006338371526,
+          "teds": 0.6756176154672395,
+          "teds_s": 0.7263157894736842,
           "mhs": null,
           "mhs_s": null
         }
@@ -1151,35 +1151,35 @@
       {
         "id": "01030000000079",
         "scores": {
-          "overall": 0.4886018237082067,
-          "nid": 0.9772036474164134,
-          "nid_s": 0.9772036474164134,
+          "overall": 0.6541007115483408,
+          "nid": 0.9753881105641803,
+          "nid_s": 0.9753881105641803,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.33281331253250135,
+          "mhs_s": 0.5
         }
       },
       {
         "id": "01030000000080",
         "scores": {
-          "overall": 0.4841467759173495,
-          "nid": 0.968293551834699,
-          "nid_s": 0.968293551834699,
+          "overall": 0.6243775332645233,
+          "nid": 0.9641970932293513,
+          "nid_s": 0.9641970932293513,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.28455797329969523,
+          "mhs_s": 0.4285714285714286
         }
       },
       {
         "id": "01030000000081",
         "scores": {
-          "overall": 0.392130857648099,
-          "nid": 0.784261715296198,
-          "nid_s": 0.6376811594202898,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9726651480637813,
+          "nid": 0.9453302961275627,
+          "nid_s": 0.990521327014218,
+          "teds": 1,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1187,11 +1187,11 @@
       {
         "id": "01030000000082",
         "scores": {
-          "overall": 0.33579817311874727,
-          "nid": 0.6715963462374945,
-          "nid_s": 0.4789833822091887,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9609211444521981,
+          "nid": 0.9218422889043963,
+          "nid_s": 0.9839357429718876,
+          "teds": 1,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1199,11 +1199,11 @@
       {
         "id": "01030000000083",
         "scores": {
-          "overall": 0.3196591984853266,
-          "nid": 0.6393183969706532,
-          "nid_s": 0.47540983606557374,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9576607896697293,
+          "nid": 0.9153215793394587,
+          "nid_s": 0.9815384615384616,
+          "teds": 1,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1211,11 +1211,11 @@
       {
         "id": "01030000000084",
         "scores": {
-          "overall": 0.3225806451612903,
-          "nid": 0.6451612903225806,
-          "nid_s": 0.521505376344086,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9563473336479471,
+          "nid": 0.9126946672958943,
+          "nid_s": 0.97,
+          "teds": 1,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1223,13 +1223,13 @@
       {
         "id": "01030000000085",
         "scores": {
-          "overall": 0.26294820717131473,
-          "nid": 0.5258964143426295,
-          "nid_s": 0.5258964143426295,
+          "overall": 0.3982958649027549,
+          "nid": 0.52465483234714,
+          "nid_s": 0.52465483234714,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.2719368974583698,
+          "mhs_s": 0.8
         }
       },
       {
@@ -1259,11 +1259,11 @@
       {
         "id": "01030000000088",
         "scores": {
-          "overall": 0.4325318246110325,
-          "nid": 0.865063649222065,
-          "nid_s": 0.14582098399525786,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9758939165371087,
+          "nid": 0.951960529732537,
+          "nid_s": 0.7874015748031497,
+          "teds": 0.9998273033416804,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1271,11 +1271,11 @@
       {
         "id": "01030000000089",
         "scores": {
-          "overall": 0.4311734846222753,
-          "nid": 0.8623469692445506,
-          "nid_s": 0.12755102040816327,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9761385328606491,
+          "nid": 0.9522770657212981,
+          "nid_s": 1,
+          "teds": 1,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1283,11 +1283,11 @@
       {
         "id": "01030000000090",
         "scores": {
-          "overall": 0.4215484250809538,
-          "nid": 0.8430968501619076,
-          "nid_s": 0.12828736369467608,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9737232323256951,
+          "nid": 0.947675962815405,
+          "nid_s": 1,
+          "teds": 0.9997705018359853,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1295,25 +1295,25 @@
       {
         "id": "01030000000091",
         "scores": {
-          "overall": 0.4954627949183303,
-          "nid": 0.9909255898366606,
-          "nid_s": 0.9909255898366606,
+          "overall": 0.9919347025509411,
+          "nid": 0.9917701213558376,
+          "nid_s": 0.9917701213558376,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9920992837460444,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000092",
         "scores": {
-          "overall": 0.49872309376140095,
-          "nid": 0.9974461875228019,
-          "nid_s": 0.9974461875228019,
+          "overall": 0.9950505120282683,
+          "nid": 0.9976899696048632,
+          "nid_s": 0.9976899696048632,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9924110544516734,
+          "mhs_s": 1
         }
       },
       {
@@ -1367,13 +1367,13 @@
       {
         "id": "01030000000097",
         "scores": {
-          "overall": 0.47607301430685744,
-          "nid": 0.9521460286137149,
-          "nid_s": 0.9521460286137149,
+          "overall": 0.9580704784481753,
+          "nid": 0.9526627218934911,
+          "nid_s": 0.9526627218934911,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9634782350028596,
+          "mhs_s": 1
         }
       },
       {
@@ -1391,13 +1391,13 @@
       {
         "id": "01030000000099",
         "scores": {
-          "overall": 0.4682352941176471,
-          "nid": 0.9364705882352942,
-          "nid_s": 0.9364705882352942,
+          "overall": 0.9403455040731976,
+          "nid": 0.9374706158909262,
+          "nid_s": 0.9374706158909262,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9432203922554689,
+          "mhs_s": 1
         }
       },
       {
@@ -1415,13 +1415,13 @@
       {
         "id": "01030000000101",
         "scores": {
-          "overall": 0.4971916971916972,
-          "nid": 0.9943833943833944,
-          "nid_s": 0.9943833943833944,
+          "overall": 0.9957580775737995,
+          "nid": 0.99462890625,
+          "nid_s": 0.99462890625,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9968872488975992,
+          "mhs_s": 1
         }
       },
       {
@@ -1439,37 +1439,37 @@
       {
         "id": "01030000000103",
         "scores": {
-          "overall": 0.288879235447437,
-          "nid": 0.577758470894874,
-          "nid_s": 0.577758470894874,
+          "overall": 0.4210062488172216,
+          "nid": 0.5724049551473729,
+          "nid_s": 0.5724049551473729,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.2696075424870703,
+          "mhs_s": 0.5625
         }
       },
       {
         "id": "01030000000104",
         "scores": {
-          "overall": 0.48459958932238195,
-          "nid": 0.9691991786447639,
-          "nid_s": 0.9691991786447639,
+          "overall": 0.9359890280739162,
+          "nid": 0.9702564102564103,
+          "nid_s": 0.9702564102564103,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.901721645891422,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000105",
         "scores": {
-          "overall": 0.45726915520628686,
-          "nid": 0.9145383104125737,
-          "nid_s": 0.9145383104125737,
+          "overall": 0.9313220156588677,
+          "nid": 0.915603532875368,
+          "nid_s": 0.915603532875368,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9470404984423676,
+          "mhs_s": 1
         }
       },
       {
@@ -1499,25 +1499,25 @@
       {
         "id": "01030000000108",
         "scores": {
-          "overall": 0.4990825688073395,
-          "nid": 0.998165137614679,
-          "nid_s": 0.998165137614679,
+          "overall": 1,
+          "nid": 1,
+          "nid_s": 1,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 1,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000109",
         "scores": {
-          "overall": 0.454679802955665,
-          "nid": 0.90935960591133,
-          "nid_s": 0.90935960591133,
+          "overall": 0.9162132079557873,
+          "nid": 0.9104330708661418,
+          "nid_s": 0.9104330708661418,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9219933450454328,
+          "mhs_s": 1
         }
       },
       {
@@ -1535,13 +1535,13 @@
       {
         "id": "01030000000111",
         "scores": {
-          "overall": 0.4505649717514124,
-          "nid": 0.9011299435028248,
-          "nid_s": 0.9011299435028248,
+          "overall": 0.9017279169408617,
+          "nid": 0.9036201222378938,
+          "nid_s": 0.9036201222378938,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8998357116438297,
+          "mhs_s": 1
         }
       },
       {
@@ -1571,9 +1571,9 @@
       {
         "id": "01030000000114",
         "scores": {
-          "overall": 0.9963735267452403,
-          "nid": 0.9963735267452403,
-          "nid_s": 0.9963735267452403,
+          "overall": 0.9945701357466064,
+          "nid": 0.9945701357466064,
+          "nid_s": 0.9945701357466064,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -1583,23 +1583,23 @@
       {
         "id": "01030000000115",
         "scores": {
-          "overall": 0.49607374530556503,
-          "nid": 0.9921474906111301,
-          "nid_s": 0.9921474906111301,
+          "overall": 0.9095535153885488,
+          "nid": 0.9921688798093292,
+          "nid_s": 0.9921688798093292,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8269381509677682,
+          "mhs_s": 0.8571428571428572
         }
       },
       {
         "id": "01030000000116",
         "scores": {
-          "overall": 0.37995824634655534,
-          "nid": 0.7599164926931107,
-          "nid_s": 0.8046692607003891,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.7689264895147248,
+          "nid": 0.8795518207282913,
+          "nid_s": 0.9038461538461539,
+          "teds": 0.6583011583011583,
+          "teds_s": 0.7027027027027026,
           "mhs": null,
           "mhs_s": null
         }
@@ -1607,35 +1607,35 @@
       {
         "id": "01030000000117",
         "scores": {
-          "overall": 0.2817544688558154,
-          "nid": 0.8452634065674463,
-          "nid_s": 0.8637651300540818,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.6430722433945957,
+          "nid": 0.8759424263193969,
+          "nid_s": 0.8757828810020877,
+          "teds": 0.7619047619047619,
+          "teds_s": 0.7619047619047619,
+          "mhs": 0.2913695419596284,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000118",
         "scores": {
-          "overall": 0.4785772029102668,
-          "nid": 0.9571544058205336,
-          "nid_s": 0.9571544058205336,
+          "overall": 0.9213046250572541,
+          "nid": 0.9597423510466989,
+          "nid_s": 0.9597423510466989,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8828668990678092,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000119",
         "scores": {
-          "overall": 0.4421768707482993,
-          "nid": 0.8843537414965986,
-          "nid_s": 0.9131364997860505,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.8404821557377591,
+          "nid": 0.9335133310833614,
+          "nid_s": 0.9788990825688073,
+          "teds": 0.7474509803921568,
+          "teds_s": 0.76,
           "mhs": null,
           "mhs_s": null
         }
@@ -1643,11 +1643,11 @@
       {
         "id": "01030000000120",
         "scores": {
-          "overall": 0.43987975951903807,
-          "nid": 0.8797595190380761,
-          "nid_s": 0.7820922795797167,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9866098600121729,
+          "nid": 0.9732197200243458,
+          "nid_s": 0.9907407407407407,
+          "teds": 1,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1655,49 +1655,49 @@
       {
         "id": "01030000000121",
         "scores": {
-          "overall": 0.32305716120745026,
-          "nid": 0.9691714836223507,
-          "nid_s": 0.8790637191157347,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.8243538395137597,
+          "nid": 0.9796771130104464,
+          "nid_s": 0.9842424242424243,
+          "teds": 0.9937888198757764,
+          "teds_s": 1,
+          "mhs": 0.4995955856550566,
+          "mhs_s": 0.5714285714285714
         }
       },
       {
         "id": "01030000000122",
         "scores": {
-          "overall": 0.27006722024515617,
-          "nid": 0.8102016607354685,
-          "nid_s": 0.9714896650035638,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.53636656828861,
+          "nid": 0.7931534667827096,
+          "nid_s": 0.9482884195193008,
+          "teds": 0.1075428194993413,
+          "teds_s": 0.21212121212121215,
+          "mhs": 0.7084034185837789,
+          "mhs_s": 0.8571428571428572
         }
       },
       {
         "id": "01030000000123",
         "scores": {
-          "overall": 0.3979031452820769,
-          "nid": 0.7958062905641538,
-          "nid_s": 0.7958062905641538,
+          "overall": 0.7340624038430628,
+          "nid": 0.7950124688279302,
+          "nid_s": 0.7950124688279302,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.6731123388581952,
+          "mhs_s": 0.75
         }
       },
       {
         "id": "01030000000124",
         "scores": {
-          "overall": 0.4678733031674208,
-          "nid": 0.9357466063348416,
-          "nid_s": 0.9357466063348416,
+          "overall": 0.9092126228202178,
+          "nid": 0.9367088607594937,
+          "nid_s": 0.9367088607594937,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8817163848809418,
+          "mhs_s": 1
         }
       },
       {
@@ -1715,23 +1715,23 @@
       {
         "id": "01030000000126",
         "scores": {
-          "overall": 0.4540901502504174,
-          "nid": 0.9081803005008348,
-          "nid_s": 0.9081803005008348,
+          "overall": 0.8727715918286327,
+          "nid": 0.9093941078376876,
+          "nid_s": 0.9093941078376876,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.836149075819578,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000127",
         "scores": {
-          "overall": 0.38392171910974676,
-          "nid": 0.7678434382194935,
-          "nid_s": 0.826455955516535,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.9414682850822973,
+          "nid": 0.9360313315926893,
+          "nid_s": 0.9985855728429985,
+          "teds": 0.9469052385719052,
+          "teds_s": 1,
           "mhs": null,
           "mhs_s": null
         }
@@ -1739,11 +1739,11 @@
       {
         "id": "01030000000128",
         "scores": {
-          "overall": 0.2701789935832489,
-          "nid": 0.5403579871664979,
-          "nid_s": 0.6850335070737156,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.8512553157831068,
+          "nid": 0.8538380651945321,
+          "nid_s": 0.8147465437788018,
+          "teds": 0.8486725663716814,
+          "teds_s": 0.8761061946902655,
           "mhs": null,
           "mhs_s": null
         }
@@ -1763,11 +1763,11 @@
       {
         "id": "01030000000130",
         "scores": {
-          "overall": 0.4046932894195142,
-          "nid": 0.8093865788390284,
-          "nid_s": 0.8156822810590632,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.861469013006886,
+          "nid": 0.882938026013772,
+          "nid_s": 0.8378661087866108,
+          "teds": 0.84,
+          "teds_s": 0.84,
           "mhs": null,
           "mhs_s": null
         }
@@ -1787,11 +1787,11 @@
       {
         "id": "01030000000132",
         "scores": {
-          "overall": 0.441659272404614,
-          "nid": 0.883318544809228,
-          "nid_s": 0.8674698795180723,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.6811043123543123,
+          "nid": 0.895541958041958,
+          "nid_s": 0.881488736532811,
+          "teds": 0.4666666666666667,
+          "teds_s": 0.4666666666666667,
           "mhs": null,
           "mhs_s": null
         }
@@ -1799,13 +1799,13 @@
       {
         "id": "01030000000133",
         "scores": {
-          "overall": 0.4786633197364292,
-          "nid": 0.9573266394728585,
-          "nid_s": 0.9573266394728585,
+          "overall": 0.8441546929485306,
+          "nid": 0.9573400250941029,
+          "nid_s": 0.9573400250941029,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.7309693608029583,
+          "mhs_s": 0.75
         }
       },
       {
@@ -1895,85 +1895,85 @@
       {
         "id": "01030000000141",
         "scores": {
-          "overall": 0.0034071550255536627,
-          "nid": 0.0068143100511073255,
-          "nid_s": 0.0068143100511073255,
+          "overall": 0.0779880380429454,
+          "nid": 0.00851063829787234,
+          "nid_s": 0.00851063829787234,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.14746543778801846,
+          "mhs_s": 0.2857142857142857
         }
       },
       {
         "id": "01030000000142",
         "scores": {
-          "overall": 0.4847502578458818,
-          "nid": 0.9695005156917637,
-          "nid_s": 0.9695005156917637,
+          "overall": 0.9732490513272471,
+          "nid": 0.9701074952142542,
+          "nid_s": 0.9701074952142542,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.97639060744024,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000143",
         "scores": {
-          "overall": 0.48643373023618974,
-          "nid": 0.9728674604723795,
-          "nid_s": 0.9728674604723795,
+          "overall": 0.9584353660618323,
+          "nid": 0.9735202492211839,
+          "nid_s": 0.9735202492211839,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9433504829024808,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000144",
         "scores": {
-          "overall": 0.4441979143554471,
-          "nid": 0.8883958287108942,
-          "nid_s": 0.8883958287108942,
+          "overall": 0.8851636248982996,
+          "nid": 0.8891843971631206,
+          "nid_s": 0.8891843971631206,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8811428526334786,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000145",
         "scores": {
-          "overall": 0.44903498190591074,
-          "nid": 0.8980699638118215,
-          "nid_s": 0.8980699638118215,
+          "overall": 0.9178231149956737,
+          "nid": 0.8992201559688062,
+          "nid_s": 0.8992201559688062,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9364260740225412,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000146",
         "scores": {
-          "overall": 0.2772470267108598,
-          "nid": 0.8317410801325794,
-          "nid_s": 0.8541804544451798,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.8006017803942699,
+          "nid": 0.8624604504001488,
+          "nid_s": 0.8669345308437721,
+          "teds": 0.7142857142857143,
+          "teds_s": 0.7142857142857143,
+          "mhs": 0.8250591764969462,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000147",
         "scores": {
-          "overall": 0.2756117040586655,
-          "nid": 0.8268351121759965,
-          "nid_s": 0.33912079793128924,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.7051293205126149,
+          "nid": 0.8667085164260305,
+          "nid_s": 0.5393258426966292,
+          "teds": 1,
+          "teds_s": 1,
+          "mhs": 0.24867944511181428,
+          "mhs_s": 0.5
         }
       },
       {
@@ -1991,9 +1991,9 @@
       {
         "id": "01030000000149",
         "scores": {
-          "overall": 0.2756563245823389,
-          "nid": 0.5513126491646778,
-          "nid_s": 0.49104859335038364,
+          "overall": 0.2759237187127533,
+          "nid": 0.5518474374255066,
+          "nid_s": 0.4902127659574468,
           "teds": 0,
           "teds_s": 0,
           "mhs": null,
@@ -2003,25 +2003,25 @@
       {
         "id": "01030000000150",
         "scores": {
-          "overall": 0.2289029535864979,
-          "nid": 0.6867088607594937,
-          "nid_s": 0.38348868175765644,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.706902689234968,
+          "nid": 0.7447272727272727,
+          "nid_s": 0.8311688311688312,
+          "teds": 0.6769939228315125,
+          "teds_s": 0.6799999999999999,
+          "mhs": 0.6989868721461188,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000151",
         "scores": {
-          "overall": 0.4968017057569296,
-          "nid": 0.9936034115138592,
-          "nid_s": 0.9936034115138592,
+          "overall": 0.9348678020509658,
+          "nid": 0.9957446808510638,
+          "nid_s": 0.9957446808510638,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8739909232508678,
+          "mhs_s": 0.875
         }
       },
       {
@@ -2039,85 +2039,85 @@
       {
         "id": "01030000000153",
         "scores": {
-          "overall": 0.4981476907878489,
-          "nid": 0.9962953815756977,
-          "nid_s": 0.9962953815756977,
+          "overall": 0.9150557111668063,
+          "nid": 0.997285961016531,
+          "nid_s": 0.997285961016531,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8328254613170815,
+          "mhs_s": 0.8333333333333334
         }
       },
       {
         "id": "01030000000154",
         "scores": {
-          "overall": 0.46983311938382544,
-          "nid": 0.9396662387676509,
-          "nid_s": 0.9396662387676509,
+          "overall": 0.9070347297459973,
+          "nid": 0.941025641025641,
+          "nid_s": 0.941025641025641,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8730438184663537,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000155",
         "scores": {
-          "overall": 0.49087893864013266,
-          "nid": 0.9817578772802653,
-          "nid_s": 0.9817578772802653,
+          "overall": 0.9874944159035068,
+          "nid": 0.9851239669421488,
+          "nid_s": 0.9851239669421488,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9898648648648649,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000156",
         "scores": {
-          "overall": 0.4920574886535552,
-          "nid": 0.9841149773071104,
-          "nid_s": 0.9841149773071104,
+          "overall": 0.8203984976744617,
+          "nid": 0.983371126228269,
+          "nid_s": 0.983371126228269,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.6574258691206544,
+          "mhs_s": 0.75
         }
       },
       {
         "id": "01030000000157",
         "scores": {
-          "overall": 0.37229275578790144,
-          "nid": 0.7445855115758029,
-          "nid_s": 0.7445855115758029,
+          "overall": 0.7153175420720852,
+          "nid": 0.744776119402985,
+          "nid_s": 0.744776119402985,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.6858589647411852,
+          "mhs_s": 0.75
         }
       },
       {
         "id": "01030000000158",
         "scores": {
-          "overall": 0.49635036496350365,
-          "nid": 0.9927007299270073,
-          "nid_s": 0.9927007299270073,
+          "overall": 0.99545626708278,
+          "nid": 0.9946576007770762,
+          "nid_s": 0.9946576007770762,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9962549333884839,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000159",
         "scores": {
-          "overall": 0.4962962962962963,
-          "nid": 0.9925925925925926,
-          "nid_s": 0.9925925925925926,
+          "overall": 0.9949158751628249,
+          "nid": 0.9932140653917335,
+          "nid_s": 0.9932140653917335,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9966176849339162,
+          "mhs_s": 1
         }
       },
       {
@@ -2159,13 +2159,13 @@
       {
         "id": "01030000000163",
         "scores": {
-          "overall": 0.4232268121590023,
-          "nid": 0.8464536243180046,
-          "nid_s": 0.8464536243180046,
+          "overall": 0.5572826904033159,
+          "nid": 0.8339087073264289,
+          "nid_s": 0.8339087073264289,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.28065667348020296,
+          "mhs_s": 0.5333333333333333
         }
       },
       {
@@ -2183,71 +2183,71 @@
       {
         "id": "01030000000165",
         "scores": {
-          "overall": 0.277504105090312,
-          "nid": 0.8325123152709359,
-          "nid_s": 0.8566870513161393,
+          "overall": 0.44552869522276195,
+          "nid": 0.8329643296432965,
+          "nid_s": 0.8560807222517259,
           "teds": 0,
           "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.5036217560249894,
+          "mhs_s": 0.6666666666666667
         }
       },
       {
         "id": "01030000000166",
         "scores": {
-          "overall": 0.289237668161435,
-          "nid": 0.8677130044843049,
-          "nid_s": 0.8886798369394795,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.6814399925863371,
+          "nid": 0.898355351846859,
+          "nid_s": 0.9037789774531597,
+          "teds": 0.4545454545454546,
+          "teds_s": 0.4545454545454546,
+          "mhs": 0.6914191713666976,
+          "mhs_s": 0.7777777777777778
         }
       },
       {
         "id": "01030000000167",
         "scores": {
-          "overall": 0.49136,
-          "nid": 0.98272,
-          "nid_s": 0.98272,
+          "overall": 0.9872621223039713,
+          "nid": 0.9833706427886153,
+          "nid_s": 0.9833706427886153,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9911536018193271,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000168",
         "scores": {
-          "overall": 0.4644691780821918,
-          "nid": 0.9289383561643836,
-          "nid_s": 0.9289383561643836,
+          "overall": 0.9360710926734537,
+          "nid": 0.9298545765611634,
+          "nid_s": 0.9298545765611634,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9422876087857439,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000169",
         "scores": {
-          "overall": 0.4777155655095185,
-          "nid": 0.955431131019037,
-          "nid_s": 0.955431131019037,
+          "overall": 0.9544394703787293,
+          "nid": 0.955898813521379,
+          "nid_s": 0.955898813521379,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9529801272360796,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000170",
         "scores": {
-          "overall": 0.36610711430855314,
-          "nid": 0.7322142286171063,
-          "nid_s": 0.7660256410256411,
-          "teds": 0,
-          "teds_s": 0,
+          "overall": 0.8707213165278697,
+          "nid": 0.8925704526046114,
+          "nid_s": 0.8809436048654626,
+          "teds": 0.8488721804511279,
+          "teds_s": 0.8839285714285714,
           "mhs": null,
           "mhs_s": null
         }
@@ -2255,21 +2255,21 @@
       {
         "id": "01030000000171",
         "scores": {
-          "overall": 0.499597747385358,
-          "nid": 0.999195494770716,
-          "nid_s": 0.999195494770716,
+          "overall": 0.5631799802361164,
+          "nid": 0.935251798561151,
+          "nid_s": 0.9475890985324947,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.1911081619110817,
+          "mhs_s": 0.2727272727272727
         }
       },
       {
         "id": "01030000000172",
         "scores": {
-          "overall": 0.998110661268556,
-          "nid": 0.998110661268556,
-          "nid_s": 0.998110661268556,
+          "overall": 0.9954239569313593,
+          "nid": 0.9954239569313593,
+          "nid_s": 0.9954239569313593,
           "teds": null,
           "teds_s": null,
           "mhs": null,
@@ -2279,229 +2279,229 @@
       {
         "id": "01030000000173",
         "scores": {
-          "overall": 0.4957310565635005,
-          "nid": 0.991462113127001,
-          "nid_s": 0.991462113127001,
+          "overall": 0.9914407974206273,
+          "nid": 0.9936102236421726,
+          "nid_s": 0.9936102236421726,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.989271371199082,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000174",
         "scores": {
-          "overall": 0.49079143852663015,
-          "nid": 0.9815828770532603,
-          "nid_s": 0.9815828770532603,
+          "overall": 0.9755426870969927,
+          "nid": 0.9836065573770492,
+          "nid_s": 0.9836065573770492,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9674788168169361,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000175",
         "scores": {
-          "overall": 0.4963087248322148,
-          "nid": 0.9926174496644296,
-          "nid_s": 0.9926174496644296,
+          "overall": 0.9936913720312643,
+          "nid": 0.9932930918846412,
+          "nid_s": 0.9932930918846412,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9940896521778875,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000176",
         "scores": {
-          "overall": 0.4926924326079896,
-          "nid": 0.9853848652159792,
-          "nid_s": 0.9853848652159792,
+          "overall": 0.9715557996219313,
+          "nid": 0.9860434923726062,
+          "nid_s": 0.9860434923726062,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9570681068712564,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000177",
         "scores": {
-          "overall": 0.45737187272285645,
-          "nid": 0.9147437454457129,
-          "nid_s": 0.9147437454457129,
+          "overall": 0.9174677460092899,
+          "nid": 0.915270696771061,
+          "nid_s": 0.915270696771061,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9196647952475188,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000178",
         "scores": {
-          "overall": 0.31218974076116934,
-          "nid": 0.936569222283508,
-          "nid_s": 0.8752466564349923,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.9896780245811208,
+          "nid": 0.9811983834124055,
+          "nid_s": 0.99676052828308,
+          "teds": 0.9984326018808778,
+          "teds_s": 1,
+          "mhs": 0.9894030884500792,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000179",
         "scores": {
-          "overall": 0.4980268350434096,
-          "nid": 0.9960536700868192,
-          "nid_s": 0.9960536700868192,
+          "overall": 0.9982488333144139,
+          "nid": 0.9976359338061466,
+          "nid_s": 0.9976359338061466,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9988617328226812,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000180",
         "scores": {
-          "overall": 0.30554317134789716,
-          "nid": 0.9166295140436915,
-          "nid_s": 0.8898441698011822,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.9264255722463295,
+          "nid": 0.973651191969887,
+          "nid_s": 0.9970041941282205,
+          "teds": 1,
+          "teds_s": 1,
+          "mhs": 0.8056255247691017,
+          "mhs_s": 0.8333333333333334
         }
       },
       {
         "id": "01030000000181",
         "scores": {
-          "overall": 0.32045929018789143,
-          "nid": 0.6409185803757829,
-          "nid_s": 0.6409185803757829,
+          "overall": 0.36547501457789067,
+          "nid": 0.6391752577319587,
+          "nid_s": 0.6391752577319587,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.09177477142382262,
+          "mhs_s": 0.625
         }
       },
       {
         "id": "01030000000182",
         "scores": {
-          "overall": 0.18981627296587925,
-          "nid": 0.5694488188976378,
-          "nid_s": 0.15914786967418545,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.456402865384903,
+          "nid": 0.6346272335181762,
+          "nid_s": 0.2247585601404741,
+          "teds": 0.33333333333333337,
+          "teds_s": 0.33333333333333337,
+          "mhs": 0.40124802930319936,
+          "mhs_s": 0.8
         }
       },
       {
         "id": "01030000000183",
         "scores": {
-          "overall": 0.25375375375375375,
-          "nid": 0.5075075075075075,
-          "nid_s": 0.5075075075075075,
+          "overall": 0.40040715270094684,
+          "nid": 0.5042183622828784,
+          "nid_s": 0.5042183622828784,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.29659594311901527,
+          "mhs_s": 0.7
         }
       },
       {
         "id": "01030000000184",
         "scores": {
-          "overall": 0.33856893542757416,
-          "nid": 0.6771378708551483,
-          "nid_s": 0.6771378708551483,
+          "overall": 0.49350208405870183,
+          "nid": 0.6761412575366064,
+          "nid_s": 0.6761412575366064,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.3108629105807973,
+          "mhs_s": 0.8461538461538461
         }
       },
       {
         "id": "01030000000185",
         "scores": {
-          "overall": 0.48457943925233643,
-          "nid": 0.9691588785046729,
-          "nid_s": 0.9691588785046729,
+          "overall": 0.8565479768178097,
+          "nid": 0.9693151324232878,
+          "nid_s": 0.9693151324232878,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.7437808212123317,
+          "mhs_s": 0.875
         }
       },
       {
         "id": "01030000000186",
         "scores": {
-          "overall": 0.47978694345807155,
-          "nid": 0.9595738869161431,
-          "nid_s": 0.9595738869161431,
+          "overall": 0.9171175635495286,
+          "nid": 0.9598580010922992,
+          "nid_s": 0.9598580010922992,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.8743771260067579,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000187",
         "scores": {
-          "overall": 0.31504983150498317,
-          "nid": 0.9451494945149495,
-          "nid_s": 0.9635002339728591,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.8719910377995067,
+          "nid": 0.9712020033388982,
+          "nid_s": 0.9905127897201873,
+          "teds": 0.6596491228070176,
+          "teds_s": 0.8157894736842105,
+          "mhs": 0.9851219872526046,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000188",
         "scores": {
-          "overall": 0.27773286625348065,
-          "nid": 0.8331985987604419,
-          "nid_s": 0.8597706641184902,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.9299119568390273,
+          "nid": 0.9383031367228031,
+          "nid_s": 0.9841659841659842,
+          "teds": 0.8807244038013269,
+          "teds_s": 0.9171597633136095,
+          "mhs": 0.9707083299929518,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000189",
         "scores": {
-          "overall": 0.2766727523141475,
-          "nid": 0.8300182569424426,
-          "nid_s": 0.879777271576816,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.8464257683393354,
+          "nid": 0.9217949830743859,
+          "nid_s": 0.985827664399093,
+          "teds": 0.6599660654255552,
+          "teds_s": 0.8859060402684564,
+          "mhs": 0.957516256518065,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000190",
         "scores": {
-          "overall": 0.2982710926694329,
-          "nid": 0.8948132780082988,
-          "nid_s": 0.9227041434456021,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.9315274573319064,
+          "nid": 0.9504204117135402,
+          "nid_s": 0.983225806451613,
+          "teds": 0.8653368236701571,
+          "teds_s": 0.9404761904761905,
+          "mhs": 0.9788251366120219,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000191",
         "scores": {
-          "overall": 0.49890566863646313,
-          "nid": 0.9978113372729263,
-          "nid_s": 0.9978113372729263,
+          "overall": 0.9990243012412456,
+          "nid": 0.9986879510168379,
+          "nid_s": 0.9986879510168379,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9993606514656533,
+          "mhs_s": 1
         }
       },
       {
@@ -2543,73 +2543,73 @@
       {
         "id": "01030000000195",
         "scores": {
-          "overall": 0.49852974440171904,
-          "nid": 0.9970594888034381,
-          "nid_s": 0.9970594888034381,
+          "overall": 0.9984168393531441,
+          "nid": 0.9979661016949153,
+          "nid_s": 0.9979661016949153,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9988675770113727,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000196",
         "scores": {
-          "overall": 0.49934782608695655,
-          "nid": 0.9986956521739131,
-          "nid_s": 0.9986956521739131,
+          "overall": 0.9996973274818626,
+          "nid": 0.9995655951346655,
+          "nid_s": 0.9995655951346655,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9998290598290598,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000197",
         "scores": {
-          "overall": 0.3080129207043868,
-          "nid": 0.9240387621131604,
-          "nid_s": 0.8764044943820225,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.8530440937096175,
+          "nid": 0.9556561085972851,
+          "nid_s": 0.9025798998844821,
+          "teds": 0.6303258145363408,
+          "teds_s": 0.6842105263157895,
+          "mhs": 0.9731503579952268,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000198",
         "scores": {
-          "overall": 0.473015873015873,
-          "nid": 0.946031746031746,
-          "nid_s": 0.946031746031746,
+          "overall": 0.9606807387490384,
+          "nid": 0.9526813880126183,
+          "nid_s": 0.9526813880126183,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.9686800894854586,
+          "mhs_s": 1
         }
       },
       {
         "id": "01030000000199",
         "scores": {
-          "overall": 0.3401253918495298,
-          "nid": 0.6802507836990596,
-          "nid_s": 0.6802507836990596,
+          "overall": 0.39941774470889685,
+          "nid": 0.6743916570104287,
+          "nid_s": 0.6743916570104287,
           "teds": null,
           "teds_s": null,
-          "mhs": 0,
-          "mhs_s": 0
+          "mhs": 0.12444383240736501,
+          "mhs_s": 0.38888888888888884
         }
       },
       {
         "id": "01030000000200",
         "scores": {
-          "overall": 0.29868543224356153,
-          "nid": 0.8960562967306847,
-          "nid_s": 0.055762081784386616,
-          "teds": 0,
-          "teds_s": 0,
-          "mhs": 0,
-          "mhs_s": 0
+          "overall": 0.35907426175828067,
+          "nid": 0.8949337938975245,
+          "nid_s": 0.057035412096521465,
+          "teds": 0.12821518449521196,
+          "teds_s": 0.14893617021276595,
+          "mhs": 0.0540738068821055,
+          "mhs_s": 0.1428571428571429
         }
       }
     ],
@@ -2636,6 +2636,6 @@
       "off": []
     }
   },
-  "commit": "cff19c43719318beabb87c1c79d14eda971b953f",
-  "date": "2026-10-16"
+  "commit": "3c218fac890c7566235a308c28f68d9fea790535",
+  "date": "2026-11-13"
 }

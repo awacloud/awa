@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -18,10 +18,10 @@
  *
  * **Output**:
  * - `raw=true` → `Uint8Array(16)` (raw binary, version + variant patched).
- * - `raw=false` (default) + `format='compact'` (default) → `string` 32 hex without
- *   hyphens (back-compat with the historical API).
- * - `raw=false` + `format='rfc4122'` → canonical `string`
- *   `xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx` (RFC 4122 §3).
+ * - `raw=false` (default) + `format='rfc4122'` → canonical `string`
+ *   `xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx` (RFC 4122 §3) — `v4`'s default.
+ * - `raw=false` + `format='compact'` → `string` 32 hex without hyphens —
+ *   `v1`'s default (the historical API), an option for `v4`.
  *
  * **Runtime requirement** : `globalThis.crypto.getRandomValues` must be
  * available. Provided in browsers (Web Crypto API), Node ≥ 19, Bun, Deno.
@@ -91,12 +91,12 @@ export const uuid = {
          * @param {boolean} [raw=false] When true, returns raw 16-byte `Uint8Array`.
          * @param {false | ((buf: Uint8Array) => Uint8Array|void)} [prng=false]
          *   Test-only entropy override ; production should use `false`.
-         * @param {'compact'|'rfc4122'} [format='compact'] String output format
+         * @param {'compact'|'rfc4122'} [format='rfc4122'] String output format
          *   (ignored if `raw=true`). `'rfc4122'` returns the canonical format
          *   with hyphens (RFC 4122 §3); `'compact'` returns 32 hex without hyphens.
          * @returns {Uint8Array|string}
          */
-        const v1 = function(raw = false, prng = false, format = 'compact') {
+        const v1 = function(raw = false, prng = false, format = 'rfc4122') {
             let i = 0, b = buf;
             let node = _nodeId, clockseq = _clockseq;
 
@@ -155,11 +155,12 @@ export const uuid = {
          * @param {boolean} [raw=false] When true, returns raw 16-byte `Uint8Array`.
          * @param {false | ((buf: Uint8Array) => Uint8Array|void)} [prng=false]
          *   Test-only entropy override ; production should use `false`.
-         * @param {'compact'|'rfc4122'} [format='compact'] String output format
-         *   (ignored if `raw=true`).
+         * @param {'compact'|'rfc4122'} [format='rfc4122'] String output format
+         *   (ignored if `raw=true`): the canonical 8-4-4-4-12 form by default,
+         *   `'compact'` for 32 hex without hyphens.
          * @returns {Uint8Array|string}
          */
-        const v4 = function(raw = false, prng = false, format = 'compact') {
+        const v4 = function(raw = false, prng = false, format = 'rfc4122') {
             const seedBytes = getSeedBytes(prng, buf);
 
             // RFC 4122 §4.1.3: version = 4 (the top 4 bits of byte 6

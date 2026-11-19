@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -13,6 +13,7 @@ import { huffman } from './huffman.js';
 import { lz77 } from './lz77.js';
 import { brotliDict } from './brotli_dict.js';
 import { brotliDictWords } from './brotli_dict_words.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DICT_BLOB = new Uint8Array(fs.readFileSync(path.join(__dirname, 'brotli_dict.bin')));
@@ -606,35 +607,35 @@ describe('brotliShared module', () => {
 
         test('flips a lowercase ASCII letter (1-byte codepoint) to uppercase', () => {
             const w = new Uint8Array([0x61]); // 'a'
-            const n = s._internal.ferment(w, 0, 1);
+            const n = s[INTERNAL].ferment(w, 0, 1);
             expect(n).toBe(1);
             expect(w[0]).toBe(0x41); // 'A'
         });
 
         test('leaves a non-letter 1-byte codepoint untouched', () => {
             const w = new Uint8Array([0x39]); // '9'
-            const n = s._internal.ferment(w, 0, 1);
+            const n = s[INTERNAL].ferment(w, 0, 1);
             expect(n).toBe(1);
             expect(w[0]).toBe(0x39);
         });
 
         test('flips bit 5 of the continuation byte of a 2-byte UTF-8 codepoint', () => {
             const w = new Uint8Array([0xC3, 0xA9]); // 'é'
-            const n = s._internal.ferment(w, 0, 2);
+            const n = s[INTERNAL].ferment(w, 0, 2);
             expect(n).toBe(2);
             expect(w[1]).toBe(0xA9 ^ 0x20);
         });
 
         test('does not write past the end of a truncated 2-byte codepoint', () => {
             const w = new Uint8Array([0xC3]); // lead byte only, no continuation
-            const n = s._internal.ferment(w, 0, 1);
+            const n = s[INTERNAL].ferment(w, 0, 1);
             expect(n).toBe(2);
             expect(w[0]).toBe(0xC3); // unmodified
         });
 
         test('XORs 5 into the 3rd byte of a 3-byte UTF-8 codepoint', () => {
             const w = new Uint8Array([0xE2, 0x82, 0xAC]); // '€'
-            const n = s._internal.ferment(w, 0, 3);
+            const n = s[INTERNAL].ferment(w, 0, 3);
             expect(n).toBe(3);
             expect(w[2]).toBe(0xAC ^ 0x05);
         });
@@ -653,47 +654,47 @@ describe('brotliShared module', () => {
         }
 
         test('op 0 (Identity) wraps the base word in prefix/suffix verbatim', () => {
-            const out = s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 0, param: 0 }]), 0, enc.encode('WORD'), null);
+            const out = s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 0, param: 0 }]), 0, enc.encode('WORD'), null);
             expect(dec.decode(out)).toBe('[WORD]');
         });
 
         test('op in [1,9] drops the last k bytes of the base word', () => {
-            const out = s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 3, param: 0 }]), 0, enc.encode('ABCDEF'), null);
+            const out = s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 3, param: 0 }]), 0, enc.encode('ABCDEF'), null);
             expect(dec.decode(out)).toBe('[ABC]');
         });
 
         test('op in [1,9] yields an empty body when the base word is shorter than k', () => {
-            const out = s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 9, param: 0 }]), 0, enc.encode('AB'), null);
+            const out = s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 9, param: 0 }]), 0, enc.encode('AB'), null);
             expect(dec.decode(out)).toBe('[]');
         });
 
         test('op 10 (FermentFirst) uppercases only the first ASCII letter', () => {
-            const out = s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 10, param: 0 }]), 0, enc.encode('abc'), null);
+            const out = s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 10, param: 0 }]), 0, enc.encode('abc'), null);
             expect(dec.decode(out)).toBe('[Abc]');
         });
 
         test('op 10 (FermentFirst) is a guarded no-op on an empty base word', () => {
-            const out = s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 10, param: 0 }]), 0, new Uint8Array(0), null);
+            const out = s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 10, param: 0 }]), 0, new Uint8Array(0), null);
             expect(dec.decode(out)).toBe('[]');
         });
 
         test('op 11 (FermentAll) uppercases every ASCII letter', () => {
-            const out = s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 11, param: 0 }]), 0, enc.encode('abc'), null);
+            const out = s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 11, param: 0 }]), 0, enc.encode('abc'), null);
             expect(dec.decode(out)).toBe('[ABC]');
         });
 
         test('op in [12,20] drops the first (op-11) bytes of the base word', () => {
-            const out = s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 14, param: 0 }]), 0, enc.encode('ABCDEF'), null);
+            const out = s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 14, param: 0 }]), 0, enc.encode('ABCDEF'), null);
             expect(dec.decode(out)).toBe('[DEF]');
         });
 
         test('op in [12,20] yields an empty body when the base word is shorter than k', () => {
-            const out = s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 20, param: 0 }]), 0, enc.encode('AB'), null);
+            const out = s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 20, param: 0 }]), 0, enc.encode('AB'), null);
             expect(dec.decode(out)).toBe('[]');
         });
 
         test('op 21 (ShiftFirst) shifts only the first codepoint scalar', () => {
-            const out = s._internal.applyCustomTransform(
+            const out = s[INTERNAL].applyCustomTransform(
                 tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 21, param: 1 }], [new Uint8Array(0), new Uint8Array(0)]),
                 0, enc.encode('ab'), null,
             );
@@ -701,7 +702,7 @@ describe('brotliShared module', () => {
         });
 
         test('op 22 (ShiftAll) shifts every codepoint scalar', () => {
-            const out = s._internal.applyCustomTransform(
+            const out = s[INTERNAL].applyCustomTransform(
                 tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 22, param: 1 }], [new Uint8Array(0), new Uint8Array(0)]),
                 0, enc.encode('ab'), null,
             );
@@ -709,13 +710,13 @@ describe('brotliShared module', () => {
         });
 
         test('rejects an invalid opIdx (directly-constructed transform, bypassing the parser bound check)', () => {
-            try { s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 99, param: 0 }]), 0, enc.encode('X'), null); }
+            try { s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 99, param: 0 }]), 0, enc.encode('X'), null); }
             catch (e) { expect(e.code).toBe('EBADSTREAM'); expect(e.message).toContain('invalid op index'); return; }
             throw new Error('expected throw');
         });
 
         test('rejects a transformId out of range', () => {
-            try { s._internal.applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 0, param: 0 }]), 5, enc.encode('X'), null); }
+            try { s[INTERNAL].applyCustomTransform(tl([{ prefixIdx: 0, suffixIdx: 1, opIdx: 0, param: 0 }]), 5, enc.encode('X'), null); }
             catch (e) { expect(e.code).toBe('EBADSTREAM'); return; }
             throw new Error('expected throw');
         });
@@ -731,34 +732,34 @@ describe('brotliShared module', () => {
         const enc = new TextEncoder();
 
         test('rejects a length below 4', () => {
-            try { s._internal.customLookupWord(mkWL({}), 3, 0, null); }
+            try { s[INTERNAL].customLookupWord(mkWL({}), 3, 0, null); }
             catch (e) { expect(e.code).toBe('EBADSTREAM'); return; }
             throw new Error('expected throw');
         });
 
         test('rejects a length above 31', () => {
-            try { s._internal.customLookupWord(mkWL({}), 32, 0, null); }
+            try { s[INTERNAL].customLookupWord(mkWL({}), 32, 0, null); }
             catch (e) { expect(e.code).toBe('EBADSTREAM'); return; }
             throw new Error('expected throw');
         });
 
         test('rejects a length with no words at all (sizeBits=0)', () => {
-            try { s._internal.customLookupWord(mkWL({}), 6, 0, null); }
+            try { s[INTERNAL].customLookupWord(mkWL({}), 6, 0, null); }
             catch (e) { expect(e.code).toBe('EBADSTREAM'); expect(e.message).toContain('no words of length'); return; }
             throw new Error('expected throw');
         });
 
         test('rejects an out-of-range index', () => {
             const wl = mkWL({ 6: [enc.encode('FOOBAR'), enc.encode('LOREMI')] });
-            try { s._internal.customLookupWord(wl, 6, 2, null); }
+            try { s[INTERNAL].customLookupWord(wl, 6, 2, null); }
             catch (e) { expect(e.code).toBe('EBADSTREAM'); return; }
             throw new Error('expected throw');
         });
 
         test('returns the exact word bytes at (length, index)', () => {
             const wl = mkWL({ 6: [enc.encode('FOOBAR'), enc.encode('LOREMI')] });
-            expect(new TextDecoder().decode(s._internal.customLookupWord(wl, 6, 0, null))).toBe('FOOBAR');
-            expect(new TextDecoder().decode(s._internal.customLookupWord(wl, 6, 1, null))).toBe('LOREMI');
+            expect(new TextDecoder().decode(s[INTERNAL].customLookupWord(wl, 6, 0, null))).toBe('FOOBAR');
+            expect(new TextDecoder().decode(s[INTERNAL].customLookupWord(wl, 6, 1, null))).toBe('LOREMI');
         });
     });
 
@@ -768,7 +769,7 @@ describe('brotliShared module', () => {
         const dec = new TextDecoder();
 
         test('rejects clen out of [4, 31]', () => {
-            const resolve = s._internal.makeResolveStaticDictRef({ dicts: [], contextMap: null });
+            const resolve = s[INTERNAL].makeResolveStaticDictRef({ dicts: [], contextMap: null });
             try { resolve(null, 0, 3, 0, null); }
             catch (e) { expect(e.code).toBe('EBADSTREAM'); return; }
             throw new Error('expected throw');
@@ -777,7 +778,7 @@ describe('brotliShared module', () => {
         test('resolves via a single custom-wordList dict (no contextMap)', () => {
             const wl = mkWL({ 6: [enc.encode('FOOBAR')] });
             const transformList = { stringlets: [enc.encode('['), enc.encode(']')], transforms: [{ prefixIdx: 0, suffixIdx: 1, opIdx: 0, param: 0 }] };
-            const resolve = s._internal.makeResolveStaticDictRef({ dicts: [{ wordList: wl, transformList }], contextMap: null });
+            const resolve = s[INTERNAL].makeResolveStaticDictRef({ dicts: [{ wordList: wl, transformList }], contextMap: null });
             const out = resolve(null, 0, 6, 0, null); // wordId=0 -> transformId=0, index=0
             expect(dec.decode(out)).toBe('[FOOBAR]');
         });
@@ -786,7 +787,7 @@ describe('brotliShared module', () => {
             const wlEmpty = mkWL({});
             const wlB = mkWL({ 6: [enc.encode('LOREMI')] });
             const transformList = { stringlets: [enc.encode(''), enc.encode('')], transforms: [{ prefixIdx: 0, suffixIdx: 0, opIdx: 0, param: 0 }] };
-            const resolve = s._internal.makeResolveStaticDictRef({
+            const resolve = s[INTERNAL].makeResolveStaticDictRef({
                 dicts: [{ wordList: wlEmpty, transformList }, { wordList: wlB, transformList }],
                 contextMap: null,
             });
@@ -800,7 +801,7 @@ describe('brotliShared module', () => {
             const transformList = { stringlets: [enc.encode('_'), enc.encode('_')], transforms: [{ prefixIdx: 0, suffixIdx: 1, opIdx: 0, param: 0 }] };
             const contextMap = new Uint8Array(64);
             contextMap[5] = 1; // contextIdL=5 -> dict index 1 (B) searched first
-            const resolve = s._internal.makeResolveStaticDictRef({
+            const resolve = s[INTERNAL].makeResolveStaticDictRef({
                 dicts: [{ wordList: wlA, transformList }, { wordList: wlB, transformList }],
                 contextMap,
             });
@@ -811,7 +812,7 @@ describe('brotliShared module', () => {
         test('rejects when word_id exceeds the total capacity across all dicts', () => {
             const wl = mkWL({ 6: [enc.encode('FOOBAR')] }); // nw=2 (padded)
             const transformList = { stringlets: [enc.encode(''), enc.encode('')], transforms: [{ prefixIdx: 0, suffixIdx: 0, opIdx: 0, param: 0 }] }; // 1 transform
-            const resolve = s._internal.makeResolveStaticDictRef({ dicts: [{ wordList: wl, transformList }], contextMap: null });
+            const resolve = s[INTERNAL].makeResolveStaticDictRef({ dicts: [{ wordList: wl, transformList }], contextMap: null });
             try { resolve(null, 5, 6, 0, null); } // capacity = nw(2) * transforms(1) = 2
             catch (e) { expect(e.code).toBe('EBADSTREAM'); expect(e.message).toContain('exceeds total capacity'); return; }
             throw new Error('expected throw');
@@ -823,7 +824,7 @@ describe('brotliShared module', () => {
             const freshShared = brotliShared.factory(freshBrotli, freshDict, _bw);
             expect(freshDict.hasWords()).toBe(false);
 
-            const resolve = freshShared._internal.makeResolveStaticDictRef({ dicts: [{ wordList: null, transformList: null }], contextMap: null });
+            const resolve = freshShared[INTERNAL].makeResolveStaticDictRef({ dicts: [{ wordList: null, transformList: null }], contextMap: null });
             const out0 = resolve(null, 0, 4, 0, null);
             expect(freshDict.hasWords()).toBe(true); // lazily loaded as a side effect
 
@@ -841,7 +842,7 @@ describe('brotliShared module', () => {
             const freshWords = brotliDictWords.factory(); // never setBlob'd
             const freshBrotli = brotli.factory(_bs, _hf, _lz, freshDict, freshWords);
             const freshShared = brotliShared.factory(freshBrotli, freshDict, freshWords);
-            const resolve = freshShared._internal.makeResolveStaticDictRef({ dicts: [{ wordList: null, transformList: null }], contextMap: null });
+            const resolve = freshShared[INTERNAL].makeResolveStaticDictRef({ dicts: [{ wordList: null, transformList: null }], contextMap: null });
             try { resolve(null, 0, 4, 0, null); }
             catch (e) { expect(e.code).toBe('ENEEDDICT'); return; }
             throw new Error('expected throw');
@@ -867,7 +868,7 @@ describe('brotliShared module', () => {
                 dictionaryMapBytes: new Uint8Array([0, 0]),
             });
             const parsed = s.parseSharedDictionary(stream);
-            const built = s._internal.buildExt({ sharedDictionary: parsed });
+            const built = s[INTERNAL].buildExt({ sharedDictionary: parsed });
             expect(typeof built._ext.findCustomDictMatch).toBe('function');
 
             const data = enc.encode('XXTESTXX');

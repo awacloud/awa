@@ -20,8 +20,11 @@
  *
  * - a colour space of **DeviceGray**, **DeviceRGB**, **ICCBased** with
  *   `/N` 1 or 3 (the profile carried in `iCCP`, the samples untouched — no
- *   colour conversion), or **Indexed** on one of those (hival ≤ 255, the
- *   lookup a string or a stream, a grey base replicated to RGB in `PLTE`);
+ *   colour conversion), **DeviceCMYK** or **ICCBased** with `/N` 4
+ *   (converted to 8-bit RGB without a profile: r = 255 (1 − c)(1 − k), g
+ *   and b likewise from m and y; the profile not carried), or **Indexed**
+ *   on one of those (hival ≤ 255, the lookup a string or a stream, a grey
+ *   base replicated to RGB in `PLTE`, a CMYK one converted);
  * - 1, 2, 4, 8 or 16 bits per component (Indexed 1–8);
  * - a `/Decode` that is the default, or every pair inverted (`1 0`; an
  *   Indexed picture's `2^bpc−1 0`, the index inverted);
@@ -61,6 +64,15 @@ export const oconvPdfImagePng = {
         const DEPTHS = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };
         const MAX_BYTES = 256 * 1024 * 1024;
         const PASSTHROUGH = new Set(['DCTDecode', 'JPXDecode']);
+        /** Components per colour-space kind. */
+        const COMPONENTS = { gray: 1, rgb: 3, cmyk: 4 };
+
+        /** One CMYK value (each 0–1) as 8-bit RGB, without a profile: (1 − c)(1 − k) and so on. */
+        function cmykToRgb(c, m, y, k, out, at) {
+            out[at] = Math.round(255 * (1 - c) * (1 - k));
+            out[at + 1] = Math.round(255 * (1 - m) * (1 - k));
+            out[at + 2] = Math.round(255 * (1 - y) * (1 - k));
+        }
 
         /** One chunk: length, type, data, CRC-32 of type and data. */
         function chunk(type, data) {
@@ -161,6 +173,7 @@ export const oconvPdfImagePng = {
                 if (cs && cs.type === 'name') {
                     if (cs.value === 'DeviceGray') return { kind: 'gray' };
                     if (cs.value === 'DeviceRGB') return { kind: 'rgb' };
+                    if (cs.value === 'DeviceCMYK') return { kind: 'cmyk' };
                     return null;
                 }
                 if (!cs || cs.type !== 'array' || cs.items.length === 0) return null;
@@ -170,7 +183,9 @@ export const oconvPdfImagePng = {
                     const stream = deref(cs.items[1]);
                     const n = stream && stream.type === 'stream' ? intOf(stream.dict.entries.N) : NaN;
                     const icc = samplesOf(stream);
-                    if (!icc || (n !== 1 && n !== 3)) return null;
+                    if (!icc || (n !== 1 && n !== 3 && n !== 4)) return null;
+                    // A 4-component profile is CMYK: converted, its profile not carried.
+                    if (n === 4) return { kind: 'cmyk' };
                     return { kind: n === 1 ? 'gray' : 'rgb', icc };
                 }
                 if (family === 'Indexed' && !nested && cs.items.length >= 4) {
@@ -178,7 +193,7 @@ export const oconvPdfImagePng = {
                     const hival = intOf(cs.items[2]);
                     const lk = deref(cs.items[3]);
                     const lookup = lk && lk.type === 'string' ? lk.value : samplesOf(lk);
-                    const n = base && base.kind === 'rgb' ? 3 : 1;
+                    const n = base ? COMPONENTS[base.kind] : 1;
                     if (!base || !(hival >= 0 && hival <= 255) || !lookup || lookup.length < (hival + 1) * n) return null;
                     return { kind: 'indexed', base, hival, lookup };
                 }
@@ -203,7 +218,7 @@ export const oconvPdfImagePng = {
             const cs = space(e.ColorSpace, false);
             if (!(width > 0 && height > 0) || !cs || ![1, 2, 4, 8, 16].includes(bpc)) return null;
             if (cs.kind === 'indexed' && bpc > 8) return null;
-            const n = cs.kind === 'rgb' ? 3 : 1;
+            const n = cs.kind === 'indexed' ? 1 : COMPONENTS[cs.kind];
             const rowBytes = Math.ceil(width * n * bpc / 8);
             if (rowBytes * height > MAX_BYTES || width * height * 8 > MAX_BYTES) return null;
             const max = 2 ** bpc - 1;
@@ -275,58 +290,80 @@ export const oconvPdfImagePng = {
                 }
             }
 
-            const icc = cs.kind === 'indexed' ? cs.base.icc : cs.icc;
-            const palette = () => {
-                const entries = Math.min(cs.hival + 1, 1 << bpc);
-                const out = new Uint8Array(entries * 3);
-                const bn = cs.base.kind === 'rgb' ? 3 : 1;
-                for (let k = 0; k < entries; k++) {
-                    for (let c = 0; c < 3; c++) out[k * 3 + c] = cs.lookup[k * bn + (bn === 3 ? c : 0)];
-                }
-                return out;
-            };
-            const spec = { width, height, iccProfile: icc };
-
-            if (!alpha) {
-                if (cs.kind === 'indexed') {
-                    Object.assign(spec, { bitDepth: bpc, colorType: 3, data, palette: palette() });
-                } else if (cs.kind === 'gray' || bpc >= 8) {
-                    Object.assign(spec, { bitDepth: bpc, colorType: cs.kind === 'gray' ? 0 : 2, data });
-                } else {
-                    // RGB at 1, 2 or 4 bits: widened to 8.
-                    const out = new Uint8Array(width * height * 3);
-                    for (let y = 0; y < height; y++) {
-                        for (let i = 0; i < width * 3; i++) out[y * width * 3 + i] = Math.round(sampleAt(data, y * rowBytes, i, bpc) * 255 / max);
+            if (cs.kind === 'cmyk') {
+                // Converted to 8-bit RGB; the picture then goes on as RGB.
+                const rgb = new Uint8Array(width * height * 3);
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const v = (c) => sampleAt(data, y * rowBytes, x * 4 + c, bpc) / max;
+                        cmykToRgb(v(0), v(1), v(2), v(3), rgb, (y * width + x) * 3);
                     }
-                    Object.assign(spec, { bitDepth: 8, colorType: 2, data: out });
                 }
+                return finish({ kind: 'rgb' }, rgb, 8, width * 3, 255, alpha, masked);
+            }
+            return finish(cs, data, bpc, rowBytes, max, alpha, masked);
+
+            /** The PNG of samples `data` in colour space `cs` (gray, rgb or indexed). */
+            function finish(cs, data, bpc, rowBytes, max, alpha, masked) {
+                const n = cs.kind === 'rgb' ? 3 : 1;
+                const icc = cs.kind === 'indexed' ? cs.base.icc : cs.icc;
+                const palette = () => {
+                    const entries = Math.min(cs.hival + 1, 1 << bpc);
+                    const out = new Uint8Array(entries * 3);
+                    const bn = COMPONENTS[cs.base.kind];
+                    for (let k = 0; k < entries; k++) {
+                        if (bn === 4) {
+                            const v = (c) => cs.lookup[k * 4 + c] / 255;
+                            cmykToRgb(v(0), v(1), v(2), v(3), out, k * 3);
+                        } else {
+                            for (let c = 0; c < 3; c++) out[k * 3 + c] = cs.lookup[k * bn + (bn === 3 ? c : 0)];
+                        }
+                    }
+                    return out;
+                };
+                const spec = { width, height, iccProfile: icc };
+
+                if (!alpha) {
+                    if (cs.kind === 'indexed') {
+                        Object.assign(spec, { bitDepth: bpc, colorType: 3, data, palette: palette() });
+                    } else if (cs.kind === 'gray' || bpc >= 8) {
+                        Object.assign(spec, { bitDepth: bpc, colorType: cs.kind === 'gray' ? 0 : 2, data });
+                    } else {
+                        // RGB at 1, 2 or 4 bits: widened to 8.
+                        const out = new Uint8Array(width * height * 3);
+                        for (let y = 0; y < height; y++) {
+                            for (let i = 0; i < width * 3; i++) out[y * width * 3 + i] = Math.round(sampleAt(data, y * rowBytes, i, bpc) * 255 / max);
+                        }
+                        Object.assign(spec, { bitDepth: 8, colorType: 2, data: out });
+                    }
+                    return { bytes: encodePng(spec), masked };
+                }
+
+                // With alpha: grey + alpha or RGBA, 16-bit when the picture is.
+                const depth = bpc === 16 && cs.kind !== 'indexed' ? 16 : 8;
+                const channels = cs.kind === 'gray' ? 2 : 4;
+                const bytesPer = depth / 8;
+                const out = new Uint8Array(width * height * channels * bytesPer);
+                const put = (at, v) => {
+                    if (depth === 16) { out[at] = v >> 8; out[at + 1] = v & 0xFF; } else { out[at] = v; }
+                };
+                const level = (v, from) => Math.round(v * (depth === 16 ? 65535 : 255) / from);
+                const pal = cs.kind === 'indexed' ? palette() : null;
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const px = (y * width + x) * channels * bytesPer;
+                        if (pal) {
+                            const k = Math.min(sampleAt(data, y * rowBytes, x, bpc), pal.length / 3 - 1);
+                            for (let c = 0; c < 3; c++) put(px + c * bytesPer, pal[k * 3 + c]);
+                        } else {
+                            for (let c = 0; c < n; c++) put(px + c * bytesPer, level(sampleAt(data, y * rowBytes, x * n + c, bpc), max));
+                        }
+                        put(px + (channels - 1) * bytesPer, level(alpha.values[y * width + x], alpha.max));
+                    }
+                }
+                Object.assign(spec, { bitDepth: depth, colorType: cs.kind === 'gray' ? 4 : 6, data: out });
                 return { bytes: encodePng(spec), masked };
             }
-
-            // With alpha: grey + alpha or RGBA, 16-bit when the picture is.
-            const depth = bpc === 16 && cs.kind !== 'indexed' ? 16 : 8;
-            const channels = cs.kind === 'gray' ? 2 : 4;
-            const bytesPer = depth / 8;
-            const out = new Uint8Array(width * height * channels * bytesPer);
-            const put = (at, v) => {
-                if (depth === 16) { out[at] = v >> 8; out[at + 1] = v & 0xFF; } else { out[at] = v; }
-            };
-            const level = (v, from) => Math.round(v * (depth === 16 ? 65535 : 255) / from);
-            const pal = cs.kind === 'indexed' ? palette() : null;
-            for (let y = 0; y < height; y++) {
-                for (let x = 0; x < width; x++) {
-                    const px = (y * width + x) * channels * bytesPer;
-                    if (pal) {
-                        const k = Math.min(sampleAt(data, y * rowBytes, x, bpc), pal.length / 3 - 1);
-                        for (let c = 0; c < 3; c++) put(px + c * bytesPer, pal[k * 3 + c]);
-                    } else {
-                        for (let c = 0; c < n; c++) put(px + c * bytesPer, level(sampleAt(data, y * rowBytes, x * n + c, bpc), max));
-                    }
-                    put(px + (channels - 1) * bytesPer, level(alpha.values[y * width + x], alpha.max));
-                }
-            }
-            Object.assign(spec, { bitDepth: depth, colorType: cs.kind === 'gray' ? 4 : 6, data: out });
-            return { bytes: encodePng(spec), masked };
         }
 
         return { encodePng, imageToPng };

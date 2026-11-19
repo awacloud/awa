@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -16,14 +16,16 @@
  * the ESM factory, JSDoc, tests and every later change are this project's own
  * work. See docs/dev/provenance.md.
  *
- * S-box and MixColumns tables are precomputed once at factory time.
+ * The T-table path's tables are precomputed once at factory time; the
+ * constant-time path reads none of them.
  *
- * ⚠️ **Cache-timing caveat** - the **default** `api.fn` path is now the
- * constant-time implementation: SubBytes runs through a masked-lookup S-box
- * (256 uniform reads per byte) so the memory access pattern is independent of
- * the AES key/state. This is secure-by-default against Bernstein-style
- * cache-timing attacks (Bernstein 2005, « Cache-timing attacks on AES ») at
- * a cost of ~50-100× the throughput of the T-table path.
+ * ⚠️ **Cache-timing caveat** - the **default** `api.fn` path is the
+ * constant-time implementation: a bitsliced AES (8 bit-planes of 16 lanes,
+ * SubBytes as the GF(2^8) inverse computed on the planes), with no table read
+ * and no branch depending on the key or the state - the key expansion
+ * included. This is secure-by-default against Bernstein-style cache-timing
+ * attacks (Bernstein 2005, « Cache-timing attacks on AES ») at a cost of
+ * about 11× the time of the T-table path (about 1.3 us a block on Bun / Node).
  *
  * The fast T-table scheduler (5 T-tables, ~5 KB, one indexed lookup per
  * SubBytes ∘ MixColumns) is **opt-in** via `aes.ttable.fn(...)`. It is
@@ -31,9 +33,6 @@
  * shared cache (cloud VM, serverless, hyper-thread) can recover the AES key.
  * Use it only when the execution environment is not shared/hostile, or prefer
  * WebCrypto (`crypto.subtle` - hardware AES-NI when available) for bulk work.
- *
- * `aes.bitsliced.fn(...)` is retained as a **deprecated alias** of `aes.fn`
- * (both are constant-time now) for back-compat; prefer `aes.fn` directly.
  *
  * Block primitive returns `false` on invalid block length - every caller
  * mode (CBC/CTR/GCM/CMAC/KW) treats a `false` result as failure (early
@@ -59,9 +58,8 @@
 /**
  * Object returned by `aes.factory()`.
  * @typedef {object} AesAPI
- * @property {AesKeyScheduler} fn Constant-time (masked-lookup) key scheduler — **default**.
+ * @property {AesKeyScheduler} fn Constant-time (bitsliced) key scheduler — **default**.
  * @property {{ fn: AesKeyScheduler }} ttable T-table key scheduler (fast, NOT constant-time, opt-in).
- * @property {{ fn: AesKeyScheduler }} bitsliced Deprecated alias of `fn`.
  */
 
 export const aes = {
@@ -175,229 +173,282 @@ export const aes = {
             return out;
         }
 
-        // ── Constant-time S-box (Iteration F2 of the FIPS 140-3 upgrade plan) ──
+        // ── Constant-time core: bitsliced AES ──
         //
-        // The opt-in `crypt` (T-table) path uses 5 T-tables (~5 KB) for
-        // SubBytes ∘ MixColumns. T-table lookups leak the AES state via
-        // cache-timing : an attacker observing cache-miss latencies can
-        // recover the key (cf. Bernstein 2005 « Cache-timing attacks on AES »).
+        // The 16 state bytes live as 8 bit-planes: plane k holds bit k of every
+        // byte, byte i (FIPS 197 column-major index, row + 4 * column) in bit i
+        // of a 16-bit lane mask. Every step is a fixed sequence of bitwise
+        // operations on the planes — no table read and no branch depends on a
+        // key or data byte, so the memory access pattern and the instruction
+        // stream are the same for every input (the property the T-table path
+        // lacks, Bernstein 2005).
         //
-        // `_sboxCT(b, sbox)` performs a *constant-time* table read by scanning
-        // all 256 entries and masking them with `b == i ? 0xFF : 0x00`. The
-        // mask is derived without branching : `diff = i XOR b`, then
-        // `isZero = ((diff - 1) >>> 8) & 1` returns 1 iff `diff === 0`
-        // (since `diff ∈ [0, 255]` ; only `diff === 0` borrows into bit 8 of
-        // `diff - 1`). Yields a uniform memory access pattern independent of `b`.
+        //   SubBytes      inverse in GF(2^8) (x^254: 4 products, 7 squares,
+        //                 reduction by x^8 + x^4 + x^3 + x + 1), then the affine map
+        //   ShiftRows     per row, a rotation of that row's lanes
+        //   MixColumns    r = c ^ t ^ xtime(c ^ c'), c' the next row, t the column sum
+        //   InvMixColumns MixColumns^3 (MixColumns has order 4)
         //
-        // Cost : ~1024 ops per S-box (vs 1 T-table lookup) → AES-128 block ~50×
-        // slower, AES-256 block ~70× slower. Acceptable for opt-in use cases :
-        // long-lived secret keys in shared-cache environments (cloud VMs,
-        // serverless), low-volume cryptographic operations (key wrapping,
-        // signature scheme inner blocks). This is the **default** `aes.fn`
-        // path; the fast T-table path is opt-in via `aes.ttable.fn(key)`.
-        function _sboxCT(b, sbox) {
-            let result = 0;
-            const bx = b & 0xff;
-            for (let i = 0; i < 256; i++) {
-                // mask = 0xFF if i == bx, else 0x00 - branchless.
-                // ((diff - 1) >>> 8) & 1 == 1 iff diff == 0 (since diff in [0, 255]).
-                const diff = (i ^ bx) >>> 0;
-                const isZero = ((diff - 1) >>> 8) & 1;
-                const mask = (-isZero) & 0xff;
-                result |= sbox[i] & mask;
-            }
-            return result & 0xff;
+        // Derived from FIPS 197 alone; checked against the tables on every input.
+
+        const LANES = 0xffff;
+
+        // GF(2^8) product and square of every lane, unrolled (out may alias an input):
+        // the 64 partial products, then x^k = x^(k-4) + x^(k-5) + x^(k-7) + x^(k-8)
+        // folds the degrees 14..8 down. Generated, then checked on every input.
+        function _bsMul(a, b, out) {
+            const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7];
+            const b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3], b4 = b[4], b5 = b[5], b6 = b[6], b7 = b[7];
+            let p0 = (a0 & b0);
+            let p1 = (a0 & b1) ^ (a1 & b0);
+            let p2 = (a0 & b2) ^ (a1 & b1) ^ (a2 & b0);
+            let p3 = (a0 & b3) ^ (a1 & b2) ^ (a2 & b1) ^ (a3 & b0);
+            let p4 = (a0 & b4) ^ (a1 & b3) ^ (a2 & b2) ^ (a3 & b1) ^ (a4 & b0);
+            let p5 = (a0 & b5) ^ (a1 & b4) ^ (a2 & b3) ^ (a3 & b2) ^ (a4 & b1) ^ (a5 & b0);
+            let p6 = (a0 & b6) ^ (a1 & b5) ^ (a2 & b4) ^ (a3 & b3) ^ (a4 & b2) ^ (a5 & b1) ^ (a6 & b0);
+            let p7 = (a0 & b7) ^ (a1 & b6) ^ (a2 & b5) ^ (a3 & b4) ^ (a4 & b3) ^ (a5 & b2) ^ (a6 & b1) ^ (a7 & b0);
+            let p8 = (a1 & b7) ^ (a2 & b6) ^ (a3 & b5) ^ (a4 & b4) ^ (a5 & b3) ^ (a6 & b2) ^ (a7 & b1);
+            let p9 = (a2 & b7) ^ (a3 & b6) ^ (a4 & b5) ^ (a5 & b4) ^ (a6 & b3) ^ (a7 & b2);
+            let p10 = (a3 & b7) ^ (a4 & b6) ^ (a5 & b5) ^ (a6 & b4) ^ (a7 & b3);
+            let p11 = (a4 & b7) ^ (a5 & b6) ^ (a6 & b5) ^ (a7 & b4);
+            let p12 = (a5 & b7) ^ (a6 & b6) ^ (a7 & b5);
+            let p13 = (a6 & b7) ^ (a7 & b6);
+            let p14 = (a7 & b7);
+            p10 ^= p14; p9 ^= p14; p7 ^= p14; p6 ^= p14;
+            p9 ^= p13; p8 ^= p13; p6 ^= p13; p5 ^= p13;
+            p8 ^= p12; p7 ^= p12; p5 ^= p12; p4 ^= p12;
+            p7 ^= p11; p6 ^= p11; p4 ^= p11; p3 ^= p11;
+            p6 ^= p10; p5 ^= p10; p3 ^= p10; p2 ^= p10;
+            p5 ^= p9; p4 ^= p9; p2 ^= p9; p1 ^= p9;
+            p4 ^= p8; p3 ^= p8; p1 ^= p8; p0 ^= p8;
+            out[0] = p0;
+            out[1] = p1;
+            out[2] = p2;
+            out[3] = p3;
+            out[4] = p4;
+            out[5] = p5;
+            out[6] = p6;
+            out[7] = p7;
         }
 
-        // GF(2^8) multiplication-by-2 (xtime) - already constant-time
-        // (bitwise ops only ; `(b >> 7) * 283` produces 0 or 283 without
-        // branching since `b >> 7` is 0 or 1).
-        function _xtime(b) {
-            return ((b << 1) ^ ((b >> 7) * 0x1b)) & 0xff;
+        function _bsSq(a, out) {
+            const a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7];
+            out[0] = a0 ^ a4 ^ a6;
+            out[1] = a4 ^ a6 ^ a7;
+            out[2] = a1 ^ a5;
+            out[3] = a4 ^ a5 ^ a6 ^ a7;
+            out[4] = a2 ^ a4 ^ a7;
+            out[5] = a5 ^ a6;
+            out[6] = a3 ^ a5;
+            out[7] = a6 ^ a7;
         }
 
-        // MixColumns on a single column (4 bytes), constant-time.
-        function _mixColumnCT(c0, c1, c2, c3) {
-            const t = c0 ^ c1 ^ c2 ^ c3;
-            const r0 = c0 ^ t ^ _xtime(c0 ^ c1);
-            const r1 = c1 ^ t ^ _xtime(c1 ^ c2);
-            const r2 = c2 ^ t ^ _xtime(c2 ^ c3);
-            const r3 = c3 ^ t ^ _xtime(c3 ^ c0);
-            return [r0, r1, r2, r3];
+        const _x2 = new Int32Array(8), _x3 = new Int32Array(8), _x12 = new Int32Array(8), _acc = new Int32Array(8), _aff = new Int32Array(8);
+
+        /** x^254 of every lane (the inverse, 0 for 0), in place. */
+        function _bsInv(x) {
+            _bsSq(x, _x2);                 // x^2
+            _bsMul(_x2, x, _x3);           // x^3
+            _bsSq(_x3, _x12);              // x^6
+            _bsSq(_x12, _x12);             // x^12
+            _bsMul(_x12, _x3, _acc);       // x^15
+            _bsSq(_acc, _acc);             // x^30
+            _bsSq(_acc, _acc);             // x^60
+            _bsSq(_acc, _acc);             // x^120
+            _bsSq(_acc, _acc);             // x^240
+            _bsMul(_acc, _x12, _acc);      // x^252
+            _bsMul(_acc, _x2, x);          // x^254
         }
 
-        // Inverse MixColumns column.
-        function _invMixColumnCT(c0, c1, c2, c3) {
-            // First apply Mixcolumns once, then forward MixColumns 3 more
-            // times - equivalent to the inverse via tower-field expansion :
-            //   InvMixCol(c) = MixCol(c) ⊕ xtime²(c⊕c²) ⊕ xtime(...).
-            // We implement directly via the standard 0x0e/0x0b/0x0d/0x09 GF
-            // multiplications.
-            const m02 = _xtime;
-            const m04 = (b) => m02(m02(b));
-            const m08 = (b) => m02(m04(b));
-            const m09 = (b) => m08(b) ^ b;
-            const m0b = (b) => m08(b) ^ m02(b) ^ b;
-            const m0d = (b) => m08(b) ^ m04(b) ^ b;
-            const m0e = (b) => m08(b) ^ m04(b) ^ m02(b);
-            return [
-                (m0e(c0) ^ m0b(c1) ^ m0d(c2) ^ m09(c3)) & 0xff,
-                (m09(c0) ^ m0e(c1) ^ m0b(c2) ^ m0d(c3)) & 0xff,
-                (m0d(c0) ^ m09(c1) ^ m0e(c2) ^ m0b(c3)) & 0xff,
-                (m0b(c0) ^ m0d(c1) ^ m09(c2) ^ m0e(c3)) & 0xff,
-            ];
+        /** SubBytes on the planes, in place: inverse, then the affine map (c = 0x63). */
+        function _bsSubPlanes(s) {
+            _bsInv(s);
+            for (let k = 0; k < 8; k++) _aff[k] = s[k];
+            for (let k = 0; k < 8; k++) {
+                s[k] = _aff[k] ^ _aff[(k + 4) & 7] ^ _aff[(k + 5) & 7] ^ _aff[(k + 6) & 7] ^ _aff[(k + 7) & 7]
+                    ^ ((0x63 >> k) & 1 ? LANES : 0);
+            }
         }
 
-        // Constant-time AES encrypt/decrypt over a 4-word (16-byte) block.
-        // Operates byte-per-byte through the standard FIPS 197 algorithm using
-        // `_sboxCT` for SubBytes ; ShiftRows is a permutation, MixColumns uses
-        // `_xtime` (branchless), AddRoundKey is XOR.
-        function _cryptCT(input, dir, keys) {
-            if (input.length !== 4) {
-                console.warn('[crypto] INVALID: aes: invalid block size');
-                return false;
+        /** InvSubBytes on the planes, in place: the inverse affine map (d = 0x05), then the inverse. */
+        function _bsInvSubPlanes(s) {
+            for (let k = 0; k < 8; k++) _aff[k] = s[k];
+            for (let k = 0; k < 8; k++) {
+                s[k] = _aff[(k + 2) & 7] ^ _aff[(k + 5) & 7] ^ _aff[(k + 7) & 7] ^ ((0x05 >> k) & 1 ? LANES : 0);
             }
-            const sbox    = tables[0][4];
-            const sboxInv = tables[1][4];
-            const sb = dir ? sboxInv : sbox;
-            const enc = !dir;
+            _bsInv(s);
+        }
 
-            // Unpack input (4 × 32-bit big-endian words) → 16 bytes (column-major).
-            // Per FIPS 197 §3.4 : state[i, j] = input[i + 4*j].
-            const state = new Uint8Array(16);
-            for (let j = 0; j < 4; j++) {
-                const w = input[j];
-                state[j * 4    ] = (w >>> 24) & 0xff;
-                state[j * 4 + 1] = (w >>> 16) & 0xff;
-                state[j * 4 + 2] = (w >>>  8) & 0xff;
-                state[j * 4 + 3] =  w         & 0xff;
+        /** ShiftRows (inv = false) or InvShiftRows: row r's lanes rotated by r columns. */
+        function _bsShift(s, inv) {
+            for (let k = 0; k < 8; k++) {
+                const x = s[k];
+                let y = x & 0x1111;
+                for (let r = 1; r < 4; r++) {
+                    const m = 0x1111 << r;
+                    const v = x & m;
+                    const n = 4 * r;
+                    const rot = inv ? (v << n) | (v >>> (16 - n)) : (v >>> n) | (v << (16 - n));
+                    y |= rot & m;
+                }
+                s[k] = y;
             }
+        }
 
-            // Build a byte-level **straight** FIPS 197 §5.3 key schedule from
-            // `keys[0]` (the encryption schedule). The decrypt path uses the
-            // standard straight-inverse algorithm (InvShiftRows / InvSubBytes
-            // / AddRoundKey / InvMixColumns) per FIPS 197 §5.3 - no need for
-            // the `decKey` pre-processed by InvMixColumns⁻¹ via T-tables.
-            // `dir` only branches encrypt vs decrypt (cf. `if (enc)`
-            // below) ; the same schedule is used for both.
-            const encWords = keys[0];
-            const Nr = encWords.length / 4 - 1;   // 10/12/14 for AES-128/192/256
-            const ks = new Uint8Array(encWords.length * 4);
-            for (let i = 0; i < encWords.length; i++) {
-                ks[i * 4    ] = (encWords[i] >>> 24) & 0xff;
-                ks[i * 4 + 1] = (encWords[i] >>> 16) & 0xff;
-                ks[i * 4 + 2] = (encWords[i] >>>  8) & 0xff;
-                ks[i * 4 + 3] =  encWords[i]         & 0xff;
+        const _c1 = new Int32Array(8), _u = new Int32Array(8);
+
+        /** MixColumns on the planes, in place. */
+        function _bsMix(s) {
+            for (let k = 0; k < 8; k++) {
+                const x = s[k];
+                const x1 = ((x >>> 1) & 0x7777) | ((x & 0x1111) << 3);   // the next row's byte, per column
+                const x2 = ((x1 >>> 1) & 0x7777) | ((x1 & 0x1111) << 3);
+                const x3 = ((x2 >>> 1) & 0x7777) | ((x2 & 0x1111) << 3);
+                _c1[k] = x ^ x1 ^ x2 ^ x3;                                // t: the column sum
+                _u[k] = x ^ x1;
             }
+            const u = _u;
+            // s ^ t ^ xtime(u); xtime: shift up a bit, fold bit 8 back as 0x1b
+            const xt0 = u[7], xt1 = u[0] ^ u[7], xt2 = u[1], xt3 = u[2] ^ u[7];
+            const xt4 = u[3] ^ u[7], xt5 = u[4], xt6 = u[5], xt7 = u[6];
+            s[0] ^= _c1[0] ^ xt0; s[1] ^= _c1[1] ^ xt1; s[2] ^= _c1[2] ^ xt2; s[3] ^= _c1[3] ^ xt3;
+            s[4] ^= _c1[4] ^ xt4; s[5] ^= _c1[5] ^ xt5; s[6] ^= _c1[6] ^ xt6; s[7] ^= _c1[7] ^ xt7;
+        }
 
-            if (enc) {
-                // AddRoundKey(0)
-                for (let i = 0; i < 16; i++) state[i] ^= ks[i];
-                // Rounds 1..Nr-1
-                for (let r = 1; r < Nr; r++) {
-                    // SubBytes
-                    for (let i = 0; i < 16; i++) state[i] = _sboxCT(state[i], sb);
-                    // ShiftRows : row k cyclic-shift by k positions.
-                    const tmp = new Uint8Array(state);
-                    for (let row = 0; row < 4; row++) {
-                        for (let col = 0; col < 4; col++) {
-                            state[col * 4 + row] = tmp[((col + row) & 3) * 4 + row];
-                        }
-                    }
-                    // MixColumns
-                    for (let col = 0; col < 4; col++) {
-                        const o = col * 4;
-                        const m = _mixColumnCT(state[o], state[o + 1], state[o + 2], state[o + 3]);
-                        state[o    ] = m[0];
-                        state[o + 1] = m[1];
-                        state[o + 2] = m[2];
-                        state[o + 3] = m[3];
-                    }
-                    // AddRoundKey(r)
-                    for (let i = 0; i < 16; i++) state[i] ^= ks[r * 16 + i];
+        function _bsInvMix(s) { _bsMix(s); _bsMix(s); _bsMix(s); }
+
+        /** 4 big-endian words → planes (out). */
+        function _bsPack(words, out) {
+            out.fill(0);
+            for (let c = 0; c < 4; c++) {
+                const w = words[c];
+                for (let r = 0; r < 4; r++) {
+                    const byte = (w >>> (24 - 8 * r)) & 0xff;
+                    const lane = r + 4 * c;
+                    for (let k = 0; k < 8; k++) out[k] |= ((byte >>> k) & 1) << lane;
                 }
-                // Final round (no MixColumns)
-                for (let i = 0; i < 16; i++) state[i] = _sboxCT(state[i], sb);
-                {
-                    const tmp = new Uint8Array(state);
-                    for (let row = 0; row < 4; row++) {
-                        for (let col = 0; col < 4; col++) {
-                            state[col * 4 + row] = tmp[((col + row) & 3) * 4 + row];
-                        }
-                    }
-                }
-                for (let i = 0; i < 16; i++) state[i] ^= ks[Nr * 16 + i];
-            } else {
-                // AddRoundKey(Nr)
-                for (let i = 0; i < 16; i++) state[i] ^= ks[Nr * 16 + i];
-                // Rounds Nr-1..1
-                for (let r = Nr - 1; r >= 1; r--) {
-                    // InvShiftRows : row k cyclic-shift by -k positions.
-                    const tmp = new Uint8Array(state);
-                    for (let row = 0; row < 4; row++) {
-                        for (let col = 0; col < 4; col++) {
-                            state[col * 4 + row] = tmp[((col - row + 4) & 3) * 4 + row];
-                        }
-                    }
-                    // InvSubBytes
-                    for (let i = 0; i < 16; i++) state[i] = _sboxCT(state[i], sb);
-                    // AddRoundKey(r)
-                    for (let i = 0; i < 16; i++) state[i] ^= ks[r * 16 + i];
-                    // InvMixColumns
-                    for (let col = 0; col < 4; col++) {
-                        const o = col * 4;
-                        const m = _invMixColumnCT(state[o], state[o + 1], state[o + 2], state[o + 3]);
-                        state[o    ] = m[0];
-                        state[o + 1] = m[1];
-                        state[o + 2] = m[2];
-                        state[o + 3] = m[3];
-                    }
-                }
-                // Final inverse round (no InvMixColumns)
-                {
-                    const tmp = new Uint8Array(state);
-                    for (let row = 0; row < 4; row++) {
-                        for (let col = 0; col < 4; col++) {
-                            state[col * 4 + row] = tmp[((col - row + 4) & 3) * 4 + row];
-                        }
-                    }
-                }
-                for (let i = 0; i < 16; i++) state[i] = _sboxCT(state[i], sb);
-                for (let i = 0; i < 16; i++) state[i] ^= ks[i];
             }
+        }
 
-            // Pack 16 bytes back to 4 × 32-bit words.
+        /** Planes → 4 big-endian words (signed, as the T-table path returns them). */
+        function _bsUnpack(s) {
             const out = [0, 0, 0, 0];
-            for (let j = 0; j < 4; j++) {
-                out[j] = (state[j * 4] << 24) | (state[j * 4 + 1] << 16) |
-                         (state[j * 4 + 2] << 8) | state[j * 4 + 3];
+            for (let c = 0; c < 4; c++) {
+                let w = 0;
+                for (let r = 0; r < 4; r++) {
+                    const lane = r + 4 * c;
+                    let byte = 0;
+                    for (let k = 0; k < 8; k++) byte |= ((s[k] >>> lane) & 1) << k;
+                    w |= byte << (24 - 8 * r);
+                }
+                out[c] = w;
             }
             return out;
         }
+
+        const _state = new Int32Array(8);
+
+        /** SubWord of the key expansion, through the bitsliced S-box (column 0's lanes). */
+        function _subWordCT(w) {
+            _bsPack([w, 0, 0, 0], _state);
+            _bsSubPlanes(_state);
+            return _bsUnpack(_state)[0];
+        }
+
+        /**
+         * FIPS 197 §5.2 key expansion with a constant-time SubWord.
+         * @param {number[]} key 4/6/8 words
+         * @returns {number[]} 4 * (Nr + 1) words
+         */
+        function _expandKeyCT(key) {
+            const n = key.length;
+            const w = key.slice(0);
+            let rcon = 1;   // public: the round constants depend on nothing secret
+            for (let i = n; i < 4 * n + 28; i++) {
+                let tmp = w[i - 1];
+                if (i % n === 0) {
+                    tmp = _subWordCT(tmp << 8 | tmp >>> 24) ^ rcon << 24;
+                    rcon = rcon << 1 ^ (rcon >> 7) * 283;
+                } else if (n === 8 && i % n === 4) {
+                    tmp = _subWordCT(tmp);
+                }
+                w[i] = w[i - n] ^ tmp;
+            }
+            return w;
+        }
+
+        /** The table-driven expansion (`ttable`'s), kept for the equality test. */
+        function _expandKeyTable(key) {
+            const sbox = tables[0][4];
+            const n = key.length;
+            const w = key.slice(0);
+            let rcon = 1;
+            for (let i = n; i < 4 * n + 28; i++) {
+                let tmp = w[i - 1];
+                if (i % n === 0 || (n === 8 && i % n === 4)) {
+                    tmp = sbox[tmp >>> 24] << 24 ^ sbox[tmp >> 16 & 255] << 16 ^ sbox[tmp >> 8 & 255] << 8 ^ sbox[tmp & 255];
+                    if (i % n === 0) { tmp = tmp << 8 ^ tmp >>> 24 ^ rcon << 24; rcon = rcon << 1 ^ (rcon >> 7) * 283; }
+                }
+                w[i] = w[i - n] ^ tmp;
+            }
+            return w;
+        }
+
+        /** Round keys as planes: Nr + 1 arrays of 8. */
+        function _bsRoundKeys(words) {
+            const rk = [];
+            for (let r = 0; r < words.length / 4; r++) {
+                const p = new Int32Array(8);
+                _bsPack(words.slice(4 * r, 4 * r + 4), p);
+                rk.push(p);
+            }
+            return rk;
+        }
+
+        const _addKey = (s, k) => { for (let i = 0; i < 8; i++) s[i] ^= k[i]; };
+
+        /** One block, encrypt (dir 0) or decrypt (dir 1), on bitsliced round keys. */
+        function _bsCrypt(input, dir, rk) {
+            if (!input || input.length !== 4) {
+                console.warn('[crypto] INVALID: aes: invalid block size');
+                return false;
+            }
+            const s = _state;
+            const nr = rk.length - 1;
+            _bsPack(input, s);
+            if (!dir) {
+                _addKey(s, rk[0]);
+                for (let r = 1; r < nr; r++) {
+                    _bsSubPlanes(s); _bsShift(s, false); _bsMix(s); _addKey(s, rk[r]);
+                }
+                _bsSubPlanes(s); _bsShift(s, false); _addKey(s, rk[nr]);
+            } else {
+                _addKey(s, rk[nr]);
+                for (let r = nr - 1; r >= 1; r--) {
+                    _bsShift(s, true); _bsInvSubPlanes(s); _addKey(s, rk[r]); _bsInvMix(s);
+                }
+                _bsShift(s, true); _bsInvSubPlanes(s); _addKey(s, rk[0]);
+            }
+            return _bsUnpack(s);
+        }
+
+        const _bsEncrypt = (input, rk) => _bsCrypt(input, 0, rk);
 
         const api = {};
 
         /**
          * Schedule an AES key — **constant-time default**.
          *
-         * Block encrypt/decrypt are routed through `_cryptCT`, which performs
-         * SubBytes via a **masked-lookup** S-box (256 uniform reads per byte)
-         * instead of T-table indexed lookups. This neutralises Bernstein-style
-         * cache-timing leaks on the AES key, making this path secure by
-         * default in shared-cache environments (cloud VM, serverless,
-         * hyper-thread).
-         *
-         * Cost : ~50-100× slower than the opt-in `api.ttable.fn`. NOT a
-         * substitute for AES-NI (use WebCrypto when available - see
-         * aes.acvp.md F2). For high-throughput work on a trusted host, opt in
-         * to the fast T-table path via `api.ttable.fn`.
-         *
-         * The key schedule itself uses the T-table SubBytes during expansion :
-         * acceptable because key expansion runs once per session, not per
-         * block, so per-block cache-timing on the schedule is irrelevant.
+         * Encrypt / decrypt run through the bitsliced core: no table read and
+         * no branch depends on the key or the data, the key expansion
+         * included (its SubWord goes through the same core). About 11x the
+         * T-table path's time per block — about 1.3 us — against
+         * cache-timing attacks the T-table path does not resist (shared caches:
+         * cloud VM, serverless, hyper-threads). For bulk work on a trusted host,
+         * `api.ttable.fn` is faster; WebCrypto (AES-NI) faster still.
          *
          * @param {Array} input_key  4/6/8 32-bit words (AES-128/192/256).
-         * @param {boolean} [full=true]  If false, only the encryption schedule is built.
+         * @param {boolean} [full=true]  If false, only `encrypt` is returned.
          * @returns {{encrypt:Function, decrypt?:Function}|false}
          */
         api.fn = function (input_key, full = true) {
@@ -406,28 +457,9 @@ export const aes = {
                 console.warn('[crypto] INVALID: aes: invalid key size');
                 return false;
             }
-            // Build the standard FIPS 197 §5.2 key schedule. `_cryptCT`
-            // only reads `keys[0]` (straight encKey) - no `decKey`
-            // pre-processed by InvMixColumns⁻¹, so the inverse T-table
-            // step present in `api.ttable.fn` is not needed.
-            const sbox = tables[0][4];
-            const encKey = input_key.slice(0);
-            let rcon = 1, i, tmp;
-            for (i = keyLen; i < 4 * keyLen + 28; i++) {
-                tmp = encKey[i - 1];
-                if (i % keyLen === 0 || (keyLen === 8 && i % keyLen === 4)) {
-                    tmp = sbox[tmp >>> 24] << 24 ^ sbox[tmp >> 16 & 255] << 16
-                        ^ sbox[tmp >>  8 & 255] <<  8 ^ sbox[tmp        & 255];
-                    if (i % keyLen === 0) {
-                        tmp = tmp << 8 ^ tmp >>> 24 ^ rcon << 24;
-                        rcon = rcon << 1 ^ (rcon >> 7) * 283;
-                    }
-                }
-                encKey[i] = encKey[i - keyLen] ^ tmp;
-            }
-            const key = [encKey];
-            const ret = { encrypt(data) { return _cryptCT(data, 0, key); } };
-            if (full) ret.decrypt = (data) => _cryptCT(data, 1, key);
+            const rk = _bsRoundKeys(_expandKeyCT(input_key));
+            const ret = { encrypt(data) { return _bsCrypt(data, 0, rk); } };
+            if (full) ret.decrypt = (data) => _bsCrypt(data, 1, rk);
             return ret;
         };
 
@@ -503,9 +535,28 @@ export const aes = {
             }
         };
 
-        // Deprecated alias of `api.fn` (both are constant-time now). Kept one
-        // cycle for back-compat; prefer `aes.fn` directly.
-        api.bitsliced = { fn: api.fn };
+        // Test-only internals, in the internal slot (core/internal.js): not API.
+        Object.defineProperty(api, Symbol.for('@awacloud/fw/internal'), { value: {
+            sbox: tables[0][4],
+            sboxInv: tables[1][4],
+            /** Bitsliced SubBytes of 16 bytes (lane i = byte i). */
+            bsSub(bytes) {
+                const p = new Int32Array(8);
+                for (let i = 0; i < 16; i++) for (let k = 0; k < 8; k++) p[k] |= ((bytes[i] >>> k) & 1) << i;
+                _bsSubPlanes(p);
+                return Uint8Array.from({ length: 16 }, (_, i) => { let v = 0; for (let k = 0; k < 8; k++) v |= ((p[k] >>> i) & 1) << k; return v; });
+            },
+            /** Bitsliced InvSubBytes of 16 bytes. */
+            bsInvSub(bytes) {
+                const p = new Int32Array(8);
+                for (let i = 0; i < 16; i++) for (let k = 0; k < 8; k++) p[k] |= ((bytes[i] >>> k) & 1) << i;
+                _bsInvSubPlanes(p);
+                return Uint8Array.from({ length: 16 }, (_, i) => { let v = 0; for (let k = 0; k < 8; k++) v |= ((p[k] >>> i) & 1) << k; return v; });
+            },
+            expandKey: _expandKeyCT,
+            expandKeyTable: _expandKeyTable,
+            bsEncrypt: _bsEncrypt,
+        } });
 
         return /** @type {AesAPI} */ (/** @type {any} */ (api));
     }

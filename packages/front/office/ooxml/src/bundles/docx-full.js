@@ -30,6 +30,8 @@ import { legacyVml } from '../extra/legacy-vml.js';
 import { wmlMisc } from '../extra/wml-misc.js';
 import { mathMisc } from '../extra/math-misc.js';
 import { dmlMainMisc } from '../extra/dml-main-misc.js';
+import { wmlStyleDetails } from '../extra/wml-style-details.js';
+import { wmlDocumentDetails } from '../extra/wml-document-details.js';
 
 export const docxFullBundle = {
     name: 'docxFullBundle',
@@ -37,17 +39,20 @@ export const docxFullBundle = {
         'docxLargeBundle',
         'wmlVmlLegacy', 'dmlShapesAdvanced',
         'transitional', 'legacyVml',
-        'wmlMisc', 'mathMisc', 'dmlMainMisc'
+        'wmlMisc', 'mathMisc', 'dmlMainMisc',
+        'wmlStyleDetails', 'wmlDocumentDetails'
     ],
-    deps: [docxLargeBundle, wmlVmlLegacy, dmlShapesAdvanced, transitional, legacyVml, wmlMisc, mathMisc, dmlMainMisc],
+    deps: [docxLargeBundle, wmlVmlLegacy, dmlShapesAdvanced, transitional, legacyVml, wmlMisc, mathMisc, dmlMainMisc, wmlStyleDetails, wmlDocumentDetails],
     factory(docxLargeBundle,
             wmlVmlLegacy, dmlShapesAdvanced,
             transitional, legacyVml,
-            wmlMisc, mathMisc, dmlMainMisc) {
+            wmlMisc, mathMisc, dmlMainMisc,
+            wmlStyleDetails, wmlDocumentDetails) {
         docxLargeBundle.use(
             wmlVmlLegacy, dmlShapesAdvanced,
             transitional, legacyVml,
-            wmlMisc, mathMisc, dmlMainMisc
+            wmlMisc, mathMisc, dmlMainMisc,
+            wmlStyleDetails, wmlDocumentDetails
         );
         return docxLargeBundle;
     }

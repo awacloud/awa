@@ -77,30 +77,23 @@ body {
 .app-main { min-height: 0; }
 .app-main > .awn { height: 100%; }
 
-/* The About panel: a modal dialog over the page (legal notices, release, updates). */
-.app-about {
-    width: min(34rem, calc(100vw - 2 * var(--fw-space-4)));
-    max-height: calc(100dvh - 2 * var(--fw-space-4));
-    padding: var(--fw-space-6);
-    color: var(--af-fg);
-    background: var(--af-surface);
-    border: 1px solid var(--af-border);
-    border-radius: var(--fw-radius-md);
-    box-shadow: var(--af-shadow);
-    font-size: var(--af-step--1);
-}
-.app-about::backdrop { background: rgb(0 0 0 / 0.5); }
-.app-about p { margin: 0 0 var(--fw-space-3); }
-.app-about-title { margin: 0 0 var(--fw-space-2); font: 700 var(--af-step-1)/1.2 var(--af-mono); }
-.app-about-version, .app-about-build { color: var(--af-muted); }
+/* The About panel: a modal dialog over the page, in the Help panel's form (the dialog carries
+ * `app-help` too: same sizing, backdrop, head with its x, scrollable body — the rules below only add
+ * what is About's own: the version line in the head, the update row, the closing button). */
+/* Its height follows its content (owner answer 2026-11-18), capped as the Help panel is: a long body
+ * scrolls inside, between the head and the closing button. `fit-content`, not `auto`: a modal dialog
+ * is pinned to both edges of the viewport, so `auto` would stretch it to the cap. */
+.app-about.app-help { height: fit-content; max-height: min(52rem, calc(100dvh - 2 * var(--fw-space-4))); }
+.app-about-headtext { flex: 1; min-width: 0; }
+.app-about-headtext .app-help-title { flex: none; }
+.app-about-version { margin: var(--fw-space-1) 0 0; font-size: var(--af-step--1); color: var(--af-chrome-muted); }
 .app-about-legal { font-weight: 600; }
 .app-about-files { margin: 0 0 var(--fw-space-3); padding-inline-start: 1.25em; }
 .app-about-update { display: flex; flex-wrap: wrap; align-items: center; gap: var(--fw-space-2) var(--fw-space-3); margin-bottom: var(--fw-space-3); }
 .app-about-update .app-about-status { margin: 0; }
 .app-offline { color: var(--af-muted); }
 .app-about-promo { padding-top: var(--fw-space-3); border-top: 1px solid var(--af-rule); }
-.app-about a { color: var(--af-accent); }
-.app-about-close { display: flex; justify-content: flex-end; }
+.app-about-close { display: flex; justify-content: flex-end; padding: var(--fw-space-3) var(--fw-space-6); border-top: 1px solid var(--af-rule); }
 .app-button {
     min-height: 2.25rem;
     padding: 0 var(--fw-space-3);
@@ -112,7 +105,7 @@ body {
     cursor: pointer;
 }
 .app-button:disabled { cursor: progress; opacity: 0.7; }
-.app-about :focus-visible { outline: 2px solid var(--af-accent); outline-offset: 2px; }
+.app-button:focus-visible { outline: 2px solid var(--af-accent); outline-offset: 2px; }
 /* The Help panel: the help page of the reader's language, over the app. */
 .app-help {
     width: min(48rem, calc(100vw - 2 * var(--fw-space-4)));

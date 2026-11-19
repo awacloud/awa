@@ -67,7 +67,7 @@ const worker = fw.createWorker(
 ## Notes
 
 - **12-byte nonce** (RFC 8439 §2.3). **Nonce reuse** does not degrade Poly1305 cryptographically but **leaks the XOR of plaintexts** + enables forgery → use `nonceTracker` for in-process detection.
-- **Tag mismatch → `false`** + `console.error('CORRUPT')`. Plaintext is never released on an invalid tag.
+- **Tag mismatch → `false`** + `console.warn('CORRUPT')` (an expected outcome; nonce reuse stays at `console.error`). Plaintext is never released on an invalid tag.
 - **No AES-NI required**: better performance than GCM on ARM / mobile / without AES hardware.
 
 ## See also

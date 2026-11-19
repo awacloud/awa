@@ -31,7 +31,7 @@ Composed internally by [`ir-to-pdf`](../../ir-to-pdf.md), once per page.
 
 | Member | Signature | Returns | Throws |
 |---|---|---|---|
-| `pageContent` | `(page: Page, fonts: Object<string, FontEntry>, layout: object, losses: object[]) => {bytes: Uint8Array, usedFonts: Set<string>}` | the page's content stream + the resource names it referenced | `Error` `oconv: pdf font missing <style>` / `oconv: pdf font missing regular` |
+| `pageContent` | `(page: Page, fonts: Object<string, FontEntry>, layout: object, losses: object[], mark?: (item) => string \| null) => {bytes: Uint8Array, usedFonts: Set<string>}` | the page's content stream + the resource names it referenced; with `mark` (a tagged document), each item's operators — and the page number's, an item of `kind: 'pageNumber'` — are wrapped in the marked-content sequence `mark(item)` opens, closed by `EMC` | `Error` `oconv: pdf font missing <style>` / `oconv: pdf font missing regular` |
 
 `FontEntry`: `res` (PDF resource name, e.g. `/FR`), `source`
 (`'standard14'` \| `'embedded'`), `embedded` (the `pdfFontEmbed` result, on

@@ -53,19 +53,20 @@ const a = runtime.resolve('drawingml');
 ```js
 {
     bodyPr?: xmlNode,    // verbatim
-    lstStyle?: xmlNode,  // verbatim
+    lstStyle?: xmlNode | null,  // verbatim; null: read without one
     paragraphs: [{
-        pPr?: { level?, align?, indent?, marL?, bullet?, _extras? },
+        pPr?: { level?, align?, indent?, marL?, bullet?, extraAttrs?, _extras? },
         runs: [textRun | breakRun | fieldRun]
     }]
 }
 
 textRun  := { type:'text', value: string, rPr? }
 breakRun := { type:'break', rPr? }
-fieldRun := { type:'field', id, fieldType?, value?, rPr? }
+fieldRun := { type:'field', id, fieldType?, value?, rPr?, pPr? }
 
 RunProperties := { lang?, size?, bold?, italic?, underline?, strike?,
-                   baseline?, color?: 'RRGGBB' | TypedColor, font?, _extras? }
+                   baseline?, color?: 'RRGGBB' | TypedColor, font?,
+                   fontAttrs?, extraAttrs?, _extras? }
 
 TypedColor := { rgb: 'RRGGBB' } | { schemeColor: string },  // + mods?: [{ name, val? }]
 ```
@@ -132,7 +133,13 @@ a.ptToEmu(12);     // 152400
 ## Notes
 
 - 1 EMU = 1/914400 inch = 1/360000 cm.
-- `bullet: 'none'` disables the bullet; `{char:'•'}` forces a character; `{autoNumType:'arabicPeriod'}` numbers the paragraph.
+- `bullet: 'none'` disables the bullet; `{char:'•'}` forces a character; `{autoNumType:'arabicPeriod'}` numbers the paragraph, from `startAt` when given.
+- **What a read keeps beyond the typed fields.** It is written back as read:
+  - a run's (or `defRPr`'s) other attributes (`kern`, `spc`, `cap`, `dirty`, `smtClean`, `altLang` …) in `extraAttrs`;
+  - an `<a:latin>`'s attributes beyond its typeface (`panose`, `pitchFamily`, `charset`) in `fontAttrs`;
+  - a paragraph's other `<a:pPr>` attributes (`marR`, `rtl`, `defTabSz`, `eaLnBrk`, `fontAlgn`, `hangingPunct` …) in `extraAttrs`;
+  - a field's `<a:pPr>` in `pPr`, written between its `<a:rPr>` and its `<a:t>`.
+- A text body read without `<a:lstStyle>` has `lstStyle: null` and is written without one. A model without the field is written with an empty `<a:lstStyle/>`.
 - `align` values: `'l' | 'ctr' | 'r' | 'just' | 'dist'`.
 - Unknown elements (fills, effects) stay in the paragraph's or run's `_extras`.
 - The written `<a:pPr>` and `<a:rPr>` / `<a:defRPr>` put the typed children and the `_extras` together in schema order (`CT_TextParagraphProperties`: `lnSpc`, `spcBef`, `spcAft`, bullet colour, size, font, the bullet, `tabLst`, `defRPr`, `extLst`; `CT_TextCharacterProperties`: `ln`, the fill, the effects, `highlight`, underline line and fill, `latin`, `ea`, `cs`, `sym`, `hlinkClick`, `hlinkMouseOver`, `rtl`, `extLst`), whatever their order in the model; an element the schema does not list follows in the order given, and an `mc:AlternateContent` takes the place of what it holds.

@@ -22,14 +22,14 @@ const gzip = runtime.resolve('gzip');
 
 ## API
 
-### Synchrone
+### Synchronous
 
 ```js
 const compressed   = gzip.gzipSync(uint8Array, opts?);    // → Uint8Array
 const decompressed = gzip.gunzipSync(compressed, opts?);  // → Uint8Array
 ```
 
-### Asynchrone
+### Asynchronous
 
 ```js
 const compressed   = await gzip.gzip(uint8Array, opts?);
@@ -47,7 +47,7 @@ comp.push(lastChunk, true);
 
 // Decompression
 const output = [];
-const decomp = new gzip.GunzipStream(opts?, (chunk) => output.push(chunk));
+const decomp = new gzip.GunzipStream(opts?, (chunk) => output.push(chunk)); // flush() as for zlib
 decomp.push(gzChunk);
 decomp.push(lastGzChunk, true);
 ```
@@ -62,12 +62,20 @@ decomp.push(lastGzChunk, true);
 | `filename` | `string` | Original filename (stored in the header) |
 | `mtime` | `number \| Date` | Modification date (stored in the header) |
 
+`flush()` ends the stream when no trailer can be expected (a source that may
+be truncated, such as a PDF FlateDecode stream): the last bytes, held back
+until then as a presumed trailer, are decoded as payload and emitted. A
+`push` after `flush()` (or after `final`) throws `ESTREAMEND` (errno 4). A header split
+across chunks is fine: the stream waits until the whole header has arrived.
+
 ### Decompression (`gunzipSync`, `gunzip`, `GunzipStream`)
 
 | Option | Type | Description |
 |--------|------|-------------|
 | `out` | `Uint8Array` | Pre-allocated output buffer |
 | `dictionary` | `Uint8Array` | Decompression dictionary |
+| `maxOutput` | `number` | Cap, in bytes, on the decoded output (a non-negative integer; absent = no cap). One byte more throws `EMAXOUT` (errno 7) before the buffer grows past the cap — the bound against a decompression bomb. It holds over every member, and on `GunzipStream` over the stream's life |
+| `verify` | `boolean` | Check the CRC-32 and ISIZE trailer against the decoded bytes (RFC 1952 § 2.3.1); a mismatch throws `ECHECKSUM` (errno 16). Default `true`; `false` skips the check |
 
 ## Internal format (RFC 1952)
 
@@ -77,11 +85,23 @@ decomp.push(lastGzChunk, true);
 
 Header: magic `0x1F 0x8B`, method `0x08`, flags, mtime, XFL, OS (`3` = Unix).
 
+A gzip file is a series of members (RFC 1952 § 2.2): `gunzipSync` and
+`GunzipStream` decode every member and return their concatenation (each
+member's trailer is checked, unless `verify: false`). Zero bytes after the last
+member are ignored; any other trailing byte throws `EBADFORMAT` (errno 6), and a member cut
+short throws `EEOF` (errno 0).
+
 ## Error codes
 
-| Code | Meaning |
-|------|---------|
-| 6 | Invalid gzip data (incorrect magic bytes) |
+| `code` | `errno` | Meaning |
+|---|------|---------|
+| `EBADFORMAT` | 6 | Invalid gzip data (incorrect magic bytes) |
+| `EMAXOUT` | 7 | Output limit exceeded — the decoded output would pass `maxOutput` |
+| `ECHECKSUM` | 16 | Incorrect data check — unless `verify: false`, the CRC-32 or the size mod 2^32 does not match the decoded bytes |
+
+`e.code` is the string in the first column; `e.errno` keeps the number of the
+earlier convention (the compressor family's one typed convention, shared
+with brotli).
 
 ## Example
 

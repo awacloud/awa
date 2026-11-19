@@ -361,9 +361,14 @@ describe('webcryptoAesKw — round-trip (generate → wrap → unwrap)', () => {
 
 describe('webcryptoAesKw — tampered wrapped bytes → unwrapKey → false', () => {
     test('flipping a byte in wrapped data causes unwrapKey to return false', async () => {
-        const consoleSpy = mock(() => {});
-        const orig = console.error;
-        console.error = consoleSpy;
+        // An integrity failure is an expected outcome: reported at warn
+        // level, never as console.error (the crypto logging policy).
+        const warnSpy = mock(() => {});
+        const errorSpy = mock(() => {});
+        const origWarn = console.warn;
+        const origError = console.error;
+        console.warn = warnSpy;
+        console.error = errorSpy;
         try {
             const kek = await _kw.generateKek(256, false);
             // crypto is a well-known global (WebCrypto spec)
@@ -382,16 +387,18 @@ describe('webcryptoAesKw — tampered wrapped bytes → unwrapKey → false', ()
                 kek, tampered, { name: 'AES-GCM', length: 256 }, ['encrypt', 'decrypt'], true
             );
             expect(result).toBe(false);
-            expect(consoleSpy).toHaveBeenCalled();
+            expect(warnSpy).toHaveBeenCalled();
+            expect(errorSpy).not.toHaveBeenCalled();
         } finally {
-            console.error = orig;
+            console.warn = origWarn;
+            console.error = origError;
         }
     });
 
     test('wrong KEK causes unwrapKey to return false', async () => {
         const consoleSpy = mock(() => {});
-        const orig = console.error;
-        console.error = consoleSpy;
+        const orig = console.warn; // integrity failure: warn level
+        console.warn = consoleSpy;
         try {
             const kek1 = await _kw.generateKek(256, false);
             const kek2 = await _kw.generateKek(256, false);
@@ -408,7 +415,7 @@ describe('webcryptoAesKw — tampered wrapped bytes → unwrapKey → false', ()
             expect(result).toBe(false);
             expect(consoleSpy).toHaveBeenCalled();
         } finally {
-            console.error = orig;
+            console.warn = orig;
         }
     });
 });

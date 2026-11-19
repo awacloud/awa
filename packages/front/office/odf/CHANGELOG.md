@@ -4,6 +4,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-19
+
+### Added
+
+- **A typed note run on write.** A paragraph's runs may hold
+  `{ type: 'note', id?, noteClass?, citation, label?, body }`, which
+  `odt.write` writes as `text:note` through its `ctx.renderNote` sink:
+  `text:id` (when given), `text:note-class` (`footnote` by default),
+  `text:note-citation` (with `text:label` when a `label` is given) and
+  `text:note-body`, whose typed blocks are rendered with the write's
+  style registry, so their spans and lists get their styles. Without a
+  sink (`odp`, `ods`, a standalone render) the run writes nothing.
+- **`odt.read(bytes, { notes: true })` types notes.** Every `text:note` of
+  a paragraph, heading, span or link body is then that note run at its
+  place, its body parsed as a body; written back, it is the same note.
+  Without the option the read is unchanged; a `notes` that is not a
+  boolean throws a contract error.
+
 ## [1.2.0] - 2026-11-02
 
 ### Added

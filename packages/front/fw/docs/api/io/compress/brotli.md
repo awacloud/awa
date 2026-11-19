@@ -38,9 +38,15 @@ const br = runtime.resolve('brotli');
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `quality` | `0..11` | `6` | Speed/ratio profile. `0` = trivial uncompressed. `1..3` = `chainDepth 2..4`, lazy off. `4..7` = `chainDepth 6..10`, lazy on. `8..11` = `chainDepth 16..32`, lazy + block splitting. |
+| `quality` | `0..11` | `6` | Speed/ratio profile. `0` = trivial uncompressed. `1..3` = `chainDepth 2..4`, lazy off. `4..5` = `chainDepth 6`, lazy on. `6` = `chainDepth 10`, lazy, one literal block split. `7` = `chainDepth 64`, the search ended by a 32-byte match (20-50 % slower than `6`, JSON 2 % smaller). `8..9` = `chainDepth 64`, ended at 64 bytes. `10..11` = `chainDepth 128`, ended at 128 bytes. |
 
 The encoder automatically selects, per block, the best `CMODE` (LSB6/MSB6/UTF8/Signed) via entropy, the best `(NPOSTFIX, NDIRECT)` among 7 candidates by bit-cost, and enables block splitting `NBLTYPES_L = 2` on heterogeneous inputs ≥ 32 KiB (trigger: KL-divergence > 0.3).
+
+### Decompression options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `maxOutput` | `number` | none | Cap, in bytes, on the decoded output (a non-negative integer). One byte more throws `EMAXOUT` before the buffer grows past the cap. On `BrotliDecompressStream` it caps the stream's total |
 
 ### Error codes
 
@@ -48,6 +54,7 @@ The encoder automatically selects, per block, the best `CMODE` (LSB6/MSB6/UTF8/S
 |------|-------|
 | `EBADARG` | Argument not `Uint8Array`, `quality` outside `[0, 11]` |
 | `EBADSTREAM` | Invalid format (forbidden WBITS, non-zero fill bits, null MLEN top-nibble, dict-ref length outside `[4, 24]`, transform id ≥ 121, Kraft inequality violation, large-window prefix without `brotliShared`) |
+| `EMAXOUT` | The decoded output would pass `maxOutput` |
 | `ENEEDDICT` | Stream requires the static dictionary but `brotliDictWords.isLoaded === false` |
 | `ESTREAMEND` | `push()` after finalization on a stream |
 | `ENOTIMPL` | Large-window WBITS > 50 (requires BigInt — out of scope) |
@@ -114,7 +121,7 @@ Streams that never use the dictionary (e.g. short text fully resolved by LZ77) d
 |---------|---------|---------|
 | §3 Compressed representation | ✅ | ✅ |
 | §3.4 / §3.5 Prefix codes (simple + complex) | ✅ | ✅ |
-| §4 Encoding of distances | ✅ | ✅ (NPOSTFIX 0..3, NDIRECT 0..120 best-of-7) |
+| §4 Encoding of distances | ✅ | ✅ (NPOSTFIX 0..3, NDIRECT 0..120 best-of-7; distance cache codes 0..15, code 0 on implicit-distance symbols) |
 | §5 Insert/copy length codes | ✅ | ✅ |
 | §6 Block-switch | ✅ | ✅ (NBLTYPES_L ∈ {1, 2} KL-driven) |
 | §7 Context modelling | ✅ | ✅ (LSB6 / MSB6 / UTF8 / Signed entropy-adaptive) |
@@ -156,10 +163,35 @@ If the stream may reference the static dictionary, add `brotliDictWords` (+ load
 - Decoder **100% RFC 7932**: round-trips all qualities 0..11 of the native Node/Bun `zlib` encoder. Encoder produces conformant brotli always decodable by `zlib.brotliDecompressSync`.
 - **Truly incremental** streaming on the decoder side via the EAGAIN mechanism: on partial input, state is saved and restored on the next `push()` — no full buffering required. Compressor streaming remains buffered (future refactor for incremental).
 - The input buffer is wrapped in an internal reader that appends 4 zero padding bytes to avoid bounds-checks in bit reads up to 32 bits.
-- `_internal` exposes low-level primitives (`makeReader`, `readBit`, `readBits`, `readWBITS`, `readPrefixCode`, `readContextMap`, `readCompressedMetaBlockHeader`, `decodeDistanceSymbol`, `contextIdLit`, `encodeUncompressed`, …) for tests and companion modules (`brotliShared`).
-- Tests: 174 cases (hand-crafted vectors + Node `BROTLI_PARAM_QUALITY: 0..11` round-trip + all 121/121 transforms).
+- The internal slot (`internalOf(brotli)`, tests only, not API) holds low-level primitives (`makeReader`, `readBit`, `readBits`, `readWBITS`, `readPrefixCode`, `readContextMap`, `readCompressedMetaBlockHeader`, `decodeDistanceSymbol`, `contextIdLit`, `encodeUncompressed`, …) for tests and companion modules (`brotliShared`).
+- Tests: 176 cases (hand-crafted vectors + Node `BROTLI_PARAM_QUALITY: 0..11` round-trip + all 121/121 transforms).
+- **Incompressible input** is stored (uncompressed meta-blocks, RFC 7932 §9.2) before LZ77 and the dictionary scan run: an order-0 entropy of at least 7.9 bits a byte over every 16th byte, then a repeat probe over content-defined anchors that finds repeats of a few hundred bytes up to about 1 MiB back. 256 KiB of uniform bytes encode in about 0.6 ms (Bun) / 1.1 ms (Node) at q6, with or without the dictionary blob.
+- **Distance cache**: a copy whose distance is one of the last four (or the last two ±1..3) is coded with a cache code, without extra bits; a code is used only where its uses save at least 128 bits over full coding, so prose, whose distances rarely repeat, is coded as before. JSON-like input is 2-4 % smaller for it.
+- **Ratio**: against the reference encoder at the same quality, on 256 KiB of English Markdown (this package's docs) with the dictionary blob loaded, the output is 4 % larger at q6 and 1.5 % at q7. Against its q6 on the bench's corpora, q6 output is 12 % larger on JSON and 4-5 % on source, q7's 10 % and 1-2 %; on the bench's text corpus (the dictionary's own word list, where every word is a dictionary hit) 15 % without the blob and 8 % with it at q6, 13 % and 7 % at q7. The built-in dictionary is used from 4-byte words. A copy whose bytes repeat at a cached distance takes that distance. Measured and left out: more literal trees (16 or 64: under 0.5 %) and block splitting of commands and distances (an upper bound of 1.2 %). The rest of the gap is the reference encoder's cost-aware parse, which prefers a cached distance to a slightly longer match.
+- The encoder's output at every quality from 1 changed with that: smaller on every bench corpus, still decoded by every Brotli decoder.
+- Two encoder defects were fixed: a literal run longer than 22 593 bytes followed by a match got a 2-byte copy that was never in the input, and fields wider than 17 bits (distance extras past about 512 KiB, insert code 23's 24 extra bits, MLEN past 2 MiB) lost their top bits. Both made streams that decode to other bytes; see `CHANGELOG.md`.
+- The encoder's output at quality ≥ 4 changed once, when an `lz77` defect was fixed (a lazy match never entered its start into the hash chains): fewer tokens, smaller output (quality 6 text 40 986 → 40 952 bytes, quality 11 JSON 25 415 → 25 326), still decoded by every Brotli decoder. A consumer that pins encoder bytes, not just round-trips, sees the change.
 
 ## Benchmark
+
+Current figures (`tools/bench/perf.js`, each cell in its own process,
+median of the per-process medians; `brotli-q6d-*` load the dictionary
+blob), 256 KiB corpora, `i7-13700KF`, Bun 1.3.13 / Node 24.16:
+
+| Cell | Bun ms | Node ms | × native (Bun / Node) |
+|---|---|---|---|
+| encode q6 text | 9.1 | 9.1 | 3.6 / 2.9 |
+| encode q6 json | 12.8 | 11.9 | 3.6 / 2.8 |
+| encode q6 random | 0.62 | 1.09 | 1.4 / 0.7 |
+| encode q6 text, dictionary loaded | 14.2 | 12.3 | 5.4 / 3.9 |
+| encode q6 json, dictionary loaded | 12.9 | 13.4 | 3.7 / 3.3 |
+| encode q6 random, dictionary loaded | 0.60 | 1.11 | 1.3 / 0.9 |
+| decode q6 text (a `node:zlib` stream) | 1.67 | 1.56 | 4.8 / 4.1 |
+| decode q6 json | 1.21 | 1.35 | 2.8 / 3.2 |
+| decode q6 random | 0.15 | 0.19 | 1.3 / 1.0 |
+
+The record below is the earlier gate of the `huffman` / `bitstream`
+rewrite, kept for its method.
 
 `brotli.js` itself changed only for the decoder long-code peek fix and the
 encoder empty-tail-command fix (see Fixed in `CHANGELOG.md`); this record

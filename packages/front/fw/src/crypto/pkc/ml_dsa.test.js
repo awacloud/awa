@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -17,6 +17,7 @@ import { random } from '../utils/random.js';
 import { utf8 } from '../../io/codec/utf8.js';
 import { hex } from '../../io/codec/hex.js';
 import { ML_DSA_65_KAT_SIG_HELLO_WORLD } from './ml_dsa.kat.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _bitArray = bitArray.factory();
 const _utf8 = utf8.factory(_bitArray);
@@ -56,8 +57,8 @@ describe('ml_dsa module', () => {
         const f = new Int32Array(256);
         for (let i = 0; i < 256; i++) f[i] = (i * 31337 + 11) % 8380417;
         const orig = new Int32Array(f);
-        M._ntt(f);
-        M._nttInv(f);
+        M[INTERNAL].ntt(f);
+        M[INTERNAL].nttInv(f);
         for (let i = 0; i < 256; i++) expect(f[i]).toBe(orig[i]);
     });
 
@@ -71,12 +72,12 @@ describe('ml_dsa module', () => {
     test('ML-DSA-65 KAT - verify Wycheproof "Hello world" signature', () => {
         const { publicKey } = M.ml_dsa65.keygen(_hex.toBytes(SEED_HEX));
         const sig = _hex.toBytes(ML_DSA_65_KAT_SIG_HELLO_WORLD);
-        expect(M.ml_dsa65.verify(sig, _hex.toBytes(MSG_HEX), publicKey)).toBe(true);
+        expect(M.ml_dsa65.verify(publicKey, sig, _hex.toBytes(MSG_HEX))).toBe(true);
     }, 30000);
 
-    test('ML-DSA-65 KAT - sign(msg, sk, ctx="", rnd=0) reproduces Wycheproof signature byte-for-byte', () => {
+    test('ML-DSA-65 KAT - sign(sk, msg, ctx="", rnd=0) reproduces Wycheproof signature byte-for-byte', () => {
         const { secretKey } = M.ml_dsa65.keygen(_hex.toBytes(SEED_HEX));
-        const sig = M.ml_dsa65.sign(_hex.toBytes(MSG_HEX), secretKey);
+        const sig = M.ml_dsa65.sign(secretKey, _hex.toBytes(MSG_HEX), undefined, new Uint8Array(32));
         expect(sig).not.toBe(false);
         expect(_hex.fromBytes(sig)).toBe(ML_DSA_65_KAT_SIG_HELLO_WORLD);
     }, 60000);
@@ -84,30 +85,30 @@ describe('ml_dsa module', () => {
     test('ML-DSA-65 round-trip sign+verify', () => {
         const { publicKey, secretKey } = M.ml_dsa65.keygen(_hex.toBytes(SEED_HEX));
         const msg = _hex.toBytes(MSG_HEX);
-        const sig = M.ml_dsa65.sign(msg, secretKey);
-        expect(M.ml_dsa65.verify(sig, msg, publicKey)).toBe(true);
+        const sig = M.ml_dsa65.sign(secretKey, msg);
+        expect(M.ml_dsa65.verify(publicKey, sig, msg)).toBe(true);
     }, 60000);
 
     test('ML-DSA-65 verify rejects tampered signature', () => {
         const { publicKey, secretKey } = M.ml_dsa65.keygen(_hex.toBytes(SEED_HEX));
         const msg = _hex.toBytes(MSG_HEX);
-        const sig = M.ml_dsa65.sign(msg, secretKey);
+        const sig = M.ml_dsa65.sign(secretKey, msg);
         sig[100] ^= 0x01;
-        expect(M.ml_dsa65.verify(sig, msg, publicKey)).toBe(false);
+        expect(M.ml_dsa65.verify(publicKey, sig, msg)).toBe(false);
     }, 60000);
 
     test('ML-DSA-44 round-trip sign+verify', () => {
         const { publicKey, secretKey } = M.ml_dsa44.keygen();
         const msg = new TextEncoder().encode('test message 44');
-        const sig = M.ml_dsa44.sign(msg, secretKey);
-        expect(M.ml_dsa44.verify(sig, msg, publicKey)).toBe(true);
+        const sig = M.ml_dsa44.sign(secretKey, msg);
+        expect(M.ml_dsa44.verify(publicKey, sig, msg)).toBe(true);
     }, 60000);
 
     test('ML-DSA-87 round-trip sign+verify', () => {
         const { publicKey, secretKey } = M.ml_dsa87.keygen();
         const msg = new TextEncoder().encode('test message 87');
-        const sig = M.ml_dsa87.sign(msg, secretKey);
-        expect(M.ml_dsa87.verify(sig, msg, publicKey)).toBe(true);
+        const sig = M.ml_dsa87.sign(secretKey, msg);
+        expect(M.ml_dsa87.verify(publicKey, sig, msg)).toBe(true);
     }, 90000);
 });
 
@@ -230,13 +231,13 @@ describe('ML-DSA-keyGen-FIPS204 (NIST CAVP, 9 sub-samples / 75 total)', () => {
 
 describe('ML-DSA-sigGen-FIPS204 / external+pure (NIST CAVP, 18 sub-samples)', () => {
     test.each(_SG_DSA)(
-        'tgId=$tg tcId=$tc ($ps, deterministic=$det): sign(msg, sk, ctx, rnd) == signature',
+        'tgId=$tg tcId=$tc ($ps, deterministic=$det): sign(sk, msg, ctx, rnd) == signature',
         (v) => {
             const sk  = _hex.toBytes(v.sk);
             const msg = _hex.toBytes(v.msg);
             const ctx = v.ctx ? _hex.toBytes(v.ctx) : new Uint8Array(0);
             const rnd = v.det ? new Uint8Array(32) : _hex.toBytes(v.rnd);
-            const sig = _MLDSA[v.ps].sign(msg, sk, ctx, rnd);
+            const sig = _MLDSA[v.ps].sign(sk, msg, ctx, rnd);
             expect(sig).not.toBe(false);
             expect(_hex.fromBytes(sig)).toBe(v.sig.toLowerCase());
         },
@@ -246,13 +247,13 @@ describe('ML-DSA-sigGen-FIPS204 / external+pure (NIST CAVP, 18 sub-samples)', ()
 
 describe('ML-DSA-sigVer-FIPS204 / external+pure (NIST CAVP, 45/45 vectors)', () => {
     test.each(_SV_DSA)(
-        'tgId=$tg tcId=$tc ($ps, expected=$pass, reason=$reason): verify(sig, msg, pk, ctx)',
+        'tgId=$tg tcId=$tc ($ps, expected=$pass, reason=$reason): verify(pk, sig, msg, ctx)',
         (v) => {
             const pk  = _hex.toBytes(v.pk);
             const msg = _hex.toBytes(v.msg);
             const sig = _hex.toBytes(v.sig);
             const ctx = v.ctx ? _hex.toBytes(v.ctx) : new Uint8Array(0);
-            const ok = _MLDSA[v.ps].verify(sig, msg, pk, ctx);
+            const ok = _MLDSA[v.ps].verify(pk, sig, msg, ctx);
             expect(ok).toBe(v.pass);
         },
         60_000
@@ -384,7 +385,7 @@ describe('ML-DSA-sigGen / external+preHash (HashML-DSA, iteration E3)', () => {
             const ctx = v.ctx ? _hex.toBytes(v.ctx) : new Uint8Array(0);
             const hashMod = _ML_DSA_E3_HASHES[v.hashAlg];
             const rnd = new Uint8Array(32);
-            const sig = _MLDSA[v.ps].signPh(msg, sk, v.hashAlg, hashMod, ctx, rnd);
+            const sig = _MLDSA[v.ps].signPh(sk, msg, v.hashAlg, hashMod, ctx, rnd);
             expect(sig).not.toBe(false);
             expect(_hex.fromBytes(sig)).toBe(v.sig.toLowerCase());
         },
@@ -401,7 +402,7 @@ describe('ML-DSA-sigGen / internal (FIPS 204 §6.2 raw, iteration E3)', () => {
             const rnd = new Uint8Array(32);
             // The "internal" path in ACVP passes the message directly (no §5.4
             // wrapping) ; our `_internal.signInternal(M, sk, rnd)` mirrors this.
-            const sig = _MLDSA[v.ps]._internal.signInternal(Mraw, sk, rnd);
+            const sig = _MLDSA[v.ps][INTERNAL].signInternal(Mraw, sk, rnd);
             expect(sig).not.toBe(false);
             expect(_hex.fromBytes(sig)).toBe(v.sig.toLowerCase());
         },
@@ -416,7 +417,7 @@ describe('ML-DSA-sigGen / externalMu (FIPS 204 §6.2 with pre-computed mu, itera
             const sk = _hex.toBytes(v.sk);
             const mu = _hex.toBytes(v.mu);
             const rnd = new Uint8Array(32);
-            const sig = _MLDSA[v.ps]._internal.signWithMu(mu, sk, rnd);
+            const sig = _MLDSA[v.ps][INTERNAL].signWithMu(mu, sk, rnd);
             expect(sig).not.toBe(false);
             expect(_hex.fromBytes(sig)).toBe(v.sig.toLowerCase());
         },
@@ -433,7 +434,7 @@ describe('ML-DSA-sigVer / external+preHash (HashML-DSA, iteration E3)', () => {
             const sig = _hex.toBytes(v.sig);
             const ctx = v.ctx ? _hex.toBytes(v.ctx) : new Uint8Array(0);
             const hashMod = _ML_DSA_E3_HASHES[v.hashAlg];
-            const ok = _MLDSA[v.ps].verifyPh(sig, msg, pk, v.hashAlg, hashMod, ctx);
+            const ok = _MLDSA[v.ps].verifyPh(pk, sig, msg, v.hashAlg, hashMod, ctx);
             expect(ok).toBe(v.pass);
         },
         60_000
@@ -482,7 +483,7 @@ if (RUN_FULL_H3) {
         const ALL = _load('ML-DSA-sigVer-FIPS204').filter(v => v.preHash === 'pure' && v.sigInterface === 'external');
         test.each(ALL)('tgId=$tg tcId=$tc ($ps, expected=$testPassed)', (v) => {
             const ctx = v.context ? _hex.toBytes(v.context) : new Uint8Array(0);
-            const ok = _MLDSA[v.ps].verify(_hex.toBytes(v.signature), _hex.toBytes(v.message), _hex.toBytes(v.pk), ctx);
+            const ok = _MLDSA[v.ps].verify(_hex.toBytes(v.pk), _hex.toBytes(v.signature), _hex.toBytes(v.message), ctx);
             expect(ok).toBe(v.testPassed);
         }, 60_000);
     });
@@ -492,7 +493,7 @@ if (RUN_FULL_H3) {
         test.each(ALL)('tgId=$tg tcId=$tc ($ps, det=$deterministic)', (v) => {
             const ctx = v.context ? _hex.toBytes(v.context) : new Uint8Array(0);
             const rnd = v.deterministic ? new Uint8Array(32) : _hex.toBytes(v.rnd);
-            const sig = _MLDSA[v.ps].sign(_hex.toBytes(v.message), _hex.toBytes(v.sk), ctx, rnd);
+            const sig = _MLDSA[v.ps].sign(_hex.toBytes(v.sk), _hex.toBytes(v.message), ctx, rnd);
             expect(_hex.fromBytes(sig)).toBe(v.signature.toLowerCase());
         }, 90_000);
     });
@@ -546,48 +547,48 @@ describe('ml_dsa keygen - seed validation', () => {
 describe('ml_dsa ctx handling - FIPS 204 §5.4 message wrapper', () => {
 
     test('wrapMessage emits 0x00 || |ctx| || ctx || msg byte-exactly', () => {
-        const wrapped = M.ml_dsa44._internal.wrapMessage(_MSG_ABC, new Uint8Array([0xaa, 0xbb]));
+        const wrapped = M.ml_dsa44[INTERNAL].wrapMessage(_MSG_ABC, new Uint8Array([0xaa, 0xbb]));
         expect(Array.from(wrapped)).toEqual([0x00, 0x02, 0xaa, 0xbb, 0x61, 0x62, 0x63]);
     });
 
     test('wrapMessage with no ctx emits a zero length byte', () => {
-        expect(Array.from(M.ml_dsa44._internal.wrapMessage(_MSG_ABC))).toEqual([0x00, 0x00, 0x61, 0x62, 0x63]);
+        expect(Array.from(M.ml_dsa44[INTERNAL].wrapMessage(_MSG_ABC))).toEqual([0x00, 0x00, 0x61, 0x62, 0x63]);
     });
 
     test('wrapMessage accepts exactly 255 ctx bytes and rejects 256', () => {
-        const ok = M.ml_dsa44._internal.wrapMessage(_MSG_ABC, new Uint8Array(255).fill(0x07));
+        const ok = M.ml_dsa44[INTERNAL].wrapMessage(_MSG_ABC, new Uint8Array(255).fill(0x07));
         expect(ok.length).toBe(2 + 255 + 3);
         expect(ok[0]).toBe(0x00);
         expect(ok[1]).toBe(255);
-        expect(M.ml_dsa44._internal.wrapMessage(_MSG_ABC, new Uint8Array(256))).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].wrapMessage(_MSG_ABC, new Uint8Array(256))).toBe(false);
     });
 
     test('sign+verify round-trip at the 255-byte ctx boundary, ctx bound into the signature', () => {
         const { publicKey, secretKey } = _kp44();
         const ctx = new Uint8Array(255).fill(0x5a);
-        const sig = M.ml_dsa44.sign(_MSG_ABC, secretKey, ctx);
+        const sig = M.ml_dsa44.sign(secretKey, _MSG_ABC, ctx);
         expect(sig).not.toBe(false);
         expect(sig.length).toBe(2420);
-        expect(M.ml_dsa44.verify(sig, _MSG_ABC, publicKey, ctx)).toBe(true);
+        expect(M.ml_dsa44.verify(publicKey, sig, _MSG_ABC, ctx)).toBe(true);
         const otherCtx = new Uint8Array(255).fill(0x5b);
-        expect(M.ml_dsa44.verify(sig, _MSG_ABC, publicKey, otherCtx)).toBe(false);
-        expect(M.ml_dsa44.verify(sig, _MSG_ABC, publicKey)).toBe(false);
+        expect(M.ml_dsa44.verify(publicKey, sig, _MSG_ABC, otherCtx)).toBe(false);
+        expect(M.ml_dsa44.verify(publicKey, sig, _MSG_ABC)).toBe(false);
     }, 90000);
 
     test('sign and verify both reject a ctx over 255 bytes with exactly false', () => {
         const { publicKey, secretKey } = _kp44();
         const tooLong = new Uint8Array(256);
-        expect(M.ml_dsa44.sign(_MSG_ABC, secretKey, tooLong)).toBe(false);
-        const sig = M.ml_dsa44.sign(_MSG_ABC, secretKey);
+        expect(M.ml_dsa44.sign(secretKey, _MSG_ABC, tooLong)).toBe(false);
+        const sig = M.ml_dsa44.sign(secretKey, _MSG_ABC);
         expect(sig).not.toBe(false);
-        expect(M.ml_dsa44.verify(sig, _MSG_ABC, publicKey, tooLong)).toBe(false);
+        expect(M.ml_dsa44.verify(publicKey, sig, _MSG_ABC, tooLong)).toBe(false);
     }, 90000);
 });
 
 describe('ml_dsa HashML-DSA wrapper - FIPS 204 §5.4 Algorithm 4 guards', () => {
 
     test('wrapMessageHash emits 0x01 || |ctx| || ctx || OID || PH byte-exactly', () => {
-        const out = M.ml_dsa44._internal.wrapMessageHash(
+        const out = M.ml_dsa44[INTERNAL].wrapMessageHash(
             new Uint8Array([0xde, 0xad]), new Uint8Array([0x09]), 'SHA2-256');
         expect(Array.from(out)).toEqual([
             0x01, 0x01, 0x09,
@@ -597,20 +598,20 @@ describe('ml_dsa HashML-DSA wrapper - FIPS 204 §5.4 Algorithm 4 guards', () => 
     });
 
     test('wrapMessageHash rejects a ctx over 255 bytes with exactly false', () => {
-        expect(M.ml_dsa44._internal.wrapMessageHash(
+        expect(M.ml_dsa44[INTERNAL].wrapMessageHash(
             new Uint8Array(4), new Uint8Array(256), 'SHA2-256')).toBe(false);
     });
 
     test('wrapMessageHash rejects an unknown hashAlg with exactly false', () => {
-        expect(M.ml_dsa44._internal.wrapMessageHash(new Uint8Array(4), undefined, 'MD5')).toBe(false);
-        expect(M.ml_dsa44._internal.wrapMessageHash(new Uint8Array(4), undefined, 'SHA-256')).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].wrapMessageHash(new Uint8Array(4), undefined, 'MD5')).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].wrapMessageHash(new Uint8Array(4), undefined, 'SHA-256')).toBe(false);
     });
 
     test('signPh and verifyPh propagate both wrapper rejections as exactly false', () => {
         const { publicKey, secretKey } = _kp44();
-        expect(M.ml_dsa44.signPh(_MSG_ABC, secretKey, 'SHA2-256', _sha256, new Uint8Array(256))).toBe(false);
-        expect(M.ml_dsa44.signPh(_MSG_ABC, secretKey, 'MD5', _sha256)).toBe(false);
-        expect(M.ml_dsa44.verifyPh(new Uint8Array(2420), _MSG_ABC, publicKey, 'MD5', _sha256)).toBe(false);
+        expect(M.ml_dsa44.signPh(secretKey, _MSG_ABC, 'SHA2-256', _sha256, new Uint8Array(256))).toBe(false);
+        expect(M.ml_dsa44.signPh(secretKey, _MSG_ABC, 'MD5', _sha256)).toBe(false);
+        expect(M.ml_dsa44.verifyPh(publicKey, new Uint8Array(2420), _MSG_ABC, 'MD5', _sha256)).toBe(false);
     }, 30000);
 });
 
@@ -618,29 +619,29 @@ describe('ml_dsa computePh - PH(message) hash-module contract', () => {
 
     test('rejects a missing hashMod with exactly false, through every entry point', () => {
         const { publicKey, secretKey } = _kp44();
-        expect(M.ml_dsa44._internal.computePh(_MSG_ABC, 'SHA2-256', null)).toBe(false);
-        expect(M.ml_dsa44.signPh(_MSG_ABC, secretKey, 'SHA2-256', null)).toBe(false);
-        expect(M.ml_dsa44.verifyPh(new Uint8Array(2420), _MSG_ABC, publicKey, 'SHA2-256', null)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].computePh(_MSG_ABC, 'SHA2-256', null)).toBe(false);
+        expect(M.ml_dsa44.signPh(secretKey, _MSG_ABC, 'SHA2-256', null)).toBe(false);
+        expect(M.ml_dsa44.verifyPh(publicKey, new Uint8Array(2420), _MSG_ABC, 'SHA2-256', null)).toBe(false);
     }, 30000);
 
     test('requires a callable hashMod for SHAKE-128 / SHAKE-256', () => {
-        expect(M.ml_dsa44._internal.computePh(_MSG_ABC, 'SHAKE-128', _sha256)).toBe(false);
-        expect(M.ml_dsa44._internal.computePh(_MSG_ABC, 'SHAKE-256', { hash: () => new Uint8Array(1) })).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].computePh(_MSG_ABC, 'SHAKE-128', _sha256)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].computePh(_MSG_ABC, 'SHAKE-256', { hash: () => new Uint8Array(1) })).toBe(false);
     });
 
     test('requires .hash on a non-SHAKE hashMod', () => {
-        expect(M.ml_dsa44._internal.computePh(_MSG_ABC, 'SHA2-256', {})).toBe(false);
-        expect(M.ml_dsa44._internal.computePh(_MSG_ABC, 'SHA3-512', { shake: () => new Uint8Array(1) })).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].computePh(_MSG_ABC, 'SHA2-256', {})).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].computePh(_MSG_ABC, 'SHA3-512', { shake: () => new Uint8Array(1) })).toBe(false);
     });
 
     test('positive control - SHA2-256 PH matches the FIPS 180-4 "abc" digest', () => {
-        expect(_hex.fromBytes(M.ml_dsa44._internal.computePh(_MSG_ABC, 'SHA2-256', _sha256)))
+        expect(_hex.fromBytes(M.ml_dsa44[INTERNAL].computePh(_MSG_ABC, 'SHA2-256', _sha256)))
             .toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
     });
 
     test('positive control - SHAKE-128 PH is the 32-byte prefix of the SHAKE-256 PH domain', () => {
-        const ph128 = M.ml_dsa44._internal.computePh(_MSG_ABC, 'SHAKE-128', _sha3.shake128);
-        const ph256 = M.ml_dsa44._internal.computePh(_MSG_ABC, 'SHAKE-256', _sha3.shake256);
+        const ph128 = M.ml_dsa44[INTERNAL].computePh(_MSG_ABC, 'SHAKE-128', _sha3.shake128);
+        const ph256 = M.ml_dsa44[INTERNAL].computePh(_MSG_ABC, 'SHAKE-256', _sha3.shake256);
         expect(ph128.length).toBe(32);
         expect(ph256.length).toBe(64);
         expect(_hex.fromBytes(ph128)).not.toBe(_hex.fromBytes(ph256.subarray(0, 32)));
@@ -651,39 +652,39 @@ describe('ml_dsa signWithMu / signInternal - parameter validation', () => {
 
     test('signWithMu rejects a mu that is not a 64-byte Uint8Array', () => {
         const { secretKey } = _kp44();
-        expect(M.ml_dsa44._internal.signWithMu(new Uint8Array(63), secretKey)).toBe(false);
-        expect(M.ml_dsa44._internal.signWithMu(new Uint8Array(65), secretKey)).toBe(false);
-        expect(M.ml_dsa44._internal.signWithMu(new Array(64).fill(0), secretKey)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].signWithMu(new Uint8Array(63), secretKey)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].signWithMu(new Uint8Array(65), secretKey)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].signWithMu(new Array(64).fill(0), secretKey)).toBe(false);
     }, 30000);
 
     test('signWithMu rejects a secretKey of the wrong length', () => {
         const mu = new Uint8Array(64);
-        expect(M.ml_dsa44._internal.signWithMu(mu, new Uint8Array(2559))).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].signWithMu(mu, new Uint8Array(2559))).toBe(false);
         // A valid ML-DSA-65 secret key is the wrong length for ML-DSA-44.
-        expect(M.ml_dsa44._internal.signWithMu(mu, new Uint8Array(4032))).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].signWithMu(mu, new Uint8Array(4032))).toBe(false);
     });
 
     test('signWithMu rejects an rnd that is not 32 bytes', () => {
         const { secretKey } = _kp44();
         const mu = new Uint8Array(64);
-        expect(M.ml_dsa44._internal.signWithMu(mu, secretKey, new Uint8Array(31))).toBe(false);
-        expect(M.ml_dsa44._internal.signWithMu(mu, secretKey, new Uint8Array(33))).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].signWithMu(mu, secretKey, new Uint8Array(31))).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].signWithMu(mu, secretKey, new Uint8Array(33))).toBe(false);
     }, 30000);
 
     test('positive control - signWithMu round-trips through verifyWithMu and binds mu', () => {
         const { publicKey, secretKey } = _kp44();
         const mu = new Uint8Array(64);
-        const sig = M.ml_dsa44._internal.signWithMu(mu, secretKey, new Uint8Array(32));
+        const sig = M.ml_dsa44[INTERNAL].signWithMu(mu, secretKey, new Uint8Array(32));
         expect(sig).not.toBe(false);
         expect(sig.length).toBe(2420);
-        expect(M.ml_dsa44._internal.verifyWithMu(sig, mu, publicKey)).toBe(true);
-        expect(M.ml_dsa44._internal.verifyWithMu(sig, new Uint8Array(64).fill(0x01), publicKey)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].verifyWithMu(sig, mu, publicKey)).toBe(true);
+        expect(M.ml_dsa44[INTERNAL].verifyWithMu(sig, new Uint8Array(64).fill(0x01), publicKey)).toBe(false);
     }, 90000);
 
     test('sign and signInternal reject a secretKey of the wrong length', () => {
         const { secretKey } = _kp44();
-        expect(M.ml_dsa44.sign(_MSG_ABC, secretKey.subarray(0, 2559))).toBe(false);
-        expect(M.ml_dsa44._internal.signInternal(_MSG_ABC, new Uint8Array(10))).toBe(false);
+        expect(M.ml_dsa44.sign(secretKey.subarray(0, 2559), _MSG_ABC)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].signInternal(_MSG_ABC, new Uint8Array(10))).toBe(false);
     }, 30000);
 });
 
@@ -691,21 +692,27 @@ describe('ml_dsa hedged mode - non-zero rnd', () => {
 
     test('a non-zero rnd yields a different signature that still verifies', () => {
         const { publicKey, secretKey } = _kp44();
-        const det = M.ml_dsa44.sign(_MSG_ABC, secretKey, undefined, new Uint8Array(32));
-        const hedged = M.ml_dsa44.sign(_MSG_ABC, secretKey, undefined, new Uint8Array(32).fill(0xa5));
+        const det = M.ml_dsa44.sign(secretKey, _MSG_ABC, undefined, new Uint8Array(32));
+        const hedged = M.ml_dsa44.sign(secretKey, _MSG_ABC, undefined, new Uint8Array(32).fill(0xa5));
         expect(det).not.toBe(false);
         expect(hedged).not.toBe(false);
         expect(_hex.fromBytes(det)).not.toBe(_hex.fromBytes(hedged));
-        expect(M.ml_dsa44.verify(det, _MSG_ABC, publicKey)).toBe(true);
-        expect(M.ml_dsa44.verify(hedged, _MSG_ABC, publicKey)).toBe(true);
+        expect(M.ml_dsa44.verify(publicKey, det, _MSG_ABC)).toBe(true);
+        expect(M.ml_dsa44.verify(publicKey, hedged, _MSG_ABC)).toBe(true);
     }, 90000);
 
-    test('an omitted rnd is the all-zero rnd, i.e. sign() is deterministic', () => {
-        const { secretKey } = _kp44();
-        const implicit = M.ml_dsa44.sign(_MSG_ABC, secretKey);
-        const explicitZero = M.ml_dsa44.sign(_MSG_ABC, secretKey, undefined, new Uint8Array(32));
-        expect(implicit).not.toBe(false);
-        expect(_hex.fromBytes(implicit)).toBe(_hex.fromBytes(explicitZero));
+    test('an omitted rnd is hedged (D9 G4): two signatures differ, both verify, neither is the zero-rnd one', () => {
+        const { publicKey, secretKey } = _kp44();
+        const a = M.ml_dsa44.sign(secretKey, _MSG_ABC);
+        const b = M.ml_dsa44.sign(secretKey, _MSG_ABC);
+        const zero = M.ml_dsa44.sign(secretKey, _MSG_ABC, undefined, new Uint8Array(32));
+        expect(a).not.toBe(false);
+        expect(_hex.fromBytes(a)).not.toBe(_hex.fromBytes(b));
+        expect(_hex.fromBytes(a)).not.toBe(_hex.fromBytes(zero));
+        expect(M.ml_dsa44.verify(publicKey, a, _MSG_ABC)).toBe(true);
+        expect(M.ml_dsa44.verify(publicKey, b, _MSG_ABC)).toBe(true);
+        // the deterministic mode stays one call away, and stays deterministic
+        expect(_hex.fromBytes(M.ml_dsa44.sign(secretKey, _MSG_ABC, undefined, new Uint8Array(32)))).toBe(_hex.fromBytes(zero));
     }, 90000);
 });
 
@@ -713,27 +720,27 @@ describe('ml_dsa verify - malformed input rejection', () => {
 
     test('rejects a signature of the wrong length', () => {
         const { publicKey } = _kp44();
-        expect(M.ml_dsa44.verify(new Uint8Array(2419), _MSG_ABC, publicKey)).toBe(false);
-        expect(M.ml_dsa44.verify(new Uint8Array(2421), _MSG_ABC, publicKey)).toBe(false);
+        expect(M.ml_dsa44.verify(publicKey, new Uint8Array(2419), _MSG_ABC)).toBe(false);
+        expect(M.ml_dsa44.verify(publicKey, new Uint8Array(2421), _MSG_ABC)).toBe(false);
         // An ML-DSA-65 signature length is wrong for ML-DSA-44.
-        expect(M.ml_dsa44.verify(new Uint8Array(3309), _MSG_ABC, publicKey)).toBe(false);
+        expect(M.ml_dsa44.verify(publicKey, new Uint8Array(3309), _MSG_ABC)).toBe(false);
     }, 30000);
 
     test('rejects a public key of the wrong length', () => {
-        expect(M.ml_dsa44.verify(new Uint8Array(2420), _MSG_ABC, new Uint8Array(1311))).toBe(false);
-        expect(M.ml_dsa44.verify(new Uint8Array(2420), _MSG_ABC, new Uint8Array(1952))).toBe(false);
-        expect(M.ml_dsa44._internal.verifyInternal(new Uint8Array(2420), _MSG_ABC, new Uint8Array(3))).toBe(false);
+        expect(M.ml_dsa44.verify(new Uint8Array(1311), new Uint8Array(2420), _MSG_ABC)).toBe(false);
+        expect(M.ml_dsa44.verify(new Uint8Array(1952), new Uint8Array(2420), _MSG_ABC)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].verifyInternal(new Uint8Array(2420), _MSG_ABC, new Uint8Array(3))).toBe(false);
     });
 
     test('rejects all-zero and all-0xff garbage signatures of the right length', () => {
         const { publicKey } = _kp44();
-        expect(M.ml_dsa44.verify(new Uint8Array(2420), _MSG_ABC, publicKey)).toBe(false);
-        expect(M.ml_dsa44.verify(new Uint8Array(2420).fill(0xff), _MSG_ABC, publicKey)).toBe(false);
+        expect(M.ml_dsa44.verify(publicKey, new Uint8Array(2420), _MSG_ABC)).toBe(false);
+        expect(M.ml_dsa44.verify(publicKey, new Uint8Array(2420).fill(0xff), _MSG_ABC)).toBe(false);
     }, 30000);
 
     test('verifyWithMu rejects a mu that is not a 64-byte Uint8Array', () => {
         const { publicKey } = _kp44();
-        expect(M.ml_dsa44._internal.verifyWithMu(new Uint8Array(2420), new Uint8Array(63), publicKey)).toBe(false);
-        expect(M.ml_dsa44._internal.verifyWithMu(new Uint8Array(2420), new Array(64).fill(0), publicKey)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].verifyWithMu(new Uint8Array(2420), new Uint8Array(63), publicKey)).toBe(false);
+        expect(M.ml_dsa44[INTERNAL].verifyWithMu(new Uint8Array(2420), new Array(64).fill(0), publicKey)).toBe(false);
     }, 30000);
 });

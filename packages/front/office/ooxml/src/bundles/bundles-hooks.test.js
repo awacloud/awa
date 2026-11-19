@@ -19,19 +19,19 @@ const rt = new ModuleRuntime();
 for (const m of [...ooxmlMods.fw_require, ...ooxmlMods.modules, ...ooxmlMods.extras, ...ooxmlMods.bundle]) rt.register(m);
 
 const WALKER_HOOKS = {
-    docx: ['RunProperties', 'ParagraphProperties', 'TcPr', 'Table', 'Row', 'Drawing', 'Settings'],
-    xlsx: ['Workbook', 'Sheet', 'Settings'],
-    pptx: ['RunProperties', 'ParagraphProperties', 'Settings']
+    docx: ['RunProperties', 'ParagraphProperties', 'TcPr', 'Table', 'Row', 'Drawing', 'Settings', 'Styles', 'Numbering'],
+    xlsx: ['Workbook', 'Sheet', 'Settings', 'RunProperties', 'ParagraphProperties', 'Paragraph', 'Package'],
+    pptx: ['RunProperties', 'ParagraphProperties', 'Paragraph', 'SlidePart', 'Theme', 'Settings', 'Package']
 };
 // The extras each bundle's page lists as typing a read (its own, not the
 // ones of the bundle it builds on).
 const DOCUMENTED = {
     docxLargeBundle: ['wmlRunFormatting', 'wmlParagraphFormatting', 'wmlTableProperties', 'wmlSettings', 'dmlWpDrawing'],
-    docxFullBundle: [],
+    docxFullBundle: ['wmlStyleDetails', 'wmlDocumentDetails'],
     xlsxLargeBundle: [],
-    xlsxFullBundle: [],
+    xlsxFullBundle: ['dmlTextDetails', 'smlWorkbookDetails', 'smlPackageParts'],
     pptxLargeBundle: [],
-    pptxFullBundle: []
+    pptxFullBundle: ['dmlTextDetails', 'pmlPartDetails', 'pmlPackageParts']
 };
 const hooked = (name, fmt) => {
     const inst = rt.resolve(name);

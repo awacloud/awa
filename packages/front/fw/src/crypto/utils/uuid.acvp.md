@@ -20,7 +20,7 @@
 
 `uuid.factory(hex)` exposes 2 generators:
 
-- **`v1(raw=false, prng=false, format='compact')`** — UUID v1 (time-based,
+- **`v1(raw=false, prng=false, format='rfc4122')`** — UUID v1 (time-based,
   RFC 4122 §4.2 / RFC 9562 §5.1). Combines a 60-bit timestamp (100-ns ticks
   since 1582-10-15), a 14-bit clockseq (anti-rollback), a 48-bit
   node (random MAC, multicast bit forced per RFC §4.5).
@@ -33,8 +33,8 @@
 | Param | Type | Description |
 |---|---|---|
 | `raw=true` | `Uint8Array(16)` | Raw binary, version + variant patched |
-| `raw=false` + `format='compact'` (default) | `string` 32 hex | No dashes, **back-compat** with the historical API |
-| `raw=false` + `format='rfc4122'` | `string` 36 chars | Canonical RFC 4122 §3 format (with dashes) |
+| `raw=false` + `format='rfc4122'` (`v4`'s default) | `string` 36 chars | Canonical RFC 4122 §3 format (with dashes) |
+| `raw=false` + `format='compact'` (`v1`'s default) | `string` 32 hex | No dashes, the historical API |
 
 ### Randomness source
 
@@ -67,8 +67,8 @@
 - [x] **Canonical string format** — `format='rfc4122'` produces the
   `xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx` representation validated by a
   strict regex (33 cases tested: 50 v4 + 50 v1 + byte-exact vector).
-- [x] **Back-compat** — `format='compact'` (default) returns 32 hex
-  chars without dashes, identical to the module's historical API.
+- [x] **Formats** — `v1` and `v4` return the canonical form by default
+  and 32 hex without dashes with `format='compact'`.
 - [x] **Safe default randomness source** — `crypto.getRandomValues`.
   A custom PRNG can only be used via an explicit parameter; no-op
   detection + automatic fallback to `crypto.getRandomValues`.

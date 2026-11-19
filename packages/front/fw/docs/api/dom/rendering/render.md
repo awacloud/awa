@@ -1,4 +1,4 @@
-﻿---
+---
 module: render
 category: dom/rendering
 dependencies: [secPolicy]
@@ -45,7 +45,7 @@ const render = runtime.resolve('render');
 
 | Method | Description |
 |---------|-------------|
-| `toHTML(parseResult, data, opts?)` | Pure function — serialises a `ParseResult` (or elm-array) to final HTML, without the DOM. Default security (URL/clobbering/event filter). Emits `data-fw-id` for future hydration. See the `rendering-pipeline.md` guide for the full signature. |
+| `toHTML(parseResult, data, opts?)` | Pure function — serialises a `ParseResult` (or elm-array) to final HTML, without the DOM. Default security (URL/clobbering/event filter). Emits `data-fw-id` for future hydration, and `data-fw-row="<i>"` on the root(s) of each iterate row. See the `rendering-pipeline.md` guide for the full signature. |
 
 #### Attribute value semantics of the SSR writer
 

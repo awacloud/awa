@@ -21,7 +21,7 @@ All outputs are big-endian `Uint8Array`, compatible with the [`rsa`](../pkc/rsa.
 
 ```js
 const rsaKeygen = runtime.resolve('rsaKeygen');
-// Returns: { generate, generateProbablePrime, _internal }
+// Returns: { generate, generateProbablePrime }
 ```
 
 ## API
@@ -30,7 +30,7 @@ const rsaKeygen = runtime.resolve('rsaKeygen');
 |--------|-----------|---------|
 | `generate(options?)` | `({bits?, e?, drbg?}) => {publicKey, privateKey} \| false` | RSA pair or `false` on error |
 | `generateProbablePrime(nbits, eBn, drbg)` | `(number, BN, DrbgInstance) => BN \| false` | Probable `nbits`-bit prime, coprime with `e` |
-| `_internal.{...}` | — | `millerRabin`, `smallPrimes`, `divmod`, `lcm`, `inverseModAny` (test/KAT only) |
+| `internalOf(rsaKeygen).{...}` | — | `millerRabin`, `smallPrimes`, `divmod`, `lcm`, `inverseModAny` (test/KAT only) |
 
 ### `generate` options
 

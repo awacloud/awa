@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -51,7 +51,6 @@ import { bitArray } from '../utils/bitArray.js';
  * @property {(prf: {encrypt: Function}, adata: number[], iv: number[], tlen?: number) => (number[]|false)} gmac GMAC tag over AAD only.
  * @property {(prf: {encrypt: Function}, adata: number[], iv: number[], tag: number[], tlen?: number) => boolean} gmacVerify Constant-time GMAC verification.
  * @property {(prf: {encrypt: Function}) => GcmNonceTracker} nonceTracker Wrap a PRF in an in-process nonce-uniqueness guard.
- * @property {{ ghash: (H: number[], data: number[]) => number[], gctr: (prf: {encrypt: Function}, icb: number[], data: number[]) => number[] }} _internal Internal primitives (KAT tests only).
  */
 
 export const gcm = {
@@ -251,7 +250,7 @@ export const gcm = {
             const expected = _authTag(prf, H, J0, adata, ciphertext, tlen);
 
             if (!bitArray.equal(bitArray.clamp(tag, tlen), expected)) {
-                console.error('[crypto] CORRUPT: gcm: authentication tag mismatch');
+                console.warn('[crypto] CORRUPT: gcm: authentication tag mismatch');
                 return false;
             }
             return _gctr(prf, _incCb(J0), ciphertext);
@@ -320,14 +319,15 @@ export const gcm = {
             };
         }
 
-        return /** @type {GcmAPI} */ (/** @type {any} */ ({
+        return /** @type {GcmAPI} */ (/** @type {any} */ (Object.defineProperty({
             encrypt,
             decrypt,
             gmac,
             gmacVerify,
-            nonceTracker,
+            nonceTracker
+        }, Symbol.for('@awacloud/fw/internal'), {
             // Internal primitives - exposed for KAT tests only. Not API.
-            _internal: { ghash: _ghash, gctr: _gctr }
-        }));
+            value: { ghash: _ghash, gctr: _gctr }
+        })));
     }
 };

@@ -6,6 +6,13 @@
 /**
  * @fileoverview `prop` — Glyph Properties (Apple TT RM06).
  *
+ * `parseProp(bytes, opts?)`: format 0 gives every glyph the default
+ * properties; format 1 decodes its lookup through `aatLookup`
+ * (`opts.numGlyphs` bounds a format 0 lookup), and `lookup(glyph)` gives
+ * the glyph's property word, else the default (`parsed: true`). A lookup
+ * that does not decode keeps `parsed: false`, its `error` and the default
+ * for every glyph.
+ *
  * Strict factory body.
  *
  * @module fonts/extra/apple-aat/prop
@@ -13,12 +20,13 @@
 
 import { fontErrors } from '../../errors.js';
 import { fontReader } from '../../primitives/reader.js';
+import { aatLookup } from './lookup.js';
 
 export const aatProp = {
     name: 'aatProp',
-    dependencies: ['fontErrors', 'fontReader'],
-    deps: [fontErrors, fontReader],
-    factory(errors, reader) {
+    dependencies: ['fontErrors', 'fontReader', 'aatLookup'],
+    deps: [fontErrors, fontReader, aatLookup],
+    factory(errors, reader, lookups) {
         const HEADER_SIZE = 8;
 
         /** Bit layout of the 16-bit per-glyph property word. */
@@ -34,7 +42,7 @@ export const aatProp = {
         const { ParseError } = errors;
         const { BinaryReader } = reader;
 
-        function parseProp(bytes) {
+        function parseProp(bytes, opts) {
             if (!(bytes instanceof Uint8Array))
                 throw new ParseError('fonts/prop-input', 'parseProp expects Uint8Array',
                     { context: { actual: typeof bytes } });
@@ -68,16 +76,26 @@ export const aatProp = {
                 throw new ParseError('fonts/prop-lookup-short', 'prop lookup region too short',
                     { context: { length: lookupBytes.length } });
             const lookupFormat = (lookupBytes[0] << 8) | lookupBytes[1];
+            const numGlyphs = opts && opts.numGlyphs;
 
+            let table;
+            try {
+                table = lookups.parseLookup(lookupBytes, 0, numGlyphs !== undefined ? { numGlyphs } : undefined);
+            } catch (e) {
+                if (!(e instanceof ParseError)) throw e;
+                return { version, format, defaultProps, lookupFormat, lookupBytes, parsed: false, error: e.code, lookup: () => defaultProps };
+            }
             return {
                 version,
                 format,
                 defaultProps,
                 lookupFormat,
                 lookupBytes,
-                parsed: false,
-                reason: 'aat-state-machine-deferred',
-                lookup: () => defaultProps
+                parsed: true,
+                lookup(glyph) {
+                    const v = table.get(glyph);
+                    return v === null ? defaultProps : v;
+                }
             };
         }
 

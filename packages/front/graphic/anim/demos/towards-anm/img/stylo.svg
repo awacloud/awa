@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 19.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Calque_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 16.7 39.6" style="enable-background:new 0 0 16.7 39.6;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#F2F2F2;}
+	.st1{fill:#D2D3D4;}
+	.st2{fill:#E7E7E7;}
+	.st3{fill:#F68E6C;}
+	.st4{fill:#B86B51;}
+	.st5{fill:#68CEF4;}
+	.st6{fill:#2BACE2;}
+	.st7{fill:#85CCA8;}
+	.st8{fill:#2DB674;}
+	.st9{fill:#F0C419;}
+	.st10{fill:#F8E79E;}
+	.st11{fill:#595A5C;}
+	.st12{fill:#6E6F72;}
+</style>
+<g>
+	<g>
+		<rect x="3.1" y="12.2" transform="matrix(0.9811 -0.1936 0.1936 0.9811 -3.6123 1.2174)" class="st0" width="2.6" height="13.7"/>
+		<rect x="3.1" y="12.4" transform="matrix(0.9813 -0.1924 0.1924 0.9813 -3.6381 1.0542)" class="st1" width="0.9" height="13.7"/>
+		
+			<rect x="4.9" y="12.1" transform="matrix(-0.9812 0.1932 -0.1932 -0.9812 14.1256 36.4734)" class="st2" width="0.8" height="13.7"/>
+		<path class="st3" d="M0.6,2.1c0,0-0.4,6.7,1,10.1l-1.1,0.2l0.1,0.4l2.4-0.5L1.1,2L0.6,2.1z"/>
+		<path class="st4" d="M5.5,11.5l-1.1,0.2C4.4,8,1.5,1.9,1.5,1.9L1.1,2l2,10.4l2.4-0.5L5.5,11.5z"/>
+	</g>
+	<g>
+		<rect x="9.2" y="13.4" class="st0" width="2.6" height="13.7"/>
+		<rect x="9.2" y="13.4" class="st1" width="0.9" height="13.7"/>
+		<rect x="11" y="13.4" class="st2" width="0.8" height="13.7"/>
+		<path class="st5" d="M10.1,2.9c0,0-1.7,6.5-0.9,10.2H8v0.4h2.5V2.9H10.1z"/>
+		<path class="st6" d="M13,13h-1.1c0.8-3.6-0.9-10.2-0.9-10.2h-0.4v10.6H13V13z"/>
+	</g>
+	<g>
+		<rect x="5.1" y="10.5" transform="matrix(0.992 0.1263 -0.1263 0.992 2.239 -0.6637)" class="st0" width="2.6" height="13.7"/>
+		<rect x="5.1" y="10.4" transform="matrix(0.9922 0.1245 -0.1245 0.9922 2.1864 -0.5542)" class="st1" width="0.9" height="13.7"/>
+		
+			<rect x="6.8" y="10.6" transform="matrix(-0.992 -0.1265 0.1265 -0.992 12.1801 35.6359)" class="st2" width="0.8" height="13.7"/>
+		<path class="st7" d="M8.1,0c0,0-2.5,6.3-2.2,10L4.8,9.8l-0.1,0.4l2.5,0.3L8.6,0.1L8.1,0z"/>
+		<path class="st8" d="M9.7,10.4l-1.1-0.1C9.9,6.8,9,0.1,9,0.1L8.6,0.1L7.2,10.5l2.5,0.3L9.7,10.4z"/>
+	</g>
+	<g>
+		
+			<rect x="10.8" y="13.9" transform="matrix(0.9721 0.2345 -0.2345 0.9721 5.1974 -2.2686)" class="st0" width="2.6" height="13.7"/>
+		<rect x="10.9" y="13.7" transform="matrix(0.9727 0.232 -0.232 0.9727 5.0711 -2.0685)" class="st1" width="0.9" height="13.7"/>
+		
+			<rect x="12.6" y="14.1" transform="matrix(-0.9719 -0.2354 0.2354 -0.9719 20.6886 44.3153)" class="st2" width="0.8" height="13.7"/>
+		<path class="st9" d="M15.8,3.7c0,0-3.2,6-3.3,9.7l-1.1-0.3l-0.1,0.4l2.4,0.6l2.5-10.3L15.8,3.7z"/>
+		<path class="st10" d="M16.3,14.2L15.1,14c1.6-3.3,1.5-10.1,1.5-10.1l-0.4-0.1l-2.5,10.3l2.4,0.6L16.3,14.2z"/>
+	</g>
+	<g>
+		<path class="st11" d="M0,16.9v21.4c0,0.7,0.6,1.3,1.3,1.3h9.2V16.9H0z"/>
+		<path class="st12" d="M10.4,16.9v22.7H15c0.7,0,1.3-0.6,1.3-1.3V16.9H10.4z"/>
+	</g>
+</g>
+</svg>

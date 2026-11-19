@@ -1,0 +1,44 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Use case — progressive enhancement: contact</title>
+    <link rel="stylesheet" href="../usecases.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "@awacloud/fw": "../../../src/main.js",
+            "@awacloud/fw/": "../../../src/"
+        }
+    }
+    </script>
+    <script type="module">
+        import { lockdown } from '@awacloud/fw/sanity/lockdown.js';
+        lockdown();
+    </script>
+    <script type="module" src="./enhance.js"></script>
+</head>
+<body>
+    <main>
+        <nav class="site" id="site-nav">
+            <a href="index.html">Home</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <h1>Contact</h1>
+        <!-- Without JavaScript the browser submits this form as a GET to this page. -->
+        <form id="contact" action="contact.html" method="get" novalidate>
+            <label>Name <input id="name" name="name" required minlength="2"></label>
+            <label>Email <input id="email" name="email" type="email" required></label>
+            <button type="submit">Send</button>
+        </form>
+        <p id="result" role="status"></p>
+    </main>
+</body>
+</html>

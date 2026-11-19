@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +7,7 @@ import { sha512 } from './sha512.js';
 import { bitArray } from '../utils/bitArray.js';
 import { utf8 } from '../../io/codec/utf8.js';
 import { hex } from '../../io/codec/hex.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _ba = bitArray.factory();
 const _utf8 = utf8.factory();
@@ -321,14 +322,14 @@ describe('sha512 _internal.makeSha (configurable IV + outWords)', () => {
     ];
 
     test('makeSha(_INIT, 16) reproduces standard SHA-512', () => {
-        const custom = sha512.factory(_ba, _utf8)._internal.makeSha(_STD_IV, 16);
+        const custom = sha512.factory(_ba, _utf8)[INTERNAL].makeSha(_STD_IV, 16);
         const ref = toHex(_sha.hash('abc'));
         const built = toHex(custom.hash('abc'));
         expect(built).toBe(ref);
     });
 
     test('outWords=8 truncates to 256 bits (internal consistency, not a SHA-512/256 vector)', () => {
-        const truncated = sha512.factory(_ba, _utf8)._internal.makeSha(_STD_IV, 8);
+        const truncated = sha512.factory(_ba, _utf8)[INTERNAL].makeSha(_STD_IV, 8);
         const ref = _sha.hash('abc');         // 16 mots
         const out = truncated.hash('abc');    // 8 mots
         expect(out.length).toBe(8);
@@ -336,7 +337,7 @@ describe('sha512 _internal.makeSha (configurable IV + outWords)', () => {
     });
 
     test('outWords=7 truncates to 224 bits (internal consistency, not a SHA-512/224 vector)', () => {
-        const truncated = sha512.factory(_ba, _utf8)._internal.makeSha(_STD_IV, 7);
+        const truncated = sha512.factory(_ba, _utf8)[INTERNAL].makeSha(_STD_IV, 7);
         const ref = _sha.hash('abc');
         const out = truncated.hash('abc');
         expect(out.length).toBe(7);
@@ -348,14 +349,14 @@ describe('sha512 _internal.makeSha (configurable IV + outWords)', () => {
             0x12345678, 0x9abcdef0, 0xfedcba98, 0x76543210, 0xdeadbeef, 0xcafebabe, 0xfacefeed, 0x0badf00d,
             0x12345678, 0x9abcdef0, 0xfedcba98, 0x76543210, 0xdeadbeef, 0xcafebabe, 0xfacefeed, 0x0badf00d
         ];
-        const custom = sha512.factory(_ba, _utf8)._internal.makeSha(customIV, 16);
+        const custom = sha512.factory(_ba, _utf8)[INTERNAL].makeSha(customIV, 16);
         const ref = toHex(_sha.hash('abc'));
         const built = toHex(custom.hash('abc'));
         expect(built).not.toBe(ref);
     });
 
     test('built module exposes the HMAC contract ({ fn, hash, fn.prototype.{blockSize,update,finalize} })', () => {
-        const custom = sha512.factory(_ba, _utf8)._internal.makeSha(_STD_IV, 16);
+        const custom = sha512.factory(_ba, _utf8)[INTERNAL].makeSha(_STD_IV, 16);
         expect(typeof custom.fn).toBe('function');
         expect(typeof custom.hash).toBe('function');
         expect(custom.fn.prototype.blockSize).toBe(1024);
@@ -364,7 +365,7 @@ describe('sha512 _internal.makeSha (configurable IV + outWords)', () => {
     });
 
     test('streaming equals one-shot on the built module (256-bit truncation)', () => {
-        const custom = sha512.factory(_ba, _utf8)._internal.makeSha(_STD_IV, 8);
+        const custom = sha512.factory(_ba, _utf8)[INTERNAL].makeSha(_STD_IV, 8);
         const data = new Uint8Array(200);
         for (let i = 0; i < 200; i++) data[i] = (i * 7 + 3) & 0xff;
         const oneShot = custom.hash(_ba.ui8_to_ba(data));
@@ -378,7 +379,7 @@ describe('sha512 _internal.makeSha (configurable IV + outWords)', () => {
     });
 
     test('clone constructor preserves the IV and outWords', () => {
-        const custom = sha512.factory(_ba, _utf8)._internal.makeSha(_STD_IV, 8);
+        const custom = sha512.factory(_ba, _utf8)[INTERNAL].makeSha(_STD_IV, 8);
         const h1 = new custom.fn();
         h1.update('shared');
         const h2 = new custom.fn(h1);
@@ -398,8 +399,8 @@ describe('sha512 _internal.makeSha (configurable IV + outWords)', () => {
     });
 
     test('_sha itself exposes _internal.makeSha (sanity check)', () => {
-        expect(typeof _sha._internal).toBe('object');
-        expect(typeof _sha._internal.makeSha).toBe('function');
+        expect(typeof _sha[INTERNAL]).toBe('object');
+        expect(typeof _sha[INTERNAL].makeSha).toBe('function');
     });
 
     // ── Iteration H1 - Large Data Test (LDT, ACVP-SHA2-512-1.0 tg=3) ────────
@@ -419,5 +420,42 @@ describe('sha512 _internal.makeSha (configurable IV + outWords)', () => {
                 '37d0615eb86f3311d0d3c75b41d98d208bbc97505937b4289d34c2298d0f22f43b3498bc67660698a8c827b40f4d5e88a8fe79fafbda5399cc58e5a50c8b57a1'
             );
         }, 10 * 60 * 1000);
+    });
+});
+
+// ── Uint8Array input: hashed as its bytes (FIPS 180-4) ─────────────────────
+// A Uint8Array used to be treated as a bitArray of 32-bit words, so
+// `hash(utf8 'abc' bytes)` returned a wrong but deterministic digest. The
+// oracle is the bitArray route, itself pinned by the FIPS vectors above.
+describe('sha512 - Uint8Array input', () => {
+    const toBa = (u8) => _ba.ui8_to_ba(u8);
+
+    test('hash(Uint8Array) equals hash(bitArray of the same bytes)', () => {
+        const msg = _utf8.toBytes('abc');
+        expect(toHex(_sha.hash(msg))).toBe(toHex(_sha.hash(toBa(msg))));
+    });
+
+    test('hash(Uint8Array) of the FIPS "abc" message gives the FIPS digest', () => {
+        expect(toHex(_sha.hash(_utf8.toBytes('abc')))).toBe('ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f');
+    });
+
+    test('empty and non-word-aligned lengths match the bitArray route', () => {
+        for (const n of [0, 1, 3, 5, 63, 64, 65, 127, 128, 129, 1000]) {
+            const u8 = new Uint8Array(n);
+            for (let i = 0; i < n; i++) u8[i] = (i * 31 + 7) & 0xff;
+            expect(toHex(_sha.hash(u8))).toBe(toHex(_sha.hash(toBa(u8))));
+        }
+    });
+
+    test('streaming update() mixes Uint8Array, bitArray and string chunks', () => {
+        const parts = [_utf8.toBytes('hello '), toBa(_utf8.toBytes('wide ')), 'world'];
+        const h = new _sha.fn();
+        for (const p of parts) h.update(p);
+        expect(toHex(h.finalize())).toBe(toHex(_sha.hash('hello wide world')));
+    });
+
+    test('a Uint8Array view is hashed over its own window only', () => {
+        const big = _utf8.toBytes('xxabcxx');
+        expect(toHex(_sha.hash(big.subarray(2, 5)))).toBe('ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f');
     });
 });

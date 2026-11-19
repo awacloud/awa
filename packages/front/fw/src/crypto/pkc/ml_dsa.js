@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -10,14 +10,15 @@
  *
  * Public API per parameter set:
  *   keygen(seed32?)            → { publicKey, secretKey }
- *   sign(msg, sk, ctx?, rnd?)  → signature  (or false on internal failure)
- *   verify(sig, msg, pk, ctx?) → boolean
+ *   sign(sk, msg, ctx?, rnd?)  → signature  (or false on internal failure)
+ *   verify(pk, sig, msg, ctx?) → boolean
  *
  * Determinism:
  *   - keygen(seed) is deterministic.
- *   - sign(msg, sk, ctx, rnd=zeros) is deterministic ("ML-DSA hedged with
- *     zero entropy", aka the FIPS 204 deterministic mode).
- *   - With no rnd, 32 random bytes are drawn from the CSPRNG.
+ *   - With no rnd, sign draws 32 random bytes: the hedged variant FIPS 204
+ *     §3.4 recommends (fault and side-channel resistance), so two signatures
+ *     of one message differ. Pass 32 zero bytes as rnd for the FIPS 204
+ *     deterministic mode (KAT vectors, reproducible signatures).
  *
  * Hash bindings (FIPS 204 §3.7):
  *   H_eta uses SHAKE256 (CRH 64 bytes for tr / mu / rhoprime).
@@ -49,11 +50,10 @@ import { random } from '../utils/random.js';
  * @typedef {object} MlDsaInstance
  * @property {MlDsaLengths} lengths Byte sizes of every artefact.
  * @property {(seed?: Uint8Array) => ({ publicKey: Uint8Array, secretKey: Uint8Array }|false)} keygen Generate a key pair (deterministic for a 32-byte seed).
- * @property {(msg: Uint8Array, secretKey: Uint8Array, ctx?: Uint8Array, rnd?: Uint8Array) => (Uint8Array|false)} sign Pure ML-DSA sign.
- * @property {(sig: Uint8Array, msg: Uint8Array, publicKey: Uint8Array, ctx?: Uint8Array) => boolean} verify Pure ML-DSA verify.
- * @property {(msg: Uint8Array, secretKey: Uint8Array, hashAlg: string, hashMod: ({hash: Function, shake?: Function}|Function|null), ctx?: Uint8Array, rnd?: Uint8Array) => (Uint8Array|false)} signPh HashML-DSA sign.
- * @property {(sig: Uint8Array, msg: Uint8Array, publicKey: Uint8Array, hashAlg: string, hashMod: ({hash: Function, shake?: Function}|Function|null), ctx?: Uint8Array) => boolean} verifyPh HashML-DSA verify.
- * @property {{ signInternal: Function, verifyInternal: Function, signWithMu: Function, verifyWithMu: Function, wrapMessage: Function, wrapMessageHash: Function, computePh: Function }} _internal Test-only escape hatches.
+ * @property {(secretKey: Uint8Array, msg: Uint8Array, ctx?: Uint8Array, rnd?: Uint8Array) => (Uint8Array|false)} sign Pure ML-DSA sign (the fw order: key, message).
+ * @property {(publicKey: Uint8Array, sig: Uint8Array, msg: Uint8Array, ctx?: Uint8Array) => boolean} verify Pure ML-DSA verify (the fw order: key, signature, message).
+ * @property {(secretKey: Uint8Array, msg: Uint8Array, hashAlg: string, hashMod: ({hash: Function, shake?: Function}|Function|null), ctx?: Uint8Array, rnd?: Uint8Array) => (Uint8Array|false)} signPh HashML-DSA sign.
+ * @property {(publicKey: Uint8Array, sig: Uint8Array, msg: Uint8Array, hashAlg: string, hashMod: ({hash: Function, shake?: Function}|Function|null), ctx?: Uint8Array) => boolean} verifyPh HashML-DSA verify.
  */
 
 /**
@@ -62,8 +62,6 @@ import { random } from '../utils/random.js';
  * @property {MlDsaInstance} ml_dsa44 ML-DSA-44 instance.
  * @property {MlDsaInstance} ml_dsa65 ML-DSA-65 instance.
  * @property {MlDsaInstance} ml_dsa87 ML-DSA-87 instance.
- * @property {(f: Int32Array) => Int32Array} _ntt Test-only NTT.
- * @property {(f: Int32Array) => Int32Array} _nttInv Test-only inverse NTT.
  */
 
 export const ml_dsa = {
@@ -578,8 +576,6 @@ export const ml_dsa = {
             }
 
             // ── HashML-DSA wrapper (FIPS 204 §5.4 Algorithm 4) ──────────
-            // Iteration E3 of the FIPS 140-3 upgrade plan.
-            //
             //   M' = 0x01 || OctetEncode(|ctx|, 1) || ctx || OID(hashAlg) || PH(message)
             //
             // OID is the DER-encoded ASN.1 OBJECT IDENTIFIER of the hash
@@ -630,8 +626,7 @@ export const ml_dsa = {
 
             // ── sign (FIPS 204 Algorithm 2 / §6.2) ──────────────────
 
-            // Iteration E3 of the FIPS 140-3 upgrade plan - sign refactor:
-            // extract `_signFromMu(mu, sk, rnd)` so callers may bypass the
+            // `_signFromMu(mu, sk, rnd)` is extracted so callers may bypass the
             // §5.4 wrapping (internal interface) or supply a pre-computed mu
             // (externalMu, useful when the same key signs many messages with
             // a shared `tr`-based prefix).
@@ -659,7 +654,7 @@ export const ml_dsa = {
                     console.warn('[crypto] INVALID: ml_dsa: wrong secretKey length');
                     return false;
                 }
-                const _rnd = rnd || new Uint8Array(32);
+                const _rnd = rnd || random.bytes(32);
                 if (_rnd.length !== 32) {
                     console.warn('[crypto] INVALID: ml_dsa: rnd must be 32 bytes');
                     return false;
@@ -793,7 +788,7 @@ export const ml_dsa = {
              * Wraps the message with the §5.4 prefix `0x00 || |ctx| || ctx ||
              * msg` then calls the internal signing path.
              */
-            function sign(msg, secretKey, ctx, rnd) {
+            function sign(secretKey, msg, ctx, rnd) {
                 const M = _wrapMessage(msg, ctx);
                 if (M === false) return false;
                 return _signInternal(M, secretKey, rnd);
@@ -813,7 +808,7 @@ export const ml_dsa = {
              * @param {Uint8Array} [ctx]
              * @param {Uint8Array} [rnd]
              */
-            function signPh(msg, secretKey, hashAlg, hashMod, ctx, rnd) {
+            function signPh(secretKey, msg, hashAlg, hashMod, ctx, rnd) {
                 const ph = _computePh(msg, hashAlg, hashMod);
                 if (ph === false) return false;
                 const M = _wrapMessageHash(ph, ctx, hashAlg);
@@ -928,14 +923,14 @@ export const ml_dsa = {
             }
 
             /** Pure ML-DSA verify (FIPS 204 §5.4 PureML-DSA + §6.3). */
-            function verify(sig, msg, publicKey, ctx) {
+            function verify(publicKey, sig, msg, ctx) {
                 const M = _wrapMessage(msg, ctx);
                 if (M === false) return false;
                 return _verifyInternal(sig, M, publicKey);
             }
 
             /** HashML-DSA verify (FIPS 204 §5.4 Algorithm 5). */
-            function verifyPh(sig, msg, publicKey, hashAlg, hashMod, ctx) {
+            function verifyPh(publicKey, sig, msg, hashAlg, hashMod, ctx) {
                 const ph = _computePh(msg, hashAlg, hashMod);
                 if (ph === false) return false;
                 const M = _wrapMessageHash(ph, ctx, hashAlg);
@@ -943,19 +938,20 @@ export const ml_dsa = {
                 return _verifyInternal(sig, M, publicKey);
             }
 
-            return {
+            return Object.defineProperty({
                 lengths: Object.freeze({
                     publicKey: PK_LEN, secretKey: SK_LEN, signature: SIG_LEN, seed: 32
                 }),
                 keygen, sign, verify,
-                // Iteration E3 of the FIPS 140-3 upgrade plan - HashML-DSA
+                // HashML-DSA
                 // (FIPS 204 §5.4 Algorithms 4 + 5).
-                signPh, verifyPh,
+                signPh, verifyPh
+            }, Symbol.for('@awacloud/fw/internal'), {
                 // Internal escape hatches (test-only). signInternal and
                 // verifyInternal expose the §6.2/§6.3 raw paths (no §5.4
                 // wrapping). signWithMu / verifyWithMu accept a pre-computed
                 // mu for the externalMu API mode.
-                _internal: {
+                value: {
                     signInternal:    _signInternal,
                     verifyInternal:  _verifyInternal,
                     signWithMu:      _signFromMu,
@@ -964,7 +960,7 @@ export const ml_dsa = {
                     wrapMessageHash: _wrapMessageHash,
                     computePh:       _computePh
                 }
-            };
+            });
         }
 
         const PARAMS = {
@@ -973,12 +969,13 @@ export const ml_dsa = {
             87: { K: 8, L: 7, GAMMA1: 1 << 19, GAMMA2: GAMMA2_2, TAU: 60, ETA: 2, OMEGA: 75, C_TILDE_BYTES: 64 }
         };
 
-        return {
+        return Object.defineProperty({
             ml_dsa44: _make(PARAMS[44]),
             ml_dsa65: _make(PARAMS[65]),
-            ml_dsa87: _make(PARAMS[87]),
-            // exposed for testing
-            _ntt, _nttInv
-        };
+            ml_dsa87: _make(PARAMS[87])
+        }, Symbol.for('@awacloud/fw/internal'), {
+            // Internal (test-only, outside the API).
+            value: { ntt: _ntt, nttInv: _nttInv }
+        });
     }
 };

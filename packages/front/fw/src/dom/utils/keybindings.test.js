@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -357,6 +357,58 @@ describe('keybindings module', () => {
             target.dispatchEvent(makeKeyEvent('KeyK', { ctrl: true }));
             target.dispatchEvent(makeKeyEvent('KeyX', { ctrl: true })); // wrong key
             expect(called).toHaveLength(0);
+        });
+
+        test('two chords sharing a first key can both complete', () => {
+            const called = [];
+            kb.bind('Ctrl+K Ctrl+A', () => called.push('a'));
+            kb.bind('Ctrl+K Ctrl+H', () => called.push('h'));
+            target.dispatchEvent(makeKeyEvent('KeyK', { ctrl: true }));
+            target.dispatchEvent(makeKeyEvent('KeyH', { ctrl: true }));
+            target.dispatchEvent(makeKeyEvent('KeyK', { ctrl: true }));
+            target.dispatchEvent(makeKeyEvent('KeyA', { ctrl: true }));
+            expect(called).toEqual(['h', 'a']);
+        });
+
+        test('the candidates narrow key by key over three segments', () => {
+            const called = [];
+            kb.bind('Ctrl+K Ctrl+X Ctrl+Y', () => called.push('xy'));
+            kb.bind('Ctrl+K Ctrl+Z', () => called.push('z'));
+            kb.bind('Ctrl+K Ctrl+X Ctrl+W', () => called.push('xw'));
+            target.dispatchEvent(makeKeyEvent('KeyK', { ctrl: true }));
+            target.dispatchEvent(makeKeyEvent('KeyX', { ctrl: true }));
+            expect(called).toEqual([]);
+            target.dispatchEvent(makeKeyEvent('KeyW', { ctrl: true }));
+            expect(called).toEqual(['xw']);
+        });
+
+        test('among chords completing on the same key, the highest priority fires', () => {
+            const called = [];
+            kb.bind('Ctrl+K Ctrl+A', () => called.push('low'), { priority: 1 });
+            kb.bind('Ctrl+K Ctrl+A', () => called.push('high'), { priority: 5 });
+            kb.bind('Ctrl+K Ctrl+H', () => called.push('h'), { priority: 9 });
+            target.dispatchEvent(makeKeyEvent('KeyK', { ctrl: true }));
+            target.dispatchEvent(makeKeyEvent('KeyA', { ctrl: true }));
+            expect(called).toEqual(['high']);
+        });
+
+        test('a complete chord wins over a longer one sharing its prefix', () => {
+            const called = [];
+            kb.bind('Ctrl+K Ctrl+A Ctrl+B', () => called.push('long'), { priority: 9 });
+            kb.bind('Ctrl+K Ctrl+A', () => called.push('short'));
+            target.dispatchEvent(makeKeyEvent('KeyK', { ctrl: true }));
+            target.dispatchEvent(makeKeyEvent('KeyA', { ctrl: true }));
+            expect(called).toEqual(['short']);
+        });
+
+        test('a key matching no candidate falls through to the simple bindings', () => {
+            const called = [];
+            kb.bind('Ctrl+K Ctrl+A', () => called.push('a'));
+            kb.bind('Ctrl+K Ctrl+H', () => called.push('h'));
+            kb.bind('Ctrl+X', () => called.push('x'));
+            target.dispatchEvent(makeKeyEvent('KeyK', { ctrl: true }));
+            target.dispatchEvent(makeKeyEvent('KeyX', { ctrl: true }));
+            expect(called).toEqual(['x']);
         });
     });
 

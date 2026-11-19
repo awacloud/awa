@@ -237,3 +237,12 @@ describe('crc32 module', () => {
 		});
 	});
 });
+
+describe('crc32 check value', () => {
+	test('CRC-32/ISO-HDLC of "123456789" is CBF43926', () => {
+		const Crc32 = crc32.factory();
+		const c = new Crc32();
+		c.append(new TextEncoder().encode('123456789'));
+		expect(c.get()).toBe(0xCBF43926);
+	});
+});

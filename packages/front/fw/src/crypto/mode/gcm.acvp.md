@@ -23,7 +23,7 @@ or via GHASH for ivLen ≠ 96. PRF: 128-bit block cipher (`encrypt(block)`),
 
 API: `encrypt(prf, pt, iv, aad, tlen)` → `{ ct, tag }`; `decrypt(prf,
 ct, iv, aad, tag, tlen)` → `pt | false` (plaintext is never released on
-an invalid tag; `console.error('CORRUPT:')`). GMAC: `gmac(prf, aad, iv,
+an invalid tag; `console.warn('CORRUPT:')`). GMAC: `gmac(prf, aad, iv,
 tlen)` / `gmacVerify(prf, aad, iv, tag, tlen)`. Nonce safeguard:
 `nonceTracker(prf)` (in-process Set of seen IVs, refuses duplicates).
 
@@ -35,8 +35,8 @@ tlen)` / `gmacVerify(prf, aad, iv, tag, tlen)`. Nonce safeguard:
 |---|---|---|---|
 | McGrew-Viega §B | TC 1-6, 13-14 | `AES-128-GCM, McGrew-Viega test case 1..6` + `AES-256-GCM TC 13/14` | KAT byte-exact + round-trip + GHASH-J0 (TC 5/6) |
 | McGrew-Viega §B | TC 5 (64-bit IV) + TC 6 (480-bit IV) | `non-96-bit IV uses GHASH-derived J0` | alternate J0 code path |
-| **McGrew-Viega §B (D1)** | TC 7-12 (AES-192) | `AES-192-GCM, test case 7..12` | KAT byte-exact for AES-192 × {empty, single block, multi-block, AAD, 96/64/480-bit IV}. Cross-checked reference against Node `createCipheriv('aes-192-gcm')` (= OpenSSL libcrypto). |
-| **McGrew-Viega §B (D1)** | TC 15-18 (AES-256 extended) | `AES-256-GCM, test case 15..18` | KAT byte-exact extending AES-256 coverage (previously limited to TC 13/14 = empty + single block) to TC 15-18 = full multi-block + AAD + 64/480-bit IV. |
+| **McGrew-Viega §B** | TC 7-12 (AES-192) | `AES-192-GCM, test case 7..12` | KAT byte-exact for AES-192 × {empty, single block, multi-block, AAD, 96/64/480-bit IV}. Cross-checked reference against Node `createCipheriv('aes-192-gcm')` (= OpenSSL libcrypto). |
+| **McGrew-Viega §B** | TC 15-18 (AES-256 extended) | `AES-256-GCM, test case 15..18` | KAT byte-exact extending AES-256 coverage (previously limited to TC 13/14 = empty + single block) to TC 15-18 = full multi-block + AAD + 64/480-bit IV. |
 | **ACVP-AES-GCM-1.0** | AFT encrypt 30/30 (tg 1, 2) | `AFT encrypt` | KAT byte-exact ct + tag (ivLen 96/120, payloadLen 0/120, aadLen 0/120, tagLen 32/128) |
 | **ACVP-AES-GCM-1.0** | AFT decrypt 30/30 (tg 3, 4) | `AFT decrypt` | Pass/fail labels honored (10 fail / 30 = `{ corrupt ct/tag/iv/aad }` rejected) |
 | **ACVP-AES-GMAC-1.0** | AFT encrypt 30/30 (tg 1, 2) | `gmac AFT encrypt` | GMAC tag byte-exact via `gcm.gmac(prf, aad, iv, tlen)` |
@@ -89,7 +89,7 @@ validate rejection of forged tags.
 | Requirement | Status | Evidence |
 |---|---|---|
 | Approved algorithm | ✅ | SP 800-38D + ACVP-AES-GCM-1.0 + ACVP-AES-GMAC-1.0 |
-| Validated parameter sizes | ✅ | **AES-128**: 60 ACVP-AES-GCM-1.0 + McGrew-Viega TC 1-6. **AES-192**: McGrew-Viega TC 7-12 (D1). **AES-256**: McGrew-Viega TC 13-18 (D1). All 3 keyLen × {96-bit IV, 64-bit IV, 480-bit IV} × {empty AAD, non-empty AAD} × {payload 0/16/60/64 bytes} covered byte-exact. |
+| Validated parameter sizes | ✅ | **AES-128**: 60 ACVP-AES-GCM-1.0 + McGrew-Viega TC 1-6. **AES-192**: McGrew-Viega TC 7-12. **AES-256**: McGrew-Viega TC 13-18. All 3 keyLen × {96-bit IV, 64-bit IV, 480-bit IV} × {empty AAD, non-empty AAD} × {payload 0/16/60/64 bytes} covered byte-exact. |
 | KAT power-on / self-test | ✅ | McGrew-Viega + 120 ACVP executed on every `bun test` |
 | CT comparisons (if secret) | ✅ | `bitArray.equal` (no early exit) |
 | No `throw` / timing leak | ✅ | Reviewed: `console.warn`/`console.error` + `return false` |
@@ -97,7 +97,7 @@ validate rejection of forged tags.
 
 ## Known limitations
 
-- ~~**AES-192 / AES-256 outside integrated ACVP**~~ ✅ **Iteration D1** —
+- ~~**AES-192 / AES-256 outside integrated ACVP**~~ ✅
   **McGrew-Viega TC 7-12 (AES-192) + TC 15-18 (AES-256 extended)** added.
   The supplied ACVP-AES-GCM-1.0 suite still only covers `keyLen=128`
   (60 tests), but McGrew-Viega §B is the historical **canonical source**
@@ -123,7 +123,7 @@ validate rejection of forged tags.
 ## Cross-references
 
 - Module: [`mode/gcm.js`](./gcm.js)
-- Tests: [`mode/gcm.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/gcm.test.js) — 156 tests (143 baseline + 13 McGrew-Viega TC 7-12 / 15-18 [D1])
+- Tests: [`mode/gcm.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/mode/gcm.test.js) — 156 tests (143 baseline + 13 McGrew-Viega TC 7-12 / 15-18)
 - ACVP draft: `references/NIST/ACVP/src/draft-celi-acvp-symmetric.adoc`
 - Vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/ACVP-AES-GCM-1.0/` + `ACVP-AES-GMAC-1.0/`
 - Overall conformance: [`NIST_CONFORMANCE.md`](../NIST_CONFORMANCE.md)

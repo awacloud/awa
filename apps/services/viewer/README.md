@@ -1,5 +1,7 @@
 # @awacloud/viewer
 
+AWA Viewer: an installable, offline document viewer in the browser for PDF, Word, Excel, PowerPoint, OpenDocument, Markdown and text. Nothing is uploaded.
+
 AWA Viewer opens a document and shows it on your device. A browser-only
 document viewer for PDF, Word (DOCX), Excel (XLSX), PowerPoint (PPTX),
 OpenDocument (ODT, ODS, ODP), Markdown and plain text — an installable PWA on
@@ -12,24 +14,26 @@ is [`@awacloud/oview`](https://github.com/awacloud/awa/tree/main/packages/front/
 
 ## Install
 
-Part of the monorepo workspaces (`apps/services/*`):
-
-```bash
-bun install
-```
+In the awa development tree the application is a workspace member
+(`apps/services/*`), linked by the root `bun install`; that tree is not what
+the public repositories carry (see [Rebuilding from source](#rebuilding-from-source)).
 
 Runtime dependencies are monorepo packages only (`workspace:*`): `@awacloud/fw`,
 `oview` (the viewer core), `pdf`, `ooxml`, `odf`, `md`, `fonts`, `oconv`. No npm
 package runs in the page.
 
-Not published to the npm registry: AWA Viewer is published as source only, in
-the public repository ([`apps/services/viewer`](https://github.com/awacloud/awa/tree/main/apps/services/viewer)).
+Not published to the npm registry: AWA Viewer is published as source only. Its
+source is public in the awa monorepo
+([`apps/services/viewer`](https://github.com/awacloud/awa/tree/main/apps/services/viewer))
+and as a derived, read-only repository of the application source; issues are
+tracked in the monorepo.
 To embed the viewer in your own page, use
 [`@awacloud/oview`](https://github.com/awacloud/awa/tree/main/packages/front/office/oview), not this application.
 
 ## Quick start
 
-Embedding: [`@awacloud/oview`](https://github.com/awacloud/awa/tree/main/packages/front/office/oview) (`mountViewer`, `<awa-viewer>`).
+Embedding: [`@awacloud/oview`](https://github.com/awacloud/awa/tree/main/packages/front/office/oview) (`mountViewer`, `<awa-viewer>`). The snippet is browser-only; the import resolves
+through the package's `exports` `.` → `src/main.js`.
 
 ```js
 import { mountViewer } from '@awacloud/oview';
@@ -40,8 +44,10 @@ await viewer.open(file);          // File | Blob | { name, bytes }
 
 The options, the markup form and the embedding notes are in the package README.
 
-Serve the **repository root** while developing: the browser resolves
+In the awa development tree, serve the **repository root**: the browser resolves
 `@awacloud/*` through an import map against `/packages/…`, with no bundler.
+The command below needs that tree's root `cli.ts`, which the published
+repositories do not carry, so it is not runnable from them at this release:
 
 ```bash
 bun cli.ts local_web --dir . --port 8793 --no-cert
@@ -64,6 +70,10 @@ The viewer's keys (toolbar, pages, zoom, open, sheet tabs) are listed in the
 
 ### Build
 
+The steps below are the build as it runs in the awa development tree. At this
+release they are not runnable from the published repositories (see
+[Rebuilding from source](#rebuilding-from-source)).
+
 ```bash
 cd apps/services/viewer && bun run build
 ```
@@ -78,11 +88,11 @@ content version and the app-shell pre-cache list, and the demos'
 `services/site-host` serves to a client that accepts gzip. It runs last,
 so no twin is older than the file it compresses; the pre-cache list names
 no `.gz` (the browser decodes).
-The build and the test suite run from the full awa monorepo toolchain: they
-read `tools/site-kit`, `apps/demo/_build/`, `apps/services/tools/`,
-`services/site-host/` and `apps/awaforge/assets/`, which the public
-repository does not carry.
-Serve it at an origin root:
+The build and the test suite read `tools/site-kit` (run through the root
+`cli.ts`), `apps/demo/_build/`, `apps/services/tools/`, `services/site-host/`
+and `apps/awaforge/assets/`, which the public repositories do not carry.
+Serve it at an origin root (same limit: this command is from the development
+tree, not runnable from the published repositories):
 
 ```bash
 bun tools/site-kit/src/index.ts serve --dist apps/services/viewer/dist --no-vendor --port 8794
@@ -187,7 +197,26 @@ canonical link is added at build from `og:url` (`tools/build-csp.js`), as
 `apps/services/tools/screenshots.mjs` re-shoots the install and share
 screenshots.
 
+## Rebuilding from source
+
+The repository publishes the complete sources of this application: `src/`,
+`public/`, the tests and the application's own build steps (`tools/`). The
+tools for a complete rebuild are coming (work in progress). At this release a
+rebuild is not possible from the published repositories, the published public
+monorepo included: the build reads paths they do not carry — `tools/site-kit`
+(run through the root `cli.ts`), `apps/demo/_build/`, `apps/services/tools/`,
+`services/site-host/` and `apps/awaforge/assets/` (and `bun run samples` also
+reads `apps/awacloud/`).
+
 ## Tests
+
+The commands below are the application's own test and lint commands as they
+run in the awa development tree. At this release they are not runnable from
+the published repositories: the tests read `apps/services/tools/`,
+`services/site-host/`, `apps/awaforge/assets/` and `apps/awacloud/` (and the
+browser test `tests/copy.e2e.mjs` reads `tests/e2e/`), the lint configuration
+reads `packages/front/office/_eslint/`, and the public repositories carry none
+of them.
 
 ```bash
 bun test ./apps/services/viewer/
@@ -252,4 +281,5 @@ Copyright (c) 2026 AwaCloud SAS
 - Issues: https://github.com/awacloud/awa/issues
 - Security policy: https://github.com/awacloud/awa/blob/main/SECURITY.md
 - Documentation: [design and architecture](https://github.com/awacloud/awa/blob/main/packages/front/office/oview/docs/design.md) (`@awacloud/oview`)
+- Developer site (the libraries this application is built on): https://awaforge.eu/
 - Offers: https://awacloud.com/offers/convert (AWA Convert)

@@ -218,7 +218,10 @@ export const pptxLargePackage = {
       SLIDE: NS.R + "/slide",
       SLIDE_LAYOUT: NS.R + "/slideLayout",
       SLIDE_MASTER: NS.R + "/slideMaster",
-      THEME: NS.R + "/theme"
+      THEME: NS.R + "/theme",
+      NOTES_SLIDE: NS.R + "/notesSlide",
+      NOTES_MASTER: NS.R + "/notesMaster",
+      HANDOUT_MASTER: NS.R + "/handoutMaster"
     }), CT = Object.freeze({
       DOCUMENT: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
       STYLES_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
@@ -244,7 +247,10 @@ export const pptxLargePackage = {
       SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
       THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
       VML_DRAWING: "application/vnd.openxmlformats-officedocument.vmlDrawing",
-      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"
+      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml",
+      NOTES_SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+      NOTES_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+      HANDOUT_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml"
     });
     function toEmu(v) {
       if (typeof v === "number")
@@ -1503,7 +1509,21 @@ export const pptxLargePackage = {
       "a:hlinkMouseOver",
       "a:rtl",
       "a:extLst"
-    ]);
+    ]), RPR_TYPED_ATTRS = new Set(["lang", "sz", "b", "i", "strike", "u", "baseline"]), PPR_TYPED_ATTRS = new Set(["lvl", "algn", "indent", "marL"]), LATIN_TYPED_ATTRS = new Set(["typeface"]);
+    function otherAttrs(attrs, typed) {
+      const out = {};
+      for (const [k, v] of Object.entries(attrs || {}))
+        if (!typed.has(k))
+          out[k] = v;
+      return Object.keys(out).length ? out : void 0;
+    }
+    function stringAttrs(o) {
+      const out = {};
+      for (const [k, v] of Object.entries(o || {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
+    }
     function runColor(solidFill, opts) {
       if (!(opts && opts.typedRunColors)) {
         const cl = solidFill.children.find((n) => n.type === "element" && n.name === "a:srgbClr");
@@ -1534,6 +1554,9 @@ export const pptxLargePackage = {
         out.underline = a.u;
       if (a.baseline != null)
         out.baseline = Number(a.baseline);
+      const extraAttrs = otherAttrs(a, RPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of rPrEl.children) {
         if (c.type !== "element")
@@ -1544,9 +1567,12 @@ export const pptxLargePackage = {
             out.color = color;
           else
             extras.push(c);
-        } else if (c.name === "a:latin")
+        } else if (c.name === "a:latin") {
           out.font = c.attrs.typeface;
-        else
+          const fontAttrs = otherAttrs(c.attrs, LATIN_TYPED_ATTRS);
+          if (fontAttrs)
+            out.fontAttrs = fontAttrs;
+        } else
           extras.push(c);
       }
       if (extras.length)
@@ -1556,7 +1582,7 @@ export const pptxLargePackage = {
     function renderRunProperties(rPr) {
       if (!rPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(rPr.extraAttrs) };
       if (rPr.lang)
         a.lang = rPr.lang;
       if (rPr.size != null)
@@ -1578,7 +1604,7 @@ export const pptxLargePackage = {
           children.push(xml.el("a:solidFill", {}, [el]));
       }
       if (rPr.font)
-        children.push(xml.el("a:latin", { typeface: rPr.font }));
+        children.push(xml.el("a:latin", { typeface: rPr.font, ...stringAttrs(rPr.fontAttrs) }));
       if (rPr._extras)
         for (const ex of rPr._extras)
           children.push(ex);
@@ -1596,6 +1622,9 @@ export const pptxLargePackage = {
         out.indent = Number(a.indent);
       if (a.marL != null)
         out.marL = Number(a.marL);
+      const extraAttrs = otherAttrs(a, PPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of pPrEl.children) {
         if (c.type !== "element")
@@ -1604,9 +1633,11 @@ export const pptxLargePackage = {
           out.bullet = "none";
         else if (c.name === "a:buChar")
           out.bullet = { char: c.attrs.char };
-        else if (c.name === "a:buAutoNum")
+        else if (c.name === "a:buAutoNum") {
           out.bullet = { autoNumType: c.attrs.type };
-        else if (c.name === "a:defRPr")
+          if (c.attrs.startAt != null)
+            out.bullet.startAt = Number(c.attrs.startAt);
+        } else if (c.name === "a:defRPr")
           out.defRPr = parseRunProperties(c, opts);
         else
           extras.push(c);
@@ -1618,7 +1649,7 @@ export const pptxLargePackage = {
     function renderParagraphProperties(pPr) {
       if (!pPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(pPr.extraAttrs) };
       if (pPr.level != null)
         a.lvl = String(pPr.level);
       if (pPr.align)
@@ -1632,8 +1663,12 @@ export const pptxLargePackage = {
         children.push(xml.el("a:buNone", {}));
       else if (pPr.bullet && pPr.bullet.char)
         children.push(xml.el("a:buChar", { char: pPr.bullet.char }));
-      else if (pPr.bullet && pPr.bullet.autoNumType)
-        children.push(xml.el("a:buAutoNum", { type: pPr.bullet.autoNumType }));
+      else if (pPr.bullet && pPr.bullet.autoNumType) {
+        const ba = { type: pPr.bullet.autoNumType };
+        if (pPr.bullet.startAt != null)
+          ba.startAt = String(pPr.bullet.startAt);
+        children.push(xml.el("a:buAutoNum", ba));
+      }
       if (pPr.defRPr) {
         const dpr = renderRunProperties(pPr.defRPr);
         if (dpr)
@@ -1642,8 +1677,6 @@ export const pptxLargePackage = {
       if (pPr._extras)
         for (const ex of pPr._extras)
           children.push(ex);
-      if (!Object.keys(a).length && !children.length)
-        return null;
       return xml.el("a:pPr", a, ordered(children, PPR_SEQ));
     }
     function parseRun(rEl, opts) {
@@ -1669,6 +1702,9 @@ export const pptxLargePackage = {
       const rPrEl = xml.findChild(fEl, "a:rPr"), tEl = xml.findChild(fEl, "a:t"), rPr = parseRunProperties(rPrEl, opts);
       if (rPr)
         out.rPr = rPr;
+      const pPr = parseParagraphProperties(xml.findChild(fEl, "a:pPr"), opts);
+      if (pPr)
+        out.pPr = pPr;
       if (tEl)
         out.value = xml.textContent(tEl);
       return out;
@@ -1680,6 +1716,9 @@ export const pptxLargePackage = {
       const children = [], rPrEl = renderRunProperties(f.rPr);
       if (rPrEl)
         children.push(rPrEl);
+      const pPrEl = renderParagraphProperties(f.pPr);
+      if (pPrEl)
+        children.push(pPrEl);
       if (f.value != null)
         children.push(xml.el("a:t", {}, [xml.text(f.value)]));
       return xml.el("a:fld", a, children);
@@ -1751,12 +1790,15 @@ export const pptxLargePackage = {
         else if (c.name === "a:p")
           out.paragraphs.push(parseParagraph(c, opts));
       }
+      if (out.lstStyle === void 0)
+        out.lstStyle = null;
       return out;
     }
     function renderTextBody(tb, rootTag = "a:txBody") {
       const children = [];
       children.push(tb.bodyPr || xml.el("a:bodyPr", {}));
-      children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
+      if (tb.lstStyle !== null)
+        children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
       for (const p of tb.paragraphs || [])
         children.push(renderParagraph(p));
       return xml.el(rootTag, {}, children);
@@ -2840,7 +2882,19 @@ export const pptxLargePackage = {
       }
       return null;
     }
-    function parseLine(lnEl) {
+    function lineColor(solidFill, opts) {
+      if (!(opts && opts.typedLineColors)) {
+        const col = parseColorChild(solidFill);
+        return col && col.rgb ? col.rgb : void 0;
+      }
+      const el = solidFill.children.find((n) => n.type === "element");
+      if (!el)
+        return;
+      if (el.name === "a:srgbClr" && !el.children.some((n) => n.type === "element"))
+        return el.attrs.val;
+      return typedColor.parse(el) || void 0;
+    }
+    function parseLine(lnEl, opts) {
       if (!lnEl)
         return;
       const out = {};
@@ -2865,9 +2919,9 @@ export const pptxLargePackage = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:solidFill") {
-          const col = parseColorChild(c);
-          if (col && col.rgb)
-            out.color = col.rgb;
+          const col = lineColor(c, opts);
+          if (col !== void 0)
+            out.color = col;
           else
             extras.push(c);
         } else if (c.name === "a:prstDash")
@@ -2901,8 +2955,11 @@ export const pptxLargePackage = {
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
-      else if (line.color)
-        children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
+      else if (line.color) {
+        const el = typeof line.color === "object" ? typedColor.render(line.color) : renderSrgbClr(line.color);
+        if (el)
+          children.push(xml.el("a:solidFill", {}, [el]));
+      }
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
       if (!line._extras)
@@ -2916,10 +2973,13 @@ export const pptxLargePackage = {
       }
       return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
-    function parseShapeProperties(spPrEl) {
+    function parseShapeProperties(spPrEl, opts) {
       if (!spPrEl)
         return;
-      const out = {}, xfrmEl = xml.findChild(spPrEl, "a:xfrm");
+      const out = {};
+      if (spPrEl.attrs && spPrEl.attrs.bwMode)
+        out.bwMode = spPrEl.attrs.bwMode;
+      const xfrmEl = xml.findChild(spPrEl, "a:xfrm");
       Object.assign(out, parseXfrm(xfrmEl));
       const prst = xml.findChild(spPrEl, "a:prstGeom");
       if (prst) {
@@ -2932,7 +2992,7 @@ export const pptxLargePackage = {
         out.fill = fill;
       const ln = xml.findChild(spPrEl, "a:ln");
       if (ln) {
-        const lineProps = parseLine(ln);
+        const lineProps = parseLine(ln, opts);
         if (lineProps !== void 0)
           out.line = lineProps;
       }
@@ -2967,11 +3027,12 @@ export const pptxLargePackage = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
+      const attrs = props.bwMode ? { bwMode: String(props.bwMode) } : {};
       if (!props._extras)
-        return xml.el(tag, {}, children);
+        return xml.el(tag, attrs, children);
       for (const ex of props._extras)
         children.push(ex);
-      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
+      return xml.el(tag, attrs, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -3083,7 +3144,8 @@ export const pptxLargePackage = {
       "p:clrMap",
       "p:clrMapOvr",
       "p:sldLayoutIdLst",
-      "p:txStyles"
+      "p:txStyles",
+      "p:notesStyle"
     ]), CSLD_ONLY = new Set(["p:custDataLst", "p:controls"]);
     function placedName(c) {
       if (!c || c.type !== "element")
@@ -3100,7 +3162,7 @@ export const pptxLargePackage = {
       "p:transition",
       "p:timing",
       "p:hf",
-      "p:txStyles",
+      ["p:txStyles", "p:notesStyle"],
       "p:extLst"
     ]);
     function parseShape(spEl, opts) {
@@ -3132,7 +3194,7 @@ export const pptxLargePackage = {
       const spPr = xml.findChild(spEl, "p:spPr");
       if (spPr) {
         out.spPr = spPr;
-        const typed = shapeMod.parseShapeProperties(spPr);
+        const typed = shapeMod.parseShapeProperties(spPr, opts);
         if (typed)
           out.shapeProps = typed;
       }
@@ -3209,6 +3271,12 @@ export const pptxLargePackage = {
             shapes.push({ type: "graphicFrame", node: c });
             break;
           }
+          case "p:grpSp":
+            if (opts && opts.typedGroups)
+              shapes.push(parseGroup(c, opts));
+            else
+              extras.push(c);
+            break;
           case "p:nvGrpSpPr":
           case "p:grpSpPr":
             extras.push(c);
@@ -3219,7 +3287,13 @@ export const pptxLargePackage = {
       }
       return { shapes, extras };
     }
-    function renderSpTree({ shapes, extras }) {
+    function parseGroup(el, opts) {
+      const tree = parseSpTree(el, opts), out = { type: "group", shapes: tree.shapes };
+      if (tree.extras.length)
+        out._extras = tree.extras;
+      return out;
+    }
+    function renderSpTree({ shapes, extras }, tag = "p:spTree") {
       const children = [], headExtras = (extras || []).filter((n) => n.name === "p:nvGrpSpPr" || n.name === "p:grpSpPr"), tailExtras = (extras || []).filter((n) => n.name !== "p:nvGrpSpPr" && n.name !== "p:grpSpPr");
       if (!headExtras.length) {
         children.push(xml.el("p:nvGrpSpPr", {}, [
@@ -3242,9 +3316,11 @@ export const pptxLargePackage = {
           children.push(chartMod.renderGraphicFrame(sp));
         else if (sp.type === "graphicFrame" && sp.node)
           children.push(sp.node);
+        else if (sp.type === "group")
+          children.push(renderSpTree({ shapes: sp.shapes || [], extras: sp._extras }, "p:grpSp"));
       for (const ex of tailExtras)
         children.push(ex);
-      return xml.el("p:spTree", {}, children);
+      return xml.el(tag, {}, children);
     }
     function parseCSld(cSldEl, opts) {
       const out = {}, extras = [];
@@ -3297,10 +3373,22 @@ export const pptxLargePackage = {
         }
         if (root.name !== rootTag)
           throw new ParseError(`pptx/${rootTag.replace(/^p:/, "")}-bad-root`, `pptx ${rootTag}: expected <${rootTag}>, got <${root.name}>`, { context: { expected: rootTag, elementName: root && root.name } });
-        const out = { type: defaults.type }, cSld = xml.findChild(root, "p:cSld");
+        const out = { type: defaults.type }, rootAttrs = {};
+        for (const [k, v] of Object.entries(root.attrs || {})) {
+          if (k === "xmlns" || k.startsWith("xmlns:") || k === "mc:Ignorable")
+            continue;
+          if (k === "type" && rootTag === "p:sldLayout")
+            out.layoutType = v;
+          else
+            rootAttrs[k] = v;
+        }
+        if (Object.keys(rootAttrs).length)
+          out.rootAttrs = rootAttrs;
+        const cSld = xml.findChild(root, "p:cSld");
         if (cSld)
           Object.assign(out, parseCSld(cSld, opts));
-        if (opts && opts.slideExtrasByPart) {
+        const byPart = !!(opts && opts.slideExtrasByPart);
+        if (byPart) {
           out.cSldExtras = out._extras || [];
           delete out._extras;
         }
@@ -3316,8 +3404,14 @@ export const pptxLargePackage = {
             out.layoutIds = parseSldLayoutIdLst(c);
           else if (c.name === "p:txStyles")
             out.txStyles = c;
+          else if (c.name === "p:notesStyle")
+            out.notesStyle = c;
           else
             extras.push(c);
+        }
+        if (extras.length && !byPart) {
+          out.cSldExtras = out._extras || [];
+          delete out._extras;
         }
         if (extras.length)
           out._extras = extras;
@@ -3327,6 +3421,7 @@ export const pptxLargePackage = {
     function buildSerializer(rootTag, defaultName, extraNs) {
       return function serialize(obj) {
         const ns = {
+          ...rootAttrsOf(obj),
           "xmlns:p": P_NS,
           "xmlns:a": A_NS,
           "xmlns:r": R_NS,
@@ -3340,13 +3435,24 @@ export const pptxLargePackage = {
           children.push(renderSldLayoutIdLst(obj.layoutIds));
         if (obj.txStyles)
           children.push(obj.txStyles);
-        if (obj._extras) {
-          for (const ex of obj._extras)
-            if (!CSLD_ONLY.has(placedName(ex)))
+        if (obj.notesStyle)
+          children.push(obj.notesStyle);
+        const rootOwn = Array.isArray(obj.cSldExtras);
+        if (obj._extras)
+          for (const ex of obj._extras) {
+            const name = placedName(ex);
+            if (rootOwn ? !CSLD_ONLY.has(name) : ROOT_ONLY.has(name))
               children.push(ex);
-        }
+          }
         return xml.serialize(xml.el(rootTag, ns, ordered(children, ROOT_SEQ)));
       };
+    }
+    function rootAttrsOf(obj) {
+      const out = {};
+      for (const [k, v] of Object.entries(obj && obj.rootAttrs || {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
     }
     function parseSldLayoutIdLst(el) {
       return xml.findAll(el, "p:sldLayoutId").map((c) => ({
@@ -3364,7 +3470,7 @@ export const pptxLargePackage = {
         return xmlText.replace("<p:sldLayout", `<p:sldLayout type="${obj.layoutType}"`);
       return xmlText;
     }
-    const serializeSlideMaster = buildSerializer("p:sldMaster", null);
+    const serializeSlideMaster = buildSerializer("p:sldMaster", null), parseNotesSlide = buildParser("p:notes", { type: "notes" }), parseNotesMaster = buildParser("p:notesMaster", { type: "notesMaster" }), parseHandoutMaster = buildParser("p:handoutMaster", { type: "handoutMaster" }), serializeNotesSlide = buildSerializer("p:notes", null), serializeNotesMaster = buildSerializer("p:notesMaster", null), serializeHandoutMaster = buildSerializer("p:handoutMaster", null);
     function slideBytes(obj) {
       return encodeText(serializeSlide(obj));
     }
@@ -3420,6 +3526,12 @@ export const pptxLargePackage = {
       serializeSlide,
       serializeSlideLayout,
       serializeSlideMaster,
+      parseNotesSlide,
+      parseNotesMaster,
+      parseHandoutMaster,
+      serializeNotesSlide,
+      serializeNotesMaster,
+      serializeHandoutMaster,
       slideBytes,
       slideLayoutBytes,
       slideMasterBytes,
@@ -3436,9 +3548,15 @@ export const pptxLargePackage = {
       REL_TYPE_SLIDE: REL_TYPE.SLIDE,
       REL_TYPE_SLIDE_LAYOUT: REL_TYPE.SLIDE_LAYOUT,
       REL_TYPE_SLIDE_MASTER: REL_TYPE.SLIDE_MASTER,
+      REL_TYPE_NOTES_SLIDE: REL_TYPE.NOTES_SLIDE,
+      REL_TYPE_NOTES_MASTER: REL_TYPE.NOTES_MASTER,
+      REL_TYPE_HANDOUT_MASTER: REL_TYPE.HANDOUT_MASTER,
       CT_SLIDE: CT.SLIDE,
       CT_SLIDE_LAYOUT: CT.SLIDE_LAYOUT,
-      CT_SLIDE_MASTER: CT.SLIDE_MASTER
+      CT_SLIDE_MASTER: CT.SLIDE_MASTER,
+      CT_NOTES_SLIDE: CT.NOTES_SLIDE,
+      CT_NOTES_MASTER: CT.NOTES_MASTER,
+      CT_HANDOUT_MASTER: CT.HANDOUT_MASTER
     };
   } });
     __register({ name: "pptxTheme", dependencies: ["ooxmlErrors","xml","ooxmlShared"], factory: function(errors, xml, shared) {
@@ -3487,7 +3605,7 @@ export const pptxLargePackage = {
       "folHlink"
     ];
     function parseClrScheme(el) {
-      const out = { name: el.attrs.name || "", colors: {} };
+      const out = { name: el.attrs.name ?? "", colors: {} };
       for (const key of CLR_SCHEME_KEYS) {
         const child = xml.findChild(el, "a:" + key);
         if (child)
@@ -3505,7 +3623,17 @@ export const pptxLargePackage = {
         if (el)
           children.push(el);
       }
-      return xml.el("a:clrScheme", { name: scheme.name || "Office" }, children);
+      return xml.el("a:clrScheme", { name: schemeName(scheme) }, children);
+    }
+    function schemeName(scheme) {
+      return typeof scheme.name === "string" ? scheme.name : "Office";
+    }
+    function otherFontAttrs(el) {
+      const out = {};
+      for (const [k, v] of Object.entries(el.attrs || {}))
+        if (k !== "typeface")
+          out[k] = v;
+      return Object.keys(out).length ? out : null;
     }
     function parseFontKind(el) {
       const out = {}, latin = xml.findChild(el, "a:latin"), ea = xml.findChild(el, "a:ea"), cs = xml.findChild(el, "a:cs");
@@ -3515,23 +3643,39 @@ export const pptxLargePackage = {
         out.ea = ea.attrs.typeface;
       if (cs)
         out.cs = cs.attrs.typeface;
+      const fontAttrs = {};
+      for (const [key, f] of [["latin", latin], ["ea", ea], ["cs", cs]]) {
+        const other = f && otherFontAttrs(f);
+        if (other)
+          fontAttrs[key] = other;
+      }
+      if (Object.keys(fontAttrs).length)
+        out.fontAttrs = fontAttrs;
       const extras = el.children.filter((n) => n.type === "element" && !["a:latin", "a:ea", "a:cs"].includes(n.name));
       if (extras.length)
         out._extras = extras;
       return out;
     }
     function renderFontKind(tag, kind) {
-      const children = [];
-      children.push(xml.el("a:latin", { typeface: kind.latin || "Calibri" }));
-      children.push(xml.el("a:ea", { typeface: kind.ea || "" }));
-      children.push(xml.el("a:cs", { typeface: kind.cs || "" }));
+      const children = [], fa = (key) => {
+        const a = kind.fontAttrs && kind.fontAttrs[key], out = {};
+        if (a && typeof a === "object") {
+          for (const [k, v] of Object.entries(a))
+            if (k !== "typeface" && v != null)
+              out[k] = String(v);
+        }
+        return out;
+      };
+      children.push(xml.el("a:latin", { typeface: kind.latin || "Calibri", ...fa("latin") }));
+      children.push(xml.el("a:ea", { typeface: kind.ea || "", ...fa("ea") }));
+      children.push(xml.el("a:cs", { typeface: kind.cs || "", ...fa("cs") }));
       if (kind._extras)
         for (const ex of kind._extras)
           children.push(ex);
       return xml.el(tag, {}, children);
     }
     function parseFontScheme(el) {
-      const out = { name: el.attrs.name || "" }, major = xml.findChild(el, "a:majorFont"), minor = xml.findChild(el, "a:minorFont");
+      const out = { name: el.attrs.name ?? "" }, major = xml.findChild(el, "a:majorFont"), minor = xml.findChild(el, "a:minorFont");
       if (major)
         out.majorFont = parseFontKind(major);
       if (minor)
@@ -3542,8 +3686,15 @@ export const pptxLargePackage = {
       const children = [];
       children.push(renderFontKind("a:majorFont", scheme.majorFont || {}));
       children.push(renderFontKind("a:minorFont", scheme.minorFont || {}));
-      return xml.el("a:fontScheme", { name: scheme.name || "Office" }, children);
+      return xml.el("a:fontScheme", { name: schemeName(scheme) }, children);
     }
+    const ROOT_TYPED = new Set(["a:themeElements", "a:objectDefaults", "a:extraClrSchemeLst"]), ROOT_SEQ = shared.sequence ? shared.sequence([
+      "a:themeElements",
+      "a:objectDefaults",
+      "a:extraClrSchemeLst",
+      "a:custClrLst",
+      "a:extLst"
+    ]) : null, ordered = (children, seq) => seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children;
     function parse(input) {
       const text = typeof input === "string" ? input : decodeText(input), root = xml.parse(text);
       if (root.name !== "a:theme")
@@ -3558,11 +3709,11 @@ export const pptxLargePackage = {
         if (fm)
           out.fmtScheme = fm;
       }
-      const od = xml.findChild(root, "a:objectDefaults"), xc = xml.findChild(root, "a:extraClrSchemeLst");
-      if (od)
-        out.objectDefaults = od;
-      if (xc)
-        out.extraClrSchemeLst = xc;
+      out.objectDefaults = xml.findChild(root, "a:objectDefaults") || null;
+      out.extraClrSchemeLst = xml.findChild(root, "a:extraClrSchemeLst") || null;
+      const extras = root.children.filter((c) => c.type === "element" && !ROOT_TYPED.has(c.name));
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function serialize(obj) {
@@ -3574,9 +3725,14 @@ export const pptxLargePackage = {
       if (obj.fmtScheme)
         themeChildren.push(obj.fmtScheme);
       const children = [xml.el("a:themeElements", {}, themeChildren)];
-      children.push(obj.objectDefaults || xml.el("a:objectDefaults", {}));
-      children.push(obj.extraClrSchemeLst || xml.el("a:extraClrSchemeLst", {}));
-      return xml.serialize(xml.el("a:theme", { "xmlns:a": A_NS, name: obj.name || "Office Theme" }, children));
+      if (obj.objectDefaults !== null)
+        children.push(obj.objectDefaults || xml.el("a:objectDefaults", {}));
+      if (obj.extraClrSchemeLst !== null)
+        children.push(obj.extraClrSchemeLst || xml.el("a:extraClrSchemeLst", {}));
+      for (const ex of Array.isArray(obj._extras) ? obj._extras : [])
+        if (ex && ex.type === "element" && !ROOT_TYPED.has(ex.name))
+          children.push(ex);
+      return xml.serialize(xml.el("a:theme", { "xmlns:a": A_NS, name: obj.name || "Office Theme" }, ordered(children, ROOT_SEQ)));
     }
     function bytesOf(obj) {
       return encodeText(serialize(obj));
@@ -3793,31 +3949,88 @@ export const pptxLargePackage = {
         return value;
       }
       function walkRunsInTextBody(tb, phase) {
-        if (!tb || !tb.paragraphs)
+        if (!tb || !Array.isArray(tb.paragraphs))
           return;
-        const hr = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hp = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties";
-        for (const p of tb.paragraphs) {
+        const hydrate = phase === "hydrate", hr = hydrate ? "hydrateRunProperties" : "dehydrateRunProperties", hp = hydrate ? "hydrateParagraphProperties" : "dehydrateParagraphProperties", hpara = hydrate ? "hydrateParagraph" : "dehydrateParagraph";
+        tb.paragraphs.forEach((p, i) => {
+          if (!p || typeof p !== "object")
+            return;
+          if (!hydrate)
+            p = tb.paragraphs[i] = applyHook(hpara, p);
           if (p.pPr)
             p.pPr = applyHook(hp, p.pPr);
-          for (const r of p.runs || [])
-            if (r.rPr)
+          for (const r of p.runs || []) {
+            if (r && r.rPr)
               r.rPr = applyHook(hr, r.rPr);
+            if (r && r.pPr)
+              r.pPr = applyHook(hp, r.pPr);
+          }
+          if (hydrate)
+            tb.paragraphs[i] = applyHook(hpara, p);
+        });
+      }
+      function walkShape(shape, phase) {
+        if (!shape || typeof shape !== "object")
+          return;
+        if (shape.type === "group") {
+          for (const s of Array.isArray(shape.shapes) ? shape.shapes : [])
+            walkShape(s, phase);
+          return;
         }
+        walkRunsInTextBody(shape.txBody, phase);
+        for (const row of Array.isArray(shape.rows) ? shape.rows : [])
+          for (const cell of row && Array.isArray(row.cells) ? row.cells : [])
+            if (cell)
+              walkRunsInTextBody(cell.txBody, phase);
+      }
+      const isObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+      function walkPart(holder, key, phase) {
+        const hydrate = phase === "hydrate", name = hydrate ? "hydrateSlidePart" : "dehydrateSlidePart";
+        let part = holder[key];
+        if (!part || typeof part !== "object")
+          return;
+        if (!hydrate)
+          part = holder[key] = applyHook(name, part);
+        for (const shape of part && part.shapes || [])
+          walkShape(shape, phase);
+        if (hydrate)
+          holder[key] = applyHook(name, part);
+      }
+      function walkTheme(holder, phase) {
+        if (!isObject(holder) || !isObject(holder.theme))
+          return;
+        holder.theme = applyHook(phase === "hydrate" ? "hydrateTheme" : "dehydrateTheme", holder.theme);
       }
       function applyExtensions(presentation, phase) {
         if (!_exts.length || !presentation)
           return presentation;
         const sName = phase === "hydrate" ? "hydrateSettings" : "dehydrateSettings";
-        for (const slide of presentation.slides || [])
-          for (const shape of slide.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
-        for (const layout of presentation.slideLayouts || [])
-          for (const shape of layout.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
-        for (const master of presentation.slideMasters || [])
-          for (const shape of master.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
+        for (const list of [presentation.slides, presentation.slideLayouts, presentation.slideMasters]) {
+          if (!Array.isArray(list))
+            continue;
+          for (let i = 0;i < list.length; i++)
+            walkPart(list, i, phase);
+        }
+        for (const slide of Array.isArray(presentation.slides) ? presentation.slides : [])
+          if (isObject(slide) && isObject(slide.notes))
+            walkPart(slide, "notes", phase);
+        for (const key of ["notesMaster", "handoutMaster"]) {
+          if (!isObject(presentation[key]))
+            continue;
+          walkPart(presentation, key, phase);
+          walkTheme(presentation[key], phase);
+        }
+        walkTheme(presentation, phase);
         applyHook(sName, presentation);
+        return presentation;
+      }
+      function applyPackage(name, presentation, ctx) {
+        for (const ext of _exts)
+          if (typeof ext[name] === "function") {
+            const r = ext[name](presentation, ctx);
+            if (r !== void 0)
+              presentation = r;
+          }
         return presentation;
       }
       return {
@@ -3827,6 +4040,12 @@ export const pptxLargePackage = {
         },
         applyDehydrate(presentation) {
           applyExtensions(presentation, "dehydrate");
+        },
+        applyPackageHydrate(presentation, ctx) {
+          return applyPackage("hydratePackage", presentation, ctx);
+        },
+        applyPackageDehydrate(presentation, ctx) {
+          return applyPackage("dehydratePackage", presentation, ctx);
         },
         get hasExtensions() {
           return _exts.length > 0;
@@ -3848,6 +4067,15 @@ export const pptxLargePackage = {
       createRidAllocator,
       trackUnmodelledParts
     } = shared, P_NS = slideMod.P_NS, A_NS = slideMod.A_NS, R_NS = slideMod.R_NS, REL_TYPE_DOC = REL_TYPE.DOC, CT_PRESENTATION = CT.PRESENTATION;
+    function allShapes(shapes) {
+      const out = [];
+      for (const s of Array.isArray(shapes) ? shapes : [])
+        if (s && s.type === "group")
+          out.push(...allShapes(s.shapes));
+        else
+          out.push(s);
+      return out;
+    }
     function attachPictureImage(shape, rels, part, pkg) {
       const rel = rels.find((r) => r.Id === shape.embedRef);
       if (!rel || rel.Type !== picMod.REL_TYPE_IMAGE)
@@ -3863,12 +4091,12 @@ export const pptxLargePackage = {
     }
     function attachTemplateImages(template, part, pkg) {
       const rels = pkg.rels[part] || [];
-      for (const shape of template.shapes || [])
+      for (const shape of allShapes(template.shapes))
         if (shape.type === "picture" && shape.embedRef)
           attachPictureImage(shape, rels, part, pkg);
     }
     function attachSlideImages(slide, slideRels, slidePart, pkg) {
-      for (const shape of slide.shapes || [])
+      for (const shape of allShapes(slide.shapes))
         if (shape.type === "picture" && shape.embedRef)
           attachPictureImage(shape, slideRels, slidePart, pkg);
         else if (shape.type === "chart" && shape.chartRef) {
@@ -3930,11 +4158,15 @@ export const pptxLargePackage = {
     }
     function read(bytes, opts) {
       const pkg = opc.read(bytes, archiveLimits(opts)), textOpts = { typedRunColors: !!(opts && opts.typedRunColors) };
+      if (opts && opts.typedLineColors)
+        textOpts.typedLineColors = !0;
+      if (opts && opts.typedGroups)
+        textOpts.typedGroups = !0;
       if (opts && opts.slideExtrasByPart)
         textOpts.slideExtrasByPart = !0;
-      const { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
+      const plainParts = pkg.parts, { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
         try {
-          return readPackage(p, textOpts);
+          return readPackage(p, textOpts, plainParts);
         } catch (e) {
           throw typedPartXml(e);
         }
@@ -3947,7 +4179,7 @@ export const pptxLargePackage = {
         return e;
       return new ParseError("pptx/invalid-part-xml", `pptx: failed to parse a part's XML (${e.message})`, { cause: e });
     }
-    function readPackage(pkg, textOpts) {
+    function readPackage(pkg, textOpts, plainParts) {
       const docRel = (pkg.rels["/"] || []).find((r) => r.Type === REL_TYPE_DOC || r.Type.endsWith("/officeDocument"));
       if (!docRel)
         throw new ParseError("pptx/missing-officeDocument-rel", "pptx: no officeDocument relationship");
@@ -3977,7 +4209,7 @@ export const pptxLargePackage = {
         if (ssEl.attrs.type)
           sldSize.type = ssEl.attrs.type;
       }
-      const slides = [], slideLayouts = [], slideMasters = [];
+      const slides = [], slideLayouts = [], slideMasters = [], slideParts = [], masterParts = [];
       let theme;
       for (const entry of slideEntries) {
         const rel = presRels.find((r) => r.Id === entry.rId);
@@ -3990,6 +4222,7 @@ export const pptxLargePackage = {
         slide._partName = slidePart;
         attachSlideImages(slide, slideRels, slidePart, pkg);
         slides.push(slide);
+        slideParts.push(slidePart);
         const layoutRel = slideRels.find((r) => r.Type === slideMod.REL_TYPE_SLIDE_LAYOUT);
         if (layoutRel) {
           const layoutPart = relsMod.resolveTarget(slidePart, layoutRel.Target);
@@ -4016,6 +4249,7 @@ export const pptxLargePackage = {
         attachTemplateImages(master, masterPart, pkg);
         master._partName = masterPart;
         slideMasters.push(master);
+        masterParts.push(masterPart);
         const themeRel = (pkg.rels[masterPart] || []).find((r) => r.Type === themeMod.REL_TYPE_THEME);
         if (themeRel && !theme) {
           const themePart = relsMod.resolveTarget(masterPart, themeRel.Target), tBytes = pkg.parts[themePart];
@@ -4023,9 +4257,10 @@ export const pptxLargePackage = {
             theme = themeMod.parse(tBytes);
         }
       }
+      const layoutParts = slideLayouts.map((l) => l._partName);
       for (const s of slides) {
         delete s._partName;
-        for (const sp of s.shapes || [])
+        for (const sp of allShapes(s.shapes))
           delete sp._chartPartName;
       }
       for (const l of slideLayouts)
@@ -4041,8 +4276,23 @@ export const pptxLargePackage = {
         presentation.theme = theme;
       if (sldSize)
         presentation.sldSize = sldSize;
-      walker.applyHydrate(presentation);
-      return { presentation, package: pkg };
+      const hydrated = walker.applyPackageHydrate(presentation, {
+        package: pkg,
+        parts: plainParts,
+        rels: pkg.rels,
+        presPart,
+        presRoot,
+        presRels,
+        slideParts,
+        layoutParts,
+        masterParts,
+        textOpts,
+        consume(partName) {
+          return pkg.parts[partName];
+        }
+      });
+      walker.applyHydrate(hydrated);
+      return { presentation: hydrated, package: pkg };
     }
     const walker = walkerMod.createWalker();
     function use(...extensions) {
@@ -4121,7 +4371,7 @@ export const pptxLargePackage = {
       const chartParts = [];
       slides.forEach((slide, k) => {
         const node = normalizeSlide(slide), slidePath = `/ppt/slides/slide${k + 1}.xml`, slideRels = [], ridAlloc = createRidAllocator({ prefix: "rId", start: 1 }), seenData = new Map;
-        for (const shape of node.shapes || [])
+        for (const shape of allShapes(node.shapes))
           if (shape.type === "picture" && shape.image && shape.image.data) {
             let item = seenData.get(shape.image.data);
             if (!item) {
@@ -4212,6 +4462,15 @@ export const pptxLargePackage = {
         Type: REL_TYPE_DOC,
         Target: "ppt/presentation.xml"
       }]);
+      if (walker.hasExtensions)
+        walker.applyPackageDehydrate(pres, {
+          package: pkg,
+          presPart: "/ppt/presentation.xml",
+          themePart: "/ppt/theme/theme1.xml",
+          slideParts: slides.map((_, k) => `/ppt/slides/slide${k + 1}.xml`),
+          layoutParts: layouts.map((_, j) => `/ppt/slideLayouts/slideLayout${j + 1}.xml`),
+          masterParts: masters.map((_, i) => `/ppt/slideMasters/slideMaster${i + 1}.xml`)
+        });
       return opc.write(pkg);
     }
     function normalizeSlide(slide) {
@@ -4627,6 +4886,15 @@ export const pptxLargePackage = {
           case "p:videoClr":
             node.videoClr = { ...c.attrs };
             break;
+          case "p:prevCondLst":
+            node.prevCondLst = parseCondLst(c, "prevCondLst");
+            break;
+          case "p:nextCondLst":
+            node.nextCondLst = parseCondLst(c, "nextCondLst");
+            break;
+          case "p:rCtr":
+            node.rCtr = { ...c.attrs };
+            break;
         }
       }
       return node;
@@ -4825,14 +5093,14 @@ export const pptxLargePackage = {
         kids.push(renderCondLst(c.prevCondLst));
       if (c.nextCondLst)
         kids.push(renderCondLst(c.nextCondLst));
+      if (c.endSync)
+        kids.push(xml.el("p:endSync", c.endSync.attrs || {}, renderCond(c.endSync).children));
       if (c.iterate)
         kids.push(renderIterate(c.iterate));
       if (c.childTnLst && c.childTnLst.children && c.childTnLst.children.length)
         kids.push(xml.el("p:childTnLst", {}, c.childTnLst.children.map(renderTimeNode)));
       if (c.subTnLst && c.subTnLst.children && c.subTnLst.children.length)
         kids.push(xml.el("p:subTnLst", {}, c.subTnLst.children.map(renderTimeNode)));
-      if (c.endSync)
-        kids.push(xml.el("p:endSync", c.endSync.attrs || {}));
       return xml.el("p:cTn", c.attrs || {}, kids);
     }
     function renderTimeNode(node) {
@@ -4843,12 +5111,18 @@ export const pptxLargePackage = {
         kids.push(renderCBhvr(node.cBhvr));
       if (node.cMediaNode)
         kids.push(renderCMediaNode(node.cMediaNode));
+      if (node.prevCondLst)
+        kids.push(renderCondLst(node.prevCondLst));
+      if (node.nextCondLst)
+        kids.push(renderCondLst(node.nextCondLst));
+      if (node.by)
+        kids.push(xml.el("p:by", node.by.attrs || {}, renderValChildren(node.by)));
       if (node.from)
         kids.push(xml.el("p:from", node.from.attrs || {}, renderValChildren(node.from)));
       if (node.to)
         kids.push(xml.el("p:to", node.to.attrs || {}, renderValChildren(node.to)));
-      if (node.by)
-        kids.push(xml.el("p:by", node.by.attrs || {}, renderValChildren(node.by)));
+      if (node.rCtr)
+        kids.push(xml.el("p:rCtr", node.rCtr));
       if (node.tavLst)
         kids.push(renderTavLst(node.tavLst));
       if (node.progress)

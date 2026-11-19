@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -105,6 +105,22 @@
  *   and non-string entries are ignored. Supplying the option BYPASSES the
  *   source-keyed `ParseResult` cache (read and write): the reservation changes
  *   which ids are minted, so a cached entry would violate the contract.
+ * @property {SharedParseCache} [cache] - A cache from `createCache`, shared
+ *   by any number of parser instances, used INSTEAD of this instance's own.
+ *   It is transparent: a hit returns exactly what a fresh parse on this
+ *   instance would, auto ids re-minted by this instance's counter.
+ */
+
+/**
+ * A parse cache shared across parser instances (`parser.createCache`). The
+ * underscored members are the parser's internal protocol.
+ *
+ * @typedef {Object} SharedParseCache
+ * @property {() => number} size - Entries held.
+ * @property {() => void} clear - Drop every entry and reset the counters.
+ * @property {() => {hits: number, misses: number, evictions: number, size: number, max: number}} stats - Counters.
+ * @property {(key: string) => (object|undefined)} _get
+ * @property {(key: string, entry: object) => void} _set
  */
 
 /**
@@ -114,6 +130,7 @@
  * @property {(htmlString: string, options?: FromHTMLOptions) => ParseResult} fromHTML - Parse HTML to a (cached) {@link ParseResult}.
  * @property {(input: ElmNode[]|ParseResult) => string} toHTML - Serialise an elm array / ParseResult back to HTML.
  * @property {ParserCache} cache - Manual cache controls.
+ * @property {(opts?: {max?: number}) => SharedParseCache} createCache - A cache several instances share through `fromHTML(html, { cache })`.
  */
 
 import { secPolicy } from './secPolicy.js';
@@ -186,6 +203,14 @@ export const parser = {
             return el;
         }
         function _makeText(value)    { return { nodeType: NODE_TEXT,    nodeValue: value }; }
+
+        /** Phrasing elements whose neighbouring whitespace renders as a space. */
+        const INLINE_TAGS = new Set(['a', 'abbr', 'b', 'bdi', 'bdo', 'br', 'cite', 'code', 'data', 'dfn', 'em', 'i',
+            'img', 'kbd', 'label', 'mark', 'q', 's', 'samp', 'small', 'span', 'strong', 'sub', 'sup', 'time', 'u',
+            'var', 'wbr', 'button', 'input', 'select', 'textarea', 'output', 'svg']);
+        function _isInlineElement(n) {
+            return !!n && n.nodeType === NODE_ELEMENT && INLINE_TAGS.has(String(n.tagName).toLowerCase());
+        }
         function _makeComment(value) { return { nodeType: NODE_COMMENT, nodeValue: value }; }
 
         // Parse an opening tag starting at `pos` (which points to '<').
@@ -364,6 +389,11 @@ export const parser = {
 
         let _seq = 0;
 
+        /** Ids `nextId` mints while a recorded parse runs (shared cache), else null. @type {string[]|null} */
+        let _mintLog = null;
+        /** The explicit ids of the document `_fromHTMLImpl` parsed last. @type {Set<string>} */
+        let _lastExplicit = new Set();
+
         /**
          * Explicit ids reserved for the WHOLE parser instance: every explicit id
          * seen by a previous `fromHTML` call, plus every id a caller declared up
@@ -428,6 +458,7 @@ export const parser = {
             while ((reserved && reserved.has(id)) || _reservedAll.has(id)) {
                 id = 'p' + (_seq++);
             }
+            if (_mintLog) _mintLog.push(id);
             return id;
         };
 
@@ -818,6 +849,7 @@ export const parser = {
             // that an auto-minted `pN` never collides with an explicit `pN` —
             // including one that only appears further down the tree.
             const reserved = collectExplicitIds(rootNode);
+            _lastExplicit = new Set(reserved);
             // Cross-call layers, both applied BEFORE the walk as well:
             //  - ids the caller declared up front for the whole assembled
             //    document (covers explicit ids this instance has not met yet);
@@ -932,15 +964,30 @@ export const parser = {
                         // Non-empty text nodes that live alongside element siblings
                         // cannot be represented as elm.text; they become synthetic
                         // child elements instead.
-                        plainKids.forEach(c => {
+                        plainKids.forEach((c, k) => {
                             if (c.nodeType === NODE_ELEMENT) {
                                 walkElement(c, id, out);
 
                             } else if (c.nodeType === NODE_TEXT) {
-                                const rawText = c.nodeValue.trim();
-                                if (!rawText) return; // whitespace-only → skip
+                                // A text node keeps the boundary space an inline
+                                // sibling renders (BL-2374, D9 G7): `or <b>this</b>`
+                                // keeps "or ". A whitespace-only node is still
+                                // skipped — a synthetic text node renders as a
+                                // <span>, so keeping it would add an element to the
+                                // DOM; beside block elements and at the parent's
+                                // edges whitespace is dropped, as rendering does.
+                                const raw = c.nodeValue;
+                                const trimmed = raw.trim();
+                                if (!trimmed) return; // whitespace-only → skip
+                                const prevInline = _isInlineElement(plainKids[k - 1]);
+                                const nextInline = _isInlineElement(plainKids[k + 1]);
+                                let rawText = trimmed;
+                                {
+                                    if (prevInline && /^\s/.test(raw)) rawText = ' ' + rawText;
+                                    if (nextInline && /\s$/.test(raw)) rawText = rawText + ' ';
+                                }
 
-                                const slotM = rawText.match(RE_SLOT);
+                                const slotM = trimmed.match(RE_SLOT);
                                 if (slotM) {
                                     // ${slot} text node with element siblings → <span>
                                     // (the memo rule: "has neighbours → span tag")
@@ -998,10 +1045,11 @@ export const parser = {
         };
 
         /**
-         * Cached `fromHTML` : returns the same ParseResult for identical input
-         * strings. The cached object is a frozen reference - callers that need
-         * to mutate it should clone first. Cache is bounded; oldest entries are
-         * evicted on overflow.
+         * Cached `fromHTML` : identical input strings are parsed once. Every
+         * call returns its own deep copy of the cached ParseResult (hit or
+         * miss), so a caller may mutate what it gets without reaching the cache
+         * or any other caller. Cache is bounded; oldest entries are evicted on
+         * overflow.
          *
          * Supplying `options.reserveIds` BYPASSES the cache in both directions:
          * the reservation changes which auto ids are minted, so a hit keyed on
@@ -1023,12 +1071,107 @@ export const parser = {
             if (reserveIdsInput !== undefined && reserveIdsInput !== null) {
                 return _fromHTMLImpl(htmlString, reserveIdsInput);
             }
+            const shared = options ? options.cache : undefined;
+            if (shared && typeof shared._get === 'function') return _fromShared(htmlString, shared);
             const cached = _cacheGet(htmlString);
-            if (cached !== undefined) return cached;
+            if (cached !== undefined) return _cloneResult(cached);
             const result = _fromHTMLImpl(htmlString);
             _cacheSet(htmlString, result);
-            return result;
+            return _cloneResult(result);
         };
+
+        /**
+         * `fromHTML` through a shared cache. An entry keeps the result, the
+         * auto ids in mint order and the document's explicit ids. A hit does
+         * what a parse does to this instance — the explicit ids join the
+         * instance set, then every auto id is minted by this instance's own
+         * `nextId` in the original order — and rewrites `id` / `parent` in a
+         * copy, so it returns exactly what a fresh parse would. The key carries
+         * the parse path: DOMParser and the internal tokenizer may build
+         * different trees from one source.
+         *
+         * @param {string} htmlString
+         * @param {SharedParseCache} shared
+         * @returns {ParseResult}
+         */
+        function _fromShared(htmlString, shared) {
+            const key = (typeof DOMParser !== 'undefined' ? 'd:' : 't:') + htmlString;
+            const entry = shared._get(key);
+            if (entry === undefined) {
+                _mintLog = [];
+                let result;
+                try {
+                    result = _fromHTMLImpl(htmlString);
+                    shared._set(key, { result, minted: _mintLog, explicit: Array.from(_lastExplicit) });
+                } finally {
+                    _mintLog = null;
+                }
+                return _cloneResult(result);
+            }
+            for (const id of entry.explicit) _reservedAll.add(id);
+            const reserved = new Set(entry.explicit);
+            const remap = new Map();
+            for (const old of entry.minted) remap.set(old, nextId(reserved));
+            const copy = _cloneResult(entry.result);
+            const rewrite = (elms) => {
+                for (const elm of elms) {
+                    if (remap.has(elm.id)) elm.id = remap.get(elm.id);
+                    if (elm.parent !== undefined && remap.has(elm.parent)) elm.parent = remap.get(elm.parent);
+                }
+            };
+            rewrite(copy.template);
+            if (copy.iterates) for (const name of Object.keys(copy.iterates)) rewrite(copy.iterates[name]);
+            return copy;
+        }
+
+        /**
+         * A parse cache several parser instances share (`fromHTML(html, { cache })`).
+         * Bounded like the instance cache: the oldest entry goes on overflow.
+         *
+         * @param {{max?: number}} [opts] - `max` entries (default 64; 0 disables).
+         * @returns {SharedParseCache}
+         */
+        function createCache(opts) {
+            const max = Math.max(0, (opts && opts.max !== undefined ? opts.max : 64) | 0);
+            const map = new Map();
+            const st = { hits: 0, misses: 0, evictions: 0 };
+            return {
+                size() { return map.size; },
+                clear() { map.clear(); st.hits = 0; st.misses = 0; st.evictions = 0; },
+                stats() { return { ...st, size: map.size, max }; },
+                _get(key) {
+                    if (max === 0) return undefined;
+                    const hit = map.get(key);
+                    if (hit === undefined) { st.misses++; return undefined; }
+                    map.delete(key); map.set(key, hit);
+                    st.hits++;
+                    return hit;
+                },
+                _set(key, entry) {
+                    if (max === 0) return;
+                    if (map.size >= max) { map.delete(map.keys().next().value); st.evictions++; }
+                    map.set(key, entry);
+                },
+            };
+        }
+
+        /**
+         * Deep copy of a ParseResult: plain objects, arrays and primitives only
+         * (what the parser produces). About an order of magnitude cheaper than
+         * the parse it replaces on a hit.
+         *
+         * @param {*} v
+         * @returns {*}
+         */
+        function _cloneResult(v) {
+            if (Array.isArray(v)) return v.map(_cloneResult);
+            if (v !== null && typeof v === 'object') {
+                const out = {};
+                for (const k of Object.keys(v)) out[k] = _cloneResult(v[k]);
+                return out;
+            }
+            return v;
+        }
 
         /**
          * Manual cache controls (test / power-user).
@@ -1050,6 +1193,6 @@ export const parser = {
             stats()  { return { ..._cacheStats, size: _cacheMap.size, max: _cacheMax }; },
         };
 
-        return { fromHTML, toHTML, cache };
+        return { fromHTML, toHTML, cache, createCache };
     }
 };

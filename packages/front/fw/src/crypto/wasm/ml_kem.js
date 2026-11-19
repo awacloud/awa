@@ -7,14 +7,14 @@
  *
  * Opt-in WASM accelerator for the pure-JS [`ml_kem`](../pkc/ml_kem.js) module.
  * A thin async wrapper over the colocated `ml_kem` binary (vendored from `@awacloud/fw-wasm-crypto`),
- * loaded BY NAME through {@link wasmRuntime} (BATCH_11 ERRATA: there is NO
+ * loaded BY NAME through {@link wasmRuntime} (there is NO
  * fw-local `ml_kem.wasm.js`; the bytes are colocated
  * (`./ml_kem.{simd,scalar}.wasm`, vendored from the package build). Implements FIPS 203 (CRYSTALS-Kyber) for
  * the three parameter sets ML-KEM-512 / 768 / 1024.
  *
  * Post-quantum KEM — NOT covered by WebCrypto. The large lattice / NTT inner
  * loops are where WASM-SIMD beats pure JS, so this is the primary accelerator
- * for the algorithm (see the BATCH_11 priority rationale, group A).
+ * for the algorithm.
  *
  * ─── No-throw async contract ───
  *

@@ -248,7 +248,7 @@ describe('createFlate — truncated streams', () => {
 
     test('the synthetic cut is an unexpected-EOF failure for strict inflate', () => {
         const e = errOf(() => fw.unzlibSync(cut));
-        expect(e.code).toBe(0);
+        expect(e.errno).toBe(0);
         expect(e.message).toBe('unexpected EOF');
     });
 
@@ -286,17 +286,17 @@ describe('createFlate — truncated streams', () => {
         expect(e).toBeInstanceOf(ParseError);
         expect(e.code).toBe('pdf/flate/inflate-failed');
         expect(e.cause).toBeInstanceOf(Error);
-        expect(e.cause.code).not.toBe(0);
+        expect(e.cause.errno).not.toBe(0);
     });
 
     test('a corrupted Adler-32 footer on a complete stream behaves as before', () => {
-        // fw's unzlibSync does not verify the Adler-32 trailer: a complete
+        // the filter inflates with `verify: false` (fw 1.0 verifies by default): a complete
         // stream with a wrong checksum decoded before this change and still
         // decodes, unflagged — the recovery arm is never entered.
         const bad = new Uint8Array(complete);
         bad[bad.length - 1] ^= 0xFF;
         bad[bad.length - 2] ^= 0x5A;
-        expect(fw.unzlibSync(bad)).toEqual(original);
+        expect(fw.unzlibSync(bad, { verify: false })).toEqual(original);
         const out = flate.decode(bad);
         expect(out).toEqual(original);
         expect(out.truncated).toBeUndefined();
@@ -316,11 +316,11 @@ describe('createFlate — truncated streams', () => {
         // path decodes nothing, so the strict error is kept as the cause.
         const slice = complete.subarray(0, 7);
         const strict = errOf(() => fw.unzlibSync(slice));
-        expect(strict.code).toBe(0);
+        expect(strict.errno).toBe(0);
         const e = errOf(() => flate.decode(slice));
         expect(e).toBeInstanceOf(ParseError);
         expect(e.code).toBe('pdf/flate/inflate-failed');
-        expect(e.cause.code).toBe(0);
+        expect(e.cause.errno).toBe(0);
         expect(e.cause.message).toBe('unexpected EOF');
     });
 
@@ -474,7 +474,7 @@ describe('createFlate — output cap (decompression bomb)', () => {
 
     test('a truncated bomb throws the limit error instead of returning a prefix', () => {
         const cut = bomb.subarray(0, bomb.length - 8);
-        expect(attempt(() => fw.unzlibSync(cut)).error.code).toBe(0);
+        expect(attempt(() => fw.unzlibSync(cut)).error.errno).toBe(0);
         const { value, error } = attempt(() => flate.decode(cut, null, { maxOutput: 64 * 1024 }));
         expect(value).toBeUndefined();
         expect(error && error.code).toBe('pdf/flate/output-limit');
@@ -494,8 +494,8 @@ describe('createFlate — output cap (decompression bomb)', () => {
         let emitted = 0;
         const spy = {
             ...fw,
-            UnzlibStream: function SpyStream(ondata) {
-                const inner = new fw.UnzlibStream((chunk, fin) => {
+            UnzlibStream: function SpyStream(opts, ondata) {
+                const inner = new fw.UnzlibStream(opts, (chunk, fin) => {
                     emitted += chunk.length;
                     ondata(chunk, fin);
                 });

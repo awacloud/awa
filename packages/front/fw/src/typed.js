@@ -38,8 +38,11 @@ export const asTyped = (runtime) => runtime;
  * (via `registerAllDeep`, so transitive `deps` come along), and return it.
  * Typed as `TypedModuleRuntime` in `types/typed.d.ts`.
  *
- * Accepts an array of module definitions or a namespace object whose values
- * are module definitions (the shape of `@awacloud/fw/core/modules`).
+ * Accepts an array of module definitions (the default export of
+ * `@awacloud/fw/core/modules`), an object whose values are module
+ * definitions, or a module namespace whose values are such arrays
+ * (`import * as ns from '@awacloud/fw/core/modules'`, i.e.
+ * `{ default: [...] }`): an array value is registered entry by entry.
  *
  * @param {*} [modules]
  * @returns {*}
@@ -47,7 +50,8 @@ export const asTyped = (runtime) => runtime;
 export const createRuntime = (modules) => {
     const rt = new ModuleRuntime();
     if (modules) {
-        rt.registerAllDeep(Array.isArray(modules) ? modules : Object.values(modules));
+        const list = Array.isArray(modules) ? modules : Object.values(modules).flat();
+        rt.registerAllDeep(list);
     }
     return rt;
 };

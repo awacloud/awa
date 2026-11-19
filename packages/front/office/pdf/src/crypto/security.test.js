@@ -629,3 +629,22 @@ describe('dispatchDecryptStream — Identity passthrough', () => {
         expect(seen).toEqual(['AESV3']);
     });
 });
+
+describe('typeEncryptDict — the public-key security handler (T2)', () => {
+    const rec = (n) => new Uint8Array([n, n + 1]);
+    test('a public-key /Encrypt types without /R, its Recipients as bytes', () => {
+        const t = typeEncryptDict({ Filter: { type: 'name', value: 'Adobe.PubSec' }, SubFilter: { type: 'name', value: 'adbe.pkcs7.s4' },
+            V: 2, Length: 128, Recipients: [rec(1), rec(5)] });
+        expect(t.V).toBe(2);
+        expect(t.R).toBeUndefined();
+        expect(t.Recipients).toEqual([rec(1), rec(5)]);
+    });
+    test('the Standard handler, or no filter, still requires /R', () => {
+        for (const Filter of [{ type: 'name', value: 'Standard' }, 'Standard', undefined]) {
+            expect(() => typeEncryptDict({ Filter, V: 4 })).toThrow(expect.objectContaining({ code: 'pdf/crypto/encrypt-dict/missing-V-R' }));
+        }
+    });
+    test('every handler still requires /V', () => {
+        expect(() => typeEncryptDict({ Filter: { type: 'name', value: 'Adobe.PubSec' } })).toThrow(expect.objectContaining({ code: 'pdf/crypto/encrypt-dict/missing-V-R' }));
+    });
+});

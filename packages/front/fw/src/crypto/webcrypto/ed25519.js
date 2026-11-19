@@ -69,10 +69,10 @@ export const webcryptoEd25519 = {
          * - `crypto.subtle` is unavailable
          * - The runtime does not support `'Ed25519'` (subtle rejects → caught → false)
          *
-         * @param {boolean} [extractable=true]
+         * @param {boolean} [extractable=false]
          * @returns {Promise<CryptoKeyPair|false>}
          */
-        async function generateKey(extractable = true) {
+        async function generateKey(extractable = false) {
             if (!_hasSubtle) {
                 console.error('[crypto] NOT READY: crypto.subtle unavailable');
                 return false;

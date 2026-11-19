@@ -3,10 +3,10 @@
 | Section | Modules | Description |
 |---------|---------|-------------|
 | [Syntax](./syntax/README.md) | `pdfTokenizer`, `pdfParser`, `pdfXref`, `pdfTrailer` | ISO 32000-2 §7.2–§7.5 — binary layer. |
-| [Document](./document/README.md) | `pdfCatalog`, `pdfPages`, `pdfPage`, `pdfDocument`, `pdfResources`, `pdfWriter`, `pdfBuilder`, `pdfIncrementalWriter`, `pdfEncryptedWriter`, `pdfXrefStreamWriter` | §7.7 / §7.8.3 — typed document layer. |
+| [Document](./document/README.md) | `pdfCatalog`, `pdfPages`, `pdfPage`, `pdfDocument`, `pdfResources`, `pdfWriter`, `pdfMerge`, `pdfBuilder`, `pdfIncrementalWriter`, `pdfEncryptedWriter`, `pdfXrefStreamWriter` | §7.7 / §7.8.3 — typed document layer. |
 | [Content](./content/README.md) | `pdfContentOps`, `pdfContentStream`, `pdfGraphics`, `pdfText`, `pdfColor`, `pdfImages` | §7.8 / §8 / §9.3–§9.4 — content streams. |
 | [Font](./font/README.md) | `pdfFont`, `pdfFontEncoding`, `pdfType3`, `pdfFontEmbed` | §9.6 / §9.7 / §9.9 — fonts. |
-| [Form](./form/README.md) | `pdfAcroForm`, `pdfFieldTree`, `pdfButtonField`, `pdfTextField`, `pdfChoiceField`, `pdfSignatureField`, `pdfAppearance` | §12.7 / §12.5.5 — interactive forms. |
+| [Form](./form/README.md) | `pdfAcroForm`, `pdfFieldTree`, `pdfFormFill`, `pdfButtonField`, `pdfTextField`, `pdfChoiceField`, `pdfSignatureField`, `pdfAppearance` | §12.7 / §12.5.5 — interactive forms. |
 | [Annot](./annot/README.md) | `pdfAnnot`, `pdfTextAnnot`, `pdfLinkAnnot`, `pdfMarkupAnnot`, `pdfShapeAnnot`, `pdfFreeTextAnnot`, `pdfInkAnnot`, `pdfStampAnnot`, `pdfFileAttachAnnot`, `pdfWidgetAnnot`, `pdfPopupAnnot`, `pdfProjectionAnnot`, `pdfRedactAnnot` | §12.5 — annotations. |
 | [Tagged](./tagged/README.md) | `pdfStructTree`, `pdfStructElement`, `pdfRoleMap`, `pdfParentTree`, `pdfClassMap`, `pdfMarkedContent` | §14.6 / §14.7 / §14.8 — Tagged PDF, PDF/UA-2. |
 | [Crypto](./crypto/README.md) | `pdfSecurity`, `pdfStandardV4`, `pdfStandardV5`, `pdfStandardV6`, `pdfPermissions`, `pdfAesGcm` | §7.6 + ISO TS 32003 — encryption. |
@@ -18,7 +18,7 @@
 | [Embedded](./embedded/README.md) | `pdfFileSpec`, `pdfEmbeddedFile`, `pdfCollection` | §7.11 — attachments. |
 | [Linearization](./linearization/README.md) | `pdfLinearization` | Annex F — Fast Web View. |
 | [Metadata](./metadata/README.md) | `pdfInfo`, `pdfXmp` | §14.3 — metadata. |
-| [Prepress](./prepress/README.md) | `pdfOutputIntent`, `pdfPageBoundary` | §14.11 — prepress. |
+| [Prepress](./prepress/README.md) | `pdfOutputIntent`, `pdfPageBoundary`, `pdfSrgbIcc` | §14.11 — prepress. |
 | [Associated Files](./associatedFiles/README.md) | `pdfAssociatedFiles` | PDF 2.0 / PDF20_AN002-AF. |
 | [Extras](./extra/README.md) | 32 opt-in modules (P0/P1/P2/P3/legacy) | L3+ coverage — color fonts, CID, full ExtGState, PAdES, AES-GCM, PDF/A, PDF/X, PDF/UA, WTPDF, 3D, JBIG2, legacy XFA, RC4, LZW… |
 | [Bundles](./bundles/README.md) | `pdf-large`, `pdf-full`, `pdf-legacy` | Pre-wired factories combining core + extras. |

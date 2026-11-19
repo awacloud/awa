@@ -45,15 +45,50 @@
  *
  * Logic is split across sibling sub-modules :
  *   - `./subsetForPdf/closure.js`        — glyph closure
- *   - `./subsetForPdf/cmap-builder.js`   — Windows BMP format 4 builder
+ *   - `./subsetForPdf/cmap-builder.js`   — Windows format 4 (+ format 12) builder
+ *   - `./subsetForPdf/cff-subset.js`     — the CFF program subset (`opts.cff`)
  *   - `./subsetForPdf/glyph-rewriter.js` — composite gid patch
  *   - `./subsetForPdf/hash.js`           — 6-char name prefix
  *
  * **Precondition**: `font` must have TrueType outlines (`glyf` + `loca`).
- * A CFF / CFF2-flavoured font (`OTTO`) — or any font without `glyf` /
- * `loca` — is rejected with `ContractError('fonts/subset-bad-font')`;
- * there is no CFF subsetting route, so the subset is always a TrueType
- * (`FontFile2`) program.
+ * A font without them is rejected with `ContractError('fonts/subset-bad-font')`,
+ * so by default the subset is always a TrueType (`FontFile2`) program.
+ *
+ * **`opts.cff: true`** (opt-in) also subsets a font with one name-keyed
+ * CFF program (`OTTO`, a `CFF ` table without `ROS`). The subset is an
+ * `OTTO` font and its descriptor carries `FontFile3`:
+ *
+ * - **the closure**: the code points' glyphs, `.notdef`, and the base and
+ *   accent glyphs of every kept `seac`;
+ * - **the CFF program** (`./subsetForPdf/cff-subset.js`):
+ *   - the Top DICT keeps its entries but `Encoding` (dropped: the `cmap`
+ *     maps);
+ *   - a format 0 charset keeps the glyph names;
+ *   - the kept CharStrings are copied byte for byte;
+ *   - the Private DICT and the global and local subroutines are kept
+ *     whole;
+ * - **the other tables**: a `cmap` of the kept code points, `hmtx`,
+ *   `head`, `hhea`, `maxp` 0.5, the source's `name` and `OS/2`, `post`
+ *   3.0.
+ *
+ * A **CID-keyed CFF** font keeps `ROS`, `CIDCount`, every FD (its Private
+ * DICT and local subroutines whole), the kept glyphs' CIDs and a format 3
+ * FDSelect over them. A **CFF2** font with one FD is subset to its default
+ * instance as a static CID-keyed CFF program (`ROS Adobe-Identity-0`, CID =
+ * the new glyph id):
+ *
+ * - each charstring has its subroutines inlined, `blend` evaluated at the
+ *   default, `vsindex` dropped, and its width and `endchar` added;
+ * - an operator over the Type 2 operand limit is split;
+ * - the Private DICT is evaluated at the default;
+ * - the variation tables are not carried.
+ *
+ * A CFF2 font with several FDs stays rejected (`fonts/subset-bad-font`).
+ * With `glyf` / `loca` the option changes nothing.
+ *
+ * The `cmap` carries a Windows BMP format 4 subtable and, when a kept
+ * code point lies past U+FFFF, a Windows full-repertoire (3, 10) format
+ * 12 subtable of every code point.
  *
  * Not carried through to the subset: variable-font tables (the default
  * instance's `glyf` outlines are subset, `gvar` / `fvar` are dropped) and
@@ -78,6 +113,9 @@ import { embedClosure } from './subsetForPdf/closure.js';
 import { embedCmapBuilder } from './subsetForPdf/cmap-builder.js';
 import { embedGlyphRewriter } from './subsetForPdf/glyph-rewriter.js';
 import { embedHash } from './subsetForPdf/hash.js';
+import { tableCff } from '../table/cff.js';
+import { tableCff2 } from '../table/cff2.js';
+import { embedCffSubset } from './subsetForPdf/cff-subset.js';
 
 export const embedSubsetForPdf = {
     name: 'embedSubsetForPdf',
@@ -85,15 +123,16 @@ export const embedSubsetForPdf = {
         'fontErrors', 'fontSfnt',
         'tableHead', 'tableHhea', 'tableMaxp', 'tableHmtx', 'tableLoca',
         'embedFontDescriptor', 'cmapToUnicode', 'fontWriter',
-        'embedClosure', 'embedCmapBuilder', 'embedGlyphRewriter', 'embedHash'
+        'embedClosure', 'embedCmapBuilder', 'embedGlyphRewriter', 'embedHash',
+        'tableCff', 'tableCff2', 'embedCffSubset'
     ],
-    deps: [fontErrors, fontSfnt, tableHead, tableHhea, tableMaxp, tableHmtx, tableLoca, embedFontDescriptor, cmapToUnicode, fontWriter, embedClosure, embedCmapBuilder, embedGlyphRewriter, embedHash],
-    factory(errors, sfnt, head, hhea, maxp, hmtx, loca, fd, toUni, writer, closure, cmapBuilder, rewriter, hash) {
+    deps: [fontErrors, fontSfnt, tableHead, tableHhea, tableMaxp, tableHmtx, tableLoca, embedFontDescriptor, cmapToUnicode, fontWriter, embedClosure, embedCmapBuilder, embedGlyphRewriter, embedHash, tableCff, tableCff2, embedCffSubset],
+    factory(errors, sfnt, head, hhea, maxp, hmtx, loca, fd, toUni, writer, closure, cmapBuilder, rewriter, hash, cffMod, cff2Mod, cffSubset) {
         const { ContractError } = errors;
         const { packSfnt, SFNT_FLAVOR } = sfnt;
         const { encodeHead, HEAD_MAGIC } = head;
         const { encodeHhea } = hhea;
-        const { encodeMaxp, MAXP_V1_0 } = maxp;
+        const { encodeMaxp, MAXP_V1_0, MAXP_V0_5 } = maxp;
         const { encodeHmtx } = hmtx;
         const { encodeLoca } = loca;
         const { buildFontDescriptor } = fd;
@@ -105,13 +144,125 @@ export const embedSubsetForPdf = {
         const { hashPrefix } = hash;
 
         /**
-         * @param {object} font           — output of `fonts.read(bytes)` — TrueType outlines required (see the precondition above)
+         * The source's `post` table for a subset: kept when already 3.0
+         * (no glyph names), else its 32-byte header re-versioned to 3.0;
+         * undefined when the source has none.
+         */
+        function postV3(font) {
+            const srcPost = font.rawSfnt.tables.post;
+            if (!srcPost || srcPost.bytes.length < 32) return undefined;
+            const src = srcPost.bytes;
+            if (src[0] === 0 && src[1] === 3 && src[2] === 0 && src[3] === 0) return new Uint8Array(src);
+            const p = new Uint8Array(src.subarray(0, 32));
+            p[0] = 0; p[1] = 3; p[2] = 0; p[3] = 0;
+            return p;
+        }
+
+        /** The font's outline program, read: `{ kind: 'name' | 'cid' | 'cff2', parsed, bytes }`, or null. */
+        function cffProgram(font) {
+            const t = font.rawSfnt.tables;
+            try {
+                if (t['CFF ']) {
+                    const parsed = cffMod.parseCff(t['CFF '].bytes);
+                    if (cffSubset.isNameKeyed(parsed)) return { kind: 'name', parsed, bytes: t['CFF '].bytes };
+                    if (cffSubset.isCidKeyed(parsed)) return { kind: 'cid', parsed, bytes: t['CFF '].bytes };
+                    return null;
+                }
+                if (t.CFF2) {
+                    const parsed = cff2Mod.parseCff2(t.CFF2.bytes);
+                    if (!parsed.fdArray || parsed.fdArray.length !== 1) return null;
+                    return { kind: 'cff2', parsed, bytes: t.CFF2.bytes, regionCounts: parsed.vstore ? cff2Mod.regionCounts(parsed.vstore.data) : [] };
+                }
+            } catch (_e) {
+                return null;
+            }
+            return null;
+        }
+
+        /**
+         * A CFF or CFF2 font's subset (`opts.cff`): an `OTTO` font of the
+         * subset CFF program, a `cmap` of the kept code points, `hmtx`,
+         * `head`, `hhea`, `maxp` 0.5, the source's `name` and `OS/2`, `post`
+         * 3.0. Its descriptor carries `FontFile3`. The program is
+         * `embedCffSubset.subsetCff` of a name-keyed one, `subsetCidCff` of
+         * a CID-keyed one, `cff2ToCidCff` of a CFF2 one (its default
+         * instance); the variation tables are not carried.
+         */
+        function subsetCffFont(font, codePoints) {
+            const program = cffProgram(font);
+            if (!font.head || !font.hmtx || !program) {
+                throw new ContractError('fonts/subset-bad-font',
+                    'subsetForPdf { cff: true } requires glyf/loca tables, one name-keyed or CID-keyed CFF font program, or a one-FD CFF2 program', {});
+            }
+            const parsed = program.parsed;
+            const cps = [...codePoints];
+            const closure = computeGlyphClosure(font, cps);
+            const keptGids = program.kind === 'name'
+                ? [...cffSubset.cffClosure(parsed, new Set(closure.keptGids))].sort((a, b) => a - b)
+                : closure.keptGids;
+            const cpToGid = closure.cpToGid;
+            const gidMap = new Map();
+            keptGids.forEach((g, i) => gidMap.set(g, i));
+            const numGlyphs = keptGids.length;
+
+            const newMetrics = keptGids.map(oldGid => {
+                const m = font.hmtx.metrics[oldGid] || { advanceWidth: 0, lsb: 0 };
+                return { advanceWidth: m.advanceWidth, lsb: m.lsb };
+            });
+            const hmtxEnc = encodeHmtx({ metrics: newMetrics });
+            const cpToNewGid = new Map();
+            for (const [cp, oldGid] of cpToGid) {
+                const ng = gidMap.get(oldGid);
+                if (ng != null) cpToNewGid.set(cp, ng);
+            }
+            const tables = {
+                'CFF ': program.kind === 'name' ? cffSubset.subsetCff(parsed, program.bytes, keptGids)
+                    : program.kind === 'cid' ? cffSubset.subsetCidCff(parsed, program.bytes, keptGids)
+                        : cffSubset.cff2ToCidCff(parsed, program.regionCounts, keptGids, newMetrics.map((m) => m.advanceWidth), {
+                            name: font.names?.postScriptName || 'Font',
+                            bbox: [font.head.xMin, font.head.yMin, font.head.xMax, font.head.yMax]
+                        }),
+                head: encodeHead({ ...font.head, magicNumber: HEAD_MAGIC, checksumAdjustment: 0 }),
+                hhea: encodeHhea({ ...font.hhea, numberOfHMetrics: hmtxEnc.numberOfHMetrics }),
+                maxp: encodeMaxp({ version: MAXP_V0_5, numGlyphs }),
+                hmtx: hmtxEnc.bytes,
+                cmap: buildCmapFormat4(cpToNewGid)
+            };
+            if (font.rawSfnt.tables.name) tables.name = new Uint8Array(font.rawSfnt.tables.name.bytes);
+            if (font.rawSfnt.tables['OS/2']) tables['OS/2'] = new Uint8Array(font.rawSfnt.tables['OS/2'].bytes);
+            const post = postV3(font);
+            if (post) tables.post = post;
+            const subsetBytes = packSfnt({ flavor: SFNT_FLAVOR.OPENTYPE, tables });
+
+            const newGidToUnicode = new Map();
+            for (const [cp, newGid] of cpToNewGid) newGidToUnicode.set(newGid, String.fromCodePoint(cp));
+            const baseName = font.names?.postScriptName || font.names?.fullName || font.names?.family || 'Font';
+            const prefix = hashPrefix(keptGids, baseName);
+            const postScriptName = `${prefix}+${baseName}`;
+            const fontDescriptor = buildFontDescriptor(font, { subsetBytes, namePrefix: prefix, isCff: true });
+            fontDescriptor.FontName = postScriptName;
+            return {
+                subsetBytes,
+                gidMap,
+                glyphMap: cpToNewGid,
+                encoding: null,
+                widths: newMetrics.map((m) => m.advanceWidth),
+                toUnicodeCmap: buildToUnicode(newGidToUnicode),
+                postScriptName,
+                fontDescriptor
+            };
+        }
+
+        /**
+         * @param {object} font           — output of `fonts.read(bytes)` — TrueType outlines required, or (`opts.cff`) one name-keyed CFF font program (see the precondition above)
          * @param {Iterable<number>} codePoints
-         * @param {object} [opts]
+         * @param {{ cff?: boolean }} [opts] `cff: true` subsets a name-keyed CFF font too (an `OTTO` subset, `FontFile3`)
          * @returns {{ subsetBytes: Uint8Array, gidMap: Map, glyphMap: Map, toUnicodeCmap: string, postScriptName: string, fontDescriptor: object }}
          */
-        // eslint-disable-next-line no-unused-vars
         function subsetForPdf(font, codePoints, opts) {
+            if (font && font.head && !font.glyphTable && opts && opts.cff === true && font.rawSfnt) {
+                return subsetCffFont(font, codePoints);
+            }
             if (!font || !font.head || !font.glyphTable || !font.loca)
                 throw new ContractError('fonts/subset-bad-font',
                     'subsetForPdf requires a TrueType font with glyf/loca tables', {});
@@ -178,7 +329,7 @@ export const embedSubsetForPdf = {
                 loca: locaEnc.bytes,
                 glyf: glyfBytes
             };
-            // A font read with `allowMissingName` has no `name` table to
+            // A font without a `name` table (read by default) has none to
             // copy: the PDF embedding needs none.
             if (font.rawSfnt.tables.name) tables.name = new Uint8Array(font.rawSfnt.tables.name.bytes);
             if (font.rawSfnt.tables['OS/2']) tables['OS/2'] = new Uint8Array(font.rawSfnt.tables['OS/2'].bytes);

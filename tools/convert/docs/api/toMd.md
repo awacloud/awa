@@ -17,18 +17,19 @@ function toMd(input: ToMdInput): Promise<ToMdResult>
 | `format` | `string` | no | One of `docx`, `odt`, `xlsx`, `ods`, `pptx`, `odp`, `pdf`. Wins over the extension of `name`. |
 | `includeNotes` | `boolean` | no | `pptx` and `odp`: include speaker notes. Default `false`; ignored on another format (no error). |
 | `sheets` | `string` | no | `xlsx` and `ods` only: `'table'` (default), `'csv'` or `'tsv'` — each sheet as a fenced `csv` / `tsv` block instead of a GFM table. A bad value or another source format is a usage error. |
-| `pdfInfer` | `string[]` | no | `pdf` only: inference on an untagged pdf — `'headings'` (from type size and weight), `'tables'` (from rules or aligned text), `'running'` (running headers and footers left out). |
+| `pdfInfer` | `string[]` | no | `pdf` only: inference on an untagged pdf — `'headings'` (from type size and weight), `'tables'` (from rules or aligned text), `'running'` (running headers and footers left out). Not given: `['headings', 'tables']`; `[]` reads without inference. |
 | `pdfDeclare` | `string[]` | no | `pdf` only: `'positional'` records one `struct/positional` loss when the structure was built from positions. |
 | `pdfInclude` | `string[]` | no | `pdf` only: `'images'` places each JPEG, JPEG 2000 and raw-pixel picture as a Markdown image, its bytes in `assets`. |
 | `pdfPassword` | `string \| Uint8Array` | no | `pdf` only: the user or owner password of an encrypted pdf. |
-| `pdfRecoverXref` | `boolean` | no | `pdf` only: `true` rebuilds an unusable cross-reference chain from the file's object definitions. |
+| `pdfRecoverXref` | `boolean` | no | `pdf` only: an unusable cross-reference chain is rebuilt from the file's object definitions by default; `false` reads strictly. |
+| `pdfEmptyPassword` | `boolean` | no | `pdf` only: with no `pdfPassword`, an encrypted pdf is opened with the empty password when it opens (the default, recorded `pdf/opened-with-empty-user-password`); `false` refuses it. |
 | `pdfLineHyphens` | `string` | no | `pdf` only: `'drop'` or `'keep'` — a word a hyphen cuts at a line end is joined without or with the hyphen (a soft hyphen always joins). |
 | `formOpBudget` | `number` | no | `pdf` only: the per-page Form XObject operator budget, default `1000000`. |
 | `odtInclude` | `string[]` | no | `odt` only: `'toc'` reads a table of contents' entries as paragraphs. |
 | `docxInclude` | `string[]` | no | `docx` only: `'toc'` reads a table of contents control's entries as paragraphs. |
-| `sheetCellBudget` | `number` | no | `xlsx` / `ods` only: a sheet whose padded table would hold more cells is written unpadded, one `<A1 address>: <text>` line per value (`sheet/sparse-form`). |
+| `sheetCellBudget` | `number` | no | `xlsx` / `ods` only, default `5000000`: a sheet whose padded table would hold more cells is written unpadded, one `<A1 address>: <text>` line per value (`sheet/sparse-form`); `Number.MAX_SAFE_INTEGER` pads every sheet. |
 | `archiveLimits` | `ArchiveLimits` | no | office formats only: the reader's archive limits (`maxParts`, `maxUncompressed`, `maxRatio`, `maxDepth`; `0` disables a check). |
-| `outputBudget` | `OutputBudget` | no | every format: `{ bytes, overflow? }` — past `bytes` of text, `'throw'` (default) fails with `oconv: output too large` (not a usage error), `'truncate'` keeps what fits (`doc/truncated`). |
+| `outputBudget` | `OutputBudget` | no | every format: `{ bytes?, overflow? }` — past `bytes` of text (256 MiB when absent, so a document past it fails with no `outputBudget`), `'throw'` (default) fails with `oconv: output too large` (not a usage error), `'truncate'` keeps what fits (`doc/truncated`). |
 | `opts` | `{ frontMatter?: string }` | no | `frontMatter`: `'full'` (default), `'compact'` (the loss ledger counted per code and detail) or `'none'` (the body alone). |
 
 Every field after `format` is `@awacloud/oconv`'s `toMd` input of the same
@@ -61,7 +62,7 @@ throws.
 | `invalid timestamp "…": expected an RFC 3339 date-time such as 2026-01-01T00:00:00.000Z` | `true` | `convertedAt` is not a strict RFC 3339 `date-time`. Checked before the conversion runs. |
 | `oconv: pdf infer needs format pdf` (likewise `pdf declare`, `pdf include`, `pdf password`, `pdf recover xref`, `pdf line hyphens`, `form op budget`; `odt include needs format odt`; `docx include needs format docx`; `sheets needs format xlsx or ods`; `sheet cell budget needs format xlsx or ods`; `archive limits need an office source`) | `true` | The option names another source format. |
 | `oconv: bad pdf infer` (likewise `pdf declare`, `pdf include`, `pdf line hyphens`, `odt include`, `docx include`, `form op budget`, `pdf recover xref`, `front matter`, `sheets`, `archive limits`, `output budget`) | `true` | oconv refuses the option's value (an `outputBudget` without `bytes` included). |
-| `oconv: output too large` | `false` | The document's text passes `outputBudget.bytes` and `overflow` is `'throw'` (the default once a budget is given). |
+| `oconv: output too large` | `false` | The document's text passes `outputBudget.bytes` (256 MiB by default) and `overflow` is `'throw'` (the default). |
 | a reader message, e.g. `OPC: too many parts in archive`, `OPC: uncompressed payload exceeds limit` | `false` | The document exceeds an `archiveLimits` limit (or a default one). |
 | a reader message, e.g. `OPC: failed to unzip archive: invalid zip data` | `false` | The bytes are not a valid file of the detected format. |
 | a pdf message, e.g. `document is encrypted (trailer /Encrypt present) — …` | `false` | An encrypted pdf without `pdfPassword`, or with a wrong one. |
@@ -92,7 +93,7 @@ sourceBytes: 1556
 sourceSha256: 7be541047cdb2255188fdf68ed6ddc98c47ed22332093df494dcb3f5c7f60b7c
 convertedAt: 2026-01-01T00:00:00.000Z
 converter: oconv
-converterVersion: 1.2.0
+converterVersion: 2.0.0
 blocks: 6
 anchors:
   - { level: 1, anchor: sovereign-rag-ingestion }

@@ -41,8 +41,8 @@ const uuid = runtime.resolve('uuid');
 
 | Value | Output | Example |
 |-------|--------|---------|
-| `'compact'` (default) | 32 hex without dashes | `91c274f29a0d4ce69d5db2c3d4e5f607` |
-| `'rfc4122'` | 36-char canonical RFC 4122 §3 | `91c274f2-9a0d-4ce6-9d5d-b2c3d4e5f607` |
+| `'rfc4122'` (`v4`'s default) | 36-char canonical RFC 4122 §3 | `91c274f2-9a0d-4ce6-9d5d-b2c3d4e5f607` |
+| `'compact'` (`v1`'s default) | 32 hex without dashes | `91c274f29a0d4ce69d5db2c3d4e5f607` |
 
 ## Examples
 
@@ -59,8 +59,8 @@ uuid.v4(true);                      // Uint8Array(16)
 ### v1 time-based
 
 ```js
-uuid.v1();                          // compact hex
-uuid.v1(false, false, 'rfc4122');   // canonical with dashes
+uuid.v1();                          // canonical with dashes
+uuid.v1(false, false, 'compact');   // 32 hex, no dashes
 ```
 
 ### Validation with valid
@@ -86,7 +86,7 @@ const worker = fw.createWorker(
 
 - **Randomness source**: `crypto.getRandomValues` (Web Crypto `RandomSource`). Custom `prng` with automatic fallback to `crypto.getRandomValues` if the callback does not modify the buffer.
 - **v1 uses a random MAC** (multicast bit forced per RFC 4122 §4.5) — no hardware MAC accessible in the browser.
-- **Back-compat**: default `format='compact'` returns 32 hex without dashes, identical to the historical API of this framework.
+- **Formats**: `v1()` and `v4()` return the canonical 8-4-4-4-12 string; `format = 'compact'` (the third argument) gives the 32 hex without dashes.
 - **v3 / v5 / v6 / v7 / v8 not implemented** — RFC 9562 §5.6-5.8; v7 (timestamp-sortable) would be useful for DB IDs.
 - Requires `globalThis.crypto.getRandomValues` — available in browsers, Node ≥ 19, Bun, Deno. Throws if absent.
 

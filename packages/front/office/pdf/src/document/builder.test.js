@@ -46,8 +46,9 @@ const td = new TextDecoder('latin1');
 describe('pdfBuilder — module shape', () => {
     test('descriptor shape', () => {
         expect(pdfBuilder.name).toBe('pdfBuilder');
+        // T30 (g2), D53: re-pinned, the builder declares the Standard 14 lookups.
         expect(pdfBuilder.dependencies).toEqual(
-            ['pdfErrors', 'pdfParserObj', 'pdfWriter']);
+            ['pdfErrors', 'pdfParserObj', 'pdfWriter', 'pdfXmp', 'pdfSrgbIcc', 'standard14Lookup', 'encodingLookup']);
         expect(pdfBuilder.factory.toString()).toContain('function');
     });
 
@@ -63,6 +64,7 @@ describe('pdfBuilder — module shape', () => {
     test('published surface order is frozen', () => {
         expect(Object.keys(builder())).toEqual([
             'addPage', 'addContent', 'addFont', 'addImage', 'addMetadata',
+            'openElement', 'markContent', 'closeElement',
             'setVersion', 'setId', 'build'
         ]);
     });

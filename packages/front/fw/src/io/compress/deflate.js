@@ -26,7 +26,7 @@
  * ## Options
  *
  * Compression: `{ level: 0–9, mem: 0–12, lazy?: boolean, dictionary?: Uint8Array }`
- * Decompression: `{ out?: Uint8Array, dictionary?: Uint8Array }`
+ * Decompression: `{ out?: Uint8Array, dictionary?: Uint8Array, maxOutput?: number }`
  *
  */
 
@@ -48,6 +48,8 @@
  * @typedef {object} InflateStreamInstance
  * @property {(chunk: Uint8Array, isFinal: boolean) => void} [ondata] Output callback.
  * @property {(chunk: Uint8Array, final?: boolean) => void} push Push a chunk of compressed data.
+ * @property {boolean} ended `true` once the final block has been decoded.
+ * @property {() => (Uint8Array|null)} rest The input pushed after the end of the stream (`null` before it).
  */
 
 /**
@@ -59,7 +61,7 @@
  * Public surface of `deflate.factory(...)`.
  * @typedef {object} DeflateApi
  * @property {(data: Uint8Array, opts?: object) => Uint8Array} deflateSync
- * @property {(data: Uint8Array, opts?: object) => Uint8Array} inflateSync
+ * @property {(data: Uint8Array, opts?: { out?: Uint8Array, dictionary?: Uint8Array, maxOutput?: number, onEnd?: (byteLength: number) => void }) => Uint8Array} inflateSync
  * @property {(data: Uint8Array, opts?: object) => Promise<Uint8Array>} deflate
  * @property {(data: Uint8Array, opts?: object) => Promise<Uint8Array>} inflate
  * @property {DeflateStreamCtor} DeflateStream
@@ -87,7 +89,10 @@ export const deflate = {
 
         // --- Error handling ---
 
-        /** Message for each `e.code` this module emits (RFC 1951 level only). */
+        // The typed string `code` of the compressor family (D9 G6); the
+        // number of the earlier convention stays in `errno`.
+        const CODE_NAMES = { 0: 'EEOF', 1: 'EBADBLOCK', 2: 'EBADSYMBOL', 3: 'EBADDISTANCE', 4: 'ESTREAMEND', 5: 'ENOHANDLER', 6: 'EBADFORMAT', 7: 'EMAXOUT', 8: 'EBADSTREAM', 9: 'EEXTRATOOLONG', 10: 'EBADDATE', 11: 'ENAMETOOLONG', 12: 'ENOENCODER', 13: 'EBADFORMAT', 14: 'EBADMETHOD', 15: 'EUNSAFEPATH', 16: 'ECHECKSUM' };
+        /** Message for each `e.errno` this module emits (RFC 1951 level only). */
         const ERROR_MESSAGES = [
             'unexpected EOF',           // 0
             'invalid block type',       // 1
@@ -95,21 +100,23 @@ export const deflate = {
             'invalid distance',         // 3
             'stream finished',          // 4
             'no stream handler',        // 5
-            null, null,
+            null,
+            'output limit exceeded',    // 7
             'invalid data',             // 8
         ];
 
         /**
-         * Throw an `Error` carrying the module's numeric `code`.
+         * Throw an `Error` carrying the module's string `code` (and the
+         * numeric `errno`).
          *
-         * @param {number} code One of the codes documented in `deflate.md`.
+         * @param {number} code The `errno` of one of the codes documented in `deflate.md`.
          * @param {string} [message] Overrides the default message for `code`.
          * @returns {never}
          */
         function fail(code, message) {
             const e = new Error(message ?? ERROR_MESSAGES[code] ?? 'unknown error');
-            // @ts-ignore - Error.code is a non-standard but widely-used extension
-            e.code = code;
+            // @ts-ignore - Error.code / errno are non-standard but widely-used extensions
+            e.code = CODE_NAMES[code]; e.errno = code;
             throw e;
         }
 
@@ -286,6 +293,12 @@ export const deflate = {
          * @property {number} emitted Bytes already handed to a stream consumer.
          * @property {Uint8Array|null} dictionary Priming dictionary (≤ 32 KiB), if any.
          * @property {boolean} fixedOut `out` is caller-provided and must not grow.
+         * @property {number} base Bytes already dropped from the front of `out` (`trimWindow`).
+         * @property {number} limit Highest `base + index` the output may reach:
+         *   the dictionary length plus `maxOutput`, or `Infinity` without a cap.
+         * @property {number} end Writable end of `out`: its length, or less when
+         *   the cap is nearer (`min(out.length, limit - base)`) — the one bound
+         *   the per-write fast path compares against.
          */
 
         /**
@@ -293,12 +306,18 @@ export const deflate = {
          *
          * @param {Uint8Array} [dictionary] Preset dictionary; only its last
          *   32 KiB are usable as back-reference history (RFC 1950 §2.2 style).
+         * @param {number} [maxOutput] Cap on the decoded bytes (the dictionary
+         *   excluded); absent = no cap.
          * @returns {InflateState}
          */
-        function createInflateState(dictionary) {
+        function createInflateState(dictionary, maxOutput) {
             const dict = dictionary && dictionary.length
                 ? dictionary.subarray(Math.max(0, dictionary.length - WINDOW_SIZE))
                 : null;
+            if (maxOutput !== undefined && maxOutput !== null && !(Number.isSafeInteger(maxOutput) && maxOutput >= 0)) {
+                throw new RangeError('maxOutput must be a non-negative integer');
+            }
+            const capped = maxOutput !== undefined && maxOutput !== null;
             return {
                 bitPos: 0,
                 finalBlock: 0,
@@ -313,6 +332,9 @@ export const deflate = {
                 emitted: 0,
                 dictionary: dict,
                 fixedOut: false,
+                base: 0,
+                limit: capped ? (dict ? dict.length : 0) + maxOutput : Infinity,
+                end: 0,
             };
         }
 
@@ -334,31 +356,38 @@ export const deflate = {
                 state.out = providedOut;
                 state.fixedOut = true;
             } else {
-                state.out = new u8(Math.max(65536, inputLength * 3));
+                // Never allocate past the cap: a bomb must fail, not exhaust memory.
+                state.out = new u8(Math.min(Math.max(65536, inputLength * 3), state.limit));
             }
             if (dictLen) {
                 state.out.set(state.dictionary);
                 state.outLen = dictLen;
                 state.emitted = dictLen;
             }
+            state.end = Math.min(state.out.length, state.limit - state.base);
         }
 
         /**
          * Guarantee `needed` bytes of capacity in `state.out`, doubling as
          * required. A caller-provided buffer cannot grow and overflows instead.
+         * Past `state.limit` (`maxOutput`) it throws code 7 before growing, and
+         * a grown buffer never exceeds the limit.
          *
          * @param {InflateState} state
          * @param {number} needed Required total capacity in bytes.
          * @returns {void}
          */
         function reserveOutput(state, needed) {
-            if (needed <= state.out.length) return;
+            if (needed <= state.end) return;
+            if (state.base + needed > state.limit) fail(7);
             if (state.fixedOut) fail(8, 'output exceeds provided buffer');
             let size = state.out.length || 65536;
             while (size < needed) size *= 2;
+            size = Math.min(size, state.limit - state.base);
             const grown = new u8(size);
             grown.set(state.out.subarray(0, state.outLen));
             state.out = grown;
+            state.end = Math.min(size, state.limit - state.base);
         }
 
         /**
@@ -634,6 +663,8 @@ export const deflate = {
             const start = state.outLen - WINDOW_SIZE;
             state.out.set(state.out.subarray(start, state.outLen), 0);
             state.outLen = WINDOW_SIZE;
+            state.base += start;
+            state.end = Math.min(state.out.length, state.limit - state.base);
             state.emitted = Math.max(0, state.emitted - start);
         }
 
@@ -711,43 +742,26 @@ export const deflate = {
         }
 
         /**
-         * Largest `lz77.encodeTokens` buffer kept alive between calls
-         * (2 Mi entries = 8 MiB, enough for 1 MiB of input); anything larger
-         * is transient. The token buffer is the encoder's working set: one
-         * `deflateSync` call holds `8 × (input bytes)` of it until it returns,
-         * while `DeflateStream` stays bounded by its 64 KiB units.
+         * The one block of tokens the encoder holds: `lz77.createScanner`
+         * fills it block by block, so a `deflateSync` call's working set no
+         * longer grows with its input (it held `8 × (input bytes)` of tokens
+         * until it returned). Shared by every call: nothing caller-supplied
+         * runs while a unit is being compressed.
          */
-        const TOKEN_SCRATCH_MAX = 1 << 21;
-
-        /** Reused `lz77.encodeTokens` output buffer — see `TOKEN_SCRATCH_MAX`. */
-        let tokenScratch = null;
-
-        /**
-         * Hand `lz77.encodeTokens` a buffer of at least `capacity` entries,
-         * reusing (and growing) the shared scratch when it is small enough to
-         * keep.
-         *
-         * @param {number} capacity `2 × (input.length - start)`.
-         * @returns {Int32Array}
-         */
-        function tokenBuffer(capacity) {
-            if (capacity > TOKEN_SCRATCH_MAX) return new i32(capacity);
-            if (!tokenScratch || tokenScratch.length < capacity) tokenScratch = new i32(capacity);
-            return tokenScratch;
-        }
+        const blockTokens = new i32(2 * BLOCK_TOKENS);
 
         // --- Encoder: token buffer ---
 
         /**
          * One block's worth of LZ77 tokens plus the symbol statistics the
          * block writer needs. The tokens are a window `[from, to)` over the
-         * packed `(len | 0, dist | byte)` pairs `lz77.encodeTokens` produced —
+         * packed `(len | 0, dist | byte)` pairs the `lz77` scanner wrote —
          * `tokens[2k] === 0` marks a literal whose byte is `tokens[2k + 1]`,
          * otherwise the pair is a match length and its distance — so the
          * matcher's output is read in place, never copied.
          *
          * @typedef {object} TokenBuffer
-         * @property {Int32Array} tokens Packed token pairs of the whole scan.
+         * @property {Int32Array} tokens Packed token pairs of the current block.
          * @property {number} from Index of the block's first token.
          * @property {number} to One past the index of the block's last token.
          * @property {Uint32Array} litFreq Literal/length symbol frequencies.
@@ -761,7 +775,7 @@ export const deflate = {
          * Create a token buffer over `tokens` whose first block starts at
          * input offset `start`.
          *
-         * @param {Int32Array} tokens Packed pairs from `lz77.encodeTokens`.
+         * @param {Int32Array} tokens Packed pairs from the `lz77` scanner.
          * @param {number} start Input offset the first block begins at.
          * @returns {TokenBuffer}
          */
@@ -1125,9 +1139,9 @@ export const deflate = {
             if (params.level === 0) {
                 writeStoredRun(w, input, start, params.final);
             } else {
-                // One scan of the whole unit into packed `(len | 0, dist | byte)`
-                // pairs; the blocks below are windows over that buffer.
-                const scan = lz77.encodeTokens(input, {
+                // The unit's scan, resumed block by block into one buffer of
+                // BLOCK_TOKENS packed `(len | 0, dist | byte)` pairs.
+                const scan = lz77.createScanner(input, {
                     windowBits: WINDOW_BITS,
                     minMatch: MIN_MATCH,
                     maxMatch: MAX_MATCH,
@@ -1137,17 +1151,14 @@ export const deflate = {
                     lazy: params.lazy,
                     chainSkip: true,
                     ...LEVELS[params.level],
-                    tokens: tokenBuffer(2 * Math.max(0, input.length - start)),
                 });
 
-                const tb = createTokenBuffer(scan.tokens, start);
-                const count = scan.count;
-                // Cut the token stream into blocks of BLOCK_TOKENS; the last
-                // one closes the unit and carries BFINAL when `final`.
-                for (let from = 0; ; from += BLOCK_TOKENS) {
-                    const to = Math.min(count, from + BLOCK_TOKENS);
-                    const covered = tallyBlock(tb, from, to);
-                    if (to === count) {
+                const tb = createTokenBuffer(blockTokens, start);
+                // Blocks of BLOCK_TOKENS tokens; the last one closes the unit
+                // and carries BFINAL when `final`.
+                for (;;) {
+                    const covered = tallyBlock(tb, 0, scan.fill(blockTokens, BLOCK_TOKENS));
+                    if (scan.done) {
                         tb.blockLen = input.length - tb.blockStart;
                         writeBlock(w, tb, input, params.final);
                         break;
@@ -1269,7 +1280,7 @@ export const deflate = {
         function InflateStream(opts, ondata) {
             if (typeof opts === 'function') { ondata = opts; opts = {}; }
             this.ondata = ondata;
-            this._state = createInflateState((opts || {}).dictionary);
+            this._state = createInflateState((opts || {}).dictionary, (opts || {}).maxOutput);
             initOutput(this._state, 0, undefined);
             this._pending = new u8(0);
             this._done = false;
@@ -1320,6 +1331,25 @@ export const deflate = {
             state.bitPos &= 7;
         };
 
+        /** `true` once the final block has been decoded. */
+        Object.defineProperty(InflateStream.prototype, 'ended', {
+            get() { return this._state.phase === PHASE_DONE; },
+        });
+
+        /**
+         * The input bytes pushed after the end of the deflate stream (a
+         * trailer, a next member), or `null` while the final block is not
+         * decoded yet.
+         *
+         * @returns {Uint8Array|null}
+         */
+        InflateStream.prototype.rest = function() {
+            if (this._state.phase !== PHASE_DONE) return null;
+            // The first pending byte holds the stream's last bits unless the
+            // stream ended on a byte boundary.
+            return this._pending.subarray(this._state.bitPos ? 1 : 0);
+        };
+
         // --- Public API ---
 
         /**
@@ -1361,19 +1391,23 @@ export const deflate = {
          *
          * Without `opts.out` the result is a freshly allocated exact-size
          * copy; with `opts.out` it is a view into the caller's buffer, which
-         * overflows with code 8 rather than growing.
+         * overflows with code 8 rather than growing. `maxOutput` caps the
+         * decoded bytes: one more throws code 7 before the buffer grows.
          *
          * @param {Uint8Array} data
-         * @param {object} [opts] - `{ out?: Uint8Array, dictionary?: Uint8Array }`
+         * @param {object} [opts] - `{ out?: Uint8Array, dictionary?: Uint8Array, maxOutput?: number }`
          * @returns {Uint8Array}
          */
         function inflateSync(data, opts = {}) {
             if (!data.length) return opts.out ? opts.out.subarray(0, 0) : new u8(0);
 
-            const state = createInflateState(opts.dictionary);
+            const state = createInflateState(opts.dictionary, opts.maxOutput);
             const dictLen = state.dictionary ? state.dictionary.length : 0;
             initOutput(state, data.length, opts.out);
             runInflate(state, data, false);
+            // Where the deflate stream stops: a container (gzip members, a
+            // trailer) reads on from there.
+            if (typeof opts.onEnd === 'function') opts.onEnd(byteOffset(state.bitPos));
 
             if (state.fixedOut) return state.out.subarray(0, state.outLen);
             if (opts.out) {

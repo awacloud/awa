@@ -1,7 +1,9 @@
 # @awacloud/oconv
 
+Convert office documents in plain JavaScript: DOCX, ODT, XLSX, ODS, PPTX, ODP and PDF to structured Markdown, Markdown to DOCX, ODT or PDF, with a loss ledger returned by every call.
+
 Document conversion in plain JavaScript, through one versioned pivot
-representation (`oconv-ir/v1`). `toMd` turns a `.docx`, `.odt`, `.xlsx`,
+representation (`oconv-ir/v2`). `toMd` turns a `.docx`, `.odt`, `.xlsx`,
 `.ods`, `.pptx`, `.odp` or `.pdf` document into a structured-markdown profile
 built for retrieval pipelines; `fromMd` writes Markdown back out as `.docx`,
 `.odt` or `.pdf`; `convert` goes document to document for four pairs
@@ -12,14 +14,14 @@ pipeline detects are recorded; the known silent cases are listed in the
 
 No network access, no external tool, no bundler. Its only runtime
 dependencies are
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/fw)
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/oconv@2.0.0/packages/front/fw)
 and the office packages it composes:
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/ooxml),
-[`@awacloud/odf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/odf),
-[`@awacloud/md`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/md),
-[`@awacloud/pdf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/pdf)
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/oconv@2.0.0/packages/front/office/ooxml),
+[`@awacloud/odf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@2.0.0/packages/front/office/odf),
+[`@awacloud/md`](https://github.com/awacloud/awa/tree/@awacloud/oconv@2.0.0/packages/front/office/md),
+[`@awacloud/pdf`](https://github.com/awacloud/awa/tree/@awacloud/oconv@2.0.0/packages/front/office/pdf)
 and
-[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/fonts).
+[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@2.0.0/packages/front/office/fonts).
 
 Bounds, stated up front: `fromMd` is structural only (one fixed built-in style
 set per target, never caller styling); `pdf → md` reads the text layer
@@ -54,9 +56,11 @@ loads, sub-path imports of `@awacloud/md` and `@awacloud/fonts` included:
 </script>
 ```
 
-The `@awacloud/oconv/` prefix points at the package root, so the worker
-specifier `@awacloud/oconv/src/worker.js` names the same file as it does
-under an `exports`-aware resolver.
+The worker needs no import map at all: `src/worker.js` is a self-contained
+bundle (see [Worker usage](#worker-usage)), so a page serving the package's
+`src/` at `/vendor/oconv/` starts it as `/vendor/oconv/worker.js`, the file
+the `@awacloud/oconv/worker.js` specifier names under an `exports`-aware
+resolver.
 
 ## Quick Start
 
@@ -137,14 +141,14 @@ options exist:
   XObjects, default `1000000`. It must be a safe integer of at least 1, else
   `oconv: bad form op budget`; passing it for another format throws
   `oconv: form op budget needs format pdf`.
-- `pdfInfer` (`pdf` only, opt-in): inference on an untagged PDF, beyond the
-  text-first default. `['headings']` turns a short line set larger than the
+- `pdfInfer` (`pdf` only): inference on an untagged PDF. Not given, it is
+  `['headings', 'tables']`; `[]` reads the text-first way, without
+  inference. `['headings']` turns a short line set larger than the
   body text, or a short line set wholly in bold, into a Markdown heading,
   its level ranked by size; `['tables']` reads a table drawn with rules
   (a grid of crossing lines) and a block of lines whose short pieces align
-  in columns (measured on opendataloader-bench with both: overall 0.5753 →
-  0.7949, the `opendataloader-bench-layout` entry of the coverage
-  scorecard). `['running']` leaves out a running header or footer: a
+  in columns (measured on opendataloader-bench: overall 0.5754 without inference,
+  0.8370 with both). `['running']` leaves out a running header or footer: a
   line near the top or bottom of the page whose text, page numbers
   aside, recurs at the same height on half the pages (3 pages or more),
   recorded `text/running-dropped`. A tagged PDF keeps its own structure.
@@ -168,13 +172,19 @@ options exist:
   PDF a picture stands with the struct element that lists it. An unknown
   or repeated name throws `oconv: bad pdf include`; passing it for another
   format throws `oconv: pdf include needs format pdf`.
-- `pdfPassword` (`pdf` only, opt-in): the user or owner password (a string
-  or bytes) that opens an encrypted PDF, RC4 (V1 / V2) files included
-  (oconv passes pdf's read-only `pdfLegacyRc4Read` with it); pass `''` for
-  an empty user password — none is tried unless `pdfPassword` is given.
-  Without it such a PDF throws `pdf/document/encrypted`, and a wrong one throws
-  `pdf/document/bad-password`. Passing it for another format throws
-  `oconv: pdf password needs format pdf`.
+- `pdfPassword` (`pdf` only): the user or owner password (a string or
+  bytes) that opens an encrypted PDF, RC4 (V1 / V2) files included (oconv
+  passes pdf's read-only `pdfLegacyRc4Read` to every pdf read). Without it
+  the empty password is tried: a PDF it opens converts, recorded
+  `pdf/opened-with-empty-user-password` (its detail the permission bits),
+  and one it does not open throws `pdf/document/encrypted`; a wrong
+  `pdfPassword` throws `pdf/document/bad-password`. Passing it for another
+  format throws `oconv: pdf password needs format pdf`.
+- `pdfEmptyPassword` (`pdf` only): `false` refuses every encrypted PDF read
+  with no `pdfPassword` (`pdf/document/encrypted`), as 1.x did; `true` is
+  the default; another value throws `oconv: bad pdf empty password`, and
+  passing it for another format throws
+  `oconv: pdf empty password needs format pdf`.
 - `pdfLineHyphens` (`pdf` only, opt-in): `'drop'` or `'keep'`. A word a
   hyphen cuts at a line end comes out `infor- mation` by default (a soft
   hyphen always joins); `'drop'` joins it without the hyphen
@@ -182,9 +192,10 @@ options exist:
   `'keep'` with it (`infor-mation`, `well-known`). Another value throws
   `oconv: bad pdf line hyphens`; passing it for another format throws
   `oconv: pdf line hyphens needs format pdf`.
-- `pdfRecoverXref` (`pdf` only, opt-in): `true` rebuilds a cross-reference
-  chain the PDF reader cannot use (a damaged or truncated file) from the
-  file's object definitions; `false` reads as without it, another value
+- `pdfRecoverXref` (`pdf` only): the PDF reader rebuilds a cross-reference
+  chain it cannot use (a damaged or truncated file) from the file's object
+  definitions by default; `false` reads strictly, the chain's error
+  thrown; `true` is the default; another value
   throws `oconv: bad pdf recover xref`, and passing it for another format
   throws `oconv: pdf recover xref needs format pdf`. The rebuild is not
   recorded in the ledger: `toMd` does not forward the PDF reader's own
@@ -210,22 +221,26 @@ options exist:
   tsv escapes a cell's backslash, tab and line breaks (`sheet/tsv-escaped`).
   Another value throws `oconv: bad sheets`; passing it for another format
   throws `oconv: sheets needs format xlsx or ods`.
-- `sheetCellBudget` (`xlsx` and `ods`, opt-in): a positive safe integer.
-  A sheet whose padded table would hold more cells — one very wide row
+- `sheetCellBudget` (`xlsx` and `ods`): a positive safe integer,
+  **5,000,000 by default** (since 2.0.0; `Number.MAX_SAFE_INTEGER` pads
+  every sheet as 1.x did). A sheet whose padded table would hold more cells — one very wide row
   pads every other row to its width — is written unpadded instead: one
   `<A1 address>: <text>` line per value (its rows unpadded under `sheets`
   `'csv'` / `'tsv'`), recorded `sheet/sparse-form`. Another value throws
   `oconv: bad cell budget`; passing it for another format throws
   `oconv: sheet cell budget needs format xlsx or ods`.
-- `outputBudget` (every format, opt-in): `{ bytes, overflow }`. After the
-  read, the UTF-8 size of the document's text (the markdown adds its
-  syntax on top) is compared with `bytes`, a positive safe integer, before
+- `outputBudget` (every format): `{ bytes, overflow }`, **256 MiB
+  `'throw'` by default** (since 2.0.0; a missing `bytes` takes 256 MiB;
+  `bytes: Number.MAX_SAFE_INTEGER` renders as 1.x did). After the read, the
+  UTF-8 size of the document's text (the markdown adds its syntax on top)
+  is compared with `bytes`, a positive safe integer, before
   any markdown is built, so a small file that expands to gigabytes of text
   fails fast instead of running out of memory. Past it, `overflow`
   `'throw'` (the default) throws `oconv: output too large`; `'truncate'`
   keeps the leading blocks (and a crossing table's leading rows) that fit
   and records `doc/truncated`. Another shape throws `oconv: bad output
-  budget`.
+  budget`. The bound is `irToMd`'s (`opts.outputBudget`), so a caller of
+  the renderer, oview's copy among them, takes it too.
 - `archiveLimits` (office formats, opt-in): `{ maxParts, maxUncompressed,
   maxRatio, maxDepth }`, any of them, passed to the docx, xlsx, pptx,
   odt, ods or odp reader. A large deck or a workbook that inflates past
@@ -358,7 +373,7 @@ covers the signature, the error order and the worker message.
 
 With no `opts.pdf.fonts`, the pdf writer uses the Standard 14 fonts (WinAnsi
 text only). Registering the optional
-[`@awacloud/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/oconv-fonts)
+[`@awacloud/oconv-fonts`](https://github.com/awacloud/awa/tree/@awacloud/oconv@2.0.0/packages/front/office/oconv-fonts)
 pack switches every style class you did not supply to embedded Liberation
 faces. This package never imports the pack and does not list it as a
 dependency; the writer finds it by the module name `oconvDefaultFaces`.
@@ -387,14 +402,18 @@ covered Unicode ranges.
 ## Worker usage
 
 `src/worker.js` runs the same conversions off the main thread, one
-conversion per message. Load it by its specifier, or by its real path (a
-`new URL()` never goes through an import map). Errors come back as data:
+conversion per message. It is a self-contained bundle of its
+source, `src/worker/entry.js`, built by `bun run gen:worker`: it imports
+nothing, so it starts in a static page (a module worker has no import map)
+and under Bun or Node alike. Load it by its specifier, or by its real path
+(`/vendor/oconv/worker.js` when the package's `src/` is served at
+`/vendor/oconv/`). Errors come back as data:
 `error` is a string on failure and `null` on success, never an exception
 thrown across the boundary.
 
 ```js
 const worker = new Worker(
-    import.meta.resolve('@awacloud/oconv/src/worker.js'),
+    import.meta.resolve('@awacloud/oconv/worker.js'),
     { type: 'module' }
 );
 
@@ -443,7 +462,7 @@ envelopes and their replies.
 
 ## Source layout
 
-- [`src/ir/`](./src/ir): the pivot representation `oconv-ir/v1` and its
+- [`src/ir/`](./src/ir): the pivot representation `oconv-ir/v2` and its
   validator. It imports nothing.
 - [`src/read/`](./src/read): one reader per source format, each composing one
   office package's public API (`@awacloud/ooxml`, `@awacloud/odf`,
@@ -460,7 +479,9 @@ envelopes and their replies.
 - [`src/write/pdf/`](./src/write/pdf): the typesetter's option validation,
   font metrics, line breaking, page stacking and one renderer per block kind.
 - [`src/oconv.js`](./src/oconv.js): the facade.
-- [`src/worker.js`](./src/worker.js): the worker entry.
+- [`src/worker/entry.js`](./src/worker/entry.js): the worker's source;
+  [`src/worker.js`](./src/worker.js) is its generated bundle
+  (`tools/generate-worker.mjs`).
 - [`src/main.js`](./src/main.js): the module manifest.
 
 The test suite runs from the repository root with
@@ -475,7 +496,7 @@ origin recorded in `PROVENANCE.md` files.
 | Sub-path | Target | Usage |
 |---|---|---|
 | `@awacloud/oconv` | `src/main.js` | Module manifest (`fw_require`, `pkg_require`, `modules`, `extras`, `bundle`): register `fw_require` and `modules` in a `ModuleRuntime`, then resolve `oconv` |
-| `@awacloud/oconv/src/worker.js` | `src/worker.js` | Worker entry, passed to `new Worker(...)`, never imported |
+| `@awacloud/oconv/worker.js` | `src/worker.js` | The bundled worker, passed to `new Worker(...)`, never imported (the 1.x `@awacloud/oconv/src/worker.js` key is gone) |
 
 ## Maturity
 
@@ -493,10 +514,10 @@ Copyright (c) 2026 AwaCloud SAS
 
 ## Project
 
-- Website: https://awaforge.eu
-- Source: [`packages/front/office/oconv`](https://github.com/awacloud/awa/tree/@awacloud/oconv@1.2.0/packages/front/office/oconv)
+- Website: https://awaforge.eu/
+- Source: [`packages/front/office/oconv`](https://github.com/awacloud/awa/tree/@awacloud/oconv@2.0.0/packages/front/office/oconv)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/oconv@1.2.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/oconv@2.0.0/SECURITY.md
 - Documentation: [index](./docs/README.md),
   [getting started](./docs/guide/getting-started.md),
   [API reference](./docs/api/README.md),

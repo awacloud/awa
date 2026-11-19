@@ -31,7 +31,7 @@ bun run types:registry:check
 ## Example
 
 ```
-[codegen-types] wrote types\registry.generated.d.ts (169 modules).
+[codegen-types] wrote types\registry.generated.d.ts (208 modules).
 ```
 
 Consumption (cf. [TypeScript — Tier 2](../guide/typescript.md)):

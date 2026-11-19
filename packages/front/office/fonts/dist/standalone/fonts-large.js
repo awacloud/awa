@@ -570,7 +570,19 @@ export const fontsLargeBundled = {
         t[symbols[i]] = lengths[i];
       return { t, l: lengths[0] };
     }
-    return { buildTree, buildMap };
+    function kraft(codeLengths) {
+      const perLength = new Int32Array(16);
+      for (let s = 0;s < codeLengths.length; ++s)
+        perLength[codeLengths[s]]++;
+      let left = 1;
+      for (let len = 1;len < 16; ++len) {
+        left = left * 2 - perLength[len];
+        if (left < 0)
+          return { oversubscribed: !0, incomplete: !1 };
+      }
+      return { oversubscribed: !1, incomplete: left > 0 };
+    }
+    return { buildTree, buildMap, kraft };
   } });
     __register({ name: "lz77", dependencies: [], factory: function() {
     const u8 = Uint8Array, i32 = Int32Array, DEFAULT = Object.freeze({
@@ -694,30 +706,18 @@ export const fontsLargeBundled = {
         }
       }
     }
-    function encodeTokens(data, opts) {
-      if (!(data instanceof u8))
-        throw Error("lz77.encodeTokens: data must be Uint8Array");
-      const o = _resolveOpts(opts), len = data.length, cap = 2 * Math.max(0, len - o.start), provided = opts && opts.tokens;
-      let tokens;
-      if (provided) {
-        if (provided.length < cap)
-          throw Error("lz77.encodeTokens: tokens buffer too small");
-        tokens = provided;
-      } else
-        tokens = new i32(cap);
+    function _fill(st, tokens, max) {
+      const { data, len, head, prev, hash, maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip, wndSize } = st, wndMask = wndSize - 1, lastKey = st.lastKey, atLeast = st.atLeast, cap = 2 * max;
       let p = 0;
-      if (o.start >= len)
-        return { tokens, count: 0 };
-      const { maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip } = o, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, head = new i32(1 << o.hashBits).fill(-1), prev = new i32(Math.min(wndSize, len)).fill(-1), hash = _hasherFor(o), lastKey = len - o.minMatch, atLeast = o.minMatch - 1;
-      for (let k = 0;k < o.start && k <= lastKey; ++k) {
-        const h = hash(data, k);
-        prev[k & wndMask] = head[h];
-        head[h] = k;
+      if (st.heldLen) {
+        tokens[p++] = st.heldLen;
+        tokens[p++] = st.heldDist;
+        st.heldLen = 0;
       }
-      let i = o.start;
-      while (i <= lastKey) {
-        const h = hash(data, i);
-        let matchLen = _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
+      let i = st.at;
+      while (p < cap && i <= lastKey) {
+        const h = hash(data, i), newest = head[h];
+        let matchLen = newest === -1 || i - newest >= wndSize ? 0 : _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
         prev[i & wndMask] = head[h];
         head[h] = i;
         if (matchLen === 0) {
@@ -727,7 +727,7 @@ export const fontsLargeBundled = {
           continue;
         }
         if (lazy && matchLen < maxLazy && i < lastKey) {
-          const h1 = hash(data, i + 1), nextLen = _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
+          const h1 = hash(data, i + 1), newest1 = head[h1], nextLen = newest1 === -1 || i + 1 - newest1 >= wndSize ? 0 : _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
           if (nextLen) {
             tokens[p++] = 0;
             tokens[p++] = data[i];
@@ -738,8 +738,13 @@ export const fontsLargeBundled = {
             head[h1] = i;
           }
         }
-        tokens[p++] = matchLen;
-        tokens[p++] = dist;
+        if (p < cap) {
+          tokens[p++] = matchLen;
+          tokens[p++] = dist;
+        } else {
+          st.heldLen = matchLen;
+          st.heldDist = dist;
+        }
         const end = i + matchLen;
         for (let k = i + 1;k < end && k <= lastKey; ++k) {
           const hk = hash(data, k);
@@ -748,12 +753,67 @@ export const fontsLargeBundled = {
         }
         i = end;
       }
-      while (i < len) {
+      while (p < cap && i < len) {
         tokens[p++] = 0;
         tokens[p++] = data[i];
         i++;
       }
-      return { tokens, count: p / 2 };
+      st.at = i;
+      return p >> 1;
+    }
+    function createScanner(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.createScanner: data must be Uint8Array");
+      const o = _resolveOpts(opts), len = data.length, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, empty = o.start >= len, hash = _hasherFor(o), lastKey = len - o.minMatch, head = empty ? null : new i32(1 << o.hashBits).fill(-1), prev = empty ? null : new i32(Math.min(wndSize, len)).fill(-1);
+      if (!empty)
+        for (let k = 0;k < o.start && k <= lastKey; ++k) {
+          const h = hash(data, k);
+          prev[k & wndMask] = head[h];
+          head[h] = k;
+        }
+      const st = {
+        data,
+        len,
+        hash,
+        lastKey,
+        wndSize,
+        head,
+        prev,
+        maxMatch: o.maxMatch,
+        niceLength: o.niceLength,
+        chainDepth: o.chainDepth,
+        lazy: o.lazy,
+        goodLength: o.goodLength,
+        maxLazy: o.maxLazy,
+        chainSkip: o.chainSkip,
+        atLeast: o.minMatch - 1,
+        at: empty ? len : o.start,
+        heldLen: 0,
+        heldDist: 0
+      };
+      return {
+        fill(tokens, max) {
+          return _fill(st, tokens, max);
+        },
+        get done() {
+          return st.at >= st.len && st.heldLen === 0;
+        }
+      };
+    }
+    function encodeTokens(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.encodeTokens: data must be Uint8Array");
+      const n = Math.max(0, data.length - Math.max(0, (opts && opts.start) | 0)), cap = 2 * n, provided = opts && opts.tokens;
+      let tokens;
+      if (provided) {
+        if (provided.length < cap)
+          throw Error("lz77.encodeTokens: tokens buffer too small");
+        tokens = provided;
+      } else
+        tokens = new i32(cap);
+      if (n === 0)
+        return { tokens, count: 0 };
+      return { tokens, count: createScanner(data, opts).fill(tokens, n) };
     }
     function decodeStream(dst, ops) {
       let p = 0;
@@ -770,6 +830,7 @@ export const fontsLargeBundled = {
     return {
       encode,
       encodeTokens,
+      createScanner,
       findMatch,
       decodeStream,
       DEFAULT
@@ -784,7 +845,7 @@ export const fontsLargeBundled = {
       byteOffset,
       slice,
       max
-    } = bitstream, { buildMap, buildTree } = huffman, ERROR_MESSAGES = [
+    } = bitstream, { buildMap, buildTree } = huffman, CODE_NAMES = { 0: "EEOF", 1: "EBADBLOCK", 2: "EBADSYMBOL", 3: "EBADDISTANCE", 4: "ESTREAMEND", 5: "ENOHANDLER", 6: "EBADFORMAT", 7: "EMAXOUT", 8: "EBADSTREAM", 9: "EEXTRATOOLONG", 10: "EBADDATE", 11: "ENAMETOOLONG", 12: "ENOENCODER", 13: "EBADFORMAT", 14: "EBADMETHOD", 15: "EUNSAFEPATH", 16: "ECHECKSUM" }, ERROR_MESSAGES = [
       "unexpected EOF",
       "invalid block type",
       "invalid length/literal",
@@ -792,12 +853,13 @@ export const fontsLargeBundled = {
       "stream finished",
       "no stream handler",
       null,
-      null,
+      "output limit exceeded",
       "invalid data"
     ];
     function fail(code, message) {
       const e = Error(message ?? ERROR_MESSAGES[code] ?? "unknown error");
-      e.code = code;
+      e.code = CODE_NAMES[code];
+      e.errno = code;
       throw e;
     }
     const u8 = Uint8Array, u16 = Uint16Array, u32 = Uint32Array, i32 = Int32Array, WINDOW_SIZE = 32768;
@@ -885,8 +947,10 @@ export const fontsLargeBundled = {
       return sym < 29 && dist >= DIST_BASE[sym + 1] ? sym + 1 : sym;
     }
     const PHASE_HEADER = 0, PHASE_STORED = 1, PHASE_CODES = 2, PHASE_DONE = 3, NEED_INPUT = 0, COMPLETE = 1;
-    function createInflateState(dictionary) {
+    function createInflateState(dictionary, maxOutput) {
       const dict = dictionary && dictionary.length ? dictionary.subarray(Math.max(0, dictionary.length - WINDOW_SIZE)) : null;
+      if (maxOutput !== void 0 && maxOutput !== null && !(Number.isSafeInteger(maxOutput) && maxOutput >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
       return {
         bitPos: 0,
         finalBlock: 0,
@@ -900,7 +964,10 @@ export const fontsLargeBundled = {
         outLen: 0,
         emitted: 0,
         dictionary: dict,
-        fixedOut: !1
+        fixedOut: !1,
+        base: 0,
+        limit: maxOutput !== void 0 && maxOutput !== null ? (dict ? dict.length : 0) + maxOutput : 1 / 0,
+        end: 0
       };
     }
     function initOutput(state, inputLength, providedOut) {
@@ -909,24 +976,29 @@ export const fontsLargeBundled = {
         state.out = providedOut;
         state.fixedOut = !0;
       } else
-        state.out = new u8(Math.max(65536, inputLength * 3));
+        state.out = new u8(Math.min(Math.max(65536, inputLength * 3), state.limit));
       if (dictLen) {
         state.out.set(state.dictionary);
         state.outLen = dictLen;
         state.emitted = dictLen;
       }
+      state.end = Math.min(state.out.length, state.limit - state.base);
     }
     function reserveOutput(state, needed) {
-      if (needed <= state.out.length)
+      if (needed <= state.end)
         return;
+      if (state.base + needed > state.limit)
+        fail(7);
       if (state.fixedOut)
         fail(8, "output exceeds provided buffer");
       let size = state.out.length || 65536;
       while (size < needed)
         size *= 2;
+      size = Math.min(size, state.limit - state.base);
       const grown = new u8(size);
       grown.set(state.out.subarray(0, state.outLen));
       state.out = grown;
+      state.end = Math.min(size, state.limit - state.base);
     }
     function readDynamicTables(state, input) {
       const totalBits = input.length * 8;
@@ -1144,6 +1216,8 @@ export const fontsLargeBundled = {
       const start = state.outLen - WINDOW_SIZE;
       state.out.set(state.out.subarray(start, state.outLen), 0);
       state.outLen = WINDOW_SIZE;
+      state.base += start;
+      state.end = Math.min(state.out.length, state.limit - state.base);
       state.emitted = Math.max(0, state.emitted - start);
     }
     const WINDOW_BITS = 15, MIN_MATCH = 3, MAX_MATCH = 258, BLOCK_TOKENS = 16384, STREAM_FLUSH_BYTES = 65536, LEVELS = [
@@ -1174,15 +1248,7 @@ export const fontsLargeBundled = {
         return Math.imul(data[i] | data[i + 1] << 8 | data[i + 2] << 16, 2654435761) >>> shift;
       };
     }
-    const TOKEN_SCRATCH_MAX = 2097152;
-    let tokenScratch = null;
-    function tokenBuffer(capacity) {
-      if (capacity > TOKEN_SCRATCH_MAX)
-        return new i32(capacity);
-      if (!tokenScratch || tokenScratch.length < capacity)
-        tokenScratch = new i32(capacity);
-      return tokenScratch;
-    }
+    const blockTokens = new i32(2 * BLOCK_TOKENS);
     function createTokenBuffer(tokens, start) {
       return {
         tokens,
@@ -1407,7 +1473,7 @@ export const fontsLargeBundled = {
       if (params.level === 0)
         writeStoredRun(w, input, start, params.final);
       else {
-        const scan = lz77.encodeTokens(input, {
+        const scan = lz77.createScanner(input, {
           windowBits: WINDOW_BITS,
           minMatch: MIN_MATCH,
           maxMatch: MAX_MATCH,
@@ -1416,12 +1482,11 @@ export const fontsLargeBundled = {
           hashFn: makeHashFn(params.hashBits),
           lazy: params.lazy,
           chainSkip: !0,
-          ...LEVELS[params.level],
-          tokens: tokenBuffer(2 * Math.max(0, input.length - start))
-        }), tb = createTokenBuffer(scan.tokens, start), count = scan.count;
-        for (let from = 0;; from += BLOCK_TOKENS) {
-          const to = Math.min(count, from + BLOCK_TOKENS), covered = tallyBlock(tb, from, to);
-          if (to === count) {
+          ...LEVELS[params.level]
+        }), tb = createTokenBuffer(blockTokens, start);
+        for (;; ) {
+          const covered = tallyBlock(tb, 0, scan.fill(blockTokens, BLOCK_TOKENS));
+          if (scan.done) {
             tb.blockLen = input.length - tb.blockStart;
             writeBlock(w, tb, input, params.final);
             break;
@@ -1509,7 +1574,7 @@ export const fontsLargeBundled = {
         opts = {};
       }
       this.ondata = ondata;
-      this._state = createInflateState((opts || {}).dictionary);
+      this._state = createInflateState((opts || {}).dictionary, (opts || {}).maxOutput);
       initOutput(this._state, 0, void 0);
       this._pending = new u8(0);
       this._done = !1;
@@ -1542,6 +1607,16 @@ export const fontsLargeBundled = {
       this._pending = slice(this._pending, state.bitPos >> 3);
       state.bitPos &= 7;
     };
+    Object.defineProperty(InflateStream.prototype, "ended", {
+      get() {
+        return this._state.phase === PHASE_DONE;
+      }
+    });
+    InflateStream.prototype.rest = function() {
+      if (this._state.phase !== PHASE_DONE)
+        return null;
+      return this._pending.subarray(this._state.bitPos ? 1 : 0);
+    };
     function deflateSync(data, opts = {}) {
       let input = data, start = 0;
       const dict = opts.dictionary;
@@ -1565,9 +1640,11 @@ export const fontsLargeBundled = {
     function inflateSync(data, opts = {}) {
       if (!data.length)
         return opts.out ? opts.out.subarray(0, 0) : new u8(0);
-      const state = createInflateState(opts.dictionary), dictLen = state.dictionary ? state.dictionary.length : 0;
+      const state = createInflateState(opts.dictionary, opts.maxOutput), dictLen = state.dictionary ? state.dictionary.length : 0;
       initOutput(state, data.length, opts.out);
       runInflate(state, data, !1);
+      if (typeof opts.onEnd === "function")
+        opts.onEnd(byteOffset(state.bitPos));
       if (state.fixedOut)
         return state.out.subarray(0, state.outLen);
       if (opts.out) {
@@ -1657,15 +1734,23 @@ export const fontsLargeBundled = {
       }
     }
     function _payloadStart(d, dict) {
+      if (d.length < 2 || (d[1] >> 3 & 4) + 2 > d.length) {
+        const e = Error("invalid zlib data: truncated header");
+        e.code = "EBADFORMAT";
+        e.errno = 6;
+        throw e;
+      }
       if ((d[0] & 15) !== 8 || d[0] >> 4 > 7 || (d[0] << 8 | d[1]) % 31) {
         const e = Error("invalid zlib data");
-        e.code = 6;
+        e.code = "EBADFORMAT";
+        e.errno = 6;
         throw e;
       }
       const hasDict = d[1] >> 5 & 1;
       if (hasDict === +!dict) {
         const e = Error("invalid zlib data: " + (hasDict ? "need" : "unexpected") + " dictionary");
-        e.code = 6;
+        e.code = "EBADFORMAT";
+        e.errno = 6;
         throw e;
       }
       return (d[1] >> 3 & 4) + 2;
@@ -1679,12 +1764,34 @@ export const fontsLargeBundled = {
       _w32be(out, hl + compressed.length, a.get());
       return out;
     }
+    const CODE_NAMES = { 0: "EEOF", 1: "EBADBLOCK", 2: "EBADSYMBOL", 3: "EBADDISTANCE", 4: "ESTREAMEND", 5: "ENOHANDLER", 6: "EBADFORMAT", 7: "EMAXOUT", 8: "EBADSTREAM", 9: "EEXTRATOOLONG", 10: "EBADDATE", 11: "ENAMETOOLONG", 12: "ENOENCODER", 13: "EBADFORMAT", 14: "EBADMETHOD", 15: "EUNSAFEPATH", 16: "ECHECKSUM" };
+    function _codeErr(code, message) {
+      const e = Error(message);
+      e.code = CODE_NAMES[code];
+      e.errno = code;
+      return e;
+    }
+    function _r32be(d, at) {
+      return (d[at] << 24 | d[at + 1] << 16 | d[at + 2] << 8 | d[at + 3]) >>> 0;
+    }
+    function _checkAdler(out, data, trailerAt) {
+      const a = new Adler32;
+      a.append(out);
+      if (a.get() !== _r32be(data, trailerAt))
+        throw _codeErr(16, "zlib: incorrect data check (Adler-32 mismatch)");
+    }
     function unzlibSync(data, opts = {}) {
       const start = _payloadStart(data, opts.dictionary);
-      return inflateSync(data.subarray(start, -4), {
+      if (opts.verify !== !1 && data.length < start + 2 + 4)
+        throw _codeErr(0, "zlib: unexpected EOF (frame shorter than a deflate stream and its trailer)");
+      const out = inflateSync(data.subarray(start, -4), {
         out: opts.out,
-        dictionary: opts.dictionary
+        dictionary: opts.dictionary,
+        maxOutput: opts.maxOutput
       });
+      if (opts.verify !== !1)
+        _checkAdler(out, data, data.length - 4);
+      return out;
     }
     function _concat2(a, b) {
       const out = new Uint8Array(a.length + b.length);
@@ -1737,8 +1844,18 @@ export const fontsLargeBundled = {
       this._inf = null;
       this._tail = new Uint8Array(4);
       this._tailLen = 0;
+      this._sum = this._opts.verify !== !1 ? new Adler32 : null;
+      this._ended = !1;
     }
     UnzlibStream.prototype.push = function(chunk, final) {
+      if (this._ended) {
+        const e = Error("stream finished");
+        e.code = "ESTREAMEND";
+        e.errno = 4;
+        throw e;
+      }
+      if (final)
+        this._ended = !0;
       if (this._hdr === -1) {
         this._buf.push(chunk);
         this._bufLen += chunk.length;
@@ -1760,6 +1877,8 @@ export const fontsLargeBundled = {
         this._buf = null;
         const self = this;
         this._inf = new InflateStream(this._opts, function(data, fin) {
+          if (self._sum)
+            self._sum.append(data);
           if (self.ondata)
             self.ondata(data, fin);
         });
@@ -1775,13 +1894,27 @@ export const fontsLargeBundled = {
         const feedLen = total.length > 4 ? total.length - 4 : 0;
         if (feedLen > 0)
           this._inf.push(total.subarray(0, feedLen), !1);
+        this._fed = (this._fed || 0) + feedLen;
         const newTailLen = total.length - feedLen;
         this._tailLen = newTailLen;
         this._tail.set(total.subarray(feedLen));
       } else {
         const feedLen = Math.max(0, total.length - 4);
+        if (this._sum && (this._fed || 0) + feedLen < 2)
+          throw _codeErr(0, "zlib: unexpected EOF (stream shorter than a deflate stream and its trailer)");
         this._inf.push(total.subarray(0, feedLen), !0);
+        if (this._sum && this._sum.get() !== _r32be(total, feedLen))
+          throw _codeErr(16, "zlib: incorrect data check (Adler-32 mismatch)");
       }
+    };
+    UnzlibStream.prototype.flush = function() {
+      if (this._ended)
+        throw _codeErr(4, "stream finished");
+      this._ended = !0;
+      if (this._hdr === -1 || this._tailLen === 0)
+        return;
+      this._inf.push(this._tail.subarray(0, this._tailLen), !1);
+      this._tailLen = 0;
     };
     const _mt = typeof queueMicrotask === "function" ? queueMicrotask : (fn) => Promise.resolve().then(fn);
     function zlibAsync(data, opts = {}) {
@@ -2317,6 +2450,7 @@ export const fontsLargeBundled = {
         return { done: islast === 1, last: islast === 1 };
       }
       const h = _readCompressedMetaBlockHeader(r, state.largeWindow);
+      _reserveOutput(state, mlen);
       _decodeCompressedBody(r, h, state, mlen);
       return { done: islast === 1, last: islast === 1 };
     }
@@ -2369,7 +2503,10 @@ export const fontsLargeBundled = {
         read(_r) {
           return symbol;
         },
-        singleSymbol: symbol
+        singleSymbol: symbol,
+        table: null,
+        mask: 0,
+        maxBits: 0
       };
     }
     function _makeTableDecoder(codeLens, alphabetSize) {
@@ -2392,7 +2529,10 @@ export const fontsLargeBundled = {
             _eofThrow(r);
           return entry >>> 4;
         },
-        alphabetSize
+        alphabetSize,
+        table,
+        mask,
+        maxBits
       };
     }
     function _readSimplePrefixCode(r, alphabetSize) {
@@ -2789,7 +2929,13 @@ export const fontsLargeBundled = {
       582,
       1094,
       2118
-    ]);
+    ]), _IAC_INS = new u8(704), _IAC_COPY = new u8(704), _IAC_DZ = new u8(704);
+    for (let sym = 0;sym < 704; ++sym) {
+      const cell = sym >> 6;
+      _IAC_INS[sym] = _IAC_I_BASE[cell] + (sym >> 3 & 7);
+      _IAC_COPY[sym] = _IAC_C_BASE[cell] + (sym & 7);
+      _IAC_DZ[sym] = cell < 2 ? 1 : 0;
+    }
     function _splitIacSym(iacSym) {
       const cell = iacSym >> 6;
       if (cell >= 11)
@@ -2799,10 +2945,6 @@ export const fontsLargeBundled = {
         copyCode: _IAC_C_BASE[cell] + (iacSym & 7),
         distZero: cell < 2
       };
-    }
-    function _readLength(r, baseArr, extraArr, code) {
-      const eb = extraArr[code], extra = eb <= 16 ? _readBits(r, eb) : _readBitsBig(r, eb);
-      return baseArr[code] + extra;
     }
     const _SPECIAL_DIST = new Int8Array([
       0,
@@ -3656,11 +3798,26 @@ export const fontsLargeBundled = {
         _err("EBADSTREAM", "block type " + sym + " out of range", r.p);
       return t;
     }
+    function _reserveOutput(state, mlen) {
+      const need = Math.min(state.outLen + mlen, state.limit);
+      if (need <= state.out.length)
+        return;
+      let newSize = state.out.length || 1024;
+      while (newSize < need)
+        newSize *= 2;
+      newSize = Math.min(newSize, state.limit);
+      const grown = new u8(newSize);
+      grown.set(state.out.subarray(0, state.outLen));
+      state.out = grown;
+    }
     function _ensureCapacity(state, additional) {
+      if (state.outLen + additional > state.limit)
+        _err("EMAXOUT", "output limit exceeded (maxOutput " + state.limit + ")");
       if (state.outLen + additional > state.out.length) {
-        let newSize = state.out.length;
+        let newSize = state.out.length || 1024;
         while (newSize < state.outLen + additional)
           newSize *= 2;
+        newSize = Math.min(newSize, state.limit);
         const grown = new u8(newSize);
         grown.set(state.out.subarray(0, state.outLen));
         state.out = grown;
@@ -3675,52 +3832,208 @@ export const fontsLargeBundled = {
       }
       _err("ENEEDDICT", "brotli static dictionary required for this stream - load it via brotliDictWords.setBlob(bytes) or .load(url), then the decoder will auto-wire on the next dict-ref", r.p);
     }
+    function _copyStaticDictRef(r, h, state, wordId, clen, remaining, btypeL) {
+      let transformed;
+      if (state.resolveStaticDictRef) {
+        const cidL = _contextIdLit(h.cmode[btypeL], state.p1, state.p2);
+        transformed = state.resolveStaticDictRef(state, wordId, clen, cidL, r);
+      } else {
+        if (clen < 4 || clen > 24)
+          _err("EBADSTREAM", "static dict ref length " + clen + " not in [4, 24]", r.p);
+        _ensureDictLoaded(r);
+        const nw = brotliDict.NWORDS(clen), index = wordId % nw, transformId = (wordId - index) / nw;
+        if (transformId >= 121)
+          _err("EBADSTREAM", "static dict transform id " + transformId + " >= 121", r.p);
+        const baseWord = brotliDict.lookupWord(clen, index);
+        transformed = brotliDict.applyTransform(transformId, baseWord);
+      }
+      const writeLen = transformed.length < remaining ? transformed.length : remaining;
+      _ensureCapacity(state, writeLen);
+      const out = state.out;
+      let outLen = state.outLen;
+      for (let k = 0;k < writeLen; ++k)
+        out[outLen++] = transformed[k];
+      state.outLen = outLen;
+    }
+    function _copyLz77DictRef(state, distance, maxAllowed, lz77DictLen, clen, remaining) {
+      const dictAddr = lz77DictLen + maxAllowed - distance, fromDictBytes = lz77DictLen - dictAddr, writeLen = clen < remaining ? clen : remaining;
+      _ensureCapacity(state, writeLen);
+      const outStart = state.outLen, windowStart = outStart > state.windowSize ? outStart - state.windowSize : 0;
+      let k = 0;
+      while (k < writeLen && k < fromDictBytes) {
+        state.out[state.outLen++] = state.lz77Dict[dictAddr + k];
+        ++k;
+      }
+      while (k < writeLen) {
+        state.out[state.outLen++] = state.out[windowStart + (k - fromDictBytes)];
+        ++k;
+      }
+    }
     function _decodeCompressedBody(r, h, state, mlen) {
       const startLen = state.outLen;
       let btypeL = 0, prevBtypeL = 1, btypeI = 0, prevBtypeI = 1, btypeD = 0, prevBtypeD = 1, blenL = h.blenL, blenI = h.blenI, blenD = h.blenD;
+      const { d, eofBits, canExpectMore: canMore } = r, htreeI = h.htreeI, htreeD = h.htreeD, cmapD = h.cmapD, npostfix = h.npostfix, ndirect = h.ndirect, lastDist = state.lastDist;
+      let bp = r.p;
       while (state.outLen - startLen < mlen) {
         if (blenI === 0) {
+          r.p = bp;
           const nb = _decodeBlockType(h.htreeBtypeI, h.nbltypesI, btypeI, prevBtypeI, r);
           prevBtypeI = btypeI;
           btypeI = nb;
           blenI = _readBlockCount(r, h.htreeBlenI);
+          bp = r.p;
         }
         blenI--;
-        const iacSym = h.htreeI[btypeI].read(r), { insertCode, copyCode, distZero } = _splitIacSym(iacSym), ilen = _readLength(r, _INSERT_BASE, _INSERT_EXTRA, insertCode), clen = _readLength(r, _COPY_BASE, _COPY_EXTRA, copyCode);
+        const treeI = htreeI[btypeI], tableI = treeI.table;
+        let iacSym;
+        if (tableI === null) {
+          r.p = bp;
+          iacSym = treeI.read(r);
+          bp = r.p;
+        } else {
+          if (canMore && bp + treeI.maxBits > eofBits) {
+            r.p = bp;
+            _eofThrow(r);
+          }
+          const o = bp >> 3, entry = tableI[(d[o] | d[o + 1] << 8 | d[o + 2] << 16) >>> (bp & 7) & treeI.mask], len = entry & 15;
+          if (len === 0)
+            _err("EBADSTREAM", "undefined prefix code", bp);
+          bp += len;
+          if (bp > eofBits) {
+            r.p = bp;
+            _eofThrow(r);
+          }
+          iacSym = entry >>> 4;
+        }
+        if (iacSym >= 704)
+          _err("EBADSTREAM", "iac symbol " + iacSym + " out of range");
+        const distZero = _IAC_DZ[iacSym] === 1, icode = _IAC_INS[iacSym], ccode = _IAC_COPY[iacSym];
+        let ilen = _INSERT_BASE[icode];
+        const ie = _INSERT_EXTRA[icode];
+        if (ie > 0) {
+          if (bp + ie > eofBits) {
+            r.p = bp;
+            _eofThrow(r);
+          }
+          const o = bp >> 3;
+          ilen += (d[o] | d[o + 1] << 8 | d[o + 2] << 16 | d[o + 3] << 24) >>> (bp & 7) & (1 << ie) - 1;
+          bp += ie;
+        }
+        let clen = _COPY_BASE[ccode];
+        const ce = _COPY_EXTRA[ccode];
+        if (ce > 0) {
+          if (bp + ce > eofBits) {
+            r.p = bp;
+            _eofThrow(r);
+          }
+          const o = bp >> 3;
+          clen += (d[o] | d[o + 1] << 8 | d[o + 2] << 16 | d[o + 3] << 24) >>> (bp & 7) & (1 << ce) - 1;
+          bp += ce;
+        }
         if (ilen > 0) {
           _ensureCapacity(state, ilen);
+          const out = state.out, stop = startLen + mlen, htreeL = h.htreeL, cmapL = h.cmapL;
+          let { outLen, p1, p2 } = state, cmode = h.cmode[btypeL], cbase = 64 * btypeL;
           for (let k = 0;k < ilen; ++k) {
             if (blenL === 0) {
+              r.p = bp;
               const nb = _decodeBlockType(h.htreeBtypeL, h.nbltypesL, btypeL, prevBtypeL, r);
               prevBtypeL = btypeL;
               btypeL = nb;
               blenL = _readBlockCount(r, h.htreeBlenL);
+              bp = r.p;
+              cmode = h.cmode[btypeL];
+              cbase = 64 * btypeL;
             }
             blenL--;
-            const cidL = _contextIdLit(h.cmode[btypeL], state.p1, state.p2), treeIdx = h.cmapL[64 * btypeL + cidL], lit = h.htreeL[treeIdx].read(r);
-            if (state.outLen - startLen < mlen) {
-              state.out[state.outLen++] = lit;
-              state.p2 = state.p1;
-              state.p1 = lit;
+            const cidL = cmode === 2 ? _LUT0[p1] | _LUT1[p2] : _contextIdLit(cmode, p1, p2), tree = htreeL[cmapL[cbase + cidL]];
+            let lit;
+            const table = tree.table;
+            if (table === null) {
+              r.p = bp;
+              lit = tree.read(r);
+              bp = r.p;
+            } else {
+              if (canMore && bp + tree.maxBits > eofBits) {
+                r.p = bp;
+                _eofThrow(r);
+              }
+              const o = bp >> 3, entry = table[(d[o] | d[o + 1] << 8 | d[o + 2] << 16) >>> (bp & 7) & tree.mask], len = entry & 15;
+              if (len === 0)
+                _err("EBADSTREAM", "undefined prefix code", bp);
+              bp += len;
+              if (bp > eofBits) {
+                r.p = bp;
+                _eofThrow(r);
+              }
+              lit = entry >>> 4;
+            }
+            if (outLen < stop) {
+              out[outLen++] = lit;
+              p2 = p1;
+              p1 = lit;
             }
           }
+          state.outLen = outLen;
+          state.p1 = p1;
+          state.p2 = p2;
         }
         if (state.outLen - startLen >= mlen)
           break;
         let distance, dsym = 0;
         if (distZero)
-          distance = state.lastDist[0];
+          distance = lastDist[0];
         else {
           if (blenD === 0) {
+            r.p = bp;
             const nb = _decodeBlockType(h.htreeBtypeD, h.nbltypesD, btypeD, prevBtypeD, r);
             prevBtypeD = btypeD;
             btypeD = nb;
             blenD = _readBlockCount(r, h.htreeBlenD);
+            bp = r.p;
           }
           blenD--;
-          const cidD = clen > 4 ? 3 : clen - 2, treeIdx = h.cmapD[4 * btypeD + cidD];
-          dsym = h.htreeD[treeIdx].read(r);
-          distance = _decodeDistanceSymbol(r, dsym, state.lastDist, h.npostfix, h.ndirect);
+          const cidD = clen > 4 ? 3 : clen - 2, treeD = htreeD[cmapD[4 * btypeD + cidD]], tableD = treeD.table;
+          if (tableD === null) {
+            r.p = bp;
+            dsym = treeD.read(r);
+            bp = r.p;
+          } else {
+            if (canMore && bp + treeD.maxBits > eofBits) {
+              r.p = bp;
+              _eofThrow(r);
+            }
+            const o = bp >> 3, entry = tableD[(d[o] | d[o + 1] << 8 | d[o + 2] << 16) >>> (bp & 7) & treeD.mask], len = entry & 15;
+            if (len === 0)
+              _err("EBADSTREAM", "undefined prefix code", bp);
+            bp += len;
+            if (bp > eofBits) {
+              r.p = bp;
+              _eofThrow(r);
+            }
+            dsym = entry >>> 4;
+          }
+          const ndistbits = dsym >= 16 + ndirect ? 1 + (dsym - ndirect - 16 >> npostfix + 1) : 0;
+          if (dsym < 16) {
+            distance = lastDist[_SPECIAL_DIST[dsym * 2]] + _SPECIAL_DIST[dsym * 2 + 1];
+            if (distance <= 0)
+              _err("EBADSTREAM", "special distance code " + dsym + " resolved to non-positive " + distance, bp);
+          } else if (ndistbits === 0)
+            distance = dsym - 15;
+          else if (ndistbits <= 24) {
+            if (bp + ndistbits > eofBits) {
+              r.p = bp;
+              _eofThrow(r);
+            }
+            const o = bp >> 3, dextra = (d[o] | d[o + 1] << 8 | d[o + 2] << 16 | d[o + 3] << 24) >>> (bp & 7) & (1 << ndistbits) - 1;
+            bp += ndistbits;
+            const dcOffset = dsym - ndirect - 16;
+            distance = ((2 + (dcOffset >> npostfix & 1) << ndistbits) - 4 + dextra << npostfix) + (dcOffset & (1 << npostfix) - 1) + ndirect + 1;
+          } else {
+            r.p = bp;
+            distance = _decodeDistanceSymbol(r, dsym, lastDist, npostfix, ndirect);
+            bp = r.p;
+          }
         }
         const maxAllowed = state.outLen < state.windowSize ? state.outLen : state.windowSize, lz77DictLen = state.lz77Dict ? state.lz77Dict.length : 0, isStaticDictRef = distance > maxAllowed + lz77DictLen, isLz77DictRef = !isStaticDictRef && distance > maxAllowed && lz77DictLen > 0;
         if (!distZero && dsym !== 0 && !isStaticDictRef) {
@@ -3731,44 +4044,27 @@ export const fontsLargeBundled = {
         }
         const remaining = mlen - (state.outLen - startLen);
         if (isStaticDictRef) {
-          const wordId = distance - maxAllowed - 1 - lz77DictLen;
-          let transformed;
-          if (state.resolveStaticDictRef) {
-            const cidL = _contextIdLit(h.cmode[btypeL], state.p1, state.p2);
-            transformed = state.resolveStaticDictRef(state, wordId, clen, cidL, r);
-          } else {
-            if (clen < 4 || clen > 24)
-              _err("EBADSTREAM", "static dict ref length " + clen + " not in [4, 24]", r.p);
-            _ensureDictLoaded(r);
-            const nw = brotliDict.NWORDS(clen), index = wordId % nw, transformId = (wordId - index) / nw;
-            if (transformId >= 121)
-              _err("EBADSTREAM", "static dict transform id " + transformId + " >= 121", r.p);
-            const baseWord = brotliDict.lookupWord(clen, index);
-            transformed = brotliDict.applyTransform(transformId, baseWord);
-          }
-          const writeLen = transformed.length < remaining ? transformed.length : remaining;
-          _ensureCapacity(state, writeLen);
-          state.out.set(transformed.subarray(0, writeLen), state.outLen);
-          state.outLen += writeLen;
-        } else if (isLz77DictRef) {
-          const dictAddr = lz77DictLen + maxAllowed - distance, fromDictBytes = lz77DictLen - dictAddr, writeLen = clen < remaining ? clen : remaining;
-          _ensureCapacity(state, writeLen);
-          const outStart = state.outLen, windowStart = outStart > state.windowSize ? outStart - state.windowSize : 0;
-          let k = 0;
-          while (k < writeLen && k < fromDictBytes) {
-            state.out[state.outLen++] = state.lz77Dict[dictAddr + k];
-            ++k;
-          }
-          while (k < writeLen) {
-            state.out[state.outLen++] = state.out[windowStart + (k - fromDictBytes)];
-            ++k;
-          }
-        } else {
+          r.p = bp;
+          _copyStaticDictRef(r, h, state, distance - maxAllowed - 1 - lz77DictLen, clen, remaining, btypeL);
+        } else if (isLz77DictRef)
+          _copyLz77DictRef(state, distance, maxAllowed, lz77DictLen, clen, remaining);
+        else {
           const writeLen = clen < remaining ? clen : remaining;
-          _ensureCapacity(state, writeLen);
-          for (let k = 0;k < writeLen; ++k) {
-            state.out[state.outLen] = state.out[state.outLen - distance];
-            state.outLen++;
+          let outLen = state.outLen;
+          if (outLen + writeLen > state.out.length || outLen + writeLen > state.limit)
+            _ensureCapacity(state, writeLen);
+          const out = state.out;
+          if (writeLen >= 32 && distance >= writeLen) {
+            out.copyWithin(outLen, outLen - distance, outLen - distance + writeLen);
+            outLen += writeLen;
+          } else
+            for (let k = 0;k < writeLen; ++k, ++outLen)
+              out[outLen] = out[outLen - distance];
+          state.outLen = outLen;
+          if (outLen >= 2) {
+            state.p1 = out[outLen - 1];
+            state.p2 = out[outLen - 2];
+            continue;
           }
         }
         if (state.outLen >= 2) {
@@ -3779,15 +4075,25 @@ export const fontsLargeBundled = {
           state.p1 = state.out[state.outLen - 1];
         }
       }
+      r.p = bp;
+    }
+    function _limitOf(opts) {
+      const m = opts ? opts.maxOutput : void 0;
+      if (m === void 0 || m === null)
+        return 1 / 0;
+      if (!(Number.isSafeInteger(m) && m >= 0))
+        _err("EBADARG", "maxOutput must be a non-negative integer");
+      return m;
     }
     function brotliDecompressSync(data, opts) {
       if (!(data instanceof u8))
         _err("EBADARG", "expected Uint8Array");
       if (data.length === 0)
         _err("EBADSTREAM", "empty input");
-      const ext = opts && opts._ext || null, r = _makeReader(data), wbitsInfo = _readWBITS(r, ext && ext.allowLargeWindow), wbits = wbitsInfo.wbits, largeWindow = wbitsInfo.largeWindow, windowSize = wbits >= 31 ? Math.pow(2, wbits) - 16 : (1 << wbits) - 16, state = {
-        out: new u8(Math.max(data.length * 4, 1024)),
+      const limit = _limitOf(opts), ext = opts && opts._ext || null, r = _makeReader(data), wbitsInfo = _readWBITS(r, ext && ext.allowLargeWindow), wbits = wbitsInfo.wbits, largeWindow = wbitsInfo.largeWindow, windowSize = wbits >= 31 ? Math.pow(2, wbits) - 16 : (1 << wbits) - 16, state = {
+        out: new u8(Math.min(Math.max(data.length * 4, 1024), limit)),
         outLen: 0,
+        limit,
         p1: 0,
         p2: 0,
         lastDist: new Int32Array([4, 11, 15, 16]),
@@ -3806,7 +4112,7 @@ export const fontsLargeBundled = {
     function _encodeUncompressed(data) {
       if (data.length === 0)
         return new u8([6]);
-      const numChunks = Math.ceil(data.length / 65536), buf = new u8(data.length + 5 + numChunks * 4);
+      const numChunks = Math.ceil(data.length / 65536), buf = new u8(data.length + 3 * numChunks + 1);
       let p = 0;
       p += 1;
       for (let i = 0;i < data.length; i += 65536) {
@@ -3823,7 +4129,7 @@ export const fontsLargeBundled = {
       bitstream.writeBits(buf, p, 3);
       p += 2;
       p = p + 7 & -8;
-      return buf.slice(0, p >> 3);
+      return p >> 3 === buf.length ? buf : buf.slice(0, p >> 3);
     }
     const _CL_OF_CL_VAL = new u8([0, 7, 3, 2, 1, 15]), _CL_OF_CL_LEN = new u8([2, 4, 3, 2, 2, 4]);
     function _insertCodeFor(len) {
@@ -3838,6 +4144,30 @@ export const fontsLargeBundled = {
           return { code: c, extra: len - _COPY_BASE[c], extraBits: _COPY_EXTRA[c] };
       return null;
     }
+    function _cacheCodeFor(distance, ld, allowed) {
+      if (distance === ld[0] && allowed & 1)
+        return 0;
+      if (distance === ld[1] && allowed & 2)
+        return 1;
+      if (distance === ld[2] && allowed & 4)
+        return 2;
+      if (distance === ld[3] && allowed & 8)
+        return 3;
+      const d0 = distance - ld[0];
+      if (d0 !== 0 && d0 >= -3 && d0 <= 3) {
+        const code = 4 + _NEAR_CODE[d0 + 3];
+        if (allowed >> code & 1)
+          return code;
+      }
+      const d1 = distance - ld[1];
+      if (d1 !== 0 && d1 >= -3 && d1 <= 3) {
+        const code = 10 + _NEAR_CODE[d1 + 3];
+        if (allowed >> code & 1)
+          return code;
+      }
+      return -1;
+    }
+    const _NEAR_CODE = new Int8Array([4, 2, 0, -1, 1, 3, 5]);
     function _findIacSym(iCode, cCode, distZero) {
       const iHi = iCode >> 3, iLo = iCode & 7, cHi = cCode >> 3, cLo = cCode & 7;
       let cell;
@@ -3859,20 +4189,11 @@ export const fontsLargeBundled = {
       const dPrime = distance - ndirect - 1;
       if (dPrime < 0)
         return null;
-      const lcodeMask = (1 << npostfix) - 1, lcode = dPrime & lcodeMask, rest = dPrime >> npostfix;
-      for (let k = 1;k <= 24; ++k) {
-        const evenLo = (1 << k + 1) - 4, evenHi = evenLo + (1 << k) - 1;
-        if (rest >= evenLo && rest <= evenHi) {
-          const dextra = rest - evenLo, dcOffset = (k - 1) * 2 << npostfix | lcode;
-          return { dsym: 16 + ndirect + dcOffset, extra: dextra, extraBits: k };
-        }
-        const oddLo = (3 << k) - 4, oddHi = oddLo + (1 << k) - 1;
-        if (rest >= oddLo && rest <= oddHi) {
-          const dextra = rest - oddLo, dcOffset = (k - 1) * 2 + 1 << npostfix | lcode;
-          return { dsym: 16 + ndirect + dcOffset, extra: dextra, extraBits: k };
-        }
-      }
-      return null;
+      const lcodeMask = (1 << npostfix) - 1, lcode = dPrime & lcodeMask, v = (dPrime >> npostfix) + 4, k = 30 - Math.clz32(v);
+      if (k > 24)
+        return null;
+      const hbit = v >> k & 1, hcode = (k - 1) * 2 + hbit;
+      return { dsym: 16 + ndirect + (hcode << npostfix | lcode), extra: v - (2 + hbit << k), extraBits: k };
     }
     function _makeWriter(initialCapacity) {
       let buf = new u8(Math.max(initialCapacity | 0, 256)), bp = 0;
@@ -3890,6 +4211,12 @@ export const fontsLargeBundled = {
       return {
         bits(n, v) {
           ensure(n);
+          if (n > 16) {
+            bitstream.writeBits16(buf, bp, v & 65535);
+            bp += 16;
+            n -= 16;
+            v >>>= 16;
+          }
           bitstream.writeBits16(buf, bp, v & (1 << n) - 1);
           bp += n;
         },
@@ -4056,6 +4383,13 @@ export const fontsLargeBundled = {
     }
     let _staticDictHash = null, _staticDictHashTried = !1;
     const _OF_K_VALUES = [1, 2, 3, 4, 5, 6, 7, 9];
+    function _bloomBit(h) {
+      return Math.imul(h, 2654435761) >>> 14;
+    }
+    function _bloomHas(bits, h) {
+      const b = _bloomBit(h);
+      return bits[b >>> 3] >> (b & 7) & 1;
+    }
     function _getStaticDictHash() {
       if (_staticDictHash !== null)
         return _staticDictHash;
@@ -4095,7 +4429,17 @@ export const fontsLargeBundled = {
           }
         }
       }
-      _staticDictHash = { table, words, ofTables };
+      const bloomOf = (m) => {
+        const bits = new u8(32768);
+        for (const key of m.keys()) {
+          const b = _bloomBit(key);
+          bits[b >>> 3] |= 1 << (b & 7);
+        }
+        return bits;
+      }, bloom = bloomOf(table), ofBlooms = Array(10);
+      for (const k of _OF_K_VALUES)
+        ofBlooms[k] = bloomOf(ofTables[k]);
+      _staticDictHash = { table, words, ofTables, bloom, ofBlooms };
       return _staticDictHash;
     }
     const _OF_TID_BY_K = new Map([
@@ -4141,10 +4485,15 @@ export const fontsLargeBundled = {
           g.suffixes.sort((a, b) => b.suffix.length - a.suffix.length);
         groups.sort((a, b) => a.prefix.length - b.prefix.length);
         return groups;
+      }, byFirst = (groups) => {
+        const idx = Array(256);
+        for (let b = 0;b < 256; ++b)
+          idx[b] = groups.filter((g) => g.prefix.length === 0 || g.prefix[0] === b);
+        return idx;
       };
-      _idTransformGroups = finalize(idByPrefix);
-      _ffTransformGroups = finalize(ffByPrefix);
-      _faTransformGroups = finalize(faByPrefix);
+      _idTransformGroups = byFirst(finalize(idByPrefix));
+      _ffTransformGroups = byFirst(finalize(ffByPrefix));
+      _faTransformGroups = byFirst(finalize(faByPrefix));
       for (const arr of olByK.values())
         arr.sort((a, b) => b.suffix.length - a.suffix.length);
       _olByK = olByK;
@@ -4153,7 +4502,7 @@ export const fontsLargeBundled = {
       const words = dictHash.words;
       _buildEncoderTransformGroups();
       let bestOutLen = 0, bestDictLen = 0, bestIdx = 0, bestTransform = 0;
-      const idGroups = _idTransformGroups;
+      const idGroups = _idTransformGroups[data[pos]];
       for (let gi = 0;gi < idGroups.length; ++gi) {
         const g = idGroups[gi], pre = g.prefix, preLen = pre.length;
         if (pos + preLen + 4 > end)
@@ -4163,7 +4512,10 @@ export const fontsLargeBundled = {
           ++mp;
         if (mp !== preLen)
           continue;
-        const hashStart = pos + preLen, h = (data[hashStart] | data[hashStart + 1] << 8 | data[hashStart + 2] << 16 | data[hashStart + 3] << 24) >>> 0, bucket = dictHash.table.get(h);
+        const hashStart = pos + preLen, h = (data[hashStart] | data[hashStart + 1] << 8 | data[hashStart + 2] << 16 | data[hashStart + 3] << 24) >>> 0;
+        if (!_bloomHas(dictHash.bloom, h))
+          continue;
+        const bucket = dictHash.table.get(h);
         if (!bucket)
           continue;
         for (let i = 0;i < bucket.length; ++i) {
@@ -4217,7 +4569,7 @@ export const fontsLargeBundled = {
           }
         }
       }
-      const ffGroups = _ffTransformGroups;
+      const ffGroups = _ffTransformGroups[data[pos]];
       for (let gi = 0;gi < ffGroups.length; ++gi) {
         const g = ffGroups[gi], pre = g.prefix, preLen = pre.length;
         if (pos + preLen + 4 > end)
@@ -4249,7 +4601,10 @@ export const fontsLargeBundled = {
           cpLen = 3;
         } else
           continue;
-        const h = (u0 | u1 << 8 | u2 << 16 | u3 << 24) >>> 0, bucket = dictHash.table.get(h);
+        const h = (u0 | u1 << 8 | u2 << 16 | u3 << 24) >>> 0;
+        if (!_bloomHas(dictHash.bloom, h))
+          continue;
+        const bucket = dictHash.table.get(h);
         if (!bucket)
           continue;
         for (let i = 0;i < bucket.length; ++i) {
@@ -4288,7 +4643,7 @@ export const fontsLargeBundled = {
           }
         }
       }
-      const faGroups = _faTransformGroups;
+      const faGroups = _faTransformGroups[data[pos]];
       for (let gi = 0;gi < faGroups.length; ++gi) {
         const g = faGroups[gi], pre = g.prefix, preLen = pre.length;
         if (pos + preLen + 4 > end)
@@ -4433,7 +4788,10 @@ export const fontsLargeBundled = {
         }
         if (!validCp || !hasFermented)
           continue;
-        const h = (u0 | u1 << 8 | u2 << 16 | u3 << 24) >>> 0, bucket = dictHash.table.get(h);
+        const h = (u0 | u1 << 8 | u2 << 16 | u3 << 24) >>> 0;
+        if (!_bloomHas(dictHash.bloom, h))
+          continue;
+        const bucket = dictHash.table.get(h);
         if (!bucket)
           continue;
         for (let bi = 0;bi < bucket.length; ++bi) {
@@ -4517,6 +4875,8 @@ export const fontsLargeBundled = {
           const k = _OF_K_VALUES[ki], ofTable = dictHash.ofTables[k];
           if (!ofTable)
             continue;
+          if (!_bloomHas(dictHash.ofBlooms[k], h))
+            continue;
           const bucket = ofTable.get(h);
           if (!bucket)
             continue;
@@ -4544,7 +4904,7 @@ export const fontsLargeBundled = {
     function _augmentWithStaticDictRefs(commands, data, dictHash, windowSize, customMatchFinder, lz77PrefixLen) {
       const augmented = [];
       let outPos = 0;
-      const MIN_DICT_MATCH = 6, L = lz77PrefixLen | 0;
+      const MIN_DICT_MATCH = customMatchFinder ? 6 : 4, L = lz77PrefixLen | 0;
       for (let ci = 0;ci < commands.length; ++ci) {
         const cmd = commands[ci], litEnd = cmd.insertStart + cmd.insertLen;
         let litStart = cmd.insertStart, pos = litStart;
@@ -4635,13 +4995,7 @@ export const fontsLargeBundled = {
       }
       return kl > 0.3 ? { splitBytePos: half } : null;
     }
-    function _pickDistParams(cmds) {
-      const distances = [];
-      for (let i = 0;i < cmds.length; ++i) {
-        const c = cmds[i];
-        if (c.copyLen > 0 && c.distance > 0)
-          distances.push(c.distance);
-      }
+    function _pickDistParams(distances) {
       if (distances.length === 0)
         return { npostfix: 0, ndirect: 0, distAlphabet: 64 };
       let bestScore = 1 / 0, bestNpost = 0, bestNdir = 0, bestAlpha = 64;
@@ -4651,14 +5005,28 @@ export const fontsLargeBundled = {
           continue;
         const cnt = new Int32Array(alpha);
         let extraBitsSum = 0, valid = !0;
-        for (const d of distances) {
-          const enc = _distanceCodeFor(d, np, nd);
-          if (!enc || enc.dsym >= alpha) {
+        const lmask = (1 << np) - 1;
+        for (let di = 0;di < distances.length; ++di) {
+          const d = distances[di];
+          let dsym, ebits;
+          if (d <= nd) {
+            dsym = 16 + d - 1;
+            ebits = 0;
+          } else {
+            const dPrime = d - nd - 1, v = (dPrime >> np) + 4;
+            ebits = 30 - Math.clz32(v);
+            if (ebits > 24) {
+              valid = !1;
+              break;
+            }
+            dsym = 16 + nd + ((ebits - 1) * 2 + (v >> ebits & 1) << np | dPrime & lmask);
+          }
+          if (dsym >= alpha) {
             valid = !1;
             break;
           }
-          ++cnt[enc.dsym];
-          extraBitsSum += enc.extraBits;
+          ++cnt[dsym];
+          extraBitsSum += ebits;
         }
         if (!valid)
           continue;
@@ -4680,13 +5048,131 @@ export const fontsLargeBundled = {
       }
       return { npostfix: bestNpost, ndirect: bestNdir, distAlphabet: bestAlpha };
     }
+    function _looksIncompressible(data, commands) {
+      const len = data.length;
+      if (commands.length > (len >> 8) + 2)
+        return !1;
+      let literals = 0;
+      for (let i = 0;i < commands.length; ++i)
+        literals += commands[i].insertLen;
+      if (literals < len * 0.99)
+        return !1;
+      return _sampledEntropyHigh(data);
+    }
+    function _sampledEntropyHigh(data) {
+      const len = data.length, hist = new Int32Array(256);
+      let n = 0;
+      for (let i = 0;i < len; i += 16) {
+        ++hist[data[i]];
+        ++n;
+      }
+      let bits = 0;
+      for (let b = 0;b < 256; ++b) {
+        const c = hist[b];
+        if (c)
+          bits -= c * Math.log2(c / n);
+      }
+      return bits >= 7.9 * n;
+    }
+    function _probeRepeats(data) {
+      const len = data.length, slots = new Int32Array(131072).fill(-1);
+      let covered = 0, i = 0, key = len >= 4 ? data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24 : 0;
+      while (i + 4 <= len) {
+        const hv = Math.imul(key, 2654435761);
+        if ((hv >>> 8 & 15) === 0) {
+          const h = hv >>> 16 << 1, c = slots[h + 1], hit = c >= 0 && slots[h] === key;
+          slots[h] = key;
+          slots[h + 1] = i;
+          if (hit) {
+            let m = 4;
+            while (i + m < len && data[c + m] === data[i + m])
+              ++m;
+            covered += m;
+            i += m;
+            if (i + 4 <= len)
+              key = data[i] | data[i + 1] << 8 | data[i + 2] << 16 | data[i + 3] << 24;
+            continue;
+          }
+        }
+        ++i;
+        if (i + 4 <= len)
+          key = key >>> 8 | data[i + 3] << 24;
+      }
+      return covered;
+    }
+    function _assignDistanceCache(cmds, data, maxDistance) {
+      const n = cmds.length, cacheCodes = new Int8Array(n).fill(-1), parsed = new Int32Array(n);
+      for (let ci = 0;ci < n; ++ci)
+        parsed[ci] = cmds[ci].distance;
+      let distances = [];
+      const assign = (allowed) => {
+        const ld = [4, 11, 15, 16], saved = new Int32Array(16);
+        distances = [];
+        let pos = 0;
+        for (let ci = 0;ci < n; ++ci) {
+          const c = cmds[ci];
+          cacheCodes[ci] = -1;
+          pos += c.insertLen;
+          if (c.copyLen === 0)
+            continue;
+          if (c.isDictRef) {
+            pos += c.dictOutputLen != null ? c.dictOutputLen : c.copyLen;
+            if (c.distance > 0)
+              distances.push(c.distance);
+            continue;
+          }
+          c.distance = parsed[ci];
+          let code = _cacheCodeFor(c.distance, ld, allowed);
+          if (code < 0 && data)
+            code = _sameBytesCacheCode(c, data, pos, ld, allowed, maxDistance);
+          pos += c.copyLen;
+          if (code < 0 && c.distance > 0)
+            distances.push(c.distance);
+          cacheCodes[ci] = code;
+          if (code >= 0)
+            saved[code] += 30 - Math.clz32(c.distance + 3);
+          if (code !== 0) {
+            ld[3] = ld[2];
+            ld[2] = ld[1];
+            ld[1] = ld[0];
+            ld[0] = c.distance;
+          }
+        }
+        return saved;
+      }, saved = assign(65535);
+      let allowed = 0;
+      for (let code = 0;code < 16; ++code)
+        if (saved[code] >= 128)
+          allowed |= 1 << code;
+      if (allowed !== 65535)
+        assign(allowed);
+      return { cacheCodes, distances };
+    }
+    function _sameBytesCacheCode(c, data, pos, ld, allowed, maxDistance) {
+      const len = c.copyLen;
+      for (let k = 0;k < 16; ++k) {
+        if (!(allowed >> k & 1))
+          continue;
+        const cd = ld[_SPECIAL_DIST[k * 2]] + _SPECIAL_DIST[k * 2 + 1];
+        if (cd <= 0 || cd > pos || cd > maxDistance || cd === c.distance)
+          continue;
+        let m = 0;
+        while (m < len && data[pos + m] === data[pos - cd + m])
+          ++m;
+        if (m === len) {
+          c.distance = cd;
+          return k;
+        }
+      }
+      return -1;
+    }
     function _encodeCompressed(data, opts) {
       const len = data.length, ntreesL = _NTREESL_OPT, _ext = opts && opts._ext || null, largeWindow = !!(_ext && _ext.largeWindow), wbits = _ext && _ext.windowBits || 22;
       if (!largeWindow && (wbits < 10 || wbits > 24))
         _err("EBADARG", "wbits " + wbits + " out of RFC 7932 range [10, 24]");
       if (largeWindow && (wbits < 10 || wbits > 50))
         _err("EBADARG", "large window wbits " + wbits + " out of supported [10, 50]");
-      const windowSize = wbits >= 31 ? Math.pow(2, wbits) - 16 : (1 << wbits) - 16, cmode = _pickCMode(data), ext = opts && opts._ext || null;
+      const windowSize = wbits >= 31 ? Math.pow(2, wbits) - 16 : (1 << wbits) - 16, ext = opts && opts._ext || null;
       let lz77Prefix = ext && ext.lz77Prefix || null;
       if (lz77Prefix && !(lz77Prefix instanceof u8))
         _err("EBADARG", "_ext.lz77Prefix must be Uint8Array");
@@ -4699,36 +5185,36 @@ export const fontsLargeBundled = {
         inputBuf.set(lz77Prefix, 0);
         inputBuf.set(data, prefixLen);
       }
-      const commands = [];
+      if (prefixLen === 0 && _sampledEntropyHigh(data) && _probeRepeats(data) < len / 100)
+        return null;
+      const cmode = _pickCMode(data), commands = [];
       let insertStart = 0, insertLen = 0;
-      const quality = opts && opts.quality != null ? opts.quality : 6, qParams = quality <= 1 ? { chainDepth: 2, lazy: !1 } : quality <= 3 ? { chainDepth: 4, lazy: !1 } : quality <= 5 ? { chainDepth: 6, lazy: !0 } : quality <= 7 ? { chainDepth: 10, lazy: !0 } : quality <= 9 ? { chainDepth: 16, lazy: !0 } : { chainDepth: 32, lazy: !0 };
-      lz77.encode(inputBuf, { windowBits: 21, minMatch: 4, ...qParams }, {
-        literal(pos) {
-          if (pos < prefixLen)
-            return;
-          const dpos = pos - prefixLen;
-          if (insertLen === 0)
-            insertStart = dpos;
-          insertLen++;
-        },
-        match(pos, mlen, dist) {
-          if (pos < prefixLen)
-            return;
-          while (insertLen > 22593) {
-            commands.push({ insertStart, insertLen: 22593, copyLen: 2, distance: 1 });
-            insertStart += 22593;
-            insertLen -= 22593;
+      const quality = opts && opts.quality != null ? opts.quality : 6, qParams = quality <= 1 ? { chainDepth: 2, lazy: !1 } : quality <= 3 ? { chainDepth: 4, lazy: !1 } : quality <= 5 ? { chainDepth: 6, lazy: !0 } : quality <= 6 ? { chainDepth: 10, lazy: !0 } : quality <= 7 ? { chainDepth: 64, lazy: !0, niceLength: 32, goodLength: 8, maxLazy: 16 } : quality <= 9 ? { chainDepth: 64, lazy: !0, niceLength: 64, goodLength: 16, maxLazy: 32 } : { chainDepth: 128, lazy: !0, niceLength: 128, goodLength: 32, maxLazy: 64 }, scan = lz77.encodeTokens(inputBuf, { windowBits: 21, minMatch: 4, ...qParams }), tokens = scan.tokens;
+      for (let k = 0, p = 0, pos = 0;k < scan.count; ++k, p += 2) {
+        const mlen = tokens[p];
+        if (mlen === 0) {
+          if (pos >= prefixLen) {
+            if (insertLen === 0)
+              insertStart = pos - prefixLen;
+            insertLen++;
           }
-          commands.push({ insertStart, insertLen, copyLen: mlen, distance: dist });
+          pos += 1;
+          continue;
+        }
+        if (pos >= prefixLen) {
+          commands.push({ insertStart, insertLen, copyLen: mlen, distance: tokens[p + 1] });
           insertStart = 0;
           insertLen = 0;
         }
-      });
+        pos += mlen;
+      }
       if (insertLen > 0)
         commands.push({ insertStart, insertLen, copyLen: 0, distance: 0 });
       if (commands.length === 0)
         commands.push({ insertStart: 0, insertLen: 0, copyLen: 0, distance: 0 });
-      const customMatchFinder = _ext && _ext.findCustomDictMatch, dictHash = customMatchFinder ? null : _getStaticDictHash(), cmds = customMatchFinder || dictHash ? _augmentWithStaticDictRefs(commands, data, dictHash, windowSize, customMatchFinder, prefixLen) : commands, distParams = _pickDistParams(cmds), npostfix = distParams.npostfix, ndirect = distParams.ndirect, distAlphabet = distParams.distAlphabet, splitLiteral = _pickLitBlockSplit(data, quality), useSplit = !!splitLiteral, ntreesLActual = useSplit ? 8 : ntreesL, litFreqPerTree = Array(ntreesLActual);
+      if (_looksIncompressible(data, commands))
+        return null;
+      const customMatchFinder = _ext && _ext.findCustomDictMatch, dictHash = customMatchFinder ? null : _getStaticDictHash(), cmds = customMatchFinder || dictHash ? _augmentWithStaticDictRefs(commands, data, dictHash, windowSize, customMatchFinder, prefixLen) : commands, { cacheCodes, distances: fullDistances } = _assignDistanceCache(cmds, prefixLen === 0 ? data : null, windowSize), distParams = _pickDistParams(fullDistances), npostfix = distParams.npostfix, ndirect = distParams.ndirect, distAlphabet = distParams.distAlphabet, splitLiteral = _pickLitBlockSplit(data, quality), useSplit = !!splitLiteral, ntreesLActual = useSplit ? 8 : ntreesL, litFreqPerTree = Array(ntreesLActual);
       for (let t = 0;t < ntreesLActual; ++t)
         litFreqPerTree[t] = new Int32Array(256);
       const iacFreq = new Int32Array(704), distFreq = new Int32Array(distAlphabet), cmdAux = Array(cmds.length);
@@ -4752,16 +5238,17 @@ export const fontsLargeBundled = {
         const isLastNoCopy = c.copyLen === 0, effCopyLen = isLastNoCopy ? 2 : c.copyLen, ic = _insertCodeFor(c.insertLen), cc = _copyCodeFor(effCopyLen);
         if (!ic || !cc)
           _err("EINTERNAL", "cannot encode I=" + c.insertLen + " C=" + effCopyLen);
-        const iacSym = _findIacSym(ic.code, cc.code, !1);
+        const cacheCode = cacheCodes[ci], implicit = cacheCode === 0 && _findIacSym(ic.code, cc.code, !0) >= 0, iacSym = _findIacSym(ic.code, cc.code, implicit);
         if (iacSym < 0)
           _err("EINTERNAL", "no IAC sym for I=" + ic.code + " C=" + cc.code);
         ++iacFreq[iacSym];
         let distEnc = null;
         if (!isLastNoCopy) {
-          distEnc = _distanceCodeFor(c.distance, npostfix, ndirect);
-          if (!distEnc || distEnc.dsym >= distAlphabet)
+          distEnc = implicit ? null : cacheCode >= 0 ? { dsym: cacheCode, extra: 0, extraBits: 0 } : _distanceCodeFor(c.distance, npostfix, ndirect);
+          if (!implicit && (!distEnc || distEnc.dsym >= distAlphabet))
             _err("EINTERNAL", "distance " + c.distance + " outside alphabet");
-          ++distFreq[distEnc.dsym];
+          if (distEnc)
+            ++distFreq[distEnc.dsym];
           if (c.isDictRef) {
             const inputPos = c.insertStart + c.insertLen, outLen = c.dictOutputLen != null ? c.dictOutputLen : c.copyLen;
             for (let k = 0;k < outLen; ++k) {
@@ -4902,6 +5389,8 @@ export const fontsLargeBundled = {
           w.bits(distLens[aux.distEnc.dsym], distMap[aux.distEnc.dsym]);
           if (aux.distEnc.extraBits > 0)
             w.bits(aux.distEnc.extraBits, aux.distEnc.extra);
+        }
+        if (c.copyLen > 0)
           if (c.isDictRef) {
             const inputPos = c.insertStart + c.insertLen, outLen = c.dictOutputLen != null ? c.dictOutputLen : c.copyLen;
             for (let k = 0;k < outLen; ++k) {
@@ -4917,7 +5406,6 @@ export const fontsLargeBundled = {
               p1 = byte;
               ++outPos;
             }
-        }
       }
       w.align();
       return w.bytes();
@@ -4932,6 +5420,8 @@ export const fontsLargeBundled = {
         return _encodeUncompressed(data);
       try {
         const compressed = _encodeCompressed(data, opts), trivial = _encodeUncompressed(data);
+        if (compressed === null)
+          return trivial;
         return compressed.length <= trivial.length ? compressed : trivial;
       } catch (e) {
         if (e.code === "EINTERNAL")
@@ -5066,10 +5556,11 @@ export const fontsLargeBundled = {
       if (!this._initDone) {
         const savedP = r.p;
         try {
-          const ext = this._opts && this._opts._ext || null, wbitsInfo = _readWBITS(r, ext && ext.allowLargeWindow), wbits = wbitsInfo.wbits, windowSize = wbits >= 31 ? Math.pow(2, wbits) - 16 : (1 << wbits) - 16;
+          const ext = this._opts && this._opts._ext || null, wbitsInfo = _readWBITS(r, ext && ext.allowLargeWindow), wbits = wbitsInfo.wbits, windowSize = wbits >= 31 ? Math.pow(2, wbits) - 16 : (1 << wbits) - 16, limit = _limitOf(this._opts);
           this._state = {
-            out: new u8(1024),
+            out: new u8(Math.min(1024, limit)),
             outLen: 0,
+            limit,
             p1: 0,
             p2: 0,
             lastDist: new Int32Array([4, 11, 15, 16]),
@@ -5127,14 +5618,15 @@ export const fontsLargeBundled = {
         }
       }
     };
-    return {
+    return Object.defineProperty({
       brotliCompressSync,
       brotliDecompressSync,
       brotliCompress,
       brotliDecompress,
       BrotliCompressStream,
-      BrotliDecompressStream,
-      _internal: {
+      BrotliDecompressStream
+    }, Symbol.for("@awacloud/fw/internal"), {
+      value: {
         makeReader: _makeReader,
         readBit: _readBit,
         readBits: _readBits,
@@ -5159,7 +5651,7 @@ export const fontsLargeBundled = {
         COPY_EXTRA: _COPY_EXTRA,
         encodeUncompressed: _encodeUncompressed
       }
-    };
+    });
   } });
 
     // fonts-local factories — inlined and topo-ordered.
@@ -7502,7 +7994,7 @@ export const fontsLargeBundled = {
         throw new ParseError("fonts/missing-hmtx", "font is missing the required `hmtx` table");
       if (!sfnt.tables.cmap)
         throw new ParseError("fonts/missing-cmap", "font is missing the required `cmap` table");
-      if (!sfnt.tables.name && !(opts && opts.allowMissingName))
+      if (!sfnt.tables.name && opts && opts.allowMissingName === !1)
         throw new ParseError("fonts/missing-name", "font is missing the required `name` table");
       const head = parseHead(sfnt.tables.head.bytes), maxp = parseMaxp(sfnt.tables.maxp.bytes), hhea = parseHhea(sfnt.tables.hhea.bytes), hmtx = parseHmtx(sfnt.tables.hmtx.bytes, hhea.numberOfHMetrics, maxp.numGlyphs), cmap = parseCmap(sfnt.tables.cmap.bytes), nameTable = sfnt.tables.name ? parseName(sfnt.tables.name.bytes) : null, os2 = sfnt.tables["OS/2"] ? parseOs2(sfnt.tables["OS/2"].bytes) : null, post = sfnt.tables.post ? parsePost(sfnt.tables.post.bytes, maxp.numGlyphs) : null;
       let loca = null, glyphTable = null;

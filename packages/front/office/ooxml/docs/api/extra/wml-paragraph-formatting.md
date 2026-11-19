@@ -61,6 +61,12 @@ const pPr   = ext.parseParagraphProperties(pPrEl);
 
 ## Notes
 
+- **Lossless.** The paragraph hooks type an element only when it is written
+  back as read (`docxProperties.hydrateLossless`, and `sameElement` for a
+  whole `tblPr` / `trPr`): an attribute the typed field does not keep, an
+  empty element or a name held twice leaves the element in `_extras` as
+  read, so a save-back through the bundle writes what the core's writes.
+
 - `tabs` is normalised to an array of `{ val, pos, leader? }`; the wrapper `<w:tabs>` is reconstructed at render.
 - Numeric attributes are coerced to `Number` on parse; `String(...)` on render.
 

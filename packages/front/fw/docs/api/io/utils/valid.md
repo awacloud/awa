@@ -23,7 +23,7 @@ Two distinct surfaces:
 const valid = runtime.resolve('valid');
 // Returns: { is, isNumber, isString, isBoolean, isArray, isObject,
 //             isUint8Array, isUint8ClampedArray, isFunction,
-//             validate, test, compile, formats, __map }
+//             validate, test, compile, formats }
 ```
 
 ## API — Type guards

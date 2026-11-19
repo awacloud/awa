@@ -6,11 +6,13 @@ Node**, without touching the test. See the integration
 
 ## Run
 
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
+
 ```sh
-npm i && npx vitest run
+bun install && bun run test
 ```
 
-Run from this directory.
+`bun run test` runs Vitest once.
 
 ## What it shows
 

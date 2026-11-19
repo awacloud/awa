@@ -6,6 +6,23 @@
 /**
  * @fileoverview `morx` — Extended Glyph Metamorphosis (Apple TT RM06).
  *
+ * `parseMorx(bytes, opts?)` reads the header, each chain's features and
+ * each subtable's header, and decodes the bodies with `parsed: true`,
+ * through `aatLookup` (`opts.numGlyphs` bounds a format 0 lookup):
+ *
+ *  - type 0, rearrangement: `stateTable`;
+ *  - type 1, contextual: `stateTable` (each entry's data is the mark and
+ *    current indices) and `substitutions`, its lookups;
+ *  - type 2, ligature: `stateTable` (the ligature action index) and the
+ *    readers `action(i)` (32-bit), `component(i)`, `ligature(i)` (16-bit);
+ *  - type 4, noncontextual: `lookup`;
+ *  - type 5, insertion: `stateTable` (the current and marked insert
+ *    indices) and the reader `insertion(i)`.
+ *
+ * A reader gives `null` past the body. A body that does not decode keeps
+ * `parsed: false` and an `error` (the `ParseError` code). Every subtable
+ * keeps its raw `body`.
+ *
  * Strict factory body.
  *
  * @module fonts/extra/apple-aat/morx
@@ -13,12 +30,13 @@
 
 import { fontErrors } from '../../errors.js';
 import { fontReader } from '../../primitives/reader.js';
+import { aatLookup } from './lookup.js';
 
 export const aatMorx = {
     name: 'aatMorx',
-    dependencies: ['fontErrors', 'fontReader'],
-    deps: [fontErrors, fontReader],
-    factory(errors, reader) {
+    dependencies: ['fontErrors', 'fontReader', 'aatLookup'],
+    deps: [fontErrors, fontReader, aatLookup],
+    factory(errors, reader, lookups) {
         const HEADER_MIN     = 8;
         const CHAIN_HDR_SIZE = 16;
         const FEATURE_SIZE   = 12;
@@ -26,7 +44,64 @@ export const aatMorx = {
         const { ParseError } = errors;
         const { BinaryReader } = reader;
 
-        function parseMorx(bytes) {
+        const u32 = (b, o) => ((b[o] << 24) >>> 0) + ((b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]);
+
+        const u16 = (b, o) => (b[o] << 8) | b[o + 1];
+
+        /** A reader of `size`-byte values from `base` of `body`: `null` past the body or below 0. */
+        function valuesAt(body, base, size) {
+            const read = size === 4 ? u32 : u16;
+            return (i) => (Number.isInteger(i) && i >= 0 && base + size * (i + 1) <= body.length ? read(body, base + size * i) : null);
+        }
+
+        /** The offsets (32-bit, after the state table header) of a type 2 or 5 body, each within the body. */
+        function offsets(body, n, code, what) {
+            if (body.length < 16 + 4 * n)
+                throw new ParseError(code, `${what} subtable header truncated`, { context: { length: body.length } });
+            const out = [];
+            for (let i = 0; i < n; i++) {
+                const off = u32(body, 16 + 4 * i);
+                if (off > body.length)
+                    throw new ParseError(code, `${what} subtable offset past the body`, { context: { offset: off, length: body.length } });
+                out.push(off);
+            }
+            return out;
+        }
+
+        /** The decoded fields of a body; null for a type that has none. */
+        function decodeBody(type, body, numGlyphs) {
+            const opts = numGlyphs !== undefined ? { numGlyphs } : undefined;
+            if (type === 0) return { stateTable: lookups.parseStateTable(body, 0, 0, opts) };
+            if (type === 4) return { lookup: lookups.parseLookup(body, 0, opts) };
+            if (type === 2) {
+                const [actionOff, componentOff, ligatureOff] = offsets(body, 3, 'fonts/morx-ligature-short', 'ligature');
+                return {
+                    stateTable: lookups.parseStateTable(body, 0, 1, opts),
+                    action: valuesAt(body, actionOff, 4),
+                    component: valuesAt(body, componentOff, 2),
+                    ligature: valuesAt(body, ligatureOff, 2)
+                };
+            }
+            if (type === 5) {
+                const [insertionOff] = offsets(body, 1, 'fonts/morx-insertion-short', 'insertion');
+                return { stateTable: lookups.parseStateTable(body, 0, 2, opts), insertion: valuesAt(body, insertionOff, 2) };
+            }
+            if (type !== 1) return null;
+            const stateTable = lookups.parseStateTable(body, 0, 2, opts);
+            if (body.length < 20)
+                throw new ParseError('fonts/morx-contextual-short', 'contextual subtable header truncated', { context: { length: body.length } });
+            const listOff = u32(body, 16);
+            let count = 0;
+            for (const e of stateTable.entries) for (const i of e.data) if (i !== 0xFFFF) count = Math.max(count, i + 1);
+            if (listOff + 4 * count > body.length)
+                throw new ParseError('fonts/morx-contextual-short', 'contextual substitution list runs past the subtable', { context: { listOff, count } });
+            const substitutions = [];
+            for (let i = 0; i < count; i++) substitutions.push(lookups.parseLookup(body, listOff + u32(body, listOff + 4 * i), opts));
+            return { stateTable, substitutions };
+        }
+
+        function parseMorx(bytes, opts) {
+            const numGlyphs = opts && opts.numGlyphs;
             if (!(bytes instanceof Uint8Array))
                 throw new ParseError('fonts/morx-input', 'parseMorx expects Uint8Array',
                     { context: { actual: typeof bytes } });
@@ -45,12 +120,12 @@ export const aatMorx = {
                     { context: { nChains } });
 
             const chains = new Array(nChains);
-            for (let i = 0; i < nChains; i++) chains[i] = parseChain(r, i);
+            for (let i = 0; i < nChains; i++) chains[i] = parseChain(r, i, numGlyphs);
 
             return { version, nChains, chains };
         }
 
-        function parseChain(r, index) {
+        function parseChain(r, index, numGlyphs) {
             const chainStart = r.pos;
             if (r.length - chainStart < CHAIN_HDR_SIZE)
                 throw new ParseError('fonts/morx-chain-short', `chain ${index} header truncated`,
@@ -81,13 +156,13 @@ export const aatMorx = {
             }
 
             const subtables = new Array(nSubtables);
-            for (let i = 0; i < nSubtables; i++) subtables[i] = parseSubtable(r, chainStart + chainLength, index, i);
+            for (let i = 0; i < nSubtables; i++) subtables[i] = parseSubtable(r, chainStart + chainLength, index, i, numGlyphs);
 
             r.seek(chainStart + chainLength);
             return { defaultFlags, chainLength, features, subtables };
         }
 
-        function parseSubtable(r, chainEnd, chainIdx, subIdx) {
+        function parseSubtable(r, chainEnd, chainIdx, subIdx, numGlyphs) {
             const subStart = r.pos;
             if (subStart + SUB_HDR_SIZE > chainEnd)
                 throw new ParseError('fonts/morx-sub-short',
@@ -112,7 +187,7 @@ export const aatMorx = {
             const bothOrientations = !!(coverage & 0x20000000);
             const logicalOrder     = !!(coverage & 0x10000000);
 
-            return {
+            const sub = {
                 length,
                 coverage: coverage >>> 0,
                 type,
@@ -124,6 +199,14 @@ export const aatMorx = {
                 body,
                 parsed: false
             };
+            try {
+                const decoded = decodeBody(type, body, numGlyphs);
+                if (decoded) Object.assign(sub, decoded, { parsed: true });
+            } catch (e) {
+                if (!(e instanceof ParseError)) throw e;
+                sub.error = e.code;
+            }
+            return sub;
         }
 
         return { parseMorx };

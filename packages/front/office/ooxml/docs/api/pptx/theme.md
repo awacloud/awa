@@ -52,17 +52,30 @@ const th = runtime.resolve('pptxTheme');
     },
     fontScheme?: {
         name: string,
-        majorFont?: { latin?, ea?, cs? },
-        minorFont?: { latin?, ea?, cs? }
+        majorFont?: { latin?, ea?, cs?,          // typeface names
+                      fontAttrs?: { latin?, ea?, cs? } },
+        minorFont?: { latin?, ea?, cs?, fontAttrs? }
     },
     fmtScheme?: xmlNode,            // verbatim (large and rarely edited)
-    objectDefaults?: xmlNode,
-    extraClrSchemeLst?: xmlNode,
-    _extras?: [xmlNode]
+    objectDefaults?: xmlNode | null,
+    extraClrSchemeLst?: xmlNode | null,
+    _extras?: [xmlNode]             // the root's other children
 }
 
 color := { srgb?: 'RRGGBB', sysClr?: { val, lastClr } }
 ```
+
+A theme is written back as read:
+
+- `fontAttrs` keeps a font's attributes beyond `typeface` (`panose`,
+  `pitchFamily`, `charset` …), one attribute map per `latin` / `ea` / `cs`.
+- A colour or font scheme's `name` is written as read, `""` included; a
+  model without one is written `"Office"`.
+- `_extras` keeps the root's other children (`a:custClrLst`, `a:extLst` …),
+  written in the schema's order after the typed ones.
+- A theme read without `a:objectDefaults` or `a:extraClrSchemeLst` holds
+  `null` there and is written without it; a model without the field is
+  written with an empty one.
 
 ## Examples
 

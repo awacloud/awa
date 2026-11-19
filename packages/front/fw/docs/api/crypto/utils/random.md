@@ -19,8 +19,8 @@ The framework's sole randomness source. `Math.random` and `crypto.randomUUID` ar
 
 ```js
 const random = runtime.resolve('random');
-// Returns: { fill, float, int, bytes, words, bits, range, drbg,
-//             health, isReady, selfTest, _internal }
+// Returns: { fill, float, int, bytes, words, bits, drbg,
+//             health, isReady, selfTest }
 ```
 
 ## API
@@ -32,13 +32,12 @@ const random = runtime.resolve('random');
 | `bits(n)` | `(number) => bitArray \| false` | n random bits (SJCL bitArray) |
 | `int(min, max)` | `(number, number) => number` | Integer in [min, max] (rejection sampling, no modulo bias) |
 | `float()` | `() => number` | Float in [0, 1) |
-| `range(min, max)` | `(number, number) => number` | Float in [min, max) |
 | `fill(typedArray)` | `(TypedArray) => TypedArray` | In-place fill |
 | `drbg(options?)` | `({personalisation?, aesKeyBits?, df?}) => DrbgInstance \| false` | Dedicated CTR_DRBG instance |
 | `health` | `{feed, reset, isDead}` | Continuous health-tests SP 800-90B |
 | `isReady()` | `() => boolean` | `true` if `crypto.getRandomValues` is available |
 | `selfTest()` | `() => boolean` | Re-run the CTR_DRBG POST KAT |
-| `_internal.makeDrbg(opts?)` | — | Parametric builder (test-only) |
+| `internalOf(random).makeDrbg(opts?)` | — | Parametric builder (test-only) |
 
 ### `drbg(options)`
 

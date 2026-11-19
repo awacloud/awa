@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -522,8 +522,8 @@ describe('aes module', () => {
                 }
                 return rounds;
             }
-            // The constant-time default path is ~50× slower
-            // (masked-lookup S-box) → timeout per chain raised to 120s.
+            // The constant-time default path is about 11× slower (bitsliced)
+            // → timeout per chain raised to 120s.
             const _mctTimeout = implName.includes('CT default') ? 120_000 : 30_000;
             test.each(MCT)('tg=$tg tcId=$tc dir=$dir kl=$kl -- iter0 + iter99 byte-exact', (v) => {
                 const seedText = v.dir === 'enc' ? v.seed.pt : v.seed.ct;
@@ -580,18 +580,8 @@ describe('aes module', () => {
     // `bitsliced` is kept one cycle for backward compat. It is now
     // a strict alias of the constant-time default path `api.fn` (no longer
     // a distinct implementation).
-    describe('bitsliced - deprecated alias of api.fn (constant-time)', () => {
-        test('aes.bitsliced.fn is the same reference as aes.fn', () => {
-            expect(_aes.bitsliced.fn).toBe(_aes.fn);
-        });
-
-        test('alias produces the same ciphertext as aes.fn on a KAT FIPS-197 vector', () => {
-            const key   = fromHex('2b7e151628aed2a6abf7158809cf4f3c');
-            const plain = fromHex('3243f6a8885a308d313198a2e0370734');
-            const viaFn    = _aes.fn(key).encrypt(plain);
-            const viaAlias = _aes.bitsliced.fn(key).encrypt(plain);
-            expect(toHex(viaAlias)).toBe(toHex(viaFn));
-            expect(toHex(viaAlias)).toBe('3925841d02dc09fbdc118597196a0b32');
-        });
+    test('the deprecated `bitsliced` alias is gone: `aes.fn` is the constant-time path (D9 G3)', () => {
+        expect(_aes.bitsliced).toBeUndefined();
+        expect(typeof _aes.fn).toBe('function');
     });
 });

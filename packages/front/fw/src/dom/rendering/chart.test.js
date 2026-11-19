@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -84,7 +84,7 @@ class MockCtx2D {
     lineTo(x, y) { this.calls.push(['lineTo', x, y]); }
     bezierCurveTo(...a) { this.calls.push(['bezierCurveTo', ...a]); }
     stroke() { this.calls.push(['stroke', this.strokeStyle, this.lineWidth]); }
-    fill() { this.calls.push(['fill', this.fillStyle]); }
+    fill() { this.calls.push(['fill', this.fillStyle]); this.fillAlpha = this.globalAlpha; }
     fillRect(...a) { this.calls.push(['fillRect', ...a, this.fillStyle]); }
     strokeRect(...a) { this.calls.push(['strokeRect', ...a, this.strokeStyle]); }
     clearRect(...a) { this.calls.push(['clearRect', ...a]); }
@@ -423,8 +423,12 @@ describe('chart module', () => {
                 yAxis: { domain: [0, 3] },
             });
 
+            // The fill: the colour as given, translucent by globalAlpha 0x33/255
+            // (it was `color + '33'`, which only a 6-digit hex survives).
             const fillCalls = ctx.calls.filter(c => c[0] === 'fill');
-            expect(fillCalls).toEqual([['fill', '#11223333']]);
+            expect(fillCalls).toEqual([['fill', '#112233']]);
+            expect(ctx.fillAlpha).toBeCloseTo(0x33 / 255, 10);
+            expect(ctx.globalAlpha).toBe(1);
 
             const strokeCalls = ctx.calls.filter(c => c[0] === 'stroke');
             expect(strokeCalls.length).toBeGreaterThanOrEqual(1);

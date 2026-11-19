@@ -165,3 +165,33 @@ describe('extra/pml-animations', () => {
         expect(b.attrNameLst.names).toEqual(['style.color', 'style.opacity']);
     });
 });
+
+describe('extra/pml-animations writes back what it reads (T60 e1)', () => {
+    const P = 'xmlns:p="x"';
+    const shape = (el) => {
+        const strip = (n) => ({ name: n.name, attrs: n.attrs || {}, children: (n.children || []).filter((c) => c.type === 'element').map(strip) });
+        return strip(el);
+    };
+    const back = (text) => {
+        const el = xml.parse(text);
+        return [shape(ext.renderTimeNode(ext.parseTimeNode(el))), shape(el)];
+    };
+    test('a sequence\'s prevCondLst and nextCondLst, after its cTn', () => {
+        const [got, want] = back(`<p:seq ${P} concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq"/>
+            <p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>
+            <p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq>`);
+        expect(got).toEqual(want);
+    });
+    test('a cTn\'s endSync before its iterate and child list', () => {
+        const [got, want] = back(`<p:par ${P}><p:cTn id="3" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst>
+            <p:endSync evt="end" delay="0"><p:rtn val="all"/></p:endSync>
+            <p:childTnLst><p:par><p:cTn id="4"/></p:par></p:childTnLst></p:cTn></p:par>`);
+        expect(got).toEqual(want);
+    });
+    test('a motion path\'s by, from, to and rCtr, in the schema\'s order', () => {
+        const [got, want] = back(`<p:animMotion ${P} origin="layout" path="M 0 0 L 1 1" pathEditMode="relative" ptsTypes="">
+            <p:cBhvr><p:cTn id="5" dur="2000" fill="hold"/><p:tgtEl><p:spTgt spid="4"/></p:tgtEl></p:cBhvr>
+            <p:by x="1" y="2"/><p:from x="0" y="0"/><p:to x="3" y="4"/><p:rCtr x="5" y="6"/></p:animMotion>`);
+        expect(got).toEqual(want);
+    });
+});

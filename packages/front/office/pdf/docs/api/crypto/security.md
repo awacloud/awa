@@ -26,7 +26,7 @@ const sec = runtime.resolve('pdfSecurity');
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `typeEncryptDict` | `(dict \| Map) => Encrypt` | Strict typing of the `/Encrypt` entries; `dict` a plain object, a `Map` or the typed dictionary node `read` yields (its numbers, booleans and strings read as values, its names and dictionaries kept as nodes). |
+| `typeEncryptDict` | `(dict \| Map) => Encrypt` | Strict typing of the `/Encrypt` entries; `dict` a plain object, a `Map` or the typed dictionary node `read` yields (its numbers, booleans and strings read as values, its names and dictionaries kept as nodes). `/V` is required; `/R` is required for the Standard handler (a `/Filter` named `Standard`, or none), not for another one such as the public-key handler (`Adobe.PubSec`, ISO 32000-2 Table 23), whose `R` is then `undefined`. |
 | `selectHandler` | `(typedEncrypt: Encrypt, handlers: { v4?, v5?, v6? }) => { handler, revision, method, strMethod, effMethod }` | Dispatches `V=4` → `handlers.v4`, `V=5,R=5` → `handlers.v5`, `V=5,R=6` → `handlers.v6`; also resolves the `/CF`/`/StmF`/`/StrF`/`/EFF` crypt-filter method (`'AESV2'`/`'V2'`/`'Identity'` for V=4, `'AESV3'`/`'AESV4'`/`'Identity'` for V=5) into `method` (streams), `strMethod` (strings) and `effMethod` (embedded files). |
 | `isEmbeddedFileStream` | `(stream) => boolean` | `true` when the stream dict has `/Type /EmbeddedFile`. |
 | `dispatchDecryptStream` | `(selection, stream, fek, objNum, gen, ciphertext, opts?) => Uint8Array` | `opts` (`{ fastCipher }`) is forwarded to the handler call. Routes to `selection.handler.decryptEmbeddedFile` (with `effMethod`) when `stream` is an embedded file, else to `handler.decryptStream` (with `method`). Returns `ciphertext` unchanged, without calling the handler, when that method is `'Identity'`. |
@@ -43,9 +43,12 @@ A class whose crypt filter is `Identity` — named explicitly, or absent, which 
     O, U, OE, UE, Perms,    // Uint8Array
     EncryptMetadata: boolean,
     P: number,              // permissions bitmask, §7.6.3.2 Table 22
+    Recipients,             // [Uint8Array] — the public-key handler's PKCS#7 objects
     raw
 }
 ```
+
+Only the Standard handler decrypts: a document under another handler is typed, then refused by the read with `pdf/crypto/unsupported-filter` (its filter named). [`pdfCryptPublicKey`](../extra/crypt-public-key.md) types the public-key handler's crypt filters.
 
 ## Examples
 

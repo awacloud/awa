@@ -1,0 +1,211 @@
+# Copyright (c) 2026 AwaCloud SAS
+# Author: Matthieu Bouilloux
+# SPDX-License-Identifier: Apache-2.0
+"""Write the zip archives of tests/_vectors/zip-foreign/ with writers that are
+not fw: CPython's zipfile and .NET's System.IO.Compression (via PowerShell).
+
+    python generate.py.txt        # from this directory
+
+A Python script stored with a .txt suffix: the repository's licence-header
+checker has no comment syntax for .py yet.
+
+The contents are this lane's own fixed strings (see CONTENTS), so the
+archives carry no third-party material; only the writers are foreign. The
+archives are stored base64-encoded in archives.json (the repository ignores
+*.zip); the tests read that file and never run this script.
+"""
+
+import base64
+import io
+import json
+import os
+import subprocess
+import sys
+import zipfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+DATE = (2026, 11, 9, 12, 0, 0)
+
+CONTENTS = {
+    'hello.txt': b'Hello, zip!\n',
+    'docs/readme.md': b'# Read me\n\n' + b'A line that repeats. ' * 200 + b'\n',
+    'bin/zeros.bin': bytes(4096),
+    'café/naïve.txt': 'Unicode names: café, naïve, 水.\n'.encode('utf-8'),
+}
+
+
+class Unseekable(io.RawIOBase):
+    """A write-only stream that cannot seek: zipfile then writes data descriptors."""
+
+    def __init__(self):
+        self.buf = bytearray()
+
+    def writable(self):
+        return True
+
+    def write(self, b):
+        self.buf += b
+        return len(b)
+
+
+def py_archive(name, compression, *, force_zip64=False, descriptor=False, comment=b''):
+    sink = Unseekable() if descriptor else io.BytesIO()
+    with zipfile.ZipFile(sink, 'w', compression=compression) as zf:
+        zf.comment = comment
+        for path, data in CONTENTS.items():
+            info = zipfile.ZipInfo(path, date_time=DATE)
+            info.compress_type = compression
+            with zf.open(info, 'w', force_zip64=force_zip64) as w:
+                w.write(data)
+        zf.writestr(zipfile.ZipInfo('empty-dir/', date_time=DATE), b'')
+    return bytes(sink.buf) if descriptor else sink.getvalue()
+
+
+def dotnet_archive(level):
+    # System.IO.Compression.ZipArchive, the writer behind Compress-Archive.
+    src = os.path.join(HERE, '_src')
+    for path, data in CONTENTS.items():
+        full = os.path.join(src, *path.split('/'))
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, 'wb') as f:
+            f.write(data)
+    out = os.path.join(HERE, '_out.zip')
+    if os.path.exists(out):
+        os.remove(out)
+    ps = (
+        "Add-Type -AssemblyName System.IO.Compression.FileSystem; "
+        "[System.IO.Compression.ZipFile]::CreateFromDirectory("
+        f"'{src}', '{out}', [System.IO.Compression.CompressionLevel]::{level}, $false, "
+        "[System.Text.Encoding]::UTF8)"
+    )
+    subprocess.run(['powershell', '-NoProfile', '-Command', ps], check=True)
+    for root, dirs, files in os.walk(src, topdown=False):
+        for fn in files:
+            os.remove(os.path.join(root, fn))
+        for dn in dirs:
+            os.rmdir(os.path.join(root, dn))
+    os.rmdir(src)
+    with open(out, 'rb') as f:
+        data = f.read()
+    os.remove(out)
+    return data
+
+
+SEVENZIP = r'C:\Program Files\7-Zip\7z.exe'
+TAR = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'), 'System32', 'tar.exe')
+
+
+def _tree():
+    """Write CONTENTS into _src/; return its path."""
+    src = os.path.join(HERE, '_src')
+    for path, data in CONTENTS.items():
+        full = os.path.join(src, *path.split('/'))
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, 'wb') as f:
+            f.write(data)
+    os.makedirs(os.path.join(src, 'empty-dir'), exist_ok=True)
+    return src
+
+
+def _rmtree(d):
+    for root, dirs, files in os.walk(d, topdown=False):
+        for fn in files:
+            os.remove(os.path.join(root, fn))
+        for dn in dirs:
+            os.rmdir(os.path.join(root, dn))
+    os.rmdir(d)
+
+
+def tool_archive(argv_of):
+    """Run a foreign archiver over _src/ (cwd = _src) and return the archive bytes."""
+    src = _tree()
+    out = os.path.join(HERE, '_out.zip')
+    if os.path.exists(out):
+        os.remove(out)
+    subprocess.run(argv_of(out), check=True, cwd=src, stdout=subprocess.DEVNULL)
+    _rmtree(src)
+    with open(out, 'rb') as f:
+        data = f.read()
+    os.remove(out)
+    return data
+
+
+# 7-Zip: `-mcu=on` writes UTF-8 names with flag bit 11; `-tzip` the zip format.
+def sevenzip(*opts):
+    return lambda out: [SEVENZIP, 'a', '-tzip', '-mcu=on', *opts, out, '*']
+
+
+# libarchive (Windows' tar.exe, bsdtar): `-a` picks the format from `.zip`.
+def libarchive(*opts):
+    return lambda out: [TAR, '-a', '-c', '-f', out, *opts, 'hello.txt', 'docs', 'bin', 'café', 'empty-dir']
+
+
+WRITERS = {
+    'cpython': lambda: {
+        'cpython-stored.zip': py_archive('cpython-stored.zip', zipfile.ZIP_STORED, comment=b'written by CPython zipfile'),
+        'cpython-deflated.zip': py_archive('cpython-deflated.zip', zipfile.ZIP_DEFLATED),
+        'cpython-zip64.zip': py_archive('cpython-zip64.zip', zipfile.ZIP_DEFLATED, force_zip64=True),
+        'cpython-descriptor.zip': py_archive('cpython-descriptor.zip', zipfile.ZIP_DEFLATED, descriptor=True),
+    },
+    'dotnet': lambda: {
+        'dotnet-optimal.zip': dotnet_archive('Optimal'),
+        'dotnet-nocompression.zip': dotnet_archive('NoCompression'),
+    },
+    '7zip': lambda: {
+        '7zip-deflate-ultra.zip': tool_archive(sevenzip('-mm=Deflate', '-mx=9')),
+        '7zip-stored.zip': tool_archive(sevenzip('-mm=Copy')),
+        '7zip-deflate64.zip': tool_archive(sevenzip('-mm=Deflate64', '-mx=9')),
+    },
+    'libarchive': lambda: {
+        'libarchive-deflate.zip': tool_archive(libarchive('--options', 'zip:hdrcharset=UTF-8')),
+        'libarchive-stored.zip': tool_archive(libarchive('--options', 'zip:compression=store,zip:hdrcharset=UTF-8')),
+    },
+}
+
+
+def writer_names():
+    names = {
+        'cpython': 'CPython ' + sys.version.split()[0] + ' zipfile',
+        'dotnet': 'System.IO.Compression.ZipFile (.NET Framework, Windows PowerShell 5.1)',
+    }
+    v7 = subprocess.run([SEVENZIP], capture_output=True, text=True).stdout.strip().split('\n')[0]
+    names['7zip'] = v7.strip()
+    names['libarchive'] = subprocess.run([TAR, '--version'], capture_output=True, text=True).stdout.strip().split('\n')[0]
+    return names
+
+
+def main():
+    # `python generate.py.txt 7zip libarchive` regenerates the named writers
+    # only and keeps the committed archives of the others byte for byte.
+    only = sys.argv[1:] or list(WRITERS)
+    path = os.path.join(HERE, 'archives.json')
+    previous = {}
+    if os.path.exists(path):
+        with open(path, encoding='utf-8') as f:
+            previous = {k: base64.b64decode(v) for k, v in json.load(f).items()}
+    archives = {}
+    for w, make in WRITERS.items():
+        if w in only:
+            archives.update(make())
+        else:
+            archives.update({k: v for k, v in previous.items() if k.startswith(w + '-')})
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        json.dump({k: base64.b64encode(v).decode('ascii') for k, v in archives.items()}, f, indent=2)
+        f.write('\n')
+    mpath = os.path.join(HERE, 'manifest.json')
+    old_writers = {}
+    if os.path.exists(mpath):
+        with open(mpath, encoding='utf-8') as f:
+            old_writers = json.load(f).get('writers', {})
+    names = writer_names()
+    manifest = {
+        'contents': {k: v.decode('utf-8') if k.endswith(('.txt', '.md')) else {'bytes': len(v), 'fill': 0} for k, v in CONTENTS.items()},
+        'writers': {w: (names[w] if w in only else old_writers.get(w, names[w])) for w in WRITERS},
+    }
+    with open(os.path.join(HERE, 'manifest.json'), 'w', encoding='utf-8', newline='\n') as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+
+
+if __name__ == '__main__':
+    main()

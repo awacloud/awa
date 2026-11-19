@@ -57,6 +57,12 @@ r.settings.compat.useFELayout;   // true
 
 ## Notes
 
+- **Lossless.** The settings hooks type an element only when it is written
+  back as read (`docxProperties.hydrateLossless`, and `sameElement` for a
+  whole `tblPr` / `trPr`): an attribute the typed field does not keep, an
+  empty element or a name held twice leaves the element in `_extras` as
+  read, so a save-back through the bundle writes what the core's writes.
+
 - The `compat` element is exposed as a flat object: each `<w:compatSetting>` and toggle child becomes a typed field.
 - `rsids` is round-tripped exactly to keep Word's revision tracking stable.
 - `<w:trackRevisions>` is the `trackRevisions` toggle: the core reads it into its boolean `trackChanges`, and `hydrate` moves a boolean `trackChanges` to `trackRevisions` (a file whose settings hold the `<w:trackChanges>` written by version 1.0.0 reads the same way). `dehydrate` writes only the object form of `trackChanges` (the attributes of a `<w:trackChanges>` element); a boolean `trackChanges` is left to the core, which writes `<w:trackRevisions/>`.

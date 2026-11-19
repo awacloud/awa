@@ -62,5 +62,4 @@ representation. This layer only does
 - [`cipher/aes.acvp.md`](../cipher/aes.acvp.md), [`mode/cbc.acvp.md`](../mode/cbc.acvp.md),
   [`mode/ctr.acvp.md`](../mode/ctr.acvp.md), [`mode/gcm.acvp.md`](../mode/gcm.acvp.md),
   [`mode/kw.acvp.md`](../mode/kw.acvp.md).
-- **I1** iteration of the FIPS 140-3 upgrade plan: clarifies the
-  *convenience wrapper, FIPS coverage delegated* status.
+- Status: a *convenience wrapper, FIPS coverage delegated* to the mode modules.

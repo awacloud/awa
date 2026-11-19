@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -12,7 +12,7 @@
  * {
  *   name         : string,       // unique identifier
  *   version?     : string,       // semver - defaults to '0.0.0' when absent
- *   type?        : string,       // taxonomy - must match /^(fw|sde|lib)\.[a-z][\w.]*$/ when present
+ *   type?        : string,       // taxonomy - must match /^(fw|sd|sde|sdc|lib|app)\.[a-z][\w.]*$/ when present
  *   dependencies : string[],     // names (or 'name@version' specs) of required modules
  *   factory      : function,     // called with resolved dependency instances as args
  * }
@@ -34,17 +34,19 @@
 const SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[\w.-]+)?(?:\+[\w.-]+)?$/;
 
 /**
- * Type taxonomy regex : `fw.<sub>`, `sd.<sub>`, `sde.<sub>`, `sdc.<sub>`, `lib.<sub>`.
+ * Type taxonomy regex : `fw.<sub>`, `sd.<sub>`, `sde.<sub>`, `sdc.<sub>`,
+ * `lib.<sub>`, `app.<sub>`.
  *
  * - `fw.*`  : framework modules (`@awacloud/fw`).
  * - `sd.*`  : shared SDE/SDC modules (`@awacloud/sd-common`).
  * - `sde.*` : multi-app desktop specifics (`@awacloud/sde-core`).
  * - `sdc.*` : mono-app container specifics (`@awacloud/sdc-core`).
  * - `lib.*` : standalone libraries (e.g. `lib.video_codec`).
+ * - `app.*` : an application's own modules (e.g. `app.notes.store`).
  *
  * @private
  */
-const TYPE_RE = /^(fw|sd|sde|sdc|lib)\.[a-z][\w.]*$/;
+const TYPE_RE = /^(fw|sd|sde|sdc|lib|app)\.[a-z][\w.]*$/;
 
 /**
  * Default version when a module descriptor omits `version`.
@@ -53,36 +55,74 @@ const TYPE_RE = /^(fw|sd|sde|sdc|lib)\.[a-z][\w.]*$/;
 const DEFAULT_VERSION = '0.0.0';
 
 /**
- * Compare two semver strings.
+ * Compare two semver strings by SemVer 2.0.0 § 11 precedence.
  *
- * Implements the ordering :
- * - numeric major.minor.patch
- * - any pre-release < no pre-release (1.0.0-beta < 1.0.0)
- * - pre-release sorted lexicographically (1.0.0-alpha < 1.0.0-beta)
+ * - build metadata (`+…`) is ignored;
+ * - major.minor.patch compare numerically;
+ * - a version with a pre-release sorts below the same version without one
+ *   (1.0.0-beta < 1.0.0);
+ * - pre-releases compare identifier by identifier (split on `.`): numeric
+ *   identifiers numerically, alphanumeric ones in ASCII order, a numeric
+ *   identifier below an alphanumeric one, and a shorter set below a longer
+ *   one when all the preceding identifiers are equal
+ *   (1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-beta.2 < 1.0.0-beta.11).
  *
- * Sufficient for picking the highest version at register time. For range
- * matching (`^`, `~`, `>=`), use the standalone `semver` module.
+ * Self-contained (no module-scope helper): `runtimeSource` inlines it into a
+ * worker by `toString()`. For range matching (`^`, `~`, `>=`), use the
+ * standalone `semver` module.
  *
  * @param {string} a Semver string.
  * @param {string} b Semver string.
- * @returns {number} -1 if a < b, 0 if equal, 1 if a > b.
+ * @returns {number} -1 if a < b, 0 if equal precedence, 1 if a > b.
  * @private
  */
 function semverCompare(a, b) {
-    const [coreA, preA = ''] = a.split('-', 2);
-    const [coreB, preB = ''] = b.split('-', 2);
-    const partsA = coreA.split('.');
-    const partsB = coreB.split('.');
+    const split = (v) => {
+        const plus = v.indexOf('+');
+        const noBuild = plus === -1 ? v : v.slice(0, plus);
+        const dash = noBuild.indexOf('-');
+        return dash === -1
+            ? { core: noBuild, pre: '' }
+            : { core: noBuild.slice(0, dash), pre: noBuild.slice(dash + 1) };
+    };
+    const va = split(a);
+    const vb = split(b);
+    const partsA = va.core.split('.');
+    const partsB = vb.core.split('.');
     for (let i = 0; i < 3; i++) {
         const na = +partsA[i] || 0;
         const nb = +partsB[i] || 0;
         if (na !== nb) return na < nb ? -1 : 1;
     }
     // pre-release < release
-    if (preA && !preB) return -1;
-    if (!preA && preB) return 1;
-    if (preA === preB) return 0;
-    return preA < preB ? -1 : 1;
+    if (va.pre && !vb.pre) return -1;
+    if (!va.pre && vb.pre) return 1;
+    if (va.pre === vb.pre) return 0;
+    const idsA = va.pre.split('.');
+    const idsB = vb.pre.split('.');
+    const len = Math.max(idsA.length, idsB.length);
+    for (let i = 0; i < len; i++) {
+        if (i >= idsA.length) return -1;
+        if (i >= idsB.length) return 1;
+        const x = idsA[i];
+        const y = idsB[i];
+        if (x === y) continue;
+        const nx = /^\d+$/.test(x);
+        const ny = /^\d+$/.test(y);
+        if (nx && ny) {
+            // Digit strings of any length, compared as integers without a
+            // Number conversion (no precision loss past 2^53).
+            const dx = x.replace(/^0+(?=\d)/, '');
+            const dy = y.replace(/^0+(?=\d)/, '');
+            if (dx.length !== dy.length) return dx.length < dy.length ? -1 : 1;
+            if (dx !== dy) return dx < dy ? -1 : 1;
+            continue;
+        }
+        if (nx) return -1;
+        if (ny) return 1;
+        return x < y ? -1 : 1;
+    }
+    return 0;
 }
 
 /**
@@ -547,10 +587,15 @@ export class ModuleRuntime {
     /**
      * List registered module definitions matching the given filter.
      *
+     * The result is read-only: a frozen array of frozen copies of the
+     * definitions (their `dependencies` a frozen copy too), so a caller
+     * cannot edit the registry through it (BL-469). A copy is not the
+     * registered object: compare by `name` and `version`, not identity.
+     *
      * Linear scan ; acceptable for the typical module count (≪ 1000).
      *
      * @param {ListFilter} [filter={}]
-     * @returns {ModuleDefinition[]}
+     * @returns {ReadonlyArray<Readonly<ModuleDefinition>>}
      */
     list(filter = {}) {
         const out = [];
@@ -571,19 +616,21 @@ export class ModuleRuntime {
                         if (def.type !== fType) continue;
                     }
                 }
-                out.push(def);
+                /** @type {Record<string, any>} */
+                const view = { ...def };
+                if (Array.isArray(def.dependencies)) view.dependencies = Object.freeze(def.dependencies.slice());
+                out.push(Object.freeze(/** @type {ModuleDefinition} */ (view)));
             }
         }
-        return out;
+        return Object.freeze(out);
     }
 
     /**
      * Passive, read-only view of the module registry.
      *
-     * Companion of {@link ModuleRuntime#list}, which returns the **live**
-     * `ModuleDefinition` objects (their `factory`, and a `dependencies` array a
-     * caller can splice in place). `snapshot` instead returns frozen metadata
-     * rows: enumeration for a devtools registry view without handing out a
+     * Companion of {@link ModuleRuntime#list}, which returns frozen copies
+     * of the `ModuleDefinition` objects (their `factory` included).
+     * `snapshot` instead returns frozen metadata rows: enumeration for a devtools registry view without handing out a
      * write channel into registry state, and without the side effect of
      * `resolve()` — which is a full instantiate, not a peek.
      *

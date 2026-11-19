@@ -5,6 +5,21 @@ All notable changes to this package are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-19
+
+### Fixed
+
+- **`bundle` reads the frozen fw 1.0 module registry.** fw 1.0 freezes the
+  registry array (`export default Object.freeze([ … ]);` in
+  `src/core/modules.js`); the source-tree validation only recognised
+  `export default [ … ];` and aborted every preset with
+  `could not locate \`export default [...]\` in modules.js`. **The published 0.1.0 cannot bundle fw 1.0.0.** The parser now accepts exactly the two shapes
+  (whitespace, trailing commas and line comments tolerated as before); any
+  other expression still throws, and the error now names both accepted forms.
+  A new integration gate runs the validation and a preset bundle against the
+  live `packages/front/fw`, so a future registry change reddens this suite
+  rather than a downstream consumer.
+
 ## [0.1.0] - 2026-09-29
 
 ### Changed

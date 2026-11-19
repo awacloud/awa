@@ -38,7 +38,7 @@ export const docxText = {
             const out = [];
             for (const c of p.children || []) {
                 if (c.type === 'run')            out.push(textOfRun(c));
-                else if (c.type === 'hyperlink' || c.type === 'ins' || c.type === 'moveTo') out.push(textOfParagraph(c));
+                else if (c.type === 'hyperlink' || c.type === 'ins' || c.type === 'moveTo' || c.type === 'smartTag') out.push(textOfParagraph(c));
                 // <w:del> and <w:moveFrom> content is not visible plain text.
             }
             return out.join('');

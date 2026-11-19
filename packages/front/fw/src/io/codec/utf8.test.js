@@ -412,15 +412,20 @@ describe('utf8 module - manual fallback (no TextEncoder/TextDecoder)', () => {
 			});
 		});
 
-		test('an unpaired high surrogate at the very end of the string passes through unreplaced', () => {
+		test('an unpaired high surrogate at the very end of the string becomes U+FFFD', () => {
 			withoutNativeCodec(() => {
-				const bytes = utf8.factory().toBytes('\uD800');
-				// At the string's end there is no next code unit to inspect, so
-				// neither the pairing branch nor the lone-low-surrogate `else if`
-				// applies: the raw (unpaired) surrogate value is 3-byte-encoded
-				// as-is. This differs from the lone-low-surrogate case above,
-				// whose `else if` has no such position dependency.
-				expect(Array.from(bytes)).toEqual([0xED, 0xA0, 0x80]);
+				expect(Array.from(utf8.factory().toBytes('\uD800'))).toEqual([0xEF, 0xBF, 0xBD]);
+				expect(Array.from(utf8.factory().toBytes('a\uDBFF'))).toEqual([0x61, 0xEF, 0xBF, 0xBD]);
+			});
+		});
+
+		test('every lone-surrogate form encodes exactly as TextEncoder does', () => {
+			const native = new TextEncoder();
+			const forms = ['\uD800', 'x\uD800', '\uD800x', '\uD800\uD800', '\uD800\uD800\uDC00', '\uDC00', 'x\uDFFF', '\uDC00\uD800', '\uD83D\uDE00'];
+			const expected = forms.map((f) => Array.from(native.encode(f)));
+			withoutNativeCodec(() => {
+				const u = utf8.factory();
+				expect(forms.map((f) => Array.from(u.toBytes(f)))).toEqual(expected);
 			});
 		});
 	});

@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: AGPL-3.0-only
+  Dual-licensed; see the NOTICE file for licensing and any additional terms.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>media-video — GPU check</title>
+<!-- Served from the repository root (any static server): /packages/front/media/video/bench/gpu/check.html -->
+<script type="importmap">
+{ "imports": { "@awacloud/fw/core/runtime.js": "/packages/front/fw/src/core/runtime.js", "@awacloud/media-stream/frame": "/packages/front/media/stream/src/frame/frame.js" } }
+</script>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; }
+  pre { background: #f3f3f0; padding: 12px; border-radius: 6px; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>media-video — the GPU front end against the CPU</h1>
+<p id="state">Running…</p>
+<pre id="report"></pre>
+<script type="module" src="./check.js"></script>
+</body>
+</html>

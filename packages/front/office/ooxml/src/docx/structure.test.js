@@ -662,11 +662,11 @@ describe('docxStructure - content control fidelity', () => {
 
     test("an inline control's content is typed as a paragraph's; another child is kept after it", () => {
         const sdt = s.parseSdt(xml.parse('<w:sdt xmlns:w="x"><w:sdtContent><w:bookmarkStart w:id="1" w:name="b"/>'
-            + '<w:r><w:t>a</w:t></w:r><w:smartTag w:element="place"/><w:bookmarkEnd w:id="1"/></w:sdtContent></w:sdt>'), false);
+            + '<w:r><w:t>a</w:t></w:r><w:customXml w:element="place"/><w:bookmarkEnd w:id="1"/></w:sdtContent></w:sdt>'), false); // T68: customXml, smartTag being typed
         expect(sdt.children.map((c) => c.type)).toEqual(['bookmarkStart', 'run', 'bookmarkEnd']);
-        expect(sdt._contentExtras.map((e) => e.name)).toEqual(['w:smartTag']);
+        expect(sdt._contentExtras.map((e) => e.name)).toEqual(['w:customXml']);
         const content = s.renderSdt(sdt).children.find((c) => c.name === 'w:sdtContent');
-        expect(names(content)).toEqual(['w:bookmarkStart', 'w:r', 'w:bookmarkEnd', 'w:smartTag']);
+        expect(names(content)).toEqual(['w:bookmarkStart', 'w:r', 'w:bookmarkEnd', 'w:customXml']);
     });
 
     test('w:showingPlcHdr keeps its value; w:text keeps its attributes', () => {

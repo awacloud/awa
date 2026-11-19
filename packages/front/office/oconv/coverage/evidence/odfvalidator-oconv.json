@@ -10,189 +10,237 @@
     "imageId": "sha256:5ff3e30dc5452962a772e9b5669844dfd2d0925ab5d518eec160ba7b4bbd2de0",
     "version": "odfvalidator v0.13.0\nb926a6134a2fee782076500dfc02c47c2d651cff"
   },
-  "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 30 (30 written, 0 round trips)",
+  "criterion": "odfvalidator 0.13.0 (ODF Toolkit, conformance mode, the schemas of the ODF version each file declares) reports no Error and no Fatal message for the written file (warnings are recorded, not failing); a round trip (read, then write with the same package) counts only when the validator reports none for its source too — a source with errors, or one the writer refuses with a typed error, is skipped with the reason; documents: 38 (38 written, 0 round trips)",
   "documents": [
     {
       "file": "from-md--every-block.odt",
       "kind": "written",
-      "sha256": "e4f6b2b1c33ae8c0728fbba76d4ce9172700f63098ad18f0a52a5894d370a233",
+      "sha256": "ac50ad3c3e3aa3392279296bdd7a7bf585621a5535a776d446f52d3d2aba2b3a",
       "errors": []
     },
     {
       "file": "from-md--images.odt",
       "kind": "written",
-      "sha256": "95cfe1c1b8f804d6ccb23d4eafc6ff639e9f9dd2549b9404d4894fe012d4f8ce",
+      "sha256": "3c9ebdc1751ceb8105985743cf5ad331655c67697a145c74bdea3f2602a086ff",
       "errors": []
     },
     {
       "file": "from-md--md-degrade.odt",
       "kind": "written",
-      "sha256": "0273ea3256c3df150b3c51610df01188698679456e7c27d207b0366759ab88bc",
+      "sha256": "4fb97f62547bc30e922ad28cf261ad3910b6fe3192928138e3646617a031fab7",
       "errors": []
     },
     {
       "file": "from-md--md-nested.odt",
       "kind": "written",
-      "sha256": "899e427e2d3159c52ad0ca957a6d97de0efb1777cf6d315c89a65549b86974b5",
+      "sha256": "ec5356714308aa3aad3a36cfde58b47b195e5f607cd740c30bf4a88eb6737281",
       "errors": []
     },
     {
       "file": "from-md--md-structural.odt",
       "kind": "written",
-      "sha256": "c5dac217b8222c2db613b80ca22e86976770a42c671633b44972fdfaaf2b6a0d",
+      "sha256": "a7863f051ed34bd2045760a04cef542171345d39be470682c07b4c8a31ae2bac",
       "errors": []
     },
     {
       "file": "convert--docx--docx-bulk.docx.odt",
       "kind": "written",
-      "sha256": "0c89d49b6e1a7ff9d095c4b79c996878b305d55f2620f057448490f7e83b92c3",
+      "sha256": "28cb443b2784146a391a5a7543ff8cd671d62494d3ac42f92ab5cc1d8806bec4",
+      "errors": []
+    },
+    {
+      "file": "convert-layout--docx--docx-bulk.docx.odt",
+      "kind": "written",
+      "sha256": "28cb443b2784146a391a5a7543ff8cd671d62494d3ac42f92ab5cc1d8806bec4",
       "errors": []
     },
     {
       "file": "via-md--docx--docx-bulk.docx.odt",
       "kind": "written",
-      "sha256": "0775d039345b6fb7f2958dfaf0d21e9567e804bdd4c927b14ec40b444d832674",
+      "sha256": "493fda35b9e60ff74b8030033966e56aa8fbd04a486574d8c2abebbb27101ddc",
       "errors": []
     },
     {
       "file": "convert--docx--docx-fr-styles.docx.odt",
       "kind": "written",
-      "sha256": "8565fe52d3d7f84be93217d3b91ac77f397c83e50a2c4875df6087bd383509ca",
+      "sha256": "45f32cdbc89baf810d6860478655bf1aab715b0275fc476d1fae8daec9027fba",
+      "errors": []
+    },
+    {
+      "file": "convert-layout--docx--docx-fr-styles.docx.odt",
+      "kind": "written",
+      "sha256": "45f32cdbc89baf810d6860478655bf1aab715b0275fc476d1fae8daec9027fba",
       "errors": []
     },
     {
       "file": "via-md--docx--docx-fr-styles.docx.odt",
       "kind": "written",
-      "sha256": "8565fe52d3d7f84be93217d3b91ac77f397c83e50a2c4875df6087bd383509ca",
+      "sha256": "45f32cdbc89baf810d6860478655bf1aab715b0275fc476d1fae8daec9027fba",
       "errors": []
     },
     {
       "file": "convert--docx--docx-smoke.docx.odt",
       "kind": "written",
-      "sha256": "e77c0205a4aae34f454958b6c7ea645a2b4836ae12dd641b84d9323f2ace9838",
+      "sha256": "6a2ae09a9888a534e0220e4bb351d82a816b349f03c26bed157b29eb8b339af4",
+      "errors": []
+    },
+    {
+      "file": "convert-layout--docx--docx-smoke.docx.odt",
+      "kind": "written",
+      "sha256": "0173dbd461206e894ee3f2bcb748b1a4b436289499328999078c7b18befdea1e",
       "errors": []
     },
     {
       "file": "via-md--docx--docx-smoke.docx.odt",
       "kind": "written",
-      "sha256": "e77c0205a4aae34f454958b6c7ea645a2b4836ae12dd641b84d9323f2ace9838",
+      "sha256": "6a2ae09a9888a534e0220e4bb351d82a816b349f03c26bed157b29eb8b339af4",
       "errors": []
     },
     {
       "file": "convert--docx--docx-structured.docx.odt",
       "kind": "written",
-      "sha256": "ebcd6820213c1cc9b2786956f008e883de64a961a9aa73f3a76cae0d2d18439e",
+      "sha256": "6aaf89dd5f67974dadc5ec05779a92fad167f73b6fcd08acb79c262a532c5ab2",
+      "errors": []
+    },
+    {
+      "file": "convert-layout--docx--docx-structured.docx.odt",
+      "kind": "written",
+      "sha256": "6aaf89dd5f67974dadc5ec05779a92fad167f73b6fcd08acb79c262a532c5ab2",
       "errors": []
     },
     {
       "file": "via-md--docx--docx-structured.docx.odt",
       "kind": "written",
-      "sha256": "116100b01deb3002ec52b08c23eeb202d977bb0f411e0fe641c5fb4ae2fb45ac",
+      "sha256": "6ade405d301ff9fd1e7e227b2e93e1423b8841514f3394b7a06a5e11ed6b61f5",
       "errors": []
     },
     {
       "file": "via-md--odp--odp-media.odp.odt",
       "kind": "written",
-      "sha256": "b0939e8b4e2b649d621dad217baea66f5e90dd31f78f3d2a5382ed3cace39048",
+      "sha256": "9b8a00e38a59a3c83759cc11b51d6d6410c5f1f250c18b0e393e4d938241a983",
       "errors": []
     },
     {
       "file": "via-md--odp--odp-structured.odp.odt",
       "kind": "written",
-      "sha256": "e3d11abcbcd372533e3b535d432fe08c41811850d4552e122d4e1d63b91ae7cf",
+      "sha256": "0eb76f906ea01651b82c867be0add05e65b71a9a8c079c1408ee7125c980a9c7",
       "errors": []
     },
     {
       "file": "via-md--ods--ods-structured.ods.odt",
       "kind": "written",
-      "sha256": "1733423dcf9de944e4d1f4e91bb72ee061d7b9ae2f11f92dd71565c0dda8f352",
+      "sha256": "19dc200142e4172bdece0e132c3c2de77f9c4b8574e5983bcaffc67b16635b15",
       "errors": []
     },
     {
       "file": "via-md--odt--odt-structured.odt.odt",
       "kind": "written",
-      "sha256": "cd5158cab27affbc9f8f89afb0983197e3ca7153e0bf6c68bc5cec7b9a3bdd46",
+      "sha256": "077cd21beead9e5d9b753991ffc3a48eda24531ff0cf0aea62aaf5a1f73b8713",
       "errors": []
     },
     {
       "file": "via-md--odt--odt-table.odt.odt",
       "kind": "written",
-      "sha256": "a0dba5b701c3d461d8eed3f3904647bc12160ee9bf0fe96ca4232bd8d2054f4b",
+      "sha256": "b1403416152f686f7af00e0cf3bd0b5126f07b6f473742689ae8285976e1e1f2",
       "errors": []
     },
     {
       "file": "via-md--pdf-tagged--tagged-structured.pdf.odt",
       "kind": "written",
-      "sha256": "3c9859e85f94d3dac08210a062b68969fe8bc4f8ec57cdbae809a759a2f2510e",
+      "sha256": "0cd1c662a0a929a00ff7cb6e3b6bb0ed7c7aaa1f54ba6c5e9680bb9dd8dfbafb",
       "errors": []
     },
     {
       "file": "via-md--pptx--poi-pictures.pptx.odt",
       "kind": "written",
-      "sha256": "8d98023e1468d36693ebcb3a38fae21d9ec0a534da1a0766ad385a9e57162515",
+      "sha256": "ab7a479a4f71f0e552969a50cf943d00aa16c6002649f3bb29b335d4494f8c36",
       "errors": []
     },
     {
       "file": "via-md--pptx--poi-sampleshow.pptx.odt",
       "kind": "written",
-      "sha256": "2a7c865a2c8584dc1719deca7fc5615fc94d214b9ec823552810af85ea5d95f6",
+      "sha256": "6e0473bb87507636678207e47cfa35035dd17bdbf9969513b11b524bd3150479",
       "errors": []
     },
     {
       "file": "via-md--pptx--poi-table.pptx.odt",
       "kind": "written",
-      "sha256": "8d98023e1468d36693ebcb3a38fae21d9ec0a534da1a0766ad385a9e57162515",
+      "sha256": "82c3e08121e4e1978651a2bb2f6b1b90fd63e2b0613d52781669c3306da926fc",
       "errors": []
     },
     {
       "file": "convert--real--poi-numbering.docx.odt",
       "kind": "written",
-      "sha256": "83a167524fb3a7f0dc59d50564510b3490495d9091441dff3ed8267b94d0d934",
+      "sha256": "44566d9eaa812038ce5476e487f9e1aa526092cdf72e020130950a66f2022e35",
+      "errors": []
+    },
+    {
+      "file": "convert-layout--real--poi-numbering.docx.odt",
+      "kind": "written",
+      "sha256": "2c287ae8f2b7316fd02bbf914edfc633b5a377f54fcdcd8d78d70ec79337fcae",
       "errors": []
     },
     {
       "file": "via-md--real--poi-numbering.docx.odt",
       "kind": "written",
-      "sha256": "a7c72f52a5a5958ddb98b816449d2371b3e7204e38de227210fe0e468a67759d",
+      "sha256": "d2cbc38cf0cac7ec6a2000d57186c2e3e04427f8a9a8be7ad0dfbb0583f9eda4",
       "errors": []
     },
     {
       "file": "convert--real--poi-table-alignment.docx.odt",
       "kind": "written",
-      "sha256": "2951b7554c27551d62e8ef28499560566b749770e772728d0fc31cbd2c6246e7",
+      "sha256": "de3777c7b5ed10803766f92250948934a7b821e38d9e0934589c6eeade354bc4",
+      "errors": []
+    },
+    {
+      "file": "convert-layout--real--poi-table-alignment.docx.odt",
+      "kind": "written",
+      "sha256": "16e344bc8d11727fc0f60f149e3b5d5472e612dce62875c20ff77c47e43f2ac0",
       "errors": []
     },
     {
       "file": "via-md--real--poi-table-alignment.docx.odt",
       "kind": "written",
-      "sha256": "0fb0e6297e0c04a97f69035c49990427ea7145ab1c0860f521fdb15b7991e969",
+      "sha256": "f0314a61544e1121017ea2ecb6ebc7126d0b71d0f65847c6a68d4a28210f99cc",
       "errors": []
     },
     {
       "file": "convert--real--poi-with-gif.docx.odt",
       "kind": "written",
-      "sha256": "ed26ff9898e9ea36ec8b8a60902917dbf23790a16e12fa4aed6edd04b0471f76",
+      "sha256": "50428a77bda57f15a55ac87fa96f97549eb9a146005774e4b105b7c2c78a3165",
+      "errors": []
+    },
+    {
+      "file": "convert-layout--real--poi-with-gif.docx.odt",
+      "kind": "written",
+      "sha256": "f215d1c8e3c3dd6792226cc7fe2191eea2c829bab82e606e5092fa9b66df4840",
       "errors": []
     },
     {
       "file": "via-md--real--poi-with-gif.docx.odt",
       "kind": "written",
-      "sha256": "ed26ff9898e9ea36ec8b8a60902917dbf23790a16e12fa4aed6edd04b0471f76",
+      "sha256": "27217afe153ebb07b128f03641dc39ccb1c3c280b91a7f1dcc3f403fc118739a",
       "errors": []
     },
     {
       "file": "via-md--xlsx--poi-formula-eval.xlsx.odt",
       "kind": "written",
-      "sha256": "d6ed7a20b130e37d41f9537aa6955e0ced192321ee33a5a3a204574a7f874131",
+      "sha256": "1f7d6aad45e3c60d7caecc140c5ecfada19e53e62090e27b2c57dd7a779bd266",
       "errors": []
     },
     {
       "file": "via-md--xlsx--poi-simple-multicell.xlsx.odt",
       "kind": "written",
-      "sha256": "acf37c2bc26409041481292fd4a31625037ada7bdab7a396a7e9a152cd0f2499",
+      "sha256": "62552dcdb4b186e495258bdb541d54d206c998aa04559797b70b19df492765bd",
+      "errors": []
+    },
+    {
+      "file": "convert-layout--generated--landscape-a4.docx.odt",
+      "kind": "written",
+      "sha256": "2957f02ac07f5f6421373faf2d4e9989868b21798616be48e242388f86737cfe",
       "errors": []
     }
   ],
-  "date": "2026-10-15",
-  "commit": "31604fbdb8296b32912776b65d1ba8fe07a87af7"
+  "date": "2026-11-09",
+  "commit": "ca4fb2af30e853f5d7e01ef39b4384eaeeb232d0"
 }

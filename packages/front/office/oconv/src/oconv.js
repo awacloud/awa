@@ -91,7 +91,7 @@
  *
  * ## convert pipeline
  *
- * `convert` is pure wiring: `read <format> → oconv-ir/v1 → write <target>`,
+ * `convert` is pure wiring: `read <format> → oconv-ir/v2 → write <target>`,
  * exactly the two existing pipelines composed back to back, for exactly
  * the allowlisted pairs `docx→odt`, `odt→docx`, `docx→pdf`, `odt→pdf`
  * (`SUPPORTED_PAIRS`, a claim in `docs/loss-matrix.md`, never widened
@@ -160,13 +160,15 @@
  *   Supplying it for a non-pdf source throws
  *   `oconv: form op budget needs format pdf` instead of being silently
  *   ignored.
- * @property {string[]} [pdfInfer] `pdf` source only — the opt-in inference
- *   of the untagged pdf path, forwarded to `oconvPdfToIr.pdfToIr`'s own
+ * @property {string[]} [pdfInfer] `pdf` source only — the inference of
+ *   the untagged pdf path, forwarded to `oconvPdfToIr.pdfToIr`'s own
  *   `opts.infer`: `'headings'` (headings from font size and weight),
  *   `'tables'` (tables from rules or aligned text), `'running'` (running
- *   headers and footers left out). An array of
- *   distinct known names, else `oconv: bad pdf infer`; `[]` reads as
- *   without it. Supplying it for a non-pdf source throws
+ *   headers and footers left out). Not given, it is
+ *   `['headings', 'tables']`; `[]` reads without inference. An array of
+ *   distinct known names, else `oconv: bad pdf infer`. A tagged pdf reads
+ *   its structure tree and never infers. Supplying it for a non-pdf
+ *   source throws
  *   `oconv: pdf infer needs format pdf`.
  * @property {string[]} [pdfDeclare] `pdf` source only — the opt-in record
  *   of a silent pdf -> md case, forwarded to `oconvPdfToIr.pdfToIr`'s own
@@ -189,19 +191,28 @@
  *   value that is neither a string nor bytes
  *   `pdf/document/bad-password-option`). RC4 files (V1 / V2) open too:
  *   oconv passes pdf's read-only `pdfLegacyRc4Read` with the password.
- *   An empty user password is `''`. Without it an encrypted pdf still
- *   throws `pdf/document/encrypted`. Supplying it for a non-pdf source
- *   throws `oconv: pdf password needs format pdf`.
+ *   An empty user password is `''`. Without it, the empty password is
+ *   tried (`pdfEmptyPassword`). Supplying it for a non-pdf source throws
+ *   `oconv: pdf password needs format pdf`.
+ * @property {boolean} [pdfEmptyPassword] `pdf` source only — with no
+ *   `pdfPassword`, an encrypted pdf is opened with the empty password when
+ *   it opens (RC4 files too), one `pdf/opened-with-empty-user-password`
+ *   loss recording it with the permission bits; a file it does not open
+ *   throws `pdf/document/encrypted`. `false` keeps the refusal of every
+ *   encrypted pdf read with no password; `true` is the default; another
+ *   value throws `oconv: bad pdf empty password`. Supplying it for a
+ *   non-pdf source throws `oconv: pdf empty password needs format pdf`.
  * @property {string} [pdfLineHyphens] `pdf` source only — the opt-in
  *   join of a hyphen ending a line before a lowercase letter, forwarded as
  *   `oconvPdfToIr.pdfToIr`'s `opts.lineHyphens`: `'drop'` joins the word
  *   without the hyphen, `'keep'` with it (a soft hyphen always joins);
  *   another value throws `oconv: bad pdf line hyphens`; for a non-pdf
  *   source it throws `oconv: pdf line hyphens needs format pdf`.
- * @property {boolean} [pdfRecoverXref] `pdf` source only — `true` rebuilds
- *   an unusable cross-reference chain from the file's object definitions,
- *   forwarded to `pdf.read`'s own `opts.recoverXref`; `false` reads as
- *   without it; any other value throws `oconv: bad pdf recover xref`.
+ * @property {boolean} [pdfRecoverXref] `pdf` source only — forwarded to
+ *   `pdf.read`'s own `opts.recoverXref`, which rebuilds an unusable
+ *   cross-reference chain from the file's object definitions by default;
+ *   `false` reads strictly, the chain's error thrown; `true` is the
+ *   default; any other value throws `oconv: bad pdf recover xref`.
  *   Supplying it for a non-pdf source throws
  *   `oconv: pdf recover xref needs format pdf`.
  * @property {string[]} [odtInclude] `odt` source only — the opt-in parts
@@ -213,7 +224,8 @@
  * @property {string[]} [docxInclude] `docx` source only — the opt-in parts
  *   the docx reader brings back, forwarded to `oconvDocxToIr.docxToIr`'s own
  *   `opts.include`: `'toc'` (a table of contents control's entries as
- *   paragraphs). An array of distinct known names, else `oconv: bad docx
+ *   paragraphs) and `'layout'` (tier 3: the page on the IR; the Markdown
+ *   it writes is unchanged). An array of distinct known names, else `oconv: bad docx
  *   include`; `[]` reads as without it. Supplying it for a non-docx source
  *   throws `oconv: docx include needs format docx`.
  * @property {string} [sheets] `xlsx` / `ods` source only — how each sheet
@@ -223,21 +235,25 @@
  *   `oconv: bad sheets`. Supplying it for another source throws
  *   `oconv: sheets needs format xlsx or ods`.
  * @property {number} [sheetCellBudget] `xlsx` / `ods` source only — the
- *   reader's `opts.cellBudget`: a sheet whose padded table would hold more
- *   cells is written unpadded, one `<A1 address>: <text>` paragraph per
+ *   reader's `opts.cellBudget`, 5,000,000 when absent (since 2.0.0;
+ *   `Number.MAX_SAFE_INTEGER` pads every sheet as 1.x did): a sheet whose
+ *   padded table would hold more cells is written unpadded, one `<A1 address>: <text>` paragraph per
  *   value (its rows unpadded under `sheets` `'csv'` / `'tsv'`), recorded
  *   `sheet/sparse-form`. A positive safe integer, else `oconv: bad cell
  *   budget`; for another source it throws `oconv: sheet cell budget needs
  *   format xlsx or ods`.
- * @property {{bytes: number, overflow?: string}} [outputBudget] every source
- *   — a bound on the output: after the read and before the render, the
- *   UTF-8 size of the IR's text (table cells included; the markdown adds its
- *   syntax on top) is compared with `bytes`, a positive safe integer. Past
- *   it, `overflow` `'throw'` (also when absent) throws `oconv: output too
- *   large` before any markdown is built; `'truncate'` keeps the top-level
- *   blocks that fit, a crossing table's leading rows that fit, and drops
- *   the rest, recorded `doc/truncated`. Another shape throws `oconv: bad
- *   output budget`.
+ * @property {{bytes?: number, overflow?: string}} [outputBudget] every source
+ *   — a bound on the output, forwarded to `oconvIrToMd.irToMd`'s
+ *   `opts.outputBudget`: after the read and before the render, the UTF-8
+ *   size of the IR's text (table cells included; the markdown adds its
+ *   syntax on top) is compared with `bytes`, a positive safe integer,
+ *   **256 MiB when absent** (since 2.0.0; `Number.MAX_SAFE_INTEGER` renders
+ *   as 1.x did). Past it, `overflow` `'throw'` (also when absent) throws
+ *   `oconv: output too large` before any markdown is built; `'truncate'`
+ *   keeps the top-level blocks that fit, a crossing table's leading rows
+ *   that fit, and drops the rest, recorded `doc/truncated`. So with no
+ *   `outputBudget` a document past 256 MiB of text throws. Another shape
+ *   throws `oconv: bad output budget`, before the read.
  * @property {{maxParts?: number, maxUncompressed?: number, maxRatio?: number, maxDepth?: number}} [archiveLimits]
  *   office sources only — the archive limits passed to the docx, xlsx,
  *   pptx, odt, ods or odp reader's `read` (each reader keeps its default
@@ -319,6 +335,10 @@
  *   recorded as `layout/font-fallback`. This package vendors NO font
  *   (Unicode-by-default faces belong in a separate
  *   companion package, registered by descriptor name).
+ * @property {'4'|'2b'} [pdfA] Claim PDF/A-4 or PDF/A-2b (`pdfBuilder`'s
+ *   `pdfA`): every style class drawn needs an embedded face (`fonts` or
+ *   the registered default faces), else `oconv: pdf/A needs embedded
+ *   faces (<classes>)`.
  */
 
 /**
@@ -364,6 +384,12 @@
  *   `docx`/`odt` throws `oconv: default faces need target pdf`. Unknown keys
  *   are rejected downstream by `createMeasurer`
  *   (`oconv: bad default font <key>`), not by this facade.
+ * @property {boolean} [layout] Tier 3: the source's styles and page layout
+ *   carried through `oconv-ir/v2` — the page, the paragraphs' alignment and
+ *   breaks, the runs' values, the headers and footers, the page fields and
+ *   the notes — on the `docx → odt` pair, the one that honours it. Absent:
+ *   on for `docx → odt`, off on every other pair (since 2.0.0). `false`:
+ *   tier 2, the output of 1.x. `true` on another pair throws.
  */
 
 /**
@@ -444,7 +470,7 @@ export const oconv = {
          * test (`oconv.test.js`) pins the two together so the two never
          * silently drift (same pattern as `ir.js`'s `IR_VERSION` mirror).
          */
-        const CONVERTER_VERSION = '1.2.0';
+        const CONVERTER_VERSION = '2.0.0';
 
         /**
          * `.docx`/`.odt`/`.xlsx`/`.ods`/`.pptx`/`.odp`/`.pdf` (case-
@@ -478,84 +504,17 @@ export const oconv = {
             'docx', 'odt', 'xlsx', 'ods', 'pptx', 'odp', 'pdf'
         ]);
 
-        /** Whether `v` is `{ bytes, overflow? }`: a positive safe integer, `'throw'` or `'truncate'`. */
+        /**
+         * Whether `v` is `{ bytes?, overflow? }`: `bytes` absent (256 MiB,
+         * `irToMd`'s default) or a positive safe integer, `overflow` absent,
+         * `'throw'` or `'truncate'`. The same check as `irToMd`'s, run here
+         * before the read.
+         */
         function validOutputBudget(v) {
             if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
             if (!Object.keys(v).every((k) => k === 'bytes' || k === 'overflow')) return false;
-            if (!Number.isSafeInteger(v.bytes) || v.bytes < 1) return false;
+            if (v.bytes !== undefined && (!Number.isSafeInteger(v.bytes) || v.bytes < 1)) return false;
             return v.overflow === undefined || v.overflow === 'throw' || v.overflow === 'truncate';
-        }
-
-        /** The UTF-8 length of `s`, or `Infinity` once it passes `room`. */
-        function utf8Within(s, room) {
-            if (s.length > room) return Infinity;
-            let n = 0;
-            for (let i = 0; i < s.length; i++) {
-                const c = s.charCodeAt(i);
-                // A surrogate half counts 2, so a pair counts its 4 bytes.
-                n += c < 0x80 ? 1 : c < 0x800 ? 2 : c >= 0xd800 && c < 0xe000 ? 2 : 3;
-                if (n > room) return Infinity;
-            }
-            return n;
-        }
-
-        /**
-         * The UTF-8 size of the text an IR node carries (its own string
-         * properties, `escapes` aside, and its children's), or `Infinity`
-         * once it passes `room`: the early stop keeps the walk bounded.
-         */
-        function textSize(n, room) {
-            let size = 0;
-            for (const key of Object.keys(n)) {
-                if (key === 'kind' || key === 'escapes') continue;
-                const v = n[key];
-                if (typeof v === 'string') size += utf8Within(v, room - size);
-                else if (key === 'children') {
-                    for (const c of v) {
-                        size += textSize(c, room - size);
-                        if (size > room) return Infinity;
-                    }
-                }
-                if (size > room) return Infinity;
-            }
-            return size;
-        }
-
-        /**
-         * The document cut at `budget` bytes of text: top-level blocks kept
-         * in order while they fit; a table that crosses keeps its leading
-         * rows that fit (none: the table is dropped); the first other block
-         * that does not fit, and every block after it, is dropped.
-         */
-        function truncateIr(ir, budget) {
-            const kept = [];
-            let used = 0;
-            let droppedBlocks = 0;
-            let droppedRows = 0;
-            let full = false;
-            for (const block of ir.children) {
-                if (full) { droppedBlocks++; continue; }
-                const size = textSize(block, budget - used);
-                if (size !== Infinity) { kept.push(block); used += size; continue; }
-                full = true;
-                const rows = [];
-                if (block.kind === 'table') {
-                    for (const row of block.children) {
-                        const rowSize = textSize(row, budget - used);
-                        if (rowSize === Infinity) break;
-                        rows.push(row);
-                        used += rowSize;
-                    }
-                }
-                if (rows.length) {
-                    kept.push({ ...block, children: rows });
-                    droppedRows += block.children.length - rows.length;
-                } else droppedBlocks++;
-            }
-            return {
-                ir: { ...ir, children: kept },
-                loss: { code: 'doc/truncated', detail: `kept ${used} bytes of text; ${droppedBlocks} blocks and ${droppedRows} table rows dropped` }
-            };
         }
 
         /**
@@ -619,7 +578,7 @@ export const oconv = {
          *
          * @returns {{ir: object, losses: {code: string, detail: string}[]}}
          */
-        function readToIr(format, bytes, includeNotes, formOpBudget, pdfInfer, pdfDeclare, odtInclude, sheets, pdfInclude, pdfPassword, pdfRecoverXref, archiveLimits, sheetCellBudget, pdfLineHyphens, docxInclude) {
+        function readToIr(format, bytes, includeNotes, formOpBudget, pdfInfer, pdfDeclare, odtInclude, sheets, pdfInclude, pdfPassword, pdfRecoverXref, archiveLimits, sheetCellBudget, pdfLineHyphens, docxInclude, pdfEmptyPassword) {
             // The office readers' own archive limits, only when given.
             const officeRead = (api) => (archiveLimits === undefined ? api.read(bytes) : api.read(bytes, archiveLimits));
             // The sheet readers' options, only when given.
@@ -636,7 +595,7 @@ export const oconv = {
                         : oconvDocxToIrApi.docxToIr(read, { include: docxInclude }));
                 }
                 case 'odt': {
-                    const read = odtApi.read(bytes, { ...archiveLimits, framesInRuns: true, elementsInRuns: true, semanticStyles: true });
+                    const read = odtApi.read(bytes, { ...archiveLimits, framesInRuns: true, elementsInRuns: true, semanticStyles: true, notes: true });
                     return titled(read, odtInclude === undefined
                         ? oconvOdtToIrApi.odtToIr(read)
                         : oconvOdtToIrApi.odtToIr(read, { include: odtInclude }));
@@ -654,7 +613,9 @@ export const oconv = {
                         : oconvOdsToIrApi.odsToIr(read, sheetOpts));
                 }
                 case 'pptx': {
-                    const read = officeRead(pptxApi);
+                    // `typedGroups`: a group shape's text and pictures
+                    // reach the reader.
+                    const read = pptxApi.read(bytes, { ...(archiveLimits || {}), typedGroups: true });
                     return titled(read, oconvPptxToIrApi.pptxToIr(read, { includeNotes }));
                 }
                 case 'odp': {
@@ -664,16 +625,22 @@ export const oconv = {
                 case 'pdf': {
                     let pdfOpts;
                     if (formOpBudget !== undefined) pdfOpts = { formOpBudget };
-                    if (pdfInfer !== undefined) pdfOpts = { ...pdfOpts, infer: pdfInfer };
+                    // Headings and tables are inferred unless the caller
+                    // says otherwise (`[]` reads without inference).
+                    pdfOpts = { ...pdfOpts, infer: pdfInfer !== undefined ? pdfInfer : ['headings', 'tables'] };
                     if (pdfDeclare !== undefined) pdfOpts = { ...pdfOpts, declare: pdfDeclare };
                     if (pdfInclude !== undefined) pdfOpts = { ...pdfOpts, include: pdfInclude };
                     if (pdfLineHyphens !== undefined) pdfOpts = { ...pdfOpts, lineHyphens: pdfLineHyphens };
-                    let readOpts;
-                    // A password read also opens RC4 (V1 / V2) files through
-                    // pdf's read-only `pdfLegacyRc4Read`.
-                    if (pdfPassword !== undefined) readOpts = { password: pdfPassword, legacyRc4: legacyRc4Api };
-                    if (pdfRecoverXref === true) readOpts = { ...readOpts, recoverXref: true };
-                    const doc = readOpts === undefined ? pdfApi.read(bytes) : pdfApi.read(bytes, readOpts);
+                    // Every read opens RC4 (V1 / V2) files through pdf's
+                    // read-only `pdfLegacyRc4Read`: with a password, and when
+                    // pdf tries the empty one (no password given).
+                    let readOpts = { legacyRc4: legacyRc4Api };
+                    if (pdfPassword !== undefined) readOpts = { ...readOpts, password: pdfPassword };
+                    if (pdfEmptyPassword === false) readOpts = { ...readOpts, emptyPassword: false };
+                    if (pdfRecoverXref !== undefined) readOpts = { ...readOpts, recoverXref: pdfRecoverXref };
+                    const doc = pdfApi.read(bytes, readOpts);
+                    // pdfToIr's ledger starts with the read's own losses
+                    // (the empty password, a rebuilt chain, …).
                     const { ir, losses } = oconvPdfToIrApi.pdfToIr(doc, pdfOpts);
                     return { ir, losses, title: pdfTitle(doc) };
                 }
@@ -771,6 +738,13 @@ export const oconv = {
             if (pdfPassword !== undefined && format !== 'pdf') {
                 throw new Error('oconv: pdf password needs format pdf');
             }
+            const pdfEmptyPassword = req.pdfEmptyPassword;
+            if (pdfEmptyPassword !== undefined && format !== 'pdf') {
+                throw new Error('oconv: pdf empty password needs format pdf');
+            }
+            if (pdfEmptyPassword !== undefined && typeof pdfEmptyPassword !== 'boolean') {
+                throw new Error('oconv: bad pdf empty password');
+            }
             const pdfRecoverXref = req.pdfRecoverXref;
             if (pdfRecoverXref !== undefined && format !== 'pdf') {
                 throw new Error('oconv: pdf recover xref needs format pdf');
@@ -815,17 +789,9 @@ export const oconv = {
             const digest = await crypto.subtle.digest('SHA-256', bytes);
             const sourceSha256 = toHex(digest);
 
-            const read = readToIr(format, bytes, includeNotes, formOpBudget, pdfInfer, pdfDeclare, odtInclude, sheets, pdfInclude, pdfPassword, pdfRecoverXref, archiveLimits, sheetCellBudget, pdfLineHyphens, docxInclude);
-            let ir = read.ir;
+            const read = readToIr(format, bytes, includeNotes, formOpBudget, pdfInfer, pdfDeclare, odtInclude, sheets, pdfInclude, pdfPassword, pdfRecoverXref, archiveLimits, sheetCellBudget, pdfLineHyphens, docxInclude, pdfEmptyPassword);
+            const ir = read.ir;
             const readerLosses = read.losses;
-            // The output budget, checked on the IR's text before any
-            // markdown is built.
-            if (outputBudget !== undefined && textSize(ir, outputBudget.bytes) === Infinity) {
-                if (outputBudget.overflow !== 'truncate') throw new Error('oconv: output too large');
-                const cut = truncateIr(ir, outputBudget.bytes);
-                ir = cut.ir;
-                readerLosses.push(cut.loss);
-            }
 
             const meta = {
                 sourceFormat: format,
@@ -840,7 +806,10 @@ export const oconv = {
             if (engine !== undefined) meta.engine = engine;
             if (read.title !== undefined) meta.title = read.title;
 
-            const written = oconvIrToMdApi.irToMd(ir, meta, req.opts);
+            // The output budget is irToMd's (256 MiB 'throw' when absent),
+            // checked on the IR's text before any markdown is built.
+            const written = oconvIrToMdApi.irToMd(ir, meta,
+                outputBudget === undefined ? req.opts : { ...req.opts, outputBudget });
             const ms = performance.now() - start;
 
             return {
@@ -962,12 +931,12 @@ export const oconv = {
 
             const start = performance.now();
 
-            const { ir, losses: readerLosses } = oconvMdToIrApi.mdToIr(markdown);
+            const { ir, losses: readerLosses, frontmatter } = oconvMdToIrApi.mdToIr(markdown);
 
             let written;
             if (target === 'docx') written = oconvIrToDocxApi.irToDocx(ir, { assets: req.assets });
             else if (target === 'odt') written = oconvIrToOdtApi.irToOdt(ir, { assets: req.assets });
-            else written = oconvIrToPdfApi.irToPdf(ir, pdfOpts, { assets: req.assets, defaultFaces: req.defaultFaces });
+            else written = oconvIrToPdfApi.irToPdf(ir, pdfOpts, { assets: req.assets, defaultFaces: req.defaultFaces, title: frontmatterTitle(frontmatter) });
 
             const losses = readerLosses.concat(written.losses);
             const ms = performance.now() - start;
@@ -981,13 +950,42 @@ export const oconv = {
             };
         }
 
+        /**
+         * The `title` of a stripped front matter (YAML `title:`, TOML
+         * `title =`, JSON `"title"`), trimmed, or `undefined`.
+         *
+         * @param {{lang: string, content: string}|null} frontmatter
+         * @returns {string|undefined}
+         */
+        function frontmatterTitle(frontmatter) {
+            if (!frontmatter || typeof frontmatter.content !== 'string') return undefined;
+            const unquote = (s) => {
+                const t = s.trim();
+                const q = t[0];
+                return (q === '"' || q === "'") && t.endsWith(q) && t.length >= 2 ? t.slice(1, -1) : t;
+            };
+            let title;
+            if (frontmatter.lang === 'json') {
+                try {
+                    const text = frontmatter.content.trim();
+                    const value = JSON.parse(text.startsWith('{') ? text : `{${text}}`);
+                    if (value && typeof value.title === 'string') title = value.title;
+                } catch { /* not JSON: no title */ }
+            } else {
+                const re = frontmatter.lang === 'toml' ? /^title\s*=\s*(.+)$/m : /^title\s*:\s*(.+)$/m;
+                const m = re.exec(frontmatter.content);
+                if (m) title = unquote(m[1]);
+            }
+            return title === undefined || title.trim() === '' ? undefined : title.trim();
+        }
+
         /** Shipped pairs — a claim in docs/loss-matrix.md, never widened silently. */
         const SUPPORTED_PAIRS = new Set(['docx>odt', 'odt>docx', 'docx>pdf', 'odt>pdf']);
 
         /**
          * Convert a `.docx`/`.odt` document directly to a `.docx`/`.odt`/
          * `.pdf` target, for exactly the four allowlisted pairs
-         * (`SUPPORTED_PAIRS`) — pure wiring, `read <format> → oconv-ir/v1 →
+         * (`SUPPORTED_PAIRS`) — pure wiring, `read <format> → oconv-ir/v2 →
          * write <target>` (see the module fileoverview's "convert pipeline"
          * section). Additive extension of the frozen `oconv` facade —
          * `toMd`/`fromMd` are untouched by this member.
@@ -1015,6 +1013,11 @@ export const oconv = {
          *   supplied and is not a non-null, non-array object whose every own
          *   value is a `Uint8Array`. Unknown keys are rejected downstream by
          *   `createMeasurer` (`oconv: bad default font <key>`).
+         * @throws {Error} `oconv: bad layout option` when `layout` is
+         *   supplied and is not a boolean (checked after the above).
+         * @throws {Error} `oconv: layout needs docx to odt` when `layout` is
+         *   `true` on another pair (checked last). An absent `layout` is on
+         *   for `docx → odt` and off elsewhere.
          */
         async function convert(input) {
             const req = input || {};
@@ -1031,12 +1034,19 @@ export const oconv = {
                 if (target !== 'pdf') throw new Error('oconv: default faces need target pdf');
                 validateDefaultFaces(req.defaultFaces);
             }
+            // Tier 3 (T27), checked after every earlier error.
+            if (req.layout !== undefined && typeof req.layout !== 'boolean') throw new Error('oconv: bad layout option');
+            if (req.layout === true && `${format}>${target}` !== 'docx>odt') throw new Error('oconv: layout needs docx to odt');
+            // On by default where the pair honours it (T82): docx → odt.
+            const layout = req.layout === undefined ? `${format}>${target}` === 'docx>odt' : req.layout;
+            const docxInclude = layout ? ['layout'] : undefined;
             const start = performance.now();
-            const { ir, losses: readerLosses } = readToIr(format, req.bytes, !!req.includeNotes);
+            const { ir, losses: readerLosses, title } = readToIr(format, req.bytes, !!req.includeNotes,
+                undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, docxInclude);
             let written;
             if (target === 'docx')      written = oconvIrToDocxApi.irToDocx(ir, {});
             else if (target === 'odt')  written = oconvIrToOdtApi.irToOdt(ir, {});
-            else                        written = oconvIrToPdfApi.irToPdf(ir, pdfOpts, { defaultFaces: req.defaultFaces });
+            else                        written = oconvIrToPdfApi.irToPdf(ir, pdfOpts, { defaultFaces: req.defaultFaces, title });
             const losses = readerLosses.concat(written.losses);
             return { bytes: written.bytes, format, target, lossy: losses.length > 0, losses, ms: performance.now() - start };
         }

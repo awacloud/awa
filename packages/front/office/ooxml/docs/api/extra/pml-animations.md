@@ -62,6 +62,8 @@ r.slides[0].timing.tnLst[0].cTn.dur; // '500'
 
 - The behaviour graph is sparse — most slides only set `iterate` / `cTn.dur`.
 - Trigger conditions are kept as typed nodes (`cond.evt`, `cond.delay`).
+- A sequence's `prevCondLst` / `nextCondLst` and a motion path's `rCtr` are kept on the time node; `renderTimeNode` writes a node's children and a `cTn`'s in the schema's order.
+- [`pmlPartDetails`](./pml-part-details.md) uses `parseTiming` / `renderTiming` to type a read through `pptx-full`.
 
 ## See also
 

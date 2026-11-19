@@ -220,8 +220,27 @@ describe('oconv wiring — specifier pin (frozen import surface)', () => {
             '@awacloud/odf',
             '@awacloud/ooxml',
             '@awacloud/pdf',
+            '@awacloud/pdf/extra/font-decoder.js', // T77: the decoder the pdf reader is built on (D56)
             '@awacloud/pdf/extra/legacy-rc4-read.js', // T45: the RC4 reader's documented sub-path (D8)
+            '@awacloud/pdf/extra/page-text.js', // T77: the page walk the pdf reader is built on (D56)
             '@awacloud/pdf/extra/xmp-extended.js' // T34 (d): the XMP reader's sub-path (D14)
         ]);
+    });
+});
+
+// T77 (D56 A): oconv's pdf reader on pdf's extras. The decoder copy leaves
+// the manifest; the page walk keeps its name, built on pdfPageText.
+describe('the pdf reader on pdf\'s pdfFontDecoder and pdfPageText (T77)', () => {
+    test('the manifest carries pdf\'s two extras and no oconvPdfFontDecoder', () => {
+        const names = modules.map((m) => m.name);
+        expect(names).toContain('pdfFontDecoder');
+        expect(names).toContain('pdfPageText');
+        expect(names).not.toContain('oconvPdfFontDecoder');
+    });
+
+    test('oconvPdfTextExtract is built on pdfPageText', () => {
+        const walk = modules.find((m) => m.name === 'oconvPdfTextExtract');
+        expect(walk.dependencies).toContain('pdfPageText');
+        expect(walk.dependencies).not.toContain('oconvPdfFontDecoder');
     });
 });

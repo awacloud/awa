@@ -40,7 +40,11 @@
     "legacyVml",
     "smlMisc",
     "dmlChartMisc",
-    "dmlMainMisc"
+    "dmlMainMisc",
+    "docxProperties",
+    "dmlTextDetails",
+    "smlWorkbookDetails",
+    "smlPackageParts"
   ],
   "fwDependencies": [
     "xml",
@@ -52,8 +56,8 @@
     "crc32"
   ],
   "bytes": {
-    "dev": 510674,
-    "min": 313409
+    "dev": 596126,
+    "min": 363314
   },
   "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
 }

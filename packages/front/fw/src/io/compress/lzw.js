@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -15,14 +15,16 @@
  *
  * ## Wire-format families
  *
- * | Family | `bigEndian` | `useClearEnd` | `minCodeBits` | Used by |
- * |---|---|---|---|---|
- * | GIF | `false` (LSB-first) | `true` (CLEAR + END markers) | 8 (variable) | image/gif |
- * | TIFF | `true` (MSB-first) | `true` | 8 | image/tiff |
- * | `compress`/.Z | `false` | `false` (no markers, just dict reset on full) | 8 | unix |
+ * | Family | `bigEndian` | `earlyChange` | `useClearEnd` | `minCodeBits` | Used by |
+ * |---|---|---|---|---|---|
+ * | GIF | `false` (LSB-first) | `false` | `true` (CLEAR + END markers) | 2..8 (the image's) | image/gif |
+ * | TIFF, PDF `LZWDecode` | `true` (MSB-first) | `true` | `true` | 8 | image/tiff, application/pdf |
+ * | `compress`/.Z | `false` | `false` | `false` (no markers, just dict reset on full) | 8 | unix |
  *
- * The defaults below match the GIF profile. Override `bigEndian: true`
- * for TIFF interop.
+ * `earlyChange` is when the code width grows: GIF (and .Z) widen once the
+ * table holds `2^n` entries; TIFF and PDF (`/EarlyChange 1`, its default)
+ * one code earlier. It defaults to `bigEndian`, so the defaults are the GIF
+ * profile and `bigEndian: true` alone is the TIFF / PDF one.
  *
  * ## API
  *
@@ -39,6 +41,7 @@
  * | `minCodeBits` | `number` (2..12) | `8` | log2 of the initial alphabet (`1 << minCodeBits` initial codes) |
  * | `maxBits` | `number` (9..16) | `12` | Max code width before the dictionary stops growing (or resets) |
  * | `bigEndian` | `boolean` | `false` | `false` = LSB-first packing (GIF/Z), `true` = MSB-first (TIFF) |
+ * | `earlyChange` | `boolean` | `bigEndian` | `true` = widen the code one code early (TIFF, PDF `/EarlyChange 1`), `false` = at `2^n` entries (GIF, .Z) |
  * | `useClearEnd` | `boolean` | `true` | Emit `CLEAR = 1 << minCodeBits` and `END = CLEAR + 1` markers |
  *
  */
@@ -46,8 +49,8 @@
 /**
  * Public surface of `lzw.factory()`.
  * @typedef {object} LzwAPI
- * @property {(data: Uint8Array, opts?: { minCodeBits?: number, maxBits?: number, bigEndian?: boolean, useClearEnd?: boolean }) => Uint8Array} encode Compress `data` to LZW codes.
- * @property {(data: Uint8Array, opts?: { minCodeBits?: number, maxBits?: number, bigEndian?: boolean, useClearEnd?: boolean }) => Uint8Array} decode Decompress LZW codes back to the original bytes.
+ * @property {(data: Uint8Array, opts?: { minCodeBits?: number, maxBits?: number, bigEndian?: boolean, useClearEnd?: boolean, earlyChange?: boolean }) => Uint8Array} encode Compress `data` to LZW codes.
+ * @property {(data: Uint8Array, opts?: { minCodeBits?: number, maxBits?: number, bigEndian?: boolean, useClearEnd?: boolean, earlyChange?: boolean }) => Uint8Array} decode Decompress LZW codes back to the original bytes.
  */
 
 export const lzw = {
@@ -58,6 +61,14 @@ export const lzw = {
 
     /** @returns {LzwAPI} */
     factory() {
+        /** An `Error` with the compressor family's string `code` (D9 G6). */
+        function _codedError(code, message) {
+            const e = new Error(message);
+            // @ts-ignore - Error.code is a non-standard but widely-used extension
+            e.code = code;
+            return e;
+        }
+
 
         const u8 = Uint8Array;
 
@@ -67,13 +78,14 @@ export const lzw = {
             const maxBits     = opts.maxBits     ?? 12;
             const bigEndian   = !!opts.bigEndian;
             const useClearEnd = opts.useClearEnd ?? true;
+            const earlyChange = opts.earlyChange ?? bigEndian;
             if (minCodeBits < 2 || minCodeBits > 12) {
-                throw new Error('lzw: minCodeBits must be in [2, 12]');
+                throw _codedError('EBADARG', 'lzw: minCodeBits must be in [2, 12]');
             }
             if (maxBits < minCodeBits + 1 || maxBits > 16) {
-                throw new Error('lzw: maxBits must be in [minCodeBits+1, 16]');
+                throw _codedError('EBADARG', 'lzw: maxBits must be in [minCodeBits+1, 16]');
             }
-            return { minCodeBits, maxBits, bigEndian, useClearEnd };
+            return { minCodeBits, maxBits, bigEndian, useClearEnd, earlyChange: !!earlyChange };
         }
 
         // --- Bit writer ---
@@ -177,7 +189,7 @@ export const lzw = {
         // --- Encoder ---
 
         function encode(data, opts) {
-            if (!(data instanceof u8)) throw new Error('lzw.encode: data must be Uint8Array');
+            if (!(data instanceof u8)) throw _codedError('EBADARG', 'lzw.encode: data must be Uint8Array');
             const o = _resolveOpts(opts);
 
             const initialSize = 1 << o.minCodeBits;
@@ -222,7 +234,9 @@ export const lzw = {
                         // The decoder side widens its code BEFORE reading
                         // a code that would require the wider width - to
                         // match, widen here when `nextCode === (1<<codeBits)`.
-                        if (nextCode === (1 << codeBits) && codeBits < o.maxBits) {
+                        // With early change (TIFF, PDF) the width grows one
+                        // code sooner than GIF's rule.
+                        if (nextCode === (1 << codeBits) + (o.earlyChange ? 0 : 1) && codeBits < o.maxBits) {
                             codeBits++;
                         }
                     }
@@ -238,7 +252,7 @@ export const lzw = {
         // --- Decoder ---
 
         function decode(data, opts) {
-            if (!(data instanceof u8)) throw new Error('lzw.decode: data must be Uint8Array');
+            if (!(data instanceof u8)) throw _codedError('EBADARG', 'lzw.decode: data must be Uint8Array');
             const o = _resolveOpts(opts);
 
             const initialSize = 1 << o.minCodeBits;
@@ -291,7 +305,7 @@ export const lzw = {
                 if (code < nextCode) {
                     seq = dict[code];
                     if (!seq) {
-                        throw new Error('lzw.decode: invalid code ' + code + ' (unassigned)');
+                        throw _codedError('EBADSTREAM', 'lzw.decode: invalid code ' + code + ' (unassigned)');
                     }
                 } else if (code === nextCode && prevSeq) {
                     // "KwKwK" case - code refers to the entry currently
@@ -300,7 +314,7 @@ export const lzw = {
                     seq.set(prevSeq, 0);
                     seq[prevSeq.length] = prevSeq[0];
                 } else {
-                    throw new Error('lzw.decode: code ' + code + ' out of range (nextCode=' + nextCode + ')');
+                    throw _codedError('EBADSTREAM', 'lzw.decode: code ' + code + ' out of range (nextCode=' + nextCode + ')');
                 }
 
                 append(seq);
@@ -314,7 +328,9 @@ export const lzw = {
                     // the encoder by one entry (it skipped adding on the
                     // very first read). Widen one iteration EARLIER than
                     // the encoder so we're aligned at the next read.
-                    if (nextCode === (1 << codeBits) - 1 && codeBits < o.maxBits) {
+                    // GIF: widen once the table holds 2^n entries; early
+                    // change (TIFF, PDF): one entry sooner.
+                    if (nextCode === (1 << codeBits) - (o.earlyChange ? 1 : 0) && codeBits < o.maxBits) {
                         codeBits++;
                     }
                 }

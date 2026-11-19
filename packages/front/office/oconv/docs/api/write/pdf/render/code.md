@@ -34,7 +34,7 @@ dispatcher, never called directly by a consumer.
 |---|---|---|---|
 | `render` | `(node: object, ctx: object) => {items: object[], losses: object[], height?: number}` | block-local laid-out items (the renderer contract) | — |
 
-`node` is an `oconv-ir/v1` `codeBlock` node (`{info, text}`). `ctx` is the
+`node` is an `oconv-ir/v2` `codeBlock` node (`{info, text}`). `ctx` is the
 stack's child context — this renderer does not use `ctx.flowChildren`: a
 code block's text has no inline children to re-flow.
 

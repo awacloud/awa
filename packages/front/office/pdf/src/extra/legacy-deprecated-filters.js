@@ -71,7 +71,8 @@ export const pdfLegacyDeprecatedFilters = {
                     bigEndian: true,
                     minCodeBits: 8,
                     maxBits: 12,
-                    useClearEnd: true
+                    useClearEnd: true,
+                    earlyChange: earlyChange === 1
                 });
             } catch (cause) {
                 throw new ParseError('pdf/lzw/decode-failed',

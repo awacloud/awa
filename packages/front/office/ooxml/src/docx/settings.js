@@ -14,7 +14,7 @@
  * ```js
  * {
  *   defaultTabStop?: number,
- *   evenAndOddHeaders?: boolean,
+ *   evenAndOddHeaders?: boolean,   // a toggle: written bare when true, w:val="0" when false
  *   updateFields?: boolean,
  *   trackChanges?: boolean,  // <w:trackRevisions> (and the <w:trackChanges> 1.0.0 wrote)
  *   zoom?: { val?: string, percent?: number },
@@ -217,15 +217,15 @@ export const docxSettings = {
                 children.push(xml.el('w:defaultTabStop',
                     { 'w:val': String(obj.defaultTabStop) }));
             }
-            if (obj.evenAndOddHeaders === true) {
-                children.push(xml.el('w:evenAndOddHeaders', {}));
-            }
-            if (obj.updateFields === true) {
-                children.push(xml.el('w:updateFields', {}));
-            }
-            if (obj.trackChanges === true) {
-                children.push(xml.el('w:trackRevisions', {}));
-            }
+            // A toggle: true written bare, false stated (w:val="0", ST_OnOff),
+            // absent not written.
+            const toggle = (name, v) => {
+                if (v === true) children.push(xml.el(name, {}));
+                else if (v === false) children.push(xml.el(name, { 'w:val': '0' }));
+            };
+            toggle('w:evenAndOddHeaders', obj.evenAndOddHeaders);
+            toggle('w:updateFields', obj.updateFields);
+            toggle('w:trackRevisions', obj.trackChanges);
             if (obj.zoom) {
                 const a = {};
                 if (obj.zoom.val) a['w:val'] = obj.zoom.val;

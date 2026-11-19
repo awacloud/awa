@@ -8,8 +8,8 @@
  *
  * A thin, opt-in wrapper over the colocated `rsa` binary (vendored from
  * `@awacloud/fw-wasm-crypto`: BearSSL i31 + an EMSA-PSS padding layer), loaded BY
- * NAME through the fw `wasmRuntime` adapter (BATCH_11 ERRATA: no fw-local
- * `.wasm.js`, dependency on `wasmRuntime` only). WebCrypto covers RSA in
+ * NAME through the fw `wasmRuntime` adapter (no fw-local `.wasm.js`,
+ * dependency on `wasmRuntime` only). WebCrypto covers RSA in
  * hardware; this module only matters where `crypto.subtle` is absent
  * (non-secure-context, locked-down workers). Pure-JS `crypto/pkc/rsa` stays
  * the universal default. Async, `Uint8Array`, no-throw.
@@ -123,13 +123,13 @@ export const wasmRsa = {
         /** Supported SHA-2 digest sizes → WebCrypto algorithm name. */
         const _HASH = { 256: 'SHA-256', 384: 'SHA-384', 512: 'SHA-512' };
 
-        /** Default digest (plan). */
+        /** Default digest. */
         const _DEFAULT_HASH = 256;
 
         /** Supported modulus sizes (bits). */
         const _MODULI = { 2048: true, 3072: true, 4096: true };
 
-        /** Default modulus (plan). */
+        /** Default modulus. */
         const _DEFAULT_BITS = 2048;
 
         /** Public exponent the keygen ABI uses (fixed F4). */
@@ -468,7 +468,8 @@ export const wasmRsa = {
                     lenBuf.ptr,
                 ]);
                 if (rc !== 0) {
-                    console.error(`[crypto] FAIL: wasmRsa.decrypt rc=${rc}`);
+                    // OAEP decoding failure: an expected outcome, warn level.
+                    console.warn(`[crypto] CORRUPT: wasmRsa.decrypt: decryption failed (rc=${rc})`);
                     return false;
                 }
                 const ptLen = _readI32(loaded, lenBuf.ptr);

@@ -24,7 +24,7 @@
  *     layer client-side — a root `'use client'` component that does
  *     `import { applyCommunity } from '@awacloud/fw/sanity/community';
  *     applyCommunity();` (a bare side-effect import is inert — `community` is
- *     an explicit-call ES module, FINDINGS §c.1). Under `community`, `<Link>`
+ *     an explicit-call ES module). Under `community`, `<Link>`
  *     / `history` client navigation works normally. See README for the
  *     recommended pattern.
  *   - **Not a React bridge.** This lets you USE fw inside a Next app (a widget

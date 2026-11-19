@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -72,6 +72,42 @@ export const dnd = {
             document.body.appendChild(preview);
         }
 
+        // ── Text selection while a drag is active ─────────────────────────────
+        // A pointer drag over text would extend a selection (native drag and
+        // drop does not): during a drag the document's `user-select` is
+        // `none`, its previous inline value restored at the end.
+        let _savedSelect = null;    // [userSelect, webkitUserSelect] while suppressed
+
+        function _suppressSelect() {
+            const st = document.documentElement && document.documentElement.style;
+            if (!st || _savedSelect !== null) return;
+            // @ts-ignore - webkitUserSelect is the prefixed property (Safari)
+            _savedSelect = [st.userSelect, st.webkitUserSelect];
+            st.userSelect = 'none';
+            // @ts-ignore
+            st.webkitUserSelect = 'none';
+        }
+
+        function _restoreSelect() {
+            const st = document.documentElement && document.documentElement.style;
+            if (!st || _savedSelect === null) return;
+            st.userSelect = _savedSelect[0];
+            // @ts-ignore
+            st.webkitUserSelect = _savedSelect[1];
+            _savedSelect = null;
+        }
+
+        /** Whether the document has a non-empty selection now. */
+        function _hasSelection() {
+            const sel = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+            return !!(sel && !sel.isCollapsed);
+        }
+
+        function _clearSelection() {
+            const sel = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+            if (sel && sel.removeAllRanges) sel.removeAllRanges();
+        }
+
         function _detachPreview(preview, cancelMs) {
             if (!preview || !preview.parentNode) return;
             if (cancelMs > 0) {
@@ -134,6 +170,7 @@ export const dnd = {
             let _dragging = false;
             let _preview  = null;
             let _hovered  = null; // dropTarget currently hovered
+            let _selectedBefore = false; // a selection existed at pointerdown
             // Track whether document-level listeners are bound for this
             // instance. Without this guard, repeated pointerdown events
             // (multi-pointer race or wrong-button-then-correct-button)
@@ -178,6 +215,7 @@ export const dnd = {
                 // reset, a click-without-drag below threshold leaves a stale
                 // _hovered reference for the next gesture. Bug fix per audit.
                 _hovered  = null;
+                _selectedBefore = _hasSelection();
 
                 el.setPointerCapture(e.pointerId);
                 _bindDocListeners();
@@ -212,15 +250,26 @@ export const dnd = {
                         }
                     }
 
-                    // Build the preview.
+                    // Build the preview. The default clone keeps the source's
+                    // rendered size: appended to <body> with `position: fixed`
+                    // it would otherwise shrink to its intrinsic width.
                     if (opts.preview) {
                         _preview = opts.preview(data);
                     } else {
+                        const rect = el.getBoundingClientRect();
                         _preview = el.cloneNode(true);
                         // @ts-ignore - cloneNode returns Node; Element is correct at runtime
-                        _preview.style.opacity = '0.6';
+                        const ps = _preview.style;
+                        ps.opacity = '0.6';
+                        ps.boxSizing = 'border-box';
+                        ps.width = rect.width + 'px';
+                        ps.height = rect.height + 'px';
                     }
                     _attachPreview(_preview, e.clientX, e.clientY);
+                    // The pointer moved over text since pointerdown: drop the
+                    // selection this gesture started (not one the page had).
+                    _suppressSelect();
+                    if (!_selectedBefore) _clearSelection();
 
                     _current = { data, preview: _preview, source: el, x: e.clientX, y: e.clientY };
 
@@ -280,6 +329,7 @@ export const dnd = {
 
                 _detachPreview(_preview, cancelMs);
                 _preview  = null;
+                _restoreSelect();
 
                 const finalData = _current ? _current.data : null;
                 _current  = null;
@@ -315,6 +365,7 @@ export const dnd = {
 
                 _detachPreview(_preview, cancelMs);
                 _preview  = null;
+                _restoreSelect();
 
                 const finalData = _current ? _current.data : null;
                 _current  = null;
@@ -347,6 +398,7 @@ export const dnd = {
                     _hovered = null;
                     _detachPreview(_preview, 0);
                     _preview = null;
+                    _restoreSelect();
                     _current = null;
                     _dragging = false;
                     _emitDocEvent('dnd:end', { data: finalData, source: el, cancelled: true });

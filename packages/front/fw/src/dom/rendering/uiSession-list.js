@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -664,7 +664,7 @@ export const uiSessionList = {
                     reordered: false,
                 };
 
-                // Phase 1 : prune disappeared keys.
+                // Step 1 : prune disappeared keys.
                 this._order = this._order.filter(k => {
                     if (seen.has(k)) return true;
                     this._removeItem(k);
@@ -673,7 +673,7 @@ export const uiSessionList = {
                     return false;
                 });
 
-                // Phase 2 : add / update / keep.
+                // Step 2 : add / update / keep.
                 let anyReplaced = false;
                 for (let i = 0; i < items.length; ++i) {
                     const k = newKeys[i];
@@ -701,7 +701,7 @@ export const uiSessionList = {
                     }
                 }
 
-                // Phase 3 : compute effective order vs newKeys ; reorder if needed.
+                // Step 3 : compute effective order vs newKeys ; reorder if needed.
                 const phase2Order = [...this._order];
                 for (const k of newKeys) {
                     if (delta.added.has(k)) phase2Order.push(k);

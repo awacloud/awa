@@ -11,7 +11,7 @@
  * explicit-call ES module — it exports `lockdown()` and `harden()`, and a bare
  * import hardens nothing. Integrity is opt-in and invoked once (auto-freezing
  * intrinsics at import time would break SSR and is untestable). The same rule
- * applies to how this tier composes `base.js` in step 6: it must CALL
+ * applies to how this tier composes `base.js` in step 5: it must CALL
  * `applyBase()`, never rely on an import side effect.
  *
  * `lockdown()` performs, in order:
@@ -21,8 +21,9 @@
  *      must hold the PRE-poison originals — see `sanity/wasm-gate.js`).
  *   3. remove ambient evaluators (`eval`, `Function`, `WebAssembly.*`).
  *   4. poison the synchronous `WebAssembly.Module` / `Instance` constructors.
- *   5. harden(intrinsics) — transitive freeze over the standard intrinsic graph.
- *   6. (browser realm only) compose the `base.js` DOM/XSS hardening.
+ *   5. (browser realm only) compose the `base.js` DOM/XSS hardening, before
+ *      the freeze (base installs wrappers on Math / JSON / Date).
+ *   6. harden(intrinsics) — transitive freeze over the standard intrinsic graph.
  *   7. arm the wasm gate.
  *
  * WebAssembly, after step 7: only a holder of the fw wasm capability may
@@ -47,6 +48,7 @@ import {
     poisonSyncConstructors,
     arm as armWasmGate,
 } from './wasm-gate.js';
+import { applyBase } from './base.js';
 
 const EVALUATOR_BLOCKED = 'lockdown: evaluator removed';
 
@@ -116,7 +118,10 @@ function harden(target) {
         } catch {
             continue;
         }
-        const keys = Reflect.ownKeys(descriptors);
+        // Not `Reflect.ownKeys`: base.js blocks the global `Reflect` slot, and
+        // `harden` must keep working after the base tier is applied.
+        const keys = /** @type {PropertyKey[]} */ (Object.getOwnPropertyNames(descriptors))
+            .concat(Object.getOwnPropertySymbols(descriptors));
         for (let i = 0; i < keys.length; i++) {
             const desc = descriptors[keys[i]];
             if (!desc) continue;
@@ -222,7 +227,7 @@ function removeAmbientEvaluators() {
 }
 
 /**
- * Build the enumerated intrinsic root set, then transitively `harden` it.
+ * Build the enumerated intrinsic root set (no freezing).
  *
  * The set is exhaustive by design — a missing intrinsic is a hole an attacker
  * could mutate. It contains every standard global constructor/namespace, each
@@ -230,8 +235,13 @@ function removeAmbientEvaluators() {
  * (`%TypedArray%`, `%IteratorPrototype%`, `%AsyncIteratorPrototype%`, the three
  * function-constructor intrinsics, `%ThrowTypeError%`). Every access is guarded
  * (`typeof` / `try`) so frozen-but-missing hosts never throw.
+ *
+ * Collected BEFORE the base tier runs: base blocks the `Reflect` and
+ * `Function` global slots, after which a by-name lookup returns its stub.
+ *
+ * @returns {unknown[]}
  */
-function hardenIntrinsics() {
+function collectIntrinsicRoots() {
     const g = globalThis;
     /** @type {unknown[]} */
     const roots = [];
@@ -327,8 +337,16 @@ function hardenIntrinsics() {
         if (d && typeof d.get === 'function') add(d.get);
     } catch { /* */ }
 
-    // Transitively freeze every root (DFS shares no visited set across roots,
-    // but `harden` is idempotent and each call is O(reachable)).
+    return roots;
+}
+
+/**
+ * Transitively `harden` an intrinsic root set (DFS shares no visited set
+ * across roots, but `harden` is idempotent and each call is O(reachable)).
+ *
+ * @param {unknown[]} roots from {@link collectIntrinsicRoots}
+ */
+function hardenIntrinsics(roots) {
     for (let i = 0; i < roots.length; i++) {
         harden(roots[i]);
     }
@@ -344,11 +362,12 @@ function hardenIntrinsics() {
  * sync wasm constructors, harden intrinsics) target pure-JS intrinsics and
  * therefore run in ANY realm — main thread, Worker, or SSR. The DOM step
  * (compose `base.js` DOM/XSS hardening) runs only in a browser realm (`window`
- * + `document` present); `base.js` is imported lazily and its `applyBase()` is
- * called explicitly there, so a non-browser realm never loads the DOM layer.
- * That step is inherently asynchronous (dynamic `import`), exactly as before —
- * the DOM hardening lands on a later microtask, while `lockdown()` itself stays
- * synchronous and returns once the intrinsic tier is complete.
+ * + `document` present), synchronously, BEFORE the intrinsics are frozen:
+ * base installs wrappers on `Math`, `JSON`, `Date` and the DOM prototypes,
+ * which a frozen namespace would refuse, and the freeze then covers those
+ * wrappers too. `base.js` is an explicit-call module, so importing it is inert
+ * in a non-browser realm, where `applyBase()` is never called. When
+ * `lockdown()` returns, both tiers are in force.
  *
  * @param {object} [options] reserved for future opts (currently unused)
  * @returns {void}
@@ -378,31 +397,38 @@ function lockdown(options = {}) {
     //    hardening of the `WebAssembly` namespace cannot silently defeat it.
     poisonSyncConstructors();
 
-    // 5. Transitive freeze of the standard intrinsic graph.
-    hardenIntrinsics();
+    // The intrinsic roots are collected now, while every global slot still
+    // holds the real intrinsic (step 5 blocks `Reflect` and `Function`).
+    const roots = collectIntrinsicRoots();
 
-    // 6. Browser-only: compose base.js DOM/XSS hardening (innerHTML→innerText
-    //    redirect, dangerous elements, document.write/execCommand, …). Imported
-    //    lazily and gated so SSR/Worker realms never load the DOM layer at all.
+    // 5. Browser-only: compose base.js DOM/XSS hardening (innerHTML→innerText
+    //    redirect, dangerous elements, document.write/execCommand, Math.random,
+    //    Date.now, JSON.parse …). It runs BEFORE the freeze of step 6: base
+    //    assigns wrappers onto Math/JSON/Date, which a frozen namespace refuses
+    //    (in strict code the first such assignment throws and aborts the whole
+    //    layer). A failure must not stop the integrity tier, and must not be
+    //    silent either: it is reported once the integrity steps are complete.
+    let baseFailure = null;
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-        // `base.js` is an explicit-call ES module (`applyBase()`): a BARE
-        // side-effect import is INERT and would silently drop the whole DOM/XSS
-        // layer. The call is chained onto the dynamic import rather than
-        // awaited — `lockdown()` is synchronous by contract — and the
-        // best-effort swallow lives on the chain, because a sync `try/catch`
-        // cannot catch a rejected dynamic import.
-        import('./base.js')
-            .then((base) => base.applyBase())
-            .catch(() => {
-                // base.js unavailable (bundler stripped / path moved) or its
-                // own application failed: the integrity tier is already
-                // applied; DOM hardening is best-effort.
-            });
+        try {
+            applyBase();
+        } catch (e) {
+            baseFailure = e;
+        }
     }
+
+    // 6. Transitive freeze of the standard intrinsic graph (base's wrappers
+    //    included).
+    hardenIntrinsics(roots);
 
     // 7. Arm the wasm capability seam LAST: from here on `opts.fetchBytes` is
     //    refused, so the byte source of fw's own loader cannot be swapped.
     armWasmGate();
+
+    if (baseFailure !== null) {
+        console.warn('lockdown: the base DOM/XSS layer did not fully apply: '
+            + (baseFailure && baseFailure.message ? baseFailure.message : String(baseFailure)));
+    }
 }
 
 export { lockdown, harden };

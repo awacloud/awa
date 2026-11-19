@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `oconv-ir/v1` → `.pdf` bytes writer — the bounded `md → pdf`
+ * @fileoverview `oconv-ir/v2` → `.pdf` bytes writer — the bounded `md → pdf`
  * typesetter's FACADE. It owns the whole `md → pdf` write pipeline and is
  * the only module in the family that talks to `@awacloud/pdf`.
  *
@@ -114,6 +114,8 @@
  * | Code | Detail | Meaning |
  * |---|---|---|
  * | `layout/font-fallback` | `{style, baseFont, reason?}` | a style class resolved to its Standard 14 face while at least one class is embedded (explicit OR default) — the pure Standard 14 route is a CHOICE, not a fallback; or a caller face (either tier) that has no TrueType outlines (a CFF / CFF2 face `subsetForPdf` refuses), always recorded, `reason: 'no TrueType outlines'` |
+ * | `layout/region-dropped` | `header` or `footer` | the IR states a header or a footer (`oconv-ir/v2`, T80), which this writer does not write; once per region. A `field` is written as its text (`oconvIr.withFieldsAsRuns`) |
+ * | `note/dropped` | `footnote` or `endnote` | the IR holds a note (`oconv-ir/v2`, T81), which this writer does not write (`oconvIr.withoutNotes`); one per note, the text around it kept |
  * | `layout/s14-variant-metrics-approx` | `{styles}` | DEFENSIVE FALLBACK — fires only if the fonts package regresses to a shared width table across Standard 14 variants (the fonts package now ships real per-variant tables); not reachable against the real `@awacloud/fonts` |
  * | `text/unencodable` | `{count, sample}` | ONE record per document, on BOTH routes: how many character occurrences could not be drawn faithfully — on the Standard 14 route not WinAnsi-representable (each emitted as `?`), on the embedded route (explicit or default face) no glyph in the resolved face (drawn as `.notdef`) — and a sample of the distinct characters |
  *
@@ -294,6 +296,9 @@ export const oconvIrToPdf = {
                 ruleX: o.ruleX === undefined
                     ? (parentCtx.ruleX === undefined ? null : parentCtx.ruleX)
                     : o.ruleX,
+                // A tagged document: the structure path the blocks' elements
+                // go under (a list item's `LBody`, a table cell).
+                tagPath: o.tagPath === undefined ? parentCtx.tagPath : o.tagPath,
                 linebreak: o.styleOverride
                     ? {
                         ...parentLb,
@@ -440,13 +445,75 @@ export const oconvIrToPdf = {
         }
 
         /**
-         * Convert an `oconv-ir/v1` document to PDF bytes.
+         * The structure types PDF/UA-2 writes for the PDF 1.7 ones the
+         * typesetter names: a quote a `Div`, a code block its `P` alone (the
+         * PDF 2.0 standard types have neither `BlockQuote` nor `Code`, which
+         * veraPDF refuses under PDF/UA-2, rule 8.2.4).
+         */
+        const UA2_TYPES = Object.freeze({ BlockQuote: 'Div', Code: null });
+
+        /**
+         * The plain text of the first heading of `ir`, trimmed, or `''`.
+         *
+         * @param {object} node
+         * @returns {string}
+         */
+        function firstHeadingText(node) {
+            for (const kid of (node && node.children) || []) {
+                if (kid && kid.kind === 'heading') {
+                    return (kid.children || []).filter((r) => r && r.kind === 'run').map((r) => String(r.text)).join('').trim();
+                }
+                const nested = firstHeadingText(kid);
+                if (nested !== '') return nested;
+            }
+            return '';
+        }
+
+        /**
+         * A tagged document's marker for `pageContent`: it opens and closes
+         * the builder's structure elements as the items' structure paths
+         * (`item.tag`) change, marks each item with an MCID of its element,
+         * and marks rules, decorative pictures and page numbers as
+         * artifacts. `close()` closes what is still open.
+         *
+         * @param {object} builder A `pdfBuilder` builder.
+         * @param {number} part The PDF/UA part.
+         * @returns {{mark: (item: object) => string, close: () => void}}
+         */
+        function structureMarker(builder, part) {
+            /** @type {object[]} The open path, outermost first. */
+            const open = [];
+            const typed = (path) => (part === 2
+                ? path.filter((seg) => UA2_TYPES[seg.type] !== null)
+                    .map((seg) => (UA2_TYPES[seg.type] ? { ...seg, type: UA2_TYPES[seg.type] } : seg))
+                : path);
+            const mark = (item) => {
+                if (item.kind === 'pageNumber') return '/Artifact <</Type /Pagination>> BDC';
+                if (!Array.isArray(item.tag) || item.artifact) return '/Artifact BMC';
+                const path = typed(item.tag);
+                let common = 0;
+                while (common < open.length && common < path.length
+                    && open[common].key === path[common].key && open[common].type === path[common].type) common += 1;
+                while (open.length > common) { builder.closeElement(); open.pop(); }
+                for (let i = common; i < path.length; i += 1) {
+                    builder.openElement(path[i].type, path[i].props);
+                    open.push(path[i]);
+                }
+                return `/${path[path.length - 1].type} <</MCID ${builder.markContent()}>> BDC`;
+            };
+            const close = () => { while (open.length > 0) { builder.closeElement(); open.pop(); } };
+            return { mark, close };
+        }
+
+        /**
+         * Convert an `oconv-ir/v2` document to PDF bytes.
          *
          * @param {object} ir The IR document node.
          * @param {object} [pdfOpts] The caller's `opts.pdf` block — validated
          *   in ONE place (`oconvPdfBox.resolveLayout`).
          * @param {{assets?: Object<string, Uint8Array>,
-         *           defaultFaces?: Object<string, Uint8Array>|null}} [writeOpts]
+         *           defaultFaces?: Object<string, Uint8Array>|null,
+         *           title?: string}} [writeOpts]
          *   `assets`: image bytes, keyed by the markdown image destination
          *   EXACTLY as written. Kept separate from `pdfOpts` on
          *   purpose: `pdfOpts` is the TYPESETTING block `resolveLayout`
@@ -457,7 +524,9 @@ export const oconvIrToPdf = {
          *   (`FontMap`, keys `regular|bold|italic|boldItalic|mono`) — the
          *   registered `oconvDefaultFaces` map carried across a worker
          *   boundary; when neither `undefined` nor `null` it replaces the
-         *   registered descriptor's map WHOLE.
+         *   registered descriptor's map WHOLE. `title`: the document's own
+         *   title (a front matter's, a source document's), the title of a
+         *   PDF/UA document before its first heading.
          * @returns {IrToPdfResult}
          * @throws {Error} `oconv: bad pdf option <key>` on an invalid option.
          * @throws {Error} `oconv: bad pdf font <style>` on unreadable font
@@ -465,6 +534,12 @@ export const oconvIrToPdf = {
          *   font <key>` for the same two cases on the default-face map.
          * @throws {Error} `oconv: invalid ir (<code> at <path>)` when the IR
          *   does not validate.
+         * @throws {Error} `oconv: pdf/A needs embedded faces (<classes>)` /
+         *   `oconv: pdf/UA needs embedded faces (<classes>)` when a drawn
+         *   style class has no embedded face under `pdfA` / `pdfUA`.
+         * @throws {Error} `oconv: pdf/UA needs a title (front matter or a
+         *   heading)` under `pdfUA` with neither `writeOpts.title` nor a
+         *   heading.
          */
         function irToPdf(ir, pdfOpts, writeOpts) {
             const layout = box.resolveLayout(pdfOpts);
@@ -493,6 +568,15 @@ export const oconvIrToPdf = {
                 const first = check.errors[0];
                 throw new Error(`oconv: invalid ir (${first.code} at ${first.path})`);
             }
+            // T80: no header or footer is written (the pdf writers take
+            // the page regions in a later release), a field as its text.
+            for (const region of ['header', 'footer']) {
+                if (ir[region]) losses.push({ code: 'layout/region-dropped', detail: region });
+            }
+            // T81: no note is written, each recorded.
+            const unnoted = irApi.withoutNotes(ir);
+            for (const cls of unnoted.dropped) losses.push({ code: 'note/dropped', detail: cls });
+            ir = irApi.withFieldsAsRuns(unnoted.ir);
 
             // --- The image seam ----------------------------------------
             // `pdfBuilder.addImage` needs a CURRENT PAGE, and builder pages
@@ -528,6 +612,16 @@ export const oconvIrToPdf = {
                 // a hand-wired factory call (those PNGs are then refused).
                 zlib: zlibApi
             };
+            // A PDF/UA claim tags the document: every block's elements go
+            // under one `Document`, and its title is required.
+            const pdfUA = pdfOpts && pdfOpts.pdfUA;
+            let title = '';
+            if (pdfUA) {
+                ctx.tagPath = [{ key: 'document', type: 'Document' }];
+                const own = writeOpts && typeof writeOpts.title === 'string' ? writeOpts.title.trim() : '';
+                title = own !== '' ? own : firstHeadingText(ir);
+                if (title === '') throw new Error('oconv: pdf/UA needs a title (front matter or a heading)');
+            }
             // Assigned after the literal so the closure can name `ctx`
             // itself. Renderers receive their OWN bound copy from `render`;
             // this one serves a standalone caller re-entering the flow.
@@ -549,12 +643,23 @@ export const oconvIrToPdf = {
 
             const fonts = buildFonts(measurer, byStyle);
 
+            // A PDF/A or PDF/UA claim embeds every font: a drawn class
+            // without an embedded face is refused before anything is written.
+            const pdfA = pdfOpts && pdfOpts.pdfA;
+            if (pdfA || pdfUA) {
+                const bare = [...byStyle.keys()].filter((style) => (byStyle.get(style) || new Set()).size > 0
+                    && measurer.face(style).source === 'standard14');
+                if (bare.length > 0) throw new Error(`oconv: pdf/${pdfA ? 'A' : 'UA'} needs embedded faces (${bare.join(', ')})`);
+            }
+
             /** Raw per-character records; collapsed into ONE loss below. */
             const unencodable = [];
-            const builder = pdfBuilderApi.builder();
+            const builder = pdfA ? pdfBuilderApi.builder({ pdfA })
+                : pdfUA ? pdfBuilderApi.builder({ pdfUA, lang: pdfOpts.lang }) : pdfBuilderApi.builder();
+            const structure = pdfUA ? structureMarker(builder, pdfUA) : null;
             for (const page of pages) {
-                const { bytes, usedFonts } = renderText.pageContent(page, fonts, layout, unencodable);
                 builder.addPage({ mediaBox: [0, 0, layout.pageWidth, layout.pageHeight] });
+                const { bytes, usedFonts } = renderText.pageContent(page, fonts, layout, unencodable, structure ? structure.mark : undefined);
                 for (const res of usedFonts) {
                     const entry = entryForRes(fonts, res);
                     if (!entry) continue;
@@ -591,6 +696,10 @@ export const oconvIrToPdf = {
             // NO date, no setId (the writer derives the /ID) — see the
             // determinism note in the header.
             builder.addMetadata({ Producer: '@awacloud/oconv', Creator: '@awacloud/oconv' });
+            if (structure) {
+                structure.close();
+                builder.addMetadata({ Title: title });
+            }
 
             return { bytes: builder.build(), losses, pages: pages.length };
         }

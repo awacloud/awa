@@ -27,14 +27,14 @@ emits `Uint8Array` bytes on `.build()`. The returned chain is closure-based
 const b = runtime.resolve('pdfBuilder');
 // Returns: { builder }
 const doc = b.builder();
-// doc: { addPage, addContent, addFont, addImage, addMetadata, setVersion, setId, build }
+// doc: { addPage, addContent, addFont, addImage, addMetadata, openElement, markContent, closeElement, setVersion, setId, build }
 ```
 
 ## API
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `builder` | `() => Builder` | Creates a fresh chainable builder (own closure state — call once per document). |
+| `builder` | `(opts?: { pdfA?: '4' \| '2b', outputIntent?: { profile: Uint8Array, components: 1 \| 3 \| 4, identifier: string, info?: string }, pdfUA?: 1 \| 2, lang?: string }) => Builder` | Creates a fresh chainable builder (own closure state — call once per document). `pdfA` makes the document claim that PDF/A profile (see [PDF/A](#pdfa)); `pdfUA` (with its `lang`) that PDF/UA part (see [PDF/UA](#pdfua)). |
 
 ### `Builder` chain
 
@@ -45,12 +45,15 @@ const doc = b.builder();
 | `addFont` | `(spec: { name: string, baseFont: string, subtype?: string, encoding?: 'WinAnsiEncoding' \| 'MacRomanEncoding' \| 'StandardEncoding', standard14?: Standard14Lookup, encodings?: EncodingLookup }) => Builder` | **Legacy shape** — registers a non-embedded font reference (`subtype` defaults to `Type1`) into the current page's `/Resources /Font`. The font dictionary is allocated once per distinct `(baseFont, subtype, encoding)` and shared by every page that registers it. Without `encoding` the emitted bytes are frozen. |
 | `addFont` | `(spec: { name: string, embedded: SimpleEmbed \| CidEmbed }) => Builder` | **Embedded shape** — takes a [`pdfFontEmbed`](../font/embed.md) result and allocates every indirect it needs (see [Embedded fonts](#embedded-fonts)). Exactly one of `baseFont` / `embedded` must be given. |
 | `addImage` | `(spec: { name, width, height, colorSpace, bitsPerComponent, data, filter?, decodeParms?, sMask? }) => Builder` | Allocates an **image XObject** as an indirect stream and registers it into the current page's `/Resources /XObject` (see [Images](#images)). Decodes nothing; emits no content operator. |
+| `openElement` | `(type: string, props?: { alt?: string, lang?: string, attributes?: object[] }) => Builder` | Opens a structure element of `type` under the open one, at the top when none is open (see [Tagged content](#tagged-content)). |
+| `markContent` | `() => number` | Returns the current page's next MCID (0, 1, … per page), made the open element's next kid; the caller writes the marked-content sequence. |
+| `closeElement` | `() => Builder` | Closes the open structure element. |
 | `addMetadata` | `(meta: object) => Builder` | Merges Info-dict fields. `Title`/`Author`/`Subject`/`Keywords`/`Creator`/`Producer`/`CreationDate`/`ModDate` are always emitted as PDF strings; other keys are kept only if their value is already a string. |
-| `setVersion` | `(v: string) => Builder` | Overrides the PDF header version (default `'2.0'`); must match `/^\d\.\d$/`. |
+| `setVersion` | `(v: string) => Builder` | Overrides the PDF header version (default `'2.0'`, `'1.7'` under `pdfA: '2b'`); must match `/^\d\.\d$/`, and under `pdfA` equal the profile's version. |
 | `setId` | `(a: string \| Uint8Array, b?: string \| Uint8Array) => Builder` | Sets the `/ID` pair — hex string or raw bytes; `b` defaults to `a`. Without it, a `'2.0'` document gets an `/ID` derived from its content ([`pdfWriter`](./writer.md#derived-id)). |
-| `build` | `() => Uint8Array` | Assembles Catalog + Pages tree + page objects + Info (if any), then calls `pdfWriter.writeDocument`. |
+| `build` | `() => Uint8Array` | Assembles Catalog + Pages tree + page objects + Info (if any) + the XMP packet (under `pdfA`), then calls `pdfWriter.writeDocument`. |
 
-Every chain method except `build` returns the same `Builder` instance.
+Every chain method except `markContent` and `build` returns the same `Builder` instance.
 
 ### `addFont` spec — non-embedded shape
 
@@ -60,7 +63,7 @@ Every chain method except `build` returns the same `Builder` instance.
 | `baseFont` | `string` | `/BaseFont` name (e.g. `Helvetica`). Exactly one of `baseFont` / `embedded`. |
 | `subtype` | `string` | `/Subtype`; defaults to `Type1`. |
 | `encoding` | `'WinAnsiEncoding' \| 'MacRomanEncoding' \| 'StandardEncoding'` | Optional. One of the three predefined simple-font encodings of ISO 32000-1 § 9.6.6 / Annex D, emitted as `/Encoding /<name>` after the existing keys: `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`. Absent (or `undefined`) emits no `/Encoding` key and the bytes are identical to a spec without the option — the default is unchanged. Any other value, or `encoding` combined with `embedded`, throws `pdf/builder/bad-font` with `{ name, encoding }` in its `context`. No `/Differences` or custom encoding dictionaries. |
-| `standard14` | `Standard14Lookup` | Optional opt-in: the `@awacloud/fonts` `standard14Lookup` API (`isStandard14`, `lookupStandard14`), as `pdfFont.typeFont` takes it. Given, the dictionary also carries the `FirstChar`, `LastChar`, `Widths` and `FontDescriptor` PDF 2.0 requires for every simple font (see [Standard 14 metrics](#standard-14-metrics)). Absent (or `undefined`), the bytes are the frozen legacy ones. |
+| `standard14` | `Standard14Lookup \| false` | The `@awacloud/fonts` `standard14Lookup` API (`isStandard14`, `lookupStandard14`), as `pdfFont.typeFont` takes it: the dictionary also carries the `FirstChar`, `LastChar`, `Widths` and `FontDescriptor` PDF 2.0 requires for every simple font (see [Standard 14 metrics](#standard-14-metrics)). **Absent, a Standard 14 Type1 face takes the builder's own lookups** (since 2.0.0); `false` writes the legacy dictionary. |
 | `encodings` | `EncodingLookup` | With `standard14`, for a Latin face in `MacRomanEncoding`, `StandardEncoding` or with no `encoding`: the `@awacloud/fonts` `encodingLookup` API (`lookupEncoding`), which names each code's glyph (see [Standard 14 metrics](#standard-14-metrics)). |
 
 **Shared dictionary.** A non-embedded font dictionary is allocated once per
@@ -77,13 +80,16 @@ one built without sharing.
 
 PDF 2.0 no longer exempts the Standard 14 faces: `FirstChar`, `LastChar`,
 `Widths` and `FontDescriptor` are required in every simple font dictionary
-(ISO 32000-2 Table 109). The legacy shape writes none of them unless the
-`standard14` option is given; with it, the dictionary gains
+(ISO 32000-2 Table 109). Since 2.0.0 the builder writes them by default
+for a Standard 14 Type1 face (it declares the fonts `standard14Lookup` and
+`encodingLookup`); `standard14: false` writes the legacy dictionary, and so
+does a builder factory composed without those lookups. With them, the
+dictionary gains
 `/FirstChar 32 /LastChar 255`, the 224 `Widths` of the face's Adobe
 Core 14 metrics (1000 units per em) and an indirect `FontDescriptor`
 (`FontName`, `Flags`, `FontBBox`, `ItalicAngle`, `Ascent`, `Descent`,
-`CapHeight`, `XHeight`, `StemV`, `StemH`), one per face. The metrics are
-injected rather than declared as a dependency, as `pdfFont.typeFont`
+`CapHeight`, `XHeight`, `StemV`, `StemH`), one per face. A caller may still
+pass its own `standard14` (and `encodings`) API, as `pdfFont.typeFont`
 takes them.
 
 The metrics' width tables are per WinAnsi code for the twelve Latin faces
@@ -92,14 +98,16 @@ and per built-in code for `Symbol` and `ZapfDingbats`, so the option takes
 symbolic ones as they are. A Latin face in `MacRomanEncoding`,
 `StandardEncoding` or with no `encoding` (its built-in encoding,
 StandardEncoding) also needs `encodings`, the `@awacloud/fonts`
-`encodingLookup` API: each code 32–255 takes the width of the glyph its
+`encodingLookup` API (the builder's own by default): each code 32–255 takes the width of the glyph its
 encoding names there — the WinAnsi table's (through WinAnsi's glyph
 names), else the record's `extraWidths` (the glyphs WinAnsi lacks: `fi`,
 `fl`, `Lslash`, `dotlessi`, the accents …), else 0 (a glyph the face does
-not have, or an empty code). A Latin face in one of those encodings
-without `encodings`, a symbolic face with an `encoding`, a `baseFont`
-outside the 14, a `subtype` other than `Type1`, or a `standard14` or
-`encodings` value that is not such an API throws `pdf/builder/bad-font`. A
+not have, or an empty code). By default, a symbolic face with an `encoding`, a `baseFont` outside
+the 14 and a `subtype` other than `Type1` keep the legacy dictionary. With
+a `standard14` given, a Latin face in one of those encodings without
+`encodings`, a symbolic face with an `encoding`, a `baseFont` outside the
+14, a `subtype` other than `Type1`, or a `standard14` or `encodings` value
+that is not such an API throws `pdf/builder/bad-font`. A
 registration with the option and one without it are two dictionaries.
 
 ```js
@@ -161,8 +169,9 @@ value without `setId` gets no `/ID`.
 ## Embedded fonts
 
 `addFont({ name, embedded })` accepts a [`pdfFontEmbed`](../font/embed.md)
-result — `embedSimple` (a `SimpleEmbed`: `/TrueType` + `/WinAnsiEncoding`) or
-`embedCid` (a `CidEmbed`: `/Type0` + `/Identity-H` + `/CIDFontType2`). The
+result — `embedSimple` (a `SimpleEmbed`: `/TrueType`, or `/Type1` for CFF
+outlines, + `/WinAnsiEncoding`) or `embedCid` (a `CidEmbed`: `/Type0` +
+`/Identity-H` + `/CIDFontType2`, or `/CIDFontType0` for CFF outlines). The
 adapter deliberately returns **inline** dicts and leaves every indirect to its
 consumer; the builder is that consumer.
 
@@ -182,7 +191,7 @@ Per **embed result object**, not per `addFont` call:
 
 | # | Indirect | Content | Route |
 |---|----------|---------|-------|
-| 1 | font-program stream | `<< /Length1 <fontFile.length> >>` (plus `/Subtype /OpenType` when `fontFileKey` is `FontFile3`) over `embedded.fontFile` | both |
+| 1 | font-program stream | `<< /Length1 <fontFile.length> >>` over `embedded.fontFile`, or `<< /Subtype /OpenType >>` when `fontFileKey` is `FontFile3` (no `/Length1`: ISO 32000-2 Table 125 gives it to `FontFile` and `FontFile2` only) | both |
 | 2 | `FontDescriptor` | `embedded.descriptor` **cloned**, with `[fontFileKey] → 1 0 R` added | both |
 | 3 | `/ToUnicode` | `embedded.toUnicodeStream` (the serializer refuses an inline stream) | both |
 | 4 | `CIDFont` | `embedded.cidFontDict` cloned, `/FontDescriptor → 2 0 R` | CID only |
@@ -318,11 +327,51 @@ const bytes = builder()
 XObject's own space is the unit square, which is why the `cm` matrix carries
 the on-page size directly.
 
+## Tagged content
+
+`openElement`, `markContent` and `closeElement` declare the logical structure of a tagged document (ISO 32000-2 § 14.7, § 14.8); the caller writes the content and its marks:
+
+```js
+const b = builder().addPage().addFont({ name: 'F1', embedded }).openElement('Document').openElement('P');
+const mcid = b.markContent();
+b.addContent(`/P <</MCID ${mcid}>> BDC BT /F1 12 Tf 72 720 Td <...> Tj ET EMC`);
+b.closeElement().addContent('/Artifact <</Type /Pagination>> BDC ... EMC').closeElement();
+```
+
+- `type` is a structure type, a name of letters and digits (`Document`, `P`, `H1`, `L`, `LI`, `Lbl`, `LBody`, `Table`, `TR`, `TH`, `TD`, `Figure`, …); `props.alt` its alternate description, `props.lang` its language, `props.attributes` its attribute objects — each `{ O, … }`, its values strings (written as names), finite numbers or booleans, such as `{ O: 'Table', Scope: 'Column' }` or `{ O: 'List', ListNumbering: 'Unordered' }`;
+- `markContent()` hands out the MCIDs of the current page; an element may hold MCIDs of several pages (content broken over a page) and elements;
+- `build()` writes the catalog's `/StructTreeRoot` and `/MarkInfo << /Marked true >>`, each element (`/S`, `/P`, `/Pg` the page of its first marked content, `/K` its kids in order — an MCID on another page than `/Pg` as a `/MCR` reference — `/Alt`, `/Lang`, `/A`), the `/ParentTree` and each marked page's `/StructParents`. Under `pdfUA: 2` every element and the root's `/Namespaces` carry the PDF 2.0 namespace (`http://iso.org/pdf2/ssn`); otherwise no namespace is written (the PDF 1.7 types).
+
+Without `openElement` nothing of this is written. An element still open at `build()` is refused.
+
+## PDF/A
+
+`builder({ pdfA: '4' })` or `builder({ pdfA: '2b' })` writes a document claiming PDF/A-4 (ISO 19005-4) or PDF/A-2b (ISO 19005-2):
+
+- `build()` adds an XMP packet ([`pdfXmp.packet`](../metadata/xmp.md)) as an unfiltered `/Type /Metadata /Subtype /XML` stream named by the catalog's `/Metadata`: its `pdfaid` (part 4 and rev 2020, or part 2 and conformance B) and the `addMetadata` fields;
+- under `'4'` no trailer Info is written (the fields live in the XMP only) and the version is 2.0;
+- under `'2b'` the Info is written as without `pdfA`, the XMP carrying the same values, the version is 1.7 and the trailer has an `/ID` — `setId`'s, else derived from the bytes ([`pdfWriter`](./writer.md#derived-id)'s `deriveId`);
+- the catalog gets `/OutputIntents` with one `GTS_PDFA1` output intent, its `/DestOutputProfile` the first-party sRGB profile ([`pdfSrgbIcc`](../prepress/srgb-icc.md), `/N 3`, `sRGB IEC61966-2.1`, registry `http://www.color.org`) — or `opts.outputIntent`'s (`profile`, `components`, `identifier`, `info`), so device colours and transparency meet the profile's colour rules.
+
+- every font must be embedded (`addFont({ embedded })`): a page that registered a font without a program (`addFont({ baseFont })`) makes `build()` throw `pdf/builder/pdfa-font-not-embedded`.
+
+So built, the builder's documents — a blank page, text in embedded fonts, a soft-masked image — conform to both profiles as veraPDF 1.30.3 judges them (the `verapdf-pdfa` suite of `tools/office-scorecard`).
+
+## PDF/UA
+
+`builder({ pdfUA: 1, lang })` or `builder({ pdfUA: 2, lang })` writes a document claiming PDF/UA-1 (ISO 14289-1) or PDF/UA-2 (ISO 14289-2), `lang` its language (a BCP 47 tag, required):
+
+- the catalog gets `/MarkInfo << /Marked true >>`, `/Lang`, `/ViewerPreferences << /DisplayDocTitle true >>` and, as unfiltered `/Metadata`, an XMP packet with `pdfuaid` (part 1; part 2 and rev 2024) and the `addMetadata` fields — a Title is required (`dc:title`, the title a viewer displays);
+- the version is 1.7 (UA-1) or 2.0 (UA-2), the trailer has an `/ID` (`setId`'s, else derived), and every font must be embedded, as under `pdfA`;
+- the Info dict is written as without `pdfUA`; `pdfUA` and `pdfA` are not written together.
+
+The logical structure is declared with [Tagged content](#tagged-content)'s methods: an untagged document claiming a part fails the structure rules (ISO 14289-1 § 7.1, ISO 14289-2 § 8.2). So tagged, the builder's documents — a paragraph; a heading, a list and a page-number artifact; a figure with its alternate description and a table — conform to both parts as veraPDF 1.30.3 judges them (the `verapdf-pdfua` suite of `tools/office-scorecard`).
+
 ## Errors
 
 | Code | Class | When |
 |------|-------|------|
-| `pdf/builder/no-page` | `RenderError` | `addContent`, `addFont` or `addImage` called before any `addPage`. |
+| `pdf/builder/no-page` | `RenderError` | `addContent`, `addFont`, `addImage` or `markContent` called before any `addPage`. |
 | `pdf/builder/bad-bytes` | `RenderError` | `addContent` data is neither `string` nor `Uint8Array`. |
 | `pdf/builder/bad-font` | `RenderError` | `addFont` spec has no `name`; or neither / both of `baseFont` and `embedded`; or an `embedded` value that is not a well-formed `pdfFontEmbed` result; or an `encoding` that is not one of the three predefined names, or is combined with `embedded`; or a `standard14` option that is not a `standard14Lookup` API, names a `baseFont` outside the 14 or a `subtype` other than `Type1`, or pairs a Latin face with an `encoding` other than `WinAnsiEncoding` without an `encodings` API (or a `Symbol` / `ZapfDingbats` face with any `encoding`), or an `encodings` value that is not an `encodingLookup` API. |
 | `pdf/builder/bad-image` | `RenderError` | `addImage` spec is not an object, or one of `name` / `width` / `height` / `colorSpace` / `bitsPerComponent` / `data` / `filter` / `decodeParms` is missing or ill-typed, or an `sMask` carries a nested `sMask`. `err.context.keys` lists the offending keys; `err.context.sMask` is `true` when the failure is on the mask leg. |
@@ -331,6 +380,19 @@ the on-page size directly.
 | `pdf/builder/bad-id` | `RenderError` | `setId` part is neither hex string nor `Uint8Array`. |
 | `pdf/builder/bad-id-hex` | `RenderError` | `setId` hex string has odd length. |
 | `pdf/builder/bad-box` | `RenderError` | `mediaBox`/`cropBox` is not a 4-element array. |
+| `pdf/builder/bad-pdfa` | `ContractError` | `builder`'s `opts.pdfA` is neither `'4'` nor `'2b'`. |
+| `pdf/builder/pdfa-version` | `ContractError` | `setVersion` under `pdfA` with another version than the profile's. |
+| `pdf/builder/pdfa-font-not-embedded` | `ContractError` | `build()` under `pdfA` or `pdfUA` when a page registered a font without an embedded program; `context.fonts` names them, `context.claim` the claim. |
+| `pdf/builder/bad-pdfua` | `ContractError` | `builder`'s `opts.pdfUA` is neither 1 nor 2. |
+| `pdf/builder/pdfua-lang` | `ContractError` | `opts.pdfUA` without a non-empty `opts.lang`. |
+| `pdf/builder/pdfua-with-pdfa` | `ContractError` | `opts.pdfUA` with `opts.pdfA`. |
+| `pdf/builder/pdfua-version` | `ContractError` | `setVersion` under `pdfUA` with another version than the part's. |
+| `pdf/builder/pdfua-title` | `ContractError` | `build()` under `pdfUA` without an `addMetadata` Title. |
+| `pdf/builder/bad-struct-type` | `ContractError` | `openElement`'s `type` is not a name of letters and digits. |
+| `pdf/builder/bad-struct-props` | `ContractError` | `openElement`'s `props` is not an object, or `alt` / `lang` is not a string, or `attributes` is not an array of objects each with a string `O` and string, finite-number or boolean values. |
+| `pdf/builder/no-open-element` | `ContractError` | `markContent` or `closeElement` with no structure element open. |
+| `pdf/builder/open-element` | `ContractError` | `build()` with a structure element still open; `context.open` lists the open types. |
+| `pdf/builder/bad-output-intent` | `ContractError` | `builder`'s `opts.outputIntent` is not `{ profile: Uint8Array (non-empty), components: 1 \| 3 \| 4, identifier: string (non-empty), info?: string }`, or is given without `opts.pdfA`. |
 | `pdf/builder/no-pages` | `RenderError` | `build()` called with zero pages added. |
 
 It also propagates every code from [`pdfWriter`](./writer.md) (raised inside `writeDocument`).

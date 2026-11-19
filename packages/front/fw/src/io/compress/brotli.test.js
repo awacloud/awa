@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -13,6 +13,7 @@ import { huffman } from './huffman.js';
 import { lz77 } from './lz77.js';
 import { brotliDict } from './brotli_dict.js';
 import { brotliDictWords } from './brotli_dict_words.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DICT_BLOB = new Uint8Array(fs.readFileSync(path.join(__dirname, 'brotli_dict.bin')));
@@ -84,9 +85,9 @@ describe('brotli module', () => {
             expect(typeof b.brotliDecompress).toBe('function');
             expect(typeof b.BrotliCompressStream).toBe('function');
             expect(typeof b.BrotliDecompressStream).toBe('function');
-            expect(typeof b._internal).toBe('object');
-            expect(typeof b._internal.readPrefixCode).toBe('function');
-            expect(typeof b._internal.makeReader).toBe('function');
+            expect(typeof b[INTERNAL]).toBe('object');
+            expect(typeof b[INTERNAL].readPrefixCode).toBe('function');
+            expect(typeof b[INTERNAL].makeReader).toBe('function');
         });
     });
 
@@ -94,7 +95,7 @@ describe('brotli module', () => {
 
     describe('_internal.readPrefixCode - simple form (§3.4)', () => {
         const b = mkBrotli();
-        const { makeReader, readPrefixCode } = b._internal;
+        const { makeReader, readPrefixCode } = b[INTERNAL];
 
         test('NSYM=1: zero-bit code returns the encoded symbol', () => {
             // head=01 (LSB) → simple, NSYM-1=00 → NSYM=1, then 8 bits = symbol
@@ -230,7 +231,7 @@ describe('brotli module', () => {
 
     describe('_internal.readPrefixCode - complex form (§3.5)', () => {
         const b = mkBrotli();
-        const { makeReader, readPrefixCode } = b._internal;
+        const { makeReader, readPrefixCode } = b[INTERNAL];
 
         test('2-symbol code via complex form (Kraft-complete CL-of-CL)', () => {
             // Target prefix code: alphabet {0, 1}, both with code length 1.
@@ -399,7 +400,7 @@ describe('brotli module', () => {
 
     describe('_internal.readPrefixCode - error cases', () => {
         const b = mkBrotli();
-        const { makeReader, readPrefixCode } = b._internal;
+        const { makeReader, readPrefixCode } = b[INTERNAL];
 
         test('rejects alphabet size < 1', () => {
             const r = makeReader(new Uint8Array([0]));
@@ -757,7 +758,7 @@ describe('brotli module', () => {
 
     describe('_internal.readVarLenCount (§9.2)', () => {
         const b = mkBrotli();
-        const { makeReader, readVarLenCount } = b._internal;
+        const { makeReader, readVarLenCount } = b[INTERNAL];
 
         function decode(bitsArray) {
             const w = bw();
@@ -794,7 +795,7 @@ describe('brotli module', () => {
 
     describe('_internal.readBlockCount (§6)', () => {
         const b = mkBrotli();
-        const { makeReader, readBlockCount } = b._internal;
+        const { makeReader, readBlockCount } = b[INTERNAL];
 
         test('decodes via a stub prefix code: code 0 + extra 0 → 1', () => {
             const stub = { read() { return 0; } };
@@ -825,7 +826,7 @@ describe('brotli module', () => {
 
     describe('_internal.readRleMax (§7.3)', () => {
         const b = mkBrotli();
-        const { makeReader, readRleMax } = b._internal;
+        const { makeReader, readRleMax } = b[INTERNAL];
 
         test('1 bit "0" → 0', () => {
             const r = makeReader(new Uint8Array([0]));
@@ -858,7 +859,7 @@ describe('brotli module', () => {
 
     describe('_internal.inverseMoveToFront (§7.3)', () => {
         const b = mkBrotli();
-        const { inverseMoveToFront } = b._internal;
+        const { inverseMoveToFront } = b[INTERNAL];
 
         test('identity transform on already-decoded values is a no-op for [0, 0, 0]', () => {
             const v = new Uint8Array([0, 0, 0]);
@@ -886,7 +887,7 @@ describe('brotli module', () => {
 
     describe('_internal.readContextMap (§7.3)', () => {
         const b = mkBrotli();
-        const { makeReader, readContextMap } = b._internal;
+        const { makeReader, readContextMap } = b[INTERNAL];
 
         test('RLEMAX=0, ntrees=2, size=4: direct values via 2-symbol prefix code', () => {
             // RLEMAX = 0 (1 bit "0").
@@ -1344,13 +1345,13 @@ describe('brotli module', () => {
             const data = new TextEncoder().encode(text);
             const enc = b.brotliCompressSync(data);
 
-            const r = b._internal.makeReader(enc);
-            b._internal.readWBITS(r);            // WBITS
-            b._internal.readBit(r);              // ISLAST
-            b._internal.readBit(r);              // ISLASTEMPTY
-            b._internal.readBits(r, 2);          // MNIBBLES code
-            b._internal.readBits(r, 16);         // MLEN-1
-            const h = b._internal.readCompressedMetaBlockHeader(r);
+            const r = b[INTERNAL].makeReader(enc);
+            b[INTERNAL].readWBITS(r);            // WBITS
+            b[INTERNAL].readBit(r);              // ISLAST
+            b[INTERNAL].readBit(r);              // ISLASTEMPTY
+            b[INTERNAL].readBits(r, 2);          // MNIBBLES code
+            b[INTERNAL].readBits(r, 16);         // MLEN-1
+            const h = b[INTERNAL].readCompressedMetaBlockHeader(r);
             expect(h.ntreesL).toBe(4);
             expect(h.cmapL.length).toBe(64);
             // Verify clustering: cmap[i] = i >> 4
@@ -1809,7 +1810,7 @@ describe('brotli module', () => {
     describe('_internal.shiftFirst / shiftAll - RFC 9841 §3.1.1', () => {
         // These helpers moved to brotli_shared as part of the v2.0 split.
         const b = mkShared();
-        const { shiftFirst, shiftAll, shiftStep, shiftAddend } = b._internal;
+        const { shiftFirst, shiftAll, shiftStep, shiftAddend } = b[INTERNAL];
 
         test('shiftAddend treats PARAMETER as 16-bit signed', () => {
             expect(shiftAddend(0)).toBe(0);

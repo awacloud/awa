@@ -132,12 +132,12 @@ const closureCaptures = {};
  * Read-family purity lock is stated against the list below. See
  * `docs/api/bundles/dist-matrix.md` for the full 95-module classification.
  *
- * `pdfFontEmbed` is write-path but is NOT includable: its four declared
+ * `pdfFontEmbed` is write-path and outside this inventory: its four declared
  * dependencies (`embedSubsetForPdf`, `embedFontDescriptor`,
  * `embedCidSystemInfo`, `embedToUnicodeBuilder`) come from `pkg_require`
- * (`@awacloud/fonts`), which `buildLocalRegistry(modules, extras)` does not
- * see — `topoLocal` throws `Unknown module : embedSubsetForPdf`. Recorded as
- * an out-of-perimeter generator gap.
+ * (`@awacloud/fonts`). Since the generator reads `pkg_require` too
+ * (`buildLocalRegistry(modules, extras, pkg_require)`), it could be bundled,
+ * the four inlined; adding it to a root is a decision of its own (size).
  */
 const WRITE_INVENTORY = [
     'pdfBuilder',           // builder()                  — document builder
@@ -196,7 +196,7 @@ const packageMain = {
 };
 
 const fwNames       = pdf.fw_require.map(m => m.name);
-const localRegistry = buildLocalRegistry(pdf.modules, pdf.extras);
+const localRegistry = buildLocalRegistry(pdf.modules, pdf.extras, pdf.pkg_require);
 
 const bundleByName = Object.fromEntries(packageMain.bundle.map(b => [b.name, b]));
 
@@ -221,6 +221,19 @@ const ROOT_SPECS = {
 };
 
 /**
+ * The `@awacloud/fonts` modules the fw surface DECLARES instead of inlining
+ * (owner ruling: the fw variant keeps `@awacloud/fonts` external, the
+ * standalone variant keeps inlining). Every `pkg_require` name is a
+ * candidate; the generator declares only the ones an entry actually reaches
+ * (`pdfBuilder`'s `standard14Lookup` and `encodingLookup` in the `-rw` roots)
+ * and stops its walk there, so the Read roots, which reach none, are emitted
+ * exactly as without the option. Inert on the `bundled` variant by
+ * construction.
+ */
+const EXTERNAL_SIBLINGS = pdf.pkg_require.map((m) => m.name);
+const SIBLING_PACKAGE   = '@awacloud/fonts';
+
+/**
  * Generator variant → committed surface. `bundled` inlines fw
  * (`dependencies: []`), `package` DI-injects it.
  */
@@ -240,17 +253,20 @@ for (const { generatorVariant, dir, metaVariant } of SURFACES) {
     // files `<root>-<variant>.js`; the committed name drops the variant suffix
     // (the surface directory carries the discriminator).
     const tmpDir = mkdtempSync(join(tmpdir(), `pdf-${generatorVariant}-`));
-    generatePrebuilds({
+    const generated = generatePrebuilds({
         packageMain,
-        outDir:       tmpDir,
-        packageLabel: 'pdf',
-        variants:     [generatorVariant],
+        outDir:           tmpDir,
+        packageLabel:     'pdf',
+        variants:         [generatorVariant],
         closureCaptures,
-        driver:       DRIVER
+        driver:           DRIVER,
+        externalSiblings: EXTERNAL_SIBLINGS,
+        siblingPackage:   SIBLING_PACKAGE
     });
 
     for (const root of Object.keys(ROOT_SPECS)) {
-        const generatedJs = readFileSync(join(tmpDir, `${root}-${generatorVariant}.js`), 'utf8');
+        const generatedPath = join(tmpDir, `${root}-${generatorVariant}.js`);
+        const generatedJs   = readFileSync(generatedPath, 'utf8');
 
         const jsPath = join(dir, `${root}.js`);
         writeFileSync(jsPath, generatedJs);
@@ -285,13 +301,26 @@ for (const { generatorVariant, dir, metaVariant } of SURFACES) {
         const exportName = Object.keys(emitted).find(k => k !== 'default');
         const descriptor = emitted[exportName];
 
+        // Declared-sibling fragment, reported BY THE GENERATOR for exactly the
+        // files that declare `@awacloud/fonts` modules (the fw `-rw` roots).
+        // For such a file the sibling names are a walk boundary of `modules`
+        // (neither they nor anything reached only through them is listed),
+        // `fwDependencies` keeps the fw names only, and the declared names go
+        // under `siblingDependencies`. A file without a fragment keeps its
+        // exact key set.
+        const siblingFragment = generated.siblingDependencies[generatedPath];
+        const siblingModules  = siblingFragment ? siblingFragment.modules : [];
+
         const meta = {
             kind:           'build',
             variant:        metaVariant,
             name:           root,
             package:        '@awacloud/pdf',
-            modules:        topoLocal(ROOT_SPECS[root], localRegistry, fwNames),
-            fwDependencies: [...descriptor.dependencies],
+            modules:        topoLocal(ROOT_SPECS[root], localRegistry, [...fwNames, ...siblingModules]),
+            fwDependencies: siblingFragment
+                ? descriptor.dependencies.filter((name) => fwNames.includes(name))
+                : [...descriptor.dependencies],
+            ...(siblingFragment ? { siblingDependencies: siblingFragment } : {}),
             bytes:          {
                 dev: devBytes,
                 min: minBytes

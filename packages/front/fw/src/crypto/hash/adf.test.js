@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -203,4 +203,37 @@ describe('adf module (AES-Derivation Function - KeePass v1 / KDBX 3.x)', () => {
             '8f10656500c6908291c43a0894045e3258cf1bf9e844790e3d3564fe9336abaa'
         );
     }, 10_000);
+});
+
+// ── node:crypto oracle (AES-256-ECB + SHA-256, the KeePass KDBX3 transform) ──
+// No external KDBX vector is vendored (the reference implementations are
+// GPL): an independent implementation computes the expected value.
+describe('adf - node:crypto oracle', () => {
+    test('fn and partial match an independent AES-256-ECB + SHA-256 transform', async () => {
+        const nodeCrypto = await import('node:crypto');
+        const master = new Uint8Array(32).map((_, i) => (i * 7 + 1) & 0xff);
+        const transform = new Uint8Array(32).map((_, i) => (i * 13 + 5) & 0xff);
+        const composite = new TextEncoder().encode('composite credentials');
+        const rounds = 1000;
+
+        const sha = (b) => nodeCrypto.createHash('sha256').update(b).digest();
+        let block = sha(composite);
+        const ecb = nodeCrypto.createCipheriv('aes-256-ecb', transform, null);
+        ecb.setAutoPadding(false);
+        for (let i = 0; i < rounds; i++) block = ecb.update(block);
+        const partial = Buffer.concat([master, sha(block)]);
+        const full = sha(partial);
+
+        const warn = console.warn;
+        console.warn = () => {};   // rounds < MIN_RECOMMENDED_ROUNDS warns WEAK
+        let gotPartial, gotFull;
+        try {
+            gotPartial = _adf.partial(_ba.ui8_to_ba(master), _ba.ui8_to_ba(transform), rounds, _ba.ui8_to_ba(composite));
+            gotFull = _adf.fn(_ba.ui8_to_ba(master), _ba.ui8_to_ba(transform), rounds, _ba.ui8_to_ba(composite));
+        } finally {
+            console.warn = warn;
+        }
+        expect(Buffer.from(_ba.ba_to_ui8(gotPartial)).toString('hex')).toBe(partial.toString('hex'));
+        expect(Buffer.from(_ba.ba_to_ui8(gotFull)).toString('hex')).toBe(full.toString('hex'));
+    });
 });

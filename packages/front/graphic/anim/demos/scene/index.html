@@ -1,0 +1,79 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — scene demo</title>
+
+    <!-- 1. SANITY LOCKDOWN — first, before any application module. -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 2. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 2bis. Surface-local layout only (no palette redeclaration). -->
+    <style>
+        #mount { width: 160px; height: 160px; }
+    </style>
+</head>
+
+<body data-demo="scene">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to demos</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>Scene — JSON → SVG scene/event DSL</h1>
+        <p class="demo-lede">
+            A traffic light built from a JSON scene spec (<code>scene.json</code>) via
+            <code>graphic.scene</code>. Click a lamp to fire its named event: the
+            yellow lamp fires <code>warn</code>, the green lamp fires <code>go</code>,
+            the red lamp fires <code>stop</code>.
+        </p>
+    </header>
+
+    <div class="demo-stage">
+        <svg id="mount" viewBox="0 0 80 160" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <p class="demo-note">
+        No build step: this page runs straight off the filesystem via a static
+        server. Running the <code id="variant-label">standalone</code> build.
+        Append <code>?variant=fw</code> to the URL to run it registered on an
+        <code>@awacloud/fw</code> runtime instead.
+    </p>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/demos/scene/</code></p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+
+<!-- 3. ENTRY — the `run()` contract. -->
+<script type="module">
+    import { boot } from '../_boot.js';
+    import { run } from './main.js';
+
+    const mount = document.getElementById('mount');
+    const { anim, variant } = await boot();
+    document.getElementById('variant-label').textContent = variant;
+    await run({ mount, anim, variant });
+    // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+</script>
+</body>
+</html>

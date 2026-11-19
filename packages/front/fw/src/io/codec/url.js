@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -50,7 +50,7 @@
  * @typedef {object} UrlAPI
  * @property {(str: string, options?: { arrayFormat?: 'repeat' | 'brackets' | 'indices' | 'comma' | 'none', nested?: boolean, space?: 'plus' | 'percent', delimiter?: string }) => Object} parseQuery
  * @property {(obj: Object, options?: { arrayFormat?: 'repeat' | 'brackets' | 'indices' | 'comma', nested?: boolean, space?: 'plus' | 'percent', delimiter?: string, skipNull?: boolean, sort?: boolean }) => string} stringifyQuery
- * @property {(str: string, base?: string) => ParsedURL} parseURL
+ * @property {(str: string, base?: string, options?: { space?: 'plus' | 'percent' }) => ParsedURL} parseURL
  * @property {(parts: Object) => string} buildURL
  * @property {(s: string, options?: { safe?: string }) => string} encodeSafe
  * @property {(s: string) => string} decodeSafe
@@ -319,15 +319,23 @@ export const url = {
          *
          * Uses native `URL` when available, falls back to a manual regex.
          *
+         * `query` reads `+` as a space, as `URLSearchParams` and HTML forms do
+         * (D17): `?q=fw+examples` gives `{ q: 'fw examples' }`, and a parse-build
+         * round trip keeps the meaning (`buildURL` writes the space as `%20`).
+         * `{ space: 'percent' }` keeps a `+` literal; a `%2B` is a `+` either way.
+         *
          * @param {string} str
          * @param {string} [base] Optional base URL (passed to `URL`).
+         * @param {{ space?: 'plus' | 'percent' }} [options] How `query` reads `+`
+         *   (default `'plus'`: a space).
          * @returns {{
          *   protocol: string, hostname: string, port: string, host: string,
          *   pathname: string, search: string, hash: string, username: string,
          *   password: string, origin: string, href: string, query: Object
          * }}
          */
-        function parseURL(str, base) {
+        function parseURL(str, base, options) {
+            const space = (options && options.space) || 'plus';
             if (typeof URL === 'function') {
                 const u = base ? new URL(str, base) : new URL(str);
                 return {
@@ -342,11 +350,13 @@ export const url = {
                     hash: u.hash,
                     origin: u.origin,
                     href: u.href,
-                    query: parseQuery(u.search)
+                    query: parseQuery(u.search, { space })
                 };
             }
             // Minimal fallback.
-            const m = /^(?:([a-z][a-z0-9+\-.]*:))?(?:\/\/((?:([^:@/]*)(?::([^@/]*))?@)?([^:/?#]*)(?::(\d+))?))?([^?#]*)(\?[^#]*)?(#.*)?$/i.exec(str);
+            // The host is a bracketed IPv6 literal (`[::1]`) or a run of
+            // characters up to `:`, `/`, `?` or `#`.
+            const m = /^(?:([a-z][a-z0-9+\-.]*:))?(?:\/\/((?:([^:@/]*)(?::([^@/]*))?@)?(\[[^\]]*\]|[^:/?#]*)(?::(\d+))?))?([^?#]*)(\?[^#]*)?(#.*)?$/i.exec(str);
             if (!m) throw new Error('url: cannot parse');
             const protocol = m[1] || '';
             const username = m[3] || '';
@@ -362,9 +372,12 @@ export const url = {
                 protocol, username, password, hostname, port, host,
                 pathname, search, hash, origin,
                 href: str,
-                query: parseQuery(search)
+                query: parseQuery(search, { space })
             };
         }
+
+        /** WHATWG special schemes: each has an authority (`//`). */
+        const SPECIAL_SCHEMES = new Set(['http', 'https', 'ws', 'wss', 'ftp', 'file']);
 
         /**
          * Build a URL from parts. Recognized fields:
@@ -380,7 +393,11 @@ export const url = {
             if (parts.protocol) {
                 out += parts.protocol;
                 if (!out.endsWith(':')) out += ':';
-                out += '//';
+                // `//` introduces an authority: written when there is a host,
+                // or for a special scheme (`file:///…` has an empty host).
+                // `mailto:`, `urn:` and `data:` have none.
+                const scheme = out.slice(0, -1).toLowerCase();
+                if (parts.host || parts.hostname || SPECIAL_SCHEMES.has(scheme)) out += '//';
             }
             if (parts.username) {
                 out += encodeURIComponent(parts.username);

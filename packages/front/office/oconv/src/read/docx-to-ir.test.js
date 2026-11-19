@@ -48,7 +48,7 @@ const TABLE_ROWS = [
 describe('oconvDocxToIr — descriptor', () => {
     test('is a fw module descriptor with the prescribed dependencies', () => {
         expect(oconvDocxToIr.name).toBe('oconvDocxToIr');
-        expect(oconvDocxToIr.dependencies).toEqual(['oconvIr', 'docx']);
+        expect(oconvDocxToIr.dependencies).toEqual(['oconvIr', 'docx', 'docxStructure']);
         expect(typeof oconvDocxToIr.factory).toBe('function');
     });
 });
@@ -97,7 +97,7 @@ describe('oconvDocxToIr — composite fixture (tier 2)', () => {
         ({ ir, losses } = docxToIr(readResult));
     });
 
-    test('validates against the frozen oconv-ir/v1 schema (round-trip sanity)', () => {
+    test('validates against the oconv-ir/v2 schema (round-trip sanity)', () => {
         const res = validate(ir);
         expect(res.errors).toEqual([]);
         expect(res.ok).toBe(true);
@@ -105,33 +105,33 @@ describe('oconvDocxToIr — composite fixture (tier 2)', () => {
 
     test('maps the heading via the pStyle heuristic', () => {
         expect(ir.children[0]).toEqual({
-            kind: 'heading', level: 2,
+            kind: 'heading', level: 2, align: null, breakBefore: false,
             children: [{
                 kind: 'run', text: 'Report Title',
-                bold: false, italic: false, strike: false, code: false, link: null
+                bold: false, italic: false, strike: false, code: false, link: null, size: null, font: null, color: null, underline: false, script: null
             }]
         });
     });
 
     test('maps bold/italic/strike runs; code stays false with no rPr.font', () => {
         expect(ir.children[1]).toEqual({
-            kind: 'paragraph',
+            kind: 'paragraph', align: null, breakBefore: false,
             children: [
-                { kind: 'run', text: 'bold', bold: true, italic: false, strike: false, code: false, link: null },
-                { kind: 'run', text: ' italic', bold: false, italic: true, strike: false, code: false, link: null },
-                { kind: 'run', text: ' strike', bold: false, italic: false, strike: true, code: false, link: null },
-                { kind: 'run', text: ' plain', bold: false, italic: false, strike: false, code: false, link: null }
+                { kind: 'run', text: 'bold', bold: true, italic: false, strike: false, code: false, link: null, size: null, font: null, color: null, underline: false, script: null },
+                { kind: 'run', text: ' italic', bold: false, italic: true, strike: false, code: false, link: null, size: null, font: null, color: null, underline: false, script: null },
+                { kind: 'run', text: ' strike', bold: false, italic: false, strike: true, code: false, link: null, size: null, font: null, color: null, underline: false, script: null },
+                { kind: 'run', text: ' plain', bold: false, italic: false, strike: false, code: false, link: null, size: null, font: null, color: null, underline: false, script: null }
             ]
         });
     });
 
     test('resolves the hyperlink target via readResult.hyperlinks[rId]', () => {
         expect(ir.children[2]).toEqual({
-            kind: 'paragraph',
+            kind: 'paragraph', align: null, breakBefore: false,
             children: [{
                 kind: 'run', text: 'Example',
                 bold: false, italic: false, strike: false, code: false,
-                link: 'https://example.test/'
+                link: 'https://example.test/', size: null, font: null, color: null, underline: false, script: null
             }]
         });
     });
@@ -188,6 +188,21 @@ describe('oconvDocxToIr — composite fixture (tier 2)', () => {
     });
 });
 
+// T68 (D52 A): a smart tag is typed by ooxml; its runs read in place.
+describe('oconvDocxToIr — a smart tag reads in place (T68)', () => {
+    test("the smart tag's text is written where it stands", () => {
+        const run = (text) => ({ type: 'run', children: [{ type: 'text', value: text }] });
+        const body = [{
+            type: 'paragraph',
+            children: [run('Visit '), { type: 'smartTag', attrs: { 'w:element': 'place' }, children: [run('Paris')] }, run(' today')]
+        }];
+        const bytes = docxApi.write({ body });
+        const { ir } = docxToIr(docxApi.read(bytes));
+        const text = ir.children[0].children.map((r) => r.text).join('');
+        expect(text).toBe('Visit Paris today');
+    });
+});
+
 describe('oconvDocxToIr — hyperlink without a resolvable target', () => {
     test('keeps the text and records link/target-missing', () => {
         // The hyperlink is built with no target and no rId, so the written
@@ -205,10 +220,10 @@ describe('oconvDocxToIr — hyperlink without a resolvable target', () => {
             { code: 'link/target-missing', detail: 'missing link text' }
         ]);
         expect(ir.children).toEqual([{
-            kind: 'paragraph',
+            kind: 'paragraph', align: null, breakBefore: false,
             children: [{
                 kind: 'run', text: 'missing link text',
-                bold: false, italic: false, strike: false, code: false, link: null
+                bold: false, italic: false, strike: false, code: false, link: null, size: null, font: null, color: null, underline: false, script: null
             }]
         }]);
     });
@@ -294,7 +309,7 @@ describe('oconvDocxToIr — empty document', () => {
         const { ir, losses } = docxToIr(readResult);
 
         expect(validate(ir).ok).toBe(true);
-        expect(ir).toEqual({ kind: 'document', children: [] });
+        expect(ir).toEqual({ kind: 'document', page: null, header: null, footer: null, children: [] });
         expect(losses).toEqual([]);
     });
 });
@@ -337,7 +352,7 @@ describe('oconvDocxToIr — monospace detection (rPr.font allowlist, office/BATC
         const { ir } = docxToIr(docxApi.read(bytes));
         expect(ir.children[0].children[0]).toEqual({
             kind: 'run', text: 'x',
-            bold: true, italic: false, strike: false, code: true, link: null
+            bold: true, italic: false, strike: false, code: true, link: null, size: null, font: null, color: null, underline: false, script: null
         });
     });
 
@@ -916,5 +931,270 @@ describe('oconvDocxToIr — a body-level content control', () => {
         const { ir, losses } = docxToIr(read);
         expect(losses).toEqual([]);
         expect(texts(ir.children)).toEqual(['Cover title', 'item 1', 'item 2']);
+    });
+});
+
+// T27 (a), D36 B: the page of the body's sectPr, under the opt-in include
+// ['layout'] (oconv-ir/v2's document.page, lengths in points).
+describe('oconvDocxToIr — the page under include layout (T27 a)', () => {
+    const para = (text, pPr) => ({ type: 'paragraph', ...(pPr ? { pPr } : {}), children: [{ type: 'run', children: [{ type: 'text', value: text }] }] });
+    const sectBreak = { _extras: [{ type: 'element', name: 'w:sectPr', attrs: {}, children: [] }] };
+    const read = (sectPr, body = [para('x')]) => docxApi.read(docxApi.write({ body, ...(sectPr ? { sectPr } : {}) }));
+    const A4 = { pageSize: { w: 11906, h: 16838 }, pageMargin: { top: 1417, right: 1417, bottom: 1134, left: 1417, header: 708, footer: 708, gutter: 0 } };
+
+    test('the size and the margins in points, portrait from the size', () => {
+        const { ir, losses } = docxToIr(read(A4), { include: ['layout'] });
+        expect(ir.page).toEqual({ width: 595.3, height: 841.9, orientation: 'portrait', margins: { top: 70.85, right: 70.85, bottom: 56.7, left: 70.85 } });
+        expect(losses).toEqual([]);
+        expect(validate(ir).ok).toBe(true);
+    });
+
+    test('orientation: orient when given, else landscape when wider than high', () => {
+        const wide = { pageSize: { w: 16838, h: 11906 } };
+        expect(docxToIr(read(wide), { include: ['layout'] }).ir.page).toMatchObject({ width: 841.9, height: 595.3, orientation: 'landscape', margins: null });
+        const stated = { pageSize: { w: 16838, h: 11906, orient: 'portrait' } };
+        expect(docxToIr(read(stated), { include: ['layout'] }).ir.page.orientation).toBe('portrait');
+        const tall = { pageSize: { w: 11906, h: 16838, orient: 'landscape' } };
+        expect(docxToIr(read(tall), { include: ['layout'] }).ir.page.orientation).toBe('landscape');
+    });
+
+    test('no sectPr, or a pgSz without w or h: no page', () => {
+        expect(docxToIr(read(null), { include: ['layout'] }).ir.page).toBe(null);
+        expect(docxToIr(read({ pageSize: { w: 11906 } }), { include: ['layout'] }).ir.page).toBe(null);
+        expect(docxToIr(read({ pageMargin: A4.pageMargin }), { include: ['layout'] }).ir.page).toBe(null);
+    });
+
+    test('a negative top or bottom margin is kept as its absolute value, recorded', () => {
+        const { ir, losses } = docxToIr(read({ pageSize: A4.pageSize, pageMargin: { ...A4.pageMargin, top: -1440, bottom: -720 } }), { include: ['layout'] });
+        expect(ir.page.margins).toEqual({ top: 72, right: 70.85, bottom: 36, left: 70.85 });
+        expect(losses).toEqual([{ code: 'layout/margin-negative', detail: 'top' }, { code: 'layout/margin-negative', detail: 'bottom' }]);
+    });
+
+    test('a gutter is dropped, recorded', () => {
+        const { ir, losses } = docxToIr(read({ pageSize: A4.pageSize, pageMargin: { ...A4.pageMargin, gutter: 567 } }), { include: ['layout'] });
+        expect(ir.page.margins.left).toBe(70.85);
+        expect(losses).toEqual([{ code: 'layout/gutter-dropped', detail: '28.35pt' }]);
+    });
+
+    test('more than one section: the last section\'s page, recorded with the count', () => {
+        const body = [para('one', sectBreak), para('two', sectBreak), para('three')];
+        const { ir, losses } = docxToIr(read(A4, body), { include: ['layout'] });
+        expect(ir.page.width).toBe(595.3);
+        expect(losses).toEqual([{ code: 'layout/sections-merged', detail: '3 sections' }]);
+        expect(ir.children.map((n) => n.children[0].text)).toEqual(['one', 'two', 'three']);
+    });
+
+    test('without the opt-in: no page and nothing recorded, whatever the sections', () => {
+        const body = [para('one', sectBreak), para('two')];
+        const { ir, losses } = docxToIr(read({ pageSize: A4.pageSize, pageMargin: { ...A4.pageMargin, gutter: 567, top: -1 } }, body));
+        expect(ir.page).toBe(null);
+        expect(losses).toEqual([]);
+        expect(docxToIr(read(A4), { include: [] }).ir.page).toBe(null);
+    });
+
+    test('layout is a known include name; an unknown one still throws', () => {
+        expect(() => docxToIr(read(A4), { include: ['layout', 'toc'] })).not.toThrow();
+        expect(() => docxToIr(read(A4), { include: ['styles'] })).toThrow('oconv: bad docx include');
+    });
+});
+
+// T27 (b), D36 B: the effective alignment and the page breaks, under the
+// opt-in include ['layout'] (oconv-ir/v2's align and breakBefore).
+describe('oconvDocxToIr — alignment and page breaks under include layout (T27 b)', () => {
+    const t = (value) => ({ type: 'text', value });
+    const run = (...children) => ({ type: 'run', children });
+    const PAGE = { type: 'break', kind: 'page' };
+    const p = (children, pPr) => ({ type: 'paragraph', ...(pPr ? { pPr } : {}), children });
+    const pbb = { type: 'element', name: 'w:pageBreakBefore', attrs: {}, children: [] };
+    const styles = {
+        docDefaults: { pPr: { align: 'both' } },
+        styles: [
+            { type: 'paragraph', styleId: 'Normal', name: 'Normal', isDefault: true },
+            { type: 'paragraph', styleId: 'Centred', name: 'Centred', basedOn: 'Normal', pPr: { align: 'center' } },
+            { type: 'paragraph', styleId: 'Child', name: 'Child', basedOn: 'Centred' },
+            { type: 'paragraph', styleId: 'Heading1', name: 'heading 1', basedOn: 'Normal', pPr: { align: 'right' } },
+            { type: 'paragraph', styleId: 'Chapter', name: 'Chapter', basedOn: 'Normal', pPr: { _extras: [pbb] } }
+        ]
+    };
+    const read = (body, st = styles) => docxApi.read(docxApi.write({ body }, { styles: st }));
+    const blocks = (body, st) => docxToIr(read(body, st), { include: ['layout'] });
+    const textOf = (n) => n.children.map((r) => r.text).join('');
+
+    test('the effective alignment: direct, else up the basedOn chain, else docDefaults', () => {
+        const { ir, losses } = blocks([
+            p([run(t('direct'))], { align: 'left' }),
+            p([run(t('styled'))], { pStyle: 'Child' }),
+            p([run(t('defaults'))]),
+            p([run(t('Title'))], { pStyle: 'Heading1' }),
+            p([run(t('ended'))], { align: 'end' })
+        ]);
+        expect(ir.children.map((n) => [n.kind, textOf(n), n.align, n.breakBefore])).toEqual([
+            ['paragraph', 'direct', 'start', false], ['paragraph', 'styled', 'center', false],
+            ['paragraph', 'defaults', 'justify', false], ['heading', 'Title', 'end', false], ['paragraph', 'ended', 'end', false]
+        ]);
+        expect(losses).toEqual([]);
+        expect(validate(ir).ok).toBe(true);
+    });
+
+    test('nothing stated anywhere: null; distribute and a kashida value give justify, recorded; an unknown value null, recorded', () => {
+        const bare = { styles: [{ type: 'paragraph', styleId: 'Normal', name: 'Normal', isDefault: true }] };
+        const { ir, losses } = blocks([
+            p([run(t('none'))]), p([run(t('dist'))], { align: 'distribute' }),
+            p([run(t('kash'))], { align: 'mediumKashida' }), p([run(t('tab'))], { align: 'numTab' })
+        ], bare);
+        expect(ir.children.map((n) => n.align)).toEqual([null, 'justify', 'justify', null]);
+        expect(losses).toEqual([
+            { code: 'layout/align-approximated', detail: 'distribute' },
+            { code: 'layout/align-approximated', detail: 'mediumKashida' },
+            { code: 'layout/align-approximated', detail: 'numTab' }
+        ]);
+    });
+
+    test('a break alone or at an end goes on the next paragraph; one at a start on its own; pageBreakBefore direct or styled', () => {
+        const { ir, losses } = blocks([
+            p([run(t('one'))]),
+            p([run(PAGE)]),
+            p([run(t('two')), run(PAGE)]),
+            p([run(t('three'))]),
+            p([run(PAGE, t('four'))]),
+            p([run(t('five'))], { _extras: [pbb] }),
+            p([run(t('six'))], { pStyle: 'Chapter' })
+        ]);
+        const kept = ir.children.filter((n) => textOf(n).trim());
+        expect(kept.map((n) => [textOf(n), n.breakBefore])).toEqual([
+            ['one', false], ['two ', true], ['three', true], [' four', true], ['five', true], ['six', true]
+        ]);
+        expect(losses).toEqual([]);
+    });
+
+    test('several breaks before one block are one, recorded; a break inside a paragraph keeps its space, recorded', () => {
+        const { ir, losses } = blocks([p([run(PAGE)]), p([run(PAGE)]), p([run(t('a'), PAGE, t('b'))], { _extras: [pbb] })]);
+        const last = ir.children[ir.children.length - 1];
+        expect([textOf(last), last.breakBefore]).toEqual(['a b', true]);
+        expect(losses).toEqual([{ code: 'layout/break-inside', detail: 'a b' }, { code: 'layout/breaks-merged', detail: '3 breaks' }]);
+    });
+
+    test('a break that reaches a table, a code block, a quote or the end is dropped, recorded', () => {
+        const cell = (text) => ({ children: [p([run(t(text))])] });
+        const st = { styles: [...styles.styles,
+            { type: 'paragraph', styleId: 'SourceCode', name: 'Source Code' }, { type: 'paragraph', styleId: 'Quote', name: 'Quote' }] };
+        const { ir, losses } = blocks([
+            p([run(PAGE)]), { type: 'table', rows: [{ cells: [cell('in a cell')] }] },
+            p([run(PAGE)]), p([run(t('x = 1'))], { pStyle: 'SourceCode' }),
+            p([run(PAGE)]), p([run(t('quoted'))], { pStyle: 'Quote' }),
+            p([run(t('last')), run(PAGE)])
+        ], st);
+        expect(losses).toEqual([
+            { code: 'layout/break-dropped', detail: 'table' }, { code: 'layout/break-dropped', detail: 'codeBlock' },
+            { code: 'layout/break-dropped', detail: 'blockquote' }, { code: 'layout/break-dropped', detail: 'end' }
+        ]);
+        const table = ir.children.find((n) => n.kind === 'table');
+        expect(table.children[0].children[0].children[0].breakBefore).toBe(false);
+    });
+
+    test('table cells and quotes keep their alignment', () => {
+        const st = { styles: [...styles.styles, { type: 'paragraph', styleId: 'Quote', name: 'Quote' }] };
+        const { ir } = blocks([
+            { type: 'table', rows: [{ cells: [{ children: [p([run(t('c'))], { align: 'center' })] }] }] },
+            p([run(t('q'))], { pStyle: 'Quote', align: 'right' })
+        ], st);
+        expect(ir.children[0].children[0].children[0].children[0].align).toBe('center');
+        expect(ir.children[1].children[0].align).toBe('end');
+    });
+
+    test('without the opt-in: align null, breakBefore false, nothing recorded; the run text is the same', () => {
+        const body = [p([run(PAGE)]), p([run(t('a'), PAGE, t('b'))], { align: 'distribute' })];
+        const off = docxToIr(read(body));
+        const on = docxToIr(read(body), { include: ['layout'] });
+        expect(off.ir.children.every((n) => n.align === null && n.breakBefore === false)).toBe(true);
+        expect(off.losses).toEqual([]);
+        expect(on.ir.children.map(textOf)).toEqual(off.ir.children.map(textOf));
+    });
+});
+
+// T27 (c), D36 B: each run's effective size, font, colour, underline and
+// script, under the opt-in include ['layout'].
+describe('oconvDocxToIr — run properties under include layout (T27 c)', () => {
+    const run = (value, rPr) => ({ type: 'run', ...(rPr ? { rPr } : {}), children: [{ type: 'text', value }] });
+    const p = (runs, pPr) => ({ type: 'paragraph', ...(pPr ? { pPr } : {}), children: runs });
+    const THEME = '<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:themeElements><a:fontScheme name="x">'
+        + '<a:majorFont><a:latin typeface="Cambria"/><a:ea typeface=""/></a:majorFont>'
+        + '<a:minorFont><a:latin typeface="Calibri"/><a:ea typeface=""/></a:minorFont></a:fontScheme></a:themeElements></a:theme>';
+    const styles = {
+        docDefaults: { rPr: { size: 22, fonts: { asciiTheme: 'minorHAnsi', hAnsiTheme: 'minorHAnsi' } } },
+        styles: [
+            { type: 'paragraph', styleId: 'Normal', name: 'Normal', isDefault: true },
+            { type: 'paragraph', styleId: 'Heading1', name: 'heading 1', basedOn: 'Normal', rPr: { size: 32, color: '2F5496', fonts: { asciiTheme: 'majorHAnsi' } } },
+            { type: 'character', styleId: 'Emph', name: 'Emph', rPr: { color: 'C00000' } },
+            { type: 'character', styleId: 'Link', name: 'Link', basedOn: 'Emph', rPr: { underline: 'single' } }
+        ]
+    };
+    const read = (body, opts = {}) => ({
+        document: { body },
+        styles: opts.styles || styles,
+        package: { parts: opts.noTheme ? {} : { '/word/theme/theme1.xml': new TextEncoder().encode(THEME) } }
+    });
+    const runsOf = (ir) => ir.children.flatMap((b) => b.children).map((r) => [r.text, r.size, r.font, r.color, r.underline, r.script]);
+
+    test('each value from its first source: direct, the character style chain, the paragraph style chain, docDefaults', () => {
+        const { ir, losses } = docxToIr(read([
+            p([run('plain'), run('direct', { size: 18, font: 'Arial', fonts: { ascii: 'Arial' }, color: 'FF0000', underline: 'single', vertAlign: 'superscript' })]),
+            p([run('styled', { rStyle: 'Link' })]),
+            p([run('Title')], { pStyle: 'Heading1' })
+        ]), { include: ['layout'] });
+        expect(runsOf(ir)).toEqual([
+            ['plain', 11, 'Calibri', null, false, null],
+            ['direct', 9, 'Arial', '#ff0000', true, 'super'],
+            ['styled', 11, 'Calibri', '#c00000', true, null],
+            ['Title', 16, 'Cambria', '#2f5496', false, null]
+        ]);
+        expect(losses).toEqual([]);
+        expect(validate(ir).ok).toBe(true);
+    });
+
+    test('a theme font wins over the same level\'s name; auto, baseline and none give nothing', () => {
+        const { ir } = docxToIr(read([p([
+            run('a', { font: 'Arial', fonts: { ascii: 'Arial', asciiTheme: 'majorHAnsi' } }),
+            run('b', { color: 'auto', vertAlign: 'baseline', underline: 'none' }),
+            run('c', { vertAlign: 'subscript' })
+        ])]), { include: ['layout'] });
+        expect(runsOf(ir)).toEqual([
+            ['a', 11, 'Cambria', null, false, null], ['b', 11, 'Calibri', null, false, null], ['c', 11, 'Calibri', null, false, 'sub']
+        ]);
+    });
+
+    test('a theme font with no theme part is null, recorded once per slot; another underline kind recorded once per kind', () => {
+        const { ir, losses } = docxToIr(read([p([
+            run('a'), run('b'), run('c', { underline: 'double' }), run('d', { underline: 'double' }), run('e', { underline: 'wave' })
+        ])], { noTheme: true }), { include: ['layout'] });
+        expect(ir.children[0].children.map((r) => [r.font, r.underline])).toEqual([[null, false], [null, false], [null, true], [null, true], [null, true]]);
+        expect(losses).toEqual([
+            { code: 'layout/font-theme-unresolved', detail: 'minorHAnsi' },
+            { code: 'layout/underline-approximated', detail: 'double' },
+            { code: 'layout/underline-approximated', detail: 'wave' }
+        ]);
+    });
+
+    test('nothing stated anywhere: every value null', () => {
+        const bare = { styles: [{ type: 'paragraph', styleId: 'Normal', name: 'Normal', isDefault: true }] };
+        const { ir, losses } = docxToIr(read([p([run('x')])], { styles: bare }), { include: ['layout'] });
+        expect(runsOf(ir)).toEqual([['x', null, null, null, false, null]]);
+        expect(losses).toEqual([]);
+    });
+
+    test('runs in a hyperlink, a list item and a table cell get their values too', () => {
+        const { ir } = docxToIr({ ...read([
+            p([{ type: 'hyperlink', rId: 'r1', children: [run('link', { rStyle: 'Link' })] }]),
+            { type: 'table', rows: [{ cells: [{ children: [p([run('cell', { size: 20 })])] }] }] }
+        ]), hyperlinks: { r1: { target: 'https://example.test/' } } }, { include: ['layout'] });
+        const link = ir.children[0].children[0];
+        expect([link.text, link.link, link.color, link.underline]).toEqual(['link', 'https://example.test/', '#c00000', true]);
+        expect(ir.children[1].children[0].children[0].children[0].children[0].size).toBe(10);
+    });
+
+    test('without the opt-in: every run as today', () => {
+        const { ir, losses } = docxToIr(read([p([run('direct', { size: 18, color: 'FF0000', underline: 'double', vertAlign: 'superscript' })])]));
+        expect(runsOf(ir)).toEqual([['direct', null, null, null, false, null]]);
+        expect(losses).toEqual([]);
     });
 });

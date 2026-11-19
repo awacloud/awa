@@ -7,7 +7,8 @@
  * Tests — the opt-in `slideExtrasByPart` read option keeps the leftovers
  * of `<p:cSld>` (`cSldExtras`) apart from those of the slide root
  * (`_extras`), so neither overwrites the other and the writer puts each
- * where it came from. Without the option the 1.0.0 model is unchanged.
+ * where it came from. Without the option, the read splits them too when
+ * the root has leftovers of its own (T62 (c): `<p:cSld>`'s were lost).
  */
 import { describe, test, expect } from 'bun:test';
 import { ooxmlRuntime } from '../../tests/_helpers/written-documents.js';
@@ -56,12 +57,13 @@ describe('pptx slide — slideExtrasByPart on read', () => {
         expect(names(master._extras)).toEqual(['p:hf']);
     });
 
-    test('without the option the 1.0.0 model is unchanged (the root overwrites p:cSld)', () => {
+    test('without the option, the root\'s leftovers in _extras and p:cSld\'s in cSldExtras when the root has some (T62 c); else p:cSld\'s in _extras', () => {
         for (const opts of [undefined, {}, { slideExtrasByPart: false }]) {
             const s = slideMod.parseSlide(slideXml(CSLD_EXT, '<p:timing/>'), opts);
-            expect(s.cSldExtras).toBeUndefined();
+            expect(names(s.cSldExtras)).toEqual(['p:extLst']);
             expect(names(s._extras)).toEqual(['p:timing']);
             const only = slideMod.parseSlide(slideXml(CSLD_EXT, ''), opts);
+            expect(only.cSldExtras).toBeUndefined();
             expect(names(only._extras)).toEqual(['p:extLst']);
         }
     });
@@ -99,11 +101,11 @@ describe('pptx slide — the writer places a split model by origin', () => {
         expect(slideMod.serializeSlide(again)).toBe(once);
     });
 
-    test('a model without cSldExtras is written as before (A47 routing)', () => {
+    test('a model without cSldExtras writes its p:extLst in p:cSld alone (T62 c: A47 wrote it in both places)', () => {
         const s = slideMod.parseSlide(slideXml(CSLD_EXT, ''));
         const root = xml.parse(slideMod.serializeSlide(s));
         expect(exts(cSldOf(root))).toEqual(['{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}']);
-        expect(exts(root)).toEqual(['{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}']);
+        expect(exts(root)).toEqual([]);
     });
 });
 
@@ -129,6 +131,6 @@ describe('pptx — slideExtrasByPart through pptx.read and pptx.write', () => {
         const out = xml.parse(decoder.decode(opc.read(p.write(deck)).parts[part]));
         expect(kids(out)).toEqual(['p:cSld', 'p:timing']);
         expect(kids(cSldOf(out))).toEqual(['p:spTree', 'p:extLst']);
-        expect(p.read(bytes).presentation.slides[0].cSldExtras).toBeUndefined();
+        expect(names(p.read(bytes).presentation.slides[0].cSldExtras)).toEqual(['p:extLst']);
     });
 });

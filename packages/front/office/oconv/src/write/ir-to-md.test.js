@@ -87,7 +87,7 @@ function fullTree() {
 const GOLDEN = [
     '---',
     'profile: v1',
-    'ir: oconv-ir/v1',
+    'ir: oconv-ir/v2',
     'sourceFormat: docx',
     'sourceName: report.docx',
     'sourceBytes: 1556',
@@ -172,7 +172,7 @@ describe('oconvIrToMd — golden document (profile v1)', () => {
     test('reports the top-level block count and the frozen versions', () => {
         const { markdown } = irToMd(fullTree(), META);
         expect(markdown).toContain('\nprofile: v1\n');
-        expect(markdown).toContain('\nir: oconv-ir/v1\n');
+        expect(markdown).toContain('\nir: oconv-ir/v2\n');
         expect(markdown).toContain('\nblocks: 9\n');
     });
 });
@@ -588,5 +588,33 @@ describe('oconvIrToMd — the document title (T34 d)', () => {
     test('an empty or blank title, or one that is not a string, is left out', () => {
         const without = irToMd(doc1(), meta(undefined)).markdown;
         for (const title of ['', '   ', 42]) expect(irToMd(doc1(), meta(title)).markdown).toBe(without);
+    });
+});
+
+describe('irToMd — the output budget, 256 MiB by default (T30 (e), D47)', () => {
+    const MiB = 'x'.repeat(1 << 20);
+    /** 300 paragraphs sharing one 1 MiB run: 300 MiB of text. */
+    const huge = () => doc(Array.from({ length: 300 }, () => node('paragraph', {}, [node('run', { text: MiB })])));
+    const small = () => doc([node('paragraph', {}, [node('run', { text: 'one' })]), node('paragraph', {}, [node('run', { text: 'two' })])]);
+
+    test('with no option, a document past 256 MiB of text throws before any markdown', () => {
+        expect(() => irToMd(huge(), META)).toThrow('oconv: output too large');
+    });
+
+    test("{ bytes, overflow: 'truncate' } keeps the leading blocks, recorded doc/truncated", () => {
+        const r = irToMd(small(), META, { outputBudget: { bytes: 3, overflow: 'truncate' } });
+        expect(r.markdown).toContain('one');
+        expect(r.markdown).not.toContain('two');
+        expect(r.losses).toContainEqual({ code: 'doc/truncated', detail: 'kept 3 bytes of text; 1 blocks and 0 table rows dropped' });
+    });
+
+    test('a missing bytes takes the default; Number.MAX_SAFE_INTEGER is accepted; a bad budget throws', () => {
+        const plain = irToMd(small(), META).markdown;
+        expect(irToMd(small(), META, { outputBudget: { overflow: 'truncate' } }).markdown).toBe(plain);
+        expect(irToMd(small(), META, { outputBudget: {} }).markdown).toBe(plain);
+        expect(irToMd(small(), META, { outputBudget: { bytes: Number.MAX_SAFE_INTEGER } }).markdown).toBe(plain);
+        for (const outputBudget of [null, 5, [], { bytes: 0 }, { bytes: 1.5 }, { bytes: 10, overflow: 'cut' }, { bytes: 10, other: 1 }]) {
+            expect(() => irToMd(small(), META, { outputBudget })).toThrow('oconv: bad output budget');
+        }
     });
 });

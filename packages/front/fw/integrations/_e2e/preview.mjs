@@ -31,7 +31,7 @@
  * a dead allowlist entry on a full run · 0 = otherwise.
  *
  * The contract this file implements is frozen at
- * `ai/plans/fw-playground/spikes/w0-preview-harness/FINDINGS.md` §1–§5. No code
+ * `ai/archives/plans/fw-playground/spikes/w0-preview-harness/FINDINGS.md` §1–§5. No code
  * is imported from that directory: the spike is a throwaway prototype.
  */
 
@@ -69,7 +69,6 @@ const HOST = '127.0.0.1';
 const SCHEMA = 'fw-preview-gate/1';
 
 const NO_PLAYWRIGHT_REASON = 'playwright not provisioned — bun install + bun run e2e:preview:install';
-const FW_DIST_SENTRY = 'packages/front/fw/dist/build/sanity.min.js';
 const SENTINEL_MARKER = 'W1-SENTINEL';
 
 const EXIT_OK = 0;
@@ -307,11 +306,6 @@ async function runLeg(ctx, recipe) {
     const cwdAbs = recipe.cwd ? join(root, recipe.cwd) : root;
     if (recipe.needsInstall && !existsSync(join(cwdAbs, 'node_modules'))) {
         return finish('SKIP', `playground not installed — bun install in ${recipe.cwd}`);
-    }
-    if (recipe.requiresFwDist && !existsSync(join(root, FW_DIST_SENTRY))) {
-        // dist/ is gitignored: a per-checkout fact, not repo state. Absent ⇒ SKIP,
-        // never FAIL — a 404 here is not a playground defect (FINDINGS §2.1).
-        return finish('SKIP', `${FW_DIST_SENTRY} absent (gitignored build output) — run the fw build to enable`);
     }
 
     // 3. Port availability — checked by BINDING it, not assumed.
@@ -552,6 +546,9 @@ async function main() {
     let chromium = null;
     let importError = null;
     try {
+        // Test seam: the no-playwright path must stay testable once playwright
+        // is installed (a skip guard keyed on its absence retired that leg).
+        if (process.env.FW_PREVIEW_ASSUME_NO_PLAYWRIGHT === '1') throw new Error('FW_PREVIEW_ASSUME_NO_PLAYWRIGHT=1');
         ({ chromium } = await import('playwright'));
     } catch (err) {
         importError = err.message;

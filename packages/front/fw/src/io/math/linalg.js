@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -283,9 +283,15 @@ export const linalg = {
             },
             /** Transpose m into out. @param {Float32Array} out @param {ArrayLike<number>} m @returns {Float32Array} */
             transpose(out, m) {
-                out[0]=m[0];out[1]=m[3];out[2]=m[6];
-                out[3]=m[1];out[4]=m[4];out[5]=m[7];
-                out[6]=m[2];out[7]=m[5];out[8]=m[8];
+                if (out === m) {
+                    let t;
+                    t=m[1];out[1]=m[3];out[3]=t; t=m[2];out[2]=m[6];out[6]=t;
+                    t=m[5];out[5]=m[7];out[7]=t;
+                } else {
+                    out[0]=m[0];out[1]=m[3];out[2]=m[6];
+                    out[3]=m[1];out[4]=m[4];out[5]=m[7];
+                    out[6]=m[2];out[7]=m[5];out[8]=m[8];
+                }
                 return out;
             },
             /** Multiply a 2D point by the affine 3×3 m (ignores translation row). @param {Float32Array} outV2 @param {ArrayLike<number>} m @param {ArrayLike<number>} v @returns {Float32Array} */

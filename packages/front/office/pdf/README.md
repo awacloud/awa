@@ -1,10 +1,12 @@
 # @awacloud/pdf
 
+Read, write, sign and verify PDF documents in plain JavaScript, in the browser: a typed PDF 2.0 object model, a from-scratch builder, encryption and PAdES signatures.
+
 Pure JavaScript library to read and write PDF documents in the browser, with
 no runtime dependency beyond
-[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.2.0/packages/front/fw)
+[`@awacloud/fw`](https://github.com/awacloud/awa/tree/@awacloud/pdf@2.0.0/packages/front/fw)
 and
-[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.2.0/packages/front/office/fonts).
+[`@awacloud/fonts`](https://github.com/awacloud/awa/tree/@awacloud/pdf@2.0.0/packages/front/office/fonts).
 The reference is ISO 32000-2:2020 (PDF 2.0); PDF 1.x files
 are read too. `pdf.write` emits a `%PDF-2.0` header; `pdfBuilder.setVersion`
 and `pdfWriter.writeDocument({ version })` emit the header they are given
@@ -27,11 +29,14 @@ Known limits, so they are not a surprise:
 
 - The whole file must be in memory as a `Uint8Array`; there is no streaming
   reader.
-- An encrypted file is refused by `read` (`pdf/document/encrypted`) unless
-  you pass `password` (decrypting read: the Standard handler V=4 R=4, V=5
-  R=5 and V=5 R=6; RC4 V=1 / V=2 through the opt-in `legacyRc4`) or opt in
-  to the raw ciphertext container with `allowEncrypted: true`. The empty
-  password is never tried on its own; see [Reading options](#reading-options).
+- An encrypted file read with no `password` is opened with the empty one
+  when it opens (recorded `pdf/document/opened-with-empty-password`, with
+  the permission bits), and refused (`pdf/document/encrypted`) when it does
+  not, unless you pass `password` (decrypting read: the Standard handler
+  V=4 R=4, V=5 R=5 and V=5 R=6; RC4 V=1 / V=2 through the opt-in
+  `legacyRc4`) or opt in to the raw ciphertext container with
+  `allowEncrypted: true`. `emptyPassword: false` refuses every encrypted
+  file read with no password; see [Reading options](#reading-options).
 - A FlateDecode stream is inflated to at most 256 MiB (`pdfFlate.limits`):
   past that `pdf/flate/output-limit` is thrown instead of a decompression
   bomb filling memory. `pdfFlate.decode(bytes, params, { maxOutput })` sets
@@ -192,11 +197,13 @@ unchanged.
 
 | Option | Default | Effect |
 |---|---|---|
-| `password` | none | Opens an encrypted document: a string or bytes (`''` is the empty user password). The Standard handler V=4 R=4, V=5 R=5 or V=5 R=6 is applied, the password tried as the user, then as the owner password, and every string and stream is decrypted as it is read. Without it an encrypted document throws `pdf/document/encrypted`; a wrong one `pdf/document/bad-password`. Ignored on an unencrypted document. |
+| `password` | none | Opens an encrypted document: a string or bytes (`''` is the empty user password). The Standard handler V=4 R=4, V=5 R=5 or V=5 R=6 is applied, the password tried as the user, then as the owner password, and every string and stream is decrypted as it is read. Without it the empty password is tried (`emptyPassword`), and a document it does not open throws `pdf/document/encrypted`; a wrong one `pdf/document/bad-password`. Ignored on an unencrypted document. |
+| `emptyPassword` | `true` | With no `password`, an encrypted document is opened with the empty one when it opens, recorded `pdf/document/opened-with-empty-password` in `doc.losses` (context: `permissions`, the `/P` bits). `false` throws `pdf/document/encrypted` on every encrypted document read with no password. |
 | `legacyRc4` | none | The opt-in `pdfLegacyRc4Read` instance, which decrypts an RC4 V=1 / V=2 document (R2, R3) under `password`. The `pdf-legacy` bundle's `read` passes its own. |
 | `fastCipher` | `false` | With `password`: routes the key check and the AES-CBC decryption through fw's T-table AES (a 30-page R6 file reads in about 25 ms instead of 0.9 s). Not constant-time: for a trusted, single-user host only. |
 | `allowEncrypted` | `false` | `true` returns the raw ciphertext container of an encrypted document instead of throwing (an object stream's members cannot be read there). `password` wins over it. |
-| `recoverXref` | `false` | `true` rebuilds a cross-reference chain the reader cannot use (a wrong offset, an undecodable cross-reference stream, no `startxref`, a trailer without `/Root`) from the file's bytes and records `pdf/document/xref-rebuilt` in `doc.losses`. |
+| `sourceWindow` | 65,536 | With a byte source `{ byteLength, read(offset, length) }` given in place of the bytes (the file read by windows, never held whole): the first window's size in bytes, doubled while a parse runs out of it, up to the parser's `maxStreamBytes` plus 64 KiB (`pdf/document/source-window`). A source whose cross-reference chain fails is read whole once for the rebuild (`recoverXref`). |
+| `recoverXref` | `true` | rebuilds a cross-reference chain the reader cannot use (a wrong offset, an undecodable cross-reference stream, no `startxref`, a trailer without `/Root`) from the file's bytes and records `pdf/document/xref-rebuilt` in `doc.losses`; a byte source whose chain fails is read whole for it. `false` reads strictly, the chain's error thrown. Signing and the AcroForm fill read their base strictly. |
 
 ```js
 // Reuses `api` and `bytes` of the Quick Start; `encrypted` is a password-protected file.
@@ -261,8 +268,8 @@ path-discriminated surfaces:
 
 | Surface | Path | Contents |
 |---|---|---|
-| `dist/build/` | `@awacloud/pdf/build/<root>` | fw-mode: declares its `@awacloud/fw` modules as `dependencies` (DI-injected), needs an `@awacloud/fw` runtime |
-| `dist/standalone/` | `@awacloud/pdf/standalone/<root>` | framework-free: every reachable fw factory inlined in the body, zero runtime dependency (Worker-serializable) |
+| `dist/build/` | `@awacloud/pdf/build/<root>` | fw-mode: declares its `@awacloud/fw` modules as `dependencies` (DI-injected), needs an `@awacloud/fw` runtime; a `-rw` root also declares `@awacloud/fonts`' `standard14Lookup` and `encodingLookup`, so register `pkg_require` (fonts' manifest) too |
+| `dist/standalone/` | `@awacloud/pdf/standalone/<root>` | framework-free: every reachable fw factory inlined in the body, `@awacloud/fonts`' lookups included in the `-rw` roots, zero runtime dependency (Worker-serializable) |
 
 Each root emits a `.js` / `.min.js` / `.meta.json` triplet (e.g.
 `dist/build/pdf-large.js`, `pdf-large.min.js`, `pdf-large.meta.json`), plus a
@@ -270,7 +277,9 @@ single `dist/build/index.js` barrel re-exporting the whole `src/main.js`
 namespace (the five registration arrays and every named descriptor) for
 registration on an `@awacloud/fw` runtime. Each `.meta.json` sidecar records
 the root's `modules`, `fwDependencies` (read back from the generated
-descriptor, never hardcoded) and build byte sizes. See
+descriptor, never hardcoded), for a `dist/build` `-rw` root the
+`siblingDependencies` it declares from `@awacloud/fonts`, and build byte
+sizes. See
 [`docs/api/bundles/dist-matrix.md`](docs/api/bundles/dist-matrix.md) for the
 8-root × 2-surface table, the `-rw` naming scheme and the write inventory.
 
@@ -287,7 +296,9 @@ through the `{ name, register }` envelope `pdf.use()` requires, so
 `core.usedExtension('pdfSign')` and `core.usedExtension('pdfSignature')` are
 both `true` and `core.pdfSignature.verifySignature` is callable. The
 `dist/build` roots need an `@awacloud/fw` runtime to inject their declared
-dependencies.
+dependencies: `fw_require`, plus `pkg_require` (`@awacloud/fonts`' manifest)
+for the `-rw` roots, which declare `standard14Lookup` and `encodingLookup`
+instead of inlining them.
 
 ## Source structure
 
@@ -325,7 +336,7 @@ src/
 
 API per module: [`docs/api/README.md`](docs/api/README.md). Sibling package
 with the same factory + bundles layout:
-[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.2.0/packages/front/office/ooxml).
+[`@awacloud/ooxml`](https://github.com/awacloud/awa/tree/@awacloud/pdf@2.0.0/packages/front/office/ooxml).
 
 ## Tests
 
@@ -420,7 +431,7 @@ Copyright (c) 2026 AwaCloud SAS
 
 ## Project
 
-- Website: https://awaforge.eu
-- Source: [`packages/front/office/pdf`](https://github.com/awacloud/awa/tree/@awacloud/pdf@1.2.0/packages/front/office/pdf)
+- Website: https://awaforge.eu/
+- Source: [`packages/front/office/pdf`](https://github.com/awacloud/awa/tree/@awacloud/pdf@2.0.0/packages/front/office/pdf)
 - Issues: https://github.com/awacloud/awa/issues
-- Security policy: https://github.com/awacloud/awa/blob/@awacloud/pdf@1.2.0/SECURITY.md
+- Security policy: https://github.com/awacloud/awa/blob/@awacloud/pdf@2.0.0/SECURITY.md

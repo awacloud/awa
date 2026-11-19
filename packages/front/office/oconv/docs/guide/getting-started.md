@@ -100,8 +100,8 @@ console.log(odt.target);   // 'odt'
 ## Run conversions in a worker
 
 The same three conversions run off the main thread through the worker entry,
-`@awacloud/oconv/src/worker.js`: create it with
-`new Worker(import.meta.resolve('@awacloud/oconv/src/worker.js'), { type: 'module' })`,
+`@awacloud/oconv/worker.js`: create it with
+`new Worker(import.meta.resolve('@awacloud/oconv/worker.js'), { type: 'module' })`,
 post one message per conversion, and read the reply from `onmessage`. A
 message with a `markdown` string is a `fromMd` call, a message with a
 `target` and no `markdown` is a `convert` call, and anything else is a `toMd`

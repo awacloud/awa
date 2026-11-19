@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -60,7 +60,7 @@ export const pbkdf2 = {
          * @param {{fn:Function}} [Prff]      PRF module (default: hmac, i.e.
          *   HMAC-SHA-256). Must expose `.fn` constructor + `.encrypt(data)`.
          * @returns {bitArray|false}          Derived key, or `false` on invalid
-         *   parameters (negative length/count).
+         *   parameters (negative length, count below 1).
          */
         function derive(password, salt, count, length, Prff) {
             if (count === undefined) {
@@ -72,8 +72,10 @@ export const pbkdf2 = {
                 );
             }
 
-            if (length < 0 || count < 0) {
-                console.warn('[crypto] INVALID: pbkdf2: invalid params');
+            // RFC 8018 §5.2: c is a positive integer; `count < 1` (or NaN)
+            // would run no iteration at all.
+            if (length < 0 || !(count >= 1)) {
+                console.warn('[crypto] INVALID: pbkdf2: invalid params (count must be >= 1, length >= 0)');
                 return false;
             }
             // Edge case (post-upgrade audit): `length === 0` must return []
@@ -94,13 +96,39 @@ export const pbkdf2 = {
             const prf = new Prf.fn(password);
             let out = [];
 
+            // HMAC-SHA-256, the default PRF: every iteration after the first
+            // is two SHA-256 compressions of a padded 32-byte message on the
+            // key's inner and outer states (what HMAC computes), without
+            // allocation. Any other PRF takes the general loop.
+            const inner = prf._baseHash && prf._baseHash[0] && prf._baseHash[0]._h;
+            const outer = prf._baseHash && prf._baseHash[1] && prf._baseHash[1]._h;
+            const compress = !Prff && prf._hash && prf._hash[Symbol.for('@awacloud/fw/internal')] && prf._hash[Symbol.for('@awacloud/fw/internal')].compress;
+            const fast = typeof compress === 'function' && inner && outer && inner.length === 8 &&
+                prf._hash.fn.prototype.blockSize === 512;
+            const st = new Int32Array(8), blk = new Int32Array(16);
+
             for (let k = 1; 32 * out.length < (length || 1); k++) {
                 let u = prf.encrypt(bitArray.concat(salt, [k]));
                 let ui = u;
-                for (let i = 1; i < count; i++) {
-                    ui = prf.encrypt(ui);
-                    for (let j = 0; j < ui.length; j++) {
-                        u[j] ^= ui[j];
+                if (fast && u.length === 8) {
+                    const cur = Int32Array.from(u);
+                    for (let i = 1; i < count; i++) {
+                        // inner: H(ipad state, U || 0x80 || 0... || 768 bits)
+                        for (let j = 0; j < 8; j++) { st[j] = inner[j]; blk[j] = cur[j]; }
+                        blk[8] = 0x80000000; blk[9] = 0; blk[10] = 0; blk[11] = 0; blk[12] = 0; blk[13] = 0; blk[14] = 0; blk[15] = 768;
+                        compress(st, blk);
+                        // outer: H(opad state, inner || 0x80 || 0... || 768 bits)
+                        for (let j = 0; j < 8; j++) { blk[j] = st[j]; st[j] = outer[j]; }
+                        blk[8] = 0x80000000; blk[9] = 0; blk[10] = 0; blk[11] = 0; blk[12] = 0; blk[13] = 0; blk[14] = 0; blk[15] = 768;
+                        compress(st, blk);
+                        for (let j = 0; j < 8; j++) { cur[j] = st[j]; u[j] ^= st[j]; }
+                    }
+                } else {
+                    for (let i = 1; i < count; i++) {
+                        ui = prf.encrypt(ui);
+                        for (let j = 0; j < ui.length; j++) {
+                            u[j] ^= ui[j];
+                        }
                     }
                 }
                 out = out.concat(u);

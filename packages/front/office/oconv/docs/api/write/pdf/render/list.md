@@ -35,7 +35,7 @@ dispatcher, never called directly by a consumer — `ctx` is stack-shaped
 |---|---|---|---|
 | `render` | `(node: object, ctx: object) => {items: object[], losses: object[], height?: number}` | block-local laid-out items (the renderer contract) | — |
 
-`node` is an `oconv-ir/v1` `list` node. `ctx` is the stack's child context
+`node` is an `oconv-ir/v2` `list` node. `ctx` is the stack's child context
 (`measurer`, `layout`, `linebreak`, `losses`, `render`, `flowChildren`,
 `index`, `indent`, `kind`) — `flowChildren` is what re-flows each item's
 children.

@@ -27,7 +27,7 @@
  *
  * Notes :
  *   - The generated directory (default `.fw-virtual/`) is build output —
- *     gitignore it. It is fully rewritten, but LAZILY (BL-299) : merely
+ *     gitignore it. It is fully rewritten, but LAZILY: merely
  *     calling `fwTurbopack(...)` only reads `fw.config.json` + the catalog
  *     and computes the alias map in memory — it never touches disk. The
  *     rm+mkdir+write only happens the FIRST time the returned `resolveAlias`
@@ -74,7 +74,7 @@ const HEADER =
 /**
  * Build the Turbopack alias map for the configured virtual modules. Reads
  * `fw.config.json` + the catalog and computes the map ENTIRELY IN MEMORY —
- * this alone never touches disk (BL-299). The directory rm+mkdir+write is
+ * this alone never touches disk. The directory rm+mkdir+write is
  * deferred to `materialize()`, run lazily on first read of `resolveAlias`
  * (see the `FwTurbopackResult` typedef) so merely constructing the config
  * for inspection can never destroy a pre-existing `outDir`.

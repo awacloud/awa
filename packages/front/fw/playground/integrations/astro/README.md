@@ -6,23 +6,13 @@ form validation, and hydrated SSR markup. Demonstrates
 
 ## Run
 
-```sh
-npm i && npm run dev
-```
-
-Run from this directory. `npm i` installs Astro and creates
-`node_modules/@awacloud/fw` (postinstall → junction/symlink); `npm run dev`
-starts the dev server at http://localhost:4321.
-
-Static build:
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
 
 ```sh
-npm run build && npm run preview
+bun install && bun run dev
 ```
 
-> `postinstall` runs `node ../../_tools/link-fw.mjs`, which points
-> `node_modules/@awacloud/fw` at the fw package root (live source, no copy).
-> Re-run `npm run setup` if the link is ever removed.
+`bun install` installs Astro and links `node_modules/@awacloud/fw` to the in-repo sources (postinstall); `bun run dev` serves the site at http://localhost:4321. `bun run build` then `bun run preview` serves the static build. Astro telemetry is yours to disable (`ASTRO_TELEMETRY_DISABLED=1`); the scripts no longer write that global setting.
 
 ## Tree
 

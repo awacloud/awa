@@ -36,6 +36,13 @@ import { embedClosure } from './subsetForPdf/closure.js';
 import { embedCmapBuilder } from './subsetForPdf/cmap-builder.js';
 import { embedGlyphRewriter } from './subsetForPdf/glyph-rewriter.js';
 import { embedHash } from './subsetForPdf/hash.js';
+import { embedCffSubset } from './subsetForPdf/cff-subset.js';
+import { tableCff } from '../table/cff.js';
+import { tableCff2 } from '../table/cff2.js';
+import { tableCffIndexRecord } from '../table/cff/index-record.js';
+import { tableCffDict } from '../table/cff/dict.js';
+import { tableCffCharstring } from '../table/cff/charstring.js';
+import { encodingStandard } from '../encodings/standard.js';
 import { embedSubsetForPdf } from './subsetForPdf.js';
 
 const _rt = new ModuleRuntime();
@@ -52,6 +59,7 @@ for (const m of [
     embedCidSystemInfo,
     embedToUnicodeBuilder,
     embedClosure, embedCmapBuilder, embedGlyphRewriter, embedHash,
+    tableCffIndexRecord, tableCffDict, tableCffCharstring, tableCff, tableCff2, encodingStandard, embedCffSubset,
     embedSubsetForPdf
 ]) _rt.register(m);
 

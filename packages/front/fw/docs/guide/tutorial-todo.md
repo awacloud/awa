@@ -32,10 +32,19 @@ Runtime demo: the HTML input fits in 25 lines, the JS in fewer than 60.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Todo</title>
-    <script src="./fw/dist/build/sanity-base-classic.min.js"></script>  <!-- fw security lock, must be first -->
-    <!-- default tier is lockdown(); no classic artifact is built for it today
-         (prebuild:sanity emits base + community only), so call lockdown() from a
-         module script — see docs/guide/security.md § Recommended default -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@awacloud/fw": "./node_modules/@awacloud/fw/src/main.js",
+            "@awacloud/fw/": "./node_modules/@awacloud/fw/src/"
+        }
+    }
+    </script>
+    <!-- fw security lock, first: module scripts run in document order -->
+    <script type="module">
+        import { lockdown } from '@awacloud/fw/sanity/lockdown.js';
+        lockdown();
+    </script>
     <script type="module" src="./app.js"></script>
 </head>
 <body>
@@ -44,8 +53,11 @@ Runtime demo: the HTML input fits in 25 lines, the JS in fewer than 60.
 </html>
 ```
 
-Sanity is loaded first — it neutralises `eval`, `Function`, `innerHTML`,
-`history.pushState`, `Math.random`, `crypto.randomUUID`, etc. The rest of
+The import map loads `@awacloud/fw` from `node_modules` as native ES
+modules (a subpath keeps its `.js` extension: an import map does no
+extension lookup). `lockdown()`, the default sanity tier, runs first — it
+neutralises `eval`, `Function`, `innerHTML`, `history.pushState`,
+`Math.random`, `crypto.randomUUID`, etc. The rest of
 the app works with fw's secure APIs only (hence the `uuid` module
 below, instead of `crypto.randomUUID`).
 
@@ -103,7 +115,7 @@ Notation reminder:
 
 ```js
 import { runtime } from '@awacloud/fw';
-import modules from '@awacloud/fw/core/modules';
+import modules from '@awacloud/fw/core/modules.js';
 
 // After the refactor: no module is pre-registered by main.js.
 // The user must register the full set (or a subset) before the
@@ -228,7 +240,7 @@ via `sess.on(blockId, slotName, ...)` is more economical for long lists
 
 ```js
 import { runtime } from '@awacloud/fw';
-import modules from '@awacloud/fw/core/modules';
+import modules from '@awacloud/fw/core/modules.js';
 
 runtime.registerAll(modules);
 

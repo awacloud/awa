@@ -19,7 +19,7 @@ Fully Uint8Array API (no bitArray on the caller side). Recommended for external 
 
 ```js
 const am = runtime.resolve('aes_modes');
-// Returns: { cbc, ctr, gcm, kw, kwp }
+// Returns: { cbc, ctr, gcm, kw }
 ```
 
 ## API
@@ -29,8 +29,7 @@ const am = runtime.resolve('aes_modes');
 | `am.cbc` | `encrypt(key, iv, pt) → ct` (PKCS#7 included), `decrypt(key, iv, ct) → pt` |
 | `am.ctr` | `encrypt(key, iv, data) → out` (involution) |
 | `am.gcm` | `encrypt(key, iv, pt, aad?, tagLen?) → {ct, tag}`, `decrypt(key, iv, ct, tag, aad?) → pt \| false` |
-| `am.kw` | `wrap(kek, key) → ct`, `unwrap(kek, ct) → key \| false` |
-| `am.kwp` | `wrapPad(kek, key) → ct`, `unwrapPad(kek, ct) → key \| false` |
+| `am.kw` | `wrap(kek, key) → ct`, `unwrap(kek, ct) → key \| false`; KWP (padded, RFC 5649): `wrapPad(kek, key) → ct`, `unwrapPad(kek, ct) → key \| false` |
 
 All inputs/outputs = `Uint8Array`.
 
@@ -72,10 +71,8 @@ const worker = fw.createWorker(
 ## Notes
 
 - **Convenience wrapper**: 100% of FIPS / SP 800 conformance is delegated to `cipher/aes` + `mode/{cbc,ctr,gcm,kw}`.
-- **Recommended for new code** over `aes_ctr.js` (legacy, deprecated).
 - **No `nonceTracker`**: use `mode/gcm.js` directly if required.
 
 ## See also
 
 - [cbc](../mode/cbc.md), [ctr](../mode/ctr.md), [gcm](../mode/gcm.md), [kw](../mode/kw.md) — underlying algorithms
-- [aes_ctr](./aes_ctr.md) — legacy CTR-only wrapper (deprecated)

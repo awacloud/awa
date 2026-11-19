@@ -7,6 +7,8 @@
 
 # @awacloud/notepad
 
+AWA Notepad: a plain-text editor in the browser, an installable PWA that works offline once visited. Files are opened and saved on the device; nothing is uploaded.
+
 AWA Notepad is a plain-text editor in the browser — a Windows Notepad replacement. An
 installable PWA that works offline once visited. Files are opened and saved
 on the device; nothing is uploaded. Same shape as `apps/services/viewer/`:
@@ -14,10 +16,18 @@ KISS, no dependency outside the monorepo, built on `@awacloud/fw`.
 
 ## Install
 
-Inside the monorepo, `bun install` at the repository root links the workspace.
-Not published to the npm registry: the notepad is published as source only.
+In the awa development tree, the root `bun install` links the workspace; that
+tree is not what the public repositories carry (see [Tests](#tests)).
+Not published to the npm registry: the notepad is published as source only. Its
+source is public in the awa monorepo
+([`apps/services/notepad`](https://github.com/awacloud/awa/tree/main/apps/services/notepad))
+and as a derived, read-only repository of the application source; issues are
+tracked in the monorepo.
 
 ## Quick start
+
+Browser-only (the editor needs a DOM; `@awacloud/notepad` resolves through
+`exports` `.` → `src/notepad.js`):
 
 ```js
 import { mountNotepad } from '@awacloud/notepad';
@@ -31,7 +41,9 @@ Link `tokens.css` (or the host's awaforge layer) and `notepad.css`. The
 component never touches `location`, `history` or `document.title`, and binds
 its keys on its own element.
 
-Development: serve the repository root and open `/apps/services/notepad/public/`.
+In the awa development tree, serve the repository root and open
+`/apps/services/notepad/public/`; the dev server is that tree's tooling, not
+runnable from the published repositories at this release.
 
 ## Features
 
@@ -61,6 +73,12 @@ Development: serve the repository root and open `/apps/services/notepad/public/`
   Replace all are steps too (a script edit wipes a textarea's own undo, and
   fw sanity blocks `execCommand`). Back at the saved text, the document is
   clean again.
+- Tab in the text inserts a tab (a selection over several lines is
+  indented), Shift+Tab outdents (a leading tab, or up to four spaces), each
+  one Undo step. To leave the text by keyboard: Escape, then Tab or
+  Shift+Tab moves the focus as in a page; or Ctrl+M, which switches Tab
+  between "inserts a tab" and "moves the focus" (shown in the status bar,
+  kept for the session only).
 - Binaries and files over 16 MiB are refused, not mangled — by their size,
   before a byte is read. From 2 MiB a file is read as a stream, its
   progress in the status bar with Cancel; from 4 MiB the status bar says
@@ -73,7 +91,7 @@ Development: serve the repository root and open `/apps/services/notepad/public/`
   IndexedDB as the text's base plus the changes typed since (written only
   when there is something to lose, dropped once saved), one session per
   window (Web Locks), with the file handle where the browser keeps it.
-- English and French; keyboard first (Ctrl+N/O/S/Shift+S/F/H/G, F3, Escape).
+- English and French; keyboard first (Ctrl+N/O/S/Shift+S/F/H/G/M, F3, Tab, Escape).
 - Offline once visited, and updates that wait for you: a new release
   installs beside the running one; "A new version is ready" offers **Update
   now** (the unsaved text comes back as a draft after the reload) or
@@ -129,6 +147,10 @@ and Windows-1252 codecs, line-ending handling.
 
 ## Tests
 
+The commands below are the application's own scripts as they run in the awa
+development tree. At this release they are not runnable from the published
+repositories (see the end of this section).
+
 ```sh
 bun test .            # unit + Happy-DOM tests
 bun run lint
@@ -136,9 +158,15 @@ bun run build         # dist/: bundle, CSP, offline service worker (versioned re
 bun run icons         # redraw public/icons/*.png (any, maskable, Apple touch) and public/favicon.ico from icon.svg's shapes
 ```
 
-The build and the test suite run from the full awa monorepo toolchain: they
-read `tools/site-kit`, `apps/demo/_build/`, `apps/services/tools/` and
-`services/site-host/`, which the public repository does not carry.
+The build and the test suite read `tools/site-kit` (run through the root
+`cli.ts`), `apps/demo/_build/`, `apps/services/tools/`, `services/site-host/`
+and `apps/awaforge/assets/`, which the public repositories do not carry.
+
+Rebuilding from source: the repository publishes the complete sources of this
+application (`src/`, `public/`, the tests and the application's own build
+steps in `tools/`). The tools for a complete rebuild are coming (work in
+progress). At this release a rebuild is not possible from the published
+repositories, the published public monorepo included.
 
 ## Maturity
 
@@ -158,3 +186,4 @@ Copyright (c) 2026 AwaCloud SAS
 - Source: [`apps/services/notepad`](https://github.com/awacloud/awa/tree/main/apps/services/notepad)
 - Issues: https://github.com/awacloud/awa/issues
 - Security policy: https://github.com/awacloud/awa/blob/main/SECURITY.md
+- Developer site (the libraries this application is built on): https://awaforge.eu/

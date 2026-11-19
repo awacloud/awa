@@ -1,0 +1,45 @@
+{
+  "kind": "build",
+  "variant": "fw",
+  "name": "graphic-hypertree",
+  "package": "@awacloud/graphic-anim",
+  "root": "graphic.hypertree",
+  "modules": [
+    "graphic.svgBuild",
+    "graphic.scopedIds",
+    "graphic.timeline",
+    "graphic.tween",
+    "graphic.svgApply",
+    "graphic.scheduler",
+    "hypertree.layout",
+    "hypertree.measure"
+  ],
+  "fwDependencies": [
+    "secPolicy",
+    "dom",
+    "interp",
+    "easing",
+    "clock"
+  ],
+  "siblingDependencies": {
+    "modules": [
+      "graphic.scopedIds",
+      "graphic.svgApply",
+      "graphic.svgBuild",
+      "graphic.scheduler",
+      "graphic.tween",
+      "graphic.timeline"
+    ],
+    "package": "@awacloud/graphic-anim"
+  },
+  "bytes": {
+    "dev": 27138,
+    "min": 14276
+  },
+  "domBound": true,
+  "workerSafeSlice": [
+    "hypertree.layout",
+    "hypertree.measure"
+  ],
+  "builtBy": "@awacloud/tool-prebuild-generator via tools/generate-bundles.mjs"
+}

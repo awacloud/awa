@@ -2,9 +2,81 @@
 
 > JavaScript browser framework — full stack control, security by default, zero npm dependencies.
 
-`@awacloud/fw` is a standalone framework for websites and web applications of moderate complexity. It takes the opposite stance from the modern toolchain (mandatory bundler, opaque dependency tree, supply chain to audit) by providing **202 autonomous modules** (`src/core/modules.js` registry, measured) organised around an explicit resolution runtime and a global-lockdown layer that runs **before any other code**.
+`@awacloud/fw` is a standalone framework for websites and web applications of moderate complexity. It takes the opposite stance from the modern toolchain (mandatory bundler, opaque dependency tree, supply chain to audit) by providing **208 autonomous modules** (the `src/core/modules.js` registry; a test of the source repository keeps this count equal to it) organised around an explicit resolution runtime and a global-lockdown layer that runs **before any other code**.
 
-For complex multi-screen applications, fw serves as the foundation for the `sd-common` layer (app patterns) and `sde`/`sdc` (multi-app / mono-app runtimes).
+## Installation
+
+```bash
+npm install @awacloud/fw
+```
+
+## Quick start
+
+On Bun (or any ESM runtime that resolves the package), import the entry and
+resolve modules from the runtime:
+
+```js
+import fw from '@awacloud/fw';
+import modules from '@awacloud/fw/core/modules.js';
+fw.runtime.registerAll(modules);
+
+const hex = fw.runtime.resolve('hex');
+const utf8 = fw.runtime.resolve('utf8');
+console.log(hex.fromBytes(utf8.toBytes('fw')));   // 6677
+```
+
+In a browser, load the sanity tier first, as a classic script, then map the package in an
+import map and resolve modules from the runtime:
+
+```html
+<script src="/node_modules/@awacloud/fw/dist/build/sanity.min.js"></script>
+<script type="importmap">
+{ "imports": {
+    "@awacloud/fw":  "/node_modules/@awacloud/fw/src/main.js",
+    "@awacloud/fw/": "/node_modules/@awacloud/fw/src/"
+}}
+</script>
+<script type="module">
+    import fw from '@awacloud/fw';
+    import modules from '@awacloud/fw/core/modules.js';
+    fw.runtime.registerAll(modules);
+
+    const hex = fw.runtime.resolve('hex');
+    const utf8 = fw.runtime.resolve('utf8');
+    console.log(hex.fromBytes(utf8.toBytes('fw')));   // "6677"
+</script>
+```
+
+Paths assume `node_modules/` is reachable from the HTTP docroot (the default
+after `npm install`). [Use cases](#use-cases) go further;
+[Production build](#production-build) replaces the import map with bundles.
+
+## Logging and `console`
+
+Importing the entry (`@awacloud/fw`, `src/main.js`), or a preset bundle built
+without `--no-log`, **takes over `console`** in a browser-shaped realm (one
+with `window`): `window.console` becomes a non-configurable, non-writable
+proxy that records every call in `fw.log` (an in-memory ring buffer, 1024
+entries by default).
+
+- **Printing**: in a dev build (`ENV.DEV`, the unbuilt sources) the calls are
+  also printed, with their stack; in a production build they are recorded
+  only — nothing reaches the browser console. Read them with
+  `fw.log.get()`, or stream them with `fw.log.subscribe(fn)`.
+- **No reassignment**: `console.error = …` is refused with a warning, so a
+  test spy assigned that way stays silent; subscribe to `fw.log` instead.
+- **A second fw entry** in the same realm (two bundles, a bundle plus the
+  sources, several test files in one process) joins the proxy the first one
+  installed: its own `log` records the same calls, and printing follows the
+  first entry's `ENV.DEV`. A `console` another script locked is left alone.
+- **Native printing**: `log.native(true)` keeps the recording but prints
+  every `console` call as the native console does, in production too
+  (`log.native(false)` restores the default).
+- **Opting out**: build with `--no-log` (`ENV.LOG = false`): no logger, no
+  takeover, `fw.log` is `false`. Under Node / Bun without a `window`, and
+  in workers outside `createWorker`, nothing is taken over.
+
+See [`docs/api/core/logger.md`](./docs/api/core/logger.md).
 
 ## Why `@awacloud/fw`
 
@@ -145,28 +217,6 @@ export const myModule = {
 
 The `factory` is called **once** by the runtime, after dependency resolution. The body of `factory` must be self-contained (no references to module-scope bindings) to remain serializable to a Worker.
 
-## Installation
-
-```bash
-npm install @awacloud/fw
-```
-
-### Statically served HTML
-
-```html
-<script src="/node_modules/@awacloud/fw/dist/build/sanity.min.js"></script>
-<script type="importmap">
-{ "imports": {
-    "@awacloud/fw":  "/node_modules/@awacloud/fw/src/main.js",
-    "@awacloud/fw/": "/node_modules/@awacloud/fw/src/"
-}}
-</script>
-<script type="module">
-    import fw from '@awacloud/fw';
-    // ...
-</script>
-```
-
 ## Production build
 
 The `sanity.min.js` bundle is **always isolated** and loaded as a classic script to guarantee the lockdown runs before any other code, without depending on the `defer` of modules or the import map. The rest of the framework is served via one (or more) ESM bundle built according to the chosen preset.
@@ -269,15 +319,15 @@ lockdown();   // default tier — composes base in a browser realm
 
 | API | Behaviour after lockdown |
 |---|---|
-| `eval`, `new Function`, `Reflect` (property access) | `throw` |
+| `eval`, `new Function`, `Reflect` (property access) | `throw` (`lockdown()` also closes the `({}).constructor.constructor` escape, which `base` alone leaves open) |
 | `Math.random` | `throw` (force usage of `crypto.getRandomValues`) |
 | `crypto.randomUUID` | `throw` (force usage of the framework's `uuid`, which is traceable) |
 | `performance.now` | `throw` (timing vector — use the framework's `clock`) |
 | `history.pushState`, `replaceState`, `go`, `back`, `forward` | `throw` (use the framework's `route`) |
-| `Element.innerHTML`, `outerHTML`, `insertAdjacentHTML` (setters) | redirect to `innerText`/`outerText`/`insertAdjacentText` (no parse, no XSS) |
-| Native prototypes (`Array.prototype`, `Object.prototype`, …) | `Object.freeze` |
+| `Element.innerHTML`, `outerHTML` (setters), `insertAdjacentHTML` (call) | redirect to `innerText`/`outerText`/`insertAdjacentText` (no parse, no XSS) |
+| Native prototypes (`Object`, `Array`, `Function`, `String`, `Number`, `Boolean`, `Date`, `RegExp`, `Error`) | `Object.freeze` (`lockdown()` freezes every intrinsic) |
 
-Consequence: any third-party code attempting these APIs **fails loudly**, which is both a safety net and an incompatibility detector. The fw modules that need them (e.g. `uuid`, `route`, `clock`, `random`) go through controlled channels.
+fw itself works with or without a sanity tier: no module requires one. Consequence of applying one: any third-party code attempting these APIs **fails loudly**, which is both a safety net and an incompatibility detector. The fw modules that need them (e.g. `uuid`, `route`, `clock`, `random`) go through controlled channels.
 
 See [`docs/guide/security.md`](./docs/guide/security.md) for the full tier spectrum (`community` / `base` / `lockdown`) and [`docs/guide/worker-confinement.md`](./docs/guide/worker-confinement.md) for the confinement half (Workers, capability grants).
 
@@ -297,12 +347,14 @@ See [`docs/guide/security.md`](./docs/guide/security.md) for the full tier spect
 - [Integrations](./integrations/README.md) — bundlers, frameworks, runners
 - [Security](./docs/guide/security.md) — sanity tier spectrum and honest threat model
 - [NIST/RFC conformance](./src/crypto/NIST_CONFORMANCE.md) — crypto vector status
+- [API stability](./docs/guide/stability.md) — the public surface, SemVer rules and deprecation cycle; the snapshot [`docs/api/surface.json`](./docs/api/surface.json)
+- [L4 evidence](./docs/evidence/l4-evidence.md) — frozen API, conformance vectors, production use
 
 ## Playground
 
-Runnable examples for `@awacloud/fw` — see [`playground/README.md`](https://github.com/awacloud/awa/blob/main/packages/front/fw/playground/README.md) (not part of the published npm package; browse it in the source repository). Currently one axis: [`playground/integrations/`](https://github.com/awacloud/awa/blob/main/packages/front/fw/playground/integrations/README.md) (one example per integration). Serve the **package root** and open `/playground/`: `npx serve --no-clean-urls .`.
+Runnable examples for `@awacloud/fw` — see [`playground/README.md`](https://github.com/awacloud/awa/blob/main/packages/front/fw/playground/README.md) (not part of the published npm package; browse it in the source repository). Two axes: [`playground/integrations/`](https://github.com/awacloud/awa/blob/main/packages/front/fw/playground/integrations/README.md) (one example per integration) and [`playground/usecases/`](https://github.com/awacloud/awa/blob/main/packages/front/fw/playground/usecases/README.md) (small realistic apps). Serve the **package root** and open `/playground/`: `node playground/_tools/serve.mjs .`.
 
-The `starters/` and `usecases/` axes (and the `create-fw-app` scaffolding CLI, currently parked) are planned to return after the first publication.
+The starter templates (`hello`, `todo`, `vite-ts`, `worker-rpc`) come with the source repository's `create-fw-app` scaffolding tool (`tools/create-fw-app/`), which copies one into a directory of a checkout.
 
 ## Development & tests
 
@@ -331,6 +383,86 @@ Detailed DX sheets in **[`docs/dev/`](docs/dev/README.md)**:
 
 Each layer **includes** fw; it does not replace it. A site with no application complexity can stop at fw.
 
+## Exposed sub-paths
+
+Every module of the `io`, `dom`, `crypto` and `process` areas is reachable
+by its path under `src/<area>/`, with its type declarations.
+
+| Sub-path | Target | Usage |
+|---|---|---|
+| `@awacloud/fw` | `src/main.js` | Entry: `ENV`, `log`, `runtime`, `createWorker`, `domReady` (default export and named exports) |
+| `@awacloud/fw/core/runtime` | `src/core/runtime.js` | `ModuleRuntime` and `runtimeSource`, to build a runtime of your own |
+| `@awacloud/fw/core/worker-helper` | `src/core/worker-helper.js` | `createWorkerRuntime`, the worker bootstrap behind `createWorker` |
+| `@awacloud/fw/core/readyState` | `src/core/readyState.js` | `readyState()`, the DOM ready-state helper behind `domReady` |
+| `@awacloud/fw/core/logger` | `src/core/logger.js` | `logger`, the logger behind `log` |
+| `@awacloud/fw/core/modules` | `src/core/modules.js` | Default export: the registry, every module descriptor, for `runtime.registerAll` |
+| `@awacloud/fw/core/runtime.js` | `src/core/runtime.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/core/worker-helper.js` | `src/core/worker-helper.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/core/readyState.js` | `src/core/readyState.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/core/logger.js` | `src/core/logger.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/core/modules.js` | `src/core/modules.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/typed` | `src/typed.js` | `asTyped(rt)` and `createRuntime(ms)`: `resolve(name)` typed by module name |
+| `@awacloud/fw/typed.js` | `src/typed.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/io/*.bin` | `src/io/*.bin` | Binary assets: `@awacloud/fw/io/compress/brotli_dict.bin`, the RFC 7932 dictionary |
+| `@awacloud/fw/io/*.js` | `src/io/*.js` | One io module by path, with the `.js` suffix (the form an import map resolves), e.g. `@awacloud/fw/io/codec/hex.js` |
+| `@awacloud/fw/io/*` | `src/io/*.js` | The same modules without the suffix, through the exports map, e.g. `@awacloud/fw/io/codec/hex` |
+| `@awacloud/fw/dom/*.js` | `src/dom/*.js` | One dom module by path, with the `.js` suffix (the form an import map resolves), e.g. `@awacloud/fw/dom/rendering/template.js` |
+| `@awacloud/fw/dom/*` | `src/dom/*.js` | The same modules without the suffix, through the exports map, e.g. `@awacloud/fw/dom/rendering/template` |
+| `@awacloud/fw/crypto/*.wasm` | `src/crypto/*.wasm` | The WASM tier binaries, e.g. `@awacloud/fw/crypto/wasm/sha3.simd.wasm` |
+| `@awacloud/fw/crypto/*.js` | `src/crypto/*.js` | One crypto module by path, with the `.js` suffix (the form an import map resolves), e.g. `@awacloud/fw/crypto/hash/sha256.js` |
+| `@awacloud/fw/crypto/*` | `src/crypto/*.js` | The same modules without the suffix, through the exports map, e.g. `@awacloud/fw/crypto/hash/sha256` |
+| `@awacloud/fw/process/*.js` | `src/process/*.js` | One process module by path, with the `.js` suffix (the form an import map resolves), e.g. `@awacloud/fw/process/workerPool.js` |
+| `@awacloud/fw/process/*` | `src/process/*.js` | The same modules without the suffix, through the exports map, e.g. `@awacloud/fw/process/workerPool` |
+| `@awacloud/fw/sanity/base` | `src/sanity/base.js` | `applyBase()`: the `base` tier as an ES module |
+| `@awacloud/fw/sanity/base.js` | `src/sanity/base.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/sanity/base.classic` | `dist/build/sanity-base-classic.min.js` | The `base` tier as a classic script (build output) |
+| `@awacloud/fw/sanity/community` | `src/sanity/community.js` | `applyCommunity()`: the `community` tier as an ES module |
+| `@awacloud/fw/sanity/community.js` | `src/sanity/community.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/sanity/community.classic` | `dist/build/sanity-community-classic.min.js` | The `community` tier as a classic script (build output) |
+| `@awacloud/fw/sanity/lockdown` | `src/sanity/lockdown.js` | `lockdown` and `harden`: the `lockdown` tier |
+| `@awacloud/fw/sanity/lockdown.js` | `src/sanity/lockdown.js` | Same, with the `.js` suffix |
+| `@awacloud/fw/sanity/lockdown.apply` | `src/sanity/lockdown-apply.js` | No exports: importing it runs `lockdown()` |
+| `@awacloud/fw/sanity/lockdown-apply.js` | `src/sanity/lockdown-apply.js` | Same as `@awacloud/fw/sanity/lockdown.apply`, by its file name |
+| `@awacloud/fw/config` | `fw.config.json` | `fw.config.json`: the build presets and side-bundles, as data |
+| `@awacloud/fw/vite` | `integrations/vite/index.js` | The Vite plugin (default export) |
+| `@awacloud/fw/vite-env` | `integrations/vite/vite-env.d.ts` | Types only: the plugin's virtual modules (`/// <reference types="@awacloud/fw/vite-env" />`) |
+| `@awacloud/fw/esbuild` | `integrations/esbuild/index.js` | The esbuild integration |
+| `@awacloud/fw/rollup` | `integrations/rollup/index.js` | The Rollup integration |
+| `@awacloud/fw/bun` | `integrations/bun/index.js` | The Bun bundler integration |
+| `@awacloud/fw/webpack` | `integrations/webpack/index.js` | The webpack integration |
+| `@awacloud/fw/astro` | `integrations/astro/index.js` | The Astro integration |
+| `@awacloud/fw/vitest/shim` | `integrations/vitest/bun-test-shim.js` | A `bun:test` stand-in, to run `bun:test` suites under Vitest |
+| `@awacloud/fw/jest/shim` | `integrations/jest/bun-test-shim.js` | A `bun:test` stand-in, to run `bun:test` suites under Jest |
+| `@awacloud/fw/next` | `integrations/nextjs/index.js` | The Next.js integration |
+| `@awacloud/fw/turbopack` | `integrations/turbopack/index.js` | The Turbopack integration |
+| `@awacloud/fw/nest` | `integrations/nestjs/index.js` | The NestJS integration |
+| `@awacloud/fw/eslint` | `integrations/eslint/no-factory-capture.js` | The `fw/no-factory-capture` ESLint rule |
+| `@awacloud/fw/dist/build/*` | `dist/build/*` | Build outputs: the classic sanity scripts and the preset bundles |
+
+Test files, KAT vectors and the markdown sources under `src/` are not
+exported.
+
+The `*.classic` scripts and `dist/build/*` are build outputs: shipped in the
+published package; in a source checkout, run `bun run prebuild` in
+`packages/front/fw` first.
+
+## Maturity
+
+L4 (`awa.maturity` in `package.json`), the top of the monorepo's L0 to L4
+scale. The public API is frozen: [`docs/guide/stability.md`](./docs/guide/stability.md)
+says what SemVer covers and how a breaking change is deprecated first, and a
+snapshot gate keeps the package equal to
+[`docs/api/surface.json`](./docs/api/surface.json). Every standard the package
+implements runs its conformance vectors, and fw runs in production — see
+[`docs/evidence/l4-evidence.md`](./docs/evidence/l4-evidence.md). The published
+surface (`src/`, `integrations/`) is covered by the package's test suite under a
+92 % line-coverage floor, and every registry module has a reference page under
+[`docs/api/`](./docs/api/README.md). The version is 1.0.0: the
+public surface is frozen under SemVer (see [`docs/guide/stability.md`](./docs/guide/stability.md)),
+and every break of the 0.x line is listed under **Breaking** in [`CHANGELOG.md`](./CHANGELOG.md). The crypto
+tier's API is frozen with the rest; its assurance is an early release, see
+[Crypto tier — early release](#crypto-tier--early-release).
+
 ## Licence
 
 Apache-2.0 — see [`LICENSE`](./LICENSE) in this package.
@@ -339,7 +471,7 @@ Copyright (c) 2026 AwaCloud SAS
 
 ## Project
 
-- Website: https://awaforge.eu
+- Website: https://awaforge.eu/
 - Source: [`packages/front/fw`](https://github.com/awacloud/awa/tree/main/packages/front/fw)
 - Issues: this package's own repository has issues disabled — report at
   https://github.com/awacloud/awa/issues

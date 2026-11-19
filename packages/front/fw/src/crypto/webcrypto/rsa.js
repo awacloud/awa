@@ -104,10 +104,10 @@ export const webcryptoRsa = {
          * @param {'OAEP'|'PSS'|'PKCS1'} scheme
          * @param {number} [modulusBits=2048]
          * @param {string} [hash='SHA-256']
-         * @param {boolean} [extractable=true]
+         * @param {boolean} [extractable=false]
          * @returns {Promise<CryptoKeyPair|false>}
          */
-        async function generateKey(scheme, modulusBits = 2048, hash = 'SHA-256', extractable = true) {
+        async function generateKey(scheme, modulusBits = 2048, hash = 'SHA-256', extractable = false) {
             if (!_hasSubtle) {
                 console.error('[crypto] NOT READY: crypto.subtle unavailable');
                 return false;
@@ -220,6 +220,11 @@ export const webcryptoRsa = {
                 const buf = await crypto.subtle.decrypt(algorithm, privateKey, /** @type {BufferSource} */ (ct));
                 return new Uint8Array(buf);
             } catch (e) {
+                if (e && e.name === 'OperationError') {
+                    // OAEP decoding failure: an expected outcome, warn level.
+                    console.warn('[crypto] CORRUPT: webcryptoRsa.decrypt: decryption failed');
+                    return false;
+                }
                 console.error('[crypto] FAIL: webcryptoRsa.decrypt: ' + (e && e.message));
                 return false;
             }

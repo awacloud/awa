@@ -1,7 +1,7 @@
 ---
 module: pdfFullBundle
 category: pdf/bundles
-dependencies: [pdf, pdfContentOpsExtended, pdfFontCidTyped, pdfFontColorTagging, pdfTaggedPdfTyped, pdfAnnotExtended, pdfAOutputIntent, pdfUaTagged, pdfFormActionsExtended, pdfColorSpacesExtended, pdfShadingTyped, pdfTransparencyTyped, pdfSigPades, pdfSigAesGcm, pdfDocumentParts, pdfRedactionIso32005, pdfXPrepress, pdfWellTagged, pdfOptionalContentExtended, pdfEmbeddedFilesPortfolio, pdfAssociatedFiles2, pdfXmpExtended, pdfLinearizationWrite, pdf3dRichMedia, pdfJbig2Read, pdfMisc, pdfInfoDictDeprecated, pdfSandbox]
+dependencies: [pdf, pdfContentOpsExtended, pdfFontCidTyped, pdfFontColorTagging, pdfTaggedPdfTyped, pdfAnnotExtended, pdfAOutputIntent, pdfUaTagged, pdfFormActionsExtended, pdfColorSpacesExtended, pdfShadingTyped, pdfTransparencyTyped, pdfSigPades, pdfSigAesGcm, pdfDocumentParts, pdfRedactionIso32005, pdfXPrepress, pdfWellTagged, pdfOptionalContentExtended, pdfEmbeddedFilesPortfolio, pdfAssociatedFiles2, pdfXmpExtended, pdfLinearizationWrite, pdf3dRichMedia, pdfJbig2Read, pdfMisc, pdfInfoDictDeprecated, pdfSandbox, pdfCryptPublicKey]
 returns: object
 worker-safe: true
 status: complete
@@ -11,9 +11,9 @@ status: complete
 
 > Full strict PDF 2.0 bundle — `pdfLargeBundle`'s 21 extras + 6 more.
 
-**Module** `pdfFullBundle` | **Source** `packages/front/office/pdf/src/bundles/pdf-full.js` | **Deps** `pdf` + the 27 extras enumerated under [Extras wired](#extras-wired) (28 names total, listed literally in the frontmatter `dependencies`) | **Worker-safe** yes
+**Module** `pdfFullBundle` | **Source** `packages/front/office/pdf/src/bundles/pdf-full.js` | **Deps** `pdf` + the 28 extras enumerated under [Extras wired](#extras-wired) (29 names total, listed literally in the frontmatter `dependencies`) | **Worker-safe** yes
 
-A module descriptor — declares the core plus every P0/P1/P2/P3 extra **except** the `legacy-*` family (27 extras total, one flat list — the source does not distinguish a separate "sandbox tail" tier). The runtime resolves the dependencies; the factory wires them into `pdf` via `.use(...)`. Fits callers that need every PDF 2.0 extra. For PDF 1.7 reading use [`pdfLegacyBundle`](./pdf-legacy.md).
+A module descriptor — declares the core plus every P0/P1/P2/P3 extra **except** the `legacy-*` family (28 extras total, one flat list — the source does not distinguish a separate "sandbox tail" tier). The runtime resolves the dependencies; the factory wires them into `pdf` via `.use(...)`. Fits callers that need every PDF 2.0 extra. For PDF 1.7 reading use [`pdfLegacyBundle`](./pdf-legacy.md).
 
 ## Resolve
 
@@ -39,9 +39,9 @@ The `extras` and `bundle` descriptors are **not** re-exported from the package r
 
 | Export | Description |
 |--------|-------------|
-| `pdfFullBundle` | Descriptor `{ name, dependencies, factory }`. Resolved by `ModuleRuntime` → `pdf` instance wired with all 27 P0-P3 extras. |
+| `pdfFullBundle` | Descriptor `{ name, dependencies, factory }`. Resolved by `ModuleRuntime` → `pdf` instance wired with all 28 P0-P3 extras. |
 
-The resolved instance is the core `pdf` object (`src/pdf.js`) with the 27 extras merged in — it carries `pdf`'s own 5 members plus one property per wired extra name:
+The resolved instance is the core `pdf` object (`src/pdf.js`) with the 28 extras merged in — it carries `pdf`'s own 5 members plus one property per wired extra name:
 
 | Member | Signature | Description |
 |--------|-----------|--------------|
@@ -53,7 +53,7 @@ The resolved instance is the core `pdf` object (`src/pdf.js`) with the 27 extras
 
 ## Extras wired
 
-Items 1-21 are [`pdfLargeBundle`](./pdf-large.md)'s extras, re-listed here so every member of the resolved instance is documented on this page; items 22-27 are `pdf-full`'s own additions.
+Items 1-21 are [`pdfLargeBundle`](./pdf-large.md)'s extras, re-listed here so every member of the resolved instance is documented on this page; items 22-28 are `pdf-full`'s own additions.
 
 | # | Extra | Phase | Status |
 |---|-------|-------|--------|
@@ -84,6 +84,7 @@ Items 1-21 are [`pdfLargeBundle`](./pdf-large.md)'s extras, re-listed here so ev
 | 25 | [`pdfMisc`](../extra/misc.md) | P3 | read |
 | 26 | [`pdfInfoDictDeprecated`](../extra/info-dict-deprecated.md) | P3 | lint |
 | 27 | [`pdfSandbox`](../extra/pdf-sandbox.md) | P3 | opt-in audit hook |
+| 28 | [`pdfCryptPublicKey`](../extra/crypt-public-key.md) | P3 | read (typing only) |
 
 ## When to choose
 

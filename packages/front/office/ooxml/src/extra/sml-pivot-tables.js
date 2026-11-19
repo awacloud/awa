@@ -428,8 +428,21 @@ export const smlPivotTables = {
                 xmlns: SML_NS,
                 'xmlns:r': REL_NS,
                 ...(pt.attrs || {})
-            }, kids);
+            }, inTableOrder(kids));
             return xml.serialize(root);
+        }
+
+        // CT_pivotTableDefinition's sequence; a child it does not name keeps
+        // its place among the others, before extLst.
+        const TABLE_SEQ = ['location', 'pivotFields', 'rowFields', 'rowItems', 'colFields', 'colItems',
+            'pageFields', 'dataFields', 'formats', 'conditionalFormats', 'chartFormats', 'pivotHierarchies',
+            'pivotTableStyleInfo', 'filters', 'rowHierarchiesUsage', 'colHierarchiesUsage', 'extLst'];
+        function inTableOrder(kids) {
+            const rank = (k) => {
+                const i = TABLE_SEQ.indexOf(k && k.name);
+                return i < 0 ? TABLE_SEQ.length - 1.5 : i;
+            };
+            return kids.map((k, i) => [k, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(e => e[0]);
         }
 
         // ---- pivotCacheDefinition --------------------------------------

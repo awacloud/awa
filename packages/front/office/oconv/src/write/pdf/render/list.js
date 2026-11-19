@@ -79,7 +79,7 @@
  * render(node, childCtx) → { items, losses, height? }
  * ```
  *
- * - `node` is the `oconv-ir/v1` `list` node.
+ * - `node` is the `oconv-ir/v2` `list` node.
  * - `childCtx` is the stack's child context: the parent `Ctx` (`measurer`,
  *   `layout`, `column`, `sizeFor`, `leading`, `linebreak`, `losses`,
  *   `render`, `flowChildren`) plus `index` (the dotted block path), `indent`
@@ -201,6 +201,12 @@ export const oconvPdfRenderList = {
          * @param {number} n 1-based item position within ITS OWN list.
          * @returns {string}
          */
+        function numberingFor(ordered, depth) {
+            if (!ordered) return 'Disc';
+            if (depth <= 1) return 'Decimal';
+            return depth === 2 ? 'LowerAlpha' : 'LowerRoman';
+        }
+
         function markerFor(ordered, depth, n) {
             if (!ordered) return BULLETS[Math.min(depth - 1, BULLETS.length - 1)];
             if (depth <= 1) return `${n}.`;
@@ -287,6 +293,7 @@ export const oconvPdfRenderList = {
                 kind: 'list'
             };
             if (first && words.every((t) => t.link === first)) item.link = first;
+            if (block.tag) item.tag = block.tag;
             items.push(item);
         }
 
@@ -335,7 +342,7 @@ export const oconvPdfRenderList = {
          * Render one `list` block: one marker + re-flowed body per item,
          * stacked with a fixed inter-item gap.
          *
-         * @param {object} node `oconv-ir/v1` `list` node.
+         * @param {object} node `oconv-ir/v2` `list` node.
          * @param {object} ctx Stack child context (see the module header).
          * @returns {{items: object[], losses: object[], height?: number}}
          */
@@ -354,15 +361,22 @@ export const oconvPdfRenderList = {
                 const items = [];
                 const losses = [];
                 let runningY = 0;
+                // A tagged document: the list's `L` (its `ListNumbering` the
+                // markers drawn), each item's `LI`, `Lbl` and `LBody`.
+                const listPath = Array.isArray(ctx.tagPath)
+                    ? [...ctx.tagPath, { key: String(ctx.index), type: 'L',
+                        props: { attributes: [{ O: 'List', ListNumbering: numberingFor(ordered, depth) }] } }]
+                    : null;
 
                 listItems.forEach((li, i) => {
                     const itemTop = runningY;
                     const marker = markerFor(ordered, depth, i + 1);
                     const markerWidth = ctx.measurer.widthOf(marker, 'regular', sizePt);
+                    const itemPath = listPath ? [...listPath, { key: `li${i}`, type: 'LI' }] : null;
 
-                    const flowed = ctx.flowChildren(itemBlocks(li, ctx.measurer, losses), {
-                        indentDelta: INDENT_STEP, ruleX: null
-                    }) || { blocks: [] };
+                    const flowOpts = { indentDelta: INDENT_STEP, ruleX: null };
+                    if (itemPath) flowOpts.tagPath = [...itemPath, { key: 'body', type: 'LBody' }];
+                    const flowed = ctx.flowChildren(itemBlocks(li, ctx.measurer, losses), flowOpts) || { blocks: [] };
                     // Placed into a SEPARATE sink first (never `items`
                     // directly): the marker must land in `items` BEFORE its
                     // own item's body — including any nested list's OWN
@@ -375,7 +389,7 @@ export const oconvPdfRenderList = {
                     const placed = placeItemBody(bodyItems, flowed.blocks || [], layout, itemTop, ctx);
                     const baselineOffset = placed.firstBaseline === null ? defaultBaseline : placed.firstBaseline;
 
-                    items.push({
+                    const markerItem = {
                         x: colRight - markerWidth,
                         y: itemTop + baselineOffset,
                         style: 'regular',
@@ -383,7 +397,9 @@ export const oconvPdfRenderList = {
                         text: marker,
                         index: ctx.index,
                         kind: 'list'
-                    });
+                    };
+                    if (itemPath) markerItem.tag = [...itemPath, { key: 'lbl', type: 'Lbl' }];
+                    items.push(markerItem);
                     for (const it of bodyItems) items.push(it);
 
                     runningY = Math.max(placed.bottom, itemTop + baselineOffset);

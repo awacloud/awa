@@ -8,10 +8,9 @@ import { readFileSync } from 'node:fs';
 import { ModuleRuntime } from '@awacloud/fw/core/runtime.js';
 // Relative import of the sibling @awacloud/pdf manifest — see font-decoder.test.js
 // for why the bare specifier is not used here (task 06 adds the package dep).
-import { fw_require, pkg_require, modules } from '../../../pdf/src/main.js';
+import { fw_require, pkg_require, modules, extras } from '../../../pdf/src/main.js';
 import { oconvIr } from '../ir/ir.js';
 import { crc32 } from '@awacloud/fw/io/calc/crc32.js';
-import { oconvPdfFontDecoder } from './pdf/font-decoder.js';
 import { oconvPdfImagePng } from './pdf/image-png.js';
 import { oconvPdfTextExtract } from './pdf/text-extract.js';
 import { oconvPdfStruct } from './pdf/struct.js';
@@ -33,7 +32,7 @@ beforeAll(() => {
     rt.registerAll(modules);
     rt.register(oconvIr);
     rt.register(crc32);
-    rt.register(oconvPdfFontDecoder);
+    for (const m of extras) if (m.name === 'pdfFontDecoder' || m.name === 'pdfPageText') rt.register(m);
     rt.register(oconvPdfImagePng);
     rt.register(oconvPdfTextExtract);
     rt.register(oconvPdfStruct);
@@ -285,7 +284,7 @@ describe('oconvPdfToIr — tagged fast path (first-party sample)', () => {
 
     test('maps the H1/H2 text and body paragraphs', () => {
         expect(ir.children[0]).toEqual({
-            kind: 'heading', level: 1, children: [{ kind: 'run', text: 'Quarterly Report', bold: false, italic: false, strike: false, code: false, link: null }]
+            kind: 'heading', level: 1, align: null, breakBefore: false, children: [{ kind: 'run', text: 'Quarterly Report', bold: false, italic: false, strike: false, code: false, link: null, size: null, font: null, color: null, underline: false, script: null }]
         });
         expect(ir.children[2].kind).toBe('heading');
         expect(ir.children[2].level).toBe(2);
@@ -307,6 +306,16 @@ describe('oconvPdfToIr — tagged fast path (first-party sample)', () => {
 });
 
 describe('oconvPdfToIr — real corpus (facturx-minimum-sample.pdf)', () => {
+    // T25 (g): the default inference read 11 headings here, every one false
+    // (D43); the labels, values, amounts and contacts now stay paragraphs.
+    test('the invoice reads one heading, not its labels, values, amounts or address (T25 g, i)', () => {
+        const bytes = new Uint8Array(readFileSync(new URL('pdf/facturx-minimum-sample.pdf', FIXTURES)));
+        const { ir } = pdfToIr(pdf.read(bytes), { infer: ['headings', 'tables'] });
+        const heads = ir.children.filter((n) => n.kind === 'heading').map((n) => n.children[0].text);
+        // T25 (i): re-pinned, the address line is no heading either.
+        expect(heads).toEqual(['SELLER TRADE NAME']);
+    });
+
     let ir;
     let coverage;
 
@@ -468,12 +477,14 @@ describe('oconvPdfToIr — headings from font size, opt-in (A13a)', () => {
         expect(losses).toEqual([]);
     });
 
-    test('without the option, and with an empty list, the same document reads as today', () => {
+    // T30 (a2), D51: re-pinned. The text-first read is `infer: []` since
+    // 2.0.0; an absent `infer` is the default, `['headings', 'tables']`.
+    test('with an empty list, the document reads text-first; without the option, as the default inference', () => {
         const doc = pdf.read(genUntagged(LINES));
-        const today = pdfToIr(doc);
+        const today = pdfToIr(doc, { infer: [] });
         expect(today.ir.children.every((n) => n.kind === 'paragraph')).toBe(true);
-        expect(pdfToIr(doc, { infer: [] })).toEqual(today);
-        expect(pdfToIr(doc, { infer: undefined })).toEqual(today);
+        expect(pdfToIr(doc, { infer: undefined })).toEqual(pdfToIr(doc, { infer: ['headings', 'tables'] }));
+        expect(pdfToIr(doc)).toEqual(pdfToIr(doc, { infer: ['headings', 'tables'] }));
     });
 
     test('a long line of a larger size stays a paragraph; a run of digits is no heading', () => {
@@ -519,9 +530,12 @@ describe('oconvPdfToIr — the infer option validation (A13a)', () => {
 
 // A13b (D46 A) — headings by weight: a whole bold line at body size.
 
-/** One untagged page, two fonts: F1 Helvetica, F2 Helvetica-Bold; a piece per entry ({ y, x?, text, size?, bold? }). */
-function genTwoFonts(pieces) {
-    let content = '';
+/**
+ * One untagged page, two fonts: F1 Helvetica, F2 `boldBase`
+ * (Helvetica-Bold by default); a piece per entry ({ y, x?, text, size?, bold? }).
+ */
+function genTwoFonts(pieces, boldBase = 'Helvetica-Bold', extra = '') {
+    let content = extra;
     for (const p of pieces) {
         content += `BT /${p.bold ? 'F2' : 'F1'} ${p.size || 11} Tf ${p.x === undefined ? 72 : p.x} ${p.y} Td (${p.text}) Tj ET\n`;
     }
@@ -536,10 +550,123 @@ function genTwoFonts(pieces) {
         }) },
         { num: 4, gen: 0, value: obj.stream(obj.dict({ Length: obj.int(content.length) }), enc(content)) },
         { num: 5, gen: 0, value: font('Helvetica') },
-        { num: 6, gen: 0, value: font('Helvetica-Bold') }
+        { num: 6, gen: 0, value: font(boldBase) }
     ];
     return pdf.write({ indirects, root: { num: 1, gen: 0 }, version: '1.7' });
 }
+
+// T25 (g): lines the inference took for headings that are labels, values,
+// contacts, amounts or a table's header row stay paragraphs; numbered and
+// colon-titled headings stay headings.
+describe('oconvPdfToIr — labels, values and table rows kept out of headings (T25 g)', () => {
+    const kinds = (pieces) => {
+        const { ir } = pdfToIr(pdf.read(genTwoFonts(pieces)), { infer: ['headings', 'tables'] });
+        return ir.children.map((n) => [n.kind, n.children[0] && n.children[0].text]);
+    };
+    const doc = (line) => [
+        { y: 760, text: 'Report Title', size: 20 },
+        { y: 720, ...line },
+        { y: 690, text: 'Plain text of the section, set at the body size.' },
+        { y: 676, text: 'More plain text, so that the body size is this one.' }
+    ];
+    const isParagraph = (line) => expect(kinds(doc(line))[1]).toEqual(['paragraph', line.text]);
+    const isHeading = (line) => expect(kinds(doc(line))[1]).toEqual(['heading', line.text]);
+
+    test('N: more digits than letters after a section number (a value, not a heading)', () => {
+        isParagraph({ text: 'F20260023', size: 16 });
+        isParagraph({ text: '5,00% sur 100,00', bold: true });
+        isHeading({ text: '6.18.66 RSQ', size: 16 });
+    });
+
+    test('A: a label ending with a space and a colon; a numbered or colon-titled heading stays', () => {
+        isParagraph({ text: 'CLIENT :', bold: true });
+        isHeading({ text: '4.4.12 Numero de facture :', bold: true });
+        isHeading({ text: 'Chapter 2: Methods', size: 16 });
+    });
+
+    test('V: a label, a colon and a numeric value; a title with a subtitle stays', () => {
+        isParagraph({ text: 'Date echeance : 02/03/2026', size: 16 });
+        isHeading({ text: '2.2.2 Mecanismes : une securite sous conditions', size: 16 });
+    });
+
+    // T25 (i): an address (two commas, a 4- or 5-digit number that is no year).
+    test('an address line is no heading; a date with its year stays one (T25 i)', () => {
+        isParagraph({ text: 'LE FOURNISSEUR 35 rue d ici, 75018 PARIS, FR', size: 16 });
+        isHeading({ text: 'QPDF Manual, Version 5, May 24, 2015', size: 16 });
+    });
+
+    test('U and M: a contact line, a URL and an amount with a currency', () => {
+        isParagraph({ text: 'Contact: buyer@example.com', bold: true });
+        isParagraph({ text: 'https://example.org/invoices', size: 16 });
+        isParagraph({ text: 'NET A PAYER 104,90 EUR', bold: true });
+    });
+
+    test('a bold line of three cells is a table row, not a heading; two cells stay a heading', () => {
+        const row = [
+            { y: 720, text: 'Name', x: 72, bold: true },
+            { y: 720, text: 'Type', x: 200, bold: true },
+            { y: 720, text: 'Description', x: 320, bold: true }
+        ];
+        const read = kinds([{ y: 760, text: 'Report Title', size: 20 }, ...row,
+            { y: 690, text: 'Plain text of the section, set at the body size.' },
+            { y: 676, text: 'More plain text, so that the body size is this one.' }]);
+        expect(read[1][0]).toBe('paragraph');
+        const numbered = kinds([{ y: 760, text: 'Report Title', size: 20 },
+            { y: 720, text: '1', x: 72, bold: true }, { y: 720, text: 'Introduction', x: 100, bold: true },
+            { y: 690, text: 'Plain text of the section, set at the body size.' },
+            { y: 676, text: 'More plain text, so that the body size is this one.' }]);
+        expect(numbered[1][0]).toBe('heading');
+    });
+});
+
+// T25 (h): a table drawn with horizontal rules only, its columns closer than
+// the 0.8 em cell gap (oconv's own md -> pdf: 3 pt of padding each side).
+describe('oconvPdfToIr — rows between horizontal rules (T25 h)', () => {
+    // 11 pt Helvetica: 'Col A' is about 26.3 pt wide, so the columns at
+    // 60, 92.3 and 124.6 sit 6 pt (0.55 em) apart.
+    const ROWS = [
+        { y: 472, text: 'Col A', x: 60 }, { y: 472, text: 'Col B', x: 92.3 }, { y: 472, text: 'Col C', x: 124.6 },
+        { y: 451, text: 'a1', x: 60 }, { y: 451, text: 'b1', x: 92.3 }, { y: 451, text: 'c1', x: 124.6 }
+    ];
+    const rule = (y) => `57 ${y - 0.25} 104 0.5 re f\n`;
+    const read = (extra) => pdfToIr(pdf.read(genTwoFonts(ROWS, 'Helvetica-Bold', extra)), { infer: ['tables'] }).ir;
+    const cells = (t) => t.children.map((r) => r.children.map((c) => (c.children[0] ? c.children[0].children[0].text : '')));
+
+    test('each row between two rules: the rows read as a table', () => {
+        const ir = read(rule(489.7) + rule(468.6) + rule(447.4));
+        const table = ir.children.find((n) => n.kind === 'table');
+        expect(table).toBeDefined();
+        expect(cells(table)).toEqual([['Col A', 'Col B', 'Col C'], ['a1', 'b1', 'c1']]);
+    });
+
+    test('no rules, or one rule between the rows (a fraction bar): no table', () => {
+        expect(read('').children.some((n) => n.kind === 'table')).toBe(false);
+        expect(read(rule(468.6)).children.some((n) => n.kind === 'table')).toBe(false);
+    });
+});
+
+// T30 (a2), D51: the 2.0.0 inference default sits in pdfToIr itself, so a
+// read chain composed without toMd (oview's copy, office-to-md) takes it.
+describe('oconvPdfToIr — headings and tables by default (T30 a2)', () => {
+    const PAGE = [
+        { y: 760, text: 'Report Title', size: 20 },
+        { y: 720, text: 'Item', x: 72 }, { y: 720, text: 'Qty', x: 200 }, { y: 720, text: 'Price', x: 320 },
+        { y: 706, text: 'Apples', x: 72 }, { y: 706, text: '12', x: 200 }, { y: 706, text: '3.40', x: 320 },
+        { y: 692, text: 'Pears', x: 72 }, { y: 692, text: '7', x: 200 }, { y: 692, text: '2.10', x: 320 },
+        { y: 660, text: 'Plain text of the section, set at the body size.' },
+        { y: 646, text: 'More plain text, so that the body size is this one.' }
+    ];
+    const kindsOf = (opts) => pdfToIr(pdf.read(genTwoFonts(PAGE)), opts).ir.children.map((n) => n.kind);
+
+    test('with no option, a heading by size and a table from aligned text', () => {
+        expect(kindsOf(undefined)).toEqual(['heading', 'table', 'paragraph']);
+        expect(kindsOf({})).toEqual(['heading', 'table', 'paragraph']);
+    });
+
+    test('infer: [] is the text-first read', () => {
+        expect(kindsOf({ infer: [] }).every((k) => k === 'paragraph')).toBe(true);
+    });
+});
 
 describe('oconvPdfToIr — headings by weight, opt-in (A13b)', () => {
     const shape = (ir) => ir.children.map((n) => [n.kind, n.level, n.children[0].text]);
@@ -613,7 +740,7 @@ describe('oconvPdfToIr — tables from aligned text, opt-in (A14a)', () => {
 
     test('without the option, and with headings only, the block reads as text', () => {
         const doc = pdf.read(genTwoFonts(TABLE));
-        expect(pdfToIr(doc).ir.children.every((n) => n.kind === 'paragraph')).toBe(true);
+        expect(pdfToIr(doc, { infer: [] }).ir.children.every((n) => n.kind === 'paragraph')).toBe(true);
         expect(pdfToIr(doc, { infer: ['headings'] }).ir.children.some((n) => n.kind === 'table')).toBe(false);
     });
 
@@ -706,7 +833,7 @@ describe('oconvPdfToIr — ruled tables, under tables (A14b2)', () => {
         ], GRID));
         const t = pdfToIr(doc, { infer: ['tables'] }).ir.children.find((n) => n.kind === 'table');
         expect(grid(t)).toEqual([['Long label', 'Value'], ['beta', '7']]);
-        expect(pdfToIr(doc).ir.children.some((n) => n.kind === 'table')).toBe(false);
+        expect(pdfToIr(doc, { infer: [] }).ir.children.some((n) => n.kind === 'table')).toBe(false);
         expect(pdfToIr(doc, { infer: ['headings'] }).ir.children.some((n) => n.kind === 'table')).toBe(false);
     });
 
@@ -729,7 +856,7 @@ describe('oconvPdfToIr — the untagged structure declared, opt-in (A44a)', () =
     });
 
     test("one struct/positional loss, after the extraction's, naming what was built", () => {
-        const { losses } = pdfToIr(withImage, { declare: ['positional'] });
+        const { losses } = pdfToIr(withImage, { declare: ['positional'], infer: [] });
         expect(losses.filter((l) => l.code === POSITIONAL)).toHaveLength(1);
         expect(losses[losses.length - 1]).toEqual({ code: POSITIONAL, detail: 'paragraphs' });
         expect(losses).toContainEqual({ code: 'image/dropped', detail: 'Im1 (7 0 R, 1x1)' });
@@ -1058,5 +1185,283 @@ describe('oconvPdfToIr — running headers and footers, opt-in (T34 e)', () => {
         expect(texts([page(1), page(2)], { infer: ['running'] }).running).toEqual([]);
         const drift = [1, 2, 3, 4].map((n) => [{ y: 770 + (n % 2) * 1.5, text: 'Header' }, { y: 400, text: `Body ${n}` }]);
         expect(texts(drift, { infer: ['running'] })).toEqual({ texts: ['Body 1', 'Body 2', 'Body 3', 'Body 4'], running: ['Header'] });
+    });
+});
+
+// T25 (a) — the opt-in inference raised further: URW's bold, captions,
+// one heading size per line, tables of contents.
+
+describe('oconvPdfToIr — the opt-in inference raised further (T25 a)', () => {
+    const shape = (ir) => ir.children.map((n) => [n.kind, n.level, n.kind === 'table' ? undefined : n.children[0].text]);
+
+    test("a whole line in URW's bold (`-Medi`) is a bold heading; the default reads as today", () => {
+        const doc = pdf.read(genTwoFonts([
+            { y: 740, text: '3 Training Details', bold: true },
+            { y: 720, text: 'Plain text of the section.' },
+            { y: 706, text: 'More plain text.' }
+        ], 'NimbusRomNo9L-Medi'));
+        expect(shape(pdfToIr(doc, { infer: ['headings'] }).ir)).toEqual([
+            ['heading', 1, '3 Training Details'],
+            ['paragraph', undefined, 'Plain text of the section. More plain text.']
+        ]);
+        expect(pdfToIr(doc, { infer: [] }).ir.children.every((n) => n.kind === 'paragraph')).toBe(true);
+    });
+
+    test('a caption set in bold or larger stays a paragraph; a heading that only starts like one stays a heading', () => {
+        const doc = pdf.read(genTwoFonts([
+            { y: 760, text: 'Results', size: 16 },
+            { y: 730, text: 'Figure 3.3. Biomass use in the industry', bold: true },
+            { y: 710, text: 'Some text.' },
+            { y: 680, text: 'TABLE 2: Members per region', size: 16 },
+            { y: 650, text: 'More text.' },
+            { y: 620, text: 'Figures of the year', bold: true },
+            { y: 600, text: 'Last text.' },
+            { y: 570, text: 'Fig.4 Map of the site', bold: true },
+            { y: 550, text: 'Closing text.' }
+        ]));
+        expect(shape(pdfToIr(doc, { infer: ['headings'] }).ir)).toEqual([
+            ['heading', 1, 'Results'],
+            ['paragraph', undefined, 'Figure 3.3. Biomass use in the industry'],
+            ['paragraph', undefined, 'Some text.'],
+            ['paragraph', undefined, 'TABLE 2: Members per region'],
+            ['paragraph', undefined, 'More text.'],
+            ['heading', 2, 'Figures of the year'],
+            ['paragraph', undefined, 'Last text.'],
+            ['paragraph', undefined, 'Fig.4 Map of the site'],
+            ['paragraph', undefined, 'Closing text.']
+        ]);
+    });
+
+    test('a title set at two heading sizes on one line (small caps) is one heading of the larger size', () => {
+        // Helvetica `T` at 16 pt is 9.776 pt wide: `HE` starts where it ends.
+        const doc = pdf.read(genTwoFonts([
+            { y: 740, text: 'T', size: 16, x: 72 },
+            { y: 740, text: 'HE CIRCLE', size: 13, x: 81.776 },
+            { y: 700, text: 'Body text.' },
+            { y: 660, text: 'Other', size: 13 },
+            { y: 640, text: 'More body text.' }
+        ]));
+        expect(shape(pdfToIr(doc, { infer: ['headings'] }).ir)).toEqual([
+            ['heading', 1, 'THE CIRCLE'],
+            ['paragraph', undefined, 'Body text.'],
+            ['heading', 2, 'Other'],
+            ['paragraph', undefined, 'More body text.']
+        ]);
+    });
+
+    test('a body-sized piece on a heading line still ends the heading', () => {
+        const doc = pdf.read(genTwoFonts([
+            { y: 740, text: 'B', size: 16, x: 72 },
+            { y: 740, text: 'ig start of the text.', size: 11, x: 82.672 },
+            { y: 700, text: 'Body text.' }
+        ]));
+        expect(shape(pdfToIr(doc, { infer: ['headings'] }).ir)).toEqual([
+            ['heading', 1, 'B'],
+            ['paragraph', undefined, 'ig start of the text.'],
+            ['paragraph', undefined, 'Body text.']
+        ]);
+    });
+
+    const toc = (rows) => rows.flatMap(([entry, page], k) => [
+        { y: 700 - 14 * k, text: entry, x: 72 }, { y: 700 - 14 * k, text: page, x: 500 }
+    ]);
+    const kinds = (rows) => pdfToIr(pdf.read(genTwoFonts(toc(rows))), { infer: ['tables'] }).ir.children.map((n) => n.kind);
+
+    test('a table of contents (entries, then page numbers that do not decrease) is no table', () => {
+        const rows = [['Executive Summary', '4'], ['Legal Framework', '6'], ['Election Administration', '11'], ['Annexes', '11']];
+        const { ir } = pdfToIr(pdf.read(genTwoFonts(toc(rows))), { infer: ['tables'] });
+        expect(ir.children.map((n) => [n.kind, n.children[0].text])).toEqual([
+            ['paragraph', 'Executive Summary 4 Legal Framework 6 Election Administration 11 Annexes 11']
+        ]);
+        expect(kinds([['Preface', 'v'], ['Acknowledgments', 'vii'], ['Foreword', 'ix']])).toEqual(['paragraph']);
+    });
+
+    test('page numbers that decrease, first cells without a letter, two rows only, or a third column: still a table', () => {
+        expect(kinds([['kaolinite', '150'], ['illite', '30'], ['humus', '200']])).toEqual(['table']);
+        expect(kinds([['1', '4'], ['2', '9'], ['3', '15']])).toEqual(['table']);
+        expect(kinds([['Introduction', '4'], ['Methods', '9']])).toEqual(['table']);
+        const three = [['Item', '1', '4'], ['Other', '2', '9'], ['Last', '3', '15']].flatMap(([a, b, c], k) => [
+            { y: 700 - 14 * k, text: a, x: 72 }, { y: 700 - 14 * k, text: b, x: 300 }, { y: 700 - 14 * k, text: c, x: 500 }
+        ]);
+        expect(pdfToIr(pdf.read(genTwoFonts(three)), { infer: ['tables'] }).ir.children.map((n) => n.kind)).toEqual(['table']);
+    });
+});
+
+// T25 (b) — a table row drawn as one TJ, read as a table under 'tables'.
+
+describe('oconvPdfToIr — table rows drawn as one TJ each (T25 b)', () => {
+    /** One untagged Helvetica page from raw content. */
+    function genContent(content) {
+        const indirects = [
+            { num: 1, gen: 0, value: obj.dict({ Type: obj.name('Catalog'), Pages: obj.ref(2, 0) }) },
+            { num: 2, gen: 0, value: obj.dict({ Type: obj.name('Pages'), Kids: obj.array([obj.ref(3, 0)]), Count: obj.int(1) }) },
+            { num: 3, gen: 0, value: obj.dict({
+                Type: obj.name('Page'), Parent: obj.ref(2, 0),
+                MediaBox: obj.array([obj.int(0), obj.int(0), obj.int(612), obj.int(792)]),
+                Contents: obj.ref(4, 0), Resources: obj.dict({ Font: obj.dict({ F1: obj.ref(5, 0) }) })
+            }) },
+            { num: 4, gen: 0, value: obj.stream(obj.dict({ Length: obj.int(content.length) }), enc(content)) },
+            { num: 5, gen: 0, value: obj.dict({ Type: obj.name('Font'), Subtype: obj.name('Type1'), BaseFont: obj.name('Helvetica') }) }
+        ];
+        return pdf.write({ indirects, root: { num: 1, gen: 0 }, version: '1.7' });
+    }
+    // Three rows, each one TJ: its cells 6 em apart (digits are all
+    // 0.556 em wide in Helvetica, so the columns line up).
+    const ROWS = [['Code', 'Unit', 'Rate'], ['1001', '2002', '3003'], ['1004', '2005', '3006']];
+    const content = 'BT /F1 11 Tf 72 740 Td (Rates of the year.) Tj ET\n'
+        + ROWS.map((r, k) => `BT /F1 11 Tf 72 ${700 - 14 * k} Td [(${r[0]}) -6000 (${r[1]}) -6000 (${r[2]})] TJ ET\n`).join('')
+        + 'BT /F1 11 Tf 72 630 Td (Rates may change.) Tj ET\n';
+    const cellText = (c) => c.children.map((b) => b.children.map((r) => r.text).join('')).join(' ');
+
+    test("under 'tables' the rows are a table; without it, the text reads as today", () => {
+        const doc = pdf.read(genContent(content));
+        const { ir } = pdfToIr(doc, { infer: ['tables'] });
+        expect(validate(ir).ok).toBe(true);
+        expect(ir.children.map((n) => n.kind)).toEqual(['paragraph', 'table', 'paragraph']);
+        expect(ir.children[1].children.map((r) => r.children.map(cellText))).toEqual(ROWS);
+        const today = pdfToIr(doc, { infer: [] }).ir.children; // T30 (a2), D51: the text-first read is `infer: []` since 2.0.0.
+        expect(today.map((n) => n.kind)).toEqual(['paragraph', 'paragraph', 'paragraph']);
+        expect(today[1].children[0].text).toBe('Code Unit Rate 1001 2002 3003 1004 2005 3006');
+    });
+
+    test("the pages are cut only for an untagged document under 'tables'", () => {
+        const seen = [];
+        const real = rt.resolve('oconvPdfTextExtract');
+        const spy = { ...real, extractPage: (page, resolve, opts) => { seen.push(!!(opts && opts.cellKerns)); return real.extractPage(page, resolve, opts); } };
+        const { pdfToIr: spied } = oconvPdfToIr.factory(rt.resolve('oconvIr'), spy, rt.resolve('oconvPdfStruct'));
+        const untagged = pdf.read(genContent(content));
+        const tagged = pdf.read(genTagged([{ S: 'P', K: ['Code Unit Rate'] }]));
+        spied(untagged, { infer: ['tables'] });
+        spied(untagged, { infer: ['headings'] });
+        spied(untagged, { infer: [] }); // T30 (a2), D51: the text-first read is `infer: []` since 2.0.0.
+        spied(tagged, { infer: ['tables'] });
+        expect(seen).toEqual([true, false, false, false]);
+    });
+});
+
+// T25 (c) — rows on several baselines, and one long column, under 'tables'.
+
+describe('oconvPdfToIr — rows on several baselines, one long column (T25 c)', () => {
+    const cellText = (c) => c.children.map((b) => b.children.map((r) => r.text).join('')).join(' ');
+    const grid = (t) => t.children.map((r) => r.children.map(cellText));
+    const kinds = (doc, opts) => pdfToIr(doc, opts).ir.children.map((n) => n.kind);
+    // 11 pt: a centred cell's two lines sit 6 pt (0.55 em) above and below
+    // the row's other cells, drawn cell by cell, as 180 and 178 draw them.
+    const centredRow = (y, a, b1, b2, c) => [
+        { y, text: a, x: 72 }, { y: y + 6, text: b1, x: 160 }, { y: y - 6, text: b2, x: 160 }, { y, text: c, x: 260 }
+    ];
+    const HEADER = [{ y: 700, text: 'Version', x: 72 }, { y: 700, text: 'Date', x: 160 }, { y: 700, text: 'Change', x: 260 }];
+    const CENTRED = [
+        { y: 740, text: 'Version history.' },
+        ...HEADER,
+        ...centredRow(670, '1.0', 'April 30,', '2022', 'Original'),
+        ...centredRow(634, '1.1', 'June 3,', '2022', 'Edits'),
+        { y: 590, text: 'Body text after.' }
+    ];
+
+    test('rows centring a one-line cell against a two-line cell are one table', () => {
+        const { ir } = pdfToIr(pdf.read(genTwoFonts(CENTRED)), { infer: ['tables'] });
+        expect(validate(ir).ok).toBe(true);
+        expect(ir.children.map((n) => n.kind)).toEqual(['paragraph', 'table', 'paragraph']);
+        expect(grid(ir.children[1])).toEqual([['Version', 'Date', 'Change'], ['1.0', 'April 30, 2022', 'Original'], ['1.1', 'June 3, 2022', 'Edits']]);
+    });
+
+    test('a three-column table whose last column holds long cells is a table', () => {
+        const long = 'meetings, consultations, listening sessions and email lists';
+        expect(long.length > 40 && long.length <= 120).toBe(true);
+        const doc = pdf.read(genTwoFonts([
+            { y: 700, text: 'Channel', x: 72, size: 8 }, { y: 700, text: 'Medium', x: 150, size: 8 }, { y: 700, text: 'Examples', x: 230, size: 8 },
+            { y: 688, text: 'Direct', x: 72, size: 8 }, { y: 688, text: 'Physical', x: 150, size: 8 }, { y: 688, text: long, x: 230, size: 8 },
+            { y: 676, text: 'Events', x: 72, size: 8 }, { y: 676, text: 'Digital', x: 150, size: 8 }, { y: 676, text: long, x: 230, size: 8 }
+        ]));
+        const t = pdfToIr(doc, { infer: ['tables'] }).ir.children[0];
+        expect(t.kind).toBe('table');
+        expect(grid(t)).toEqual([['Channel', 'Medium', 'Examples'], ['Direct', 'Physical', long], ['Events', 'Digital', long]]);
+    });
+
+    test('equation lines with smaller subscripts at a sub-line offset stay text', () => {
+        // Each line: P with a subscript, a comma, Q with a subscript; the
+        // subscripts 6 pt lower in 7 pt, drawn between the main pieces.
+        const line = (y) => [
+            { y, text: 'P', x: 72 }, { y: y - 6, text: 'LL', x: 80, size: 7 }, { y, text: ',', x: 150 },
+            { y, text: 'Q', x: 200 }, { y: y - 6, text: 'HH', x: 208, size: 7 }
+        ];
+        const doc = pdf.read(genTwoFonts([...line(700), ...line(676), ...line(652)]));
+        expect(kinds(doc, { infer: ['tables'] }).includes('table')).toBe(false);
+    });
+
+    test('a header and one centred row (two rows) stay text', () => {
+        const doc = pdf.read(genTwoFonts([...HEADER, ...centredRow(670, '1.0', 'April 30,', '2022', 'Original')]));
+        expect(kinds(doc, { infer: ['tables'] }).includes('table')).toBe(false);
+    });
+
+    test('a three-column candidate whose first column is long stays text', () => {
+        const title = 'Introduction to researching wicked problems';
+        expect(title.length > 40).toBe(true);
+        const doc = pdf.read(genTwoFonts([
+            { y: 700, text: title, x: 72, size: 8 }, { y: 700, text: 'Part', x: 300, size: 8 }, { y: 700, text: '3', x: 400, size: 8 },
+            { y: 688, text: title, x: 72, size: 8 }, { y: 688, text: 'Part', x: 300, size: 8 }, { y: 688, text: '13', x: 400, size: 8 },
+            { y: 676, text: title, x: 72, size: 8 }, { y: 676, text: 'Part', x: 300, size: 8 }, { y: 676, text: '25', x: 400, size: 8 }
+        ]));
+        expect(kinds(doc, { infer: ['tables'] }).includes('table')).toBe(false);
+    });
+
+    test("without 'tables', the centred rows read as text", () => {
+        const doc = pdf.read(genTwoFonts(CENTRED));
+        expect(kinds(doc, { infer: [] }).every((k) => k === 'paragraph')).toBe(true);
+        expect(kinds(doc, { infer: ['headings'] }).includes('table')).toBe(false);
+    });
+});
+
+// T25 (d) — ruled tables drawn in segments, and a grid coarser than its text.
+
+describe('oconvPdfToIr — ruled tables drawn in segments (T25 d)', () => {
+    const cellText = (c) => c.children.map((b) => b.children.map((r) => r.text).join('')).join(' ');
+    const grid = (t) => t.children.map((r) => r.children.map(cellText));
+    const LONG = 'A description longer than forty characters';
+    const XS = [72, 172, 272];
+    const YS = [700, 680, 660, 640];
+    // Whole horizontals; each vertical cut at every row border, as 146 draws
+    // it: a long segment from the row's lower rule to 5 units under its
+    // upper rule, then a short one across the upper rule.
+    const hRules = YS.map((y) => `72 ${y} m 272 ${y} l S`).join(' ');
+    const vSegments = XS.flatMap((x) => YS.slice(1).map((lo, k) => {
+        const hi = YS[k];
+        return `${x} ${lo + 0.2} m ${x} ${hi - 5} l S ${x} ${hi - 5} m ${x} ${hi + 0.3} l S`;
+    })).join(' ');
+    const SEGMENTED = [
+        { y: 686, x: 80, text: 'Name' }, { y: 686, x: 180, text: 'Value' },
+        { y: 666, x: 80, text: LONG }, { y: 666, x: 180, text: '42' },
+        { y: 646, x: 80, text: 'beta' }, { y: 646, x: 180, text: '7' }
+    ];
+
+    test('a ruled table whose verticals are drawn in one segment per row is one table', () => {
+        expect(LONG.length).toBeGreaterThan(40);
+        const { ir } = pdfToIr(pdf.read(genRuled(SEGMENTED, `${hRules} ${vSegments}\n`)), { infer: ['tables'] });
+        expect(validate(ir).ok).toBe(true);
+        const tables = ir.children.filter((n) => n.kind === 'table');
+        expect(tables.length).toBe(1);
+        expect(grid(tables[0])).toEqual([['Name', 'Value'], [LONG, '42'], ['beta', '7']]);
+    });
+
+    test('a grid with a rule under its header only reads its body rows by line', () => {
+        // Rules at 700, 680 (under the header) and 620; whole verticals.
+        const paths = '72 700 m 272 700 l S 72 680 m 272 680 l S 72 620 m 272 620 l S '
+            + XS.map((x) => `${x} 620 m ${x} 700 l S`).join(' ') + '\n';
+        const doc = pdf.read(genRuled([
+            { y: 686, x: 80, text: 'Name' }, { y: 686, x: 180, text: 'Value' },
+            { y: 666, x: 80, text: 'alpha' }, { y: 666, x: 180, text: '1' },
+            { y: 652, x: 80, text: 'beta' }, { y: 652, x: 180, text: '2' },
+            { y: 638, x: 80, text: 'gamma' }, { y: 638, x: 180, text: '3' }
+        ], paths));
+        const tables = pdfToIr(doc, { infer: ['tables'] }).ir.children.filter((n) => n.kind === 'table');
+        expect(tables.length).toBe(1);
+        expect(grid(tables[0])).toEqual([['Name', 'Value'], ['alpha', '1'], ['beta', '2'], ['gamma', '3']]);
+    });
+
+    test("without 'tables', the segmented table reads as text", () => {
+        const doc = pdf.read(genRuled(SEGMENTED, `${hRules} ${vSegments}\n`));
+        expect(pdfToIr(doc, { infer: [] }).ir.children.some((n) => n.kind === 'table')).toBe(false);
+        expect(pdfToIr(doc, { infer: ['headings'] }).ir.children.some((n) => n.kind === 'table')).toBe(false);
     });
 });

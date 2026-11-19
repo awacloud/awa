@@ -459,7 +459,19 @@ export const docxBundled = {
         t[symbols[i]] = lengths[i];
       return { t, l: lengths[0] };
     }
-    return { buildTree, buildMap };
+    function kraft(codeLengths) {
+      const perLength = new Int32Array(16);
+      for (let s = 0;s < codeLengths.length; ++s)
+        perLength[codeLengths[s]]++;
+      let left = 1;
+      for (let len = 1;len < 16; ++len) {
+        left = left * 2 - perLength[len];
+        if (left < 0)
+          return { oversubscribed: !0, incomplete: !1 };
+      }
+      return { oversubscribed: !1, incomplete: left > 0 };
+    }
+    return { buildTree, buildMap, kraft };
   } });
     __register({ name: "lz77", dependencies: [], factory: function() {
     const u8 = Uint8Array, i32 = Int32Array, DEFAULT = Object.freeze({
@@ -583,30 +595,18 @@ export const docxBundled = {
         }
       }
     }
-    function encodeTokens(data, opts) {
-      if (!(data instanceof u8))
-        throw Error("lz77.encodeTokens: data must be Uint8Array");
-      const o = _resolveOpts(opts), len = data.length, cap = 2 * Math.max(0, len - o.start), provided = opts && opts.tokens;
-      let tokens;
-      if (provided) {
-        if (provided.length < cap)
-          throw Error("lz77.encodeTokens: tokens buffer too small");
-        tokens = provided;
-      } else
-        tokens = new i32(cap);
+    function _fill(st, tokens, max) {
+      const { data, len, head, prev, hash, maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip, wndSize } = st, wndMask = wndSize - 1, lastKey = st.lastKey, atLeast = st.atLeast, cap = 2 * max;
       let p = 0;
-      if (o.start >= len)
-        return { tokens, count: 0 };
-      const { maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip } = o, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, head = new i32(1 << o.hashBits).fill(-1), prev = new i32(Math.min(wndSize, len)).fill(-1), hash = _hasherFor(o), lastKey = len - o.minMatch, atLeast = o.minMatch - 1;
-      for (let k = 0;k < o.start && k <= lastKey; ++k) {
-        const h = hash(data, k);
-        prev[k & wndMask] = head[h];
-        head[h] = k;
+      if (st.heldLen) {
+        tokens[p++] = st.heldLen;
+        tokens[p++] = st.heldDist;
+        st.heldLen = 0;
       }
-      let i = o.start;
-      while (i <= lastKey) {
-        const h = hash(data, i);
-        let matchLen = _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
+      let i = st.at;
+      while (p < cap && i <= lastKey) {
+        const h = hash(data, i), newest = head[h];
+        let matchLen = newest === -1 || i - newest >= wndSize ? 0 : _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
         prev[i & wndMask] = head[h];
         head[h] = i;
         if (matchLen === 0) {
@@ -616,7 +616,7 @@ export const docxBundled = {
           continue;
         }
         if (lazy && matchLen < maxLazy && i < lastKey) {
-          const h1 = hash(data, i + 1), nextLen = _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
+          const h1 = hash(data, i + 1), newest1 = head[h1], nextLen = newest1 === -1 || i + 1 - newest1 >= wndSize ? 0 : _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
           if (nextLen) {
             tokens[p++] = 0;
             tokens[p++] = data[i];
@@ -627,8 +627,13 @@ export const docxBundled = {
             head[h1] = i;
           }
         }
-        tokens[p++] = matchLen;
-        tokens[p++] = dist;
+        if (p < cap) {
+          tokens[p++] = matchLen;
+          tokens[p++] = dist;
+        } else {
+          st.heldLen = matchLen;
+          st.heldDist = dist;
+        }
         const end = i + matchLen;
         for (let k = i + 1;k < end && k <= lastKey; ++k) {
           const hk = hash(data, k);
@@ -637,12 +642,67 @@ export const docxBundled = {
         }
         i = end;
       }
-      while (i < len) {
+      while (p < cap && i < len) {
         tokens[p++] = 0;
         tokens[p++] = data[i];
         i++;
       }
-      return { tokens, count: p / 2 };
+      st.at = i;
+      return p >> 1;
+    }
+    function createScanner(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.createScanner: data must be Uint8Array");
+      const o = _resolveOpts(opts), len = data.length, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, empty = o.start >= len, hash = _hasherFor(o), lastKey = len - o.minMatch, head = empty ? null : new i32(1 << o.hashBits).fill(-1), prev = empty ? null : new i32(Math.min(wndSize, len)).fill(-1);
+      if (!empty)
+        for (let k = 0;k < o.start && k <= lastKey; ++k) {
+          const h = hash(data, k);
+          prev[k & wndMask] = head[h];
+          head[h] = k;
+        }
+      const st = {
+        data,
+        len,
+        hash,
+        lastKey,
+        wndSize,
+        head,
+        prev,
+        maxMatch: o.maxMatch,
+        niceLength: o.niceLength,
+        chainDepth: o.chainDepth,
+        lazy: o.lazy,
+        goodLength: o.goodLength,
+        maxLazy: o.maxLazy,
+        chainSkip: o.chainSkip,
+        atLeast: o.minMatch - 1,
+        at: empty ? len : o.start,
+        heldLen: 0,
+        heldDist: 0
+      };
+      return {
+        fill(tokens, max) {
+          return _fill(st, tokens, max);
+        },
+        get done() {
+          return st.at >= st.len && st.heldLen === 0;
+        }
+      };
+    }
+    function encodeTokens(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.encodeTokens: data must be Uint8Array");
+      const n = Math.max(0, data.length - Math.max(0, (opts && opts.start) | 0)), cap = 2 * n, provided = opts && opts.tokens;
+      let tokens;
+      if (provided) {
+        if (provided.length < cap)
+          throw Error("lz77.encodeTokens: tokens buffer too small");
+        tokens = provided;
+      } else
+        tokens = new i32(cap);
+      if (n === 0)
+        return { tokens, count: 0 };
+      return { tokens, count: createScanner(data, opts).fill(tokens, n) };
     }
     function decodeStream(dst, ops) {
       let p = 0;
@@ -659,6 +719,7 @@ export const docxBundled = {
     return {
       encode,
       encodeTokens,
+      createScanner,
       findMatch,
       decodeStream,
       DEFAULT
@@ -673,7 +734,7 @@ export const docxBundled = {
       byteOffset,
       slice,
       max
-    } = bitstream, { buildMap, buildTree } = huffman, ERROR_MESSAGES = [
+    } = bitstream, { buildMap, buildTree } = huffman, CODE_NAMES = { 0: "EEOF", 1: "EBADBLOCK", 2: "EBADSYMBOL", 3: "EBADDISTANCE", 4: "ESTREAMEND", 5: "ENOHANDLER", 6: "EBADFORMAT", 7: "EMAXOUT", 8: "EBADSTREAM", 9: "EEXTRATOOLONG", 10: "EBADDATE", 11: "ENAMETOOLONG", 12: "ENOENCODER", 13: "EBADFORMAT", 14: "EBADMETHOD", 15: "EUNSAFEPATH", 16: "ECHECKSUM" }, ERROR_MESSAGES = [
       "unexpected EOF",
       "invalid block type",
       "invalid length/literal",
@@ -681,12 +742,13 @@ export const docxBundled = {
       "stream finished",
       "no stream handler",
       null,
-      null,
+      "output limit exceeded",
       "invalid data"
     ];
     function fail(code, message) {
       const e = Error(message ?? ERROR_MESSAGES[code] ?? "unknown error");
-      e.code = code;
+      e.code = CODE_NAMES[code];
+      e.errno = code;
       throw e;
     }
     const u8 = Uint8Array, u16 = Uint16Array, u32 = Uint32Array, i32 = Int32Array, WINDOW_SIZE = 32768;
@@ -774,8 +836,10 @@ export const docxBundled = {
       return sym < 29 && dist >= DIST_BASE[sym + 1] ? sym + 1 : sym;
     }
     const PHASE_HEADER = 0, PHASE_STORED = 1, PHASE_CODES = 2, PHASE_DONE = 3, NEED_INPUT = 0, COMPLETE = 1;
-    function createInflateState(dictionary) {
+    function createInflateState(dictionary, maxOutput) {
       const dict = dictionary && dictionary.length ? dictionary.subarray(Math.max(0, dictionary.length - WINDOW_SIZE)) : null;
+      if (maxOutput !== void 0 && maxOutput !== null && !(Number.isSafeInteger(maxOutput) && maxOutput >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
       return {
         bitPos: 0,
         finalBlock: 0,
@@ -789,7 +853,10 @@ export const docxBundled = {
         outLen: 0,
         emitted: 0,
         dictionary: dict,
-        fixedOut: !1
+        fixedOut: !1,
+        base: 0,
+        limit: maxOutput !== void 0 && maxOutput !== null ? (dict ? dict.length : 0) + maxOutput : 1 / 0,
+        end: 0
       };
     }
     function initOutput(state, inputLength, providedOut) {
@@ -798,24 +865,29 @@ export const docxBundled = {
         state.out = providedOut;
         state.fixedOut = !0;
       } else
-        state.out = new u8(Math.max(65536, inputLength * 3));
+        state.out = new u8(Math.min(Math.max(65536, inputLength * 3), state.limit));
       if (dictLen) {
         state.out.set(state.dictionary);
         state.outLen = dictLen;
         state.emitted = dictLen;
       }
+      state.end = Math.min(state.out.length, state.limit - state.base);
     }
     function reserveOutput(state, needed) {
-      if (needed <= state.out.length)
+      if (needed <= state.end)
         return;
+      if (state.base + needed > state.limit)
+        fail(7);
       if (state.fixedOut)
         fail(8, "output exceeds provided buffer");
       let size = state.out.length || 65536;
       while (size < needed)
         size *= 2;
+      size = Math.min(size, state.limit - state.base);
       const grown = new u8(size);
       grown.set(state.out.subarray(0, state.outLen));
       state.out = grown;
+      state.end = Math.min(size, state.limit - state.base);
     }
     function readDynamicTables(state, input) {
       const totalBits = input.length * 8;
@@ -1033,6 +1105,8 @@ export const docxBundled = {
       const start = state.outLen - WINDOW_SIZE;
       state.out.set(state.out.subarray(start, state.outLen), 0);
       state.outLen = WINDOW_SIZE;
+      state.base += start;
+      state.end = Math.min(state.out.length, state.limit - state.base);
       state.emitted = Math.max(0, state.emitted - start);
     }
     const WINDOW_BITS = 15, MIN_MATCH = 3, MAX_MATCH = 258, BLOCK_TOKENS = 16384, STREAM_FLUSH_BYTES = 65536, LEVELS = [
@@ -1063,15 +1137,7 @@ export const docxBundled = {
         return Math.imul(data[i] | data[i + 1] << 8 | data[i + 2] << 16, 2654435761) >>> shift;
       };
     }
-    const TOKEN_SCRATCH_MAX = 2097152;
-    let tokenScratch = null;
-    function tokenBuffer(capacity) {
-      if (capacity > TOKEN_SCRATCH_MAX)
-        return new i32(capacity);
-      if (!tokenScratch || tokenScratch.length < capacity)
-        tokenScratch = new i32(capacity);
-      return tokenScratch;
-    }
+    const blockTokens = new i32(2 * BLOCK_TOKENS);
     function createTokenBuffer(tokens, start) {
       return {
         tokens,
@@ -1296,7 +1362,7 @@ export const docxBundled = {
       if (params.level === 0)
         writeStoredRun(w, input, start, params.final);
       else {
-        const scan = lz77.encodeTokens(input, {
+        const scan = lz77.createScanner(input, {
           windowBits: WINDOW_BITS,
           minMatch: MIN_MATCH,
           maxMatch: MAX_MATCH,
@@ -1305,12 +1371,11 @@ export const docxBundled = {
           hashFn: makeHashFn(params.hashBits),
           lazy: params.lazy,
           chainSkip: !0,
-          ...LEVELS[params.level],
-          tokens: tokenBuffer(2 * Math.max(0, input.length - start))
-        }), tb = createTokenBuffer(scan.tokens, start), count = scan.count;
-        for (let from = 0;; from += BLOCK_TOKENS) {
-          const to = Math.min(count, from + BLOCK_TOKENS), covered = tallyBlock(tb, from, to);
-          if (to === count) {
+          ...LEVELS[params.level]
+        }), tb = createTokenBuffer(blockTokens, start);
+        for (;; ) {
+          const covered = tallyBlock(tb, 0, scan.fill(blockTokens, BLOCK_TOKENS));
+          if (scan.done) {
             tb.blockLen = input.length - tb.blockStart;
             writeBlock(w, tb, input, params.final);
             break;
@@ -1398,7 +1463,7 @@ export const docxBundled = {
         opts = {};
       }
       this.ondata = ondata;
-      this._state = createInflateState((opts || {}).dictionary);
+      this._state = createInflateState((opts || {}).dictionary, (opts || {}).maxOutput);
       initOutput(this._state, 0, void 0);
       this._pending = new u8(0);
       this._done = !1;
@@ -1431,6 +1496,16 @@ export const docxBundled = {
       this._pending = slice(this._pending, state.bitPos >> 3);
       state.bitPos &= 7;
     };
+    Object.defineProperty(InflateStream.prototype, "ended", {
+      get() {
+        return this._state.phase === PHASE_DONE;
+      }
+    });
+    InflateStream.prototype.rest = function() {
+      if (this._state.phase !== PHASE_DONE)
+        return null;
+      return this._pending.subarray(this._state.bitPos ? 1 : 0);
+    };
     function deflateSync(data, opts = {}) {
       let input = data, start = 0;
       const dict = opts.dictionary;
@@ -1454,9 +1529,11 @@ export const docxBundled = {
     function inflateSync(data, opts = {}) {
       if (!data.length)
         return opts.out ? opts.out.subarray(0, 0) : new u8(0);
-      const state = createInflateState(opts.dictionary), dictLen = state.dictionary ? state.dictionary.length : 0;
+      const state = createInflateState(opts.dictionary, opts.maxOutput), dictLen = state.dictionary ? state.dictionary.length : 0;
       initOutput(state, data.length, opts.out);
       runInflate(state, data, !1);
+      if (typeof opts.onEnd === "function")
+        opts.onEnd(byteOffset(state.bitPos));
       if (state.fixedOut)
         return state.out.subarray(0, state.outLen);
       if (opts.out) {
@@ -1575,7 +1652,8 @@ export const docxBundled = {
       const d = new Date(mtime ?? Date.now()), y = d.getFullYear() - 1980;
       if (y < 0 || y > 119) {
         const e = Error("date not in range 1980-2099");
-        e.code = 10;
+        e.code = "EBADDATE";
+        e.errno = 10;
         throw e;
       }
       return y << 25 | d.getMonth() + 1 << 21 | d.getDate() << 16 | d.getHours() << 11 | d.getMinutes() << 5 | d.getSeconds() >> 1;
@@ -1590,7 +1668,8 @@ export const docxBundled = {
           const l = ex[k].length;
           if (l > 65535) {
             const e = Error("extra field too long");
-            e.code = 9;
+            e.code = "EEXTRATOOLONG";
+            e.errno = 9;
             throw e;
           }
           le += l + 4;
@@ -1708,8 +1787,14 @@ export const docxBundled = {
       return b + 30 + _r16(d, b + 26) + _r16(d, b + 28);
     }
     function _readCDE(d, b, zip64) {
-      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
-      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off];
+      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8).replace(/\\/g, "/"), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
+      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off, _r32(d, b + 16) >>> 0];
+    }
+    function _setOwn(obj, key, value) {
+      if (key === "__proto__")
+        Object.defineProperty(obj, key, { value, writable: !0, enumerable: !0, configurable: !0 });
+      else
+        obj[key] = value;
     }
     function _flatten(d, prefix, out, defaultOpts) {
       for (const k in d) {
@@ -1720,9 +1805,9 @@ export const docxBundled = {
           data = val[0];
         }
         if (data instanceof Uint8Array)
-          out[name] = [data, opts];
+          _setOwn(out, name, [data, opts]);
         else {
-          out[name + "/"] = [new Uint8Array(0), opts];
+          _setOwn(out, name + "/", [new Uint8Array(0), opts]);
           _flatten(data, name + "/", out, defaultOpts);
         }
       }
@@ -1736,7 +1821,8 @@ export const docxBundled = {
         const [file, p] = flat[fn], compression = p.level === 0 ? 0 : 8, fnBytes = _strToU8(fn), fnLen = fnBytes.length;
         if (fnLen > 65535) {
           const e = Error("filename too long");
-          e.code = 11;
+          e.code = "ENAMETOOLONG";
+          e.errno = 11;
           throw e;
         }
         const comBytes = p.comment ? _strToU8(p.comment) : null, exl = _exfl(p.extra), u = _isUTF8(fn) || comBytes && _isUTF8(p.comment), dosTime = _dosDateTime(p.mtime), crc = new Crc32;
@@ -1787,12 +1873,15 @@ export const docxBundled = {
       return !1;
     }
     function unzipSync(data, opts = {}) {
-      const result = {}, safe = opts.safe !== !1;
-      let e = data.length - 22;
+      const result = Object.create(null), safe = opts.safe !== !1, cap = opts.maxOutput === void 0 || opts.maxOutput === null ? 1 / 0 : opts.maxOutput;
+      if (cap !== 1 / 0 && !(Number.isSafeInteger(cap) && cap >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
+      let extracted = 0, e = data.length - 22;
       while (_r32(data, e) !== 101010256) {
         if (!e || data.length - e > 65558) {
           const err = Error("invalid zip data");
-          err.code = 13;
+          err.code = "EBADFORMAT";
+          err.errno = 13;
           throw err;
         }
         --e;
@@ -1811,26 +1900,46 @@ export const docxBundled = {
       const fltr = opts.filter;
       let o = cdOffset;
       for (let i = 0;i < entryCount; ++i) {
-        const [cmp, cSize, uSize, fn, nextOff, localOff] = _readCDE(data, o, zip64);
+        const [cmp, cSize, uSize, fn, nextOff, localOff, crcExpected] = _readCDE(data, o, zip64);
         o = nextOff;
         const dataStart = _slzh(data, localOff);
         if (safe && _isUnsafePath(fn)) {
           const err = Error('zip-slip: unsafe entry path "' + fn + '"');
-          err.code = 15;
+          err.code = "EUNSAFEPATH";
+          err.errno = 15;
           throw err;
         }
         if (fltr && !fltr({ name: fn, size: cSize, originalSize: uSize, compression: cmp }))
           continue;
+        const outSize = cmp === 0 ? cSize : uSize;
+        if (outSize > cap - extracted) {
+          const err = Error('zip: output limit exceeded (maxOutput) at "' + fn + '"');
+          err.code = "EMAXOUT";
+          err.errno = 7;
+          throw err;
+        }
+        extracted += outSize;
         if (cmp === 0)
-          result[fn] = new Uint8Array(data.subarray(dataStart, dataStart + cSize));
+          _setOwn(result, fn, new Uint8Array(data.subarray(dataStart, dataStart + cSize)));
         else if (cmp === 8)
-          result[fn] = inflateSync(data.subarray(dataStart, dataStart + cSize), {
+          _setOwn(result, fn, inflateSync(data.subarray(dataStart, dataStart + cSize), {
             out: new Uint8Array(uSize)
-          });
+          }));
         else {
           const err = Error("unknown compression type " + cmp);
-          err.code = 14;
+          err.code = "EBADMETHOD";
+          err.errno = 14;
           throw err;
+        }
+        if (opts.verify !== !1) {
+          const c = new Crc32;
+          c.append(result[fn]);
+          if (c.get() !== crcExpected || result[fn].length !== uSize) {
+            const err = Error('zip: incorrect data check (CRC-32 or size mismatch) for "' + fn + '"');
+            err.code = "ECHECKSUM";
+            err.errno = 16;
+            throw err;
+          }
         }
       }
       return result;
@@ -1893,7 +2002,8 @@ export const docxBundled = {
       const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
       if (fnBytes.length > 65535) {
         const e = Error("filename too long");
-        e.code = 11;
+        e.code = "ENAMETOOLONG";
+        e.errno = 11;
         throw e;
       }
       const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, crc = new Crc32;
@@ -1911,7 +2021,8 @@ export const docxBundled = {
       const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
       if (fnBytes.length > 65535) {
         const e = Error("filename too long");
-        e.code = 11;
+        e.code = "ENAMETOOLONG";
+        e.errno = 11;
         throw e;
       }
       const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, hdr = new Uint8Array(localHdrLen);
@@ -2047,12 +2158,27 @@ export const docxBundled = {
           t = t >>> 1;
       table[i] = t;
     }
+    const slices = new Uint32Array(4096);
+    slices.set(table);
+    for (let k = 256;k < 4096; k++) {
+      const prev = slices[k - 256];
+      slices[k] = prev >>> 8 ^ table[prev & 255];
+    }
     function Crc32() {
       this.crc = -1;
     }
     Crc32.prototype.append = function(data) {
       let crc = this.crc | 0;
-      for (let offset = 0, length = data.length | 0;offset < length; offset++)
+      const length = data.length | 0;
+      let offset = 0;
+      if (data instanceof Uint8Array) {
+        const t = slices;
+        for (const end = length - 15;offset < end; offset += 16) {
+          const a = crc ^ (data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 | data[offset + 3] << 24);
+          crc = t[3840 + (a & 255)] ^ t[3584 + (a >>> 8 & 255)] ^ t[3328 + (a >>> 16 & 255)] ^ t[3072 + (a >>> 24)] ^ t[2816 + data[offset + 4]] ^ t[2560 + data[offset + 5]] ^ t[2304 + data[offset + 6]] ^ t[2048 + data[offset + 7]] ^ t[1792 + data[offset + 8]] ^ t[1536 + data[offset + 9]] ^ t[1280 + data[offset + 10]] ^ t[1024 + data[offset + 11]] ^ t[768 + data[offset + 12]] ^ t[512 + data[offset + 13]] ^ t[256 + data[offset + 14]] ^ t[data[offset + 15]];
+        }
+      }
+      for (;offset < length; offset++)
         crc = crc >>> 8 ^ table[(crc ^ data[offset]) & 255];
       this.crc = crc;
     };
@@ -2116,7 +2242,7 @@ export const docxBundled = {
       for (const c of p.children || [])
         if (c.type === "run")
           out.push(textOfRun(c));
-        else if (c.type === "hyperlink" || c.type === "ins" || c.type === "moveTo")
+        else if (c.type === "hyperlink" || c.type === "ins" || c.type === "moveTo" || c.type === "smartTag")
           out.push(textOfParagraph(c));
       return out.join("");
     }
@@ -2295,7 +2421,10 @@ export const docxBundled = {
       SLIDE: NS.R + "/slide",
       SLIDE_LAYOUT: NS.R + "/slideLayout",
       SLIDE_MASTER: NS.R + "/slideMaster",
-      THEME: NS.R + "/theme"
+      THEME: NS.R + "/theme",
+      NOTES_SLIDE: NS.R + "/notesSlide",
+      NOTES_MASTER: NS.R + "/notesMaster",
+      HANDOUT_MASTER: NS.R + "/handoutMaster"
     }), CT = Object.freeze({
       DOCUMENT: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
       STYLES_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
@@ -2321,7 +2450,10 @@ export const docxBundled = {
       SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
       THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
       VML_DRAWING: "application/vnd.openxmlformats-officedocument.vmlDrawing",
-      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"
+      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml",
+      NOTES_SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+      NOTES_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+      HANDOUT_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml"
     });
     function toEmu(v) {
       if (typeof v === "number")
@@ -3096,6 +3228,96 @@ export const docxBundled = {
         return xml.el(name, { "w:val": "0" });
       return null;
     }
+    function toggleForm(v) {
+      if (v === void 0 || v === "true" || v === "1" || v === "on")
+        return "on";
+      if (v === "false" || v === "0" || v === "off")
+        return "off";
+      return v;
+    }
+    function significant(children) {
+      return (children || []).filter((c) => !(c && c.type === "text" && /^\s*$/.test(String(c.value ?? c.text ?? ""))));
+    }
+    function sameElement(a, b) {
+      if (!a || !b || a.type !== b.type)
+        return !1;
+      if (a.type !== "element")
+        return String(a.value ?? a.text ?? "") === String(b.value ?? b.text ?? "");
+      if (a.name !== b.name)
+        return !1;
+      const ka = significant(a.children), kb = significant(b.children), aa = a.attrs || {}, ba = b.attrs || {}, keys = new Set([...Object.keys(aa), ...Object.keys(ba)]);
+      for (const k of keys)
+        if (k === "w:val" && ka.length === 0 && kb.length === 0) {
+          if (toggleForm(aa[k]) !== toggleForm(ba[k]))
+            return !1;
+        } else if (aa[k] !== ba[k])
+          return !1;
+      if (ka.length !== kb.length)
+        return !1;
+      for (let i = 0;i < ka.length; i++)
+        if (!sameElement(ka[i], kb[i]))
+          return !1;
+      return !0;
+    }
+    function isPlain(v) {
+      return !!v && typeof v === "object" && !Array.isArray(v);
+    }
+    function hydrateLossless(bag, typeBag, untypeBag) {
+      if (!bag || !Array.isArray(bag._extras))
+        return bag;
+      const count = new Map;
+      for (const c of bag._extras)
+        if (c && c.type === "element")
+          count.set(c.name, (count.get(c.name) || 0) + 1);
+      const claimed = new Map, keysOf = (k) => {
+        if (!claimed.has(k))
+          claimed.set(k, new Set(isPlain(bag[k]) ? Object.keys(bag[k]) : []));
+        return claimed.get(k);
+      }, verdicts = bag._extras.map((c) => {
+        if (!c || c.type !== "element")
+          return null;
+        const probe = typeBag({ _extras: [c] }) || {}, fields = Object.keys(probe).filter((k) => k !== "_extras");
+        if (count.get(c.name) > 1 && !fields.every((k) => Array.isArray(probe[k])))
+          return null;
+        const merges = (k) => Array.isArray(probe[k]) && (bag[k] === void 0 || Array.isArray(bag[k])) || isPlain(probe[k]) && (bag[k] === void 0 || isPlain(bag[k])) && (k[0] === "_" || Object.keys(probe[k]).every((s) => !keysOf(k).has(s))), taken = (k) => bag[k] !== void 0 || claimed.has(k), clash = fields.some((k) => taken(k) && !merges(k));
+        if (fields.length === 0 || (probe._extras || []).length > 0 || clash)
+          return null;
+        const back = (untypeBag({ ...probe }) || {})._extras || [];
+        if (back.length !== 1 || !sameElement(back[0], c))
+          return null;
+        for (const k of fields) {
+          const keys = keysOf(k);
+          if (isPlain(probe[k]))
+            for (const s of Object.keys(probe[k]))
+              keys.add(s);
+        }
+        return { name: c.name, probe, fields };
+      }), refused = new Set;
+      bag._extras.forEach((c, i) => {
+        if (c && c.type === "element" && count.get(c.name) > 1 && verdicts[i] === null)
+          refused.add(c.name);
+      });
+      const remaining = [];
+      bag._extras.forEach((c, i) => {
+        const v = verdicts[i];
+        if (v === null || refused.has(v.name)) {
+          remaining.push(c);
+          return;
+        }
+        for (const k of v.fields)
+          if (Array.isArray(v.probe[k]))
+            bag[k] = (Array.isArray(bag[k]) ? bag[k] : []).concat(v.probe[k]);
+          else if (isPlain(bag[k]))
+            bag[k] = { ...bag[k], ...v.probe[k] };
+          else
+            bag[k] = v.probe[k];
+      });
+      if (remaining.length)
+        bag._extras = remaining;
+      else
+        delete bag._extras;
+      return bag;
+    }
     function valOf(el) {
       return el ? el.attrs["w:val"] : void 0;
     }
@@ -3704,7 +3926,9 @@ export const docxBundled = {
       valOf,
       elVal,
       sequence,
-      orderBySequence
+      orderBySequence,
+      sameElement,
+      hydrateLossless
     };
   } });
     __register({ name: "drawingmlShape", dependencies: ["xml","ooxmlShared"], factory: function(xml, shared) {
@@ -3826,7 +4050,19 @@ export const docxBundled = {
       }
       return null;
     }
-    function parseLine(lnEl) {
+    function lineColor(solidFill, opts) {
+      if (!(opts && opts.typedLineColors)) {
+        const col = parseColorChild(solidFill);
+        return col && col.rgb ? col.rgb : void 0;
+      }
+      const el = solidFill.children.find((n) => n.type === "element");
+      if (!el)
+        return;
+      if (el.name === "a:srgbClr" && !el.children.some((n) => n.type === "element"))
+        return el.attrs.val;
+      return typedColor.parse(el) || void 0;
+    }
+    function parseLine(lnEl, opts) {
       if (!lnEl)
         return;
       const out = {};
@@ -3851,9 +4087,9 @@ export const docxBundled = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:solidFill") {
-          const col = parseColorChild(c);
-          if (col && col.rgb)
-            out.color = col.rgb;
+          const col = lineColor(c, opts);
+          if (col !== void 0)
+            out.color = col;
           else
             extras.push(c);
         } else if (c.name === "a:prstDash")
@@ -3887,8 +4123,11 @@ export const docxBundled = {
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
-      else if (line.color)
-        children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
+      else if (line.color) {
+        const el = typeof line.color === "object" ? typedColor.render(line.color) : renderSrgbClr(line.color);
+        if (el)
+          children.push(xml.el("a:solidFill", {}, [el]));
+      }
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
       if (!line._extras)
@@ -3902,10 +4141,13 @@ export const docxBundled = {
       }
       return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
-    function parseShapeProperties(spPrEl) {
+    function parseShapeProperties(spPrEl, opts) {
       if (!spPrEl)
         return;
-      const out = {}, xfrmEl = xml.findChild(spPrEl, "a:xfrm");
+      const out = {};
+      if (spPrEl.attrs && spPrEl.attrs.bwMode)
+        out.bwMode = spPrEl.attrs.bwMode;
+      const xfrmEl = xml.findChild(spPrEl, "a:xfrm");
       Object.assign(out, parseXfrm(xfrmEl));
       const prst = xml.findChild(spPrEl, "a:prstGeom");
       if (prst) {
@@ -3918,7 +4160,7 @@ export const docxBundled = {
         out.fill = fill;
       const ln = xml.findChild(spPrEl, "a:ln");
       if (ln) {
-        const lineProps = parseLine(ln);
+        const lineProps = parseLine(ln, opts);
         if (lineProps !== void 0)
           out.line = lineProps;
       }
@@ -3953,11 +4195,12 @@ export const docxBundled = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
+      const attrs = props.bwMode ? { bwMode: String(props.bwMode) } : {};
       if (!props._extras)
-        return xml.el(tag, {}, children);
+        return xml.el(tag, attrs, children);
       for (const ex of props._extras)
         children.push(ex);
-      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
+      return xml.el(tag, attrs, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -4271,7 +4514,7 @@ export const docxBundled = {
       }
       return null;
     }
-    const LATE_FIELDS = new Set(["image", "chart", "embedRef", "svgRef", "chartRef", "docId", "_source", "_read"]), REL_NAMESPACES = new Set([R_NS, "http://purl.oclc.org/ooxml/officeDocument/relationships"]);
+    const LATE_FIELDS = new Set(["image", "chart", "alternate", "embedRef", "svgRef", "chartRef", "docId", "_source", "_read"]), REL_NAMESPACES = new Set([R_NS, "http://purl.oclc.org/ooxml/officeDocument/relationships"]);
     function typedFields(d) {
       const out = {};
       for (const k of Object.keys(d))
@@ -4373,6 +4616,15 @@ export const docxBundled = {
         return kept;
       const inner = drawing.mode === "anchor" ? renderAnchorWrapper(drawing) : renderInlineWrapper(drawing);
       return xml.el("w:drawing", {}, [inner]);
+    }
+    function renderRunChild(drawing) {
+      const el = renderDrawing(drawing), alt = drawing.alternate;
+      if (!alt || drawing._read && !sameModel(typedFields(drawing), drawing._read))
+        return el;
+      const children = [xml.el("mc:Choice", { Requires: String(alt.requires || "") }, [el])];
+      if (alt.fallback)
+        children.push(alt.fallback);
+      return xml.el("mc:AlternateContent", {}, children);
     }
     function renderInlineWrapper(d) {
       const a = {};
@@ -4577,6 +4829,7 @@ export const docxBundled = {
     return {
       parseDrawing,
       renderDrawing,
+      renderRunChild,
       withRelationships,
       typedFields,
       keepSource,
@@ -5102,6 +5355,33 @@ export const docxBundled = {
       "w:cellMerge",
       "w:tcPrChange"
     ]);
+    let choiceDrawings = !1;
+    function withChoiceDrawings(on, fn) {
+      const before = choiceDrawings;
+      choiceDrawings = on === !0;
+      try {
+        return fn();
+      } finally {
+        choiceDrawings = before;
+      }
+    }
+    const CHOICE_PREFIXES = new Set(["wps", "wpg", "wpc"]);
+    function choiceDrawing(ac) {
+      const els = ac.children.filter((k) => k.type === "element"), choice = els[0], fallback = els[1] || null;
+      if (!choice || choice.name !== "mc:Choice" || els.length > 2 || fallback && fallback.name !== "mc:Fallback")
+        return null;
+      if (Object.keys(ac.attrs).length || Object.keys(choice.attrs).some((k) => k !== "Requires"))
+        return null;
+      const requires = String(choice.attrs.Requires || ""), prefixes = requires.split(/\s+/).filter(Boolean);
+      if (!prefixes.length || !prefixes.every((p) => CHOICE_PREFIXES.has(p)))
+        return null;
+      const inner = choice.children.filter((k) => k.type === "element");
+      if (inner.length !== 1 || inner[0].name !== "w:drawing")
+        return null;
+      const drawing = drawingMod.parseDrawing(inner[0]);
+      drawing.alternate = { requires, fallback };
+      return drawing;
+    }
     function parseRunChildren(rEl) {
       const out = [];
       for (const c of rEl.children) {
@@ -5143,6 +5423,9 @@ export const docxBundled = {
           }
           case "w:drawing":
             out.push(drawingMod.parseDrawing(c));
+            break;
+          case "mc:AlternateContent":
+            out.push(choiceDrawings && choiceDrawing(c) || { type: "unknown", node: c });
             break;
           case "w:fldChar": {
             const f = {
@@ -5212,7 +5495,7 @@ export const docxBundled = {
             break;
           }
           case "drawing":
-            out.push(drawingMod.renderDrawing(ch));
+            out.push(drawingMod.renderRunChild(ch));
             break;
           case "fldChar": {
             const a = { "w:fldCharType": ch.kind };
@@ -5583,6 +5866,25 @@ export const docxBundled = {
           return parseRevision(c, REVISION_TAGS[c.name]);
         case "w:sdt":
           return parseSdt(c, !1);
+        case "w:smartTag": {
+          const t = { type: "smartTag", attrs: { ...c.attrs || {} }, children: [] }, extras = [];
+          for (const cc of c.children) {
+            if (cc.type !== "element")
+              continue;
+            if (cc.name === "w:smartTagPr") {
+              t.smartTagPr = cc;
+              continue;
+            }
+            const node = parseInline(cc);
+            if (node)
+              t.children.push(node);
+            else
+              extras.push(cc);
+          }
+          if (extras.length)
+            t._extras = extras;
+          return t;
+        }
         case "m:oMath":
           return mathMod.parseOMath(c);
         case "w:fldSimple": {
@@ -5713,6 +6015,16 @@ export const docxBundled = {
           case "sdt":
             children.push(renderSdt(c));
             break;
+          case "smartTag": {
+            const kids = [];
+            if (c.smartTagPr)
+              kids.push(c.smartTagPr);
+            kids.push(...renderInlines(c.children));
+            if (c._extras)
+              kids.push(...c._extras);
+            children.push(xml.el("w:smartTag", { ...c.attrs || {} }, kids));
+            break;
+          }
           case "oMath":
             children.push(mathMod.renderOMath(c));
             break;
@@ -6156,6 +6468,7 @@ export const docxBundled = {
       parseParagraph,
       renderParagraph,
       withParaIds,
+      withChoiceDrawings,
       parseTable,
       renderTable,
       parseRow,
@@ -6832,12 +7145,15 @@ export const docxBundled = {
       const children = [];
       if (obj.defaultTabStop != null)
         children.push(xml.el("w:defaultTabStop", { "w:val": String(obj.defaultTabStop) }));
-      if (obj.evenAndOddHeaders === !0)
-        children.push(xml.el("w:evenAndOddHeaders", {}));
-      if (obj.updateFields === !0)
-        children.push(xml.el("w:updateFields", {}));
-      if (obj.trackChanges === !0)
-        children.push(xml.el("w:trackRevisions", {}));
+      const toggle = (name, v) => {
+        if (v === !0)
+          children.push(xml.el(name, {}));
+        else if (v === !1)
+          children.push(xml.el(name, { "w:val": "0" }));
+      };
+      toggle("w:evenAndOddHeaders", obj.evenAndOddHeaders);
+      toggle("w:updateFields", obj.updateFields);
+      toggle("w:trackRevisions", obj.trackChanges);
       if (obj.zoom) {
         const a = {};
         if (obj.zoom.val)
@@ -7670,7 +7986,13 @@ export const docxBundled = {
       "hydrateDrawing",
       "dehydrateDrawing",
       "hydrateSettings",
-      "dehydrateSettings"
+      "dehydrateSettings",
+      "hydrateStyles",
+      "dehydrateStyles",
+      "hydrateNumbering",
+      "dehydrateNumbering",
+      "hydrateSection",
+      "dehydrateSection"
     ];
     function createWalker() {
       const _exts = [];
@@ -7702,8 +8024,9 @@ export const docxBundled = {
         const list = _hookIndex[name];
         if (!list)
           return value;
-        for (let i = 0;i < list.length; i++) {
-          const r = list[i][name](value);
+        const reverse = name.startsWith("dehydrate");
+        for (let n = 0;n < list.length; n++) {
+          const r = list[reverse ? list.length - 1 - n : n][name](value);
           if (r !== void 0)
             value = r;
         }
@@ -7735,10 +8058,18 @@ export const docxBundled = {
         if (node.type === "run" && node.rPr)
           node.rPr = applyHook(hr, node.rPr);
         if (node.type === "paragraph") {
+          const hs = phase === "hydrate" ? "hydrateSection" : "dehydrateSection", section = () => {
+            if (node.pPr && node.pPr.sectPr && typeof node.pPr.sectPr === "object" && node.pPr.sectPr.type !== "element")
+              node.pPr.sectPr = applyHook(hs, node.pPr.sectPr);
+          };
+          if (phase === "dehydrate")
+            section();
           if (node.pPr)
             node.pPr = applyHook(hp, node.pPr);
           if (node.pPr && node.pPr.rPr)
             node.pPr.rPr = applyHook(hr, node.pPr.rPr);
+          if (phase === "hydrate")
+            section();
         }
         if (node.type === "cell" && node.tcPr)
           node.tcPr = applyHook(htc, node.tcPr);
@@ -7756,6 +8087,8 @@ export const docxBundled = {
           return;
         if (result.document)
           walkProperties(result.document, phase);
+        if (result.document && result.document.sectPr)
+          result.document.sectPr = applyHook(phase === "hydrate" ? "hydrateSection" : "dehydrateSection", result.document.sectPr);
         for (const k of Object.keys(result.headers || {}))
           walkProperties(result.headers[k], phase);
         for (const k of Object.keys(result.footers || {}))
@@ -7769,15 +8102,43 @@ export const docxBundled = {
         for (const item of result.comments && result.comments.comments || [])
           if (item)
             walkProperties(item.body, phase);
-        if (result.styles && Array.isArray(result.styles.styles)) {
-          const hrName = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hpName = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties";
-          for (const st of result.styles.styles) {
+        const hrName = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hpName = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties", part = (key, hook, visit) => {
+          if (!result[key])
+            return;
+          if (phase === "hydrate")
+            result[key] = applyHook("hydrate" + hook, result[key]);
+          visit(result[key]);
+          if (phase === "dehydrate")
+            result[key] = applyHook("dehydrate" + hook, result[key]);
+        };
+        part("styles", "Styles", (styles) => {
+          const dd = styles.docDefaults;
+          if (dd && dd.rPr)
+            dd.rPr = applyHook(hrName, dd.rPr);
+          if (dd && dd.pPr)
+            dd.pPr = applyHook(hpName, dd.pPr);
+          for (const st of Array.isArray(styles.styles) ? styles.styles : []) {
             if (st.rPr)
               st.rPr = applyHook(hrName, st.rPr);
             if (st.pPr)
               st.pPr = applyHook(hpName, st.pPr);
+            for (const t of Array.isArray(st.tblStylePr) ? st.tblStylePr : []) {
+              if (t && t.rPr)
+                t.rPr = applyHook(hrName, t.rPr);
+              if (t && t.pPr)
+                t.pPr = applyHook(hpName, t.pPr);
+            }
           }
-        }
+        });
+        part("numbering", "Numbering", (numbering) => {
+          for (const an of Array.isArray(numbering.abstractNums) ? numbering.abstractNums : [])
+            for (const lvl of an && Array.isArray(an.levels) ? an.levels : []) {
+              if (lvl.pPr)
+                lvl.pPr = applyHook(hpName, lvl.pPr);
+              if (lvl.rPr)
+                lvl.rPr = applyHook(hrName, lvl.rPr);
+            }
+        });
         if (result.settings) {
           const name = phase === "hydrate" ? "hydrateSettings" : "dehydrateSettings";
           result.settings = applyHook(name, result.settings);
@@ -7923,14 +8284,14 @@ export const docxBundled = {
     }
     function read(bytes, opts) {
       const alternate = opts && opts.alternateContent !== void 0 ? opts.alternateContent : "fallback";
-      if (alternate !== "fallback" && alternate !== "keep")
-        throw new ContractError("docx/invalid-alternate-content", "docx.read: opts.alternateContent must be 'fallback' or 'keep'", { context: { received: alternate === null ? "null" : typeof alternate === "string" ? alternate : typeof alternate } });
+      if (alternate !== "fallback" && alternate !== "keep" && alternate !== "choice")
+        throw new ContractError("docx/invalid-alternate-content", "docx.read: opts.alternateContent must be 'fallback', 'keep' or 'choice'", { context: { received: alternate === null ? "null" : typeof alternate === "string" ? alternate : typeof alternate } });
       const extensions = opts && opts.extensions !== void 0 ? opts.extensions : "drop";
       if (extensions !== "drop" && extensions !== "keep")
         throw new ContractError("docx/invalid-extensions", "docx.read: opts.extensions must be 'drop' or 'keep'", { context: { received: extensions === null ? "null" : typeof extensions === "string" ? extensions : typeof extensions } });
       const pkg = opc.read(bytes, archiveLimits(opts)), { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
         try {
-          return readPackage(p, alternate === "keep", extensions === "keep");
+          return structure.withChoiceDrawings(alternate === "choice", () => readPackage(p, alternate !== "fallback", extensions === "keep"));
         } catch (e) {
           throw typedPartXml(e);
         }
@@ -8268,7 +8629,7 @@ export const docxBundled = {
       }
       const carry = carrySpec(opts);
       checkReferences(doc, opts);
-      let settings = opts.settings;
+      let { settings, styles: stylesPart, numbering: numberingPart } = opts;
       if (walker.hasExtensions) {
         const parts = {
           document: doc,
@@ -8278,10 +8639,13 @@ export const docxBundled = {
           endnotes: opts.endnotes,
           comments: opts.comments,
           styles: opts.styles,
+          numbering: opts.numbering,
           settings: opts.settings
         };
         walker.applyDehydrate(parts);
         settings = parts.settings;
+        stylesPart = parts.styles;
+        numberingPart = parts.numbering;
       }
       assignDocIds(doc, opts);
       const pkg = opc.empty(), kept = keptOf(doc), keptIds = keptIdsOf(kept), storyKept = storyKeptOf(opts), hyperlinks = opts.hyperlinks || derivedHyperlinks(doc), collected = collectImages(doc, opts.images, keptIds), chartCollected = collectCharts(doc, keptIds), story = collectStoryDrawings(opts, collected, chartCollected.length, storyKept);
@@ -8347,18 +8711,18 @@ export const docxBundled = {
             links.add(id);
         return drawingMod.withRelationships({ links, media }, () => structure.withParaIds(fn));
       }
-      if (opts.styles)
+      if (stylesPart)
         attachPart({
-          bytes: stylesMod.bytesOf(opts.styles),
+          bytes: stylesMod.bytesOf(stylesPart),
           contentType: stylesMod.CT_STYLES
         }, "/word/styles.xml", {
           Id: claimRid(),
           Type: stylesMod.REL_TYPE_STYLES,
           Target: "styles.xml"
         });
-      if (opts.numbering)
+      if (numberingPart)
         attachPart({
-          bytes: numberingMod.bytesOf(opts.numbering),
+          bytes: numberingMod.bytesOf(numberingPart),
           contentType: numberingMod.CT_NUMBERING
         }, "/word/numbering.xml", {
           Id: claimRid(),

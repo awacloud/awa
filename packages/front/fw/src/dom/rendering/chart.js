@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -105,19 +105,33 @@ export const chart = {
             return [mn - pad, mx + pad];
         }
 
+        // A "nice" step is 1, 2, 2.5 or 5 times a power of ten.
+        const _NICE = [1, 2, 2.5, 5, 10];
+
         /**
-         * Generate readable ticks for a domain.
+         * Round ticks inside [min, max]: the smallest nice step that gives at
+         * most `count - 1` intervals, starting at the first multiple of the
+         * step at or above `min`; each value rounded to the step's decimals
+         * (no 0.30000000000000004). A degenerate domain gives its one value.
          *
          * @param {number} min
          * @param {number} max
          * @param {number} [count=5]
-         * @returns {number[]}
+         * @returns {{ticks: number[], decimals: number}}
          */
-        function _ticks(min, max, count = 5) {
-            const step = (max - min) / (count - 1 || 1);
+        function _niceTicks(min, max, count = 5) {
+            if (!(isFinite(min) && isFinite(max)) || !(max > min)) return { ticks: [min], decimals: 2 };
+            const raw = (max - min) / Math.max(1, count - 1);
+            const exp = Math.floor(Math.log10(raw));
+            const base = Math.pow(10, exp);
+            let nice = 10;
+            for (const n of _NICE) { if (raw <= n * base * (1 + 1e-9)) { nice = n; break; } }
+            const step = nice * base;
+            const decimals = Math.max(0, -exp) + (nice === 2.5 ? 1 : 0);
             const out = [];
-            for (let i = 0; i < count; i++) out.push(min + step * i);
-            return out;
+            const first = Math.ceil(min / step - 1e-9);
+            for (let k = first; k * step <= max + step * 1e-9; k++) out.push(Number((k * step).toFixed(Math.min(decimals, 20))));
+            return { ticks: out, decimals };
         }
 
         /**
@@ -206,6 +220,50 @@ export const chart = {
         // ─────────────────────────────────────────────────────────────────
 
         const PAD = { top: 10, right: 10, bottom: 30, left: 40 };
+        const AXIS_FONT = '10px sans-serif';
+
+        /** Width of `text` at the axis font: `measureText` when the context has it, else 6 px a character. */
+        function _textWidth(ctx, text) {
+            if (ctx && typeof ctx.measureText === 'function') {
+                const m = ctx.measureText(text);
+                if (m && typeof m.width === 'number') return m.width;
+            }
+            return 6 * String(text).length;
+        }
+
+        /**
+         * The axes' ticks, label formatters and the plot padding for one draw:
+         * default ticks are round (`_niceTicks`) and labelled at their step's
+         * precision; `ticks` / `format` given in the axis options are kept.
+         * The left padding fits the widest y label and half the first x
+         * label, the right one half the last x label — never below `PAD`.
+         *
+         * @returns {{pad: {top:number,right:number,bottom:number,left:number}, xTicks: number[], yTicks: number[], xFmt: Function, yFmt: Function}}
+         */
+        function _layout(ctx, xMin, xMax, yMin, yMax, xAxisOpts, yAxisOpts) {
+            const axis = (opts, min, max) => {
+                const given = opts && opts.ticks;
+                const nt = given ? null : _niceTicks(min, max, 5);
+                const ticks = given || nt.ticks;
+                const fmt = (opts && opts.format) ||
+                    (nt ? (v => String(Number(v.toFixed(Math.min(nt.decimals, 20))))) : (v => String(Math.round(v * 100) / 100)));
+                return { ticks, fmt };
+            };
+            const y = axis(yAxisOpts, yMin, yMax), x = axis(xAxisOpts, xMin, xMax);
+            if (ctx) ctx.font = AXIS_FONT;
+            let yw = 0;
+            for (const t of y.ticks) yw = Math.max(yw, _textWidth(ctx, y.fmt(t)));
+            const firstX = x.ticks.length ? _textWidth(ctx, x.fmt(x.ticks[0])) : 0;
+            const lastX = x.ticks.length ? _textWidth(ctx, x.fmt(x.ticks[x.ticks.length - 1])) : 0;
+            const pad = {
+                top: PAD.top,
+                bottom: PAD.bottom,
+                // label right edge at left - 6, plus 2 px of margin
+                left: Math.max(PAD.left, Math.ceil(yw) + 8, Math.ceil(firstX / 2) + 2),
+                right: Math.max(PAD.right, Math.ceil(lastX / 2) + 2),
+            };
+            return { pad, xTicks: x.ticks, yTicks: y.ticks, xFmt: x.fmt, yFmt: y.fmt };
+        }
 
         /**
          * Draw the X and Y axes with their tick marks.
@@ -218,10 +276,12 @@ export const chart = {
          * @param {number} yMax
          * @param {Object} [xAxisOpts]
          * @param {Object} [yAxisOpts]
+         * @param {ReturnType<typeof _layout>} [layout] The draw's ticks and padding (computed when absent).
          */
-        function _drawAxes(ctx, size, xMin, xMax, yMin, yMax, xAxisOpts, yAxisOpts) {
+        function _drawAxes(ctx, size, xMin, xMax, yMin, yMax, xAxisOpts, yAxisOpts, layout) {
             const { w, h } = size;
-            const pl = PAD.left, pr = PAD.right, pt = PAD.top, pb = PAD.bottom;
+            const L = layout || _layout(ctx, xMin, xMax, yMin, yMax, xAxisOpts, yAxisOpts);
+            const pl = L.pad.left, pr = L.pad.right, pt = L.pad.top, pb = L.pad.bottom;
             const cw = w - pl - pr;
             const ch = h - pt - pb;
 
@@ -229,13 +289,13 @@ export const chart = {
             ctx.strokeStyle = '#888';
             ctx.fillStyle = '#888';
             ctx.lineWidth = 1;
-            ctx.font = '10px sans-serif';
+            ctx.font = AXIS_FONT;
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
 
             // Axe Y
-            const yTicks = (yAxisOpts && yAxisOpts.ticks) || _ticks(yMin, yMax, 5);
-            const yFmt = (yAxisOpts && yAxisOpts.format) || (v => String(Math.round(v * 100) / 100));
+            const yTicks = L.yTicks;
+            const yFmt = L.yFmt;
             for (const t of yTicks) {
                 const py = pt + ch - _scale(t, yMin, yMax, ch);
                 ctx.beginPath();
@@ -246,8 +306,8 @@ export const chart = {
             }
 
             // Axe X
-            const xTicks = (xAxisOpts && xAxisOpts.ticks) || _ticks(xMin, xMax, 5);
-            const xFmt = (xAxisOpts && xAxisOpts.format) || (v => String(Math.round(v * 100) / 100));
+            const xTicks = L.xTicks;
+            const xFmt = L.xFmt;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             for (const t of xTicks) {
@@ -286,11 +346,13 @@ export const chart = {
          * @param {string} color
          * @param {'none'|'monotone'} smoothing
          * @param {boolean} fillArea
+         * @param {{top:number,right:number,bottom:number,left:number}} [pad] Plot padding (default `PAD`).
          */
-        function _renderLine(ctx, size, pts, xMin, xMax, yMin, yMax, color, smoothing, fillArea) {
+        function _renderLine(ctx, size, pts, xMin, xMax, yMin, yMax, color, smoothing, fillArea, pad) {
             if (!pts.length) return;
             const { w, h } = size;
-            const pl = PAD.left, pr = PAD.right, pt = PAD.top, pb = PAD.bottom;
+            const P = pad || PAD;
+            const pl = P.left, pr = P.right, pt = P.top, pb = P.bottom;
             const cw = w - pl - pr;
             const ch = h - pt - pb;
 
@@ -323,8 +385,13 @@ export const chart = {
                 ctx.lineTo(toX(pts[pts.length - 1].x), baseline);
                 ctx.lineTo(toX(pts[0].x), baseline);
                 ctx.closePath();
-                ctx.fillStyle = color + '33';
+                // Translucent by alpha, not by a suffix on the colour: any CSS
+                // colour works, and a hex renders as `color + '33'` did.
+                const alpha = ctx.globalAlpha;
+                ctx.fillStyle = color;
+                ctx.globalAlpha = alpha * 0x33 / 255;
                 ctx.fill();
+                ctx.globalAlpha = alpha;
                 // Re-draw the stroke on top of the fill
                 ctx.beginPath();
                 ctx.moveTo(x0, y0);
@@ -360,11 +427,13 @@ export const chart = {
          * @param {number} yMin
          * @param {number} yMax
          * @param {string} color
+         * @param {{top:number,right:number,bottom:number,left:number}} [pad] Plot padding (default `PAD`).
          */
-        function _renderBar(ctx, size, pts, xMin, xMax, yMin, yMax, color) {
+        function _renderBar(ctx, size, pts, xMin, xMax, yMin, yMax, color, pad) {
             if (!pts.length) return;
             const { w, h } = size;
-            const pl = PAD.left, pr = PAD.right, pt = PAD.top, pb = PAD.bottom;
+            const P = pad || PAD;
+            const pl = P.left, pr = P.right, pt = P.top, pb = P.bottom;
             const cw = w - pl - pr;
             const ch = h - pt - pb;
 
@@ -375,16 +444,20 @@ export const chart = {
             const baseline = pt + ch;
 
             ctx.save();
-            ctx.fillStyle = color + 'aa';
+            ctx.fillStyle = color;
             ctx.strokeStyle = color;
             ctx.lineWidth = 1;
+            // The fill translucent by alpha (as `color + 'aa'` did for a hex).
+            const alpha = ctx.globalAlpha;
 
             for (const p of pts) {
                 const bx = toX(p.x) - barW / 2;
                 const by = toY(p.y);
                 const bh = baseline - by;
                 if (bh > 0) {
+                    ctx.globalAlpha = alpha * 0xaa / 255;
                     ctx.fillRect(bx, by, barW, bh);
+                    ctx.globalAlpha = alpha;
                     ctx.strokeRect(bx, by, barW, bh);
                 }
             }
@@ -421,6 +494,7 @@ export const chart = {
                 data: _data,
                 xDomain: [0, 1],
                 yDomain: [0, 1],
+                pad: PAD,
             };
 
             function _computeDomains() {
@@ -443,16 +517,15 @@ export const chart = {
                 const [xMin, xMax] = _state.xDomain;
                 const [yMin, yMax] = _state.yDomain;
 
+                const layout = _layout(ctx, xMin, xMax, yMin, yMax, _opts.xAxis, _opts.yAxis);
+                _state.pad = layout.pad;
+                _drawAxes(ctx, { w, h }, xMin, xMax, yMin, yMax, _opts.xAxis, _opts.yAxis, layout);
                 if (chartType !== 'bar') {
-                    _drawAxes(ctx, { w, h }, xMin, xMax, yMin, yMax,
-                        _opts.xAxis, _opts.yAxis);
                     _renderLine(ctx, { w, h }, _data, xMin, xMax, yMin, yMax,
-                        _opts.color, _opts.smoothing || 'none', chartType === 'area');
+                        _opts.color, _opts.smoothing || 'none', chartType === 'area', layout.pad);
                 } else {
-                    _drawAxes(ctx, { w, h }, xMin, xMax, yMin, yMax,
-                        _opts.xAxis, _opts.yAxis);
                     _renderBar(ctx, { w, h }, _data, xMin, xMax, yMin, yMax,
-                        _opts.color);
+                        _opts.color, layout.pad);
                 }
             }
 

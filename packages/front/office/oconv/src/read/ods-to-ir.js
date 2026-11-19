@@ -4,7 +4,7 @@
 // Dual-licensed; see the NOTICE file for licensing and any additional terms.
 
 /**
- * @fileoverview `ods` → `oconv-ir/v1` reader — tier 2 (per the frozen
+ * @fileoverview `ods` → `oconv-ir/v2` reader — tier 2 (per the frozen
  * fidelity matrix).
  *
  * Converts the value of `@awacloud/odf`'s public `ods.read(bytes)` façade into
@@ -53,10 +53,11 @@
  * ## `opts.cellBudget` — a sheet too wide to pad
  *
  * Padding every row to the widest makes a table of rows times columns: one
- * wide row in a long sheet can make tens of millions of empty cells. Under
+ * wide row in a long sheet can make tens of millions of empty cells. Past
  * `opts.cellBudget` (a positive safe integer, else `oconv: bad cell
- * budget`), a sheet whose padded grid would hold more cells is never
- * padded: under `'table'` it gives one IR `paragraph` per non-empty cell,
+ * budget`; **5,000,000 when absent**, since 2.0.0, ooxml's own
+ * `maxCellsPerSheet`; `Number.MAX_SAFE_INTEGER` pads every sheet as 1.x
+ * did), a sheet whose padded grid would hold more cells is never padded: under `'table'` it gives one IR `paragraph` per non-empty cell,
  * `<A1 address>: <text>`, in row then column order; under `'csv'` /
  * `'tsv'`, its rows unpadded (each row's trailing empty cells trimmed).
  * Either way `sheet/sparse-form` records the sheet name and the padded and
@@ -203,10 +204,14 @@ export const oconvOdsToIr = {
             return lines;
         }
 
-        /** `opts.cellBudget`: absent, or a positive safe integer, else throws. */
+        // The padded cells past which a sheet takes the sparse form when
+        // `opts.cellBudget` is absent (since 2.0.0): ooxml's maxCellsPerSheet.
+        const DEFAULT_CELL_BUDGET = 5000000;
+
+        /** `opts.cellBudget`: a positive safe integer, else throws; `DEFAULT_CELL_BUDGET` when absent. */
         function cellBudgetOf(opts) {
             const v = opts && opts.cellBudget;
-            if (v === undefined) return undefined;
+            if (v === undefined) return DEFAULT_CELL_BUDGET;
             if (!Number.isSafeInteger(v) || v < 1) throw new Error('oconv: bad cell budget');
             return v;
         }
@@ -309,15 +314,15 @@ export const oconvOdsToIr = {
 
         /**
          * Convert `readResult` (the value of `ods.read(bytes)`) into an
-         * `oconv-ir/v1` document plus its loss ledger.
+         * `oconv-ir/v2` document plus its loss ledger.
          *
          * @param {object} readResult Value of `ods.read(bytes)`.
          * @param {{sheets?: string, cellBudget?: number}} [opts] `sheets` —
          *   `'table'` (default), `'csv'` or `'tsv'`: how each sheet's grid is
          *   written (see the module header); else `oconv: bad sheets`.
-         *   `cellBudget` — a positive safe integer: a sheet whose padded
-         *   table would hold more cells is written unpadded (see the module
-         *   header); else `oconv: bad cell budget`.
+         *   `cellBudget` — a positive safe integer, 5,000,000 when absent: a
+         *   sheet whose padded table would hold more cells is written
+         *   unpadded (see the module header); else `oconv: bad cell budget`.
          * @returns {{ir: object, losses: {code: string, detail: string}[]}}
          * @throws {Error} `oconv: bad sheets`, `oconv: bad cell budget`
          */

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -51,6 +51,49 @@ export const hex = {
             if (i >= 10) charToNibble['ABCDEF'.charCodeAt(i - 10)] = i;
         }
 
+        /** The 16 digit codes. */
+        const hexCode = Uint8Array.from(hexChar, (c) => c.charCodeAt(0));
+
+        /** Whether a `Uint16Array` stores its low byte first (it does on every current platform). */
+        const little = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+
+        /** Byte -> its two digit codes as one 16-bit unit, in memory order. */
+        const pairCode = new Uint16Array(256);
+        for (let b = 0; b < 256; b++) {
+            const hi = hexCode[b >> 4], lo = hexCode[b & 0x0f];
+            pairCode[b] = little ? hi | (lo << 8) : (hi << 8) | lo;
+        }
+
+        // `Uint8Array.prototype.toHex` (TC39 "Uint8Array to/from base64";
+        // JavaScriptCore, SpiderMonkey) gives the same lowercase string;
+        // read once, so a realm without it takes the JS path below.
+        // Typed `any`: not in the ES2023 lib the type build targets.
+        const U8P = /** @type {any} */ (Uint8Array.prototype);
+        const nativeToHex = typeof U8P.toHex === 'function' ? U8P.toHex : null;
+
+        // ASCII bytes decode as UTF-8 to the same characters; the platform
+        // decoder is several times faster than `String.fromCharCode`, which
+        // remains the fallback of a realm without `TextDecoder`.
+        const ascii = typeof TextDecoder === 'function' ? new TextDecoder() : null;
+
+        /** Character codes per `String.fromCharCode` call (argument-count limit). */
+        const CHUNK = 8192;
+
+        /**
+         * A string from ASCII character codes.
+         * @param {Uint8Array} codes
+         * @returns {string}
+         */
+        function _codesToString(codes) {
+            if (ascii) return ascii.decode(codes);
+            if (codes.length <= CHUNK) return String.fromCharCode.apply(null, /** @type {any} */ (codes));
+            const parts = [];
+            for (let k = 0; k < codes.length; k += CHUNK) {
+                parts.push(String.fromCharCode.apply(null, /** @type {any} */ (codes.subarray(k, k + CHUNK))));
+            }
+            return parts.join('');
+        }
+
         /**
          * Converts a hexadecimal string to a byte array.
          * Accepts upper- or lowercase hex digits (0-9, a-f, A-F).
@@ -98,11 +141,13 @@ export const hex = {
          * console.log(hex); // "48656c6c6f"
          */
         const fromBytes = (bytes) => {
-            const arr = new Array(bytes.length);
-            for (let i = 0; i < bytes.length; i++) {
-                arr[i] = hexChar[(bytes[i] & 0xf0) >> 4] + hexChar[bytes[i] & 0x0f];
-            }
-            return arr.join('');
+            if (nativeToHex && bytes instanceof Uint8Array) return nativeToHex.call(bytes);
+            const n = bytes.length;
+            const pairs = new Uint16Array(n);
+            // `& 0xff` keeps the old per-byte result for any array element
+            // (out-of-range numbers, holes): `(b & 0xf0) >> 4` and `b & 0x0f`.
+            for (let i = 0; i < n; i++) pairs[i] = pairCode[bytes[i] & 0xff];
+            return _codesToString(new Uint8Array(pairs.buffer));
         };
 
         /**

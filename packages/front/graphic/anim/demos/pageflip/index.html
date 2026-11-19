@@ -1,0 +1,180 @@
+<!doctype html>
+<!--
+  Copyright (c) 2026 AwaCloud SAS
+  Author: Matthieu Bouilloux
+  SPDX-License-Identifier: Apache-2.0
+-->
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>@awacloud/graphic-anim — pageflip demo</title>
+
+    <!-- 1. IMPORT MAP — first, strictly before any module script tag
+         (the real-browser baseline: Firefox discards an import map that arrives after a module
+         load/preload has already started and dies on this page's very first
+         bare specifier; Chromium tolerates the wrong order).
+
+         The two `graphic.pageflip` pure kernels this demo needs beyond the
+         `_boot.js`-resolved `graphic.anim` aggregate, PUBLIC via
+         `package.json` `exports` (`./kernels/pageflip/*`), PLUS the
+         package's own root entry (`exports["."]`) for the composed
+         `pageflipModule` descriptor it re-exports by name.
+
+         The three `@awacloud/fw/*` entries are NOT optional and NOT a new
+         dependency: `src/main.js` and its graph write those bare specifiers
+         themselves (`src/main.js:27-28`, `src/svg/apply.js:14`,
+         `src/svg/build.js:25`, `src/{pageflip,hypertree}/create.js`), so a
+         browser throws "Failed to resolve module specifier" on the first one
+         without them — `bun test` cannot see this, because Bun resolves bare
+         specifiers through workspace `node_modules` with no import map at all.
+         This page ALREADY loads all three files: `../_boot.js`'s `fw`-variant
+         leg imports the same `/packages/front/fw/src/...` URLs relatively, and
+         §2's sanity lockdown below loads the fw source tree root-absolutely.
+         Declaring them here therefore adds ZERO modules to the page graph and
+         cannot double-instantiate fw — a module is identified by its RESOLVED
+         URL, and both routes resolve to the identical file.
+
+         Deliberately EXACT keys, not the `"@awacloud/fw/": ".../src/"` prefix
+         form of the convention's §2 sample: a trailing-slash key makes every
+         present and future fw specifier trivially "declared", which would blunt
+         `tests/demos-smoke.integration.test.js`'s browser-resolution gate over
+         exactly the package whose undeclared specifiers killed this page twice.
+         Exact keys keep that gate sharp — a new fw import in graphic-anim's
+         source turns into a red test here instead of a silently dead page.
+
+         Every key carries the `.js` suffix because the package writes every
+         fw specifier that way (`src/{pageflip,hypertree}/create.js` import
+         `@awacloud/fw/core/runtime.js`), and an import map matches a
+         specifier exactly: the spelling here must be the source's. -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@awacloud/graphic-anim":                             "/packages/front/graphic/anim/src/main.js",
+            "@awacloud/graphic-anim/kernels/pageflip/fold.js":    "/packages/front/graphic/anim/src/pageflip/fold.js",
+            "@awacloud/graphic-anim/kernels/pageflip/compose.js": "/packages/front/graphic/anim/src/pageflip/compose.js",
+            "@awacloud/fw/dom/query/dom.js":                      "/packages/front/fw/src/dom/query/dom.js",
+            "@awacloud/fw/dom/rendering/secPolicy.js":            "/packages/front/fw/src/dom/rendering/secPolicy.js",
+            "@awacloud/fw/io/math/interp.js":                     "/packages/front/fw/src/io/math/interp.js",
+            "@awacloud/fw/io/calc/easing.js":                     "/packages/front/fw/src/io/calc/easing.js",
+            "@awacloud/fw/io/timing/clock.js":                    "/packages/front/fw/src/io/timing/clock.js",
+            "@awacloud/fw/core/runtime.js":                       "/packages/front/fw/src/core/runtime.js"
+        }
+    }
+    </script>
+
+    <!-- 2. SANITY LOCKDOWN — before any application module runs. -->
+    <script type="module">
+        import { applyBase } from '/packages/front/fw/src/sanity/base.js';
+        applyBase();
+    </script>
+
+    <!-- 3. SHARED SHELL — the ONE appearance. Never inline the palette. -->
+    <link rel="stylesheet" href="/tools/dev-portal/assets/demo-shell/demo-shell.css">
+
+    <!-- 3bis. Surface-local layout only (no palette redeclaration). -->
+    <style>
+        #mount { width: 520px; height: 364px; }
+        button:disabled { opacity: 0.5; cursor: default; }
+    </style>
+</head>
+
+<body data-demo="pageflip">
+<div class="demo-shell">
+
+    <nav class="demo-nav">
+        <a href="../index.html">back to demos</a>
+        <a class="demo-nav-fwd" href="/packages/front/index.html">packages/front index</a>
+    </nav>
+
+    <header class="demo-header">
+        <h1>Pageflip — six-page book, page-curl fold</h1>
+        <p class="demo-lede">
+            A small book built entirely through <code>graphic.pageflip</code> — six
+            inline-generated, numbered pages, forward/back controls driving the real
+            page-curl fold (<code>graphic.timeline</code> + <code>graphic.tween</code>
+            on the shared scheduler). Closing or reloading mid-turn exercises
+            <code>Pageflip#dispose()</code>'s in-flight-turn cancellation. The
+            Previous/Next buttons disable themselves for the duration of a turn, so
+            an overlapping click can never reach the underlying
+            ignore-while-in-flight guard from the UI — that guard (and the
+            zero-orphaned-timeline teardown) is instead exercised directly in
+            <code>tests/demos-smoke.integration.test.js</code>'s "pageflip
+            rapid-turn leg".
+        </p>
+    </header>
+
+    <p class="demo-note" style="margin-top:0;">Variant: <code id="variant-label">…</code> — Page:
+        <code id="page-label">…</code></p>
+
+    <div class="demo-stage">
+        <svg id="mount" viewBox="0 0 800 560" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="demo-controls">
+        <button type="button" id="prev">&larr; Previous</button>
+        <button type="button" id="next">Next &rarr;</button>
+    </div>
+
+    <p class="demo-note">
+        No build step: this page runs straight off the filesystem via a static
+        server. Running the <code id="variant-note-label">standalone</code> build.
+        Append <code>?variant=fw</code> to the URL to run it registered on an
+        <code>@awacloud/fw</code> runtime instead.
+    </p>
+
+    <footer class="demo-footer">
+        <p>Source: <code>packages/front/graphic/anim/demos/pageflip/</code></p>
+        <p>Serve from the repo root — <code>bun cli.ts local_web --config cnf/local_web/dev.config.json</code></p>
+    </footer>
+
+</div>
+
+<!-- 4. ENTRY — the `run()` contract. -->
+<script type="module">
+    import { boot } from '../_boot.js';
+    import { run } from './main.js';
+
+    const mount = document.getElementById('mount');
+    const variantLabel = document.getElementById('variant-label');
+    const variantNoteLabel = document.getElementById('variant-note-label');
+    const pageLabel = document.getElementById('page-label');
+    const prevButton = document.getElementById('prev');
+    const nextButton = document.getElementById('next');
+
+    /** @type {{ dispose(): void, next(): object|null, previous(): object|null, index(): number, pageCount(): number }|null} */
+    let handle = null;
+    /** @type {object|null} The Timeline currently in flight, if any (polled for `.done`). */
+    let turning = null;
+
+    function updateReadout() {
+        if (!handle) return;
+        if (turning && turning.done) turning = null;
+        pageLabel.textContent = `${handle.index() + 1} / ${handle.pageCount()}`;
+        const busy = turning !== null;
+        prevButton.disabled = busy || handle.index() <= 0;
+        nextButton.disabled = busy || handle.index() >= handle.pageCount() - 1;
+        requestAnimationFrame(updateReadout);
+    }
+
+    prevButton.addEventListener('click', () => {
+        if (!handle || turning) return;
+        turning = handle.previous();
+    });
+    nextButton.addEventListener('click', () => {
+        if (!handle || turning) return;
+        turning = handle.next();
+    });
+
+    const { anim, variant } = await boot();
+    variantLabel.textContent = variant;
+    variantNoteLabel.textContent = variant;
+    handle = await run({ mount, anim, variant });
+    // Readiness contract (e2e/run.mjs): two frames after run() resolved.
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.setAttribute('data-ready', '1')));
+    updateReadout();
+</script>
+</body>
+</html>

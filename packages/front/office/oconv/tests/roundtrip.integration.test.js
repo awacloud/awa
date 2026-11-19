@@ -497,7 +497,9 @@ describe('roundtrip — leg 8: md->pdf->md (F9 bounded typesetter)', () => {
         return { body: bodyOf(read.markdown), writeLosses: written.losses, readLosses: read.losses };
     }
 
-    // MEASURED, not the plan's literal wording: `pdf -> md` (F5, frozen)
+    // MEASURED, not the plan's literal wording: `pdf -> md` (F5, frozen; since
+    // T30 (a) the text-first read is `pdfInfer: []`, and the default infers
+    // heading marks and table pipes — see the EXACT leg below)
     // never recovers markdown SYNTAX (no heading marks, no `**`/`*`/`~~`/
     // backtick markers, no `-`/`1.` list markers, no `|` table pipes) — it
     // recovers PLAIN TEXT only. So "the word stream equals the source's" is
@@ -531,8 +533,18 @@ describe('roundtrip — leg 8: md->pdf->md (F9 bounded typesetter)', () => {
     test('md-structural.md x pdf, pageNumbers:false — EXACT decoded body (MEASURED, regression guard)', async () => {
         const src = fixtureText(MD_STRUCTURAL);
         const n1 = await normalizePdf(src, { pageNumbers: false });
+        // Re-measured 2026-11-11 (T30 (a), D43): the read infers headings and
+        // tables by default, so the three headings come back as headings and
+        // the subsection no longer runs into the paragraph under it. The
+        // table's bold header row comes back as a `####` heading (a false
+        // heading, left to a T25 part by D43), and its one body row as a
+        // paragraph: one row is no table. Re-measured at T25 (h): this
+        // writer draws the columns 6 pt apart (`Col A` ends near 88.4,
+        // `Col B` starts at 94.4), under the 0.8 em cell gap, but each row
+        // sits between two horizontal rules, so it is cut at 0.4 em and the
+        // table comes back as a table.
         expect(n1.body).toBe(
-            'Title One\n\nSection Two\n\nSubsection Three This is the first paragraph of '
+            '# Title One\n\n## Section Two\n\n### Subsection Three\n\nThis is the first paragraph of '
             + 'prose introducing the document.\n\nHere is a paragraph with bold text, '
             + 'italic text, strikethrough text and inline code.\n\nA third paragraph '
             + 'closes out the prose section, with an external link included here.\n\n'
@@ -543,7 +555,7 @@ describe('roundtrip — leg 8: md->pdf->md (F9 bounded typesetter)', () => {
             // `/Encoding /WinAnsiEncoding`: the CP1252 bullet marker (0x95)
             // now decodes back to `•` in front of each bullet item.
             + '• Bullet item one • Bullet item two\n\n1\\. Ordered item one 2. Ordered item two'
-            + '\n\nCol A Col B Col C\n\na1 b1 c1\n'
+            + '\n\n| Col A | Col B | Col C |\n| --- | --- | --- |\n| a1 | b1 | c1 |\n'
         );
     });
 

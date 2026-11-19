@@ -19,7 +19,7 @@ Purely hash-based signatures (conservative quantum resistance). 12 variants: 2 h
 
 ```js
 const slh_dsa = runtime.resolve('slh_dsa');
-// Returns: { slh_dsa_sha2_128f, ..., slh_dsa_shake_256s, _internal }
+// Returns: { slh_dsa_sha2_128f, ..., slh_dsa_shake_256s }
 ```
 
 ## API (12 paramSets)
@@ -33,12 +33,12 @@ const slh_dsa = runtime.resolve('slh_dsa');
 | Method | Signature | Returns |
 |--------|-----------|---------|
 | `slh_dsa_*.keygen(seed?)` | — | `{publicKey, secretKey}` |
-| `slh_dsa_*.sign(msg, sk, opts?)` | `(Uint8Array, Uint8Array, {context?, extraEntropy?}) => Uint8Array` | Signature |
-| `slh_dsa_*.verify(sig, msg, pk, opts?)` | — | `boolean` |
-| `slh_dsa_*.signPh(msg, sk, hashAlg, hashMod, opts?)` | — | HashSLH-DSA (preHash + OID) |
-| `slh_dsa_*.verifyPh(sig, msg, pk, hashAlg, hashMod, opts?)` | — | `boolean` |
-| `_internal.signInternal(M, sk, opts?)` | — | Raw §6 (no M' wrapper) |
-| `_internal.verifyInternal(sig, M, pk)` | — | `boolean` raw |
+| `slh_dsa_*.sign(sk, msg, opts?)` | `(Uint8Array, Uint8Array, {context?, extraEntropy?}) => Uint8Array` | Signature |
+| `slh_dsa_*.verify(pk, sig, msg, opts?)` | — | `boolean` |
+| `slh_dsa_*.signPh(sk, msg, hashAlg, hashMod, opts?)` | — | HashSLH-DSA (preHash + OID) |
+| `slh_dsa_*.verifyPh(pk, sig, msg, hashAlg, hashMod, opts?)` | — | `boolean` |
+| `internalOf(slh_dsa).signInternal(M, sk, opts?)` | — | Raw §6 (no M' wrapper) |
+| `internalOf(slh_dsa).verifyInternal(sig, M, pk)` | — | `boolean` raw |
 
 ## Examples
 
@@ -49,15 +49,15 @@ const { slh_dsa } = fw.runtime.resolveAll(['slh_dsa']);
 
 // SHAKE-128f : fastest sign, large sig (17 KB)
 const { publicKey, secretKey } = slh_dsa.slh_dsa_shake_128f.keygen();
-const sig = slh_dsa.slh_dsa_shake_128f.sign(msg, secretKey);
-const ok  = slh_dsa.slh_dsa_shake_128f.verify(sig, msg, publicKey);
+const sig = slh_dsa.slh_dsa_shake_128f.sign(secretKey, msg);
+const ok  = slh_dsa.slh_dsa_shake_128f.verify(publicKey, sig, msg);
 ```
 
 ### HashSLH-DSA preHash
 
 ```js
 const sha256 = fw.runtime.resolve('sha256');
-const sig = slh_dsa.slh_dsa_sha2_128f.signPh(msg, secretKey, 'SHA2-256', sha256);
+const sig = slh_dsa.slh_dsa_sha2_128f.signPh(secretKey, msg, 'SHA2-256', sha256);
 ```
 
 ## Worker Usage
@@ -68,7 +68,7 @@ const worker = fw.createWorker(
     function ({ libs, args }) {
         self.postMessage(libs.slh_dsa.slh_dsa_sha2_128f.sign(args[0], args[1]));
     },
-    { dependencies: ['slh_dsa'], args: [msg, secretKey] }
+    { dependencies: ['slh_dsa'], args: [secretKey, msg] }
 );
 ```
 
@@ -76,7 +76,7 @@ const worker = fw.createWorker(
 
 - **Variant choice**: `f` (fast sign, large sig) for interactive use; `s` (small sig, slow sign) for infrequent long-term artefacts.
 - **256s sign costs minutes** — never block the UI.
-- **`_internal.*`** test-only — `_internal` convention to bypass the §5.4 wrapper.
+- **`internalOf(slh_dsa).*`** test-only, the internal slot (not API) — bypasses the §5.4 wrapper.
 - **Full ACVP keyGen + sigVer ext+pure** under `CRYPTO_FULL=1` (~135 s). Full sigGen (624) deliberately not wired (would take hours).
 
 ## See also

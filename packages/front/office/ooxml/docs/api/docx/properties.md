@@ -22,7 +22,8 @@ const props = runtime.resolve('docxProperties');
 // Returns: { parseRunProperties, renderRunProperties,
 //            parseParagraphProperties, renderParagraphProperties,
 //            parseTableProperties, renderTableProperties,
-//            readToggle, writeToggle, valOf, elVal }
+//            readToggle, writeToggle, valOf, elVal,
+//            sequence, orderBySequence, sameElement, hydrateLossless }
 ```
 
 ## API
@@ -36,6 +37,8 @@ const props = runtime.resolve('docxProperties');
 | `parseTableProperties` | `(tblPrEl) => TableProperties \| undefined` | Typed bag; `undefined` when the element has no element children. |
 | `renderTableProperties` | `(tblPr) => element \| null` | `<w:tblPr>` (the typed children and the `_extras` in `CT_TblPr` order), or `null` when nothing would render. `renderRunProperties` and `renderParagraphProperties` order theirs by `CT_RPr` / `CT_PPr` the same way. |
 | `readToggle` / `writeToggle` | boolean helpers | For element toggles. |
+| `sameElement(a, b)` | `(XmlNode, XmlNode) => boolean` | Whether two elements are the same: names, attributes (in any order) and children, an element's whitespace-only text left out, a childless element's `w:val` compared as a toggle (`true` / `1` / `on` / none = on, `false` / `0` / `off` = off). |
+| `hydrateLossless(bag, typeBag, untypeBag)` | `(bag, (bag) => bag, (bag) => bag) => bag` | Types a property bag's `_extras` element by element: each is typed alone by `typeBag`, written back by `untypeBag` and kept typed only when that gives the same element (`sameElement`) and its fields are not set yet; an element written back otherwise, an empty one, or a name the bag holds twice (unless it types into an array) stays in `_extras` as read, in place. The guard of the typing extensions (`wmlRunFormatting`, `wmlParagraphFormatting`, `wmlTableProperties`, `wmlSettings`). Mutates and returns `bag`. |
 | `valOf` / `elVal` | `w:val` helpers | Read / write the `w:val` attribute. |
 | `sequence(names)` | `(names: Array<string\|string[]>) => seq` | Indexes an `xsd:sequence` of child names for `orderBySequence`; an entry that is an array names elements sharing one place (a choice inside the sequence). |
 | `orderBySequence(children, seq)` | `(XmlNode[], seq) => XmlNode[]` | A new array of `children` sorted by their place in `seq`, stably. An `mc:AlternateContent` takes the place of the element its `mc:Fallback` (else its first `mc:Choice`) holds; a name `seq` does not list goes before the sequence's trailing `…Change` entry when it has one, else last. The same code as `ooxmlShared`'s (this module has no `ooxmlShared` dependency); `docxStructure` uses it to put the elements a read preserved in `_extras` back among the typed ones. |

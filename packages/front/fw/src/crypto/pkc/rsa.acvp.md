@@ -35,7 +35,7 @@ Keys serialized as big-endian `Uint8Array` (shape compatible with
 `rsaKeygen.js`).
 
 API: `factory(bitArray, bn, random)` → `{ oaepEncrypt, oaepDecrypt,
-pssSign, pssVerify, _internal: { rsaep, rsadp, mgf1 } }`.
+pssSign, pssVerify }`, with `{ rsaep, rsadp, mgf1 }` in its internal slot (`internalOf(rsa)`).
 
 ## Test coverage
 
@@ -72,7 +72,7 @@ canonical violation per vector:
 - `ct = n − 1` (1/group, trivial fixed-point),
 - `ct ≥ n` (1/group, out of domain).
 
-`rsa.js._internal.rsadp` **does not validate** this domain (pure
+`internalOf(rsa).rsadp` **does not validate** this domain (pure
 primitive). The test driver applies the IUT contract: `expect(isZero ||
 isOne || isNMinus1 || isGeN).toBe(true)` — proof that the 24 invalid
 vectors are indeed out-of-domain. Domain-enforcement responsibility is
@@ -117,19 +117,16 @@ and passed to `pssVerify(pub, msg, sig, sha224, sLen=2)`.
   Round-trip sign/verify covered by in-house tests.
 - [ ] **PSS with SHA-3/SHAKE** — ACVP 186-5 exposes these variants; not
   implemented (would require MGF1-Keccak or SHAKE-based derivation).
-- [x] **RSA-SignaturePrimitive / PKCS1v1.5 signature** — **Iteration G1**:
-  `pkcs1v15Sign` / `pkcs1v15Verify` / `pkcs1v15Encrypt` / `pkcs1v15Decrypt`
-  exposed but return `false` + `console.warn('[crypto] DEPRECATED…')`
-  (and `DEPRECATED|UNSAFE` for the encryption variants — Bleichenbacher
-  padding oracle). Rationale: SP 800-131A Rev.2 Table 5 (Nov. 2019)
+- [ ] **RSA-SignaturePrimitive / PKCS1v1.5 signature** — not offered
+  (signature nor encryption). Rationale: SP 800-131A Rev.2 Table 5 (Nov. 2019)
   deprecates v1.5 for signature; v1.5 encryption has a
   Manger/Bleichenbacher oracle. The 18 ACVP SigVer v1.5 groups are
   deliberately not covered.
-- [x] **RSA blinding (anti-timing)** — **Iteration F1**: `_rsadp` applies
+- [x] **RSA blinding (anti-timing)** — `_rsadp` applies
   Chaum/Pollard blinding (`c → c·r^e mod n`, modexp, then `m·r^-1 mod n`)
   by default (`{ blinding: true }`). Covers Boneh-Brumley 2003. Decorrelates
   the secret modexp timing from the attacker-controlled content. Opt-out
-  via `_internal.rsadp(p, c, {blinding:false})` for benchmarks. Silent
+  via `internalOf(rsa).rsadp(p, c, {blinding:false})` for benchmarks. Silent
   fallback without blinding if `priv.e` is absent.
 
 ## FIPS 140-3 conformance
@@ -141,7 +138,7 @@ and passed to `pssVerify(pub, msg, sig, sha224, sLen=2)`.
 | Power-on KAT / self-test | N/A (covered by RFC round-trip + 66 byte-exact vectors on every `bun test`) | — |
 | CT comparisons (if secret) | ✅ | OAEP decrypt accumulates `bad`/`badPad` without short-circuit (anti-Manger) |
 | No `throw` / timing leak | ✅ | Review: `console.warn`/`console.error` + `return false` |
-| Anti-timing modexp side-channel | ✅ | **Iteration F1**: Chaum/Pollard RSA blinding enabled by default in `_rsadp`; covers Boneh-Brumley 2003 |
+| Anti-timing modexp side-channel | ✅ | Chaum/Pollard RSA blinding enabled by default in `_rsadp`; covers Boneh-Brumley 2003 |
 | SP 800-56B domain check | ⚠️ (delegated to caller) | `rsadp` pure primitive; OAEP/PSS validate via EM structure |
 | Secure CRT path | ✅ | `c mod p` and `c mod q` before Montgomery; unsigned subtraction |
 | MGF1 conformant | ✅ | RFC 8017 §B.2.1 (32-bit big-endian counter, injectable hash module) |
@@ -159,18 +156,17 @@ and passed to `pssVerify(pub, msg, sig, sha224, sLen=2)`.
 - **PSS SHA-3/SHAKE**: not implemented. The injectable hash module
   would support SHA-3, but MGF1 with SHAKE (XOF) requires an
   adaptation of the current `_mgf1` (counter-mode vs. direct XOF). P3.
-- ~~**Anti-timing blinding**~~ ✅ **Iteration F1 of the FIPS 140-3
-  upgrade plan** — implemented. `_rsadp` now applies Chaum/Pollard
+- ~~**Anti-timing blinding**~~ ✅ implemented. `_rsadp` now applies Chaum/Pollard
   blinding by default: `c' = c · r^e mod n` (random r ∈ (1, n)
   via `bn.random` paranoia=6) → internal modexp → `m = m' · r^-1 mod n`.
   Decorrelates the compression-function timing from attacker-controlled
-  content. Cost ~5-8% on RSA-2048. Can be disabled via `_internal.rsadp(priv, c,
+  content. Cost ~5-8% on RSA-2048. Can be disabled via `internalOf(rsa).rsadp(priv, c,
   { blinding: false })` for benchmarks or external protocols
   (TLS 1.3 records, etc.). If `priv.e` is absent: graceful fallback
   without blinding + warning. Covers Boneh-Brumley 2003 (remote OpenSSL
   timing). 6 dedicated tests (default round-trip, cross-run
   determinism, PSS blinding preserving salt randomness, blinded vs.
-  unblinded equivalence via `_internal.rsadp`, fallback without `e`).
+  unblinded equivalence via `internalOf(rsa).rsadp`, fallback without `e`).
 - **[2, n−2] domain check not enforced**: delegated to the caller
   (OAEP via `badPad` + ct length, PSS via EM structure + `sig.length == k`).
   The test driver verifies the classification of the 24
@@ -179,7 +175,7 @@ and passed to `pssVerify(pub, msg, sig, sha224, sLen=2)`.
 ## Cross-references
 
 - Module: [`pkc/rsa.js`](./rsa.js)
-- Tests: [`pkc/rsa.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/pkc/rsa.test.js) — **146 tests** (136 baseline + 6 iteration F1: RSA blinding round-trips + cross-run determinism + PSS salt randomness preserved + blinded vs. unblinded equivalence + fallback without `e`; + 4 iteration G1: PKCS#1 v1.5 sign/verify/encrypt/decrypt explicit rejects)
+- Tests: [`pkc/rsa.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/pkc/rsa.test.js) — **146 tests** (136 baseline + 6 for RSA blinding round-trips + cross-run determinism + PSS salt randomness preserved + blinded vs. unblinded equivalence + fallback without `e`; + 4 for the PKCS#1 v1.5 sign/verify/encrypt/decrypt explicit rejects)
 - Associated keygen: [`../utils/rsaKeygen.acvp.md`](../utils/rsaKeygen.acvp.md)
 - ACVP draft: `references/NIST/ACVP/src/draft-celi-acvp-rsa.adoc`
 - Decrypt vectors: `references/NIST/ACVP-Server-1.1.0.42/gen-val/json-files/RSA-DecryptionPrimitive-Sp800-56Br2/`

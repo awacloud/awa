@@ -28,7 +28,7 @@ const fonts = runtime.resolve('fonts');
 
 | Method | Signature | Returns |
 |---------|-----------|---------|
-| `read` | `(bytes: Uint8Array, opts?: { allowMissingName?: boolean }) => Font` | Builds a complete `Font` object. A font without a `name` table throws `fonts/missing-name` (OpenType requires the table); `allowMissingName: true` reads it instead, with `name: null` and every `names` field `undefined` — for the subsets embedded in PDF files, which may omit it. |
+| `read` | `(bytes: Uint8Array, opts?: { allowMissingName?: boolean }) => Font` | Builds a complete `Font` object. A font without a `name` table reads, with `name: null` and every `names` field `undefined` — for the subsets embedded in PDF files, which may omit it (since 2.0.0); `allowMissingName: false` throws `fonts/missing-name` instead (OpenType requires the table), as 1.x did by default. Any other value of the option is the default. |
 | `use` | `(...exts: object[]) => fonts` | Registers hook-based extensions (`hydrateFont`, …). Idempotent. |
 | `buildFont` | `(sfnt: SfntFile, opts?: { allowMissingName?: boolean }) => Font` | Builds a `Font` from an already-parsed SFNT directory (used internally by `read`; also exposed for callers that already hold a `parseSfnt` result). |
 | `KNOWN_HOOKS` | `string[]` | List of hooks recognized by `use()`. |
@@ -41,7 +41,7 @@ const fonts = runtime.resolve('fonts');
 | `flavor` | `'truetype' \| 'opentype' \| 'apple-true' \| 'apple-typ1'` | SFNT flavor. |
 | `sfntVersion` | `number` | Raw `sfntVersion` field from the SFNT header. |
 | `rawSfnt` | `SfntFile` | The underlying parsed SFNT directory (see [sfnt](./sfnt/sfnt.md)), kept for callers that need raw table bytes (e.g. subsetting). |
-| `head`, `hhea`, `maxp`, `hmtx`, `cmap`, `name`, `os2`, `post` | parsed objects | OT tables (the last two can be `null`; `name` too, for a font read with `allowMissingName`). |
+| `head`, `hhea`, `maxp`, `hmtx`, `cmap`, `name`, `os2`, `post` | parsed objects | OT tables (the last two can be `null`; `name` too, for a font without a `name` table). |
 | `loca` | `Uint32Array \| null` | Offsets into `glyf` (TT only). |
 | `glyphTable` | `Array<object \| null> \| null` | Raw glyphs (TT only). |
 | `numGlyphs` | `number` | Taken from `maxp`. |

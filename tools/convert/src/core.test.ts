@@ -17,7 +17,7 @@ import { fw_require as oconvFwRequire, modules as oconvModules } from '@awacloud
 import { extras as mdExtras, fw_require as mdFwRequire, modules as mdModules } from '@awacloud/md';
 import { assetFiles, convert, fromMd, isCoreError, toHtml, toMd, type ToMdInput } from './core.ts';
 import { toModuleDefinitions } from './descriptors.ts';
-import { brokenXrefPdf, encryptedPdf, jpegPdf, JPEG_BYTES, PAGE_TEXT, plainOdt, plainPdf } from '../tests/pdf-fixtures.ts';
+import { brokenXrefPdf, encryptedPdf, jpegPdf, JPEG_BYTES, PAGE_TEXT, pagedDocx, plainOdt, plainPdf } from '../tests/pdf-fixtures.ts';
 
 const FIXTURES = join(import.meta.dir, '..', 'tests', 'fixtures');
 const SAMPLE_DOCX = readFileSync(join(FIXTURES, 'sample.docx'));
@@ -192,6 +192,27 @@ describe('convert', () => {
         if (!isCoreError(result)) throw new Error('unreachable');
         expect(result.error).toContain('unsupported pair');
         expect(result.usage).toBe(true);
+    });
+});
+
+describe('convert — layout (oconv tier 3, docx to odt)', () => {
+    const run = (extra: Record<string, unknown>) => convert({ name: 'paged.docx', bytes: pagedDocx(), target: 'odt', ...extra } as never);
+
+    // T82: an absent layout is oconv's default, on for docx to odt.
+    test('absent and layout: true write the page into the odt; layout: false writes tier 2', async () => {
+        const plain = await run({});
+        const off = await run({ layout: false });
+        const on = await run({ layout: true });
+        if (isCoreError(plain) || isCoreError(off) || isCoreError(on)) throw new Error('unexpected error');
+        expect(Buffer.from(on.bytes).equals(Buffer.from(plain.bytes))).toBe(true);
+        expect(Buffer.from(off.bytes).equals(Buffer.from(plain.bytes))).toBe(false);
+    });
+
+    test('a non-boolean layout, or layout on another pair, is a usage error', async () => {
+        const bad = await run({ layout: 'yes' });
+        expect(isCoreError(bad) && bad.error === 'oconv: bad layout option' && bad.usage).toBe(true);
+        const pdf = await convert({ name: 'sample.docx', bytes: new Uint8Array(SAMPLE_DOCX), target: 'pdf', layout: true });
+        expect(isCoreError(pdf) && pdf.error === 'oconv: layout needs docx to odt' && pdf.usage).toBe(true);
     });
 });
 

@@ -65,17 +65,17 @@ describe('oconvXlsxToIr — sheet -> heading + table mapping (tier 2)', () => {
         ({ ir, losses } = xlsxToIr(readResult));
     });
 
-    test('validates against the frozen oconv-ir/v1 schema', () => {
+    test('validates against the oconv-ir/v2 schema', () => {
         expect(validate(ir).errors).toEqual([]);
         expect(validate(ir).ok).toBe(true);
     });
 
     test('emits one level-1 heading with the sheet name, then one table', () => {
         expect(ir.children[0]).toEqual({
-            kind: 'heading', level: 1,
+            kind: 'heading', level: 1, align: null, breakBefore: false,
             children: [{
                 kind: 'run', text: 'Data',
-                bold: false, italic: false, strike: false, code: false, link: null
+                bold: false, italic: false, strike: false, code: false, link: null, size: null, font: null, color: null, underline: false, script: null
             }]
         });
         expect(ir.children[1].kind).toBe('table');
@@ -207,7 +207,7 @@ describe('oconvXlsxToIr — empty sheet', () => {
         const { ir, losses } = xlsxToIr(xlsxApi.read(bytes));
 
         expect(validate(ir).ok).toBe(true);
-        expect(ir).toEqual({ kind: 'document', children: [] });
+        expect(ir).toEqual({ kind: 'document', page: null, header: null, footer: null, children: [] });
         expect(losses).toEqual([]);
     });
 });
@@ -317,5 +317,33 @@ describe('oconvXlsxToIr — cellBudget: a sheet past the budget is not padded (T
                 expect(lines).toEqual(sparseLines(shape));
             }
         }
+    });
+});
+
+describe('oconvXlsxToIr — a 5,000,000 cell budget by default (T30 (d), D46)', () => {
+    const str = (value) => ({ type: 'cell', value, t: 's' });
+    /** 400 rows × 16,384 columns padded (6,553,600 cells): a value in A1 and in XFD400. */
+    function pastDefault() {
+        const last = new Array(16384).fill(null);
+        last[16383] = str('z');
+        const rows = [[str('a')], ...Array.from({ length: 398 }, () => []), last];
+        return { workbook: { sheets: [{ name: 'Wide', rows }] } };
+    }
+
+    test('with no option, a sheet past 5 M padded cells takes the sparse form', () => {
+        const { ir, losses } = xlsxToIr(pastDefault());
+        expect(ir.children.some((n) => n.kind === 'table')).toBe(false);
+        const lines = ir.children.filter((n) => n.kind === 'paragraph').map((p) => p.children[0].text);
+        expect(lines).toEqual(['A1: a', 'XFD400: z']);
+        expect(losses).toEqual([{ code: 'sheet/sparse-form', detail: 'Wide: 6553600 padded cells, 2 kept' }]);
+    });
+
+    test('Number.MAX_SAFE_INTEGER, the way back to 1.x, is a budget like any other', () => {
+        // Padding the 6.5 M cells for real costs over 1 GB (a probe in the
+        // T30 (d) record); a small sheet shows the value is accepted.
+        const { ir, losses } = xlsxToIr({ workbook: { sheets: [{ name: 'G', rows: [[str('a'), str('b')]] }] } },
+            { cellBudget: Number.MAX_SAFE_INTEGER });
+        expect(tableTexts(ir.children.find((n) => n.kind === 'table'))).toEqual([['a', 'b']]);
+        expect(losses).toEqual([]);
     });
 });

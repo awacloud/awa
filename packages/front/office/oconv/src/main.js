@@ -110,25 +110,24 @@ import {
 //   - @awacloud/ooxml : `docx` (docx-to-ir), `xlsx` (xlsx-to-ir), `pptx` (pptx-to-ir)
 //   - @awacloud/odf   : `odt` (odt-to-ir), `ods` (ods-to-ir), `odp` (odp-to-ir)
 //   - @awacloud/md    : `md` (ir-to-md — binding `mdMod`), `mdNode` (ir-to-md)
-//   - @awacloud/pdf   : `pdf` (facade), `pdfFont`/`pdfFontEncoding`/`pdfFilterDispatch`
-//                  (pdf/font-decoder), `pdfStructTree` (pdf/struct),
-//                  `pdfResources`/`pdfContentStream` (pdf/text-extract),
+//   - @awacloud/pdf   : `pdf` (facade), `pdfFilterDispatch` (pdf/text-extract,
+//                  pdf/image-png), `pdfStructTree` (pdf/struct),
+//                  `pdfPageText` (pdf/text-extract, at its `./extra/*` sub-path,
+//                  with `pdfFontDecoder` it depends on),
 //                  `pdfBuilder`/`pdfFontEmbed` (write/ir-to-pdf)
-//   - @awacloud/fonts : `cmapToUnicode`/`encodingLookup`/`encodingAgl`
-//                  (pdf/font-decoder — @awacloud/pdf composes @awacloud/fonts transitively),
-//                  `standard14Lookup`/`fonts` (write/pdf/metrics),
+//   - @awacloud/fonts : `standard14Lookup`/`fonts` (write/pdf/metrics),
 //                  `fonts` again for write/ir-to-pdf
+//                  (@awacloud/pdf composes @awacloud/fonts transitively)
 import { docx, xlsx, pptx } from '@awacloud/ooxml';
 import { odt, ods, odp } from '@awacloud/odf';
 import { mdMod as md, mdNode } from '@awacloud/md';
 import {
     pdf,
-    pdfFont, pdfFontEncoding, pdfFilterDispatch,
-    pdfStructTree, pdfResources, pdfContentStream,
+    pdfFilterDispatch,
+    pdfStructTree,
     pdfBuilder, pdfFontEmbed
 } from '@awacloud/pdf';
 import {
-    cmapToUnicode, encodingLookup, encodingAgl,
     standard14Lookup, fonts
 } from '@awacloud/fonts';
 
@@ -148,6 +147,10 @@ import { pdfLegacyRc4Read } from '@awacloud/pdf/extra/legacy-rc4-read.js';
 // `pdfXmpExtended` likewise (pdf's `extras`): the facade reads a pdf's XMP
 // `dc:title` with it for the front matter's `title`.
 import { pdfXmpExtended } from '@awacloud/pdf/extra/xmp-extended.js';
+// `pdfFontDecoder` and `pdfPageText` likewise (pdf's `extras`): the page walk
+// the pdf reader is built on (`read/pdf/text-extract.js`) and its decoder.
+import { pdfFontDecoder } from '@awacloud/pdf/extra/font-decoder.js';
+import { pdfPageText } from '@awacloud/pdf/extra/page-text.js';
 
 import { oconvIr } from './ir/ir.js';
 import { oconvDocxToIr } from './read/docx-to-ir.js';
@@ -156,7 +159,6 @@ import { oconvXlsxToIr } from './read/xlsx-to-ir.js';
 import { oconvOdsToIr } from './read/ods-to-ir.js';
 import { oconvPptxToIr } from './read/pptx-to-ir.js';
 import { oconvOdpToIr } from './read/odp-to-ir.js';
-import { oconvPdfFontDecoder } from './read/pdf/font-decoder.js';
 import { oconvPdfImagePng } from './read/pdf/image-png.js';
 import { oconvPdfTextExtract } from './read/pdf/text-extract.js';
 import { oconvPdfStruct } from './read/pdf/struct.js';
@@ -239,14 +241,14 @@ export const pkg_require = [
     docx, xlsx, pptx,
     odt, ods, odp,
     md, mdNode,
-    pdf, pdfFont, pdfFontEncoding, pdfFilterDispatch,
-    pdfStructTree, pdfResources, pdfContentStream,
+    pdf, pdfFilterDispatch,
+    pdfStructTree,
     pdfBuilder, pdfFontEmbed,
-    cmapToUnicode, encodingLookup, encodingAgl,
     standard14Lookup, fonts,
     mdFrontmatter,
     pdfLegacyRc4Read,
-    pdfXmpExtended
+    pdfXmpExtended,
+    pdfFontDecoder, pdfPageText
 ];
 
 /**
@@ -258,10 +260,9 @@ export const pkg_require = [
  * `modules`, depends on four of them), `@awacloud/pdf`'s `pkg_require` (resolves `@awacloud/fonts`' WHOLE
  * manifest, transitively required by `@awacloud/pdf`'s own modules — see the
  * file header) then `@awacloud/pdf`'s own `modules` (resolves `pdf` and every
- * `pdf*` runtime module the four new `src/read/pdf/*` descriptors below
- * depend on: `pdfFont`, `pdfFontEncoding`, `pdfFilterDispatch`,
- * `cmapToUnicode`, `encodingLookup`, `encodingAgl`, `pdfResources`,
- * `pdfContentStream`, `pdfStructTree`). Registering only the single format
+ * `pdf*` runtime module the `src/read/pdf/*` descriptors below depend on:
+ * `pdfFilterDispatch`, `pdfStructTree`), then pdf's two extras the page walk
+ * is built on, `pdfFontDecoder` and `pdfPageText`. Registering only the single format
  * descriptor (without its own package's full graph) would resolve fine at
  * registration time but throw "Module not found" the first time a consumer
  * actually calls `runtime.resolve('docx')` / `'pdf'` / … — the same
@@ -278,6 +279,8 @@ export const modules = [
     ...pdfModules,
     pdfLegacyRc4Read,
     pdfXmpExtended,
+    pdfFontDecoder,
+    pdfPageText,
     oconvIr,
     oconvDocxToIr,
     oconvOdtToIr,
@@ -285,7 +288,6 @@ export const modules = [
     oconvOdsToIr,
     oconvPptxToIr,
     oconvOdpToIr,
-    oconvPdfFontDecoder,
     oconvPdfImagePng,
     oconvPdfTextExtract,
     oconvPdfStruct,

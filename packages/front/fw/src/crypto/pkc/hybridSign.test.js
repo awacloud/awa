@@ -42,6 +42,7 @@ import { utf8 } from '../../io/codec/utf8.js';
 
 import * as VED from './__fixtures__/composite-mldsa65-ed25519.js';
 import * as VEC from './__fixtures__/composite-mldsa65-ecdsaP256.js';
+import { INTERNAL } from '../../core/internal.js';
 
 // ── manual DI wiring (mirrors src/crypto/pkc/ml_kem.test.js) ──────────
 function wire() {
@@ -101,7 +102,7 @@ describe('digest domain (W1 carry-forward c)', () => {
     test('_sha512Bytes("abc") matches the FIPS 180-4 KAT', () => {
         const inst = wire();
         const _hex = hex.factory();
-        const digest = inst._internal.sha512Bytes(enc('abc'));
+        const digest = inst[INTERNAL].sha512Bytes(enc('abc'));
         expect(_hex.fromBytes(digest)).toBe(SHA512_ABC);
     });
 });
@@ -125,7 +126,7 @@ function variantSuite(name, V, schemeId, tradPkLen, opts) {
             const mldsaPk = pk.subarray(0, 1952);
             const tradPk = pk.subarray(1952);
             expect(tradPk.length).toBe(tradPkLen);
-            return inst._internal.encodeTlv(schemeId, [mldsaPk, tradPk]);
+            return inst[INTERNAL].encodeTlv(schemeId, [mldsaPk, tradPk]);
         };
         // Re-frame the official signature into the module's canonical container.
         const officialSig = (rawB64) => opts.reframeSig(b64(rawB64));
@@ -134,78 +135,78 @@ function variantSuite(name, V, schemeId, tradPkLen, opts) {
             expect(kp).not.toBe(false);
             const sig = variant.sign(kp.secretKey, M);
             expect(sig).not.toBe(false);
-            expect(variant.verify(kp.publicKey, M, sig)).toBe(true);
+            expect(variant.verify(kp.publicKey, sig, M)).toBe(true);
         });
 
         test('keygen → sign → verify round-trip (with ctx)', () => {
             const sig = variant.sign(kp.secretKey, M, CTX);
-            expect(variant.verify(kp.publicKey, M, sig, CTX)).toBe(true);
+            expect(variant.verify(kp.publicKey, sig, M, CTX)).toBe(true);
         });
 
         test('wrong message ⇒ reject', () => {
             const sig = variant.sign(kp.secretKey, M);
-            expect(variant.verify(kp.publicKey, enc('other'), sig)).toBe(false);
+            expect(variant.verify(kp.publicKey, sig, enc('other'))).toBe(false);
         });
 
         test('OFFICIAL vector: empty-ctx signature verifies (byte-exact)', () => {
-            expect(variant.verify(officialTlvPk(), M, officialSig(V.SIG_EMPTYCTX_B64))).toBe(true);
+            expect(variant.verify(officialTlvPk(), officialSig(V.SIG_EMPTYCTX_B64), M)).toBe(true);
         });
 
         test('OFFICIAL vector: with-ctx signature verifies (byte-exact)', () => {
-            expect(variant.verify(officialTlvPk(), M, officialSig(V.SIG_WITHCTX_B64), CTX)).toBe(true);
+            expect(variant.verify(officialTlvPk(), officialSig(V.SIG_WITHCTX_B64), M, CTX)).toBe(true);
         });
 
         test('negative: empty-ctx signature must NOT verify under a ctx binding', () => {
-            expect(variant.verify(officialTlvPk(), M, officialSig(V.SIG_EMPTYCTX_B64), CTX)).toBe(false);
+            expect(variant.verify(officialTlvPk(), officialSig(V.SIG_EMPTYCTX_B64), M, CTX)).toBe(false);
         });
 
         test('negative: with-ctx signature must NOT verify without ctx', () => {
-            expect(variant.verify(officialTlvPk(), M, officialSig(V.SIG_WITHCTX_B64))).toBe(false);
+            expect(variant.verify(officialTlvPk(), officialSig(V.SIG_WITHCTX_B64), M)).toBe(false);
         });
 
         test('negative: tampered ML-DSA byte ⇒ reject', () => {
             const bad = new Uint8Array(officialSig(V.SIG_EMPTYCTX_B64));
             bad[8] ^= 0xff;                              // inside the ML-DSA slice
-            expect(variant.verify(officialTlvPk(), M, bad)).toBe(false);
+            expect(variant.verify(officialTlvPk(), bad, M)).toBe(false);
         });
 
         test('negative: tampered trad byte ⇒ reject (no downgrade)', () => {
             const bad = new Uint8Array(officialSig(V.SIG_EMPTYCTX_B64));
             bad[bad.length - 1] ^= 0xff;                 // inside the trad slice
-            expect(variant.verify(officialTlvPk(), M, bad)).toBe(false);
+            expect(variant.verify(officialTlvPk(), bad, M)).toBe(false);
         });
 
         test('negative: stripped trad component (zeroed) ⇒ reject', () => {
             const bad = new Uint8Array(officialSig(V.SIG_EMPTYCTX_B64));
             bad.fill(0, 3309);                           // zero everything after ML-DSA sig
-            expect(variant.verify(officialTlvPk(), M, bad)).toBe(false);
+            expect(variant.verify(officialTlvPk(), bad, M)).toBe(false);
         });
 
         test('negative: swapped trad public key ⇒ reject', () => {
             const sig = variant.sign(kp.secretKey, M);
             // splice variant B's trad pk into A's composite pk.
             const kp2 = variant.keygen();
-            const aParts = inst._internal.decodeTlv(kp.publicKey, schemeId, 2);
-            const bParts = inst._internal.decodeTlv(kp2.publicKey, schemeId, 2);
-            const mixed = inst._internal.encodeTlv(schemeId, [aParts[0], bParts[1]]);
-            expect(variant.verify(mixed, M, sig)).toBe(false);
+            const aParts = inst[INTERNAL].decodeTlv(kp.publicKey, schemeId, 2);
+            const bParts = inst[INTERNAL].decodeTlv(kp2.publicKey, schemeId, 2);
+            const mixed = inst[INTERNAL].encodeTlv(schemeId, [aParts[0], bParts[1]]);
+            expect(variant.verify(mixed, sig, M)).toBe(false);
         });
 
         test('TLV splice-reject: wrong schemeId ⇒ verify false', () => {
             const tlv = new Uint8Array(kp.publicKey);
             tlv[0] = 0x7f;                               // corrupt scheme id
             const sig = variant.sign(kp.secretKey, M);
-            expect(variant.verify(tlv, M, sig)).toBe(false);
+            expect(variant.verify(tlv, sig, M)).toBe(false);
         });
 
         test('TLV splice-reject: trailing byte ⇒ decodeTlv false', () => {
             const spliced = cat(kp.publicKey, Uint8Array.from([0x00]));
-            expect(inst._internal.decodeTlv(spliced, schemeId, 2)).toBe(false);
+            expect(inst[INTERNAL].decodeTlv(spliced, schemeId, 2)).toBe(false);
         });
 
         test('TLV splice-reject: truncated container ⇒ decodeTlv false', () => {
             const truncated = kp.publicKey.subarray(0, kp.publicKey.length - 1);
-            expect(inst._internal.decodeTlv(truncated, schemeId, 2)).toBe(false);
+            expect(inst[INTERNAL].decodeTlv(truncated, schemeId, 2)).toBe(false);
         });
     });
 }
@@ -232,6 +233,6 @@ describe('hybridSign.mldsa65_ecdsaP256 DER handling', () => {
         const sig = new Uint8Array(v.sign(kp.secretKey, enc(VEC.M)));
         // corrupt the DER SEQUENCE tag (byte right after the ML-DSA sig + u16 len)
         sig[3309 + 2] = 0x00;
-        expect(v.verify(kp.publicKey, enc(VEC.M), sig)).toBe(false);
+        expect(v.verify(kp.publicKey, sig, enc(VEC.M))).toBe(false);
     });
 });

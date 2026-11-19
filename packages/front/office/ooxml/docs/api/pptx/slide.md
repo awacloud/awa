@@ -39,9 +39,12 @@ const sl = runtime.resolve('pptxSlide');
 | `parseSlide` / `serializeSlide` / `slideBytes` | `<p:sld>` | Full slide. Each `parse*` takes `(input, opts?)`; `opts.typedRunColors` reaches the text bodies (shapes, table cells). |
 | `parseSlideLayout` / `serializeSlideLayout` / `slideLayoutBytes` | `<p:sldLayout>` | Layout. |
 | `parseSlideMaster` / `serializeSlideMaster` / `slideMasterBytes` | `<p:sldMaster>` | Master. |
+| `parseNotesSlide` / `serializeNotesSlide` | `<p:notes>` | A notes slide (`type: 'notes'`), parsed as a slide; `clrMapOvr`. The core's read does not load it; [`pmlPackageParts`](../extra/pml-package-parts.md) does. |
+| `parseNotesMaster` / `serializeNotesMaster` | `<p:notesMaster>` | The notes master (`type: 'notesMaster'`); `clrMap`, `notesStyle` (verbatim). |
+| `parseHandoutMaster` / `serializeHandoutMaster` | `<p:handoutMaster>` | The handout master (`type: 'handoutMaster'`); `clrMap`. |
 | `parseCSld` | `(<p:cSld>) => { name?, bg?, shapes, spTreeExtras?, _extras? }` | Common slide data, flattened. |
 | `renderCSld` | `(obj, defaultName?) => element` | `<p:cSld>`. |
-| `parseSpTree` | `(<p:spTree>) => { shapes, extras }` | Shape tree. |
+| `parseSpTree` | `(<p:spTree>, opts?) => { shapes, extras }` | Shape tree. With `opts.typedGroups`, a `p:grpSp` is a `group` shape (see below); else it is kept in `extras`. |
 | `renderSpTree` | `(shapes, extras?) => element` | `<p:spTree>`. |
 | `fromTitleBody` | `({ title, body: string[] }) => slide` | Convenience builder — takes ONE object. |
 | `extractTitle` | `(slide) => string \| null` | Text of the title placeholder. |
@@ -63,16 +66,28 @@ shape := {
     _extras?
 }
 
+group := {                       // a p:grpSp, with the typedGroups read option
+    type: 'group',
+    shapes: [shape | picture | table | chart | graphicFrame | group],
+    _extras?: [xmlNode]          // its <p:nvGrpSpPr>, <p:grpSpPr> and other
+                                 // children, verbatim
+}
+
 slide := {
     type: 'slide' | 'slideLayout' | 'slideMaster',
     name?, bg?,                  // from <p:cSld>
-    shapes: [shape | picture | table | chart | graphicFrame],
-    spTreeExtras?: [xmlNode],    // <p:nvGrpSpPr>, <p:grpSpPr>, …
+    shapes: [shape | picture | table | chart | graphicFrame | group],
+    spTreeExtras?: [xmlNode],    // <p:nvGrpSpPr>, <p:grpSpPr>, … (and every
+                                 // <p:grpSp> without the typedGroups option)
     clrMap?, clrMapOvr?,         // verbatim elements
     layoutIds?: [{ id, rId }],   // slideMaster only
     txStyles?: xmlNode,          // slideMaster only
+    layoutType?: string,         // slideLayout only: the root's `type`
+    rootAttrs?: { [name]: string }, // the root's other attributes (show,
+                                 // preserve, userDrawn, showMasterSp, …)
     _extras?: [xmlNode],         // <p:timing>, <p:transition>, …
-    cSldExtras?: [xmlNode]       // only with opts.slideExtrasByPart
+    cSldExtras?: [xmlNode]       // <p:cSld>'s leftovers, when the root has
+                                 // some too, or with opts.slideExtrasByPart
 }
 ```
 
@@ -80,11 +95,17 @@ There is **no `cSld` level in the typed model**: `parseCSld`'s output is merged
 into the slide object. Elements such as `<p:timing>` and `<p:transition>` are
 not typed by this module and stay verbatim in `_extras`. By default the
 leftovers of `<p:cSld>` (`<p:custDataLst>`, `<p:controls>`, `<p:extLst>`) go
-to `_extras` too, and when the root has leftovers of its own they replace
-them. With `opts.slideExtrasByPart: true` (the second argument of
+to `_extras` too when the root has none; when the root has leftovers of its
+own, those are `_extras` and `<p:cSld>`'s are kept in `cSldExtras` (possibly
+empty). With `opts.slideExtrasByPart: true` (the second argument of
 `parseSlide` / `parseSlideLayout` / `parseSlideMaster`, or of `pptx.read`),
-the `<p:cSld>` leftovers are kept in `cSldExtras` — always an array, empty
+the `<p:cSld>` leftovers are always kept in `cSldExtras` — an array, empty
 when there are none — and `_extras` holds the root's only.
+
+The root's attributes are kept: a layout's `type` as `layoutType` (which the
+writer already used), every other one (`show`, `showMasterSp`,
+`showMasterPhAnim`, `preserve`, `userDrawn`, `matchingName` …; namespace
+declarations and `mc:Ignorable` aside) in `rootAttrs`, written back.
 
 On write, each `_extras` element goes where the schema places it: the
 slide-level ones (`<p:transition>`, `<p:timing>`, `<p:hf>`) at the root,
@@ -93,9 +114,10 @@ after `<p:clrMap>` / `<p:clrMapOvr>` and `<p:sldLayoutIdLst>` and before
 (`<p:custDataLst>`, `<p:controls>`) inside `<p:cSld>` after `<p:spTree>`,
 never at the root. An `<mc:AlternateContent>` is placed as the element it
 holds. An element both lists allow (`<p:extLst>`) or neither names is
-written in both places, as before — unless the object has a `cSldExtras`
-array: `<p:cSld>` then takes its leftovers from `cSldExtras` only and the
-root from `_extras` only, so every element is written once, at the level
+written once: inside `<p:cSld>` when the object has no `cSldExtras` (its
+`_extras` are then `<p:cSld>`'s), at the root when it has one. With a
+`cSldExtras` array `<p:cSld>` takes its leftovers from `cSldExtras` only
+and the root from `_extras` only, so every element is written at the level
 it came from (the placement rules above still apply to both lists).
 
 ## Examples

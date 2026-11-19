@@ -459,7 +459,19 @@ export const pptxBundled = {
         t[symbols[i]] = lengths[i];
       return { t, l: lengths[0] };
     }
-    return { buildTree, buildMap };
+    function kraft(codeLengths) {
+      const perLength = new Int32Array(16);
+      for (let s = 0;s < codeLengths.length; ++s)
+        perLength[codeLengths[s]]++;
+      let left = 1;
+      for (let len = 1;len < 16; ++len) {
+        left = left * 2 - perLength[len];
+        if (left < 0)
+          return { oversubscribed: !0, incomplete: !1 };
+      }
+      return { oversubscribed: !1, incomplete: left > 0 };
+    }
+    return { buildTree, buildMap, kraft };
   } });
     __register({ name: "lz77", dependencies: [], factory: function() {
     const u8 = Uint8Array, i32 = Int32Array, DEFAULT = Object.freeze({
@@ -583,30 +595,18 @@ export const pptxBundled = {
         }
       }
     }
-    function encodeTokens(data, opts) {
-      if (!(data instanceof u8))
-        throw Error("lz77.encodeTokens: data must be Uint8Array");
-      const o = _resolveOpts(opts), len = data.length, cap = 2 * Math.max(0, len - o.start), provided = opts && opts.tokens;
-      let tokens;
-      if (provided) {
-        if (provided.length < cap)
-          throw Error("lz77.encodeTokens: tokens buffer too small");
-        tokens = provided;
-      } else
-        tokens = new i32(cap);
+    function _fill(st, tokens, max) {
+      const { data, len, head, prev, hash, maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip, wndSize } = st, wndMask = wndSize - 1, lastKey = st.lastKey, atLeast = st.atLeast, cap = 2 * max;
       let p = 0;
-      if (o.start >= len)
-        return { tokens, count: 0 };
-      const { maxMatch, niceLength, chainDepth, lazy, goodLength, maxLazy, chainSkip } = o, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, head = new i32(1 << o.hashBits).fill(-1), prev = new i32(Math.min(wndSize, len)).fill(-1), hash = _hasherFor(o), lastKey = len - o.minMatch, atLeast = o.minMatch - 1;
-      for (let k = 0;k < o.start && k <= lastKey; ++k) {
-        const h = hash(data, k);
-        prev[k & wndMask] = head[h];
-        head[h] = k;
+      if (st.heldLen) {
+        tokens[p++] = st.heldLen;
+        tokens[p++] = st.heldDist;
+        st.heldLen = 0;
       }
-      let i = o.start;
-      while (i <= lastKey) {
-        const h = hash(data, i);
-        let matchLen = _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
+      let i = st.at;
+      while (p < cap && i <= lastKey) {
+        const h = hash(data, i), newest = head[h];
+        let matchLen = newest === -1 || i - newest >= wndSize ? 0 : _longestMatch(data, i, h, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i), niceLength, chainDepth, chainSkip, atLeast), dist = matchDist;
         prev[i & wndMask] = head[h];
         head[h] = i;
         if (matchLen === 0) {
@@ -616,7 +616,7 @@ export const pptxBundled = {
           continue;
         }
         if (lazy && matchLen < maxLazy && i < lastKey) {
-          const h1 = hash(data, i + 1), nextLen = _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
+          const h1 = hash(data, i + 1), newest1 = head[h1], nextLen = newest1 === -1 || i + 1 - newest1 >= wndSize ? 0 : _longestMatch(data, i + 1, h1, head, prev, wndSize, wndMask, Math.min(maxMatch, len - i - 1), niceLength, matchLen >= goodLength ? chainDepth >> 2 || 1 : chainDepth, chainSkip, matchLen);
           if (nextLen) {
             tokens[p++] = 0;
             tokens[p++] = data[i];
@@ -627,8 +627,13 @@ export const pptxBundled = {
             head[h1] = i;
           }
         }
-        tokens[p++] = matchLen;
-        tokens[p++] = dist;
+        if (p < cap) {
+          tokens[p++] = matchLen;
+          tokens[p++] = dist;
+        } else {
+          st.heldLen = matchLen;
+          st.heldDist = dist;
+        }
         const end = i + matchLen;
         for (let k = i + 1;k < end && k <= lastKey; ++k) {
           const hk = hash(data, k);
@@ -637,12 +642,67 @@ export const pptxBundled = {
         }
         i = end;
       }
-      while (i < len) {
+      while (p < cap && i < len) {
         tokens[p++] = 0;
         tokens[p++] = data[i];
         i++;
       }
-      return { tokens, count: p / 2 };
+      st.at = i;
+      return p >> 1;
+    }
+    function createScanner(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.createScanner: data must be Uint8Array");
+      const o = _resolveOpts(opts), len = data.length, wndSize = 1 << o.windowBits, wndMask = wndSize - 1, empty = o.start >= len, hash = _hasherFor(o), lastKey = len - o.minMatch, head = empty ? null : new i32(1 << o.hashBits).fill(-1), prev = empty ? null : new i32(Math.min(wndSize, len)).fill(-1);
+      if (!empty)
+        for (let k = 0;k < o.start && k <= lastKey; ++k) {
+          const h = hash(data, k);
+          prev[k & wndMask] = head[h];
+          head[h] = k;
+        }
+      const st = {
+        data,
+        len,
+        hash,
+        lastKey,
+        wndSize,
+        head,
+        prev,
+        maxMatch: o.maxMatch,
+        niceLength: o.niceLength,
+        chainDepth: o.chainDepth,
+        lazy: o.lazy,
+        goodLength: o.goodLength,
+        maxLazy: o.maxLazy,
+        chainSkip: o.chainSkip,
+        atLeast: o.minMatch - 1,
+        at: empty ? len : o.start,
+        heldLen: 0,
+        heldDist: 0
+      };
+      return {
+        fill(tokens, max) {
+          return _fill(st, tokens, max);
+        },
+        get done() {
+          return st.at >= st.len && st.heldLen === 0;
+        }
+      };
+    }
+    function encodeTokens(data, opts) {
+      if (!(data instanceof u8))
+        throw Error("lz77.encodeTokens: data must be Uint8Array");
+      const n = Math.max(0, data.length - Math.max(0, (opts && opts.start) | 0)), cap = 2 * n, provided = opts && opts.tokens;
+      let tokens;
+      if (provided) {
+        if (provided.length < cap)
+          throw Error("lz77.encodeTokens: tokens buffer too small");
+        tokens = provided;
+      } else
+        tokens = new i32(cap);
+      if (n === 0)
+        return { tokens, count: 0 };
+      return { tokens, count: createScanner(data, opts).fill(tokens, n) };
     }
     function decodeStream(dst, ops) {
       let p = 0;
@@ -659,6 +719,7 @@ export const pptxBundled = {
     return {
       encode,
       encodeTokens,
+      createScanner,
       findMatch,
       decodeStream,
       DEFAULT
@@ -673,7 +734,7 @@ export const pptxBundled = {
       byteOffset,
       slice,
       max
-    } = bitstream, { buildMap, buildTree } = huffman, ERROR_MESSAGES = [
+    } = bitstream, { buildMap, buildTree } = huffman, CODE_NAMES = { 0: "EEOF", 1: "EBADBLOCK", 2: "EBADSYMBOL", 3: "EBADDISTANCE", 4: "ESTREAMEND", 5: "ENOHANDLER", 6: "EBADFORMAT", 7: "EMAXOUT", 8: "EBADSTREAM", 9: "EEXTRATOOLONG", 10: "EBADDATE", 11: "ENAMETOOLONG", 12: "ENOENCODER", 13: "EBADFORMAT", 14: "EBADMETHOD", 15: "EUNSAFEPATH", 16: "ECHECKSUM" }, ERROR_MESSAGES = [
       "unexpected EOF",
       "invalid block type",
       "invalid length/literal",
@@ -681,12 +742,13 @@ export const pptxBundled = {
       "stream finished",
       "no stream handler",
       null,
-      null,
+      "output limit exceeded",
       "invalid data"
     ];
     function fail(code, message) {
       const e = Error(message ?? ERROR_MESSAGES[code] ?? "unknown error");
-      e.code = code;
+      e.code = CODE_NAMES[code];
+      e.errno = code;
       throw e;
     }
     const u8 = Uint8Array, u16 = Uint16Array, u32 = Uint32Array, i32 = Int32Array, WINDOW_SIZE = 32768;
@@ -774,8 +836,10 @@ export const pptxBundled = {
       return sym < 29 && dist >= DIST_BASE[sym + 1] ? sym + 1 : sym;
     }
     const PHASE_HEADER = 0, PHASE_STORED = 1, PHASE_CODES = 2, PHASE_DONE = 3, NEED_INPUT = 0, COMPLETE = 1;
-    function createInflateState(dictionary) {
+    function createInflateState(dictionary, maxOutput) {
       const dict = dictionary && dictionary.length ? dictionary.subarray(Math.max(0, dictionary.length - WINDOW_SIZE)) : null;
+      if (maxOutput !== void 0 && maxOutput !== null && !(Number.isSafeInteger(maxOutput) && maxOutput >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
       return {
         bitPos: 0,
         finalBlock: 0,
@@ -789,7 +853,10 @@ export const pptxBundled = {
         outLen: 0,
         emitted: 0,
         dictionary: dict,
-        fixedOut: !1
+        fixedOut: !1,
+        base: 0,
+        limit: maxOutput !== void 0 && maxOutput !== null ? (dict ? dict.length : 0) + maxOutput : 1 / 0,
+        end: 0
       };
     }
     function initOutput(state, inputLength, providedOut) {
@@ -798,24 +865,29 @@ export const pptxBundled = {
         state.out = providedOut;
         state.fixedOut = !0;
       } else
-        state.out = new u8(Math.max(65536, inputLength * 3));
+        state.out = new u8(Math.min(Math.max(65536, inputLength * 3), state.limit));
       if (dictLen) {
         state.out.set(state.dictionary);
         state.outLen = dictLen;
         state.emitted = dictLen;
       }
+      state.end = Math.min(state.out.length, state.limit - state.base);
     }
     function reserveOutput(state, needed) {
-      if (needed <= state.out.length)
+      if (needed <= state.end)
         return;
+      if (state.base + needed > state.limit)
+        fail(7);
       if (state.fixedOut)
         fail(8, "output exceeds provided buffer");
       let size = state.out.length || 65536;
       while (size < needed)
         size *= 2;
+      size = Math.min(size, state.limit - state.base);
       const grown = new u8(size);
       grown.set(state.out.subarray(0, state.outLen));
       state.out = grown;
+      state.end = Math.min(size, state.limit - state.base);
     }
     function readDynamicTables(state, input) {
       const totalBits = input.length * 8;
@@ -1033,6 +1105,8 @@ export const pptxBundled = {
       const start = state.outLen - WINDOW_SIZE;
       state.out.set(state.out.subarray(start, state.outLen), 0);
       state.outLen = WINDOW_SIZE;
+      state.base += start;
+      state.end = Math.min(state.out.length, state.limit - state.base);
       state.emitted = Math.max(0, state.emitted - start);
     }
     const WINDOW_BITS = 15, MIN_MATCH = 3, MAX_MATCH = 258, BLOCK_TOKENS = 16384, STREAM_FLUSH_BYTES = 65536, LEVELS = [
@@ -1063,15 +1137,7 @@ export const pptxBundled = {
         return Math.imul(data[i] | data[i + 1] << 8 | data[i + 2] << 16, 2654435761) >>> shift;
       };
     }
-    const TOKEN_SCRATCH_MAX = 2097152;
-    let tokenScratch = null;
-    function tokenBuffer(capacity) {
-      if (capacity > TOKEN_SCRATCH_MAX)
-        return new i32(capacity);
-      if (!tokenScratch || tokenScratch.length < capacity)
-        tokenScratch = new i32(capacity);
-      return tokenScratch;
-    }
+    const blockTokens = new i32(2 * BLOCK_TOKENS);
     function createTokenBuffer(tokens, start) {
       return {
         tokens,
@@ -1296,7 +1362,7 @@ export const pptxBundled = {
       if (params.level === 0)
         writeStoredRun(w, input, start, params.final);
       else {
-        const scan = lz77.encodeTokens(input, {
+        const scan = lz77.createScanner(input, {
           windowBits: WINDOW_BITS,
           minMatch: MIN_MATCH,
           maxMatch: MAX_MATCH,
@@ -1305,12 +1371,11 @@ export const pptxBundled = {
           hashFn: makeHashFn(params.hashBits),
           lazy: params.lazy,
           chainSkip: !0,
-          ...LEVELS[params.level],
-          tokens: tokenBuffer(2 * Math.max(0, input.length - start))
-        }), tb = createTokenBuffer(scan.tokens, start), count = scan.count;
-        for (let from = 0;; from += BLOCK_TOKENS) {
-          const to = Math.min(count, from + BLOCK_TOKENS), covered = tallyBlock(tb, from, to);
-          if (to === count) {
+          ...LEVELS[params.level]
+        }), tb = createTokenBuffer(blockTokens, start);
+        for (;; ) {
+          const covered = tallyBlock(tb, 0, scan.fill(blockTokens, BLOCK_TOKENS));
+          if (scan.done) {
             tb.blockLen = input.length - tb.blockStart;
             writeBlock(w, tb, input, params.final);
             break;
@@ -1398,7 +1463,7 @@ export const pptxBundled = {
         opts = {};
       }
       this.ondata = ondata;
-      this._state = createInflateState((opts || {}).dictionary);
+      this._state = createInflateState((opts || {}).dictionary, (opts || {}).maxOutput);
       initOutput(this._state, 0, void 0);
       this._pending = new u8(0);
       this._done = !1;
@@ -1431,6 +1496,16 @@ export const pptxBundled = {
       this._pending = slice(this._pending, state.bitPos >> 3);
       state.bitPos &= 7;
     };
+    Object.defineProperty(InflateStream.prototype, "ended", {
+      get() {
+        return this._state.phase === PHASE_DONE;
+      }
+    });
+    InflateStream.prototype.rest = function() {
+      if (this._state.phase !== PHASE_DONE)
+        return null;
+      return this._pending.subarray(this._state.bitPos ? 1 : 0);
+    };
     function deflateSync(data, opts = {}) {
       let input = data, start = 0;
       const dict = opts.dictionary;
@@ -1454,9 +1529,11 @@ export const pptxBundled = {
     function inflateSync(data, opts = {}) {
       if (!data.length)
         return opts.out ? opts.out.subarray(0, 0) : new u8(0);
-      const state = createInflateState(opts.dictionary), dictLen = state.dictionary ? state.dictionary.length : 0;
+      const state = createInflateState(opts.dictionary, opts.maxOutput), dictLen = state.dictionary ? state.dictionary.length : 0;
       initOutput(state, data.length, opts.out);
       runInflate(state, data, !1);
+      if (typeof opts.onEnd === "function")
+        opts.onEnd(byteOffset(state.bitPos));
       if (state.fixedOut)
         return state.out.subarray(0, state.outLen);
       if (opts.out) {
@@ -1575,7 +1652,8 @@ export const pptxBundled = {
       const d = new Date(mtime ?? Date.now()), y = d.getFullYear() - 1980;
       if (y < 0 || y > 119) {
         const e = Error("date not in range 1980-2099");
-        e.code = 10;
+        e.code = "EBADDATE";
+        e.errno = 10;
         throw e;
       }
       return y << 25 | d.getMonth() + 1 << 21 | d.getDate() << 16 | d.getHours() << 11 | d.getMinutes() << 5 | d.getSeconds() >> 1;
@@ -1590,7 +1668,8 @@ export const pptxBundled = {
           const l = ex[k].length;
           if (l > 65535) {
             const e = Error("extra field too long");
-            e.code = 9;
+            e.code = "EEXTRATOOLONG";
+            e.errno = 9;
             throw e;
           }
           le += l + 4;
@@ -1708,8 +1787,14 @@ export const pptxBundled = {
       return b + 30 + _r16(d, b + 26) + _r16(d, b + 28);
     }
     function _readCDE(d, b, zip64) {
-      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
-      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off];
+      const fnl = _r16(d, b + 28), utf8 = (_r16(d, b + 8) & 2048) !== 0, fn = _u8ToStr(d.subarray(b + 46, b + 46 + fnl), utf8).replace(/\\/g, "/"), es = b + 46 + fnl, bs = _r32(d, b + 20), [sc, su, off] = zip64 && bs === 4294967295 ? _z64e(d, es) : [bs, _r32(d, b + 24), _r32(d, b + 42)];
+      return [_r16(d, b + 10), sc, su, fn, es + _r16(d, b + 30) + _r16(d, b + 32), off, _r32(d, b + 16) >>> 0];
+    }
+    function _setOwn(obj, key, value) {
+      if (key === "__proto__")
+        Object.defineProperty(obj, key, { value, writable: !0, enumerable: !0, configurable: !0 });
+      else
+        obj[key] = value;
     }
     function _flatten(d, prefix, out, defaultOpts) {
       for (const k in d) {
@@ -1720,9 +1805,9 @@ export const pptxBundled = {
           data = val[0];
         }
         if (data instanceof Uint8Array)
-          out[name] = [data, opts];
+          _setOwn(out, name, [data, opts]);
         else {
-          out[name + "/"] = [new Uint8Array(0), opts];
+          _setOwn(out, name + "/", [new Uint8Array(0), opts]);
           _flatten(data, name + "/", out, defaultOpts);
         }
       }
@@ -1736,7 +1821,8 @@ export const pptxBundled = {
         const [file, p] = flat[fn], compression = p.level === 0 ? 0 : 8, fnBytes = _strToU8(fn), fnLen = fnBytes.length;
         if (fnLen > 65535) {
           const e = Error("filename too long");
-          e.code = 11;
+          e.code = "ENAMETOOLONG";
+          e.errno = 11;
           throw e;
         }
         const comBytes = p.comment ? _strToU8(p.comment) : null, exl = _exfl(p.extra), u = _isUTF8(fn) || comBytes && _isUTF8(p.comment), dosTime = _dosDateTime(p.mtime), crc = new Crc32;
@@ -1787,12 +1873,15 @@ export const pptxBundled = {
       return !1;
     }
     function unzipSync(data, opts = {}) {
-      const result = {}, safe = opts.safe !== !1;
-      let e = data.length - 22;
+      const result = Object.create(null), safe = opts.safe !== !1, cap = opts.maxOutput === void 0 || opts.maxOutput === null ? 1 / 0 : opts.maxOutput;
+      if (cap !== 1 / 0 && !(Number.isSafeInteger(cap) && cap >= 0))
+        throw RangeError("maxOutput must be a non-negative integer");
+      let extracted = 0, e = data.length - 22;
       while (_r32(data, e) !== 101010256) {
         if (!e || data.length - e > 65558) {
           const err = Error("invalid zip data");
-          err.code = 13;
+          err.code = "EBADFORMAT";
+          err.errno = 13;
           throw err;
         }
         --e;
@@ -1811,26 +1900,46 @@ export const pptxBundled = {
       const fltr = opts.filter;
       let o = cdOffset;
       for (let i = 0;i < entryCount; ++i) {
-        const [cmp, cSize, uSize, fn, nextOff, localOff] = _readCDE(data, o, zip64);
+        const [cmp, cSize, uSize, fn, nextOff, localOff, crcExpected] = _readCDE(data, o, zip64);
         o = nextOff;
         const dataStart = _slzh(data, localOff);
         if (safe && _isUnsafePath(fn)) {
           const err = Error('zip-slip: unsafe entry path "' + fn + '"');
-          err.code = 15;
+          err.code = "EUNSAFEPATH";
+          err.errno = 15;
           throw err;
         }
         if (fltr && !fltr({ name: fn, size: cSize, originalSize: uSize, compression: cmp }))
           continue;
+        const outSize = cmp === 0 ? cSize : uSize;
+        if (outSize > cap - extracted) {
+          const err = Error('zip: output limit exceeded (maxOutput) at "' + fn + '"');
+          err.code = "EMAXOUT";
+          err.errno = 7;
+          throw err;
+        }
+        extracted += outSize;
         if (cmp === 0)
-          result[fn] = new Uint8Array(data.subarray(dataStart, dataStart + cSize));
+          _setOwn(result, fn, new Uint8Array(data.subarray(dataStart, dataStart + cSize)));
         else if (cmp === 8)
-          result[fn] = inflateSync(data.subarray(dataStart, dataStart + cSize), {
+          _setOwn(result, fn, inflateSync(data.subarray(dataStart, dataStart + cSize), {
             out: new Uint8Array(uSize)
-          });
+          }));
         else {
           const err = Error("unknown compression type " + cmp);
-          err.code = 14;
+          err.code = "EBADMETHOD";
+          err.errno = 14;
           throw err;
+        }
+        if (opts.verify !== !1) {
+          const c = new Crc32;
+          c.append(result[fn]);
+          if (c.get() !== crcExpected || result[fn].length !== uSize) {
+            const err = Error('zip: incorrect data check (CRC-32 or size mismatch) for "' + fn + '"');
+            err.code = "ECHECKSUM";
+            err.errno = 16;
+            throw err;
+          }
         }
       }
       return result;
@@ -1893,7 +2002,8 @@ export const pptxBundled = {
       const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
       if (fnBytes.length > 65535) {
         const e = Error("filename too long");
-        e.code = 11;
+        e.code = "ENAMETOOLONG";
+        e.errno = 11;
         throw e;
       }
       const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, crc = new Crc32;
@@ -1911,7 +2021,8 @@ export const pptxBundled = {
       const p = Object.assign({}, this._opts, opts), fnBytes = _strToU8(name);
       if (fnBytes.length > 65535) {
         const e = Error("filename too long");
-        e.code = 11;
+        e.code = "ENAMETOOLONG";
+        e.errno = 11;
         throw e;
       }
       const u = _isUTF8(name), method = p.level === 0 ? 0 : 8, dosTime = _dosDateTime(p.mtime), exl = _exfl(p.extra), localHdrLen = _localHeaderSize(fnBytes.length, exl), localOffset = this._off, hdr = new Uint8Array(localHdrLen);
@@ -2047,12 +2158,27 @@ export const pptxBundled = {
           t = t >>> 1;
       table[i] = t;
     }
+    const slices = new Uint32Array(4096);
+    slices.set(table);
+    for (let k = 256;k < 4096; k++) {
+      const prev = slices[k - 256];
+      slices[k] = prev >>> 8 ^ table[prev & 255];
+    }
     function Crc32() {
       this.crc = -1;
     }
     Crc32.prototype.append = function(data) {
       let crc = this.crc | 0;
-      for (let offset = 0, length = data.length | 0;offset < length; offset++)
+      const length = data.length | 0;
+      let offset = 0;
+      if (data instanceof Uint8Array) {
+        const t = slices;
+        for (const end = length - 15;offset < end; offset += 16) {
+          const a = crc ^ (data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16 | data[offset + 3] << 24);
+          crc = t[3840 + (a & 255)] ^ t[3584 + (a >>> 8 & 255)] ^ t[3328 + (a >>> 16 & 255)] ^ t[3072 + (a >>> 24)] ^ t[2816 + data[offset + 4]] ^ t[2560 + data[offset + 5]] ^ t[2304 + data[offset + 6]] ^ t[2048 + data[offset + 7]] ^ t[1792 + data[offset + 8]] ^ t[1536 + data[offset + 9]] ^ t[1280 + data[offset + 10]] ^ t[1024 + data[offset + 11]] ^ t[768 + data[offset + 12]] ^ t[512 + data[offset + 13]] ^ t[256 + data[offset + 14]] ^ t[data[offset + 15]];
+        }
+      }
+      for (;offset < length; offset++)
         crc = crc >>> 8 ^ table[(crc ^ data[offset]) & 255];
       this.crc = crc;
     };
@@ -2241,7 +2367,10 @@ export const pptxBundled = {
       SLIDE: NS.R + "/slide",
       SLIDE_LAYOUT: NS.R + "/slideLayout",
       SLIDE_MASTER: NS.R + "/slideMaster",
-      THEME: NS.R + "/theme"
+      THEME: NS.R + "/theme",
+      NOTES_SLIDE: NS.R + "/notesSlide",
+      NOTES_MASTER: NS.R + "/notesMaster",
+      HANDOUT_MASTER: NS.R + "/handoutMaster"
     }), CT = Object.freeze({
       DOCUMENT: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
       STYLES_W: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
@@ -2267,7 +2396,10 @@ export const pptxBundled = {
       SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
       THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
       VML_DRAWING: "application/vnd.openxmlformats-officedocument.vmlDrawing",
-      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"
+      CUSTOM_XML_PROPS: "application/vnd.openxmlformats-officedocument.customXmlProperties+xml",
+      NOTES_SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
+      NOTES_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+      HANDOUT_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.handoutMaster+xml"
     });
     function toEmu(v) {
       if (typeof v === "number")
@@ -3526,7 +3658,21 @@ export const pptxBundled = {
       "a:hlinkMouseOver",
       "a:rtl",
       "a:extLst"
-    ]);
+    ]), RPR_TYPED_ATTRS = new Set(["lang", "sz", "b", "i", "strike", "u", "baseline"]), PPR_TYPED_ATTRS = new Set(["lvl", "algn", "indent", "marL"]), LATIN_TYPED_ATTRS = new Set(["typeface"]);
+    function otherAttrs(attrs, typed) {
+      const out = {};
+      for (const [k, v] of Object.entries(attrs || {}))
+        if (!typed.has(k))
+          out[k] = v;
+      return Object.keys(out).length ? out : void 0;
+    }
+    function stringAttrs(o) {
+      const out = {};
+      for (const [k, v] of Object.entries(o || {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
+    }
     function runColor(solidFill, opts) {
       if (!(opts && opts.typedRunColors)) {
         const cl = solidFill.children.find((n) => n.type === "element" && n.name === "a:srgbClr");
@@ -3557,6 +3703,9 @@ export const pptxBundled = {
         out.underline = a.u;
       if (a.baseline != null)
         out.baseline = Number(a.baseline);
+      const extraAttrs = otherAttrs(a, RPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of rPrEl.children) {
         if (c.type !== "element")
@@ -3567,9 +3716,12 @@ export const pptxBundled = {
             out.color = color;
           else
             extras.push(c);
-        } else if (c.name === "a:latin")
+        } else if (c.name === "a:latin") {
           out.font = c.attrs.typeface;
-        else
+          const fontAttrs = otherAttrs(c.attrs, LATIN_TYPED_ATTRS);
+          if (fontAttrs)
+            out.fontAttrs = fontAttrs;
+        } else
           extras.push(c);
       }
       if (extras.length)
@@ -3579,7 +3731,7 @@ export const pptxBundled = {
     function renderRunProperties(rPr) {
       if (!rPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(rPr.extraAttrs) };
       if (rPr.lang)
         a.lang = rPr.lang;
       if (rPr.size != null)
@@ -3601,7 +3753,7 @@ export const pptxBundled = {
           children.push(xml.el("a:solidFill", {}, [el]));
       }
       if (rPr.font)
-        children.push(xml.el("a:latin", { typeface: rPr.font }));
+        children.push(xml.el("a:latin", { typeface: rPr.font, ...stringAttrs(rPr.fontAttrs) }));
       if (rPr._extras)
         for (const ex of rPr._extras)
           children.push(ex);
@@ -3619,6 +3771,9 @@ export const pptxBundled = {
         out.indent = Number(a.indent);
       if (a.marL != null)
         out.marL = Number(a.marL);
+      const extraAttrs = otherAttrs(a, PPR_TYPED_ATTRS);
+      if (extraAttrs)
+        out.extraAttrs = extraAttrs;
       const extras = [];
       for (const c of pPrEl.children) {
         if (c.type !== "element")
@@ -3627,9 +3782,11 @@ export const pptxBundled = {
           out.bullet = "none";
         else if (c.name === "a:buChar")
           out.bullet = { char: c.attrs.char };
-        else if (c.name === "a:buAutoNum")
+        else if (c.name === "a:buAutoNum") {
           out.bullet = { autoNumType: c.attrs.type };
-        else if (c.name === "a:defRPr")
+          if (c.attrs.startAt != null)
+            out.bullet.startAt = Number(c.attrs.startAt);
+        } else if (c.name === "a:defRPr")
           out.defRPr = parseRunProperties(c, opts);
         else
           extras.push(c);
@@ -3641,7 +3798,7 @@ export const pptxBundled = {
     function renderParagraphProperties(pPr) {
       if (!pPr)
         return null;
-      const a = {};
+      const a = { ...stringAttrs(pPr.extraAttrs) };
       if (pPr.level != null)
         a.lvl = String(pPr.level);
       if (pPr.align)
@@ -3655,8 +3812,12 @@ export const pptxBundled = {
         children.push(xml.el("a:buNone", {}));
       else if (pPr.bullet && pPr.bullet.char)
         children.push(xml.el("a:buChar", { char: pPr.bullet.char }));
-      else if (pPr.bullet && pPr.bullet.autoNumType)
-        children.push(xml.el("a:buAutoNum", { type: pPr.bullet.autoNumType }));
+      else if (pPr.bullet && pPr.bullet.autoNumType) {
+        const ba = { type: pPr.bullet.autoNumType };
+        if (pPr.bullet.startAt != null)
+          ba.startAt = String(pPr.bullet.startAt);
+        children.push(xml.el("a:buAutoNum", ba));
+      }
       if (pPr.defRPr) {
         const dpr = renderRunProperties(pPr.defRPr);
         if (dpr)
@@ -3665,8 +3826,6 @@ export const pptxBundled = {
       if (pPr._extras)
         for (const ex of pPr._extras)
           children.push(ex);
-      if (!Object.keys(a).length && !children.length)
-        return null;
       return xml.el("a:pPr", a, ordered(children, PPR_SEQ));
     }
     function parseRun(rEl, opts) {
@@ -3692,6 +3851,9 @@ export const pptxBundled = {
       const rPrEl = xml.findChild(fEl, "a:rPr"), tEl = xml.findChild(fEl, "a:t"), rPr = parseRunProperties(rPrEl, opts);
       if (rPr)
         out.rPr = rPr;
+      const pPr = parseParagraphProperties(xml.findChild(fEl, "a:pPr"), opts);
+      if (pPr)
+        out.pPr = pPr;
       if (tEl)
         out.value = xml.textContent(tEl);
       return out;
@@ -3703,6 +3865,9 @@ export const pptxBundled = {
       const children = [], rPrEl = renderRunProperties(f.rPr);
       if (rPrEl)
         children.push(rPrEl);
+      const pPrEl = renderParagraphProperties(f.pPr);
+      if (pPrEl)
+        children.push(pPrEl);
       if (f.value != null)
         children.push(xml.el("a:t", {}, [xml.text(f.value)]));
       return xml.el("a:fld", a, children);
@@ -3774,12 +3939,15 @@ export const pptxBundled = {
         else if (c.name === "a:p")
           out.paragraphs.push(parseParagraph(c, opts));
       }
+      if (out.lstStyle === void 0)
+        out.lstStyle = null;
       return out;
     }
     function renderTextBody(tb, rootTag = "a:txBody") {
       const children = [];
       children.push(tb.bodyPr || xml.el("a:bodyPr", {}));
-      children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
+      if (tb.lstStyle !== null)
+        children.push(tb.lstStyle || xml.el("a:lstStyle", {}));
       for (const p of tb.paragraphs || [])
         children.push(renderParagraph(p));
       return xml.el(rootTag, {}, children);
@@ -4863,7 +5031,19 @@ export const pptxBundled = {
       }
       return null;
     }
-    function parseLine(lnEl) {
+    function lineColor(solidFill, opts) {
+      if (!(opts && opts.typedLineColors)) {
+        const col = parseColorChild(solidFill);
+        return col && col.rgb ? col.rgb : void 0;
+      }
+      const el = solidFill.children.find((n) => n.type === "element");
+      if (!el)
+        return;
+      if (el.name === "a:srgbClr" && !el.children.some((n) => n.type === "element"))
+        return el.attrs.val;
+      return typedColor.parse(el) || void 0;
+    }
+    function parseLine(lnEl, opts) {
       if (!lnEl)
         return;
       const out = {};
@@ -4888,9 +5068,9 @@ export const pptxBundled = {
         if (c.type !== "element")
           continue;
         if (c.name === "a:solidFill") {
-          const col = parseColorChild(c);
-          if (col && col.rgb)
-            out.color = col.rgb;
+          const col = lineColor(c, opts);
+          if (col !== void 0)
+            out.color = col;
           else
             extras.push(c);
         } else if (c.name === "a:prstDash")
@@ -4924,8 +5104,11 @@ export const pptxBundled = {
       const children = [];
       if (line.color === null)
         children.push(xml.el("a:noFill", {}));
-      else if (line.color)
-        children.push(xml.el("a:solidFill", {}, [renderSrgbClr(line.color)]));
+      else if (line.color) {
+        const el = typeof line.color === "object" ? typedColor.render(line.color) : renderSrgbClr(line.color);
+        if (el)
+          children.push(xml.el("a:solidFill", {}, [el]));
+      }
       if (line.dash)
         children.push(xml.el("a:prstDash", { val: line.dash }));
       if (!line._extras)
@@ -4939,10 +5122,13 @@ export const pptxBundled = {
       }
       return xml.el("a:ln", a, ordered(children, LN_SEQ));
     }
-    function parseShapeProperties(spPrEl) {
+    function parseShapeProperties(spPrEl, opts) {
       if (!spPrEl)
         return;
-      const out = {}, xfrmEl = xml.findChild(spPrEl, "a:xfrm");
+      const out = {};
+      if (spPrEl.attrs && spPrEl.attrs.bwMode)
+        out.bwMode = spPrEl.attrs.bwMode;
+      const xfrmEl = xml.findChild(spPrEl, "a:xfrm");
       Object.assign(out, parseXfrm(xfrmEl));
       const prst = xml.findChild(spPrEl, "a:prstGeom");
       if (prst) {
@@ -4955,7 +5141,7 @@ export const pptxBundled = {
         out.fill = fill;
       const ln = xml.findChild(spPrEl, "a:ln");
       if (ln) {
-        const lineProps = parseLine(ln);
+        const lineProps = parseLine(ln, opts);
         if (lineProps !== void 0)
           out.line = lineProps;
       }
@@ -4990,11 +5176,12 @@ export const pptxBundled = {
       const lineEl = renderLine(props.line);
       if (lineEl)
         children.push(lineEl);
+      const attrs = props.bwMode ? { bwMode: String(props.bwMode) } : {};
       if (!props._extras)
-        return xml.el(tag, {}, children);
+        return xml.el(tag, attrs, children);
       for (const ex of props._extras)
         children.push(ex);
-      return xml.el(tag, {}, ordered(children, SPPR_SEQ));
+      return xml.el(tag, attrs, ordered(children, SPPR_SEQ));
     }
     const { EMU_PER_INCH, EMU_PER_CM, EMU_PER_PT, EMU_PER_PX_96, toEmu } = shared;
     function withMods(color, from) {
@@ -5106,7 +5293,8 @@ export const pptxBundled = {
       "p:clrMap",
       "p:clrMapOvr",
       "p:sldLayoutIdLst",
-      "p:txStyles"
+      "p:txStyles",
+      "p:notesStyle"
     ]), CSLD_ONLY = new Set(["p:custDataLst", "p:controls"]);
     function placedName(c) {
       if (!c || c.type !== "element")
@@ -5123,7 +5311,7 @@ export const pptxBundled = {
       "p:transition",
       "p:timing",
       "p:hf",
-      "p:txStyles",
+      ["p:txStyles", "p:notesStyle"],
       "p:extLst"
     ]);
     function parseShape(spEl, opts) {
@@ -5155,7 +5343,7 @@ export const pptxBundled = {
       const spPr = xml.findChild(spEl, "p:spPr");
       if (spPr) {
         out.spPr = spPr;
-        const typed = shapeMod.parseShapeProperties(spPr);
+        const typed = shapeMod.parseShapeProperties(spPr, opts);
         if (typed)
           out.shapeProps = typed;
       }
@@ -5232,6 +5420,12 @@ export const pptxBundled = {
             shapes.push({ type: "graphicFrame", node: c });
             break;
           }
+          case "p:grpSp":
+            if (opts && opts.typedGroups)
+              shapes.push(parseGroup(c, opts));
+            else
+              extras.push(c);
+            break;
           case "p:nvGrpSpPr":
           case "p:grpSpPr":
             extras.push(c);
@@ -5242,7 +5436,13 @@ export const pptxBundled = {
       }
       return { shapes, extras };
     }
-    function renderSpTree({ shapes, extras }) {
+    function parseGroup(el, opts) {
+      const tree = parseSpTree(el, opts), out = { type: "group", shapes: tree.shapes };
+      if (tree.extras.length)
+        out._extras = tree.extras;
+      return out;
+    }
+    function renderSpTree({ shapes, extras }, tag = "p:spTree") {
       const children = [], headExtras = (extras || []).filter((n) => n.name === "p:nvGrpSpPr" || n.name === "p:grpSpPr"), tailExtras = (extras || []).filter((n) => n.name !== "p:nvGrpSpPr" && n.name !== "p:grpSpPr");
       if (!headExtras.length) {
         children.push(xml.el("p:nvGrpSpPr", {}, [
@@ -5265,9 +5465,11 @@ export const pptxBundled = {
           children.push(chartMod.renderGraphicFrame(sp));
         else if (sp.type === "graphicFrame" && sp.node)
           children.push(sp.node);
+        else if (sp.type === "group")
+          children.push(renderSpTree({ shapes: sp.shapes || [], extras: sp._extras }, "p:grpSp"));
       for (const ex of tailExtras)
         children.push(ex);
-      return xml.el("p:spTree", {}, children);
+      return xml.el(tag, {}, children);
     }
     function parseCSld(cSldEl, opts) {
       const out = {}, extras = [];
@@ -5320,10 +5522,22 @@ export const pptxBundled = {
         }
         if (root.name !== rootTag)
           throw new ParseError(`pptx/${rootTag.replace(/^p:/, "")}-bad-root`, `pptx ${rootTag}: expected <${rootTag}>, got <${root.name}>`, { context: { expected: rootTag, elementName: root && root.name } });
-        const out = { type: defaults.type }, cSld = xml.findChild(root, "p:cSld");
+        const out = { type: defaults.type }, rootAttrs = {};
+        for (const [k, v] of Object.entries(root.attrs || {})) {
+          if (k === "xmlns" || k.startsWith("xmlns:") || k === "mc:Ignorable")
+            continue;
+          if (k === "type" && rootTag === "p:sldLayout")
+            out.layoutType = v;
+          else
+            rootAttrs[k] = v;
+        }
+        if (Object.keys(rootAttrs).length)
+          out.rootAttrs = rootAttrs;
+        const cSld = xml.findChild(root, "p:cSld");
         if (cSld)
           Object.assign(out, parseCSld(cSld, opts));
-        if (opts && opts.slideExtrasByPart) {
+        const byPart = !!(opts && opts.slideExtrasByPart);
+        if (byPart) {
           out.cSldExtras = out._extras || [];
           delete out._extras;
         }
@@ -5339,8 +5553,14 @@ export const pptxBundled = {
             out.layoutIds = parseSldLayoutIdLst(c);
           else if (c.name === "p:txStyles")
             out.txStyles = c;
+          else if (c.name === "p:notesStyle")
+            out.notesStyle = c;
           else
             extras.push(c);
+        }
+        if (extras.length && !byPart) {
+          out.cSldExtras = out._extras || [];
+          delete out._extras;
         }
         if (extras.length)
           out._extras = extras;
@@ -5350,6 +5570,7 @@ export const pptxBundled = {
     function buildSerializer(rootTag, defaultName, extraNs) {
       return function serialize(obj) {
         const ns = {
+          ...rootAttrsOf(obj),
           "xmlns:p": P_NS,
           "xmlns:a": A_NS,
           "xmlns:r": R_NS,
@@ -5363,13 +5584,24 @@ export const pptxBundled = {
           children.push(renderSldLayoutIdLst(obj.layoutIds));
         if (obj.txStyles)
           children.push(obj.txStyles);
-        if (obj._extras) {
-          for (const ex of obj._extras)
-            if (!CSLD_ONLY.has(placedName(ex)))
+        if (obj.notesStyle)
+          children.push(obj.notesStyle);
+        const rootOwn = Array.isArray(obj.cSldExtras);
+        if (obj._extras)
+          for (const ex of obj._extras) {
+            const name = placedName(ex);
+            if (rootOwn ? !CSLD_ONLY.has(name) : ROOT_ONLY.has(name))
               children.push(ex);
-        }
+          }
         return xml.serialize(xml.el(rootTag, ns, ordered(children, ROOT_SEQ)));
       };
+    }
+    function rootAttrsOf(obj) {
+      const out = {};
+      for (const [k, v] of Object.entries(obj && obj.rootAttrs || {}))
+        if (v != null && typeof v !== "object")
+          out[k] = String(v);
+      return out;
     }
     function parseSldLayoutIdLst(el) {
       return xml.findAll(el, "p:sldLayoutId").map((c) => ({
@@ -5387,7 +5619,7 @@ export const pptxBundled = {
         return xmlText.replace("<p:sldLayout", `<p:sldLayout type="${obj.layoutType}"`);
       return xmlText;
     }
-    const serializeSlideMaster = buildSerializer("p:sldMaster", null);
+    const serializeSlideMaster = buildSerializer("p:sldMaster", null), parseNotesSlide = buildParser("p:notes", { type: "notes" }), parseNotesMaster = buildParser("p:notesMaster", { type: "notesMaster" }), parseHandoutMaster = buildParser("p:handoutMaster", { type: "handoutMaster" }), serializeNotesSlide = buildSerializer("p:notes", null), serializeNotesMaster = buildSerializer("p:notesMaster", null), serializeHandoutMaster = buildSerializer("p:handoutMaster", null);
     function slideBytes(obj) {
       return encodeText(serializeSlide(obj));
     }
@@ -5443,6 +5675,12 @@ export const pptxBundled = {
       serializeSlide,
       serializeSlideLayout,
       serializeSlideMaster,
+      parseNotesSlide,
+      parseNotesMaster,
+      parseHandoutMaster,
+      serializeNotesSlide,
+      serializeNotesMaster,
+      serializeHandoutMaster,
       slideBytes,
       slideLayoutBytes,
       slideMasterBytes,
@@ -5459,9 +5697,15 @@ export const pptxBundled = {
       REL_TYPE_SLIDE: REL_TYPE.SLIDE,
       REL_TYPE_SLIDE_LAYOUT: REL_TYPE.SLIDE_LAYOUT,
       REL_TYPE_SLIDE_MASTER: REL_TYPE.SLIDE_MASTER,
+      REL_TYPE_NOTES_SLIDE: REL_TYPE.NOTES_SLIDE,
+      REL_TYPE_NOTES_MASTER: REL_TYPE.NOTES_MASTER,
+      REL_TYPE_HANDOUT_MASTER: REL_TYPE.HANDOUT_MASTER,
       CT_SLIDE: CT.SLIDE,
       CT_SLIDE_LAYOUT: CT.SLIDE_LAYOUT,
-      CT_SLIDE_MASTER: CT.SLIDE_MASTER
+      CT_SLIDE_MASTER: CT.SLIDE_MASTER,
+      CT_NOTES_SLIDE: CT.NOTES_SLIDE,
+      CT_NOTES_MASTER: CT.NOTES_MASTER,
+      CT_HANDOUT_MASTER: CT.HANDOUT_MASTER
     };
   } });
     __register({ name: "pptxTheme", dependencies: ["ooxmlErrors","xml","ooxmlShared"], factory: function(errors, xml, shared) {
@@ -5510,7 +5754,7 @@ export const pptxBundled = {
       "folHlink"
     ];
     function parseClrScheme(el) {
-      const out = { name: el.attrs.name || "", colors: {} };
+      const out = { name: el.attrs.name ?? "", colors: {} };
       for (const key of CLR_SCHEME_KEYS) {
         const child = xml.findChild(el, "a:" + key);
         if (child)
@@ -5528,7 +5772,17 @@ export const pptxBundled = {
         if (el)
           children.push(el);
       }
-      return xml.el("a:clrScheme", { name: scheme.name || "Office" }, children);
+      return xml.el("a:clrScheme", { name: schemeName(scheme) }, children);
+    }
+    function schemeName(scheme) {
+      return typeof scheme.name === "string" ? scheme.name : "Office";
+    }
+    function otherFontAttrs(el) {
+      const out = {};
+      for (const [k, v] of Object.entries(el.attrs || {}))
+        if (k !== "typeface")
+          out[k] = v;
+      return Object.keys(out).length ? out : null;
     }
     function parseFontKind(el) {
       const out = {}, latin = xml.findChild(el, "a:latin"), ea = xml.findChild(el, "a:ea"), cs = xml.findChild(el, "a:cs");
@@ -5538,23 +5792,39 @@ export const pptxBundled = {
         out.ea = ea.attrs.typeface;
       if (cs)
         out.cs = cs.attrs.typeface;
+      const fontAttrs = {};
+      for (const [key, f] of [["latin", latin], ["ea", ea], ["cs", cs]]) {
+        const other = f && otherFontAttrs(f);
+        if (other)
+          fontAttrs[key] = other;
+      }
+      if (Object.keys(fontAttrs).length)
+        out.fontAttrs = fontAttrs;
       const extras = el.children.filter((n) => n.type === "element" && !["a:latin", "a:ea", "a:cs"].includes(n.name));
       if (extras.length)
         out._extras = extras;
       return out;
     }
     function renderFontKind(tag, kind) {
-      const children = [];
-      children.push(xml.el("a:latin", { typeface: kind.latin || "Calibri" }));
-      children.push(xml.el("a:ea", { typeface: kind.ea || "" }));
-      children.push(xml.el("a:cs", { typeface: kind.cs || "" }));
+      const children = [], fa = (key) => {
+        const a = kind.fontAttrs && kind.fontAttrs[key], out = {};
+        if (a && typeof a === "object") {
+          for (const [k, v] of Object.entries(a))
+            if (k !== "typeface" && v != null)
+              out[k] = String(v);
+        }
+        return out;
+      };
+      children.push(xml.el("a:latin", { typeface: kind.latin || "Calibri", ...fa("latin") }));
+      children.push(xml.el("a:ea", { typeface: kind.ea || "", ...fa("ea") }));
+      children.push(xml.el("a:cs", { typeface: kind.cs || "", ...fa("cs") }));
       if (kind._extras)
         for (const ex of kind._extras)
           children.push(ex);
       return xml.el(tag, {}, children);
     }
     function parseFontScheme(el) {
-      const out = { name: el.attrs.name || "" }, major = xml.findChild(el, "a:majorFont"), minor = xml.findChild(el, "a:minorFont");
+      const out = { name: el.attrs.name ?? "" }, major = xml.findChild(el, "a:majorFont"), minor = xml.findChild(el, "a:minorFont");
       if (major)
         out.majorFont = parseFontKind(major);
       if (minor)
@@ -5565,8 +5835,15 @@ export const pptxBundled = {
       const children = [];
       children.push(renderFontKind("a:majorFont", scheme.majorFont || {}));
       children.push(renderFontKind("a:minorFont", scheme.minorFont || {}));
-      return xml.el("a:fontScheme", { name: scheme.name || "Office" }, children);
+      return xml.el("a:fontScheme", { name: schemeName(scheme) }, children);
     }
+    const ROOT_TYPED = new Set(["a:themeElements", "a:objectDefaults", "a:extraClrSchemeLst"]), ROOT_SEQ = shared.sequence ? shared.sequence([
+      "a:themeElements",
+      "a:objectDefaults",
+      "a:extraClrSchemeLst",
+      "a:custClrLst",
+      "a:extLst"
+    ]) : null, ordered = (children, seq) => seq && shared.orderBySequence ? shared.orderBySequence(children, seq) : children;
     function parse(input) {
       const text = typeof input === "string" ? input : decodeText(input), root = xml.parse(text);
       if (root.name !== "a:theme")
@@ -5581,11 +5858,11 @@ export const pptxBundled = {
         if (fm)
           out.fmtScheme = fm;
       }
-      const od = xml.findChild(root, "a:objectDefaults"), xc = xml.findChild(root, "a:extraClrSchemeLst");
-      if (od)
-        out.objectDefaults = od;
-      if (xc)
-        out.extraClrSchemeLst = xc;
+      out.objectDefaults = xml.findChild(root, "a:objectDefaults") || null;
+      out.extraClrSchemeLst = xml.findChild(root, "a:extraClrSchemeLst") || null;
+      const extras = root.children.filter((c) => c.type === "element" && !ROOT_TYPED.has(c.name));
+      if (extras.length)
+        out._extras = extras;
       return out;
     }
     function serialize(obj) {
@@ -5597,9 +5874,14 @@ export const pptxBundled = {
       if (obj.fmtScheme)
         themeChildren.push(obj.fmtScheme);
       const children = [xml.el("a:themeElements", {}, themeChildren)];
-      children.push(obj.objectDefaults || xml.el("a:objectDefaults", {}));
-      children.push(obj.extraClrSchemeLst || xml.el("a:extraClrSchemeLst", {}));
-      return xml.serialize(xml.el("a:theme", { "xmlns:a": A_NS, name: obj.name || "Office Theme" }, children));
+      if (obj.objectDefaults !== null)
+        children.push(obj.objectDefaults || xml.el("a:objectDefaults", {}));
+      if (obj.extraClrSchemeLst !== null)
+        children.push(obj.extraClrSchemeLst || xml.el("a:extraClrSchemeLst", {}));
+      for (const ex of Array.isArray(obj._extras) ? obj._extras : [])
+        if (ex && ex.type === "element" && !ROOT_TYPED.has(ex.name))
+          children.push(ex);
+      return xml.serialize(xml.el("a:theme", { "xmlns:a": A_NS, name: obj.name || "Office Theme" }, ordered(children, ROOT_SEQ)));
     }
     function bytesOf(obj) {
       return encodeText(serialize(obj));
@@ -5816,31 +6098,88 @@ export const pptxBundled = {
         return value;
       }
       function walkRunsInTextBody(tb, phase) {
-        if (!tb || !tb.paragraphs)
+        if (!tb || !Array.isArray(tb.paragraphs))
           return;
-        const hr = phase === "hydrate" ? "hydrateRunProperties" : "dehydrateRunProperties", hp = phase === "hydrate" ? "hydrateParagraphProperties" : "dehydrateParagraphProperties";
-        for (const p of tb.paragraphs) {
+        const hydrate = phase === "hydrate", hr = hydrate ? "hydrateRunProperties" : "dehydrateRunProperties", hp = hydrate ? "hydrateParagraphProperties" : "dehydrateParagraphProperties", hpara = hydrate ? "hydrateParagraph" : "dehydrateParagraph";
+        tb.paragraphs.forEach((p, i) => {
+          if (!p || typeof p !== "object")
+            return;
+          if (!hydrate)
+            p = tb.paragraphs[i] = applyHook(hpara, p);
           if (p.pPr)
             p.pPr = applyHook(hp, p.pPr);
-          for (const r of p.runs || [])
-            if (r.rPr)
+          for (const r of p.runs || []) {
+            if (r && r.rPr)
               r.rPr = applyHook(hr, r.rPr);
+            if (r && r.pPr)
+              r.pPr = applyHook(hp, r.pPr);
+          }
+          if (hydrate)
+            tb.paragraphs[i] = applyHook(hpara, p);
+        });
+      }
+      function walkShape(shape, phase) {
+        if (!shape || typeof shape !== "object")
+          return;
+        if (shape.type === "group") {
+          for (const s of Array.isArray(shape.shapes) ? shape.shapes : [])
+            walkShape(s, phase);
+          return;
         }
+        walkRunsInTextBody(shape.txBody, phase);
+        for (const row of Array.isArray(shape.rows) ? shape.rows : [])
+          for (const cell of row && Array.isArray(row.cells) ? row.cells : [])
+            if (cell)
+              walkRunsInTextBody(cell.txBody, phase);
+      }
+      const isObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+      function walkPart(holder, key, phase) {
+        const hydrate = phase === "hydrate", name = hydrate ? "hydrateSlidePart" : "dehydrateSlidePart";
+        let part = holder[key];
+        if (!part || typeof part !== "object")
+          return;
+        if (!hydrate)
+          part = holder[key] = applyHook(name, part);
+        for (const shape of part && part.shapes || [])
+          walkShape(shape, phase);
+        if (hydrate)
+          holder[key] = applyHook(name, part);
+      }
+      function walkTheme(holder, phase) {
+        if (!isObject(holder) || !isObject(holder.theme))
+          return;
+        holder.theme = applyHook(phase === "hydrate" ? "hydrateTheme" : "dehydrateTheme", holder.theme);
       }
       function applyExtensions(presentation, phase) {
         if (!_exts.length || !presentation)
           return presentation;
         const sName = phase === "hydrate" ? "hydrateSettings" : "dehydrateSettings";
-        for (const slide of presentation.slides || [])
-          for (const shape of slide.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
-        for (const layout of presentation.slideLayouts || [])
-          for (const shape of layout.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
-        for (const master of presentation.slideMasters || [])
-          for (const shape of master.shapes || [])
-            walkRunsInTextBody(shape.txBody, phase);
+        for (const list of [presentation.slides, presentation.slideLayouts, presentation.slideMasters]) {
+          if (!Array.isArray(list))
+            continue;
+          for (let i = 0;i < list.length; i++)
+            walkPart(list, i, phase);
+        }
+        for (const slide of Array.isArray(presentation.slides) ? presentation.slides : [])
+          if (isObject(slide) && isObject(slide.notes))
+            walkPart(slide, "notes", phase);
+        for (const key of ["notesMaster", "handoutMaster"]) {
+          if (!isObject(presentation[key]))
+            continue;
+          walkPart(presentation, key, phase);
+          walkTheme(presentation[key], phase);
+        }
+        walkTheme(presentation, phase);
         applyHook(sName, presentation);
+        return presentation;
+      }
+      function applyPackage(name, presentation, ctx) {
+        for (const ext of _exts)
+          if (typeof ext[name] === "function") {
+            const r = ext[name](presentation, ctx);
+            if (r !== void 0)
+              presentation = r;
+          }
         return presentation;
       }
       return {
@@ -5850,6 +6189,12 @@ export const pptxBundled = {
         },
         applyDehydrate(presentation) {
           applyExtensions(presentation, "dehydrate");
+        },
+        applyPackageHydrate(presentation, ctx) {
+          return applyPackage("hydratePackage", presentation, ctx);
+        },
+        applyPackageDehydrate(presentation, ctx) {
+          return applyPackage("dehydratePackage", presentation, ctx);
         },
         get hasExtensions() {
           return _exts.length > 0;
@@ -5871,6 +6216,15 @@ export const pptxBundled = {
       createRidAllocator,
       trackUnmodelledParts
     } = shared, P_NS = slideMod.P_NS, A_NS = slideMod.A_NS, R_NS = slideMod.R_NS, REL_TYPE_DOC = REL_TYPE.DOC, CT_PRESENTATION = CT.PRESENTATION;
+    function allShapes(shapes) {
+      const out = [];
+      for (const s of Array.isArray(shapes) ? shapes : [])
+        if (s && s.type === "group")
+          out.push(...allShapes(s.shapes));
+        else
+          out.push(s);
+      return out;
+    }
     function attachPictureImage(shape, rels, part, pkg) {
       const rel = rels.find((r) => r.Id === shape.embedRef);
       if (!rel || rel.Type !== picMod.REL_TYPE_IMAGE)
@@ -5886,12 +6240,12 @@ export const pptxBundled = {
     }
     function attachTemplateImages(template, part, pkg) {
       const rels = pkg.rels[part] || [];
-      for (const shape of template.shapes || [])
+      for (const shape of allShapes(template.shapes))
         if (shape.type === "picture" && shape.embedRef)
           attachPictureImage(shape, rels, part, pkg);
     }
     function attachSlideImages(slide, slideRels, slidePart, pkg) {
-      for (const shape of slide.shapes || [])
+      for (const shape of allShapes(slide.shapes))
         if (shape.type === "picture" && shape.embedRef)
           attachPictureImage(shape, slideRels, slidePart, pkg);
         else if (shape.type === "chart" && shape.chartRef) {
@@ -5953,11 +6307,15 @@ export const pptxBundled = {
     }
     function read(bytes, opts) {
       const pkg = opc.read(bytes, archiveLimits(opts)), textOpts = { typedRunColors: !!(opts && opts.typedRunColors) };
+      if (opts && opts.typedLineColors)
+        textOpts.typedLineColors = !0;
+      if (opts && opts.typedGroups)
+        textOpts.typedGroups = !0;
       if (opts && opts.slideExtrasByPart)
         textOpts.slideExtrasByPart = !0;
-      const { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
+      const plainParts = pkg.parts, { value: result, unmodelledParts } = trackUnmodelledParts(pkg, (p) => {
         try {
-          return readPackage(p, textOpts);
+          return readPackage(p, textOpts, plainParts);
         } catch (e) {
           throw typedPartXml(e);
         }
@@ -5970,7 +6328,7 @@ export const pptxBundled = {
         return e;
       return new ParseError("pptx/invalid-part-xml", `pptx: failed to parse a part's XML (${e.message})`, { cause: e });
     }
-    function readPackage(pkg, textOpts) {
+    function readPackage(pkg, textOpts, plainParts) {
       const docRel = (pkg.rels["/"] || []).find((r) => r.Type === REL_TYPE_DOC || r.Type.endsWith("/officeDocument"));
       if (!docRel)
         throw new ParseError("pptx/missing-officeDocument-rel", "pptx: no officeDocument relationship");
@@ -6000,7 +6358,7 @@ export const pptxBundled = {
         if (ssEl.attrs.type)
           sldSize.type = ssEl.attrs.type;
       }
-      const slides = [], slideLayouts = [], slideMasters = [];
+      const slides = [], slideLayouts = [], slideMasters = [], slideParts = [], masterParts = [];
       let theme;
       for (const entry of slideEntries) {
         const rel = presRels.find((r) => r.Id === entry.rId);
@@ -6013,6 +6371,7 @@ export const pptxBundled = {
         slide._partName = slidePart;
         attachSlideImages(slide, slideRels, slidePart, pkg);
         slides.push(slide);
+        slideParts.push(slidePart);
         const layoutRel = slideRels.find((r) => r.Type === slideMod.REL_TYPE_SLIDE_LAYOUT);
         if (layoutRel) {
           const layoutPart = relsMod.resolveTarget(slidePart, layoutRel.Target);
@@ -6039,6 +6398,7 @@ export const pptxBundled = {
         attachTemplateImages(master, masterPart, pkg);
         master._partName = masterPart;
         slideMasters.push(master);
+        masterParts.push(masterPart);
         const themeRel = (pkg.rels[masterPart] || []).find((r) => r.Type === themeMod.REL_TYPE_THEME);
         if (themeRel && !theme) {
           const themePart = relsMod.resolveTarget(masterPart, themeRel.Target), tBytes = pkg.parts[themePart];
@@ -6046,9 +6406,10 @@ export const pptxBundled = {
             theme = themeMod.parse(tBytes);
         }
       }
+      const layoutParts = slideLayouts.map((l) => l._partName);
       for (const s of slides) {
         delete s._partName;
-        for (const sp of s.shapes || [])
+        for (const sp of allShapes(s.shapes))
           delete sp._chartPartName;
       }
       for (const l of slideLayouts)
@@ -6064,8 +6425,23 @@ export const pptxBundled = {
         presentation.theme = theme;
       if (sldSize)
         presentation.sldSize = sldSize;
-      walker.applyHydrate(presentation);
-      return { presentation, package: pkg };
+      const hydrated = walker.applyPackageHydrate(presentation, {
+        package: pkg,
+        parts: plainParts,
+        rels: pkg.rels,
+        presPart,
+        presRoot,
+        presRels,
+        slideParts,
+        layoutParts,
+        masterParts,
+        textOpts,
+        consume(partName) {
+          return pkg.parts[partName];
+        }
+      });
+      walker.applyHydrate(hydrated);
+      return { presentation: hydrated, package: pkg };
     }
     const walker = walkerMod.createWalker();
     function use(...extensions) {
@@ -6144,7 +6520,7 @@ export const pptxBundled = {
       const chartParts = [];
       slides.forEach((slide, k) => {
         const node = normalizeSlide(slide), slidePath = `/ppt/slides/slide${k + 1}.xml`, slideRels = [], ridAlloc = createRidAllocator({ prefix: "rId", start: 1 }), seenData = new Map;
-        for (const shape of node.shapes || [])
+        for (const shape of allShapes(node.shapes))
           if (shape.type === "picture" && shape.image && shape.image.data) {
             let item = seenData.get(shape.image.data);
             if (!item) {
@@ -6235,6 +6611,15 @@ export const pptxBundled = {
         Type: REL_TYPE_DOC,
         Target: "ppt/presentation.xml"
       }]);
+      if (walker.hasExtensions)
+        walker.applyPackageDehydrate(pres, {
+          package: pkg,
+          presPart: "/ppt/presentation.xml",
+          themePart: "/ppt/theme/theme1.xml",
+          slideParts: slides.map((_, k) => `/ppt/slides/slide${k + 1}.xml`),
+          layoutParts: layouts.map((_, j) => `/ppt/slideLayouts/slideLayout${j + 1}.xml`),
+          masterParts: masters.map((_, i) => `/ppt/slideMasters/slideMaster${i + 1}.xml`)
+        });
       return opc.write(pkg);
     }
     function normalizeSlide(slide) {

@@ -29,6 +29,15 @@ describe('extra/legacy-deprecated-filters — LZW', () => {
         expect(() => m.lzwEncode(null)).toThrow(ParseError);
     });
 
+    test('decodes an LZW stream encoded without early change under /EarlyChange 0', () => {
+        const pt = enc('abcabcabc'.repeat(400) + 'the quick brown fox '.repeat(200));
+        const ct = lzwImpl.encode(pt, {
+            bigEndian: true, minCodeBits: 8, maxBits: 12, useClearEnd: true, earlyChange: false
+        });
+        const back = m.lzwDecode(ct, { EarlyChange: 0 });
+        expect(new TextDecoder().decode(back)).toBe(new TextDecoder().decode(pt));
+    });
+
     test('rejects bad /EarlyChange', () => {
         expect(() => m.lzwDecode(new Uint8Array(0), { EarlyChange: 7 })).toThrow(ParseError);
     });

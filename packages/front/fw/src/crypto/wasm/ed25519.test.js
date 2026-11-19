@@ -269,7 +269,7 @@ describe('wasmEd25519 — parity with pure-JS pkc/ed25519', () => {
         expect(sig).not.toBe(false);
 
         // Pure-JS verify: (publicKey, message, signature) — message before sig.
-        const ok = _pureEd.verify(kp.publicKey, msg, sig);
+        const ok = _pureEd.verify(kp.publicKey, sig, msg);
         expect(ok).toBe(true);
     });
 
@@ -304,7 +304,7 @@ describe('wasmEd25519 — parity with pure-JS pkc/ed25519', () => {
         const msg = new TextEncoder().encode('cross-tier parity test');
         const wasmSig = await _wed.sign(wasmKp.privateKey, msg);
         expect(wasmSig).not.toBe(false);
-        expect(_pureEd.verify(pureKp.publicKey, msg, wasmSig)).toBe(true);
+        expect(_pureEd.verify(pureKp.publicKey, wasmSig, msg)).toBe(true);
 
         // Pure-JS signs, WASM verifies.
         const pureSig = _pureEd.sign(pureKp.privateKey, msg);

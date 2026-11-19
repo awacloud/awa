@@ -38,10 +38,10 @@
 
 Internal API (test-only):
 
-- `_internal.Hp(input, outLen)` — variable-length BLAKE2b extension (RFC 9106
+- `internalOf(argon2).Hp(input, outLen)` — variable-length BLAKE2b extension (RFC 9106
   §3.3). Single-call path if outLen ≤ 64, multi-block otherwise.
-- `_internal.compress` — Argon2 compression function §3.4 (G).
-  `_internal.*` convention shared with gcm/cmac/rsa/random (post-upgrade
+- `internalOf(argon2).compress` — Argon2 compression function §3.4 (G).
+  `internalOf(argon2).*` convention shared with gcm/cmac/rsa/random (post-upgrade
   audit Finding 2).
 
 Underlying: BLAKE2b (RFC 7693, see blake2b.acvp.md). Argon2id combines
@@ -65,8 +65,8 @@ data-independent addressing (first half-pass) and data-dependent
 | Binding p | p=1 ≠ p=2 | `parallelism binding` | tag ≠ (final XOR fold) |
 | τ variations | 32/64/128 | `tagLen variations` | correct length + determinism |
 | τ binding | tagLen 32 ≠ truncate(64) | `tagLen 32 ≠ truncate(tagLen 64)` | τ parameterized in H₀ §3.2 |
-| `_internal.Hp` ≤64 | outLen 32 + 64 | `_Hp produces requested length (≤64)` | correct length |
-| `_internal.Hp` >64 | outLen 100, 200, 1024 | `_Hp produces requested length (>64 multi-block)` | multi-block path + determinism |
+| `internalOf(argon2).Hp` ≤64 | outLen 32 + 64 | `_Hp produces requested length (≤64)` | correct length |
+| `internalOf(argon2).Hp` >64 | outLen 100, 200, 1024 | `_Hp produces requested length (>64 multi-block)` | multi-block path + determinism |
 | Validation | salt < 8 | `rejects salt < 8 bytes` | false |
 | Validation | t < 1 | `rejects t < 1` | false |
 | Validation | p < 1 | `rejects p < 1` | false |
@@ -87,7 +87,7 @@ data-independent addressing (first half-pass) and data-dependent
 - [x] **Parametric τ** — bound in H₀ §3.2; `Argon2id(τ=32)` ≠
       `truncate(Argon2id(τ=64), 32)` — security against truncation
       attacks.
-- [x] **`_internal.Hp` multi-block** — outLen 100/200/1024 validates the §3.3
+- [x] **`internalOf(argon2).Hp` multi-block** — outLen 100/200/1024 validates the §3.3
       path (BLAKE2b chained with previous-block XOR).
 - [x] **Memory clamp** — m < 8·p readjusted to 8·p (RFC §3.2); tag
       identical to the explicit m=8·p case.
@@ -95,14 +95,10 @@ data-independent addressing (first half-pass) and data-dependent
       out of range, missing P/S).
 - [x] **No `throw`** — `console.warn` + `return false` (reviewed
       lines 284-291).
-- [x] **Argon2d (type=0)** — **Iteration G4**: `hashD()` exposed but
-      returns `false` + `console.warn('UNSAFE: vulnerable to cache-timing
-      attacks (data-dependent addressing). Use hash() (Argon2id)')`.
-      Preempts the classic mistake of using Argon2d for password hashing.
-- [x] **Argon2i (type=1)** — **Iteration G4**: `hashI()` exposed but
-      returns `false` + `console.warn('DEPRECATED: Argon2i alone is
-      sub-optimal (Alwen-Blocki 2016 — reduced GPU/ASIC resistance).
-      Use hash() (Argon2id)')`.
+- [ ] **Argon2d (type=0)** — not offered: vulnerable to cache-timing
+      attacks (data-dependent addressing); `hash()` is Argon2id.
+- [ ] **Argon2i (type=1)** — not offered: sub-optimal alone
+      (Alwen-Blocki 2016 — reduced GPU/ASIC resistance).
 - [ ] **Argon2 v1.0 (legacy)** — RFC 9106 specifies v=0x13 (our
       `VERSION`). v=0x10 (Argon2 v1.0, outside the RFC) is not supported. **P3** —
       historical interest only.
@@ -137,7 +133,7 @@ data-independent addressing (first half-pass) and data-dependent
 ## Cross references
 
 - Module: [`hash/argon2.js`](./argon2.js)
-- Tests: [`hash/argon2.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/hash/argon2.test.js) — **23 tests** (including the 2 added in G4: `hashD` UNSAFE + `hashI` DEPRECATED rejects; was 4 before the upgrade)
+- Tests: [`hash/argon2.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/hash/argon2.test.js) — **22 tests** (one asserts that no Argon2d / Argon2i entry point exists; was 4 before the upgrade)
 - RFC 9106: [`https://datatracker.ietf.org/doc/html/rfc9106`](https://datatracker.ietf.org/doc/html/rfc9106)
 - Underlying hash: [`./blake2b.js`](./blake2b.js) — see [blake2b.acvp.md](./blake2b.acvp.md)
 - Equivalent NIST KDF: [`./pbkdf2.js`](./pbkdf2.js) — see [pbkdf2.acvp.md](./pbkdf2.acvp.md)

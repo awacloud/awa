@@ -7,16 +7,13 @@ Capturing a module-scope binding breaks worker bootstrap — the rule flags it a
 
 ## Run
 
-```sh
-npm i
-```
-
-Run from this directory. Then:
+Once, from `packages/front/fw`: `bun run setup:playground` (it builds the fw bundles and type declarations the playgrounds read; both are git-ignored, a published package ships them). Then, from this directory:
 
 ```sh
-npx eslint bad-module.js    # shows the capture error
-npx eslint good-module.js   # passes (no output)
+bun install && bun run lint
 ```
+
+The command **exits 1 by design**: the `fw/no-factory-capture` rule reports the capture in `bad-module.js` and passes `good-module.js`. Lint one file with `bunx eslint good-module.js` (exit 0) or `bunx eslint bad-module.js` (exit 1).
 
 ## Files
 

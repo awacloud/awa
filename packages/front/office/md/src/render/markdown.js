@@ -157,15 +157,56 @@ export const renderMarkdownMod = {
                 default:            return '==' + inner + '==';   // highlight
             }
         }
-        function indent(s, prefix) {
-            if (!s) return '';
-            return s.split('\n').map((l, i) => (i === 0 ? l : (l.length ? prefix + l : prefix.replace(/\s+$/, '')))).join('\n');
+        // A block's rendered text as lines: each line keeps the prefixes
+        // its enclosing quotes and list items add (`pre`, innermost first)
+        // apart from its `text`, so a level adds its prefix to each line
+        // once instead of re-splitting and re-prefixing the whole text, and
+        // the lines are joined once (the time is linear in the output).
+        // `empty`: the line as written is ''.
+        function toLines(s) {
+            return s.split('\n').map(t => ({ pre: null, text: t, empty: t === '' }));
+        }
+        function lineText(l) {
+            return l.pre ? l.pre.slice().reverse().join('') + l.text : l.text;
+        }
+        function prefixLine(l, p) {
+            (l.pre || (l.pre = [])).push(p);
+            l.empty = false;
+        }
+        // `dst` followed by `src`, the two texts joined by `sep` ('\n' or
+        // ''), in place: with '' the last line of `dst` and the first of
+        // `src` are one line.
+        function appendLines(dst, src, sep) {
+            if (sep || !dst.length) {
+                for (const l of src) dst.push(l);
+                return dst;
+            }
+            const last = dst[dst.length - 1];
+            const first = src[0];
+            if (last.pre === null && last.text === '') dst[dst.length - 1] = first;
+            else {
+                const t = lineText(last) + lineText(first);
+                dst[dst.length - 1] = { pre: null, text: t, empty: t === '' };
+            }
+            for (let i = 1; i < src.length; i++) dst.push(src[i]);
+            return dst;
+        }
+        function joinLines(parts, sep) {
+            const out = [];
+            parts.forEach((part, i) => appendLines(out, part, i === 0 ? '\n' : sep));
+            return out.length ? out : toLines('');
+        }
+        // A text's trailing newline dropped: its last line, when it is empty
+        // and not the only one.
+        function dropTrailingNewline(lines) {
+            if (lines.length > 1 && lines[lines.length - 1].empty) lines.pop();
+            return lines;
         }
         /**
          * `node` and its descendants as Markdown. A `document`,
-         * `block_quote` or `list` frame collects its children's text in
-         * `parts`; every child of a list is an item frame, whatever its
-         * type, whose children are blocks again.
+         * `block_quote` or `list` frame collects its children's text, as
+         * lines, in `parts`; every child of a list is an item frame,
+         * whatever its type, whose children are blocks again.
          */
         function renderBlock(node) {
             if (!BLOCK_CONTAINERS.has(node.type)) return renderLeafBlock(node);
@@ -180,43 +221,52 @@ export const renderMarkdownMod = {
                     } else if (BLOCK_CONTAINERS.has(child.type)) {
                         stack.push({ node: child, item: false, tight: true, parts: [], child: child.firstChild });
                     } else {
-                        top.parts.push(renderLeafBlock(child));
+                        top.parts.push(toLines(renderLeafBlock(child)));
                     }
                     continue;
                 }
                 stack.pop();
                 const out = finishBlock(top);
-                if (stack.length === 0) return out;
+                if (stack.length === 0) return out.map(lineText).join('\n');
                 stack[stack.length - 1].parts.push(out);
             }
         }
         function finishBlock(frame) {
             const node = frame.node;
-            if (frame.item) return frame.parts.join(frame.tight ? '' : '\n');
+            if (frame.item) return joinLines(frame.parts, frame.tight ? '' : '\n');
             switch (node.type) {
-                case 'document': return frame.parts.join('\n');
+                case 'document': return joinLines(frame.parts, '\n');
                 case 'block_quote': {
                     // Every inner block ends with a newline: drop that last
                     // (empty) line rather than emit it as a bare `>`.
-                    return frame.parts.join('\n').replace(/\n$/, '').split('\n')
-                        .map(l => l.length ? '> ' + l : '>').join('\n') + '\n';
+                    const lines = dropTrailingNewline(joinLines(frame.parts, '\n'));
+                    for (const l of lines) prefixLine(l, l.empty ? '>' : '> ');
+                    lines.push({ pre: null, text: '', empty: true });
+                    return lines;
                 }
                 default: {   // list
                     const tight = node.listTight !== false;
-                    let out = '';
+                    const out = toLines('');
                     let item = node.firstChild;
                     let idx = 0;
                     while (item) {
                         const marker = node.listType === 'ordered'
                             ? ((node.listStart || 1) + idx) + (node.listDelimiter || '.') + ' '
                             : (node.listBulletChar || '-') + ' ';
-                        const itemBody = frame.parts[idx];
+                        const body = frame.parts[idx] || toLines('');
+                        // The item's later lines indented under its marker (an
+                        // empty one stays empty); its first one after the
+                        // marker and the task box.
                         const prefix = ' '.repeat(marker.length);
+                        for (let i = 1; i < body.length; i++) if (!body[i].empty) prefixLine(body[i], prefix);
+                        dropTrailingNewline(body);
                         let taskPrefix = '';
                         if (item.checked === true) taskPrefix = '[x] ';
                         else if (item.checked === false) taskPrefix = '[ ] ';
-                        out += marker + taskPrefix + indent(itemBody, prefix).replace(/\n$/, '') + '\n';
-                        if (!tight && item.next) out += '\n';
+                        prefixLine(body[0], marker + taskPrefix);
+                        body.push({ pre: null, text: '', empty: true });
+                        appendLines(out, body, '');
+                        if (!tight && item.next) out.push({ pre: null, text: '', empty: true });
                         idx++;
                         item = item.next;
                     }

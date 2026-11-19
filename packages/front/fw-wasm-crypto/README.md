@@ -1,10 +1,66 @@
 # @awacloud/fw-wasm-crypto
 
+Seventeen freestanding WebAssembly crypto modules for the browser (AES, SHA-2/3, Ed25519, ML-KEM, ML-DSA and more), with a loader and a provenance validator.
+
 Build-asset package that produces the framework's crypto `.wasm` modules. Holds own C sources (`csrc/`), ABI shims (`shims/`), committed vendored sources (`vendor/`), the build manifest (`targets.json`), the provenance lockfile (`vendor/PROVENANCE.json`), and the emitted artifacts (`dist/`). Built by `tools/wasm-crypto` via `--pkg`; consumed by `@awacloud/fw` through the loader in `src/loader.js`.
 
-Maturity: **L3** — docs + aggregated NOTICE + all 17 targets ACVP/RFC-green as **functional KAT**. L3 is reached: the extended manifest fields, the API mirror and a declared coverage floor (`awa.coverageBasis` `["src/**"]` with `coverageFloor` 0.86) are all in place, and the in-engine constant-time proof and differential fuzz were delivered.
-
 > **Early release.** All 17 targets pass their NIST ACVP / defining-RFC vectors as functional KAT (byte-for-byte where the vector format states it) — correctness evidence, not a timing guarantee. In-engine constant-time is proven only where measured (see the [CT note](#tier-a-own-modules) below); there is no blanket CT attestation and no third-party audit. The whole crypto tier, this package included, is scheduled for a full rework against a dedicated ACVP validation harness in the next program.
+
+## Installation
+
+```bash
+npm install @awacloud/fw-wasm-crypto
+```
+
+## Quick start
+
+Hash a message with the shipped SHA-2 module, on Bun or any other ESM
+runtime with `fetch` for `file:` URLs (in a browser the same import works
+once the page's import map or bundler resolves
+`@awacloud/fw-wasm-crypto/loader`, and `dist/` is served next to
+`src/`). The loader fetches `dist/sha2.scalar.wasm`, refuses a module that
+declares any import, and checks the frozen `memory` / `alloc` / `free` ABI.
+`sha2` is a scalar-only target (`simd: false`), so the example names the
+variant; for targets built in both variants, omit it and the loader picks
+simd128 when the engine supports it.
+
+```js
+import { loadWasmModule } from '@awacloud/fw-wasm-crypto/loader';
+
+const sha2 = await loadWasmModule('sha2', ['sha2'], { variant: 'scalar' });
+
+const message = new TextEncoder().encode('abc');
+const inPtr = sha2.alloc(message.length);
+const outPtr = sha2.alloc(32);
+new Uint8Array(sha2.memory.buffer, inPtr, message.length).set(message);
+
+// sha2(variantId, inPtr, inLen, outPtr) -> 0 on success; 256 selects SHA-256.
+const status = sha2.exports.sha2(256, inPtr, message.length, outPtr);
+const digest = new Uint8Array(sha2.memory.buffer, outPtr, 32);
+console.log(status, [...digest].map((b) => b.toString(16).padStart(2, '0')).join(''));
+// 0 ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+```
+
+The per-module export names are listed in the [canonical module
+table](#canonical-module-table).
+
+### Rebuilding the `.wasm` targets
+
+Building and verifying the `.wasm` targets needs the companion
+`@awacloud/tool-wasm-crypto` builder (installed separately):
+
+```bash
+npm install --save-dev @awacloud/tool-wasm-crypto
+
+# Build all wasm targets defined in targets.json
+bunx wasm-crypto build --pkg node_modules/@awacloud/fw-wasm-crypto
+
+# Verify emitted artifacts against vendor/PROVENANCE.json
+bunx wasm-crypto verify --pkg node_modules/@awacloud/fw-wasm-crypto
+```
+
+The framework itself only *consumes* the already-compiled `.wasm` bytes
+shipped in `dist/` — building is only needed to regenerate them.
 
 ## Canonical module table
 
@@ -41,30 +97,6 @@ All 17 modules in `targets.json` declaration order. This table is the index; the
 | `vendor/` | Committed vendored third-party C sources + `PROVENANCE.json` lockfile |
 | `dist/` | Emitted `.wasm` and `.wasm.js` artifacts (build output, gitignored in CI) |
 | `src/` | Shipped JS loader and provenance validator modules |
-
-## Installation
-
-```bash
-npm install @awacloud/fw-wasm-crypto
-```
-
-## Quick Start
-
-Building and verifying the `.wasm` targets needs the companion
-`@awacloud/tool-wasm-crypto` builder (installed separately):
-
-```bash
-npm install --save-dev @awacloud/tool-wasm-crypto
-
-# Build all wasm targets defined in targets.json
-bunx wasm-crypto build --pkg node_modules/@awacloud/fw-wasm-crypto
-
-# Verify emitted artifacts against vendor/PROVENANCE.json
-bunx wasm-crypto verify --pkg node_modules/@awacloud/fw-wasm-crypto
-```
-
-The framework itself only *consumes* the already-compiled `.wasm` bytes
-shipped in `dist/` — building is only needed to regenerate them.
 
 ## Tests
 
@@ -200,7 +232,7 @@ vendored dependency in this tier — never roll the block cipher).
 | `hmac` | HMAC-SHA2 (FIPS 198-1) | own (`csrc/hmac/`) over own SHA-2 | `shims/hmac.c` | scalar | ACVP HMAC-SHA2-256/384/512 byte-for-byte + RFC 4231 — shared `csrc/` core for hkdf/pbkdf2 |
 | `hkdf` | HKDF (RFC 5869) | own (`csrc/hkdf/`) over own HMAC | `shims/hkdf.c` | scalar | RFC 5869 extract/expand byte-for-byte |
 | `pbkdf2` | PBKDF2 (RFC 8018) | own (`csrc/pbkdf2/`) over own HMAC | `shims/pbkdf2.c` | scalar | RFC 7914/6070 SHA-256 byte-for-byte (NIST PBKDF corpus is SHA2-224-only, outside the frozen hashId enum 256/384/512) |
-| `argon2` | Argon2id (RFC 9106) | own (`csrc/argon2/`) over own BLAKE2b | `shims/argon2.c` | scalar | RFC 9106 §5.3 byte-for-byte (t=3, m=32 KiB, p=4, 32-byte tag) |
+| `argon2` | Argon2id (RFC 9106) | own (`csrc/argon2/`) over own BLAKE2b | `shims/argon2.c` | scalar | RFC 9106 §5.3 byte-for-byte (t=3, m=32 KiB, p=4, 32-byte tag) + the OWASP rows (19 MiB / t=2, 47 MiB / t=1) and six segment shapes vs OpenSSL; block matrix in grown linear memory (not the arena), `m` ≤ 1048576 KiB (1 GiB) |
 
 The previously vendored sources for these algos (`vendor/{argon2,blake2,xkcp}`,
 the libsodium ChaCha path) are now unreferenced by `targets.json` but kept on
@@ -403,6 +435,20 @@ message-randomization conformance groups are out of ABI scope).
 - [`@awacloud/tool-wasm-crypto`](https://github.com/awacloud/awa/tree/main/tools/wasm-crypto) — the builder tool (`--pkg` interface)
 - [`@awacloud/fw`](https://github.com/awacloud/awa/tree/main/packages/front/fw) — the browser framework that consumes `dist/*.wasm` via the loader seam
 
+## Exposed sub-paths
+
+| Sub-path | Target | Usage |
+|---|---|---|
+| `.` | `./src/loader.js` | The loader seam: `loadWasmModule`, `supportsSimd`, `selectVariant`, `resolveDistUrl` |
+| `./loader` | `./src/loader.js` | Same module as `.`, under an explicit name |
+| `./provenance` | `./src/provenance.js` | Validator for `vendor/PROVENANCE.json` (`validateProvenance`, `provenanceErrors`) |
+| `./targets.json` | `./targets.json` | The build manifest: the 17 targets, their sources, ABI exports and vectors |
+| `./dist/*` | `./dist/*` | The emitted `.wasm` and `.wasm.js` artifacts |
+
+## Maturity
+
+**L3** (`awa.maturity` in `package.json`) — docs + aggregated NOTICE + all 17 targets ACVP/RFC-green as **functional KAT**. L3 is reached: the extended manifest fields, the API mirror and a declared coverage floor (`awa.coverageBasis` `["src/**"]` with `coverageFloor` 0.86) are all in place, and the in-engine constant-time proof and differential fuzz were delivered.
+
 ## Licence
 
 Apache-2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE) (aggregated
@@ -413,7 +459,7 @@ Copyright (c) 2026 AwaCloud SAS
 
 ## Project
 
-- Website: https://awaforge.eu
+- Website: https://awaforge.eu/
 - Source: [`packages/front/fw-wasm-crypto`](https://github.com/awacloud/awa/tree/main/packages/front/fw-wasm-crypto)
 - Issues: this package's own repository has issues disabled — report at
   https://github.com/awacloud/awa/issues

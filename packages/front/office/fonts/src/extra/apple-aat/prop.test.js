@@ -6,6 +6,7 @@
 import { describe, test, expect } from 'bun:test';
 import { aatProp } from './prop.js';
 import { testRuntime } from '../_test-runtime.js';
+import { lookup6, lookup8 } from './_test-aat.js';
 const { parseProp, PROP_BITS } = testRuntime.resolve('aatProp');
 const { ParseError } = testRuntime.resolve('fontErrors');
 const { BinaryWriter } = testRuntime.resolve('fontWriter');
@@ -23,7 +24,7 @@ function writeProp({ version = 3, format, defaultProps, lookup }) {
 describe('aatProp', () => {
     test('module metadata', () => {
         expect(aatProp.name).toBe('aatProp');
-        expect(aatProp.dependencies).toEqual(['fontErrors', 'fontReader']);
+        expect(aatProp.dependencies).toEqual(['fontErrors', 'fontReader', 'aatLookup']);
         expect(PROP_BITS.DIRECTION_MASK).toBe(0x1F);
     });
 
@@ -60,5 +61,20 @@ describe('aatProp', () => {
     test('rejects bad format', () => {
         const bytes = writeProp({ format: 9, defaultProps: 0 });
         expect(() => parseProp(bytes)).toThrow(ParseError);
+    });
+});
+
+// T15 (c), D38: format 1's lookup decoded.
+describe('aatProp — format 1 decoded (T15 c)', () => {
+    test("lookup(glyph) gives the glyph's property word, else the default", () => {
+        const p = parseProp(writeProp({ format: 1, defaultProps: 0x0003, lookup: new Uint8Array(lookup6({ 4: 0x8001, 9: 0x1000 })) }));
+        expect([p.parsed, p.lookup(4), p.lookup(9), p.lookup(5)]).toEqual([true, 0x8001, 0x1000, 3]);
+        expect(p.reason).toBeUndefined();
+        const q = parseProp(writeProp({ format: 1, defaultProps: 0, lookup: new Uint8Array(lookup8(2, [7, 8])) }), { numGlyphs: 3 });
+        expect([q.lookup(2), q.lookup(3), q.lookup(4)]).toEqual([7, 8, 0]);
+    });
+    test('a lookup that does not decode keeps parsed: false, its error and the default', () => {
+        const p = parseProp(writeProp({ format: 1, defaultProps: 0x0002, lookup: new Uint8Array([0, 3, 0, 0]) }));
+        expect([p.parsed, p.error, p.lookup(1)]).toEqual([false, 'fonts/aat-lookup-format', 2]);
     });
 });

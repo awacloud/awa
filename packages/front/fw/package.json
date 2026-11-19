@@ -1,6 +1,6 @@
 {
   "name": "@awacloud/fw",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -8,10 +8,10 @@
   "keywords": ["awa", "framework", "browser", "esm", "zero-dependencies", "dependency-injection", "import-maps", "crypto", "webcrypto", "wasm", "post-quantum", "rendering", "service-worker", "web-worker", "lockdown"],
   "engines": { "node": ">=18" },
   "awa": {
-    "maturity": "L3",
+    "maturity": "L4",
     "coverageBasis": ["src/**", "integrations/**", "tools/rendering/**", "tools/_lib/cli-help.js"],
     "coverageFloor": 0.92,
-    "_coverageComment": "Basis = the package.json files[] JS surface, i.e. exactly what this package PUBLISHES: src/**, integrations/**, tools/rendering/** and tools/_lib/cli-help.js. playground/** is excluded because files[] excludes it (!playground/**), and test files are already out via bunfig coverageSkipTestFiles. The unfiltered All-files aggregate is NOT a source-quality signal here: it is an unweighted mean of per-file %Lines, so it admitted 4 rows that are not this package at all - two tools/fw-bundler/** modules and two OS-temp COPIES that integrations/_shared/config-resolve.test.js imports from a temp dir (1.14% and 29.94%) - which dragged 238 rows to 91.9770% (RED) while the 230 published rows read 93.1865%. The floor stays 0.92, deliberately UNCHANGED: coverageBasis fixes the measurement basis, it must not relax the gate, so the max(0, floor(basis mean) - 2) seeding rule used when DECLARING a floor is not applied here - 0.92 was earned previously and is kept, now with a +1.19 pp margin."
+    "_coverageComment": "Basis = the package.json files[] JS surface, i.e. exactly what this package PUBLISHES: src/**, integrations/**, tools/rendering/** and tools/_lib/cli-help.js. playground/** is excluded because files[] excludes it (!playground/**), and test files are already out via bunfig coverageSkipTestFiles. The unfiltered All-files aggregate is NOT a source-quality signal here: it is an unweighted mean of per-file %Lines, so it admitted 4 rows that are not this package at all - two tools/fw-bundler/** modules and two OS-temp COPIES that integrations/_shared/config-resolve.test.js imports from a temp dir (1.14% and 29.94%) - which dragged 238 rows to 91.9770% (RED) while the 230 published rows read 93.1865%. The floor stays 0.92, deliberately UNCHANGED: coverageBasis fixes the measurement basis, it must not relax the gate, so the max(0, floor(basis mean) - 2) seeding rule used when DECLARING a floor is not applied here - 0.92 was earned previously and is kept, now with a +1.19 pp margin. Re-measured 2026-11-06 by `bun cli.ts coverage-gate --scopes packages/front/fw/`: 93.36% over 234 basis rows (10583 pass / 0 fail / 8 skip), floor unchanged."
   },
   "main": "src/main.js",
   "types": "dist/types/main.d.ts",
@@ -26,6 +26,7 @@
     "src/**/*.js",
     "src/**/*.md",
     "src/**/*.bin",
+    "src/**/*.wasm",
     "types/**/*.d.ts",
     "dist/types/**/*.d.ts",
     "dist/types/**/*.d.ts.map",
@@ -44,6 +45,7 @@
     "!integrations/**/*.test.js",
     "!src/**/*.test.js",
     "!src/**/*.kat.js",
+    "!src/**/*.reference.js",
     "!src/**/*.test.html",
     "!src/**/__fixtures__/**",
     "!dist/types/**/__fixtures__/**",
@@ -51,6 +53,7 @@
     "third-party",
     "!docs/api-generated/**",
     "!playground/**",
+    "NOTICE",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -107,14 +110,35 @@
       "types": "./types/typed.d.ts",
       "default": "./src/typed.js"
     },
+    "./typed.js": {
+      "types": "./types/typed.d.ts",
+      "default": "./src/typed.js"
+    },
+    "./io/*.test.js": null,
+    "./io/*.test": null,
+    "./io/*.kat.js": null,
+    "./io/*.kat": null,
+    "./io/*.reference.js": null,
+    "./io/*.reference": null,
+    "./io/*.md": null,
+    "./io/*.bin": {
+      "default": "./src/io/*.bin"
+    },
     "./io/*.js": {
       "types": "./dist/types/io/*.d.ts",
       "default": "./src/io/*.js"
     },
     "./io/*": {
       "types": "./dist/types/io/*.d.ts",
-      "default": "./src/io/*"
+      "default": "./src/io/*.js"
     },
+    "./dom/*.test.js": null,
+    "./dom/*.test": null,
+    "./dom/*.kat.js": null,
+    "./dom/*.kat": null,
+    "./dom/*.reference.js": null,
+    "./dom/*.reference": null,
+    "./dom/*.md": null,
     "./dom/*.js": {
       "types": "./dist/types/dom/*.d.ts",
       "browser": "./src/dom/*.js",
@@ -122,43 +146,80 @@
     },
     "./dom/*": {
       "types": "./dist/types/dom/*.d.ts",
-      "browser": "./src/dom/*",
-      "default": "./src/dom/*"
+      "browser": "./src/dom/*.js",
+      "default": "./src/dom/*.js"
     },
     "./crypto/pkc/__fixtures__/*.js": null,
     "./crypto/pkc/__fixtures__/*": null,
+    "./crypto/*.test.js": null,
+    "./crypto/*.test": null,
+    "./crypto/*.kat.js": null,
+    "./crypto/*.kat": null,
+    "./crypto/*.reference.js": null,
+    "./crypto/*.reference": null,
+    "./crypto/*.md": null,
+    "./crypto/*.wasm": {
+      "default": "./src/crypto/*.wasm"
+    },
     "./crypto/*.js": {
       "types": "./dist/types/crypto/*.d.ts",
       "default": "./src/crypto/*.js"
     },
     "./crypto/*": {
       "types": "./dist/types/crypto/*.d.ts",
-      "default": "./src/crypto/*"
+      "default": "./src/crypto/*.js"
     },
+    "./process/*.test.js": null,
+    "./process/*.test": null,
+    "./process/*.kat.js": null,
+    "./process/*.kat": null,
+    "./process/*.reference.js": null,
+    "./process/*.reference": null,
+    "./process/*.md": null,
     "./process/*.js": {
       "types": "./dist/types/process/*.d.ts",
       "default": "./src/process/*.js"
     },
     "./process/*": {
       "types": "./dist/types/process/*.d.ts",
-      "default": "./src/process/*"
+      "default": "./src/process/*.js"
     },
     "./sanity/base": {
+      "types": "./dist/types/sanity/base.d.ts",
+      "default": "./src/sanity/base.js"
+    },
+    "./sanity/base.js": {
+      "types": "./dist/types/sanity/base.d.ts",
       "default": "./src/sanity/base.js"
     },
     "./sanity/base.classic": {
       "default": "./dist/build/sanity-base-classic.min.js"
     },
     "./sanity/community": {
+      "types": "./dist/types/sanity/community.d.ts",
+      "default": "./src/sanity/community.js"
+    },
+    "./sanity/community.js": {
+      "types": "./dist/types/sanity/community.d.ts",
       "default": "./src/sanity/community.js"
     },
     "./sanity/community.classic": {
       "default": "./dist/build/sanity-community-classic.min.js"
     },
     "./sanity/lockdown": {
+      "types": "./dist/types/sanity/lockdown.d.ts",
+      "default": "./src/sanity/lockdown.js"
+    },
+    "./sanity/lockdown.js": {
+      "types": "./dist/types/sanity/lockdown.d.ts",
       "default": "./src/sanity/lockdown.js"
     },
     "./sanity/lockdown.apply": {
+      "types": "./dist/types/sanity/lockdown-apply.d.ts",
+      "default": "./src/sanity/lockdown-apply.js"
+    },
+    "./sanity/lockdown-apply.js": {
+      "types": "./dist/types/sanity/lockdown-apply.d.ts",
       "default": "./src/sanity/lockdown-apply.js"
     },
     "./config": {
@@ -209,6 +270,9 @@
       "types": "./integrations/nestjs/index.d.ts",
       "default": "./integrations/nestjs/index.js"
     },
+    "./eslint": {
+      "default": "./integrations/eslint/no-factory-capture.js"
+    },
     "./dist/build/*": {
       "default": "./dist/build/*"
     },
@@ -224,8 +288,11 @@
     "types:audit": "fw-codegen audit",
     "integrations:catalog": "fw-bundler catalog",
     "integrations:catalog:check": "fw-bundler catalog --check",
-    "prepack": "bun run lint && bun run types && bun run types:registry && bun run prebuild",
+    "api:surface": "bun tools/api-surface.js",
+    "api:surface:check": "bun tools/api-surface.js --check",
+    "prepack": "bun run lint && bun run types && bun run types:registry && bun run api:surface:check && bun run prebuild",
     "prebuild": "fw-bundler bundle",
+    "setup:playground": "fw-bundler bundle && tsc -p tsconfig.types.json",
     "prebuild:presets": "fw-bundler bundle presets",
     "prebuild:side-bundles": "fw-bundler bundle side-bundles",
     "prebuild:minimal": "fw-bundler bundle minimal",

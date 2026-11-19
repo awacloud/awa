@@ -44,6 +44,17 @@ describe('TOOLS — schema', () => {
         }
     });
 
+    test('convert takes an optional boolean layout (docx to odt)', () => {
+        const convert = TOOLS.find((t) => t.name === 'convert')!;
+        expect((convert.inputSchema.properties as Record<string, { type: string }>).layout!.type).toBe('boolean');
+    });
+
+    test('callTool convert with layout: a usage error on a pdf target', async () => {
+        const { content, isError } = await callTool('convert', { path: SAMPLE_DOCX_PATH, target: 'pdf', layout: true });
+        expect(isError).toBe(true);
+        expect(content[0]!.text).toContain('oconv: layout needs docx to odt');
+    });
+
     test('from_md and convert require "target"', () => {
         const fromMd = TOOLS.find((t) => t.name === 'from_md')!;
         const convert = TOOLS.find((t) => t.name === 'convert')!;

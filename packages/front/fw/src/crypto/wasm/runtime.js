@@ -6,8 +6,8 @@
  * @fileoverview `wasmRuntime` — the shared fw adapter every `crypto/wasm/*`
  * wrapper loads its binary through.
  *
- * ARCHITECTURE (2026-06-22, session decision — supersedes the BATCH_11 ERRATA's
- * "thin adapter over @awacloud/fw-wasm-crypto" model): the `.wasm` binaries are
+ * ARCHITECTURE (2026-06-22; it replaced a "thin adapter over
+ * @awacloud/fw-wasm-crypto" model): the `.wasm` binaries are
  * **colocated assets** committed next to this module
  * (`<wasmModule>.{simd,scalar}.wasm`), copied from `@awacloud/fw-wasm-crypto`'s
  * `dist/`. fw is **self-contained at runtime** — it fetches the colocated asset
@@ -53,6 +53,21 @@
  * Worker-safe: pure factory; `WebAssembly` exists in workers; binary bytes are
  * fetched by name (resolved from `import.meta.url`), not closed over from the
  * main thread.
+ *
+ * ─── Asset base ───
+ *
+ * The binaries are fetched from this module's own directory by default. A
+ * build that inlines the factory elsewhere, a CDN or a Worker served from
+ * another place names the directory instead: `configure({ baseUrl })` for
+ * every later load (the algorithm wrappers included), or `{ baseUrl }` on one
+ * `load`. The base is an absolute URL; it is a place to fetch from, never
+ * bytes, so it stays open under `lockdown()`.
+ *
+ * Every `load` fetches and compiles afresh. A compile memo was measured and
+ * withheld: under JavaScriptCore, `chacha20poly1305.simd.wasm` returns a wrong
+ * Poly1305 tag from the 7th call on one `WebAssembly.Module` (V8 is correct;
+ * `wasm/chacha-simd-jsc.test.js` pins it), and a fresh module per load never
+ * reaches that state.
  */
 
 /**
@@ -79,6 +94,9 @@
  * Per-call load options.
  * @typedef {object} WasmLoadOptions
  * @property {"simd" | "scalar"} [variant]  force a variant; default = runtime selection
+ * @property {string | URL} [baseUrl]  absolute URL of the directory holding the
+ *   binaries, for this call (default: the `configure` base, else this module's
+ *   directory)
  * @property {(wasmModule: string, variant: string) => Promise<Uint8Array>} [fetchBytes]
  *   injectable byte source (test seam); default fetches the colocated
  *   `<wasmModule>.<variant>.wasm` relative to this module.
@@ -98,6 +116,9 @@
  * @property {(loaded: WasmLoaded, fnName: string, args: number[]) => number} run
  *   Call an export and return its `i32` status. A throw propagates to the
  *   caller's try/catch (the per-algo wrapper's no-throw boundary).
+ * @property {(opts: { baseUrl: string | URL | null }) => void} configure
+ *   Set the asset base every later `load` uses (`null` restores this module's
+ *   directory). Throws `TypeError` when the base is not an absolute URL.
  */
 
 export const wasmRuntime = {
@@ -130,6 +151,41 @@ export const wasmRuntime = {
 
         /** @type {boolean|undefined} memoized simd128 support. */
         let _simd;
+
+        /** @type {string|null} the `configure` base (`null` = this module's directory). */
+        let _base = null;
+
+        /** A module name selects a binary; it never carries a path. */
+        const NAME_RE = /^[a-z0-9_]+$/;
+
+        /**
+         * Normalise an asset base: an absolute URL naming a directory.
+         * @param {unknown} baseUrl
+         * @returns {string} the href, ending with `/`
+         * @throws {TypeError} when `baseUrl` is not an absolute URL
+         */
+        function _absoluteBase(baseUrl) {
+            if (typeof baseUrl !== 'string' && !(baseUrl instanceof URL)) {
+                throw new TypeError('wasmRuntime: baseUrl must be an absolute URL');
+            }
+            let href;
+            try {
+                href = new URL(String(baseUrl)).href;
+            } catch {
+                throw new TypeError('wasmRuntime: baseUrl must be an absolute URL, got "' + String(baseUrl) + '"');
+            }
+            return href.endsWith('/') ? href : href + '/';
+        }
+
+        /**
+         * Set (or, with `null`, clear) the asset base every later `load` uses.
+         * @param {{ baseUrl: string | URL | null }} opts
+         * @returns {void}
+         */
+        function configure(opts) {
+            const b = opts ? opts.baseUrl : undefined;
+            _base = b === null || b === undefined ? null : _absoluteBase(b);
+        }
 
         /**
          * Lazy, memoised handle to the fw wasm capability seam
@@ -209,18 +265,25 @@ export const wasmRuntime = {
         }
 
         /**
-         * Fetch the colocated `<wasmModule>.<variant>.wasm` next to this module
-         * (resolved via `import.meta.url`, like `brotli_dict_words.js`). Pure
-         * `URL` build — browser/worker safe, no `node:*`.
+         * Fetch `<wasmModule>.<variant>.wasm` from `base`, or next to this
+         * module when `base` is `null` (resolved via `import.meta.url`, like
+         * `brotli_dict_words.js`). Pure `URL` build — browser/worker safe, no
+         * `node:*`.
          * @param {string} wasmModule
          * @param {string} variant
+         * @param {string|null} base absolute directory URL, or `null`
          * @returns {Promise<Uint8Array>}
          */
-        async function _fetchBytes(wasmModule, variant) {
-            const url = new URL(
-                './' + wasmModule + '.' + variant + '.wasm',
-                import.meta.url,
-            );
+        async function _fetchBytes(wasmModule, variant, base) {
+            if (!NAME_RE.test(wasmModule)) {
+                throw new Error('invalid module name "' + wasmModule + '"');
+            }
+            // The default keeps the literal `import.meta.url` form: static
+            // asset scanners (site-kit's dist module graph) find the binaries
+            // through exactly this call shape.
+            const url = base
+                ? new URL(wasmModule + '.' + variant + '.wasm', base)
+                : new URL('./' + wasmModule + '.' + variant + '.wasm', import.meta.url);
             const res = await fetch(url);
             if (!res || !res.ok) {
                 const status = res ? res.status : 'no-response';
@@ -244,7 +307,7 @@ export const wasmRuntime = {
          * Compile / instantiate / module-reflection are routed through the fw
          * wasm capability seam (`sanity/wasm-gate.js`) — the only path left open
          * once `lockdown()` poisons the ambient `WebAssembly` evaluators (the
-         * async four, and, since fw-sanity W0, the synchronous `Module`/
+         * async four, and, since 2026-07, the synchronous `Module`/
          * `Instance` constructors too), so this loader keeps working under
          * lockdown while caller-supplied bytes still have no route in.
          * `opts.fetchBytes` is a documented test seam before `lockdown()`; the
@@ -269,8 +332,12 @@ export const wasmRuntime = {
                 gate.assertByteSource(opts);
 
                 const variant = _selectVariant(opts);
-                const read = opts && opts.fetchBytes ? opts.fetchBytes : _fetchBytes;
-                const bytes = await read(wasmModule, variant);
+                const base = opts && opts.baseUrl !== undefined && opts.baseUrl !== null
+                    ? _absoluteBase(opts.baseUrl)
+                    : _base;
+                const bytes = opts && opts.fetchBytes
+                    ? await opts.fetchBytes(wasmModule, variant)
+                    : await _fetchBytes(wasmModule, variant, base);
 
                 const module = await gate.compile(cap, bytes);
 
@@ -286,9 +353,9 @@ export const wasmRuntime = {
                 const result = await gate.instantiate(cap, module, {});
                 // Post-lockdown, the global `WebAssembly.Instance` is a throwing
                 // shim (`poisonSyncConstructors`), so `instanceof` would silently
-                // return false rather than throw (ORCHESTRATOR RULING, task 03: the
-                // gate exposes no captured `Instance` — the export surface is
-                // frozen at 8, FINDINGS §d.3). Test the SHAPE instead: a
+                // return false rather than throw (the gate exposes no captured
+                // `Instance`: its export surface is frozen at 8). Test the SHAPE
+                // instead: a
                 // `{module, instance}` source carries a truthy `.instance`; a bare
                 // `Instance` does not.
                 const instance = result.instance ? result.instance : result;
@@ -395,6 +462,6 @@ export const wasmRuntime = {
             return fn(...(args || []));
         }
 
-        return { isAvailable, hasSimd, load, withBytes, readBytes, run };
+        return { isAvailable, hasSimd, load, withBytes, readBytes, run, configure };
     },
 };

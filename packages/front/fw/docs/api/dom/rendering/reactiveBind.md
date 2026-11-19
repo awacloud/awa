@@ -231,4 +231,4 @@ comparisons.
 
 - [signal](../../io/utils/signal.md) — reactive primitives: `create`, `effect`, `computed`.
 - [uiSession](./uiSession.md) — the session that `reactiveBind` patches.
-- [component](./component.md) — higher-level component system; task 04 will add `self.bind` which wraps `reactiveBind`.
+- [component](./component.md) — higher-level component system; its `self.bind` wraps `reactiveBind`.

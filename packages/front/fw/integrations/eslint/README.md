@@ -1,6 +1,12 @@
 # `@awacloud/fw` — ESLint
 
-ESLint guards that **encode framework invariants**. Consumed by the `eslint.config.js` at the root of the package (no `@awacloud/fw/<x>` export — this is internal dev tooling).
+ESLint guards that **encode framework invariants**. Consumed by the `eslint.config.js` at the root of the package, and exported as `@awacloud/fw/eslint` for a project that wants the same rule:
+
+```js
+// eslint.config.js of a consumer
+import fw from '@awacloud/fw/eslint';
+export default [{ plugins: { fw }, rules: { 'fw/no-factory-capture': 'error' } }];
+```
 
 ## Contents
 

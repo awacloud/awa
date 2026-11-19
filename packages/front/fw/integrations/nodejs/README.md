@@ -21,10 +21,10 @@ The builder drove `Bun.build`/`Bun.gzipSync`. It is now behind a **backend selec
 
 ```sh
 bun run setup:e2e                              # installs esbuild (on demand)
-node ../../../tools/fw-bundler/src/bundle/index.js --backend esbuild
+node --input-type=module -e "import('@awacloud/tool-fw-bundler/bundle').then(m => m.runCli(process.argv.slice(1))).then(c => process.exit(c))" -- --backend esbuild
 ```
 
-> **Node invocation**: target `index.js` explicitly (`node tools/<…>/index.js`, or for the mutualized tools `node ../../../tools/<fw-bundler|fw-codegen>/src/<…>/index.js`), not the directory — the `isMainModule` guard does not activate on `node <directory>`.
+> **Node invocation**: the bundler and codegen tools are reached through their package `exports` (`@awacloud/tool-fw-bundler/<entry>`, `@awacloud/tool-fw-codegen/<entry>`) and their `runCli(argv)`, the form [`docs/dev/runtime.md`](../../docs/dev/runtime.md) and `package.node.example.json` use — no relative path into `tools/`.
 
 ## Developing 100% under Node — intentional substitution
 
@@ -34,7 +34,7 @@ The default `package.json` is **bun**-oriented (and intentionally *lean*: heavy 
 # use it as inspiration, or merge its scripts/devDependencies into package.json, then:
 npm install
 npm test            # vitest
-npm run prebuild    # node …/fw-bundler/src/bundle/index.js --backend esbuild
+npm run prebuild    # @awacloud/tool-fw-bundler/bundle runCli, --backend esbuild
 npm run types       # tsc
 ```
 

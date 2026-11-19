@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -8,6 +8,7 @@ import { bitArray } from './bitArray.js';
 import { aes } from '../cipher/aes.js';
 import { sha256 } from '../hash/sha256.js';
 import { utf8 } from '../../io/codec/utf8.js';
+import { INTERNAL } from '../../core/internal.js';
 
 const _ba = bitArray.factory();
 const _utf8 = utf8.factory(_ba);
@@ -284,7 +285,7 @@ describe('random module', () => {
 //     (4096 bits / 512 bytes per call).
 //   - Excluded variants (not implemented): AES-128/192, TDES, derFunc=True
 //     (use df instead of XOR seed). 210 vectors filtered out.
-//   - Drives the internal _makeDrbg() via random._internal so the OS NRBG
+//   - Drives the internal _makeDrbg() via random[INTERNAL] so the OS NRBG
 //     is bypassed and the ACVP entropy strings are fed verbatim. The public
 //     drbg() API remains the only audited path for production use.
 // ============================================================================
@@ -333,7 +334,7 @@ const _b2h = (b) => Array.from(b, (v) => v.toString(16).padStart(2, '0')).join('
 
 describe('ctrDRBG-1.0 (NIST CAVP CTR_DRBG-AES-256 no-df, ACVP-driven)', () => {
     test.each(_DRBG_AFT)('tgId=$tg tcId=$tc (predResistance=$pr, returnedBitsLen=$L)', (v) => {
-        const d = _rng._internal.makeDrbg();
+        const d = _rng[INTERNAL].makeDrbg();
         // §10.2.1.3.1 instantiate (no df): seed_material = entropy XOR perso
         // (nonce empty for no-df because the entropy already carries 384 bits).
         expect(d.instantiate(_h2b(v.ent), v.pers ? _h2b(v.pers) : null)).toBe(true);
@@ -413,7 +414,7 @@ for (const cfg of _MODES_H4) {
     if (cases.length === 0) continue;
     describe(`ctrDRBG-1.0 (NIST CAVP CTR_DRBG-${cfg.mode} ${cfg.df ? 'with-df' : 'no-df'}, iteration H4)`, () => {
         test.each(cases)('tgId=$tg tcId=$tc (returnedBitsLen=$L)', (v) => {
-            const d = _rng._internal.makeDrbg({ aesKeyBits: cfg.kb, df: cfg.df });
+            const d = _rng[INTERNAL].makeDrbg({ aesKeyBits: cfg.kb, df: cfg.df });
             expect(d).not.toBe(false);
             // df-mode: instantiate(entropy, perso, nonce) ; no-df: instantiate(entropy, perso).
             const ok = cfg.df

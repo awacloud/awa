@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -32,7 +32,7 @@ import { utf8 } from './utf8.js';
 /**
  * @typedef {object} MsgpackAPI
  * @property {(value: unknown) => Uint8Array} encode
- * @property {(bytes: Uint8Array, options?: { useMap?: boolean }) => unknown} decode
+ * @property {(bytes: Uint8Array, options?: { useMap?: boolean, maxDepth?: number }) => unknown} decode
  * @property {new (type: number, data: Uint8Array) => MsgpackExt} Ext
  */
 export const msgpack = {
@@ -335,6 +335,19 @@ export const msgpack = {
         }
 
         /**
+         * Set an own enumerable property, `__proto__` included: assigning
+         * `obj.__proto__ = v` would replace the object's prototype with a
+         * decoded value instead of storing it. Every other key assigns.
+         */
+        function _setOwn(obj, key, value) {
+            if (key === '__proto__') {
+                Object.defineProperty(obj, key, { value, writable: true, enumerable: true, configurable: true });
+            } else {
+                obj[key] = value;
+            }
+        }
+
+        /**
          * Encode a JS value to a MessagePack byte array.
          * @param {any} value
          * @returns {Uint8Array}
@@ -367,26 +380,50 @@ export const msgpack = {
             return s;
         }
 
+        /** Default nesting limit of `decode` (arrays, maps). */
+        const DEFAULT_MAX_DEPTH = 512;
+
+        /**
+         * Enter one nesting level: past `maxDepth` the decode throws instead
+         * of recursing until the engine's stack overflows (audit A5; a
+         * 100 000-deep array is a few hundred kilobytes of input).
+         */
+        function enter(ctx) {
+            if (++ctx.depth > ctx.maxDepth) throw new Error('MessagePack: nesting deeper than maxDepth (' + ctx.maxDepth + ')');
+        }
+
+        function maxDepthOf(options) {
+            const d = options && options.maxDepth;
+            if (d === undefined || d === null) return DEFAULT_MAX_DEPTH;
+            if (!Number.isInteger(d) || d < 1) throw new RangeError('messagepack.decode: maxDepth must be a positive integer');
+            return d;
+        }
+
         function readArray(ctx, len) {
+            enter(ctx);
             const arr = new Array(len);
             for (let i = 0; i < len; i++) arr[i] = decodeValue(ctx);
+            ctx.depth--;
             return arr;
         }
 
         function readMap(ctx, len) {
+            enter(ctx);
             if (ctx.useMap) {
                 const m = new Map();
                 for (let i = 0; i < len; i++) {
                     const k = decodeValue(ctx);
                     m.set(k, decodeValue(ctx));
                 }
+                ctx.depth--;
                 return m;
             }
-            const obj = {};
+            const obj = Object.create(null);   // null prototype: no inherited key collides with a decoded one (D9 G7)
             for (let i = 0; i < len; i++) {
                 const k = decodeValue(ctx);
-                obj[k] = decodeValue(ctx);
+                _setOwn(obj, k, decodeValue(ctx));
             }
+            ctx.depth--;
             return obj;
         }
 
@@ -471,9 +508,11 @@ export const msgpack = {
         /**
          * Decode a MessagePack byte array into a JS value.
          * @param {Uint8Array} bytes
-         * @param {{useMap?: boolean}} [options]
+         * @param {{useMap?: boolean, maxDepth?: number}} [options]
          *        `useMap` : return `Map` instances (preserves non-string keys
          *        and insertion order) instead of plain objects.
+         *        `maxDepth` : nesting limit of arrays and maps (default 512);
+         *        a deeper item throws.
          * @returns {any}
          */
         function decode(bytes, options) {
@@ -481,7 +520,9 @@ export const msgpack = {
                 bytes,
                 view: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
                 offset: 0,
-                useMap: !!(options && options.useMap)
+                useMap: !!(options && options.useMap),
+                depth: 0,
+                maxDepth: maxDepthOf(options),
             };
             return decodeValue(ctx);
         }

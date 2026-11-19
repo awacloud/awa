@@ -25,7 +25,7 @@ Public API (`Uint8Array`):
 - `xor(key, nonce, data, initialCounter = 0)` → `Uint8Array` of the same
   length as `data`, or `false` if key ≠ 32 bytes or nonce ≠ 12 bytes.
   Implements the stream involution (encrypt = decrypt).
-- `_internal.block(key32, counter, nonce32, out32)` — exposed under the `_internal.*` convention (post-upgrade Finding 2 audit) for debug / introspection. Public tests exercise it indirectly via `xor(zero, …)`. Generates a
+- `internalOf(chacha20).block(key32, counter, nonce32, out32)` — exposed under the `internalOf(chacha20).*` convention (post-upgrade Finding 2 audit) for debug / introspection. Public tests exercise it indirectly via `xor(zero, …)`. Generates a
   64-byte block (16 u32 words) of keystream.
 
 No `seek` variant; the initial counter is explicit (`initialCounter`
@@ -68,11 +68,10 @@ parameter).
 - [x] **Empty input** — empty output (stream cipher edge case).
 - [x] **No `throw`** — `console.warn` + `return false` (reviewed
       lines 61-69).
-- [x] **XChaCha20 (192-bit nonce)** — **Iteration G3**: `xchacha20()`
-      exposed but returns `false` + `console.warn('NOT-IMPLEMENTED: XChaCha20
-      (draft-irtf-cfrg-xchacha)')`. Prevents silent use; callers must
-      go through a dedicated implementation (e.g. libsodium-wasm) if needed.
-- [x] **32-bit counter overflow guard** — **Iteration G3**: `xor()` rejects
+- [ ] **XChaCha20 (192-bit nonce)** — not implemented
+      (`draft-irtf-cfrg-xchacha`, never finalised); callers go through a
+      dedicated implementation (e.g. libsodium-wasm) if needed.
+- [x] **32-bit counter overflow guard** — `xor()` rejects
       any call that would push the counter ≥ 2^32 under a (key, nonce)
       pair → `false` + `console.warn('LIMIT-EXCEEDED: counter overflow (>256 GiB)')`.
       Prevents silent counter wraparound (which would reuse keystream
@@ -110,7 +109,7 @@ parameter).
 ## Cross-references
 
 - Module: [`cipher/chacha20.js`](./chacha20.js)
-- Tests: [`cipher/chacha20.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/cipher/chacha20.test.js) — **20 tests** (including the 4 added in Iteration G3: counter overflow guard + XChaCha20 reject)
+- Tests: [`cipher/chacha20.test.js`](https://github.com/awacloud/awa/blob/main/packages/front/fw/src/crypto/cipher/chacha20.test.js) — **20 tests** (including 4 for the counter overflow guard and the XChaCha20 reject)
 - RFC 8439: [`https://datatracker.ietf.org/doc/html/rfc8439`](https://datatracker.ietf.org/doc/html/rfc8439)
 - AEAD wrapper: [`../mode/chacha20poly1305.js`](../mode/chacha20poly1305.js) — see [chacha20poly1305.acvp.md](../mode/chacha20poly1305.acvp.md) (forthcoming)
 - Tag MAC: [`../hash/poly1305.js`](../hash/poly1305.js) — see [poly1305.acvp.md](../hash/poly1305.acvp.md) (forthcoming)

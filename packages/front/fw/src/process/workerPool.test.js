@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -169,6 +169,54 @@ describe('workerPool module', () => {
             // Wait for respawn
             await new Promise(r => setTimeout(r, 50));
             expect(p.idle()).toBe(1);
+            p.terminate();
+        });
+    });
+
+    describe('signal.abort() during run, respawnOnCrash: false', () => {
+        test('the slot gets a live worker: the next job runs', async () => {
+            const stubs = [];
+            const p = pool.create({
+                factory: () => { const s = makeWorkerStub({ delay: 40 }); stubs.push(s); return s; },
+                size: 1,
+                respawnOnCrash: false,
+            });
+            const ctrl = new AbortController();
+            const aborted = p.run('slow', { signal: ctrl.signal });
+            setTimeout(() => ctrl.abort(), 10);
+            expect((await aborted.catch(e => e)).name).toBe('AbortError');
+            expect(stubs[0]._terminated).toBe(true);
+
+            const next = await Promise.race([
+                p.run('next'),
+                new Promise(r => setTimeout(() => r('HUNG'), 500)),
+            ]);
+            expect(next).toBe('next');
+            expect(stubs).toHaveLength(2);
+            expect(p.size()).toBe(1);
+            p.terminate();
+        });
+    });
+
+    describe('signal.abort() on a slot resize() removed', () => {
+        test('spawns no orphan worker', async () => {
+            let spawned = 0;
+            const p = pool.create({
+                factory: () => { spawned++; return makeWorkerStub({ delay: 80 }); },
+                size: 2,
+                respawnOnCrash: true,
+            });
+            const ctrl = new AbortController();
+            const b = p.run('b');                          // slot 0
+            const a = p.run('a', { signal: ctrl.signal }); // slot 1
+            p.resize(1);                 // both busy: the last slot (job a) leaves the pool
+            const before = spawned;
+            ctrl.abort();
+            expect((await a.catch(e => e)).name).toBe('AbortError');
+            expect(await b).toBe('b');
+            await new Promise(r => setTimeout(r, 120));
+            expect(spawned - before).toBe(0);
+            expect(p.size()).toBe(1);
             p.terminate();
         });
     });

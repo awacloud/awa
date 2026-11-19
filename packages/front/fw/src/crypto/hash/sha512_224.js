@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 AwaCloud SAS
+// Copyright (c) 2026 AwaCloud SAS
 // Author: Matthieu Bouilloux
 // SPDX-License-Identifier: Apache-2.0
 
@@ -56,7 +56,7 @@ export const sha512_224 = {
         ];
 
         // outWords = 7 → 7 × 32-bit = 224 bits.
-        const inner = sha512._internal.makeSha(_INIT_512_224, 7);
+        const inner = sha512[Symbol.for('@awacloud/fw/internal')].makeSha(_INIT_512_224, 7);
 
         return {
             fn: inner.fn,
