@@ -43,35 +43,49 @@ other packages are listed below, each with its own README.
 ## Published packages
 
 The Apache-2.0 packages were first published at `0.1.0` on 2026-09-29 (lot
-1); the office libraries were published at `1.0.0` on 2026-10-07 (lot 2),
-seven of them at `1.1.0` on 2026-10-21 (`@awacloud/oconv-fonts` was not
-re-released then), and eight of them again on 2026-11-04, all at `1.2.0`
-but `@awacloud/oconv-fonts` at `1.1.0`: `@awacloud/pdf`, `@awacloud/ooxml`,
-`@awacloud/odf`, `@awacloud/oconv`, `@awacloud/tool-convert`, `@awacloud/md`,
-`@awacloud/fonts` and `@awacloud/oconv-fonts`. The `Published` column gives
-the latest version on the npm registry and the day it was published.
+1), and six of them on 2026-11-19 (`@awacloud/graphic-anim` was published
+for the first time), all at `0.1.1` but `@awacloud/fw` at `1.0.0`,
+`@awacloud/fw-wasm-crypto` at `0.2.0`, `@awacloud/graphic-anim` at `0.1.0`:
+`@awacloud/tool-fw-bundler`, `@awacloud/tool-fw-codegen`,
+`@awacloud/tool-wasm-crypto`, `@awacloud/fw`, `@awacloud/fw-wasm-crypto` and
+`@awacloud/graphic-anim`; the office libraries were published at `1.0.0` on
+2026-10-07 (lot 2), seven of them at `1.1.0` on 2026-10-21
+(`@awacloud/oconv-fonts` was not re-released then), eight of them again on
+2026-11-04, all at `1.2.0` but `@awacloud/oconv-fonts` at `1.1.0`:
+`@awacloud/pdf`, `@awacloud/ooxml`, `@awacloud/odf`, `@awacloud/oconv`,
+`@awacloud/tool-convert`, `@awacloud/md`, `@awacloud/fonts` and
+`@awacloud/oconv-fonts`, and eight of them again on 2026-11-19
+(`@awacloud/oview` was published for the first time), all at `2.0.0` but
+`@awacloud/ooxml` and `@awacloud/odf` at `1.3.0`, `@awacloud/md` at `1.2.1`,
+`@awacloud/oview` at `0.3.0`: `@awacloud/pdf`, `@awacloud/fonts`,
+`@awacloud/oconv`, `@awacloud/tool-convert`, `@awacloud/ooxml`,
+`@awacloud/odf`, `@awacloud/md` and `@awacloud/oview`. The `Published`
+column gives the latest version on the npm registry and the day it was
+published.
 
 | Package | Directory | Repository | npm | Published | Lot | Licence |
 |---|---|---|---|---|---|---|
-| `@awacloud/fw` | [`packages/front/fw`](packages/front/fw/) | [`awacloud/fw`](https://github.com/awacloud/fw) | [`@awacloud/fw`](https://www.npmjs.com/package/@awacloud/fw) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
-| `@awacloud/fw-wasm-crypto` | [`packages/front/fw-wasm-crypto`](packages/front/fw-wasm-crypto/) | [`awacloud/fw-wasm-crypto`](https://github.com/awacloud/fw-wasm-crypto) | [`@awacloud/fw-wasm-crypto`](https://www.npmjs.com/package/@awacloud/fw-wasm-crypto) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
-| `@awacloud/tool-fw-bundler` | [`tools/fw-bundler`](tools/fw-bundler/) | [`awacloud/tool-fw-bundler`](https://github.com/awacloud/tool-fw-bundler) | [`@awacloud/tool-fw-bundler`](https://www.npmjs.com/package/@awacloud/tool-fw-bundler) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
-| `@awacloud/tool-fw-codegen` | [`tools/fw-codegen`](tools/fw-codegen/) | [`awacloud/tool-fw-codegen`](https://github.com/awacloud/tool-fw-codegen) | [`@awacloud/tool-fw-codegen`](https://www.npmjs.com/package/@awacloud/tool-fw-codegen) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
-| `@awacloud/tool-wasm-crypto` | [`tools/wasm-crypto`](tools/wasm-crypto/) | [`awacloud/tool-wasm-crypto`](https://github.com/awacloud/tool-wasm-crypto) | [`@awacloud/tool-wasm-crypto`](https://www.npmjs.com/package/@awacloud/tool-wasm-crypto) | `0.1.0` · 2026-09-29 | 1 | Apache-2.0 |
-| `@awacloud/pdf` | [`packages/front/office/pdf`](packages/front/office/pdf/) | [`awacloud/pdf`](https://github.com/awacloud/pdf) | [`@awacloud/pdf`](https://www.npmjs.com/package/@awacloud/pdf) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
-| `@awacloud/ooxml` | [`packages/front/office/ooxml`](packages/front/office/ooxml/) | [`awacloud/ooxml`](https://github.com/awacloud/ooxml) | [`@awacloud/ooxml`](https://www.npmjs.com/package/@awacloud/ooxml) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
-| `@awacloud/odf` | [`packages/front/office/odf`](packages/front/office/odf/) | [`awacloud/odf`](https://github.com/awacloud/odf) | [`@awacloud/odf`](https://www.npmjs.com/package/@awacloud/odf) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
-| `@awacloud/md` | [`packages/front/office/md`](packages/front/office/md/) | [`awacloud/md`](https://github.com/awacloud/md) | [`@awacloud/md`](https://www.npmjs.com/package/@awacloud/md) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
-| `@awacloud/fonts` | [`packages/front/office/fonts`](packages/front/office/fonts/) | [`awacloud/fonts`](https://github.com/awacloud/fonts) | [`@awacloud/fonts`](https://www.npmjs.com/package/@awacloud/fonts) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
-| `@awacloud/oconv` | [`packages/front/office/oconv`](packages/front/office/oconv/) | [`awacloud/oconv`](https://github.com/awacloud/oconv) | [`@awacloud/oconv`](https://www.npmjs.com/package/@awacloud/oconv) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/fw` | [`packages/front/fw`](packages/front/fw/) | [`awacloud/fw`](https://github.com/awacloud/fw) | [`@awacloud/fw`](https://www.npmjs.com/package/@awacloud/fw) | `1.0.0` · 2026-11-19 | 1 | Apache-2.0 |
+| `@awacloud/fw-wasm-crypto` | [`packages/front/fw-wasm-crypto`](packages/front/fw-wasm-crypto/) | [`awacloud/fw-wasm-crypto`](https://github.com/awacloud/fw-wasm-crypto) | [`@awacloud/fw-wasm-crypto`](https://www.npmjs.com/package/@awacloud/fw-wasm-crypto) | `0.2.0` · 2026-11-19 | 1 | Apache-2.0 |
+| `@awacloud/tool-fw-bundler` | [`tools/fw-bundler`](tools/fw-bundler/) | [`awacloud/tool-fw-bundler`](https://github.com/awacloud/tool-fw-bundler) | [`@awacloud/tool-fw-bundler`](https://www.npmjs.com/package/@awacloud/tool-fw-bundler) | `0.1.1` · 2026-11-19 | 1 | Apache-2.0 |
+| `@awacloud/tool-fw-codegen` | [`tools/fw-codegen`](tools/fw-codegen/) | [`awacloud/tool-fw-codegen`](https://github.com/awacloud/tool-fw-codegen) | [`@awacloud/tool-fw-codegen`](https://www.npmjs.com/package/@awacloud/tool-fw-codegen) | `0.1.1` · 2026-11-19 | 1 | Apache-2.0 |
+| `@awacloud/tool-wasm-crypto` | [`tools/wasm-crypto`](tools/wasm-crypto/) | [`awacloud/tool-wasm-crypto`](https://github.com/awacloud/tool-wasm-crypto) | [`@awacloud/tool-wasm-crypto`](https://www.npmjs.com/package/@awacloud/tool-wasm-crypto) | `0.1.1` · 2026-11-19 | 1 | Apache-2.0 |
+| `@awacloud/graphic-anim` | [`packages/front/graphic/anim`](packages/front/graphic/anim/) | [`awacloud/graphic-anim`](https://github.com/awacloud/graphic-anim) | [`@awacloud/graphic-anim`](https://www.npmjs.com/package/@awacloud/graphic-anim) | `0.1.0` · 2026-11-19 | 1 | Apache-2.0 |
+| `@awacloud/pdf` | [`packages/front/office/pdf`](packages/front/office/pdf/) | [`awacloud/pdf`](https://github.com/awacloud/pdf) | [`@awacloud/pdf`](https://www.npmjs.com/package/@awacloud/pdf) | `2.0.0` · 2026-11-19 | 2 | AGPL-3.0-only |
+| `@awacloud/ooxml` | [`packages/front/office/ooxml`](packages/front/office/ooxml/) | [`awacloud/ooxml`](https://github.com/awacloud/ooxml) | [`@awacloud/ooxml`](https://www.npmjs.com/package/@awacloud/ooxml) | `1.3.0` · 2026-11-19 | 2 | AGPL-3.0-only |
+| `@awacloud/odf` | [`packages/front/office/odf`](packages/front/office/odf/) | [`awacloud/odf`](https://github.com/awacloud/odf) | [`@awacloud/odf`](https://www.npmjs.com/package/@awacloud/odf) | `1.3.0` · 2026-11-19 | 2 | AGPL-3.0-only |
+| `@awacloud/md` | [`packages/front/office/md`](packages/front/office/md/) | [`awacloud/md`](https://github.com/awacloud/md) | [`@awacloud/md`](https://www.npmjs.com/package/@awacloud/md) | `1.2.1` · 2026-11-19 | 2 | AGPL-3.0-only |
+| `@awacloud/fonts` | [`packages/front/office/fonts`](packages/front/office/fonts/) | [`awacloud/fonts`](https://github.com/awacloud/fonts) | [`@awacloud/fonts`](https://www.npmjs.com/package/@awacloud/fonts) | `2.0.0` · 2026-11-19 | 2 | AGPL-3.0-only |
+| `@awacloud/oconv` | [`packages/front/office/oconv`](packages/front/office/oconv/) | [`awacloud/oconv`](https://github.com/awacloud/oconv) | [`@awacloud/oconv`](https://www.npmjs.com/package/@awacloud/oconv) | `2.0.0` · 2026-11-19 | 2 | AGPL-3.0-only |
 | `@awacloud/oconv-fonts` | [`packages/front/office/oconv-fonts`](packages/front/office/oconv-fonts/) | [`awacloud/oconv-fonts`](https://github.com/awacloud/oconv-fonts) | [`@awacloud/oconv-fonts`](https://www.npmjs.com/package/@awacloud/oconv-fonts) | `1.1.0` · 2026-11-04 | 2 | AGPL-3.0-only |
-| `@awacloud/tool-convert` | [`tools/convert`](tools/convert/) | [`awacloud/tool-convert`](https://github.com/awacloud/tool-convert) | [`@awacloud/tool-convert`](https://www.npmjs.com/package/@awacloud/tool-convert) | `1.2.0` · 2026-11-04 | 2 | AGPL-3.0-only |
+| `@awacloud/tool-convert` | [`tools/convert`](tools/convert/) | [`awacloud/tool-convert`](https://github.com/awacloud/tool-convert) | [`@awacloud/tool-convert`](https://www.npmjs.com/package/@awacloud/tool-convert) | `2.0.0` · 2026-11-19 | 2 | AGPL-3.0-only |
+| `@awacloud/oview` | [`packages/front/office/oview`](packages/front/office/oview/) | [`awacloud/oview`](https://github.com/awacloud/oview) | [`@awacloud/oview`](https://www.npmjs.com/package/@awacloud/oview) | `0.3.0` · 2026-11-19 | 2 | AGPL-3.0-only |
 
 ### Install
 
 Install only the packages you use, from the npm registry.
 
-Lot 1, published 2026-09-29:
+Lot 1, first published 2026-09-29, latest release 2026-11-19:
 
 ```bash
 npm i @awacloud/fw
@@ -79,9 +93,10 @@ npm i @awacloud/fw-wasm-crypto
 npm i @awacloud/tool-fw-bundler
 npm i @awacloud/tool-fw-codegen
 npm i @awacloud/tool-wasm-crypto
+npm i @awacloud/graphic-anim
 ```
 
-Lot 2, published 2026-10-07:
+Lot 2, first published 2026-10-07, latest release 2026-11-19:
 
 ```bash
 npm i @awacloud/pdf
@@ -92,9 +107,11 @@ npm i @awacloud/fonts
 npm i @awacloud/oconv
 npm i @awacloud/oconv-fonts
 npm i @awacloud/tool-convert
+npm i @awacloud/oview
 ```
 
-The browser packages — `@awacloud/fw` and the seven office libraries — are
+The browser packages — `@awacloud/fw`, `@awacloud/graphic-anim` and the
+eight office libraries, `@awacloud/oview` included — are
 plain ES modules with no bundler required: a statically served page maps
 each package name to its files through an import map. Each package's own
 README shows its setup, and the documentation at https://awaforge.eu/docs/
